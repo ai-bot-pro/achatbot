@@ -1,4 +1,6 @@
 import whisper
+from whisper_timestamped import transcribe_timestamped
+
 
 _MODELS = {
     "tiny.en": "https://openaipublic.azureedge.net/main/whisper/models/d3dd57d32accea0b295c96e26691aa14d8822fac7d9d27d5dc00b4ca2826dd03/tiny.en.pt",
@@ -22,11 +24,28 @@ _MODELS = {
 # whisper records/tmp.wav --language zh --model large --model_dir ./models
 
 
-def whisper_transcribe():
-    audio_path = "/Users/wuyong/project/python/chat-bot/records/tmp.wav"
+def whisper_transcribe(audio_path, download_root, model_size="base", target_lang="zh"):
     audio_model = whisper.load_model(
-        "tiny", download_root="/Users/wuyong/project/python/chat-bot/models")
-    result = audio_model.transcribe(audio_path, language="zh")
+        model_size, download_root=download_root)
+    result = audio_model.transcribe(audio_path, language=target_lang)
+    print(result)
+    text = result['text'].strip()
+    print(text)
+
+
+# whisper_timestamped records/tmp.wav --language zh --model base --model_dir ./models
+# whisper_timestamped records/tmp.wav --language zh --model base --model_dir ./models
+# whisper_timestamped records/tmp.wav --language zh --model small --model_dir ./models
+# whisper_timestamped records/tmp.wav --language zh --model medium --model_dir ./models
+# whisper_timestamped records/tmp.wav --language zh --model large --model_dir ./models
+
+def whisper_transcribe_timestamped(audio_path, download_root, model_size="base", target_lang="zh"):
+    audio_model = whisper.load_model(
+        model_size, download_root=download_root)
+    # help(transcribe_timestamped)
+    result = transcribe_timestamped(
+        audio_model, audio_path, language=target_lang)
+    print(result)
     text = result['text'].strip()
     print(text)
 
@@ -34,5 +53,20 @@ def whisper_transcribe():
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--type', "-t", type=str,
-                        default="generate", help='choice generate or chat')
+    parser.add_argument('--model_type', "-t", type=str,
+                        default="whisper", help='choice whisper | whisper_timestamped')
+    parser.add_argument('--audio_path', "-a", type=str,
+                        default="/Users/wuyong/project/python/chat-bot/records/tmp.wav", help='audio path')
+    parser.add_argument('--model_size', "-s", type=str,
+                        default="base", help='model size')
+    parser.add_argument('--model_path', "-m", type=str,
+                        default="/Users/wuyong/project/python/chat-bot/models", help='model root path')
+    parser.add_argument('--lang', "-l", type=str,
+                        default="zh", help='target language')
+    args = parser.parse_args()
+    if args.model_type == "whisper_timestamped":
+        whisper_transcribe_timestamped(args.audio_path, args.model_path,
+                                       args.model_size, args.lang)
+    else:
+        whisper_transcribe(args.audio_path, args.model_path,
+                           args.model_size, args.lang)
