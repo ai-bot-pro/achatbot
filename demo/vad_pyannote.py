@@ -7,7 +7,7 @@ hf-repo-ckpt:
 - https://huggingface.co/pyannote/segmentation-3.0
 - https://huggingface.co/pyannote/speaker-diarization-3.0
 
-paper: 
+paper:
 - [pyannote.audio: neural building blocks for speaker diarization](https://arxiv.org/abs/1911.01255)
 - [End-to-end speaker segmentation for overlap-aware resegmentation](https://arxiv.org/abs/2104.04045)
 - [Powerset multi-class cross entropy loss for neural speaker diarization](https://arxiv.org/abs/2310.13025)
@@ -15,22 +15,30 @@ paper:
 """
 
 import os
-from pyannote.audio.pipelines import VoiceActivityDetection
 from pyannote.audio import Model
 
 
-def pyannote_vad_pipeline(audio_path, hf_auth_token,
-                          path_or_hf_repo="pyannote/segmentation-3.0", model_type="segmentation-3.0"):
+def init_model(hf_auth_token, path_or_hf_repo="pyannote/segmentation-3.0",):
     auth_token = os.environ.get('HF_TOKEN') if os.environ.get(
         'HF_TOKEN') else hf_auth_token
 
     # 1. visit hf.co/pyannote/segmentation-3.0 and accept user conditions
     # 2. visit hf.co/settings/tokens to create an access token
     # 3. instantiate pretrained model
-    model = Model.from_pretrained(
-        path_or_hf_repo, use_auth_token=auth_token)
+    model = Model.from_pretrained(path_or_hf_repo, use_auth_token=auth_token)
 
-    pipeline = VoiceActivityDetection(segmentation=model)
+    return model
+
+
+def pyannote_vad_pipeline(audio_path, hf_auth_token,
+                          path_or_hf_repo="pyannote/segmentation-3.0", model_type="segmentation-3.0"):
+    r"""
+    voice activity detection
+    """
+    from pyannote.audio.pipelines import VoiceActivityDetection
+
+    pipeline = VoiceActivityDetection(
+        segmentation=init_model(hf_auth_token, path_or_hf_repo))
     HYPER_PARAMETERS = {
         # remove speech regions shorter than that many seconds.
         "min_duration_on": 0.0,
@@ -43,10 +51,37 @@ def pyannote_vad_pipeline(audio_path, hf_auth_token,
         HYPER_PARAMETERS["offset"] = 0.5
     pipeline.instantiate(HYPER_PARAMETERS)
     vad_results = pipeline(audio_path)
-    print(vad_results)
+    print(type(vad_results), vad_results)
     # `vad_results` is a pyannote.core.Annotation instance containing speech regions
     for segment in vad_results.itersegments():
-        print(segment, segment.start, segment.end)
+        print(type(segment), segment, segment.start, segment.end)
+
+
+def pyannote_osd_pipeline(audio_path, hf_auth_token,
+                          path_or_hf_repo="pyannote/segmentation-3.0", model_type="segmentation-3.0"):
+    r"""
+    Overlapped speech detection
+    """
+    from pyannote.audio.pipelines import OverlappedSpeechDetection
+
+    pipeline = OverlappedSpeechDetection(
+        segmentation=init_model(hf_auth_token, path_or_hf_repo))
+    HYPER_PARAMETERS = {
+        # remove speech regions shorter than that many seconds.
+        "min_duration_on": 0.0,
+        # fill non-speech regions shorter than that many seconds.
+        "min_duration_off": 0.0
+    }
+    # if use pyannote/segmentation open onset/offset activation thresholds
+    if model_type == "segmentation":
+        HYPER_PARAMETERS["onset"] = 0.5
+        HYPER_PARAMETERS["offset"] = 0.5
+    pipeline.instantiate(HYPER_PARAMETERS)
+    vad_results = pipeline(audio_path)
+    print(type(vad_results), vad_results)
+    # `vad_results` is a pyannote.core.Annotation instance containing speech regions
+    for segment in vad_results.itersegments():
+        print(type(segment), segment, segment.start, segment.end)
 
 
 if __name__ == '__main__':
@@ -65,6 +100,13 @@ if __name__ == '__main__':
     parser.add_argument('--model_type', "-mt", type=str,
                         default="segmentation-3.0", choices=["segmentation-3.0", "segmentation"],
                         help='choice segmentation or segmentation-3.0')
+    parser.add_argument('--detect_type', "-dt", type=str,
+                        default="vad", choices=["vad", "osd"],
+                        help='choice vad or osd')
     args = parser.parse_args()
-    pyannote_vad_pipeline(
-        args.audio_path, args.auth_token, args.path_or_hf_repo, args.model_type)
+    if args.detect_type == "osd":
+        pyannote_osd_pipeline(
+            args.audio_path, args.auth_token, args.path_or_hf_repo, args.model_type)
+    else:
+        pyannote_vad_pipeline(
+            args.audio_path, args.auth_token, args.path_or_hf_repo, args.model_type)
