@@ -51,11 +51,11 @@ if __name__ == '__main__':
     parser.add_argument('--model_type', "-t", type=str,
                         default="whisper", help='choice whisper | whisper_timestamped')
     parser.add_argument('--audio_path', "-a", type=str,
-                        default="/Users/wuyong/project/python/chat-bot/records/tmp.wav", help='audio path')
+                        default="./records/tmp.wav", help='audio path')
     parser.add_argument('--model_size', "-s", type=str,
                         default="base", help='model size')
     parser.add_argument('--model_path', "-m", type=str,
-                        default="/Users/wuyong/project/python/chat-bot/models", help='model root path')
+                        default="./models", help='model root path')
     parser.add_argument('--lang', "-l", type=str,
                         default="zh", help='target language')
     args = parser.parse_args()

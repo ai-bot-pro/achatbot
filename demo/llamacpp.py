@@ -94,7 +94,7 @@ if __name__ == '__main__':
     parser.add_argument('--type', "-t", type=str,
                         default="generate", help='choice generate or chat')
     parser.add_argument('--model_path', "-m", type=str,
-                        default="/Users/wuyong/project/python/voice-assistant/models/Phi-3-mini-4k-instruct-q4.gguf", help='model path')
+                        default="./models/Phi-3-mini-4k-instruct-q4.gguf", help='model path')
     parser.add_argument('--system', "-s", type=str,
                         default="你是一个中国人,请用中文回答。回答限制在1-5句话内。要友好、乐于助人且简明扼要。默认使用公制单位。保持对话简短而甜蜜。只用纯文本回答，不要包含链接或其他附加内容。不要回复计算机代码，例如不要返回用户的经度。", help='system prompt')
     parser.add_argument('--query', "-q", type=str,
