@@ -153,6 +153,7 @@ cython_debug/
 
 .DS_Store
 models/*
+records/*
 *.wav
 main-dev.py
 tmp.*

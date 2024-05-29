@@ -6,6 +6,7 @@ hf-repo-ckpt:
 - https://huggingface.co/pyannote/segmentation
 - https://huggingface.co/pyannote/segmentation-3.0
 - https://huggingface.co/pyannote/speaker-diarization-3.0
+- https://huggingface.co/pyannote/speaker-diarization-3.1
 
 paper:
 - [pyannote.audio: neural building blocks for speaker diarization](https://arxiv.org/abs/1911.01255)
@@ -15,10 +16,11 @@ paper:
 """
 
 import os
-from pyannote.audio import Model
 
 
 def init_model(hf_auth_token, path_or_hf_repo="pyannote/segmentation-3.0",):
+    from pyannote.audio import Model
+
     auth_token = os.environ.get('HF_TOKEN') if os.environ.get(
         'HF_TOKEN') else hf_auth_token
 
@@ -33,7 +35,7 @@ def init_model(hf_auth_token, path_or_hf_repo="pyannote/segmentation-3.0",):
 def pyannote_vad_pipeline(audio_path, hf_auth_token,
                           path_or_hf_repo="pyannote/segmentation-3.0", model_type="segmentation-3.0"):
     r"""
-    voice activity detection
+    voice activity detection (语音活动识别)
     """
     from pyannote.audio.pipelines import VoiceActivityDetection
 
@@ -60,7 +62,7 @@ def pyannote_vad_pipeline(audio_path, hf_auth_token,
 def pyannote_osd_pipeline(audio_path, hf_auth_token,
                           path_or_hf_repo="pyannote/segmentation-3.0", model_type="segmentation-3.0"):
     r"""
-    Overlapped speech detection
+    Overlapped speech detection (重叠语音检测)
     """
     from pyannote.audio.pipelines import OverlappedSpeechDetection
 
@@ -84,9 +86,52 @@ def pyannote_osd_pipeline(audio_path, hf_auth_token,
         print(type(segment), segment, segment.start, segment.end)
 
 
+def pyannote_diarization_pipeline(audio_path, hf_auth_token,
+                                  path_or_hf_repo="pyannote/speaker-diarization-3.1", diarization_path="./records/diarization_audio.rttm"):
+    r"""
+    Speaker diarization（说话人分割或说话人辨识）
+    """
+    from pyannote.audio import Pipeline
+
+    auth_token = os.environ.get('HF_TOKEN') if os.environ.get(
+        'HF_TOKEN') else hf_auth_token
+    # instantiate the pipeline
+    pipeline = Pipeline.from_pretrained(
+        path_or_hf_repo, use_auth_token=auth_token)
+
+    # run the pipeline on an audio file
+    diarization = pipeline(audio_path)
+    print(type(diarization), diarization)
+
+    # Pre-loading audio files in memory may result in faster processing:
+    # import torchaudio
+    # waveform, sample_rate = torchaudio.load("audio.wav")
+    # diarization = pipeline({"waveform": waveform, "sample_rate": sample_rate})
+
+    # Monitoring progress Hooks are available to monitor the progress of the pipeline:
+    # from pyannote.audio.pipelines.utils.hook import ProgressHook
+    # with ProgressHook() as hook:
+    #    diarization = pipeline("audio.wav", hook=hook)
+
+    # Controlling the number of speakers
+    # diarization = pipeline("audio.wav", num_speakers=2)
+    # diarization = pipeline("audio.wav", min_speakers=2, max_speakers=5)
+
+    for turn, _, speaker in diarization.itertracks(yield_label=True):
+        print(type(turn), turn,
+              f"start: {turn.start:.3f}", f"end: {turn.end:.3f}")
+        print(type(speaker), speaker)
+
+    # dump the diarization output to disk using RTTM format
+    with open(diarization_path, "w") as rttm:
+        diarization.write_rttm(rttm)
+
+
 if __name__ == '__main__':
     r"""
     python demo/vad_pyannote.py -m ./models/pyannote/segmentation/pytorch_model.bin -mt segmentation
+    python demo/vad_pyannote.py -dt osd
+    python demo/vad_pyannote.py -m pyannote/speaker-diarization-3.1 -dt diarization -dp ./records/diarization_audio.rttm
     """
     import argparse
     parser = argparse.ArgumentParser()
@@ -101,10 +146,16 @@ if __name__ == '__main__':
                         default="segmentation-3.0", choices=["segmentation-3.0", "segmentation"],
                         help='choice segmentation or segmentation-3.0')
     parser.add_argument('--detect_type', "-dt", type=str,
-                        default="vad", choices=["vad", "osd"],
-                        help='choice vad or osd')
+                        default="vad", choices=["vad", "osd", "diarization"],
+                        help='choice vad, osd, diarization')
+    parser.add_argument('--diarization_path', "-dp", type=str,
+                        default="./records/diarization_audio.rttm", help='diarization rttm file path')
     args = parser.parse_args()
-    if args.detect_type == "osd":
+
+    if args.detect_type == "diarization":
+        pyannote_diarization_pipeline(
+            args.audio_path, args.auth_token, args.path_or_hf_repo, args.diarization_path)
+    elif args.detect_type == "osd":
         pyannote_osd_pipeline(
             args.audio_path, args.auth_token, args.path_or_hf_repo, args.model_type)
     else:
