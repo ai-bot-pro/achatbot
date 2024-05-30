@@ -89,7 +89,7 @@ def pyannote_osd_pipeline(audio_path, hf_auth_token,
 def pyannote_diarization_pipeline(audio_path, hf_auth_token,
                                   path_or_hf_repo="pyannote/speaker-diarization-3.1", diarization_path="./records/diarization_audio.rttm"):
     r"""
-    Speaker diarization（说话人分割或说话人辨识）
+    Speaker diarization (说话人分割或说话人辨识)
     """
     from pyannote.audio import Pipeline
 

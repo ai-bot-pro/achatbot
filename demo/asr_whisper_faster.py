@@ -12,7 +12,7 @@ ct2-transformers-converter --model openai/whisper-base --output_dir faster-whisp
 """
 
 from faster_whisper import WhisperModel
-from cuda import CUDAInfo
+from device_cuda import CUDAInfo
 
 
 def faster_whisper_transcribe(audio_path, download_root, model_size="base", target_lang="zh"):
@@ -32,7 +32,7 @@ def faster_whisper_transcribe(audio_path, download_root, model_size="base", targ
     else:
         # or run on CPU with INT8
         # tested: works, but slow, appx 10-times than cuda FP16
-        #        model = WhisperModel(modelsize, device="cpu", compute_type="int8") #, download_root="faster-disk-cache-dir/")
+        # model = WhisperModel(modelsize, device="cpu", compute_type="int8") #, download_root="faster-disk-cache-dir/")
         model = WhisperModel(model_size, device="cpu",
                              compute_type="float32", download_root=download_root)
 

@@ -1,5 +1,5 @@
 import torch
-from cuda import CUDAInfo
+from device_cuda import CUDAInfo
 from transformers import pipeline
 
 
