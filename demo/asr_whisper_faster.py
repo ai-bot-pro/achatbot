@@ -20,6 +20,7 @@ def faster_whisper_transcribe(audio_path, download_root, model_size="base", targ
     https://github.com/SYSTRAN/faster-whisper?#whisper
     https://opennmt.net/CTranslate2/quantization.html#implicit-type-conversion-on-load
     """
+    text = []
     info = CUDAInfo()
     if info.is_cuda:
         # this worked fast and reliably on NVIDIA L40
@@ -43,6 +44,9 @@ def faster_whisper_transcribe(audio_path, download_root, model_size="base", targ
         print(segment)
         print("[%.2fs -> %.2fs] %s" %
               (segment.start, segment.end, segment.text))
+        text.append(segment.text)
+
+    return " ".join(text)
 
 
 if __name__ == '__main__':
@@ -60,5 +64,6 @@ if __name__ == '__main__':
                         default="zh", help='target language')
     args = parser.parse_args()
 
-    faster_whisper_transcribe(args.audio_path, args.model_path,
-                              args.model_size, args.lang)
+    text = faster_whisper_transcribe(args.audio_path, args.model_path,
+                                     args.model_size, args.lang)
+    print(text)

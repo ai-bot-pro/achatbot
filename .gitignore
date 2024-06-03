@@ -157,3 +157,6 @@ records/*
 *.wav
 main-dev.py
 tmp.*
+
+#:)
+src
