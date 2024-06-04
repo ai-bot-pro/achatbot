@@ -143,8 +143,8 @@ if __name__ == '__main__':
                         default="./models/pyannote/segmentation-3.0/pytorch_model.bin",
                         help='model ckpt file path or hf repo')
     parser.add_argument('--model_type', "-mt", type=str,
-                        default="segmentation-3.0", choices=["segmentation-3.0", "segmentation"],
-                        help='choice segmentation or segmentation-3.0')
+                        default="segmentation-3.0", choices=["segmentation-3.0", "segmentation", "diarization"],
+                        help='choice segmentation or segmentation-3.0 or diarization')
     parser.add_argument('--detect_type', "-dt", type=str,
                         default="vad", choices=["vad", "osd", "diarization"],
                         help='choice vad, osd, diarization')

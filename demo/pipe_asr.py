@@ -20,8 +20,8 @@ RATE = 16000
 SILENCE_THRESHOLD = 500
 # two seconds of silence marks the end of user voice input
 SILENT_CHUNKS = 2 * RATE / CHUNK
-# Set microphone id. Use tools/list_microphones.py to see a device list.
-MIC_IDX = 0
+# Set microphone id. Use list_microphones.py to see a device list.
+MIC_IDX = 1
 
 INT16_MAX_ABS_VALUE = 32768.0
 
@@ -37,7 +37,7 @@ def compute_rms(data):
     return rms
 
 
-def record_audio(conn, e: multiprocessing.Event):
+def record_audio(conn):
     audio = pyaudio.PyAudio()
     stream = audio.open(format=FORMAT, channels=CHANNELS, rate=RATE,
                         input=True, input_device_index=MIC_IDX, frames_per_buffer=CHUNK)
@@ -69,8 +69,6 @@ def record_audio(conn, e: multiprocessing.Event):
     save_file('records/tmp.wav',
               audio.get_sample_size(FORMAT), frames)
 
-    e.wait()
-
 
 def save_file(path, sample_width, data):
     # save audio to a WAV file
@@ -82,9 +80,10 @@ def save_file(path, sample_width, data):
         print(f"save to {path}")
 
 
-def loop_record(conn, e):
+def loop_record(conn, e: multiprocessing.Event):
     while True:
-        record_audio(conn, e)
+        record_audio(conn)
+        e.wait()
 
 
 def loop_asr(conn, q: multiprocessing.Queue, download_root, model_size="base", target_lang="zh"):
