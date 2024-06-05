@@ -1,15 +1,21 @@
+import os
 import logging
+
+from .types import LOG_DIR
 
 
 class Logger():
     @staticmethod
-    def init(level=logging.INFO):
+    def init(level=logging.INFO, app_name="chat-bot", log_dir=LOG_DIR):
+        os.makedirs(log_dir, exist_ok=True)
         # Create a logger
         logger = logging.getLogger()
         logger.setLevel(level)  # Set the root logger's level
+        logger.name = app_name
 
         # Create a file handler and set its level
-        file_handler = logging.FileHandler('chat-bot.log')
+        log_path = os.path.join(log_dir, f"{app_name}.log")
+        file_handler = logging.FileHandler(log_path)
         file_handler.setLevel(logging.DEBUG)
 
         # Create a console handler and set its level

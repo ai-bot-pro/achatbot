@@ -42,6 +42,7 @@ def record_audio(conn):
     stream = audio.open(format=FORMAT, channels=CHANNELS, rate=RATE,
                         input=True, input_device_index=MIC_IDX, frames_per_buffer=CHUNK)
 
+
     silent_chunks = 0
     audio_started = False
     frames = []

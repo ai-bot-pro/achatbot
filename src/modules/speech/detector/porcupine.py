@@ -42,7 +42,7 @@ class PorcupineWakeWordDetector(IDetector, PorcupineDetector):
             return
         pcm = struct.unpack_from(
             "h" * self.buffer_size,
-            session.args.wake_word_buffer
+            session.args.frames
         )
         wakeword_index = self.porcupine.process(pcm)
 
@@ -52,7 +52,7 @@ class PorcupineWakeWordDetector(IDetector, PorcupineDetector):
             samples_for_0_1_sec = int(self.sample_rate * 0.1)
             start_index = max(0, len(self.audio_buffer) - samples_for_0_1_sec)
             temp_samples = collections.deque(
-                itertools.islice( self.audio_buffer, start_index, None)
+                itertools.islice(self.audio_buffer, start_index, None)
             )
             self.audio_buffer.clear()
             self.audio_buffer.extend(temp_samples)

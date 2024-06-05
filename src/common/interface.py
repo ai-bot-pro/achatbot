@@ -28,7 +28,7 @@ class IDetector(ABC):
 
 class IAsr(ABC):
     @abstractmethod
-    async def transcribe(self, session):
+    async def transcribe(self, session) -> dict:
         raise NotImplemented("must be implemented in the child class")
 
 
