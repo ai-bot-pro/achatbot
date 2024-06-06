@@ -1,8 +1,3 @@
-import whisper
-from whisper_timestamped import transcribe_timestamped
-from faster_whisper import WhisperModel
-import torch
-from transformers import pipeline
 
 from src.common.factory import EngineClass
 from src.common.session import Session
@@ -26,6 +21,7 @@ class WhisperAsr(WhisperASRBase, IAsr):
     TAG = "whisper_asr"
 
     def __init__(self, **args: WhisperASRArgs) -> None:
+        import whisper
         super().__init__(**args)
         self.model = whisper.load_model(
             self.args.model_name_or_path, download_root=self.args.download_path)
@@ -33,12 +29,13 @@ class WhisperAsr(WhisperASRBase, IAsr):
     async def transcribe(self, session: Session) -> dict:
         transcription = self.model.transcribe(
             session.args.asr_audio, language=session.args.language, word_timestamps=True, condition_on_previous_text=True)
-
+        flattened_words = [
+            word for segment in transcription["segments"] for word in segment["words"]]
         res = {
             "language": session.args.language,
             "language_probability": transcription["language"],
             "text": transcription["text"].strip(),
-            "words": transcription['words'],
+            "words": flattened_words,
         }
         return res
 
@@ -47,14 +44,16 @@ class WhisperTimestampedAsr(WhisperAsr):
     TAG = "whisper_timestamped_asr"
 
     async def transcribe(self, session: Session) -> dict:
+        from whisper_timestamped import transcribe_timestamped
         transcription = transcribe_timestamped(
             self.model, session.args.asr_audio, language=session.args.language,  condition_on_previous_text=True)
-
+        flattened_words = [
+            word for segment in transcription["segments"] for word in segment["words"]]
         res = {
             "language": session.args.language,
             "language_probability": transcription["language"],
             "text": transcription["text"].strip(),
-            "words": [{'text': item['text'], 'start': item['start'], 'end': item['end'], 'probability': item['confidence']} for item in transcription['words']],
+            "words": [{'text': item['text'], 'start': item['start'], 'end': item['end'], 'probability': item['confidence']} for item in flattened_words],
         }
         return res
 
@@ -68,17 +67,19 @@ class WhisperFasterAsr(WhisperASRBase, IAsr):
         https://opennmt.net/CTranslate2/quantization.html#implicit-type-conversion-on-load
         """
         super().__init__(**args)
-        text = []
+        from faster_whisper import WhisperModel
         info = CUDAInfo()
         if info.is_cuda:
             # this worked fast and reliably on NVIDIA L40
-            self.model = WhisperModel(self.args.model_name_or_path, device="cuda",
-                                      compute_type="float16" if info.compute_capability_major >= 7 else "float32",
-                                      download_root=self.args.download_path)
+            self.model = WhisperModel(
+                self.args.model_name_or_path, device="cuda",
+                compute_type="float16" if info.compute_capability_major >= 7 else "float32",
+                download_root=self.args.download_path)
         else:
-            self.model = WhisperModel(self.args.model_name_or_path, device="cpu",
-                                      compute_type="float32",
-                                      download_root=self.args.download_path)
+            self.model = WhisperModel(
+                self.args.model_name_or_path, device="cpu",
+                compute_type="float32",
+                download_root=self.args.download_path)
 
     async def transcribe(self, session: Session) -> dict:
         segmentsIter, info = self.model.transcribe(
@@ -90,12 +91,14 @@ class WhisperFasterAsr(WhisperASRBase, IAsr):
         flattened_words = [
             word for segment in segments for word in segment.words]
 
+        # print(type(flattened_words[0]))
         res = {
             "language": info.language,
             "language_probability": info.language_probability,
             "text": ' '.join([s.text.strip() for s in segments]),
             "words":
-            [w.__dict__ for w in flattened_words]
+            [{"word": w.word, "start": w.start, "end": w.end, "probability": w.probability}
+                for w in flattened_words]
         }
         return res
 
@@ -105,8 +108,9 @@ class WhisperTransformersAsr(WhisperASRBase, IAsr):
 
     def __init__(self, **args: WhisperASRArgs) -> None:
         super().__init__(**args)
+        from transformers import pipeline
+        import torch
         info = CUDAInfo()
-
         # Initialize the ASR pipeline
         if info.is_cuda:
             self.pipe = pipeline("automatic-speech-recognition",

@@ -160,3 +160,5 @@ tmp.*
 
 log/*
 config/*
+
+.vscode/
