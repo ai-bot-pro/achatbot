@@ -9,14 +9,14 @@ ASR_TAG=whisper_transformers_asr MODEL_NAME_OR_PATH=./models/openai/whisper-base
 
 ASR_TAG=whisper_mlx_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
 """
+import logging
 import unittest
 import os
-import json
 import asyncio
 
-from sentence_transformers import SentenceTransformer, util
 
-from src.common.utils.audio_utils import save_audio_to_file
+from src.common.logger import Logger
+from src.common.utils.audio_utils import save_audio_to_file, load_json, get_audio_segment
 from src.common.factory import EngineFactory
 from src.common.session import Session
 from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR
@@ -32,6 +32,7 @@ class TestWhisperASR(unittest.TestCase):
         cls.asr_tag = os.getenv('ASR_TAG', "whisper_faster_asr")
         cls.audio_file = os.getenv('AUDIO_FILE', audio_file)
         cls.model_name_or_path = os.getenv('MODEL_NAME_OR_PATH', 'base')
+        Logger.init(logging.DEBUG)
 
     @classmethod
     def tearDownClass(cls):
@@ -50,34 +51,21 @@ class TestWhisperASR(unittest.TestCase):
         self.session = Session(**SessionCtx(
             "test_client_id", 16000, 2).__dict__)  # Example client
 
-        self.similarity_model = SentenceTransformer(
-            'sentence-transformers/all-MiniLM-L6-v2')
-
     def tearDown(self):
         pass
 
-    def load_annotations(self):
-        with open(self.annotations_path, 'r') as file:
-            return json.load(file)
-
-    def get_audio_segment(self, file_path, start=None, end=None):
-        from pydub import AudioSegment
-        with open(file_path, 'rb') as file:
-            audio = AudioSegment.from_file(file, format="wav")
-        if start is not None and end is not None:
-            # pydub works in milliseconds
-            return audio[start * 1000:end * 1000]
-        return audio
-
     def test_transcribe(self):
-        self.session.args.asr_audio = self.audio_file
-        self.session.args.language = "zh"
+        self.session.ctx.asr_audio = self.audio_file
+        self.session.ctx.language = "zh"
         res = asyncio.run(
             self.asr.transcribe(self.session))
         print(res)
 
     def test_transcribe_segments(self):
-        annotations = self.load_annotations()
+        from sentence_transformers import SentenceTransformer, util
+        self.similarity_model = SentenceTransformer(
+            'sentence-transformers/all-MiniLM-L6-v2')
+        annotations = asyncio.run(load_json(self.annotations_path))
 
         for audio_file, data in annotations.items():
             audio_file_path = os.path.join(
@@ -85,15 +73,17 @@ class TestWhisperASR(unittest.TestCase):
 
             similarities = []
             for segment in data["segments"]:
-                audio_segment = self.get_audio_segment(
-                    audio_file_path, segment["start"], segment["end"])
+                audio_segment = asyncio.run(get_audio_segment(
+                    audio_file_path,
+                    segment["start"],
+                    segment["end"]))
                 audio_frames = bytearray(audio_segment.raw_data)
-                self.session.args.language = "en"
+                self.session.ctx.language = "en"
 
                 file_path = asyncio.run(save_audio_to_file(
                     audio_frames, self.session.get_file_name(),
                     audio_dir=RECORDS_DIR))
-                self.session.args.asr_audio = file_path
+                self.session.ctx.asr_audio = file_path
 
                 transcription = asyncio.run(
                     self.asr.transcribe(self.session))["text"]
@@ -112,7 +102,6 @@ class TestWhisperASR(unittest.TestCase):
                     f"\nSegment from '{audio_file}' ({segment['start']}-{segment['end']}s):")
                 print(f"Expected: {segment['transcription']}")
                 print(f"Actual: {transcription}")
-
                 # self.assertGreater(len(transcription), 0)
 
             # Calculate average similarity for the file

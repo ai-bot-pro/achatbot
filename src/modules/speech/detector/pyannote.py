@@ -1,11 +1,17 @@
 import logging
 import os
-from common.session import Session
+
+from src.common.session import Session
 from src.common.interface import IDetector
 from src.common.types import PyannoteDetectorArgs
+from src.common.factory import EngineClass
 
 
-class PyannoteDetector:
+class PyannoteDetector(EngineClass):
+
+    @classmethod
+    def get_args(cls, **kwargs) -> dict:
+        return {**PyannoteDetectorArgs().__dict__, **kwargs}
 
     @staticmethod
     def load_model(hf_auth_token, path_or_hf_repo="pyannote/segmentation-3.0", model_type="segmentation-3.0"):
@@ -32,45 +38,44 @@ class PyannoteDetector:
 
         return model
 
-    def __init__(self, args: PyannoteDetectorArgs) -> None:
-        self.args = args
+    def __init__(self, **args: PyannoteDetectorArgs) -> None:
+        self.args = PyannoteDetectorArgs(**args)
         self.hyper_parameters = {
             # remove speech regions shorter than that many seconds.
-            "min_duration_on": args.min_duration_on,
+            "min_duration_on": self.args.min_duration_on,
             # fill non-speech regions shorter than that many seconds.
-            "min_duration_off": args.min_duration_off
+            "min_duration_off": self.args.min_duration_off
         }
         # if use pyannote/segmentation open onset/offset activation thresholds
         if self.args.model_type == "segmentation":
-            self.hyper_parameters["onset"] = args.onset
-            self.hyper_parameters["offset"] = args.offset
+            self.hyper_parameters["onset"] = self.args.onset
+            self.hyper_parameters["offset"] = self.args.offset
 
         self.model = PyannoteDetector.load_model(
-            args.hf_auth_token, args.path_or_hf_repo, args.model_type)
+            self.args.hf_auth_token, self.args.path_or_hf_repo, self.args.model_type)
 
 
-class PyannoteVOD(IDetector, PyannoteDetector):
+class PyannoteVAD(IDetector, PyannoteDetector):
     r"""
     voice activity detection (语音活动识别)
     """
+    TAG = "pyannote_vad"
 
-    def __init__(self, args: PyannoteDetector) -> None:
-        super().__init__(args)
+    def __init__(self, **args: PyannoteDetector) -> None:
+        super().__init__(**args)
 
         from pyannote.audio.pipelines import VoiceActivityDetection
         self.pipeline = VoiceActivityDetection(segmentation=self.model)
         self.pipeline.instantiate(self.hyper_parameters)
 
     async def detect(self, session: Session) -> None:
-        vad_results = self.pipeline(session.args.vad_pyannote_audio)
-        logging.debug(f"vad_results: {vad_results}")
+        vad_results = self.pipeline(session.ctx.vad_pyannote_audio)
         # `vad_results` is a pyannote.core.Annotation instance containing speech regions
         vad_segments = []
-        if len(vad_results) > 0:
-            vad_segments = [
-                {"start": segment.start, "end": segment.end, "confidence": 1.0}
-                for segment in vad_results.itersegments()
-            ]
+        for segment in vad_results.itersegments():
+            logging.debug(f"vad_segment: {segment}")
+            vad_segments.append(
+                {"start": segment.start, "end": segment.end, "confidence": 1.0})
         logging.debug(f"vad_segments: {vad_segments}")
         return vad_segments
 
@@ -79,16 +84,17 @@ class PyannoteOSD(IDetector, PyannoteDetector):
     r"""
     Overlapped speech detection (重叠语音检测)
     """
+    TAG = "pyannote_osd"
 
-    def __init__(self, args: PyannoteDetector) -> None:
-        super().__init__(args)
+    def __init__(self, **args: PyannoteDetector) -> None:
+        super().__init__(**args)
 
         from pyannote.audio.pipelines import OverlappedSpeechDetection
         self.pipeline = OverlappedSpeechDetection(segmentation=self.model)
         self.pipeline.instantiate(self.hyper_parameters)
 
     async def detect(self, session: Session) -> None:
-        vad_results = self.pipeline(session.args.vad_pyannote_audio)
+        vad_results = self.pipeline(session.ctx.vad_pyannote_audio)
         logging.debug(f"vad_results: {vad_results}")
         # `vad_results` is a pyannote.core.Annotation instance containing speech regions
         vad_segments = []
@@ -105,14 +111,15 @@ class PyannoteDiarization(IDetector, PyannoteDetector):
     r"""
     Speaker diarization (说话人分割或说话人辨识)
     """
+    TAG = "diarization"
 
-    def __init__(self, args: PyannoteDetector) -> None:
-        super().__init__(args)
+    def __init__(self, **args: PyannoteDetector) -> None:
+        super().__init__(**args)
         self.pipeline = self.model
 
     async def detect(self, session: Session):
         # run the pipeline on an audio file
-        diarization = self.pipeline(session.args.vad_pyannote_audio)
+        diarization = self.pipeline(session.ctx.vad_pyannote_audio)
         logging.debug(f"diarization: {diarization}")
 
         # Pre-loading audio files in memory may result in faster processing:
@@ -139,3 +146,5 @@ class PyannoteDiarization(IDetector, PyannoteDetector):
                 f"turn:{turn} start: {turn.start:.3f} end: {turn.end:.3f}, speaker: {speaker}")
             vad_segments.append(
                 {"start": turn.start, "end": turn.end, "confidence": 1.0})
+
+        return vad_segments

@@ -37,14 +37,19 @@ class SessionCtx:
     samples_width: int = 2
     frames = bytearray()
     buffering_stragegy: IBuffering = None
-    vad: IDetector = None
     waker: IDetector = None
+    vad: IDetector = None
     asr: IAsr = None
     llm: ILlm = None
     tts: ITts = None
     on_session_start: callable = None
     on_session_end: callable = None
     vad_pyannote_audio: AudioFile = None
+    # NOTE:
+    # - openai-whisper or whispertimestamped use str(file_path)/np.ndarray/torch tensor
+    # - transformers whisper use torch tensor/tf tensor
+    # - faster whisper don't use torch tensor, use np.ndarray or str(file_path)/~BinaryIO~
+    # - mlx whisper don't use torch tensor, use str(file_path)/np.ndarray/~mlx.array~
     asr_audio: Union[str, np.ndarray, torch.Tensor] = None
     language: str = "zh"
 
@@ -81,11 +86,11 @@ class SilenceAtEndOfChunkArgs:
 
 @dataclass
 class PyannoteDetectorArgs:
-    hf_auth_token: str
+    hf_auth_token: str = ""  # defualt use env HF_TOKEN
     path_or_hf_repo: str = "pyannote/segmentation-3.0"
     model_type: str = "segmentation-3.0"
     # remove speech regions shorter than that many seconds.
-    min_duration_on: float = 0.3,
+    min_duration_on: float = 0.3
     # fill non-speech regions shorter than that many seconds.
     min_duration_off: float = 0.3
     # if use pyannote/segmentation open onset/offset activation thresholds

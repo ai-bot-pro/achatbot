@@ -42,7 +42,7 @@ class PorcupineWakeWordDetector(IDetector, PorcupineDetector):
             return
         pcm = struct.unpack_from(
             "h" * self.buffer_size,
-            session.args.frames
+            session.ctx.frames
         )
         wakeword_index = self.porcupine.process(pcm)
 

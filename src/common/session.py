@@ -3,8 +3,7 @@ from .types import SessionCtx
 
 class Session:
     def __init__(self, **args: SessionCtx) -> None:
-        self.args = SessionCtx(**args)
-        self.client_id = self.args.client_id
+        self.ctx = SessionCtx(**args)
         self.buffer = bytearray()
         self.scratch_buffer = bytearray()
         self.config = {}
@@ -23,4 +22,9 @@ class Session:
         self.file_counter += 1
 
     def get_file_name(self):
-        return f"{self.client_id}_{self.file_counter}.wav"
+        return f"{self.ctx.client_id}_{self.file_counter}.wav"
+    
+    def process_audio(self):
+        self.buffering_strategy.process_audio(
+            websocket, vad_pipeline, asr_pipeline)
+        
