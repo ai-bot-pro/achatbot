@@ -28,6 +28,11 @@ class TestEngineFactory(unittest.TestCase):
         engines = EngineFactory.get_engines(IAsr)
         self.assertGreater(len(engines), 0)
 
+        from src.modules.speech.buffering_strategy.none import IBuffering
+        engines = EngineFactory.get_engines(IBuffering)
+        print(engines)
+        self.assertGreater(len(engines), 0)
+
     def test_get_engine_by_tag(self):
         from src.modules.speech.asr.whisper_asr import EngineClass
         engine = EngineFactory.get_engine_by_tag(

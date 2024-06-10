@@ -52,10 +52,10 @@ def pyannote_vad_pipeline(audio_path, hf_auth_token,
         HYPER_PARAMETERS["onset"] = 0.5
         HYPER_PARAMETERS["offset"] = 0.5
     pipeline.instantiate(HYPER_PARAMETERS)
-    vad_results = pipeline(audio_path)
-    print(type(vad_results), vad_results)
-    # `vad_results` is a pyannote.core.Annotation instance containing speech regions
-    for segment in vad_results.itersegments():
+    vad_res = pipeline(audio_path)
+    print(type(vad_res), vad_res)
+    # `vad_res` is a pyannote.core.Annotation instance containing speech regions
+    for segment in vad_res.itersegments():
         print(type(segment), segment, segment.start, segment.end)
 
 
@@ -79,10 +79,10 @@ def pyannote_osd_pipeline(audio_path, hf_auth_token,
         HYPER_PARAMETERS["onset"] = 0.5
         HYPER_PARAMETERS["offset"] = 0.5
     pipeline.instantiate(HYPER_PARAMETERS)
-    vad_results = pipeline(audio_path)
-    print(type(vad_results), vad_results)
-    # `vad_results` is a pyannote.core.Annotation instance containing speech regions
-    for segment in vad_results.itersegments():
+    vad_res = pipeline(audio_path)
+    print(type(vad_res), vad_res)
+    # `vad_res` is a pyannote.core.Annotation instance containing speech regions
+    for segment in vad_res.itersegments():
         print(type(segment), segment, segment.start, segment.end)
 
 

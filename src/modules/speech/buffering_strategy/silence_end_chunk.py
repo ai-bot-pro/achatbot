@@ -21,6 +21,15 @@ class SilenceAtEndOfChunk(IBuffering):
         self.chunk_offset_seconds = float(self.chunk_offset_seconds)
 
         self.processing_flag = False
+        self.buffer = bytearray()
+        self.scratch_buffer = bytearray()
+
+    def insert(self, audio_data):
+        self.buffer.extend(audio_data)
+
+    def clear(self):
+        self.buffer.clear()
+        self.scratch_buffer.clear()
 
     def process_audio(self, session: Session):
         chunk_length_in_bytes = self.chunk_length_seconds * \
@@ -29,36 +38,36 @@ class SilenceAtEndOfChunk(IBuffering):
             if self.processing_flag:
                 exit("Error in realtime processing: tried processing a new chunk while the previous one was still being processed")
 
-            session.scratch_buffer += session.buffer
-            session.buffer.clear()
+            self.scratch_buffer += session.buffer
+            self.buffer.clear()
             self.processing_flag = True
             # Schedule the processing in a separate task on asyncio event loop
             asyncio.create_task(self.process_audio_async(session))
 
+    def is_voice_active(self, session) -> bool:
+        if "vad_res" not in session.ctx.state \
+                or len(session.ctx.state["vad_res"]) == 0:
+            return False
+        last_segment_should_end_before = ((len(session.scratch_buffer) / (
+            session.ctx.sampling_rate * session.ctx.samples_width))
+            - self.chunk_offset_seconds)
+        return session.ctx.state["vad_res"][-1]['end'] < last_segment_should_end_before
+
     async def process_audio_async(self, session: Session):
         if session.ctx.vad == None \
-                or session.ctx.asr == None \
-                or session.ctx.on_session_end == None:
-            session.scratch_buffer.clear()
-            session.buffer.clear()
+                or session.ctx.asr == None:
             self.processing_flag = False
             return
 
         start = time.time()
-        vad_results = await session.ctx.vad.detect(session)
-        if len(vad_results) == 0:
-            session.scratch_buffer.clear()
-            session.buffer.clear()
-            return
+        vad_res = await session.ctx.vad.detect(session)
+        session.ctx.state["vad_res"] = vad_res
 
-        last_segment_should_end_before = ((len(session.scratch_buffer) / (
-            session.ctx.sampling_rate * session.ctx.samples_width)) - self.chunk_offset_seconds)
-        if vad_results[-1]['end'] < last_segment_should_end_before:
+        if self.is_voice_active(session):
             transcription = await session.ctx.asr.transcribe(session)
             if transcription['text'] != '':
                 end = time.time()
                 transcription['processing_time'] = end - start
-                await session.ctx.on_session_end(transcription)
-            session.scratch_buffer.clear()
+            self.scratch_buffer.clear()
 
         self.processing_flag = False

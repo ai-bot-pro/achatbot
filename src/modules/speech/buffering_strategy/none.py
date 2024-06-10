@@ -1,38 +1,48 @@
 import time
 import asyncio
 
-from common.interface import IBuffering
-from common.session import Session
+from src.common.interface import IBuffering
+from src.common.factory import EngineClass
+from src.common.session import Session
+from src.common.utils.audio_utils import bytes2NpArrayWith16
 
 
-class NoneBuffering(IBuffering):
+class NoneBuffering(IBuffering, EngineClass):
+    r"""
+    no buffering, just trust the client vad audio data
+    client(audio recoder)<--pipe-->serve(NLG)
+    """
+    TAG = "buffering_none"
+
+    def __init__(self, **args) -> None:
+        self.buffer = bytearray()
+
+    def insert(self, audio_data):
+        return self.buffer.extend(audio_data)
+
+    def clear(self):
+        self.buffer.clear()
+
+    def is_voice_active(self, session) -> bool:
+        if "vad_res" not in session.ctx.state \
+                or len(session.ctx.state["vad_res"]) == 0:
+            return False
+        return True
 
     def process_audio(self, session: Session):
-        session.scratch_buffer += session.buffer
-        session.buffer.clear()
         # Schedule the processing in a separate task on asyncio event loop
         asyncio.create_task(self.process_audio_async(session))
 
-    async def process_audio(self, session: Session):
-        if session.ctx.vad == None \
-                or session.ctx.asr == None \
-                or session.ctx.on_session_end == None:
-            session.scratch_buffer.clear()
-            session.buffer.clear()
-            return
-
+    async def process_audio_async(self, session: Session):
         start = time.time()
-        vad_results = await session.ctx.vad.detect(session)
-        if len(vad_results) == 0:
-            session.scratch_buffer.clear()
-            session.buffer.clear()
-            return
+        if session.ctx.vad is not None:
+            vad_res = await session.ctx.vad.detect(session)
+            session.ctx.state["vad_res"] = vad_res
 
-        transcription = await session.ctx.asr.transcribe(session)
-        if transcription['text'] != '':
-            end = time.time()
-            transcription['processing_time'] = end - start
-            await session.ctx.on_session_end(transcription)
-        session.scratch_buffer.clear()
-
-        self.processing_flag = False
+        if self.is_voice_active(session):
+            session.ctx.asr_audio = self.buffer
+            transcription = await session.ctx.asr.transcribe(session)
+            if transcription['text'] != '':
+                end = time.time()
+                transcription['processing_time'] = end - start
+            session.ctx.state["transcribe_res"] = transcription

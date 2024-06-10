@@ -55,7 +55,7 @@ class TestWhisperASR(unittest.TestCase):
         pass
 
     def test_transcribe(self):
-        self.session.ctx.asr_audio = self.audio_file
+        self.asr.set_audio_data(self.audio_file)
         self.session.ctx.language = "zh"
         res = asyncio.run(
             self.asr.transcribe(self.session))
@@ -83,7 +83,7 @@ class TestWhisperASR(unittest.TestCase):
                 file_path = asyncio.run(save_audio_to_file(
                     audio_frames, self.session.get_file_name(),
                     audio_dir=RECORDS_DIR))
-                self.session.ctx.asr_audio = file_path
+                self.asr.set_audio_data(file_path)
 
                 transcription = asyncio.run(
                     self.asr.transcribe(self.session))["text"]

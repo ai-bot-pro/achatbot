@@ -3,14 +3,19 @@ import struct
 
 import pyaudio
 
+from src.common.factory import EngineClass
 from src.common.session import Session
 from src.common.interface import IRecorder
 from src.common.types import AudioRecoderArgs, SILENCE_THRESHOLD, SILENT_CHUNKS
 
 
-class RMSRecorder(IRecorder):
-    def __init__(self, args: AudioRecoderArgs) -> None:
-        self.args = args
+class PyAudioRecorder(EngineClass):
+    @classmethod
+    def get_args(cls, **kwargs) -> dict:
+        return {**AudioRecoderArgs().__dict__, **kwargs}
+
+    def __init__(self, **args) -> None:
+        self.args = AudioRecoderArgs(**args)
         self.audio = pyaudio.PyAudio()
         self.stream = self.audio.open(
             format=args.format_, channels=args.channels,
@@ -18,6 +23,13 @@ class RMSRecorder(IRecorder):
             input_device_index=args.input_device_index,
             s_per_buffer=args.frames_per_buffer)
 
+    def close(self):
+        self.stream.stop_stream()
+        self.stream.close()
+        self.audio.terminate()
+
+
+class RMSRecorder(PyAudioRecorder, IRecorder):
     def compute_rms(self, data):
         # Assuming data is in 16-bit samples
         format = "<{}h".format(len(data) // 2)
@@ -49,7 +61,6 @@ class RMSRecorder(IRecorder):
                 audio_started = True
         return frames
 
-    def close(self):
-        self.stream.stop_stream()
-        self.stream.close()
-        self.audio.terminate()
+
+class VADRecorder(PyAudioRecorder, IRecorder):
+    pass

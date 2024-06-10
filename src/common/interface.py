@@ -1,5 +1,6 @@
 
 from abc import ABC, abstractmethod
+from typing import Iterator
 
 
 class IModel(ABC):
@@ -19,6 +20,18 @@ class IBuffering(ABC):
     def process_audio(self, session):
         raise NotImplemented("must be implemented in the child class")
 
+    @abstractmethod
+    def is_voice_active(self, session):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def insert(self, audio_data):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def clear(self):
+        raise NotImplemented("must be implemented in the child class")
+
 
 class IDetector(ABC):
     @abstractmethod
@@ -31,14 +44,27 @@ class IAsr(ABC):
     async def transcribe(self, session) -> dict:
         raise NotImplemented("must be implemented in the child class")
 
+    def set_audio_data(self, audio_data):
+        raise NotImplemented("must be implemented in the child class")
 
-class ILlm(ABC):
+
+class IHallucination(ABC):
     @abstractmethod
-    def generate(self, session):
+    def check(self, session) -> bool:
         raise NotImplemented("must be implemented in the child class")
 
     @abstractmethod
-    def chat_completion(self, session):
+    def filter(self, session) -> str:
+        raise NotImplemented("must be implemented in the child class")
+
+
+class ILlm(ABC):
+    @abstractmethod
+    def generate(self, session) -> Iterator[str]:
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def chat_completion(self, session) -> Iterator[str]:
         raise NotImplemented("must be implemented in the child class")
 
 
@@ -50,5 +76,5 @@ class IFunction(ABC):
 
 class ITts(ABC):
     @abstractmethod
-    def inference(self, session):
+    def inference(self, session)-> Iterator[bytearray]:
         raise NotImplemented("must be implemented in the child class")

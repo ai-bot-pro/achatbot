@@ -1,6 +1,11 @@
 import json
 import os
 
+import numpy as np
+import torch
+
+from src.common.types import INT16_MAX_ABS_VALUE
+
 
 async def save_audio_to_file(audio_data, file_name, audio_dir="records", channles=1, sample_width=2, sample_rate=16000):
     os.makedirs(audio_dir, exist_ok=True)
@@ -30,3 +35,37 @@ async def get_audio_segment(file_path, start=None, end=None):
         # pydub works in milliseconds
         return audio[start * 1000:end * 1000]
     return audio
+
+
+def bytes2NpArrayWith16(frames: bytearray):
+    # Convert the buffer frames to a NumPy array
+    audio_array = np.frombuffer(frames, dtype=np.int16)
+    # Normalize the array to a [-1, 1] range
+    float_data = audio_array.astype(
+        np.float32) / INT16_MAX_ABS_VALUE
+    return float_data
+
+
+def bytes2TorchTensorWith16(frames: bytearray):
+    float_data = bytes2NpArrayWith16(frames)
+    waveform_tensor = torch.tensor(float_data, dtype=torch.float32)
+    # don't Stereo, just Mono, reshape(1,-1) (1(channel),size(time))
+    if waveform_tensor.ndim == 1:
+        # float_data= float_data.reshape(1, -1)
+        waveform_tensor = waveform_tensor.reshape(1, -1)
+    return waveform_tensor
+
+
+def npArray2bytes(np_arr: np.ndarray) -> bytearray:
+    # Convert a NumPy array to bytes
+    bytes_obj = np_arr.tobytes()
+    # bytes -> bytearray
+    byte_arr = bytearray(bytes_obj)
+    return byte_arr
+
+
+def torchTensor2bytes(tensor: torch.Tensor) -> bytearray:
+    # Convert a NumPy array to bytes
+    np_arr = tensor.numpy()
+
+    return npArray2bytes(np_arr)

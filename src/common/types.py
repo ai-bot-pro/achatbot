@@ -1,5 +1,5 @@
 import os
-from typing import Union
+from typing import Union, List
 from dataclasses import dataclass
 
 import numpy as np
@@ -36,6 +36,7 @@ class SessionCtx:
     sampling_rate: int = 16000
     samples_width: int = 2
     frames = bytearray()
+    state = dict()
     buffering_stragegy: IBuffering = None
     waker: IDetector = None
     vad: IDetector = None
@@ -52,6 +53,23 @@ class SessionCtx:
     # - mlx whisper don't use torch tensor, use str(file_path)/np.ndarray/~mlx.array~
     asr_audio: Union[str, np.ndarray, torch.Tensor] = None
     language: str = "zh"
+    # llm
+    llm_prompt_tpl: str = "<|user|>\n{%s}<|end|>\n<|assistant|>"
+    llm_stop: Union[str, List[str]] = ["<|end|>", "</s>", "<s>", "<|user|>"]
+    llm_max_tokens: int = 256
+    llm_temperature: float = 0.8
+    llm_top_p: float = 0.95,
+    llm_stream: bool = False
+    llm_chat_system: str = ""
+    # tts
+    tts_temperature: float = 0.75
+    tts_top_p: float = 0.85
+    tts_stream: bool = False
+    tts_length_penalty: float = 1.0
+    tts_repetition_penalty: float = 10.0
+    tts_num_beams: int = 1
+    tts_speed: float = 1.0
+    tts_language: str = "zh"
 
 
 # Recording Configuration
@@ -139,3 +157,21 @@ class WhisperMLXASRArgs(WhisperASRArgs):
 @dataclass
 class WhisperTransformersASRArgs(WhisperASRArgs):
     pass
+
+
+@dataclass
+class LLamcppLLMArgs:
+    model_type: str = ""
+    model_path: str = ""
+    n_threads: int = 1
+    n_batch: int = 8
+    n_gpu_layers: int = 0
+    n_ctx: int = 2048
+    chat_format: str = "chatml"
+
+
+@dataclass
+class CoquiTTSArgs:
+    conf_file: str = ""
+    model_path: str = ""
+    reference_audio_path: str = ""

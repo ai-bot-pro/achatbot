@@ -69,10 +69,10 @@ class PyannoteVAD(IDetector, PyannoteDetector):
         self.pipeline.instantiate(self.hyper_parameters)
 
     async def detect(self, session: Session) -> None:
-        vad_results = self.pipeline(session.ctx.vad_pyannote_audio)
-        # `vad_results` is a pyannote.core.Annotation instance containing speech regions
+        vad_res = self.pipeline(session.ctx.vad_pyannote_audio)
+        # `vad_res` is a pyannote.core.Annotation instance containing speech regions
         vad_segments = []
-        for segment in vad_results.itersegments():
+        for segment in vad_res.itersegments():
             logging.debug(f"vad_segment: {segment}")
             vad_segments.append(
                 {"start": segment.start, "end": segment.end, "confidence": 1.0})
@@ -94,14 +94,14 @@ class PyannoteOSD(IDetector, PyannoteDetector):
         self.pipeline.instantiate(self.hyper_parameters)
 
     async def detect(self, session: Session) -> None:
-        vad_results = self.pipeline(session.ctx.vad_pyannote_audio)
-        logging.debug(f"vad_results: {vad_results}")
-        # `vad_results` is a pyannote.core.Annotation instance containing speech regions
+        vad_res = self.pipeline(session.ctx.vad_pyannote_audio)
+        logging.debug(f"vad_res: {vad_res}")
+        # `vad_res` is a pyannote.core.Annotation instance containing speech regions
         vad_segments = []
-        if len(vad_results) > 0:
+        if len(vad_res) > 0:
             vad_segments = [
                 {"start": segment.start, "end": segment.end, "confidence": 1.0}
-                for segment in vad_results.itersegments()
+                for segment in vad_res.itersegments()
             ]
         logging.debug(f"vad_segments: {vad_segments}")
         return vad_segments
