@@ -2,7 +2,7 @@ from .types import SessionCtx
 
 
 class Session:
-    def __init__(self, **args: SessionCtx) -> None:
+    def __init__(self, **args) -> None:
         self.ctx = SessionCtx(**args)
         self.config = {}
         self.file_counter = 0
@@ -24,9 +24,10 @@ class Session:
 
     def process_audio(self):
         # @TODO: use burr work flow
-        if self.ctx.on_session_start is not None:
+        if self.ctx.on_session_start:
             self.ctx.on_session_start(self)
-        self.ctx.buffering_stragegy.process_audio(self)
-        if self.ctx.on_session_end is not None:
+        if self.ctx.buffering_stragegy:
+            self.ctx.buffering_stragegy.process_audio(self)
+        if self.ctx.on_session_end:
             self.ctx.on_session_end(self)
         self.clear_buffer()

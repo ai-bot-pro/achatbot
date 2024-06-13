@@ -6,7 +6,7 @@ import pyaudio
 from src.common.factory import EngineClass
 from src.common.session import Session
 from src.common.interface import IRecorder
-from src.common.types import AudioRecoderArgs, SILENCE_THRESHOLD, SILENT_CHUNKS
+from src.common.types import AudioRecoderArgs, SILENCE_THRESHOLD, SILENT_CHUNKS, RATE
 
 
 class PyAudioRecorder(EngineClass):
@@ -18,10 +18,10 @@ class PyAudioRecorder(EngineClass):
         self.args = AudioRecoderArgs(**args)
         self.audio = pyaudio.PyAudio()
         self.stream = self.audio.open(
-            format=args.format_, channels=args.channels,
-            rate=args.rate, input=True,
-            input_device_index=args.input_device_index,
-            s_per_buffer=args.frames_per_buffer)
+            format=self.args.format_, channels=self.args.channels,
+            rate=self.args.rate, input=True,
+            input_device_index=self.args.input_device_index,
+            frames_per_buffer=self.args.frames_per_buffer)
 
     def close(self):
         self.stream.stop_stream()
@@ -30,6 +30,8 @@ class PyAudioRecorder(EngineClass):
 
 
 class RMSRecorder(PyAudioRecorder, IRecorder):
+    TAG = "rms_recorder"
+
     def compute_rms(self, data):
         # Assuming data is in 16-bit samples
         format = "<{}h".format(len(data) // 2)
@@ -43,12 +45,18 @@ class RMSRecorder(PyAudioRecorder, IRecorder):
     def record_audio(self, session: Session):
         silent_chunks = 0
         audio_started = False
-        frames = []
+        frames = bytearray()
+
+        if self.args.rate != RATE:
+            logging.warning(
+                "Sampling rate of the audio just support 16000Hz at now"
+            )
+            return frames
 
         logging.debug("start recording")
         while True:
             data = self.stream.read(self.args.frames_per_buffer)
-            frames.append(data)
+            frames.extend(data)
             rms = self.compute_rms(data)
             if audio_started:
                 if rms < SILENCE_THRESHOLD:

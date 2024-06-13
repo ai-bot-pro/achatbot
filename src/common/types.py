@@ -45,6 +45,7 @@ class SessionCtx:
     tts: ITts = None
     on_session_start: callable = None
     on_session_end: callable = None
+    # asr
     vad_pyannote_audio: AudioFile = None
     # NOTE:
     # - openai-whisper or whispertimestamped use str(file_path)/np.ndarray/torch tensor
@@ -55,10 +56,10 @@ class SessionCtx:
     language: str = "zh"
     # llm
     llm_prompt_tpl: str = "<|user|>\n{%s}<|end|>\n<|assistant|>"
-    llm_stop: Union[str, List[str]] = ["<|end|>", "</s>", "<s>", "<|user|>"]
+    llm_stop: Union[str, List[str]] = None
     llm_max_tokens: int = 256
     llm_temperature: float = 0.8
-    llm_top_p: float = 0.95,
+    llm_top_p: float = 0.95
     llm_stream: bool = False
     llm_chat_system: str = ""
     # tts
@@ -69,14 +70,19 @@ class SessionCtx:
     tts_repetition_penalty: float = 10.0
     tts_num_beams: int = 1
     tts_speed: float = 1.0
+    tts_stream_chunk_size: int = 20
+    tts_overlap_wav_len: int = 1024
+    tts_enable_text_splitting: bool = False
     tts_language: str = "zh"
+    tts_default_silence_duration = 0.3
+    tts_comma_silence_duration = 0.3,
+    tts_sentence_silence_duration = 0.6,
 
 
 # Recording Configuration
 CHUNK = 1024
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
-# RATE = 44100
 RATE = 16000
 SILENCE_THRESHOLD = 500
 # two seconds of silence marks the end of user voice input
@@ -84,6 +90,7 @@ SILENT_CHUNKS = 2 * RATE / CHUNK
 # Set microphone id. Use list_microphones.py to see a device list.
 MIC_IDX = 1
 
+# 2^(16-1)
 INT16_MAX_ABS_VALUE = 32768.0
 
 
@@ -94,6 +101,14 @@ class AudioRecoderArgs:
     rate: int = RATE
     input_device_index: int = MIC_IDX
     frames_per_buffer: int = CHUNK
+
+
+@dataclass
+class AudioSpeakerArgs:
+    format_: str = FORMAT
+    channels: int = CHANNELS
+    rate: int = RATE
+    output_device_index = None
 
 
 @dataclass

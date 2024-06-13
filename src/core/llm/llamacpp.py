@@ -5,12 +5,12 @@ from src.common.session import Session
 from src.common.types import LLamcppLLMArgs
 
 
-class LLamacppLLM(ILlm, EngineClass):
+class LLamacppLLM(EngineClass, ILlm):
     TAG = "llm_llamacpp"
 
     @classmethod
     def get_args(cls, **kwargs) -> dict:
-        return {**(LLamcppLLMArgs).__dict__, **kwargs}
+        return {**LLamcppLLMArgs().__dict__, **kwargs}
 
     def __init__(self, **args) -> None:
         self.args = LLamcppLLMArgs(**args)
@@ -21,7 +21,7 @@ class LLamacppLLM(ILlm, EngineClass):
                 n_ctx=self.args.n_ctx,
                 n_batch=self.args.n_batch,
                 n_threads=self.args.n_threads,
-                n_gpu_layers=self.args.n_gpu_lay,
+                n_gpu_layers=self.args.n_gpu_layers,
                 chat_format=self.args.chat_format)
         else:
             self.model = Llama(
@@ -44,12 +44,19 @@ class LLamacppLLM(ILlm, EngineClass):
             top_p=session.ctx.llm_top_p,
         )
         session.ctx.state["llm_text"] = ""
+        res = ""
         if session.ctx.llm_stream:
             for item in output:
-                session.ctx.state["llm_text"] += item['choices'][0]['text']
-                yield item['choices'][0]['text']
+                content = item['choices'][0]['text']
+                session.ctx.state["llm_text"] += content
+                res += content
+                if self._have_special_char(content):
+                    yield res
+                    res = ""
+            if len(res) > 0:
+                yield res
         else:
-            session.ctx.state["llm_text"] += output['choices'][0]['text']
+            session.ctx.state["llm_text"] = output['choices'][0]['text']
             yield output['choices'][0]['text']
 
     def chat_completion(self, session: Session):
@@ -71,17 +78,23 @@ class LLamacppLLM(ILlm, EngineClass):
         )
         session.ctx.state["llm_text"] = ""
         if session.ctx.llm_stream:
+            res = ""
             for item in output:
                 if 'content' in item['choices'][0]['delta']:
                     content = item['choices'][0]['delta']['content']
                     session.ctx.state["llm_text"] += content
                     res += content
-                    for char in ['.', '。', ',', '，', ';', '；']:
-                        if char in content:
-                            res += '\n'
-                            yield res
-                            res = ""
-                            break
+                    if self._have_special_char(content):
+                        yield res
+                        res = ""
+            if len(res) > 0:
+                yield res
         else:
-            session.ctx.state["llm_text"] += item['choices'][0]['message']['content'] if 'content' in item['choices'][0]['message'] else ""
+            session.ctx.state["llm_text"] += output['choices'][0]['message']['content'] if 'content' in output['choices'][0]['message'] else ""
             yield session.ctx.state["llm_text"]
+
+    def _have_special_char(self, content: str) -> bool:
+        for char in ['.', '。', ',', '，', ';', '；', '!', '！', '?', '？']:
+            if char in content:
+                return True
+        return False

@@ -37,12 +37,12 @@ async def get_audio_segment(file_path, start=None, end=None):
     return audio
 
 
-def bytes2NpArrayWith16(frames: bytearray):
+def bytes2NpArrayWith16(frames: bytearray, sample_width):
     # Convert the buffer frames to a NumPy array
     audio_array = np.frombuffer(frames, dtype=np.int16)
     # Normalize the array to a [-1, 1] range
     float_data = audio_array.astype(
-        np.float32) / INT16_MAX_ABS_VALUE
+        np.float32) / 2**((2*sample_width)-1)
     return float_data
 
 
@@ -69,3 +69,16 @@ def torchTensor2bytes(tensor: torch.Tensor) -> bytearray:
     np_arr = tensor.numpy()
 
     return npArray2bytes(np_arr)
+
+
+def postprocess_tts_wave(chunk: torch.Tensor | list) -> bytes:
+    r"""
+    Post process the output waveform
+    """
+    if isinstance(chunk, list):
+        chunk = torch.cat(chunk, dim=0)
+    chunk = chunk.clone().detach().cpu().numpy()
+    chunk = chunk[None, : int(chunk.shape[0])]
+    chunk = np.clip(chunk, -1, 1)
+    chunk = chunk.astype(np.float32)
+    return chunk.tobytes()

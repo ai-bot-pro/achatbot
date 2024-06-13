@@ -49,7 +49,7 @@ class TestWhisperASR(unittest.TestCase):
             TEST_DIR, "audio_files/annotations.json")
 
         self.session = Session(**SessionCtx(
-            "test_client_id", 16000, 2).__dict__)  # Example client
+            "test_client_id", 16000, 2).__dict__)
 
     def tearDown(self):
         pass

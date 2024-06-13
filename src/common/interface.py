@@ -15,6 +15,12 @@ class IRecorder(ABC):
         raise NotImplemented("must be implemented in the child class")
 
 
+class ISpeaker(ABC):
+    @abstractmethod
+    def play_audio(self, session):
+        raise NotImplemented("must be implemented in the child class")
+
+
 class IBuffering(ABC):
     @abstractmethod
     def process_audio(self, session):
@@ -76,5 +82,5 @@ class IFunction(ABC):
 
 class ITts(ABC):
     @abstractmethod
-    def inference(self, session)-> Iterator[bytearray]:
+    def synthesize(self, session) -> Iterator[bytearray]:
         raise NotImplemented("must be implemented in the child class")
