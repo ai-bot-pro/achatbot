@@ -1,0 +1,3 @@
+[submodule "ChatTTS"]
+	path = deps
+	url = https://github.com/weedge/ChatTTS.git

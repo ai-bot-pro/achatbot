@@ -24,7 +24,7 @@ def pipe_whisper_transcribe(audio_path, model_size="base", target_lang="zh"):
 
         # for Word-level timestamps batch-size must be 1. https://huggingface.co/openai/whisper-large-v3/discussions/12
         outputs = pipe(audio_path, chunk_length_s=30, batch_size=1,
-                       generate_kwargs={"language": target_lang}, return_timestamps="word")
+                       generate_kwargs={"language": target_lang, }, return_timestamps="word")
         print(outputs)
 
 

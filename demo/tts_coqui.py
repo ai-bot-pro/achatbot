@@ -157,7 +157,8 @@ def inference_streaming(model_path, conf_file, reference_audio_path="records/tmp
     for i, chunk in enumerate(chunks):
         if i == 0:
             print(f"Time to first chunck: {time.time() - t0}")
-        print(f"Received chunk {i} of audio length {chunk.shape[-1]}")
+        print(
+            f"Received chunk {i} of audio length {chunk.shape[-1]}", chunk.shape)
         wav_chuncks.append(chunk)
     wav = torch.cat(wav_chuncks, dim=0)
     torchaudio.save("records/tts_coqui_infer_stream_clone_en.wav",
@@ -175,7 +176,8 @@ def inference_streaming(model_path, conf_file, reference_audio_path="records/tmp
     for i, chunk in enumerate(chunks):
         if i == 0:
             print(f"Time to first chunck: {time.time() - t0}")
-        print(f"Received chunk {i} of audio length {chunk.shape[-1]}")
+        print(
+            f"Received chunk {i} of audio length {chunk.shape[-1]}", chunk.shape)
         wav_chuncks.append(chunk)
     wav = torch.cat(wav_chuncks, dim=0)
     torchaudio.save("records/tts_coqui_infer_stream_clone_zh.wav",

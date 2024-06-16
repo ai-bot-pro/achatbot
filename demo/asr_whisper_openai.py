@@ -27,7 +27,8 @@ _MODELS = {
 def whisper_transcribe(audio_path, download_root, model_size="base", target_lang="zh"):
     audio_model = whisper.load_model(
         model_size, download_root=download_root)
-    result = audio_model.transcribe(audio_path, language=target_lang)
+    result = audio_model.transcribe(audio_path, language=target_lang,
+                                    beam_size=5, word_timestamps=True, condition_on_previous_text=True)
     print(result)
     text = result['text'].strip()
     print(text)

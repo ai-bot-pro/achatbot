@@ -16,7 +16,7 @@ def text_to_speech(text: str):
         print(f"Error in text-to-speech: {e}")
 
 
-def generate(model_path: str, prompt: str):
+def generate(model_path: str, prompt: str, stream=True):
     # the same as forward
     llm = Llama(
         # path to GGUF file
@@ -35,33 +35,35 @@ def generate(model_path: str, prompt: str):
     # )
     # print(output['choices'][0]['text'])
 
-    output_stream = llm(
+    output = llm(
         f"<|user|>\n{prompt}<|end|>\n<|assistant|>",
         max_tokens=256,  # Generate up to 256 tokens
         stop=["<|end|>"],
         # echo=True,  # Whether to echo the prompt
-        stream=True,
+        stream=stream,
     )
+    print(output)
 
     item = ""
-    for output in output_stream:
-        item += output['choices'][0]['text']
-        # if len(item) == 12:
-        if "\n" in item:
+    if stream:
+        for output in output:
+            item += output['choices'][0]['text']
+            # if len(item) == 12:
+            if "\n" in item:
+                print(item)
+                text_to_speech(item)
+                item = ""
+
+        if len(item) > 0:
             print(item)
             text_to_speech(item)
-            item = ""
-
-    if len(item) > 0:
-        print(item)
-        text_to_speech(item)
+    else:
+        text_to_speech(output["choices"][0]["text"])
 
 
 def chat_completion(model_path: str, system: str, query: str, stream=False):
     llm = Llama(
         model_path=model_path,
-        max_tokens=256,
-        stop=["<|end|>", "</s>", "<s>", "<|user|>"],
         chat_format="chatml")
     output = llm.create_chat_completion(
         messages=[
@@ -71,6 +73,8 @@ def chat_completion(model_path: str, system: str, query: str, stream=False):
             },
             {"role": "user", "content": query},
         ],
+        max_tokens=256,
+        stop=["<|end|>", "</s>", "<s>", "<|user|>"],
         stream=stream,
         # response_format={"type": "json_object"},
         temperature=0.7,
@@ -108,4 +112,4 @@ if __name__ == '__main__':
     if args.type == "chat":
         chat_completion(model_path, system_prompt, prompt, args.stream)
     else:
-        generate(model_path, prompt)
+        generate(model_path, prompt, args.stream)
