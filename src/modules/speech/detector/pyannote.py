@@ -111,7 +111,7 @@ class PyannoteDiarization(IDetector, PyannoteDetector):
     r"""
     Speaker diarization (说话人分割或说话人辨识)
     """
-    TAG = "diarization"
+    TAG = "pyannote_diarization"
 
     def __init__(self, **args: PyannoteDetector) -> None:
         super().__init__(**args)
