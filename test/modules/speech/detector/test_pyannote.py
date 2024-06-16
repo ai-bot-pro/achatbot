@@ -12,7 +12,7 @@ from src.common.logger import Logger
 from src.common.utils.audio_utils import save_audio_to_file, load_json, get_audio_segment, bytes2NpArrayWith16, bytes2TorchTensorWith16
 from src.common.factory import EngineFactory
 from src.common.session import Session
-from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR, INT16_MAX_ABS_VALUE
+from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR
 from src.modules.speech.detector.pyannote import EngineClass
 
 

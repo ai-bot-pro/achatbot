@@ -1,3 +1,4 @@
+import logging
 import os
 
 
@@ -13,6 +14,10 @@ class RedisQueue:
             "REDIS_PASSWORD", "")
         self.client = redis.Redis(
             host=redis_host, port=redis_port, password=redis_password, db=db)
+        if self.client.ping():
+            logging.debug(f"connect redis:{redis_host}:{redis_port} success")
+        else:
+            logging.debug(f"connect redis:{redis_host}:{redis_port} fail!")
 
     def _get_key(self, key: str) -> str:
         return f"{self.Q_PREFIX_KEY}:{key}"

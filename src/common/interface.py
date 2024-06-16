@@ -11,13 +11,11 @@ class IModel(ABC):
 
 class IRecorder(ABC):
     @abstractmethod
-    def record_audio(self, session):
+    def record_audio(self, session) -> list[bytes]:
         raise NotImplemented("must be implemented in the child class")
 
-
-class ISpeaker(ABC):
     @abstractmethod
-    def play_audio(self, session):
+    def close(self):
         raise NotImplemented("must be implemented in the child class")
 
 
@@ -82,5 +80,14 @@ class IFunction(ABC):
 
 class ITts(ABC):
     @abstractmethod
-    def synthesize(self, session) -> Iterator[bytearray]:
+    def synthesize(self, session) -> Iterator[bytes]:
+        raise NotImplemented("must be implemented in the child class")
+
+    def get_stream_info(self) -> dict:
+        raise NotImplemented("must be implemented in the child class")
+
+
+class IPlayer(ABC):
+    @abstractmethod
+    def play_audio(self, session):
         raise NotImplemented("must be implemented in the child class")

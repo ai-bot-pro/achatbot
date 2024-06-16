@@ -27,7 +27,7 @@ class TestWhisperASR(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         audio_file = os.path.join(
-            RECORDS_DIR, f"tmp.wav")
+            RECORDS_DIR, f"d641c3ef-980b-4f55-83a4-ae120f2bdd8d.wav")
         # Use an environment variable to get the ASR model TAG
         cls.asr_tag = os.getenv('ASR_TAG', "whisper_faster_asr")
         cls.audio_file = os.getenv('AUDIO_FILE', audio_file)

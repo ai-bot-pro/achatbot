@@ -33,22 +33,21 @@ class LLamacppLLM(EngineClass, ILlm):
 
     def generate(self, session: Session):
         prompt = session.ctx.state["prompt"]
-        prompt = session.ctx.llm_prompt_tpl % (prompt,)
+        prompt = self.args.llm_prompt_tpl % (prompt,)
         output = self.model(
             prompt,
-            max_tokens=session.ctx.llm_max_tokens,  # Generate up to 256 tokens
-            stop=session.ctx.llm_stop,
+            max_tokens=self.args.llm_max_tokens,  # Generate up to 256 tokens
+            stop=self.args.llm_stop,
             # echo=True,  # Whether to echo the prompt
-            stream=session.ctx.llm_stream,
-            temperature=session.ctx.llm_temperature,
-            top_p=session.ctx.llm_top_p,
+            stream=self.args.llm_stream,
+            temperature=self.args.llm_temperature,
+            top_p=self.args.llm_top_p,
+            top_k=self.args.llm_top_k,
         )
-        session.ctx.state["llm_text"] = ""
         res = ""
-        if session.ctx.llm_stream:
+        if self.args.llm_stream:
             for item in output:
                 content = item['choices'][0]['text']
-                session.ctx.state["llm_text"] += content
                 res += content
                 if self._have_special_char(content):
                     yield res
@@ -56,7 +55,6 @@ class LLamacppLLM(EngineClass, ILlm):
             if len(res) > 0:
                 yield res
         else:
-            session.ctx.state["llm_text"] = output['choices'][0]['text']
             yield output['choices'][0]['text']
 
     def chat_completion(self, session: Session):
@@ -65,24 +63,23 @@ class LLamacppLLM(EngineClass, ILlm):
             messages=[
                 {
                     "role": "system",
-                    "content": session.ctx.llm_chat_system,
+                    "content": self.args.llm_chat_system,
                 },
                 {"role": "user", "content": query},
             ],
             # response_format={"type": "json_object"},
-            max_tokens=session.ctx.llm_max_tokens,  # Generate up to 256 tokens
-            stop=session.ctx.llm_stop,
-            stream=session.ctx.llm_stream,
-            temperature=session.ctx.llm_temperature,
-            top_p=session.ctx.llm_top_p,
+            max_tokens=self.args.llm_max_tokens,  # Generate up to 256 tokens
+            stop=self.args.llm_stop,
+            stream=self.args.llm_stream,
+            temperature=self.args.llm_temperature,
+            top_p=self.args.llm_top_p,
+            top_k=self.args.llm_top_k,
         )
-        session.ctx.state["llm_text"] = ""
-        if session.ctx.llm_stream:
-            res = ""
+        res = ""
+        if self.args.llm_stream:
             for item in output:
                 if 'content' in item['choices'][0]['delta']:
                     content = item['choices'][0]['delta']['content']
-                    session.ctx.state["llm_text"] += content
                     res += content
                     if self._have_special_char(content):
                         yield res
@@ -90,8 +87,8 @@ class LLamacppLLM(EngineClass, ILlm):
             if len(res) > 0:
                 yield res
         else:
-            session.ctx.state["llm_text"] += output['choices'][0]['message']['content'] if 'content' in output['choices'][0]['message'] else ""
-            yield session.ctx.state["llm_text"]
+            res = output['choices'][0]['message']['content'] if 'content' in output['choices'][0]['message'] else ""
+            yield res
 
     def _have_special_char(self, content: str) -> bool:
         for char in ['.', '。', ',', '，', ';', '；', '!', '！', '?', '？']:

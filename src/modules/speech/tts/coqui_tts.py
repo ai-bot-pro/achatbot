@@ -4,18 +4,19 @@ from typing import Iterator
 import time
 
 import torch
+import pyaudio
 import numpy as np
-import torchaudio
+# import torchaudio
 
 from src.common.device_cuda import CUDAInfo
 from src.common.interface import ITts
-from src.common.factory import EngineClass
 from src.common.session import Session
 from src.common.types import CoquiTTSArgs
 from src.common.utils.audio_utils import postprocess_tts_wave
+from .base import BaseTTS, EngineClass
 
 
-class CoquiTTS(ITts, EngineClass):
+class CoquiTTS(BaseTTS, ITts):
     TAG = "tts_coqui"
 
     @classmethod
@@ -50,32 +51,27 @@ class CoquiTTS(ITts, EngineClass):
             audio_path=[reference_audio_path],
             gpt_cond_len=30, max_ref_length=60)
 
-    def synthesize(self, session: Session) -> Iterator[bytes]:
-        if "tts_text_iter" in session.ctx.state:
-            for text in session.ctx.state["tts_text_iter"]:
-                for chunk in self._inference(session, text):
-                    yield chunk
-                yield self._get_end_silence_chunk(session, text)
-        elif "tts_text" in session.ctx.state:
-            text = session.ctx.state["tts_text"]
-            for chunk in self._inference(session, text):
-                yield chunk
-            yield self._get_end_silence_chunk(session, text)
+    def get_stream_info(self) -> dict:
+        return {
+            "format_": pyaudio.paFloat32,
+            "channels": 1,
+            "rate": self.config.audio.output_sample_rate
+        }
 
     def _inference(self, session: Session, text: str) -> Iterator[bytes]:
-        if session.ctx.tts_stream is False:
+        if self.args.tts_stream is False:
             logging.debug("Inference...")
             out = self.model.inference(
                 text,
-                session.ctx.tts_language,
+                self.args.tts_language,
                 self.gpt_cond_latent,
                 self.speaker_embedding,
-                temperature=session.ctx.tts_temperature,
-                top_p=session.ctx.tts_top_p,
-                length_penalty=session.ctx.tts_length_penalty,
-                repetition_penalty=session.ctx.tts_repetition_penalty,
-                speed=session.ctx.tts_speed,
-                num_beams=session.ctx.tts_num_beams,
+                temperature=self.args.tts_temperature,
+                top_p=self.args.tts_top_p,
+                length_penalty=self.args.tts_length_penalty,
+                repetition_penalty=self.args.tts_repetition_penalty,
+                speed=self.args.tts_speed,
+                num_beams=self.args.tts_num_beams,
             )
             tensor_wave = torch.tensor(out["wav"]).unsqueeze(0).cpu()
             # torchaudio.save("records/tts_coqui_infer_zh_test.wav", tensor_wave, 24000)
@@ -88,17 +84,17 @@ class CoquiTTS(ITts, EngineClass):
             time_start = time.time()
             chunks = self.model.inference_stream(
                 text,
-                session.ctx.tts_language,
+                self.args.tts_language,
                 self.gpt_cond_latent,
                 self.speaker_embedding,
-                temperature=session.ctx.tts_temperature,
-                top_p=session.ctx.tts_top_p,
-                length_penalty=session.ctx.tts_length_penalty,
-                repetition_penalty=session.ctx.tts_repetition_penalty,
-                speed=session.ctx.tts_speed,
-                stream_chunk_size=session.ctx.tts_stream_chunk_size,
-                overlap_wav_len=session.ctx.tts_overlap_wav_len,
-                enable_text_splitting=session.ctx.tts_enable_text_splitting
+                temperature=self.args.tts_temperature,
+                top_p=self.args.tts_top_p,
+                length_penalty=self.args.tts_length_penalty,
+                repetition_penalty=self.args.tts_repetition_penalty,
+                speed=self.args.tts_speed,
+                stream_chunk_size=self.args.tts_stream_chunk_size,
+                overlap_wav_len=self.args.tts_overlap_wav_len,
+                enable_text_splitting=self.args.tts_enable_text_splitting
             )
             seconds_to_first_chunk = 0.0
             full_generated_seconds = 0.0
@@ -150,11 +146,11 @@ class CoquiTTS(ITts, EngineClass):
         mid_sentence_delimeters = ";；:：,，\n（()）【[]】「{}」-“”„\"—/|《》"
 
         if text[-1] in end_sentence_delimeters:
-            silence_duration = session.ctx.tts_sentence_silence_duration
+            silence_duration = self.args.tts_sentence_silence_duration
         elif text[-1] in mid_sentence_delimeters:
-            silence_duration = session.ctx.tts_comma_silence_duration
+            silence_duration = self.args.tts_comma_silence_duration
         else:
-            silence_duration = session.ctx.tts_default_silence_duration
+            silence_duration = self.args.tts_default_silence_duration
 
         silent_samples = int(sample_rate * silence_duration)
         silent_chunk = np.zeros(silent_samples, dtype=np.float32)

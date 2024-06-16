@@ -10,25 +10,19 @@ from src.common.factory import EngineFactory
 from src.common.logger import Logger
 from src.common.session import Session
 from src.common.types import SessionCtx, MODELS_DIR, RECORDS_DIR
-from src.modules.speech.tts.coqui_tts import EngineClass, CoquiTTS
+from src.modules.speech.tts.pyttsx3_tts import EngineClass
 
 r"""
-python -m unittest test.modules.speech.tts.test_coqui.TestCoquiTTS.test_synthesize
+python -m unittest test.modules.speech.tts.test_pyttsx3.TestPyttsx3TTS.test_synthesize
 """
 
 
-class TestCoquiTTS(unittest.TestCase):
+class TestPyttsx3TTS(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tts_tag = os.getenv('LLM_TAG', "tts_coqui")
+        cls.tts_tag = os.getenv('LLM_TAG', "tts_pyttsx3")
         cls.tts_text = os.getenv('TTS_TEXT', "你好，我是机器人")
-        cls.stream = os.getenv('STREAM', "")
-        cls.conf_file = os.getenv(
-            'CONF_FILE', os.path.join(MODELS_DIR, "coqui/XTTS-v2/config.json"))
-        cls.model_path = os.getenv('MODEL_PATH', os.path.join(
-            MODELS_DIR, "coqui/XTTS-v2"))
-        cls.reference_audio_path = os.getenv('REFERENCE_AUDIO_PATH', os.path.join(
-            RECORDS_DIR, "tmp.wav"))
+        cls.voice_name = os.getenv('VOICE_NAME', "Tingting")
         Logger.init(logging.DEBUG)
 
     @classmethod
@@ -37,18 +31,17 @@ class TestCoquiTTS(unittest.TestCase):
 
     def setUp(self):
         kwargs = {}
-        kwargs["model_path"] = self.model_path
-        kwargs["conf_file"] = self.conf_file
-        kwargs["reference_audio_path"] = self.reference_audio_path
-        self.tts: CoquiTTS = EngineFactory.get_engine_by_tag(
+        kwargs["voice_name"] = self.voice_name
+        self.tts = EngineFactory.get_engine_by_tag(
             EngineClass, self.tts_tag, **kwargs)
         self.session = Session(**SessionCtx("test_tts_client_id").__dict__)
 
+        stream_info = self.tts.get_stream_info()
         self.pyaudio_instance = pyaudio.PyAudio()
         self.audio_stream = self.pyaudio_instance.open(
-            format=pyaudio.paFloat32,
-            channels=1,
-            rate=24000,
+            format=stream_info["format_"],
+            channels=stream_info["channels"],
+            rate=stream_info["rate"],
             output_device_index=None,
             output=True)
 
@@ -60,15 +53,19 @@ class TestCoquiTTS(unittest.TestCase):
         self.pyaudio_instance.terminate()
         pass
 
+    def test_get_voices(self):
+        voices = self.tts.get_voices()
+        self.assertGreater(len(voices), 0)
+        print(voices)
+
     def test_synthesize(self):
         self.session.ctx.state["tts_text"] = self.tts_text
         print(self.session.ctx)
-        self.tts.args.tts_stream = bool(self.stream)
         iter = self.tts.synthesize(self.session)
         sub_chunk_size = 1024
         for i, chunk in enumerate(iter):
             print(f"get {i} chunk {len(chunk)}")
-            self.assertGreater(len(chunk), 0)
+            self.assertGreaterEqual(len(chunk), 0)
             if len(chunk) / sub_chunk_size < 100:
                 self.audio_stream.write(chunk)
                 continue

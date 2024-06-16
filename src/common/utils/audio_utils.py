@@ -37,12 +37,12 @@ async def get_audio_segment(file_path, start=None, end=None):
     return audio
 
 
-def bytes2NpArrayWith16(frames: bytearray, sample_width):
+def bytes2NpArrayWith16(frames: bytearray):
     # Convert the buffer frames to a NumPy array
     audio_array = np.frombuffer(frames, dtype=np.int16)
     # Normalize the array to a [-1, 1] range
     float_data = audio_array.astype(
-        np.float32) / 2**((2*sample_width)-1)
+        np.float32) / INT16_MAX_ABS_VALUE
     return float_data
 
 

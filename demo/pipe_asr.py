@@ -37,22 +37,23 @@ def compute_rms(data):
     return rms
 
 
+audio = pyaudio.PyAudio()
+stream = audio.open(format=FORMAT, channels=CHANNELS, rate=RATE,
+                    input=True, input_device_index=MIC_IDX, frames_per_buffer=CHUNK)
+
+
 def record_audio(conn):
-    audio = pyaudio.PyAudio()
-    stream = audio.open(format=FORMAT, channels=CHANNELS, rate=RATE,
-                        input=True, input_device_index=MIC_IDX, frames_per_buffer=CHUNK)
-
-
     silent_chunks = 0
     audio_started = False
     frames = []
 
+    stream.start_stream()
     print("start recording")
     while True:
         data = stream.read(CHUNK)
-        frames.append(data)
         rms = compute_rms(data)
         if audio_started:
+            frames.append(data)
             if rms < SILENCE_THRESHOLD:
                 silent_chunks += 1
                 if silent_chunks > SILENT_CHUNKS:
@@ -60,18 +61,17 @@ def record_audio(conn):
             else:
                 silent_chunks = 0
         elif rms >= SILENCE_THRESHOLD:
+            frames.append(data)
             audio_started = True
 
     stream.stop_stream()
-    stream.close()
-    audio.terminate()
 
     conn.send(("record frames", frames))
     save_file('records/tmp.wav',
               audio.get_sample_size(FORMAT), frames)
 
 
-def save_file(path, sample_width, data):
+def save_file(path, sample_width, data: list[bytes]):
     # save audio to a WAV file
     with wave.open(path, 'wb') as wf:
         wf.setnchannels(CHANNELS)
@@ -83,6 +83,7 @@ def save_file(path, sample_width, data):
 
 def loop_record(conn, e: multiprocessing.Event):
     while True:
+        e.clear()
         record_audio(conn)
         e.wait()
 
@@ -147,3 +148,6 @@ if __name__ == '__main__':
 
     start_record_event.clear()
     mp_queue.close()
+
+    stream.close()
+    audio.terminate()

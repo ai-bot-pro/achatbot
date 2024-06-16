@@ -10,25 +10,22 @@ from src.common.factory import EngineFactory
 from src.common.logger import Logger
 from src.common.session import Session
 from src.common.types import SessionCtx, MODELS_DIR, RECORDS_DIR
-from src.modules.speech.tts.coqui_tts import EngineClass, CoquiTTS
+from src.modules.speech.tts.chat_tts import EngineClass, ChatTTS
 
 r"""
-python -m unittest test.modules.speech.tts.test_coqui.TestCoquiTTS.test_synthesize
+python -m unittest test.modules.speech.tts.test_chat.TestChatTTS.test_synthesize
 """
 
 
-class TestCoquiTTS(unittest.TestCase):
+class TestChatTTS(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tts_tag = os.getenv('LLM_TAG', "tts_coqui")
+        cls.tts_tag = os.getenv('LLM_TAG', "tts_chat")
         cls.tts_text = os.getenv('TTS_TEXT', "你好，我是机器人")
         cls.stream = os.getenv('STREAM', "")
-        cls.conf_file = os.getenv(
-            'CONF_FILE', os.path.join(MODELS_DIR, "coqui/XTTS-v2/config.json"))
-        cls.model_path = os.getenv('MODEL_PATH', os.path.join(
-            MODELS_DIR, "coqui/XTTS-v2"))
-        cls.reference_audio_path = os.getenv('REFERENCE_AUDIO_PATH', os.path.join(
-            RECORDS_DIR, "tmp.wav"))
+        cls.source = os.getenv('SOURCE', "local")
+        cls.local_path = os.getenv('LOCAL_PATH', os.path.join(
+            MODELS_DIR, "2Noise/ChatTTS"))
         Logger.init(logging.DEBUG)
 
     @classmethod
@@ -37,18 +34,18 @@ class TestCoquiTTS(unittest.TestCase):
 
     def setUp(self):
         kwargs = {}
-        kwargs["model_path"] = self.model_path
-        kwargs["conf_file"] = self.conf_file
-        kwargs["reference_audio_path"] = self.reference_audio_path
-        self.tts: CoquiTTS = EngineFactory.get_engine_by_tag(
+        kwargs["local_path"] = self.local_path
+        kwargs["source"] = self.source
+        self.tts: ChatTTS = EngineFactory.get_engine_by_tag(
             EngineClass, self.tts_tag, **kwargs)
         self.session = Session(**SessionCtx("test_tts_client_id").__dict__)
 
+        info = self.tts.get_stream_info()
         self.pyaudio_instance = pyaudio.PyAudio()
         self.audio_stream = self.pyaudio_instance.open(
-            format=pyaudio.paFloat32,
-            channels=1,
-            rate=24000,
+            format=info['format_'],
+            channels=info['channels'],
+            rate=info['rate'],
             output_device_index=None,
             output=True)
 

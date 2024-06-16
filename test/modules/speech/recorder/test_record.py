@@ -12,6 +12,7 @@ from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR, INT1
 from src.modules.speech.recorder.record import EngineClass
 
 r"""
+python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_record
 """
 
 
@@ -33,14 +34,14 @@ class TestRMSRecorder(unittest.TestCase):
             EngineClass, self.tag, **kwargs)
         self.session = Session(**SessionCtx(
             "test_client_id").__dict__)
-        pass
 
     def tearDown(self):
         self.recorder.close()
-        pass
 
     def test_record(self):
         frames = self.recorder.record_audio(self.session)
         self.assertGreater(len(frames), 0)
-        asyncio.run(audio_utils.save_audio_to_file(
-            frames, os.path.join(RECORDS_DIR, "test.wav")))
+        data = b''.join(frames)
+        file_path = asyncio.run(audio_utils.save_audio_to_file(
+            data, os.path.join(RECORDS_DIR, "test.wav")))
+        print(file_path)

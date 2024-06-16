@@ -1,8 +1,8 @@
 import logging
 import struct
 
-import pyaudio
 
+from src.common.audio_stream import AudioStream, AudioStreamArgs
 from src.common.factory import EngineClass
 from src.common.session import Session
 from src.common.interface import IRecorder
@@ -16,17 +16,18 @@ class PyAudioRecorder(EngineClass):
 
     def __init__(self, **args) -> None:
         self.args = AudioRecoderArgs(**args)
-        self.audio = pyaudio.PyAudio()
-        self.stream = self.audio.open(
-            format=self.args.format_, channels=self.args.channels,
-            rate=self.args.rate, input=True,
+        self.audio = AudioStream(AudioStreamArgs(
+            format_=self.args.format_,
+            channels=self.args.channels,
+            rate=self.args.rate,
             input_device_index=self.args.input_device_index,
-            frames_per_buffer=self.args.frames_per_buffer)
+            input=True,
+            frames_per_buffer=self.args.frames_per_buffer
+        ))
+        self.audio.open_stream()
 
     def close(self):
-        self.stream.stop_stream()
-        self.stream.close()
-        self.audio.terminate()
+        self.audio.close()
 
 
 class RMSRecorder(PyAudioRecorder, IRecorder):
@@ -42,10 +43,10 @@ class RMSRecorder(PyAudioRecorder, IRecorder):
         rms = (sum_squares / len(ints)) ** 0.5
         return rms
 
-    def record_audio(self, session: Session):
+    def record_audio(self, session: Session) -> list[bytes]:
         silent_chunks = 0
         audio_started = False
-        frames = bytearray()
+        frames = []
 
         if self.args.rate != RATE:
             logging.warning(
@@ -53,12 +54,13 @@ class RMSRecorder(PyAudioRecorder, IRecorder):
             )
             return frames
 
+        self.audio.stream.start_stream()
         logging.debug("start recording")
         while True:
-            data = self.stream.read(self.args.frames_per_buffer)
-            frames.extend(data)
+            data = self.audio.stream.read(self.args.frames_per_buffer)
             rms = self.compute_rms(data)
             if audio_started:
+                frames.append(data)
                 if rms < SILENCE_THRESHOLD:
                     silent_chunks += 1
                     if silent_chunks > SILENT_CHUNKS:
@@ -66,7 +68,12 @@ class RMSRecorder(PyAudioRecorder, IRecorder):
                 else:
                     silent_chunks = 0
             elif rms >= SILENCE_THRESHOLD:
+                frames.append(data)
                 audio_started = True
+
+        self.audio.stream.stop_stream()
+        logging.debug("end recording")
+
         return frames
 
 

@@ -1,10 +1,11 @@
 
 import unittest
 
-from src.common.factory import EngineFactory
+from src.common.factory import EngineFactory, EngineClass
 
 r"""
 python -m unittest test.common.test_factory
+python -m unittest test.common.test_factory.TestEngineFactory.test_get_engine_by_tag
 """
 
 
@@ -34,7 +35,8 @@ class TestEngineFactory(unittest.TestCase):
         self.assertGreater(len(engines), 0)
 
     def test_get_engine_by_tag(self):
-        from src.modules.speech.asr.whisper_asr import EngineClass
+        import src.modules.speech
         engine = EngineFactory.get_engine_by_tag(
             EngineClass, "whisper_asr_base")
+        print(engine)
         self.assertIsInstance(engine, EngineClass)

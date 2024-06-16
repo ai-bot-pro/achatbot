@@ -4,7 +4,7 @@ import logging
 import unittest
 
 from src.common.factory import EngineFactory
-from src.core.llm.llamacpp import EngineClass
+from src.core.llm.llamacpp import EngineClass, LLamacppLLM
 from src.common.logger import Logger
 from src.common.session import Session
 from src.common.types import SessionCtx, MODELS_DIR
@@ -36,7 +36,7 @@ class TestLLamacppLLM(unittest.TestCase):
         kwargs["model_path"] = self.model_path
         kwargs["model_type"] = self.model_type
         kwargs["n_threads"] = os.cpu_count()
-        self.llm = EngineFactory.get_engine_by_tag(
+        self.llm: LLamacppLLM = EngineFactory.get_engine_by_tag(
             EngineClass, self.llm_tag, **kwargs)
         self.session = Session(**SessionCtx("test_client_id").__dict__)
 
@@ -44,7 +44,8 @@ class TestLLamacppLLM(unittest.TestCase):
         pass
 
     def test_generate(self):
-        self.session.ctx.llm_stream = bool(self.stream)
+        self.llm.args.llm_stream = bool(self.stream)
+        logging.debug(self.llm.args)
         self.session.ctx.state["prompt"] = self.prompt
         logging.debug(self.session.ctx)
         iter = self.llm.generate(self.session)
@@ -53,9 +54,9 @@ class TestLLamacppLLM(unittest.TestCase):
             self.assertGreater(len(item), 0)
 
     def test_chat_completion(self):
-        self.session.ctx.llm_stream = bool(self.stream)
-        self.session.ctx.llm_stop = ["<|end|>", "</s>", "<s>", "<|user|>"]
-        self.session.ctx.llm_chat_system = "你是一个中国人,请用中文回答。回答限制在1-5句话内。要友好、乐于助人且简明扼要。默认使用公制单位。保持对话简短而甜蜜。只用纯文本回答，不要包含链接或其他附加内容。不要回复计算机代码，例如不要返回用户的经度。"
+        self.llm.args.llm_stream = bool(self.stream)
+        self.llm.args.llm_stop = ["<|end|>", "</s>", "<s>", "<|user|>"]
+        self.llm.args.llm_chat_system = "你是一个中国人,请用中文回答。回答限制在1-5句话内。要友好、乐于助人且简明扼要。保持对话简短而甜蜜。只用纯文本回答，不要包含链接或其他附加内容。不要回复计算机代码以及数学公式。"
         self.session.ctx.state["prompt"] = self.prompt
         logging.debug(self.session.ctx)
         iter = self.llm.chat_completion(self.session)

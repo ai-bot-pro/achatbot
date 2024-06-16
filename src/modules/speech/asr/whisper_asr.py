@@ -192,3 +192,4 @@ class WhisperMLXAsr(WhisperASRBase, IAsr):
             "words": [{'text': item['text'], 'start': item['start'], 'end': item['end'], 'probability': item['confidence']} for item in outputs['words']],
         }
         return res
+

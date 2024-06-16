@@ -15,7 +15,7 @@ Author: Jan Schlüter
 License: MIT (https://gist.github.com/f0k/63a664160d016a491b2cbea15913d549#gistcomment-3870498)
 """
 
-import sys
+import logging
 import ctypes
 
 
@@ -74,7 +74,7 @@ class CUDAInfo:
             else:
                 break
         else:
-            print("could not load any of: " + ' '.join(libnames))
+            logging.debug("could not load any of: " + ' '.join(libnames))
             self.is_cuda = False
             return
 
