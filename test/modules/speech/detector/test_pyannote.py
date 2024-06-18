@@ -13,8 +13,12 @@ from src.common.utils.audio_utils import save_audio_to_file, load_json, get_audi
 from src.common.factory import EngineFactory
 from src.common.session import Session
 from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR
+from src.common.interface import IDetector
 from src.modules.speech.detector.pyannote import EngineClass
 
+r"""
+python -m unittest test.modules.speech.detector.test_pyannote.TestPyannoteDetector.test_detect_activity
+"""
 
 class TestPyannoteDetector(unittest.TestCase):
     @classmethod
@@ -40,7 +44,7 @@ class TestPyannoteDetector(unittest.TestCase):
         kwargs = {}
         kwargs["path_or_hf_repo"] = self.path_or_hf_repo
         kwargs["model_type"] = self.model_type
-        self.detector = EngineFactory.get_engine_by_tag(
+        self.detector: IDetector = EngineFactory.get_engine_by_tag(
             EngineClass, self.tag, **kwargs)
 
         self.annotations_path = os.path.join(
@@ -53,8 +57,7 @@ class TestPyannoteDetector(unittest.TestCase):
         pass
 
     def test_detect(self):
-        self.session.ctx.vad_pyannote_audio = self.audio_file
-        logging.debug(self.session.ctx)
+        self.detector.set_audio_data(self.audio_file)
         res = asyncio.run(
             self.detector.detect(self.session))
         logging.debug(res)
@@ -78,14 +81,15 @@ class TestPyannoteDetector(unittest.TestCase):
 
                 frames = bytearray(audio_segment.raw_data)
                 waveform_tensor = bytes2TorchTensorWith16(frames)
-                self.session.ctx.vad_pyannote_audio = {
+                vad_pyannote_audio = {
                     "waveform": waveform_tensor, "sample_rate": 16000}
+                self.detector.set_audio_data(vad_pyannote_audio)
 
                 # audio_frames = bytearray(audio_segment.raw_data)
                 # file_path = asyncio.run(save_audio_to_file(
                 #    audio_frames, self.session.get_file_name(),
                 #    audio_dir=RECORDS_DIR))
-                # self.session.ctx.vad_pyannote_audio = file_path
+                # self.detector.set_audio_data(file_path)
 
                 vad_res = asyncio.run(
                     self.detector.detect(self.session))

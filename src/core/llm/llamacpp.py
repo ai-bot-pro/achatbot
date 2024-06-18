@@ -19,6 +19,7 @@ class LLamacppLLM(EngineClass, ILlm):
             self.model = Llama(
                 model_path=self.args.model_path,
                 n_ctx=self.args.n_ctx,
+                verbose=self.args.verbose,
                 n_batch=self.args.n_batch,
                 n_threads=self.args.n_threads,
                 n_gpu_layers=self.args.n_gpu_layers,
@@ -27,6 +28,7 @@ class LLamacppLLM(EngineClass, ILlm):
             self.model = Llama(
                 model_path=self.args.model_path,
                 n_ctx=self.args.n_ctx,
+                verbose=self.args.verbose,
                 n_batch=self.args.n_batch,
                 n_threads=self.args.n_threads,
                 n_gpu_layers=self.args.n_gpu_layers)

@@ -30,6 +30,9 @@ class PorcupineDetector:
             self.buffer_size = self.porcupine.frame_length
             self.sample_rate = self.porcupine.sample_rate
 
+    def set_audio_data(self, audio_data):
+        self.audio_buffer = audio_data
+
 
 class PorcupineWakeWordDetector(IDetector, PorcupineDetector):
     def __init__(self, args: PorcupineDetectorArgs) -> None:
@@ -57,7 +60,5 @@ class PorcupineWakeWordDetector(IDetector, PorcupineDetector):
             self.audio_buffer.clear()
             self.audio_buffer.extend(temp_samples)
 
-            self.wake_word_detect_time = time.time()
-            self.wakeword_detected = True
             if self.args.on_wakeword_detected:
-                self.on_wakeword_detected()
+                self.args.on_wakeword_detected()

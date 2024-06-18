@@ -26,7 +26,7 @@ class TestChatTTS(unittest.TestCase):
         cls.source = os.getenv('SOURCE', "local")
         cls.local_path = os.getenv('LOCAL_PATH', os.path.join(
             MODELS_DIR, "2Noise/ChatTTS"))
-        Logger.init(logging.DEBUG)
+        Logger.init(logging.DEBUG, is_file=False)
 
     @classmethod
     def tearDownClass(cls):
@@ -49,13 +49,10 @@ class TestChatTTS(unittest.TestCase):
             output_device_index=None,
             output=True)
 
-        pass
-
     def tearDown(self):
         self.audio_stream.stop_stream()
         self.audio_stream.close()
         self.pyaudio_instance.terminate()
-        pass
 
     def test_synthesize(self):
         self.session.ctx.state["tts_text"] = self.tts_text

@@ -14,21 +14,22 @@ def getDefaultFormatter():
 class Logger():
 
     @staticmethod
-    def init(level=logging.INFO, app_name="chat-bot", log_dir=LOG_DIR, console=True):
+    def init(level=logging.INFO, app_name="chat-bot", log_dir=LOG_DIR, is_file=True, is_console=True):
         os.makedirs(log_dir, exist_ok=True)
         # Create a logger
         logger = logging.getLogger()
         logger.setLevel(level)  # Set the root logger's level
         logger.name = app_name
 
-        # Create a file handler and set its level
-        log_path = os.path.join(log_dir, f"{app_name}.log")
-        file_handler = logging.FileHandler(log_path)
-        file_handler.setLevel(logging.DEBUG)
-        file_handler.setFormatter(getDefaultFormatter())
-        logger.addHandler(file_handler)
+        if is_file:
+            # Create a file handler and set its level
+            log_path = os.path.join(log_dir, f"{app_name}.log")
+            file_handler = logging.FileHandler(log_path)
+            file_handler.setLevel(logging.DEBUG)
+            file_handler.setFormatter(getDefaultFormatter())
+            logger.addHandler(file_handler)
 
-        if console:
+        if is_console:
             # Create a console handler and set its level
             console_handler = logging.StreamHandler()
             console_handler.setLevel(level)

@@ -42,12 +42,17 @@ class IDetector(ABC):
     async def detect(self, session):
         raise NotImplemented("must be implemented in the child class")
 
+    @abstractmethod
+    def set_audio_data(self, audio_data):
+        raise NotImplemented("must be implemented in the child class")
+
 
 class IAsr(ABC):
     @abstractmethod
     async def transcribe(self, session) -> dict:
         raise NotImplemented("must be implemented in the child class")
 
+    @abstractmethod
     def set_audio_data(self, audio_data):
         raise NotImplemented("must be implemented in the child class")
 
@@ -90,4 +95,8 @@ class ITts(ABC):
 class IPlayer(ABC):
     @abstractmethod
     def play_audio(self, session):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def close(self):
         raise NotImplemented("must be implemented in the child class")
