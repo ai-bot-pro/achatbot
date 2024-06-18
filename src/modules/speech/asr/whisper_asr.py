@@ -37,11 +37,13 @@ class WhisperAsr(WhisperASRBase, IAsr):
 
     async def transcribe(self, session: Session) -> dict:
         transcription = self.model.transcribe(
-            self.asr_audio, language=session.ctx.language, word_timestamps=True, condition_on_previous_text=True)
+            self.asr_audio, verbose=self.args.verbose,
+            language=self.args.language, word_timestamps=True,
+            condition_on_previous_text=True)
         flattened_words = [
             word for segment in transcription["segments"] for word in segment["words"]]
         res = {
-            "language": session.ctx.language,
+            "language": self.args.language,
             "language_probability": transcription["language"],
             "text": transcription["text"].strip(),
             "words": flattened_words,
@@ -55,11 +57,11 @@ class WhisperTimestampedAsr(WhisperAsr):
     async def transcribe(self, session: Session) -> dict:
         from whisper_timestamped import transcribe_timestamped
         transcription = transcribe_timestamped(
-            self.model, self.asr_audio, language=session.ctx.language,  condition_on_previous_text=True)
+            self.model, self.asr_audio, language=self.args.language,  condition_on_previous_text=True, verbose=self.args.verbose)
         flattened_words = [
             word for segment in transcription["segments"] for word in segment["words"]]
         res = {
-            "language": session.ctx.language,
+            "language": self.args.language,
             "language_probability": transcription["language"],
             "text": transcription["text"].strip(),
             "words": [{'text': item['text'], 'start': item['start'], 'end': item['end'], 'probability': item['confidence']} for item in flattened_words],
@@ -100,7 +102,7 @@ class WhisperFasterAsr(WhisperASRBase, IAsr):
 
     async def transcribe(self, session: Session) -> dict:
         segmentsIter, info = self.model.transcribe(
-            self.asr_audio, language=session.ctx.language,
+            self.asr_audio, language=self.args.language,
             beam_size=5, word_timestamps=True,
             condition_on_previous_text=True)
         # The transcription will actually run here.
@@ -155,10 +157,10 @@ class WhisperTransformersAsr(WhisperASRBase, IAsr):
         # for Word-level timestamps batch-size must be 1. https://huggingface.co/openai/whisper-large-v3/discussions/12
         outputs = self.pipe(
             self.asr_audio, chunk_length_s=30, batch_size=1,
-            generate_kwargs={"language": session.ctx.language},
+            generate_kwargs={"language": self.args.language},
             return_timestamps="word")
         res = {
-            "language": session.ctx.language,
+            "language": self.args.language,
             "language_probability": None,
             "text": outputs['text'].strip(),
             "words": [{"text": item["text"], "start": item["timestamp"][0], "end": item["timestamp"][1]} for item in outputs["chunks"]]
@@ -180,16 +182,15 @@ class WhisperMLXAsr(WhisperASRBase, IAsr):
         import mlx_whisper
 
         transcribe_kargs = {}
-        transcribe_kargs["language"] = session.ctx.language
+        transcribe_kargs["language"] = self.args.language
         outputs = mlx_whisper.transcribe(
             self.asr_audio,
             path_or_hf_repo=self.args.model_name_or_path,
             word_timestamps=True, **transcribe_kargs)
         res = {
-            "language": session.ctx.language,
+            "language": self.args.language,
             "language_probability": outputs["language"],
             "text": outputs["text"].strip(),
             "words": [{'text': item['text'], 'start': item['start'], 'end': item['end'], 'probability': item['confidence']} for item in outputs['words']],
         }
         return res
-

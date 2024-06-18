@@ -4,7 +4,7 @@ python -m  demo.tts_chat
 import torch
 import torchaudio
 
-import deps.ChatTTS as ChatTTS
+import deps.ChatTTS.ChatTTS as ChatTTS
 
 if __name__ == "__main__":
 
@@ -14,7 +14,19 @@ if __name__ == "__main__":
 
     texts = ["你好，我是机器人",]
     ###################################
-
+    r"""
+    def infer_code(
+        models,
+        text, 
+        spk_emb = None,
+        top_P = 0.7, 
+        top_K = 20, 
+        temperature = 0.3, 
+        repetition_penalty = 1.05,
+        max_new_token = 2048,
+        **kwargs
+    ):
+    """
     # Sample a speaker from Gaussian.
     rand_spk = chat.sample_random_speaker()
     params_infer_code = {

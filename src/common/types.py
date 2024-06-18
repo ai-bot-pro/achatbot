@@ -1,5 +1,5 @@
 r"""
-use SOTA LLM like chatGPT to generate config file(json,yaml,toml) from datacalss type
+use SOTA LLM like chatGPT to generate config file(json,yaml,toml) from dataclass type
 """
 import os
 from typing import Union, List
@@ -48,16 +48,6 @@ class SessionCtx:
     tts: ITts = None
     on_session_start: callable = None
     on_session_end: callable = None
-    # vad
-    vad_pyannote_audio: AudioFile = None
-    # asr
-    # NOTE:
-    # - openai-whisper or whispertimestamped use str(file_path)/np.ndarray/torch tensor
-    # - transformers whisper use torch tensor/tf tensor
-    # - faster whisper don't use torch tensor, use np.ndarray or str(file_path)/~BinaryIO~
-    # - mlx whisper don't use torch tensor, use str(file_path)/np.ndarray/~mlx.array~
-    asr_audio: Union[str, np.ndarray, torch.Tensor] = None
-    language: str = "zh"
 
 
 # audio stream default configuration
@@ -124,6 +114,8 @@ class PyannoteDetectorArgs:
     # if use pyannote/segmentation open onset/offset activation thresholds
     onset: float = 0.5
     offset: float = 0.5
+    # vad
+    vad_pyannote_audio: AudioFile = None
 
 
 INIT_WAKE_WORDS_SENSITIVITY = 0.6
@@ -147,6 +139,15 @@ class PorcupineDetectorArgs:
 class WhisperASRArgs:
     download_path: str = ""
     model_name_or_path: str = "base"
+    # asr
+    # NOTE:
+    # - openai-whisper or whispertimestamped use str(file_path)/np.ndarray/torch tensor
+    # - transformers whisper use torch tensor/tf tensor
+    # - faster whisper don't use torch tensor, use np.ndarray or str(file_path)/~BinaryIO~
+    # - mlx whisper don't use torch tensor, use str(file_path)/np.ndarray/~mlx.array~
+    asr_audio: Union[str, np.ndarray, torch.Tensor] = None
+    language: str = "zh"
+    verbose: bool = True
 
 
 @dataclass
@@ -178,6 +179,7 @@ class LLamcppLLMArgs:
     n_gpu_layers: int = 0
     n_ctx: int = 2048
     chat_format: str = "chatml"
+    verbose: bool = True
     # llm
     llm_prompt_tpl: str = "<|user|>\n{%s}<|end|>\n<|assistant|>"
     llm_stop: Union[str, List[str]] = None

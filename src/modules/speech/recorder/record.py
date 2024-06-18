@@ -22,7 +22,7 @@ class PyAudioRecorder(EngineClass):
             rate=self.args.rate,
             input_device_index=self.args.input_device_index,
             input=True,
-            frames_per_buffer=self.args.frames_per_buffer
+            frames_per_buffer=self.args.frames_per_buffer,
         ))
         self.audio.open_stream()
 

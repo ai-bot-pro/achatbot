@@ -6,6 +6,7 @@ class Session:
         self.ctx = SessionCtx(**args)
         self.config = {}
         self.file_counter = 0
+        self.chat_round = 0
 
     def update_config(self, config_data):
         self.config.update(config_data)
@@ -19,8 +20,11 @@ class Session:
     def increment_file_counter(self):
         self.file_counter += 1
 
+    def increment_chat_round(self):
+        self.chat_round += 1
+
     def get_file_name(self):
-        return f"{self.ctx.client_id}_{self.file_counter}.wav"
+        return f"{self.file_counter}_{self.ctx.client_id}.wav"
 
     def process_audio(self):
         # @TODO: use burr work flow

@@ -19,7 +19,7 @@ class ChatTTS(BaseTTS, ITts):
         return {**ChatTTSArgs().__dict__, **kwargs}
 
     def __init__(self, **args) -> None:
-        import deps.ChatTTS as ChatTTS
+        import deps.ChatTTS.ChatTTS as ChatTTS
         self.args = ChatTTSArgs(**args)
         self.chat = ChatTTS.Chat()
         self.chat.load_models(
@@ -86,7 +86,7 @@ class ChatTTS(BaseTTS, ITts):
 
     def _inference(self, session: Session, text: str) -> Iterator[bytes]:
         logging.debug(
-            f"{self.TAG} synthesis: {text}, args: {self.args}")
+            f"{self.TAG} synthesis: {text}")
         wav = self.chat.infer(
             [text,],
             skip_refine_text=self.args.skip_refine_text,

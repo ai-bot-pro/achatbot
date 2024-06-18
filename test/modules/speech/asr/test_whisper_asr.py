@@ -27,10 +27,11 @@ class TestWhisperASR(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         audio_file = os.path.join(
-            RECORDS_DIR, f"d641c3ef-980b-4f55-83a4-ae120f2bdd8d.wav")
+            RECORDS_DIR, f"tmp.wav")
         # Use an environment variable to get the ASR model TAG
         cls.asr_tag = os.getenv('ASR_TAG', "whisper_faster_asr")
         cls.audio_file = os.getenv('AUDIO_FILE', audio_file)
+        cls.verbose = os.getenv('ASR_VERBOSE', "")
         cls.model_name_or_path = os.getenv('MODEL_NAME_OR_PATH', 'base')
         Logger.init(logging.DEBUG)
 
@@ -42,6 +43,7 @@ class TestWhisperASR(unittest.TestCase):
         kwargs = {}
         kwargs["model_name_or_path"] = self.model_name_or_path
         kwargs["download_path"] = MODELS_DIR
+        kwargs["verbose"] = bool(self.verbose)
         self.asr = EngineFactory.get_engine_by_tag(
             EngineClass, self.asr_tag, **kwargs)
 
@@ -56,7 +58,7 @@ class TestWhisperASR(unittest.TestCase):
 
     def test_transcribe(self):
         self.asr.set_audio_data(self.audio_file)
-        self.session.ctx.language = "zh"
+        self.asr.args.language = "zh"
         res = asyncio.run(
             self.asr.transcribe(self.session))
         print(res)
@@ -78,7 +80,7 @@ class TestWhisperASR(unittest.TestCase):
                     segment["start"],
                     segment["end"]))
                 audio_frames = bytearray(audio_segment.raw_data)
-                self.session.ctx.language = "en"
+                self.asr.args.language = "en"
 
                 file_path = asyncio.run(save_audio_to_file(
                     audio_frames, self.session.get_file_name(),

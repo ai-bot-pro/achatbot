@@ -1,10 +1,16 @@
 import logging
 import os
 
+from pyannote.audio.core.io import AudioFile
+
 from src.common.session import Session
 from src.common.interface import IDetector
 from src.common.types import PyannoteDetectorArgs
 from src.common.factory import EngineClass
+
+r"""
+python -m unittest test.modules.speech.detector.test_pyannote.TestPyannoteDetector.test_detect_activity
+"""
 
 
 class PyannoteDetector(EngineClass):
@@ -54,8 +60,12 @@ class PyannoteDetector(EngineClass):
         self.model = PyannoteDetector.load_model(
             self.args.hf_auth_token, self.args.path_or_hf_repo, self.args.model_type)
 
+    def set_audio_data(self, audio_data):
+        if isinstance(audio_data, AudioFile):
+            self.args.vad_pyannote_audio = audio_data
 
-class PyannoteVAD(IDetector, PyannoteDetector):
+
+class PyannoteVAD(PyannoteDetector, IDetector):
     r"""
     voice activity detection (语音活动识别)
     """
@@ -69,7 +79,7 @@ class PyannoteVAD(IDetector, PyannoteDetector):
         self.pipeline.instantiate(self.hyper_parameters)
 
     async def detect(self, session: Session) -> None:
-        vad_res = self.pipeline(session.ctx.vad_pyannote_audio)
+        vad_res = self.pipeline(self.args.vad_pyannote_audio)
         # `vad_res` is a pyannote.core.Annotation instance containing speech regions
         vad_segments = []
         for segment in vad_res.itersegments():
@@ -80,7 +90,7 @@ class PyannoteVAD(IDetector, PyannoteDetector):
         return vad_segments
 
 
-class PyannoteOSD(IDetector, PyannoteDetector):
+class PyannoteOSD(PyannoteDetector, IDetector):
     r"""
     Overlapped speech detection (重叠语音检测)
     """
@@ -94,7 +104,7 @@ class PyannoteOSD(IDetector, PyannoteDetector):
         self.pipeline.instantiate(self.hyper_parameters)
 
     async def detect(self, session: Session) -> None:
-        vad_res = self.pipeline(session.ctx.vad_pyannote_audio)
+        vad_res = self.pipeline(self.args.vad_pyannote_audio)
         logging.debug(f"vad_res: {vad_res}")
         # `vad_res` is a pyannote.core.Annotation instance containing speech regions
         vad_segments = []
@@ -107,7 +117,7 @@ class PyannoteOSD(IDetector, PyannoteDetector):
         return vad_segments
 
 
-class PyannoteDiarization(IDetector, PyannoteDetector):
+class PyannoteDiarization(PyannoteDetector, IDetector):
     r"""
     Speaker diarization (说话人分割或说话人辨识)
     """
@@ -119,7 +129,7 @@ class PyannoteDiarization(IDetector, PyannoteDetector):
 
     async def detect(self, session: Session):
         # run the pipeline on an audio file
-        diarization = self.pipeline(session.ctx.vad_pyannote_audio)
+        diarization = self.pipeline(self.args.vad_pyannote_audio)
         logging.debug(f"diarization: {diarization}")
 
         # Pre-loading audio files in memory may result in faster processing:
