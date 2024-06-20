@@ -49,6 +49,22 @@ class SessionCtx:
     on_session_start: callable = None
     on_session_end: callable = None
 
+    def __getstate__(self):
+        return {
+            "client_id": self.client_id,
+            "sampling_rate": self.sampling_rate,
+            "samples_width": self.samples_width,
+            "read_audio_frames": self.read_audio_frames,
+            "state": self.state,
+        }
+
+    def __setstate__(self, state):
+        self.client_id = state["client_id"]
+        self.sampling_rate = state["sampling_rate"]
+        self.samples_width = state["samples_width"]
+        self.read_audio_frames = state["read_audio_frames"]
+        self.state = state["state"]
+
 
 # audio stream default configuration
 CHUNK = 1024

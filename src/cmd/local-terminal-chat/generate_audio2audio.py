@@ -34,7 +34,7 @@ def clear_console():
 def initWakerEngine() -> interface.IDetector:
     # waker
     recorder_tag = os.getenv('RECORDER_TAG', "rms_recorder")
-    if "waker" not in recorder_tag:
+    if "wake" not in recorder_tag:
         return None
 
     tag = os.getenv('WAKER_DETECTOR_TAG', "porcupine_wakeword")

@@ -8,6 +8,20 @@ class Session:
         self.file_counter = 0
         self.chat_round = 0
 
+    def __getstate__(self):
+        return {
+            "config": self.config,
+            "file_counter": self.file_counter,
+            "chat_round": self.chat_round,
+            "ctx": self.ctx
+        }
+
+    def __setstate__(self, state):
+        self.config = state["config"]
+        self.file_counter = state["file_counter"]
+        self.chat_round = state["chat_round"]
+        self.ctx = state["ctx"]
+
     def update_config(self, config_data):
         self.config.update(config_data)
 
