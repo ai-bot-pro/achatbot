@@ -64,9 +64,9 @@ class PorcupineWakeWordDetector(PorcupineDetector, IDetector):
 
         # If a wake word is detected
         if wakeword_index >= 0:
-            logging.debug(
-                f"index {wakeword_index} {self.args.wake_words[wakeword_index]} hotword detected, audio_buffer length {len(self.audio_buffer)}")
-            session.ctx.state['bot_name'] = self.args.wake_words[wakeword_index]
+            logging.info(
+                f"index {wakeword_index} {self.wake_words_list[wakeword_index]} hotword detected, audio_buffer length {len(self.audio_buffer)}")
+            session.ctx.state['bot_name'] = self.wake_words_list[wakeword_index]
             # Removing the wake word from the recording
             samples_for_0_1_sec = int(self.porcupine.sample_rate * 0.1)
             start_index = max(0, len(self.audio_buffer) - samples_for_0_1_sec)

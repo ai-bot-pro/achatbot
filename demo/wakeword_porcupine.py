@@ -24,7 +24,7 @@ def get_defualt_instance():
 
 
 def get_custom_instance():
-    keywords = ["小黑"]
+    keywords = "小黑".split(',')
     porcupine = pvporcupine.create(
         access_key, keywords=keywords,
         model_path="./models/porcupine_params_zh.pv",

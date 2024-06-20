@@ -101,6 +101,7 @@ class AudioRecoderArgs:
     rate: int = RATE
     input_device_index: int = None
     frames_per_buffer: int = CHUNK
+    silence_timeout_s: int = 10
 
 
 @dataclass

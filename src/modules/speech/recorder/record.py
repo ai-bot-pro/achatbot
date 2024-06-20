@@ -1,6 +1,7 @@
 import logging
 import struct
 import asyncio
+import time
 
 
 from src.common.audio_stream import AudioStream, AudioStreamArgs, RingBuffer
@@ -54,9 +55,15 @@ class RMSRecorder(PyAudioRecorder, IRecorder):
         silent_chunks = 0
         audio_started = False
         frames = []
+        silence_timeout = 0
+        if "silence_timeout_s" in session.ctx.state:
+            logging.info(
+                f"rms recording with silence_timeout {session.ctx.state['silence_timeout_s']} s")
+            silence_timeout = int(session.ctx.state['silence_timeout_s'])
 
         self.audio.stream.start_stream()
         logging.debug("start rms recording")
+        start_time = time.time()
         while True:
             data = self.audio.stream.read(self.args.frames_per_buffer)
             rms = self.compute_rms(data)
@@ -71,6 +78,11 @@ class RMSRecorder(PyAudioRecorder, IRecorder):
             elif rms >= SILENCE_THRESHOLD:
                 frames.append(data)
                 audio_started = True
+            else:
+                if silence_timeout > 0 \
+                        and time.time()-start_time > silence_timeout:
+                    logging.warning(f"rms recording silence timeout")
+                    break
 
         self.audio.stream.stop_stream()
         logging.debug("end rms recording")
@@ -116,6 +128,8 @@ class WakeWordsRMSRecorder(RMSRecorder, IRecorder):
         self.audio.stream.stop_stream()
         logging.debug("end wake words detector rms recording")
 
+        if self.args.silence_timeout_s > 0:
+            session.ctx.state["silence_timeout_s"] = self.args.silence_timeout_s
         return super().record_audio(session)
 
 

@@ -1,5 +1,6 @@
 r"""
 TQDM_DISABLE=True python -m src.cmd.local-terminal-chat.generate_audio2audio > std_out.log
+TQDM_DISABLE=True RECORDER_TAG=wakeword_rms_recorder python -m src.cmd.local-terminal-chat.generate_audio2audio > std_out.log
 """
 import multiprocessing
 import multiprocessing.connection
@@ -31,6 +32,12 @@ def clear_console():
     os.system('clear' if os.name == 'posix' else 'cls')
 
 
+def on_wakeword_detected(session, data):
+    if "bot_name" in session.ctx.state:
+        print(f"{session.ctx.state['bot_name']}",
+              end="", flush=True, file=sys.stderr)
+
+
 def initWakerEngine() -> interface.IDetector:
     # waker
     recorder_tag = os.getenv('RECORDER_TAG', "rms_recorder")
@@ -49,6 +56,7 @@ def initWakerEngine() -> interface.IDetector:
     kwargs["keyword_paths"] = os.getenv(
         'KEYWORD_PATHS', keyword_paths).split(',')
     kwargs["model_path"] = os.getenv('MODEL_PATH', model_path)
+    kwargs["on_wakeword_detected"] = on_wakeword_detected
     engine = EngineFactory.get_engine_by_tag(
         EngineClass, tag, **kwargs)
     return engine
@@ -182,6 +190,8 @@ def loop_record(conn: multiprocessing.connection.Connection, e: threading.Event)
             e.clear()
 
             frames = recorder.record_audio(session)
+            if len(frames) == 0:
+                continue
             data = b''.join(frames)
             conn.send(("RECORD_FRAMES", data, session))
             asyncio.run(save_audio_to_file(
@@ -212,6 +222,7 @@ def loop_play(conn: multiprocessing.connection.Connection, e: threading.Event):
             elif msg == "LLM_GENERATE_TEXT":
                 if llm_gen_segments == 0:
                     bot_name = session.ctx.state["bot_name"] if "bot_name" in session.ctx.state else "bot"
+                    logging.info(f"bot_name: {bot_name}")
                     print(f"\n{bot_name} >> ", end="",
                           flush=True, file=sys.stderr)
                 print(recv_data.strip(), end="", flush=True, file=sys.stderr)

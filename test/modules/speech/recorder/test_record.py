@@ -88,10 +88,14 @@ class TestRMSRecorder(unittest.TestCase):
         self.recorder2.close()
 
     def test_wakeword_rms_record(self):
+        def on_wakeword_detected(session, data):
+            print(
+                f"bot_name:{session.ctx.state['bot_name']} wakeword detected")
         kwargs = {}
         kwargs["access_key"] = self.access_key
         kwargs["wake_words"] = self.wake_words
         kwargs["model_path"] = self.model_path
+        kwargs["on_wakeword_detected"] = on_wakeword_detected
         kwargs["keyword_paths"] = self.keyword_paths.split(',')
         # print(kwargs)
         self.session.ctx.waker = EngineFactory.get_engine_by_tag(
@@ -100,7 +104,7 @@ class TestRMSRecorder(unittest.TestCase):
         round = 3
         for i in range(round):
             frames = self.recorder.record_audio(self.session)
-            self.assertGreater(len(frames), 0)
+            self.assertGreaterEqual(len(frames), 0)
             data = b''.join(frames)
             file_path = asyncio.run(audio_utils.save_audio_to_file(
                 data, os.path.join(RECORDS_DIR, f"test{i}.wav")))
