@@ -38,9 +38,9 @@ class SessionCtx:
     client_id: str
     sampling_rate: int = 16000
     samples_width: int = 2
-    frames = bytearray()
+    read_audio_frames = bytes()
     state = dict()
-    buffering_stragegy: IBuffering = None
+    buffering_strategy: IBuffering = None
     waker: IDetector = None
     vad: IDetector = None
     asr: IAsr = None
@@ -48,6 +48,22 @@ class SessionCtx:
     tts: ITts = None
     on_session_start: callable = None
     on_session_end: callable = None
+
+    def __getstate__(self):
+        return {
+            "client_id": self.client_id,
+            "sampling_rate": self.sampling_rate,
+            "samples_width": self.samples_width,
+            "read_audio_frames": self.read_audio_frames,
+            "state": self.state,
+        }
+
+    def __setstate__(self, state):
+        self.client_id = state["client_id"]
+        self.sampling_rate = state["sampling_rate"]
+        self.samples_width = state["samples_width"]
+        self.read_audio_frames = state["read_audio_frames"]
+        self.state = state["state"]
 
 
 # audio stream default configuration
@@ -72,7 +88,7 @@ class AudioStreamArgs:
     channels: int = CHANNELS
     rate: int = RATE
     frames_per_buffer: int = CHUNK
-    input_device_index: int = MIC_IDX
+    input_device_index: int = None
     output_device_index: int = None
     input: bool = False
     output: bool = False
@@ -83,8 +99,9 @@ class AudioRecoderArgs:
     format_: str = FORMAT
     channels: int = CHANNELS
     rate: int = RATE
-    input_device_index: int = MIC_IDX
+    input_device_index: int = None
     frames_per_buffer: int = CHUNK
+    silence_timeout_s: int = 10
 
 
 @dataclass
@@ -125,14 +142,18 @@ INIT_WAKE_WORD_TIMEOUT = 5.0
 
 @dataclass
 class PorcupineDetectorArgs:
+    access_key: str = ""
+    keyword_paths: list[str] = None
+    model_path: str = None
+    library_path: str = None
     wake_words: str = ""
     wake_words_sensitivity: float = INIT_WAKE_WORDS_SENSITIVITY
-    wake_word_activation_delay: float = INIT_WAKE_WORD_ACTIVATION_DELAY
-    wake_word_timeout: float = INIT_WAKE_WORD_TIMEOUT
+    # wake_word_activation_delay: float = INIT_WAKE_WORD_ACTIVATION_DELAY
+    # wake_word_timeout: float = INIT_WAKE_WORD_TIMEOUT
     on_wakeword_detected: callable = None
-    on_wakeword_timeout: callable = None
-    on_wakeword_detection_start: callable = None
-    on_wakeword_detection_end: callable = None
+    # on_wakeword_timeout: callable = None
+    # on_wakeword_detection_start: callable = None
+    # on_wakeword_detection_end: callable = None
 
 
 @dataclass

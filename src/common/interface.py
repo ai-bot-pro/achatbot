@@ -46,6 +46,14 @@ class IDetector(ABC):
     def set_audio_data(self, audio_data):
         raise NotImplemented("must be implemented in the child class")
 
+    @abstractmethod
+    def get_sample_info(self):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def close(self):
+        raise NotImplemented("must be implemented in the child class")
+
 
 class IAsr(ABC):
     @abstractmethod

@@ -27,8 +27,10 @@ def compute_rms(data):
 
 def record_audio():
     audio = pyaudio.PyAudio()
-    stream = audio.open(format=FORMAT, channels=CHANNELS, rate=RATE,
-                        input=True, input_device_index=MIC_IDX, frames_per_buffer=CHUNK)
+    stream = audio.open(
+        format=FORMAT, channels=CHANNELS, rate=RATE,
+        input=True, input_device_index=None,
+        frames_per_buffer=CHUNK)
 
     silent_chunks = 0
     audio_started = False
@@ -39,6 +41,7 @@ def record_audio():
         data = stream.read(CHUNK)
         frames.append(data)
         rms = compute_rms(data)
+        print(f"rms:{rms} silence threshold:{SILENCE_THRESHOLD}")
         if audio_started:
             if rms < SILENCE_THRESHOLD:
                 silent_chunks += 1
@@ -60,6 +63,7 @@ def record_audio():
         wf.setsampwidth(audio.get_sample_size(FORMAT))
         wf.setframerate(RATE)
         wf.writeframes(b''.join(frames))
+        wf.close()
 
 
 if __name__ == '__main__':

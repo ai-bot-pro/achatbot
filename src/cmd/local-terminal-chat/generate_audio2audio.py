@@ -1,5 +1,6 @@
 r"""
 TQDM_DISABLE=True python -m src.cmd.local-terminal-chat.generate_audio2audio > std_out.log
+TQDM_DISABLE=True RECORDER_TAG=wakeword_rms_recorder python -m src.cmd.local-terminal-chat.generate_audio2audio > std_out.log
 """
 import multiprocessing
 import multiprocessing.connection
@@ -31,11 +32,43 @@ def clear_console():
     os.system('clear' if os.name == 'posix' else 'cls')
 
 
+def on_wakeword_detected(session, data):
+    if "bot_name" in session.ctx.state:
+        print(f"{session.ctx.state['bot_name']}",
+              end="", flush=True, file=sys.stderr)
+
+
+def initWakerEngine() -> interface.IDetector:
+    # waker
+    recorder_tag = os.getenv('RECORDER_TAG', "rms_recorder")
+    if "wake" not in recorder_tag:
+        return None
+
+    tag = os.getenv('WAKER_DETECTOR_TAG', "porcupine_wakeword")
+    wake_words = os.getenv('WAKE_WORDS', "小黑")
+    model_path = os.path.join(
+        MODELS_DIR, "porcupine_params_zh.pv")
+    keyword_paths = os.path.join(
+        MODELS_DIR, "小黑_zh_mac_v3_0_0.ppn")
+    kwargs = {}
+    kwargs["access_key"] = os.getenv('PORCUPINE_ACCESS_KEY', "")
+    kwargs["wake_words"] = wake_words
+    kwargs["keyword_paths"] = os.getenv(
+        'KEYWORD_PATHS', keyword_paths).split(',')
+    kwargs["model_path"] = os.getenv('MODEL_PATH', model_path)
+    kwargs["on_wakeword_detected"] = on_wakeword_detected
+    engine = EngineFactory.get_engine_by_tag(
+        EngineClass, tag, **kwargs)
+    return engine
+
+
 def initRecorderEngine() -> interface.IRecorder:
     # recorder
-    tag = os.getenv('RECODER_TAG', "rms_recorder")
+    tag = os.getenv('RECORDER_TAG', "rms_recorder")
     kwargs = {}
-    kwargs["input_device_index"] = int(os.getenv('MIC_IDX', "1"))
+    input_device_index = os.getenv('MIC_IDX', None)
+    kwargs["input_device_index"] = None if input_device_index is None else int(
+        input_device_index)
     engine = EngineFactory.get_engine_by_tag(
         EngineClass, tag, **kwargs)
     logging.info(f"initRecorderEngine: {tag}, {engine}")
@@ -44,7 +77,7 @@ def initRecorderEngine() -> interface.IRecorder:
 
 def initVADEngine() -> interface.IDetector:
     # vad detector
-    tag = os.getenv('DETECTOR_TAG', "pyannote_vad")
+    tag = os.getenv('VAD_DETECTOR_TAG', "pyannote_vad")
     model_type = os.getenv(
         'VAD_MODEL_TYPE', 'segmentation-3.0')
     model_ckpt_path = os.path.join(
@@ -146,7 +179,8 @@ def loop_record(conn: multiprocessing.connection.Connection, e: threading.Event)
     recorder = initRecorderEngine()
     sid = uuid.uuid4()
     session = Session(**SessionCtx(sid).__dict__)
-    logging.info(f"loop_record starting with session: {session}")
+    session.ctx.waker = initWakerEngine()
+    logging.info(f"loop_record starting with session ctx: {session.ctx}")
     print("start loop_record...", flush=True, file=sys.stderr)
     while True:
         try:
@@ -156,6 +190,8 @@ def loop_record(conn: multiprocessing.connection.Connection, e: threading.Event)
             e.clear()
 
             frames = recorder.record_audio(session)
+            if len(frames) == 0:
+                continue
             data = b''.join(frames)
             conn.send(("RECORD_FRAMES", data, session))
             asyncio.run(save_audio_to_file(
@@ -164,9 +200,9 @@ def loop_record(conn: multiprocessing.connection.Connection, e: threading.Event)
             session.increment_chat_round()
 
             e.wait()
-        except Exception as e:
+        except Exception as ex:
             logging.warning(
-                f"loop_record Exception {e} sid:{session.ctx.client_id}")
+                f"loop_record Exception {ex} sid:{session.ctx.client_id}")
 
 
 def loop_play(conn: multiprocessing.connection.Connection, e: threading.Event):
@@ -185,7 +221,10 @@ def loop_play(conn: multiprocessing.connection.Connection, e: threading.Event):
                 llm_gen_segments = 0
             elif msg == "LLM_GENERATE_TEXT":
                 if llm_gen_segments == 0:
-                    print("\nbot >> ", end="", flush=True, file=sys.stderr)
+                    bot_name = session.ctx.state["bot_name"] if "bot_name" in session.ctx.state else "bot"
+                    logging.info(f"bot_name: {bot_name}")
+                    print(f"\n{bot_name} >> ", end="",
+                          flush=True, file=sys.stderr)
                 print(recv_data.strip(), end="", flush=True, file=sys.stderr)
                 llm_gen_segments += 1
             elif msg == "LLM_GENERATE_DONE":
@@ -257,9 +296,9 @@ def loop_asr_llm_generate(asr: interface.IAsr, llm: interface.ILlm,
                 text_buffer.put_nowait(
                     ("LLM_GENERATE_TEXT", text, session))
             conn.send(("LLM_GENERATE_DONE", "", session))
-        except Exception as e:
+        except Exception as ex:
             conn.send(
-                ("BE_EXCEPTION", f"asr_llm_generate's exception: {e}", session))
+                ("BE_EXCEPTION", f"asr_llm_generate's exception: {ex}", session))
 
 
 def loop_tts_synthesize(
@@ -289,9 +328,9 @@ def loop_tts_synthesize(
             logging.debug(
                 f"tts_synthesize's consumption queue is empty after block {q_get_timeout}s")
             continue
-        except Exception as e:
+        except Exception as ex:
             conn.send(
-                ("BE_EXCEPTION", f"tts_synthesize's exception: {e}", session))
+                ("BE_EXCEPTION", f"tts_synthesize's exception: {ex}", session))
 
 
 def main():
