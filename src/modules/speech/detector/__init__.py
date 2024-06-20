@@ -1,2 +1,3 @@
 from . import pyannote
-# from . import porcupine, silero_vad, webrtc_vad
+from . import porcupine
+# from . import silero_vad, webrtc_vad

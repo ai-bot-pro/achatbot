@@ -12,10 +12,12 @@ class Session:
         self.config.update(config_data)
 
     def append_audio_data(self, audio_data):
-        self.ctx.buffering_stragegy.insert(audio_data)
+        if self.ctx.buffering_strategy is not None:
+            self.ctx.buffering_strategy.insert(audio_data)
 
     def clear_buffer(self):
-        self.ctx.buffering_stragegy.clear()
+        if self.ctx.buffering_strategy is not None:
+            self.ctx.buffering_strategy.clear()
 
     def increment_file_counter(self):
         self.file_counter += 1
@@ -30,8 +32,22 @@ class Session:
         # @TODO: use burr work flow
         if self.ctx.on_session_start:
             self.ctx.on_session_start(self)
-        if self.ctx.buffering_stragegy:
-            self.ctx.buffering_stragegy.process_audio(self)
+        if self.ctx.buffering_strategy:
+            self.ctx.buffering_strategy.process_audio(self)
         if self.ctx.on_session_end:
             self.ctx.on_session_end(self)
         self.clear_buffer()
+
+    def close(self):
+        if hasattr(self.ctx.buffering_strategy, "close"):
+            self.ctx.buffering_strategy.close()
+        if hasattr(self.ctx.waker, "close"):
+            self.ctx.waker.close()
+        if hasattr(self.ctx.vad, "close"):
+            self.ctx.vad.close()
+        if hasattr(self.ctx.asr, "close"):
+            self.ctx.asr.close()
+        if hasattr(self.ctx.llm, "close"):
+            self.ctx.llm.close()
+        if hasattr(self.ctx.tts, "close"):
+            self.ctx.tts.close()

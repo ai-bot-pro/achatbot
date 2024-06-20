@@ -5,7 +5,7 @@ from pyannote.audio.core.io import AudioFile
 
 from src.common.session import Session
 from src.common.interface import IDetector
-from src.common.types import PyannoteDetectorArgs
+from src.common.types import PyannoteDetectorArgs, RATE, CHUNK
 from src.common.factory import EngineClass
 
 r"""
@@ -64,6 +64,12 @@ class PyannoteDetector(EngineClass):
         if isinstance(audio_data, AudioFile):
             self.args.vad_pyannote_audio = audio_data
 
+    def get_sample_info(self):
+        return RATE, CHUNK
+
+    def close(self):
+        pass
+
 
 class PyannoteVAD(PyannoteDetector, IDetector):
     r"""
@@ -78,7 +84,7 @@ class PyannoteVAD(PyannoteDetector, IDetector):
         self.pipeline = VoiceActivityDetection(segmentation=self.model)
         self.pipeline.instantiate(self.hyper_parameters)
 
-    async def detect(self, session: Session) -> None:
+    async def detect(self, session: Session):
         vad_res = self.pipeline(self.args.vad_pyannote_audio)
         # `vad_res` is a pyannote.core.Annotation instance containing speech regions
         vad_segments = []

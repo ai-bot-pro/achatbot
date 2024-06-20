@@ -1,8 +1,9 @@
 import logging
 import struct
+import asyncio
 
 
-from src.common.audio_stream import AudioStream, AudioStreamArgs
+from src.common.audio_stream import AudioStream, AudioStreamArgs, RingBuffer
 from src.common.factory import EngineClass
 from src.common.session import Session
 from src.common.interface import IRecorder
@@ -33,6 +34,12 @@ class PyAudioRecorder(EngineClass):
 class RMSRecorder(PyAudioRecorder, IRecorder):
     TAG = "rms_recorder"
 
+    def __init__(self, **args) -> None:
+        super().__init__(**args)
+        if self.args.rate != RATE:
+            raise Exception(
+                f"Sampling rate of the audio just support 16000Hz at now")
+
     def compute_rms(self, data):
         # Assuming data is in 16-bit samples
         format = "<{}h".format(len(data) // 2)
@@ -48,14 +55,8 @@ class RMSRecorder(PyAudioRecorder, IRecorder):
         audio_started = False
         frames = []
 
-        if self.args.rate != RATE:
-            logging.warning(
-                "Sampling rate of the audio just support 16000Hz at now"
-            )
-            return frames
-
         self.audio.stream.start_stream()
-        logging.debug("start recording")
+        logging.debug("start rms recording")
         while True:
             data = self.audio.stream.read(self.args.frames_per_buffer)
             rms = self.compute_rms(data)
@@ -72,10 +73,61 @@ class RMSRecorder(PyAudioRecorder, IRecorder):
                 audio_started = True
 
         self.audio.stream.stop_stream()
-        logging.debug("end recording")
+        logging.debug("end rms recording")
 
         return frames
 
 
+class WakeWordsRMSRecorder(RMSRecorder, IRecorder):
+    TAG = "wakeword_rms_recorder"
+
+    def __init__(self, **args) -> None:
+        super().__init__(**args)
+
+    def record_audio(self, session: Session) -> list[bytes]:
+        if session.ctx.waker is None:
+            logging.warning(
+                f"WakeWordsRMSRecorder no waker instance in session ctx, use RMSRecorder")
+            return super().record_audio(session)
+
+        sample_rate, frame_length = session.ctx.waker.get_sample_info()
+        self.sample_rate, self.frame_length = sample_rate, frame_length
+
+        # ring buffer
+        pre_recording_buffer_duration = 10.0
+        maxlen = int((sample_rate // frame_length) *
+                     pre_recording_buffer_duration)
+        self.audio_buffer = RingBuffer(maxlen)
+        logging.debug(f"audio ring buffer maxlen: {maxlen}")
+
+        self.audio.stream.start_stream()
+        logging.debug("start wake words detector rms recording")
+
+        while True:
+            data = self.audio.stream.read(self.frame_length)
+            session.ctx.read_audio_frames = data
+            session.ctx.waker.set_audio_data(self.audio_buffer.get_buf())
+            res = asyncio.run(
+                session.ctx.waker.detect(session))
+            if res is True:
+                break
+            self.audio_buffer.extend(data)
+
+        self.audio.stream.stop_stream()
+        logging.debug("end wake words detector rms recording")
+
+        return super().record_audio(session)
+
+
 class VADRecorder(PyAudioRecorder, IRecorder):
-    pass
+    TAG = ""
+
+    def record_audio(self, session: Session) -> list[bytes]:
+        pass
+
+
+class WakeWordsVADRecorder(PyAudioRecorder, IRecorder):
+    TAG = ""
+
+    def record_audio(self, session: Session) -> list[bytes]:
+        pass

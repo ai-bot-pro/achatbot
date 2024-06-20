@@ -1,8 +1,29 @@
 import logging
+import collections
 
 import pyaudio
 
 from src.common.types import AudioStreamArgs
+
+
+class RingBuffer(object):
+    """Ring buffer to hold audio from audio stream"""
+
+    def __init__(self, size=4096):
+        self._buf = collections.deque(maxlen=size)
+
+    def get_buf(self):
+        return self._buf
+
+    def extend(self, data):
+        """Adds data to the end of buffer"""
+        self._buf.extend(data)
+
+    def get(self):
+        """Retrieves data from the beginning of buffer and clears it"""
+        tmp = bytes(bytearray(self._buf))
+        self._buf.clear()
+        return tmp
 
 
 class AudioStream:
@@ -19,6 +40,9 @@ class AudioStream:
         self.args = args
         self.stream = None
         self.pyaudio_instance = pyaudio.PyAudio()
+        if self.args.input is True and self.args.input_device_index is None:
+            default_device = self.pyaudio_instance.get_default_input_device_info()
+            self.args.input_device_index = default_device['index']
 
     def open_stream(self):
         """Opens an audio stream."""
