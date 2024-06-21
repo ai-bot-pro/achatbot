@@ -8,13 +8,14 @@ import sys
 
 
 from src.common import interface
+from src.common.logger import Logger
 import src.cmd.init
 
 
 HISTORY_LIMIT = 10240
 
 
-def run_be(conn: interface.IConnector, e: multiprocessing.Event):
+def run_be(conn: interface.IConnector, e: multiprocessing.Event = None):
     # vad_detector = src.cmd.init.initVADEngine()
     asr = src.cmd.init.initASREngine()
     llm = src.cmd.init.initLLMEngine()
@@ -30,7 +31,7 @@ def run_be(conn: interface.IConnector, e: multiprocessing.Event):
     tts_synthesize_t.start()
 
     logging.info(f"init BE is ok")
-    e.set()
+    e and e.set()
 
     asr_llm_gen_t.join()
     tts_synthesize_t.join()
@@ -44,7 +45,10 @@ def loop_asr_llm_generate(asr: interface.IAsr, llm: interface.ILlm,
     print("start loop_asr_llm_generate...", flush=True, file=sys.stderr)
     while True:
         try:
-            msg, frames, session = conn.recv('be')
+            res = conn.recv('be')
+            if res is None:
+                continue
+            msg, frames, session = res
             if msg is None or msg.lower() == "stop":
                 break
             logging.info(f'Received: {msg} len(frames): {len(frames)}')

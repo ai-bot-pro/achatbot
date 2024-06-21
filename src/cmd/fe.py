@@ -45,7 +45,7 @@ def loop_record(conn: interface.IConnector, e: threading.Event):
             if len(frames) == 0:
                 continue
             data = b''.join(frames)
-            conn.send(("RECORD_FRAMES", data, session),'fe')
+            conn.send(("RECORD_FRAMES", data, session), 'fe')
             asyncio.run(save_audio_to_file(
                 data, session.get_file_name(), audio_dir=RECORDS_DIR))
             session.increment_file_counter()
@@ -63,7 +63,10 @@ def loop_play(conn: interface.IConnector, e: threading.Event):
     llm_gen_segments = 0
     while True:
         try:
-            msg, recv_data, session = conn.recv('fe')
+            res = conn.recv('fe')
+            if res is None:
+                continue
+            msg, recv_data, session = res
             if msg is None or msg.lower() == "stop":
                 break
             if msg == "PLAY_FRAMES":

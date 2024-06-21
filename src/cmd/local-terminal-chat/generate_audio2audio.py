@@ -1,6 +1,7 @@
 r"""
-TQDM_DISABLE=True python -m src.cmd.local-terminal-chat.generate_audio2audio > std_out.log
-TQDM_DISABLE=True RECORDER_TAG=wakeword_rms_recorder python -m src.cmd.local-terminal-chat.generate_audio2audio > std_out.log
+TQDM_DISABLE=True python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
+
+TQDM_DISABLE=True RECORDER_TAG=wakeword_rms_recorder python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
 """
 import multiprocessing
 import multiprocessing.connection
@@ -12,8 +13,8 @@ from src.cmd.be import run_be
 from src.cmd.fe import run_fe
 
 
-# global logging for fork processes
-logger = Logger.init(logging.INFO, is_file=True, is_console=False)
+# global logging
+Logger.init(logging.INFO, is_file=True, is_console=False)
 
 
 def main():

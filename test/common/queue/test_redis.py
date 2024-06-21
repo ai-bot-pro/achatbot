@@ -32,13 +32,15 @@ class TestRedisQueue(unittest.TestCase):
         self.queue.client.flushdb()
         self.queue.client.close()
 
-    def test_get(self):
-        asyncio.run(self.queue.put("test_get", b"test"))
-        res = asyncio.run(self.queue.get("test_get"))
-        print(res)
-        self.assertGreater(len(res), 0)
+    def test_get_timeout(self):
+        res = asyncio.run(self.queue.get("test_get", timeout_s=0.5))
+        print(f"get res: {res}")
+        self.assertIsNone(res)
 
-    def test_put(self):
-        res = asyncio.run(self.queue.put("test_set", b"test"))
-        print(res)
+    def test_put_get(self):
+        res = asyncio.run(self.queue.put("test_get_set", b"test"))
+        print(f"put res: {res}")
         self.assertGreater(res, 0)
+        res = asyncio.run(self.queue.get("test_get_set"))
+        print(f"get res: {res}")
+        self.assertGreater(len(res), 0)

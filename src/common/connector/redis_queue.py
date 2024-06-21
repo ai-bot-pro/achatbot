@@ -32,5 +32,7 @@ class RedisQueueConnector(IConnector):
             res = asyncio.run(self.conn.get(self.be_send_key))
         if at == "be":
             res = asyncio.run(self.conn.get(self.fe_send_key))
+        if res is None:
+            return None
 
         return pickle.loads(res)
