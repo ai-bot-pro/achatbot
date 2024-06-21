@@ -33,3 +33,7 @@ class RedisQueue:
     async def put(self, key: str, data: bytes):
         key = self._get_key(key)
         return self.client.rpush(key, data)
+
+    def close(self):
+        self.client.close()
+        pass

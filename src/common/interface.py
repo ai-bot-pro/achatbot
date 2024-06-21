@@ -112,3 +112,17 @@ class IPlayer(ABC):
     @abstractmethod
     def close(self):
         raise NotImplemented("must be implemented in the child class")
+
+
+class IConnector(ABC):
+    @abstractmethod
+    def send(self, data, _to: str):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def recv(self, _from: str):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def close(self):
+        raise NotImplemented("must be implemented in the child class")
