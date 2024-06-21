@@ -116,11 +116,11 @@ class IPlayer(ABC):
 
 class IConnector(ABC):
     @abstractmethod
-    def send(self, data, _to: str):
+    def send(self, data, at: str):
         raise NotImplemented("must be implemented in the child class")
 
     @abstractmethod
-    def recv(self, _from: str):
+    def recv(self, at: str):
         raise NotImplemented("must be implemented in the child class")
 
     @abstractmethod

@@ -7,13 +7,14 @@ import sys
 
 import uuid
 
+from src.common import interface
 from src.common.session import Session
 from src.common.utils.audio_utils import save_audio_to_file
 from src.common.types import SessionCtx, RECORDS_DIR
 import src.cmd.init
 
 
-def run_fe(conn: multiprocessing.connection.Connection):
+def run_fe(conn: interface.IConnector):
     start_record_event = threading.Event()
     play_t = threading.Thread(target=loop_play,
                               args=(conn, start_record_event))
@@ -26,7 +27,7 @@ def run_fe(conn: multiprocessing.connection.Connection):
     play_t.join()
 
 
-def loop_record(conn: multiprocessing.connection.Connection, e: threading.Event):
+def loop_record(conn: interface.IConnector, e: threading.Event):
     recorder = src.cmd.init.initRecorderEngine()
     sid = uuid.uuid4()
     session = Session(**SessionCtx(sid).__dict__)
@@ -44,7 +45,7 @@ def loop_record(conn: multiprocessing.connection.Connection, e: threading.Event)
             if len(frames) == 0:
                 continue
             data = b''.join(frames)
-            conn.send(("RECORD_FRAMES", data, session))
+            conn.send(("RECORD_FRAMES", data, session),'fe')
             asyncio.run(save_audio_to_file(
                 data, session.get_file_name(), audio_dir=RECORDS_DIR))
             session.increment_file_counter()
@@ -56,13 +57,13 @@ def loop_record(conn: multiprocessing.connection.Connection, e: threading.Event)
                 f"loop_record Exception {ex} sid:{session.ctx.client_id}")
 
 
-def loop_play(conn: multiprocessing.connection.Connection, e: threading.Event):
+def loop_play(conn: interface.IConnector, e: threading.Event):
     player = src.cmd.init.initPlayerEngine()
     print("start loop_play...", flush=True, file=sys.stderr)
     llm_gen_segments = 0
     while True:
         try:
-            msg, recv_data, session = conn.recv()
+            msg, recv_data, session = conn.recv('fe')
             if msg is None or msg.lower() == "stop":
                 break
             if msg == "PLAY_FRAMES":

@@ -13,18 +13,18 @@ class MultiprocessingPipeConnector(IConnector):
         self.fe_conn.close()
         self.be_conn.close()
 
-    def send(self, data, _to: str):
-        if _to not in ["be", "fe"]:
-            raise Exception(f"send to {_to} must use 'be' or 'fe'")
-        if _to == "fe":
+    def send(self, data, at: str):
+        if at not in ["be", "fe"]:
+            raise Exception(f"send at {at} must use 'be' or 'fe'")
+        if at == "fe":
             return self.fe_conn.send(data)
-        if _to == "be":
+        if at == "be":
             return self.be_conn.send(data)
 
-    def recv(self, _from: str):
-        if _from not in ["be", "fe"]:
-            raise Exception(f"recv from {_from} must use 'be' or 'fe'")
-        if _from == "fe":
+    def recv(self, at: str):
+        if at not in ["be", "fe"]:
+            raise Exception(f"recv at {at} must use 'be' or 'fe'")
+        if at == "fe":
             return self.fe_conn.recv()
-        if _from == "be":
+        if at == "be":
             return self.be_conn.recv()
