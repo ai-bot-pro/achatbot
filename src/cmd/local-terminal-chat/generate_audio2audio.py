@@ -328,6 +328,8 @@ def loop_asr_llm_generate(asr: interface.IAsr, llm: interface.ILlm,
 
             session.ctx.state["prompt"] = create_prompt(history)
             logging.info(f"llm.generate prompt: {session.ctx.state['prompt']}")
+            print(f"me: {session.ctx.state['prompt']}",
+                  flush=True, file=sys.stdout)
             assistant_text = ""
             text_iter = llm.generate(session)
             for text in text_iter:
@@ -335,7 +337,10 @@ def loop_asr_llm_generate(asr: interface.IAsr, llm: interface.ILlm,
                 conn.send(("LLM_GENERATE_TEXT", text, session))
                 text_buffer.put_nowait(
                     ("LLM_GENERATE_TEXT", text, session))
-            history.append(get_assistant_prompt(assistant_text))
+            out = get_assistant_prompt(assistant_text)
+            history.append(out)
+            bot_name = session.ctx.state["bot_name"] if "bot_name" in session.ctx.state else "bot"
+            print(f"{bot_name}: {out}", flush=True, file=sys.stdout)
             conn.send(("LLM_GENERATE_DONE", "", session))
         except Exception as ex:
             conn.send(
