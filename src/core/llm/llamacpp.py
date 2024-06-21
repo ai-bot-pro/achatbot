@@ -33,6 +33,12 @@ class LLamacppLLM(EngineClass, ILlm):
                 n_threads=self.args.n_threads,
                 n_gpu_layers=self.args.n_gpu_layers)
 
+    def encode(self, text: str | bytes):
+        return self.model.tokenize(text.encode() if isinstance(text, str) else text)
+
+    def count_tokens(self, text: str | bytes):
+        return len(self.encode(text))
+
     def generate(self, session: Session):
         prompt = session.ctx.state["prompt"]
         prompt = self.args.llm_prompt_tpl % (prompt,)

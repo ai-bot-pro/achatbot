@@ -193,6 +193,7 @@ class WhisperTransformersASRArgs(WhisperASRArgs):
 
 @dataclass
 class LLamcppLLMArgs:
+    model_name: str = ""
     model_type: str = ""
     model_path: str = ""
     n_threads: int = 1
