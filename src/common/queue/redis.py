@@ -22,14 +22,22 @@ class RedisQueue:
     def _get_key(self, key: str) -> str:
         return f"{self.Q_PREFIX_KEY}:{key}"
 
-    async def get(self, key: str) -> bytes:
+    async def get(self, key: str, timeout_s=0) -> bytes:
         key = self._get_key(key)
+        logging.debug(f"get key: {key}")
         q_len = self.client.llen(key)
         if q_len > 10:
             self.client.expire(key, 1)
-        frames = self.client.blpop(key, timeout=0.1)
-        return frames
+        res = self.client.blpop(key, timeout=timeout_s)
+        if res is None:
+            return None
+        return res[1]
 
     async def put(self, key: str, data: bytes):
         key = self._get_key(key)
+        logging.debug(f"put key: {key}")
         return self.client.rpush(key, data)
+
+    def close(self):
+        self.client.close()
+        pass
