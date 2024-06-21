@@ -24,6 +24,9 @@ from src.common.types import SessionCtx,  MODELS_DIR, RECORDS_DIR, CHUNK
 import src.modules.speech
 import src.core.llm
 
+DEFAULT_SYSTEM_PROMPT = "你是一个中国人,请用中文回答。回答限制在1-5句话内。要友好、乐于助人且简明扼要。保持对话简短而甜蜜。只用纯文本回答，不要包含链接或其他附加内容。不要回复计算机代码以及数学公式。"
+HISTORY_LIMIT = 10240
+
 # global logging for fork processes
 logger = Logger.init(logging.INFO, is_file=True, is_console=False)
 
@@ -34,7 +37,7 @@ def clear_console():
 
 def on_wakeword_detected(session, data):
     if "bot_name" in session.ctx.state:
-        print(f"{session.ctx.state['bot_name']}",
+        print(f"{session.ctx.state['bot_name']}~ ",
               end="", flush=True, file=sys.stderr)
 
 
@@ -106,10 +109,38 @@ def initASREngine() -> interface.IAsr:
     return engine
 
 
+def create_phi3_prompt(history: list[str], system_prompt: str, init_message: str = None):
+    prompt = f'<|system|>\n{system_prompt}</s>\n'
+    if init_message:
+        prompt += f"<|assistant|>\n{init_message}</s>\n"
+
+    return prompt + "".join(history) + "<|assistant|>"
+
+
+def create_prompt(history: list[str], system_prompt: str = DEFAULT_SYSTEM_PROMPT, init_message: str = None):
+    if "phi-3" in os.getenv('MODEL_NAME', 'phi-3').lower():
+        return create_phi3_prompt(history, system_prompt, init_message)
+
+    return ""
+
+
+def get_user_prompt(text):
+    if "phi-3" in os.getenv('MODEL_NAME', 'phi-3').lower():
+        return (f"<|user|>\n{text}</s>\n")
+    return ""
+
+
+def get_assistant_prompt(text):
+    if "phi-3" in os.getenv('MODEL_NAME', 'phi-3').lower():
+        return (f"<|assistant|>\n{text}</s>\n")
+    return ""
+
+
 def initLLMEngine() -> interface.ILlm:
     # llm
     tag = os.getenv('LLM_TAG', "llm_llamacpp")
     kwargs = {}
+    kwargs["model_name"] = os.getenv('MODEL_NAME', 'phi-3')
     kwargs["model_path"] = os.getenv('LLM_MODEL_PATH', os.path.join(
         MODELS_DIR, "Phi-3-mini-4k-instruct-q4.gguf"))
     kwargs["model_type"] = os.getenv('LLM_MODEL_TYPE', "chat")
@@ -272,6 +303,7 @@ def run_be(conn: multiprocessing.connection.Connection, e: multiprocessing.Event
 def loop_asr_llm_generate(asr: interface.IAsr, llm: interface.ILlm,
                           conn: multiprocessing.connection.Connection,
                           text_buffer: queue.Queue):
+    history = []
     logging.info(f"loop_asr starting with asr: {asr}")
     print("start loop_asr_llm_generate...", flush=True, file=sys.stderr)
     while True:
@@ -289,12 +321,26 @@ def loop_asr_llm_generate(asr: interface.IAsr, llm: interface.ILlm,
             conn.send(("ASR_TEXT", res['text'], session))
             conn.send(("ASR_TEXT_DONE", "", session))
 
-            session.ctx.state["prompt"] = res['text']
+            history.append(get_user_prompt(res['text']))
+            while llm.count_tokens(create_prompt(history)) > HISTORY_LIMIT:
+                history.pop(0)
+                history.pop(0)
+
+            session.ctx.state["prompt"] = create_prompt(history)
+            logging.info(f"llm.generate prompt: {session.ctx.state['prompt']}")
+            print(f"me: {session.ctx.state['prompt']}",
+                  flush=True, file=sys.stdout)
+            assistant_text = ""
             text_iter = llm.generate(session)
             for text in text_iter:
+                assistant_text += text
                 conn.send(("LLM_GENERATE_TEXT", text, session))
                 text_buffer.put_nowait(
                     ("LLM_GENERATE_TEXT", text, session))
+            out = get_assistant_prompt(assistant_text)
+            history.append(out)
+            bot_name = session.ctx.state["bot_name"] if "bot_name" in session.ctx.state else "bot"
+            print(f"{bot_name}: {out}", flush=True, file=sys.stdout)
             conn.send(("LLM_GENERATE_DONE", "", session))
         except Exception as ex:
             conn.send(
