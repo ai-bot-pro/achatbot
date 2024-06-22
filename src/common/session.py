@@ -7,6 +7,7 @@ class Session:
         self.config = {}
         self.file_counter = 0
         self.chat_round = 0
+        # just for local history,@todo: use kv store history
         self.chat_history = []
 
     def __getstate__(self):
