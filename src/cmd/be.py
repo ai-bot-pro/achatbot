@@ -7,19 +7,19 @@ import queue
 import sys
 
 
+from src.common.session import Session
 from src.common import interface
-from src.common.logger import Logger
-import src.cmd.init
+from src.cmd import init
 
 
 HISTORY_LIMIT = 10240
 
 
 def run_be(conn: interface.IConnector, e: multiprocessing.Event = None):
-    # vad_detector = src.cmd.init.initVADEngine()
-    asr = src.cmd.init.initASREngine()
-    llm = src.cmd.init.initLLMEngine()
-    tts = src.cmd.init.initTTSEngine()
+    # vad_detector = init.initVADEngine()
+    asr = init.initASREngine()
+    llm = init.initLLMEngine()
+    tts = init.initTTSEngine()
 
     th_q = queue.Queue()
 
@@ -40,7 +40,6 @@ def run_be(conn: interface.IConnector, e: multiprocessing.Event = None):
 def loop_asr_llm_generate(asr: interface.IAsr, llm: interface.ILlm,
                           conn: interface.IConnector,
                           text_buffer: queue.Queue):
-    history = []
     logging.info(f"loop_asr starting with asr: {asr}")
     print("start loop_asr_llm_generate...", flush=True, file=sys.stderr)
     while True:
@@ -61,12 +60,13 @@ def loop_asr_llm_generate(asr: interface.IAsr, llm: interface.ILlm,
             conn.send(("ASR_TEXT", res['text'], session), 'be')
             conn.send(("ASR_TEXT_DONE", "", session), 'be')
 
-            history.append(src.cmd.init.get_user_prompt(res['text']))
-            while llm.count_tokens(src.cmd.init.create_prompt(history)) > HISTORY_LIMIT:
-                history.pop(0)
-                history.pop(0)
+            session.chat_history.append(init.get_user_prompt(res['text']))
+            while llm.count_tokens(init.create_prompt(session.chat_history)) > HISTORY_LIMIT:
+                session.chat_history.pop(0)
+                session.chat_history.pop(0)
 
-            session.ctx.state["prompt"] = src.cmd.init.create_prompt(history)
+            session.ctx.state["prompt"] = init.create_prompt(
+                session.chat_history)
             logging.info(f"llm.generate prompt: {session.ctx.state['prompt']}")
             print(f"me: {session.ctx.state['prompt']}",
                   flush=True, file=sys.stdout)
@@ -77,8 +77,8 @@ def loop_asr_llm_generate(asr: interface.IAsr, llm: interface.ILlm,
                 conn.send(("LLM_GENERATE_TEXT", text, session), 'be')
                 text_buffer.put_nowait(
                     ("LLM_GENERATE_TEXT", text, session))
-            out = src.cmd.init.get_assistant_prompt(assistant_text)
-            history.append(out)
+            out = init.get_assistant_prompt(assistant_text)
+            session.chat_history.append(out)
             bot_name = session.ctx.state["bot_name"] if "bot_name" in session.ctx.state else "bot"
             print(f"{bot_name}: {out}", flush=True, file=sys.stdout)
             conn.send(("LLM_GENERATE_DONE", "", session), 'be')

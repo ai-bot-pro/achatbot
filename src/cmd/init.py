@@ -1,4 +1,3 @@
-import multiprocessing.connection
 import os
 import logging
 import sys
@@ -136,6 +135,8 @@ def initLLMEngine() -> interface.ILlm:
     kwargs["llm_stream"] = False
     # if logger.getEffectiveLevel() != logging.DEBUG:
     #    kwargs["verbose"] = False
+    kwargs['llm_stop'] = ["<|end|>", "</s>", "/s>",
+                          "</s", "<s>", "<|user|>", "<|assistant|>", "<|system|>"]
     engine = EngineFactory.get_engine_by_tag(
         EngineClass, tag, **kwargs)
     logging.info(f"initLLMEngine: {tag}, {engine}")

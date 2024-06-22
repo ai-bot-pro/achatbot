@@ -1,5 +1,3 @@
-import multiprocessing
-import multiprocessing.connection
 import logging
 import asyncio
 import threading
@@ -11,7 +9,7 @@ from src.common import interface
 from src.common.session import Session
 from src.common.utils.audio_utils import save_audio_to_file
 from src.common.types import SessionCtx, RECORDS_DIR
-import src.cmd.init
+from src.cmd import init
 
 
 def run_fe(conn: interface.IConnector):
@@ -28,10 +26,10 @@ def run_fe(conn: interface.IConnector):
 
 
 def loop_record(conn: interface.IConnector, e: threading.Event):
-    recorder = src.cmd.init.initRecorderEngine()
+    recorder = init.initRecorderEngine()
     sid = uuid.uuid4()
     session = Session(**SessionCtx(sid).__dict__)
-    session.ctx.waker = src.cmd.init.initWakerEngine()
+    session.ctx.waker = init.initWakerEngine()
     logging.info(f"loop_record starting with session ctx: {session.ctx}")
     print("start loop_record...", flush=True, file=sys.stderr)
     while True:
@@ -58,7 +56,7 @@ def loop_record(conn: interface.IConnector, e: threading.Event):
 
 
 def loop_play(conn: interface.IConnector, e: threading.Event):
-    player = src.cmd.init.initPlayerEngine()
+    player = init.initPlayerEngine()
     print("start loop_play...", flush=True, file=sys.stderr)
     llm_gen_segments = 0
     while True:

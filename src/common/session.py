@@ -7,12 +7,15 @@ class Session:
         self.config = {}
         self.file_counter = 0
         self.chat_round = 0
+        # just for local history,@todo: use kv store history
+        self.chat_history = []
 
     def __getstate__(self):
         return {
             "config": self.config,
             "file_counter": self.file_counter,
             "chat_round": self.chat_round,
+            "chat_history": self.chat_history,
             "ctx": self.ctx
         }
 
@@ -20,6 +23,7 @@ class Session:
         self.config = state["config"]
         self.file_counter = state["file_counter"]
         self.chat_round = state["chat_round"]
+        self.chat_history = state["chat_history"]
         self.ctx = state["ctx"]
 
     def update_config(self, config_data):
