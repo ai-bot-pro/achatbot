@@ -22,6 +22,10 @@ from src.common.session import Session
 from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR
 from src.modules.speech.asr.whisper_asr import EngineClass
 
+r"""
+KMP_DUPLICATE_LIB_OK=TRUE MODEL_NAME_OR_PATH=./models/Systran/faster-whisper-base ASR_VERBOSE=True ASR_TAG=whisper_faster_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
+"""
+
 
 class TestWhisperASR(unittest.TestCase):
     @classmethod

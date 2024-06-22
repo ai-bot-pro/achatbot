@@ -2,6 +2,8 @@ r"""
 TQDM_DISABLE=True python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
 
 TQDM_DISABLE=True RECORDER_TAG=wakeword_rms_recorder python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
+
+KMP_DUPLICATE_LIB_OK=TRUE TQDM_DISABLE=True RECORDER_TAG=wakeword_rms_recorder ASR_TAG=whisper_faster_asr ASR_MODEL_NAME_OR_PATH=./models/Systran/faster-whisper-base python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
 """
 import multiprocessing
 import multiprocessing.connection

@@ -8,7 +8,7 @@ eg: (base size model)
 ct2-transformers-converter --model openai/whisper-base --output_dir faster-whisper-base \
 --copy_files tokenizer.json - -quantization float16
 
-2. faster_whisper model ckpt from https://huggingface.co/collections/guillaumekln/faster-whisper-64f9c349b3115b4f51434976
+2. faster_whisper model ckpt from https://huggingface.co/Systran
 """
 
 from faster_whisper import WhisperModel
@@ -52,14 +52,12 @@ def faster_whisper_transcribe(audio_path, download_root, model_size="base", targ
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_type', "-t", type=str,
-                        default="whisper", help='choice whisper | whisper_timestamped')
     parser.add_argument('--audio_path', "-a", type=str,
                         default="./records/tmp.wav", help='audio path')
-    parser.add_argument('--model_size', "-s", type=str,
+    parser.add_argument('--model_size_or_path', "-s", type=str,
                         default="base", help='model size')
-    parser.add_argument('--model_path', "-m", type=str,
-                        default="./models", help='model root path')
+    parser.add_argument('--download_path', "-m", type=str,
+                        default="./models", help='model download path')
     parser.add_argument('--lang', "-l", type=str,
                         default="zh", help='target language')
     args = parser.parse_args()
