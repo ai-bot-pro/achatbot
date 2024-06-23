@@ -11,8 +11,8 @@ import logging
 
 from src.common.logger import Logger
 from src.common.connector.multiprocessing_pipe import MultiprocessingPipeConnector
-from src.cmd.be import run_be
-from src.cmd.fe import run_fe
+from src.cmd.be import Audio2AudioChatWorker as ChatWorker
+from src.cmd.fe import TerminalChatClient
 
 
 # global logging
@@ -23,14 +23,15 @@ def main():
     mp_conn = MultiprocessingPipeConnector()
 
     # BE
+
     be_init_event = multiprocessing.Event()
     c = multiprocessing.Process(
-        target=run_be, args=(mp_conn, be_init_event))
+        target=ChatWorker().run, args=(mp_conn, be_init_event))
     c.start()
     be_init_event.wait()
 
     # FE
-    run_fe(mp_conn)
+    TerminalChatClient().run(mp_conn)
 
     c.join()
     c.close()

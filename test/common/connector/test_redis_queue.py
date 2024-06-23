@@ -5,7 +5,8 @@ import asyncio
 import unittest
 
 from src.common.logger import Logger
-from src.common.types import LOG_DIR
+from src.common.session import Session
+from src.common.types import LOG_DIR, SessionCtx
 from src.common.connector.redis_queue import RedisQueueConnector
 
 r"""
@@ -27,6 +28,7 @@ class TestRedisQueue(unittest.TestCase):
 
     def setUp(self):
         self.connector = RedisQueueConnector(
+            fe_send_key="TEST_FE_SEND", be_send_key="TEST_BE_SEND",
             host=self.REDIS_HOST, port=self.REDIS_PORT)
 
     def tearDown(self):
@@ -39,3 +41,23 @@ class TestRedisQueue(unittest.TestCase):
         self.assertEqual(v1, 1)
         self.assertEqual(v2, 2)
         self.assertEqual(v3, 3)
+
+    def test_send_recv_session(self):
+        s = Session(**SessionCtx("test_sid").__dict__)
+        s.chat_history.append("hello")
+        self.connector.send((1, 2, s), 'be')
+        v1, v2, session = self.connector.recv('fe')
+        print(v1, v2, session)
+        print(session.chat_history)
+        self.assertEqual(v1, 1)
+        self.assertEqual(v2, 2)
+        self.assertIsNotNone(session)
+
+        session.chat_history.append("world")
+        self.connector.send((1, 2, session), 'fe')
+        v1, v2, s = self.connector.recv('be')
+        print(v1, v2, s)
+        print(s.chat_history)
+        self.assertEqual(v1, 1)
+        self.assertEqual(v2, 2)
+        self.assertIsNotNone(s)

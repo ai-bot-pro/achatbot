@@ -2,8 +2,8 @@ import os
 import logging
 import argparse
 
-from src.cmd.fe import run_fe
-from src.cmd.be import run_be
+from src.cmd.fe import TerminalChatClient
+from src.cmd.be import Audio2AudioChatWorker as ChatWorker
 from src.common.connector.redis_queue import RedisQueueConnector
 from src.common.logger import Logger
 
@@ -32,9 +32,9 @@ def main():
 
     op = os.getenv("RUN_OP", "fe")
     if op == "be":
-        run_be(conn)
+        TerminalChatClient().run(conn)
     else:
-        run_fe(conn)
+        ChatWorker().run(conn)
     conn.close()
 
 
