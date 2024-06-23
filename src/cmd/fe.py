@@ -3,6 +3,7 @@ import asyncio
 import threading
 import sys
 import traceback
+import os
 
 
 import uuid
@@ -11,7 +12,7 @@ from src.common import interface
 from src.common.session import Session
 from src.common.utils.audio_utils import save_audio_to_file
 from src.common.types import SessionCtx, RECORDS_DIR
-from src.cmd import init
+from src.cmd.init import Env as init
 
 
 class TerminalChatClient:
@@ -31,9 +32,15 @@ class TerminalChatClient:
         record_t.join()
         play_t.join()
 
+    def on_wakeword_detected(self, session, data):
+        if "bot_name" in session.ctx.state:
+            print(f"{session.ctx.state['bot_name']}~ ",
+                  end="", flush=True, file=sys.stderr)
+
     def loop_record(self, conn: interface.IConnector, e: threading.Event):
         recorder = init.initRecorderEngine()
         waker = init.initWakerEngine()
+        waker.set_args(on_wakeword_detected=self.on_wakeword_detected)
         logging.info(
             f"loop_record starting with session ctx: {self.session.ctx}")
         print("start loop_record...", flush=True, file=sys.stderr)
@@ -106,3 +113,7 @@ class TerminalChatClient:
                 logging.warning(f"loop_play Exception {ex}, trace: {ex_trace}")
                 e.set()
                 llm_gen_segments = 0
+
+    @staticmethod
+    def clear_console():
+        os.system('clear' if os.name == 'posix' else 'cls')

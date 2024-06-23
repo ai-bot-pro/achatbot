@@ -9,7 +9,7 @@ import sys
 
 from src.common.session import Session
 from src.common import interface
-from src.cmd import init
+from src.cmd.init import Env as init
 
 
 HISTORY_LIMIT = 10240
