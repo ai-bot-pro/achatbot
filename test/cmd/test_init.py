@@ -8,7 +8,7 @@ from src.cmd.init import Env
 from src.common.logger import Logger
 
 r"""
-python -m unittest test.cmd.test_init.TestEnv.test_save_to_yaml
+python -m unittest test.cmd.test_init.TestEnv.test_save_to_yamls
 """
 
 
@@ -28,10 +28,10 @@ class TestEnv(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_save_to_yaml(self):
+    def test_save_to_yamls(self):
         os.environ['RECORDER_TAG'] = 'wakeword_rms_recorder'
         os.environ['CONF_ENV'] = 'local'
-        res = asyncio.run(Env.save_to_yaml())
+        res = asyncio.run(Env.save_to_yamls())
         self.assertIsInstance(res, list)
         for file_path in res:
             print(file_path)

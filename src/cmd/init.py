@@ -40,8 +40,7 @@ class Env:
         kwargs["keyword_paths"] = os.getenv(
             'KEYWORD_PATHS', keyword_paths).split(',')
         kwargs["model_path"] = os.getenv('MODEL_PATH', model_path)
-        engine = EngineFactory.get_engine_by_tag(
-            EngineClass, tag, **kwargs)
+        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         return engine
 
     @staticmethod
@@ -52,8 +51,7 @@ class Env:
         input_device_index = os.getenv('MIC_IDX', None)
         kwargs["input_device_index"] = None if input_device_index is None else int(
             input_device_index)
-        engine = EngineFactory.get_engine_by_tag(
-            EngineClass, tag, **kwargs)
+        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         logging.info(f"initRecorderEngine: {tag}, {engine}")
         return engine
 
@@ -69,8 +67,7 @@ class Env:
         kwargs["path_or_hf_repo"] = os.getenv(
             'VAD_PATH_OR_HF_REPO', model_ckpt_path)
         kwargs["model_type"] = model_type
-        engine = EngineFactory.get_engine_by_tag(
-            EngineClass, tag, **kwargs)
+        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         logging.info(f"initVADEngine: {tag}, {engine}")
         return engine
 
@@ -84,8 +81,7 @@ class Env:
         kwargs["download_path"] = MODELS_DIR
         kwargs["verbose"] = True
         kwargs["language"] = "zh"
-        engine = EngineFactory.get_engine_by_tag(
-            EngineClass, tag, **kwargs)
+        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         logging.info(f"initASREngine: {tag}, {engine}")
         return engine
 
@@ -136,8 +132,8 @@ class Env:
         #    kwargs["verbose"] = False
         kwargs['llm_stop'] = ["<|end|>", "</s>", "/s>",
                               "</s", "<s>", "<|user|>", "<|assistant|>", "<|system|>"]
-        engine = EngineFactory.get_engine_by_tag(
-            EngineClass, tag, **kwargs)
+        kwargs["llm_chat_system"] = DEFAULT_SYSTEM_PROMPT
+        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         logging.info(f"initLLMEngine: {tag}, {engine}")
         return engine
 
@@ -170,8 +166,7 @@ class Env:
         # tts
         tag = os.getenv('TTS_TAG', "tts_chat")
         kwargs = Env.map_config_func[tag]()
-        engine = EngineFactory.get_engine_by_tag(
-            EngineClass, tag, **kwargs)
+        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         logging.info(f"initTTSEngine: {tag}, {engine}")
         return engine
 
@@ -193,86 +188,120 @@ class Env:
         return engine
 
     @classmethod
-    async def save_obj_to_yaml(cls, name, obj, tag=None):
-        if "init" not in name and "Engine" not in name:
-            return
-        engine = obj()
-        if tag and tag not in engine.TAG:
-            return
-        # u can use local, dev, test, stress, gray, online
-        env = os.getenv('CONF_ENV', "env")
-        file_dir = os.path.join(CONFIG_DIR, env)
-        if not os.path.exists(file_dir):
-            os.makedirs(file_dir)
-        file_path = os.path.join(file_dir, f"{engine.TAG}.yaml")
-        logging.debug(f"obj: {obj}, engine: {engine}, file_path: {file_path}")
-        await Conf.save_to_yaml(engine.args.__dict__, file_path)
-        return name[4:len(name)-6].lower(), file_path, engine.TAG
+    async def save_to_yamls(cls, tag=None):
+        return await Conf.save_to_yamls(cls, tag)
 
-    @classmethod
-    async def save_to_yaml(cls, tag=None):
-        async_tasks = []
-        for name, obj in inspect.getmembers(cls, inspect.isfunction):
-            async_task = asyncio.create_task(
-                cls.save_obj_to_yaml(name, obj, tag))
-            async_tasks.append(async_task)
-            # await async_task
-        logging.debug(f"{async_tasks}, len(async_tasks):{len(async_tasks)}")
-        res = await asyncio.gather(*async_tasks, return_exceptions=True)
-        manifests = {}
-        items = []
-        for item in res:
-            if item is None:
+
+class YamlConfig:
+
+    @staticmethod
+    async def load_engine(key, tag, file_path):
+        conf = await Conf.load_from_yaml(file_path)
+        engine = EngineFactory.get_engine_by_tag(
+            EngineClass, tag, **conf)
+        return key, engine
+
+    @staticmethod
+    async def load(mainifests_path=None, engine_name=None) -> dict:
+        if mainifests_path is None:
+            env = os.getenv('CONF_ENV', "local")
+            mainifests_path = os.path.join(CONFIG_DIR, env, "manifests.yaml")
+
+        conf = await Conf.load_from_yaml(mainifests_path)
+        tasks = []
+        for key, item in conf.items():
+            if engine_name and engine_name != key:
                 continue
-            items.append(item)
-            name, file_path, _tag = item
-            manifests[name] = {"file_path": file_path, "tag": _tag}
+            task = asyncio.create_task(
+                YamlConfig.load_engine(key, item.tag, item.file_path))
+            tasks.append(task)
+        res = await asyncio.gather(*tasks)
 
-        env = os.getenv('CONF_ENV', "env")
-        file_path = os.path.join(CONFIG_DIR, env, "manifests.yaml")
-        await Conf.save_to_yaml(manifests, file_path)
-        items.append(("manifests", file_path, "manifests"))
-        return items
-
-
-class Config:
+        engines = {}
+        for key, engine in res:
+            engines[key] = engine
+        return engines
 
     @staticmethod
     def initWakerEngine() -> interface.IDetector | EngineClass:
-        pass
+        return asyncio.run(YamlConfig.load(engine_name="waker"))["waker"]
 
     @staticmethod
     def initRecorderEngine() -> interface.IRecorder | EngineClass:
-        pass
+        return asyncio.run(YamlConfig.load(engine_name="recorder"))["recorder"]
 
     @staticmethod
     def initVADEngine() -> interface.IDetector | EngineClass:
-        pass
+        return asyncio.run(YamlConfig.load(engine_name="vad"))["vad"]
 
     @staticmethod
     def initASREngine() -> interface.IAsr | EngineClass:
-        pass
+        return asyncio.run(YamlConfig.load(engine_name="asr"))["asr"]
 
     @staticmethod
     def initLLMEngine() -> interface.ILlm | EngineClass:
-        pass
+        return asyncio.run(YamlConfig.load(engine_name="llm"))["llm"]
 
     @staticmethod
     def initTTSEngine() -> interface.ITts | EngineClass:
-        pass
+        return asyncio.run(YamlConfig.load(engine_name="tts"))["tts"]
 
     @staticmethod
     def initPlayerEngine(tts: interface.ITts = None) -> interface.IPlayer | EngineClass:
-        pass
+        return asyncio.run(YamlConfig.load(engine_name="player"))["player"]
+
+
+def env2yaml():
+    res = asyncio.run(Env.save_to_yamls())
+    for file_path in res:
+        logging.info(file_path)
+
+
+def init_engines(object) -> dict:
+    engines = {}
+    for name, obj in inspect.getmembers(object, inspect.isfunction):
+        if "init" not in name and "Engine" not in name:
+            continue
+        engines[name] = obj()
+    return engines
 
 
 r"""
 CONF_ENV=local python -m src.cmd.init
+CONF_ENV=local python -m src.cmd.init -o init_engine -i env
+CONF_ENV=local python -m src.cmd.init -o env2yaml
+CONF_ENV=local python -m src.cmd.init -o init_engine -i config 
+CONF_ENV=local python -m src.cmd.init -o gather_load_configs
 """
 if __name__ == "__main__":
-    os.environ['RECORDER_TAG'] = 'wakeword_rms_recorder'
     os.environ['CONF_ENV'] = 'local'
+    os.environ['RECORDER_TAG'] = 'wakeword_rms_recorder'
+
     Logger.init(logging.INFO, is_file=False)
-    res = asyncio.run(Env.save_to_yaml())
-    for file_path in res:
-        print(file_path)
+
+    def get_engines(init_type="env"):
+        if init_type == "config":
+            return init_engines(YamlConfig)
+        return init_engines(Env)
+
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--op', "-o", type=str,
+                        default="load_engine", help='op method')
+    parser.add_argument('--init_type', "-i", type=str,
+                        default="env",
+                        help='init type from env or config')
+    args = parser.parse_args()
+    if args.op == "load_engine":
+        engines = asyncio.run(YamlConfig.load())
+        print(engines)
+    elif args.op == "init_engine":
+        engines = get_engines(args.init_type)
+        print(engines)
+    elif args.op == "env2yaml":
+        env2yaml()
+    elif args.op == "gather_load_configs":
+        res = asyncio.run(YamlConfig.load())
+        print(res)
+    else:
+        print("unsupport op")
