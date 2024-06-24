@@ -2,8 +2,13 @@ r"""
 use SOTA LLM like chatGPT to generate config file(json,yaml,toml) from dataclass type
 """
 import os
-from typing import Union, List
 from dataclasses import dataclass
+from typing import (
+    Optional,
+    Sequence,
+    Union,
+    List
+)
 
 import numpy as np
 from pyannote.audio.core.io import AudioFile
@@ -143,17 +148,17 @@ INIT_WAKE_WORD_TIMEOUT = 5.0
 @dataclass
 class PorcupineDetectorArgs:
     access_key: str = ""
-    keyword_paths: list[str] = None
-    model_path: str = None
-    library_path: str = None
+    keyword_paths: Optional[Sequence[str]] = None
+    model_path: Optional[str] = None
+    library_path: Optional[str] = None
     wake_words: str = ""
     wake_words_sensitivity: float = INIT_WAKE_WORDS_SENSITIVITY
     # wake_word_activation_delay: float = INIT_WAKE_WORD_ACTIVATION_DELAY
     # wake_word_timeout: float = INIT_WAKE_WORD_TIMEOUT
-    on_wakeword_detected: callable = None
-    # on_wakeword_timeout: callable = None
-    # on_wakeword_detection_start: callable = None
-    # on_wakeword_detection_end: callable = None
+    on_wakeword_detected: Optional[str] = None
+    # on_wakeword_timeout: Optional[str] = None
+    # on_wakeword_detection_start: Optional[str] = None
+    # on_wakeword_detection_end: Optional[str] = None
 
 
 @dataclass
@@ -166,7 +171,7 @@ class WhisperASRArgs:
     # - transformers whisper use torch tensor/tf tensor
     # - faster whisper don't use torch tensor, use np.ndarray or str(file_path)/~BinaryIO~
     # - mlx whisper don't use torch tensor, use str(file_path)/np.ndarray/~mlx.array~
-    asr_audio: Union[str, np.ndarray, torch.Tensor] = None
+    asr_audio: str | np.ndarray | torch.Tensor = None
     language: str = "zh"
     verbose: bool = True
 
@@ -204,7 +209,7 @@ class LLamcppLLMArgs:
     verbose: bool = True
     # llm
     llm_prompt_tpl: str = "<|user|>\n{%s}<|end|>\n<|assistant|>"
-    llm_stop: Union[str, List[str]] = None
+    llm_stop: Optional[List[str]] = None
     llm_max_tokens: int = 256
     llm_temperature: float = 0.8
     llm_top_p: float = 0.95

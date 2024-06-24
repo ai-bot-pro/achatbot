@@ -8,9 +8,18 @@ class EngineClass(object):
     # the same as ABC(Abstract Base Classe)
     __metaclass__ = ABCMeta
 
+    args = None
+    TAG = ""
+
     @classmethod
     def get_args(cls, **kwargs) -> dict:
         return kwargs
+
+    def set_args(self, **args):
+        if self.args is not None \
+                and hasattr(self.args, '__dict__') \
+                and hasattr(self.args, '__class__'):
+            self.args = self.args.__class__(**{**self.args.__dict__, **args})
 
     @classmethod
     def get_instance(cls, **kwargs):

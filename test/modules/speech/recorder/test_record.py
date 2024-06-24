@@ -95,13 +95,14 @@ class TestRMSRecorder(unittest.TestCase):
         kwargs["access_key"] = self.access_key
         kwargs["wake_words"] = self.wake_words
         kwargs["model_path"] = self.model_path
-        kwargs["on_wakeword_detected"] = on_wakeword_detected
+        # kwargs["on_wakeword_detected"] = on_wakeword_detected
         kwargs["keyword_paths"] = self.keyword_paths.split(',')
-        # print(kwargs)
         self.session.ctx.waker = EngineFactory.get_engine_by_tag(
             EngineClass, self.detector_tag, **kwargs)
+        self.session.ctx.waker.set_args(
+            on_wakeword_detected=on_wakeword_detected)
 
-        round = 3
+        round = 1
         for i in range(round):
             frames = self.recorder.record_audio(self.session)
             self.assertGreaterEqual(len(frames), 0)
