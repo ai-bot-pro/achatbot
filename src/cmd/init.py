@@ -6,6 +6,7 @@ import asyncio
 
 import pyaudio
 
+from src.common.logger import Logger
 from src.common import interface
 from src.common.config import Conf
 from src.common.factory import EngineFactory, EngineClass
@@ -192,7 +193,9 @@ class Env:
         return engine
 
     @classmethod
-    async def save_obj_to_yaml(cls, obj, tag=None):
+    async def save_obj_to_yaml(cls, name, obj, tag=None):
+        if "init" not in name and "Engine" not in name:
+            return
         engine = obj()
         if tag and tag not in engine.TAG:
             return
@@ -204,20 +207,32 @@ class Env:
         file_path = os.path.join(file_dir, f"{engine.TAG}.yaml")
         logging.debug(f"obj: {obj}, engine: {engine}, file_path: {file_path}")
         await Conf.save_to_yaml(engine.args.__dict__, file_path)
-        return file_path
+        return name[4:len(name)-6].lower(), file_path, engine.TAG
 
     @classmethod
     async def save_to_yaml(cls, tag=None):
         async_tasks = []
         for name, obj in inspect.getmembers(cls, inspect.isfunction):
-            if "init" not in name:
-                continue
-            async_task = asyncio.create_task(cls.save_obj_to_yaml(obj, tag))
+            async_task = asyncio.create_task(
+                cls.save_obj_to_yaml(name, obj, tag))
             async_tasks.append(async_task)
             # await async_task
         logging.debug(f"{async_tasks}, len(async_tasks):{len(async_tasks)}")
         res = await asyncio.gather(*async_tasks, return_exceptions=True)
-        return res
+        manifests = {}
+        items = []
+        for item in res:
+            if item is None:
+                continue
+            items.append(item)
+            name, file_path, _tag = item
+            manifests[name] = {"file_path": file_path, "tag": _tag}
+
+        env = os.getenv('CONF_ENV', "env")
+        file_path = os.path.join(CONFIG_DIR, env, "manifests.yaml")
+        await Conf.save_to_yaml(manifests, file_path)
+        items.append(("manifests", file_path, "manifests"))
+        return items
 
 
 class Config:
@@ -249,3 +264,15 @@ class Config:
     @staticmethod
     def initPlayerEngine(tts: interface.ITts = None) -> interface.IPlayer | EngineClass:
         pass
+
+
+r"""
+CONF_ENV=local python -m src.cmd.init
+"""
+if __name__ == "__main__":
+    os.environ['RECORDER_TAG'] = 'wakeword_rms_recorder'
+    os.environ['CONF_ENV'] = 'local'
+    Logger.init(logging.INFO, is_file=False)
+    res = asyncio.run(Env.save_to_yaml())
+    for file_path in res:
+        print(file_path)
