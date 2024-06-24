@@ -8,8 +8,8 @@ class EngineClass(object):
     # the same as ABC(Abstract Base Classe)
     __metaclass__ = ABCMeta
 
-    # args
     args = None
+    TAG = ""
 
     @classmethod
     def get_args(cls, **kwargs) -> dict:

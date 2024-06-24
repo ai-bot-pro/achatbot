@@ -1,13 +1,15 @@
 import os
 import logging
-import sys
+import inspect
 from typing import (Any)
+import asyncio
 
 import pyaudio
 
 from src.common import interface
+from src.common.config import Conf
 from src.common.factory import EngineFactory, EngineClass
-from src.common.types import MODELS_DIR, RECORDS_DIR, CHUNK
+from src.common.types import MODELS_DIR, RECORDS_DIR, CHUNK, CONFIG_DIR
 # need import engine class -> EngineClass.__subclasses__
 import src.modules.speech
 import src.core.llm
@@ -125,7 +127,7 @@ class Env:
         kwargs["model_name"] = os.getenv('LLM_MODEL_NAME', 'phi-3')
         kwargs["model_path"] = os.getenv('LLM_MODEL_PATH', os.path.join(
             MODELS_DIR, "Phi-3-mini-4k-instruct-q4.gguf"))
-        kwargs["model_type"] = os.getenv('LLM_MODEL_TYPE', "chat")
+        kwargs["model_type"] = os.getenv('LLM_MODEL_TYPE', "generation")
         kwargs["n_threads"] = os.cpu_count()
         kwargs["verbose"] = True
         kwargs["llm_stream"] = False
@@ -176,25 +178,46 @@ class Env:
     def initPlayerEngine(tts: interface.ITts = None) -> interface.IPlayer | EngineClass:
         # player
         tag = os.getenv('PLAYER_TAG', "stream_player")
-        # info = tts.get_stream_info()
         info = {
             "format_": pyaudio.paFloat32,
             "channels": 1,
             "rate": 24000,
         }
+        if tts:
+            info = tts.get_stream_info()
         info["chunk_size"] = CHUNK * 10
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **info)
         logging.info(
             f"stream_info: {info}, initPlayerEngine: {tag},  {engine}")
         return engine
 
-    @staticmethod
-    def save_to_yaml_config(args: Any, file_path: str):
-        from omegaconf import OmegaConf
-        conf = OmegaConf.structured(args)
-        yaml_str = OmegaConf.to_yaml(conf)
-        with open(file_path, 'w') as f:
-            f.write(yaml_str)
+    @classmethod
+    async def save_obj_to_yaml(cls, obj, tag=None):
+        engine = obj()
+        if tag and tag not in engine.TAG:
+            return
+        # u can use local, dev, test, stress, gray, online
+        env = os.getenv('CONF_ENV', "env")
+        file_dir = os.path.join(CONFIG_DIR, env)
+        if not os.path.exists(file_dir):
+            os.makedirs(file_dir)
+        file_path = os.path.join(file_dir, f"{engine.TAG}.yaml")
+        logging.debug(f"obj: {obj}, engine: {engine}, file_path: {file_path}")
+        await Conf.save_to_yaml(engine.args.__dict__, file_path)
+        return file_path
+
+    @classmethod
+    async def save_to_yaml(cls, tag=None):
+        async_tasks = []
+        for name, obj in inspect.getmembers(cls, inspect.isfunction):
+            if "init" not in name:
+                continue
+            async_task = asyncio.create_task(cls.save_obj_to_yaml(obj, tag))
+            async_tasks.append(async_task)
+            # await async_task
+        logging.debug(f"{async_tasks}, len(async_tasks):{len(async_tasks)}")
+        res = await asyncio.gather(*async_tasks, return_exceptions=True)
+        return res
 
 
 class Config:

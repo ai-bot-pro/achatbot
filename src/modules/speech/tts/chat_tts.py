@@ -43,9 +43,10 @@ class ChatTTS(BaseTTS, ITts):
             **kwargs
         ):
         """
+        self.rand_speaker = self.chat.sample_random_speaker()
         self.args.params_infer_code = {
             # Sample a speaker from Gaussian.
-            'spk_emb': self.chat.sample_random_speaker(),
+            'spk_emb': None,
             'temperature': 0.3,
             'top_P': 0.7,
             'top_K': 20,
@@ -85,8 +86,8 @@ class ChatTTS(BaseTTS, ITts):
         }
 
     def _inference(self, session: Session, text: str) -> Iterator[bytes]:
-        logging.debug(
-            f"{self.TAG} synthesis: {text}")
+        self.set_speaker(self.rand_speaker)
+        logging.debug(f"{self.TAG} synthesis: {text}")
         wav = self.chat.infer(
             [text,],
             skip_refine_text=self.args.skip_refine_text,
