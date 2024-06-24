@@ -16,10 +16,43 @@ import src.modules.speech
 import src.core.llm
 
 
-DEFAULT_SYSTEM_PROMPT = "你是一个中国人,请用中文回答。回答限制在1-5句话内。要友好、乐于助人且简明扼要。保持对话简短而甜蜜。只用纯文本回答，不要包含链接或其他附加内容。不要回复计算机代码以及数学公式。"
+DEFAULT_SYSTEM_PROMPT = "你是一个中国人,请用中文回答。回答限制在1-5句话内。要友好、乐于助人且简明扼要。保持对话简短而甜蜜。字数限制在200字以内。只用纯文本回答，不要包含链接或其他附加内容。不要回复计算机代码以及数学公式。不显示markdown格式。"
 
 
-class Env:
+class PromptInit():
+    @staticmethod
+    def create_phi3_prompt(history: list[str],
+                           system_prompt: str = DEFAULT_SYSTEM_PROMPT,
+                           init_message: str = None):
+        prompt = f'<|system|>\n{system_prompt}</s>\n'
+        if init_message:
+            prompt += f"<|assistant|>\n{init_message}</s>\n"
+
+        return prompt + "".join(history) + "<|assistant|>"
+
+    @staticmethod
+    def create_prompt(history: list[str],  init_message: str = None):
+        system_prompt: str = os.getenv(
+            'LLM_SYSTEM_PROMPT', DEFAULT_SYSTEM_PROMPT)
+        if "phi-3" in os.getenv('LLM_MODEL_NAME', 'phi-3').lower():
+            return Env.create_phi3_prompt(history, system_prompt, init_message)
+
+        return ""
+
+    @staticmethod
+    def get_user_prompt(text):
+        if "phi-3" in os.getenv('LLM_MODEL_NAME', 'phi-3').lower():
+            return (f"<|user|>\n{text}</s>\n")
+        return ""
+
+    @staticmethod
+    def get_assistant_prompt(text):
+        if "phi-3" in os.getenv('LLM_MODEL_NAME', 'phi-3').lower():
+            return (f"<|assistant|>\n{text}</s>\n")
+        return ""
+
+
+class Env(PromptInit):
 
     @staticmethod
     def initWakerEngine() -> interface.IDetector | EngineClass:
@@ -84,37 +117,6 @@ class Env:
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         logging.info(f"initASREngine: {tag}, {engine}")
         return engine
-
-    @staticmethod
-    def create_phi3_prompt(history: list[str],
-                           system_prompt: str = DEFAULT_SYSTEM_PROMPT,
-                           init_message: str = None):
-        prompt = f'<|system|>\n{system_prompt}</s>\n'
-        if init_message:
-            prompt += f"<|assistant|>\n{init_message}</s>\n"
-
-        return prompt + "".join(history) + "<|assistant|>"
-
-    @staticmethod
-    def create_prompt(history: list[str],  init_message: str = None):
-        system_prompt: str = os.getenv(
-            'LLM_SYSTEM_PROMPT', DEFAULT_SYSTEM_PROMPT)
-        if "phi-3" in os.getenv('LLM_MODEL_NAME', 'phi-3').lower():
-            return Env.create_phi3_prompt(history, system_prompt, init_message)
-
-        return ""
-
-    @staticmethod
-    def get_user_prompt(text):
-        if "phi-3" in os.getenv('LLM_MODEL_NAME', 'phi-3').lower():
-            return (f"<|user|>\n{text}</s>\n")
-        return ""
-
-    @staticmethod
-    def get_assistant_prompt(text):
-        if "phi-3" in os.getenv('LLM_MODEL_NAME', 'phi-3').lower():
-            return (f"<|assistant|>\n{text}</s>\n")
-        return ""
 
     @staticmethod
     def initLLMEngine() -> interface.ILlm | EngineClass:
@@ -192,7 +194,7 @@ class Env:
         return await Conf.save_to_yamls(cls, tag)
 
 
-class YamlConfig:
+class YamlConfig(PromptInit):
 
     @staticmethod
     async def load_engine(key, tag, file_path):
@@ -220,6 +222,7 @@ class YamlConfig:
         engines = {}
         for key, engine in res:
             engines[key] = engine
+        logging.info(f"load engines: {engines}")
         return engines
 
     @staticmethod

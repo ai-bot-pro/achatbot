@@ -1,15 +1,18 @@
-import multiprocessing
 import multiprocessing.connection
+import multiprocessing
+import threading
 import logging
 import asyncio
-import threading
 import queue
 import sys
+import os
 
 
-from src.common.session import Session
 from src.common import interface
-from src.cmd.init import Env as init
+if os.getenv("INIT_TYPE", 'env') == 'yaml_config':
+    from src.cmd.init import YamlConfig as init
+else:
+    from src.cmd.init import Env as init
 
 
 HISTORY_LIMIT = 10240
