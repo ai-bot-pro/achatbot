@@ -119,7 +119,7 @@ class Audio2AudioChatWorker:
                 logging.info(f"tts_text: {text}")
                 session.ctx.state["tts_text"] = text
                 tts.args.tts_stream = False
-                audio_iter = tts.synthesize(session)
+                audio_iter = tts.synthesize_sync(session)
                 for i, chunk in enumerate(audio_iter):
                     logging.info(f"synthesize audio {i} chunk {len(chunk)}")
                     if len(chunk) > 0:

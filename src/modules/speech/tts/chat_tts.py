@@ -1,5 +1,5 @@
 import logging
-from typing import Iterator
+from typing import AsyncGenerator, Iterator
 
 import pyaudio
 import torch
@@ -85,7 +85,7 @@ class ChatTTS(BaseTTS, ITts):
             "rate": 24000,
         }
 
-    def _inference(self, session: Session, text: str) -> Iterator[bytes]:
+    async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
         self.set_speaker(self.rand_speaker)
         logging.debug(f"{self.TAG} synthesis: {text}")
         wav = self.chat.infer(

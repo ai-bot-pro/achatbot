@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from typing import Iterator
+from typing import AsyncGenerator, Iterator
 import time
 
 import torch
@@ -58,7 +58,7 @@ class CoquiTTS(BaseTTS, ITts):
             "rate": self.config.audio.output_sample_rate
         }
 
-    def _inference(self, session: Session, text: str) -> Iterator[bytes]:
+    async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
         if self.args.tts_stream is False:
             logging.debug("Inference...")
             out = self.model.inference(

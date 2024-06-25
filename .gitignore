@@ -156,6 +156,14 @@ models/*
 records/*
 main-dev.py
 tmp.*
+*.wav
+*.mp3
+*.flv
+
+#vim
+*~
+*.swp
+*.swo
 
 
 log/*

@@ -125,7 +125,7 @@ class Env(PromptInit):
         kwargs = {}
         kwargs["model_name"] = os.getenv('LLM_MODEL_NAME', 'phi-3')
         kwargs["model_path"] = os.getenv('LLM_MODEL_PATH', os.path.join(
-            MODELS_DIR, "Phi-3-mini-4k-instruct-q4.gguf"))
+            MODELS_DIR, "qwen2-1_5b-instruct-q8_0.gguf"))
         kwargs["model_type"] = os.getenv('LLM_MODEL_TYPE', "generation")
         kwargs["n_threads"] = os.cpu_count()
         kwargs["verbose"] = True

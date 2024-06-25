@@ -37,6 +37,13 @@ async def get_audio_segment(file_path, start=None, end=None):
     return audio
 
 
+async def read_audio_file(file_path):
+    import wave
+    with wave.open(file_path, 'rb') as wav_file:
+        frames = wav_file.readframes(wav_file.getnframes())
+    return frames
+
+
 def bytes2NpArrayWith16(frames: bytearray):
     # Convert the buffer frames to a NumPy array
     audio_array = np.frombuffer(frames, dtype=np.int16)

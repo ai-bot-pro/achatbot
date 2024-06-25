@@ -1,6 +1,6 @@
 
 from abc import ABC, abstractmethod
-from typing import Iterator
+from typing import Iterator, AsyncGenerator, Generator
 
 
 class IModel(ABC):
@@ -97,9 +97,14 @@ class IFunction(ABC):
 
 class ITts(ABC):
     @abstractmethod
-    def synthesize(self, session) -> Iterator[bytes]:
+    def synthesize_sync(self) -> Generator[bytes, None, None]:
         raise NotImplemented("must be implemented in the child class")
 
+    @abstractmethod
+    async def synthesize(self, session) -> AsyncGenerator[bytes, None]:
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
     def get_stream_info(self) -> dict:
         raise NotImplemented("must be implemented in the child class")
 

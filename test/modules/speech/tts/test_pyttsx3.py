@@ -10,7 +10,7 @@ from src.common.factory import EngineFactory
 from src.common.logger import Logger
 from src.common.session import Session
 from src.common.types import SessionCtx, MODELS_DIR, RECORDS_DIR
-from src.modules.speech.tts.pyttsx3_tts import EngineClass
+from src.modules.speech.tts.pyttsx3_tts import EngineClass, Pyttsx3TTS
 
 r"""
 python -m unittest test.modules.speech.tts.test_pyttsx3.TestPyttsx3TTS.test_synthesize
@@ -23,7 +23,7 @@ class TestPyttsx3TTS(unittest.TestCase):
         cls.tts_tag = os.getenv('LLM_TAG', "tts_pyttsx3")
         cls.tts_text = os.getenv('TTS_TEXT', "你好，我是机器人")
         cls.voice_name = os.getenv('VOICE_NAME', "Tingting")
-        Logger.init(logging.DEBUG)
+        Logger.init(logging.DEBUG, is_file=False)
 
     @classmethod
     def tearDownClass(cls):
@@ -32,7 +32,7 @@ class TestPyttsx3TTS(unittest.TestCase):
     def setUp(self):
         kwargs = {}
         kwargs["voice_name"] = self.voice_name
-        self.tts = EngineFactory.get_engine_by_tag(
+        self.tts: Pyttsx3TTS = EngineFactory.get_engine_by_tag(
             EngineClass, self.tts_tag, **kwargs)
         self.session = Session(**SessionCtx("test_tts_client_id").__dict__)
 
@@ -61,7 +61,7 @@ class TestPyttsx3TTS(unittest.TestCase):
     def test_synthesize(self):
         self.session.ctx.state["tts_text"] = self.tts_text
         print(self.session.ctx)
-        iter = self.tts.synthesize(self.session)
+        iter = self.tts.synthesize_sync(self.session)
         sub_chunk_size = 1024
         for i, chunk in enumerate(iter):
             print(f"get {i} chunk {len(chunk)}")

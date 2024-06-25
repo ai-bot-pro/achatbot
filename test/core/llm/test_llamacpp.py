@@ -24,7 +24,7 @@ class TestLLamacppLLM(unittest.TestCase):
         cls.stream = os.getenv('STREAM', "")
         cls.model_type = os.getenv('MODEL_TYPE', "chat")
         cls.model_path = os.getenv('MODEL_PATH', os.path.join(
-            MODELS_DIR, "Phi-3-mini-4k-instruct-q4.gguf"))
+            MODELS_DIR, "qwen2-1_5b-instruct-q8_0.gguf"))
         Logger.init(logging.DEBUG)
 
     @classmethod

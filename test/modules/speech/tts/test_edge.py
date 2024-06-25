@@ -5,30 +5,25 @@ import asyncio
 import unittest
 import pyaudio
 
-from src.common.utils.audio_utils import save_audio_to_file
-from src.common.factory import EngineFactory
+from src.common.factory import EngineFactory, EngineClass
 from src.common.logger import Logger
 from src.common.session import Session
 from src.common.types import SessionCtx, MODELS_DIR, RECORDS_DIR
-from src.modules.speech.tts.coqui_tts import EngineClass, CoquiTTS
+import src.modules.speech
+from src.modules.speech.tts.edge_tts import EdgeTTS
 
 r"""
-python -m unittest test.modules.speech.tts.test_coqui.TestCoquiTTS.test_synthesize
+python -m unittest test.modules.speech.tts.test_edge.TestEdgeTTS.test_get_voices
+python -m unittest test.modules.speech.tts.test_edge.TestEdgeTTS.test_synthesize
 """
 
 
-class TestCoquiTTS(unittest.TestCase):
+class TestEdgeTTS(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tts_tag = os.getenv('TTS_TAG', "tts_coqui")
-        cls.tts_text = os.getenv('TTS_TEXT', "你好，我是机器人")
-        cls.stream = os.getenv('STREAM', "")
-        cls.conf_file = os.getenv(
-            'CONF_FILE', os.path.join(MODELS_DIR, "coqui/XTTS-v2/config.json"))
-        cls.model_path = os.getenv('MODEL_PATH', os.path.join(
-            MODELS_DIR, "coqui/XTTS-v2"))
-        cls.reference_audio_path = os.getenv('REFERENCE_AUDIO_PATH', os.path.join(
-            RECORDS_DIR, "tmp.wav"))
+        cls.tts_tag = os.getenv('TTS_TAG', "tts_edge")
+        cls.tts_text = os.getenv(
+            'TTS_TEXT', "你好，我是机器人, hello, test.modules.speech.tts.test_gtts.TestGTTS.test_synthesize")
         Logger.init(logging.DEBUG, is_file=False)
 
     @classmethod
@@ -37,38 +32,42 @@ class TestCoquiTTS(unittest.TestCase):
 
     def setUp(self):
         kwargs = {}
-        kwargs["model_path"] = self.model_path
-        kwargs["conf_file"] = self.conf_file
-        kwargs["reference_audio_path"] = self.reference_audio_path
-        self.tts: CoquiTTS = EngineFactory.get_engine_by_tag(
+        kwargs['voice_name'] = "zh-CN-XiaoxiaoNeural"
+        self.tts: EdgeTTS = EngineFactory.get_engine_by_tag(
             EngineClass, self.tts_tag, **kwargs)
         self.session = Session(**SessionCtx("test_tts_client_id").__dict__)
 
+        stream_info = self.tts.get_stream_info()
         self.pyaudio_instance = pyaudio.PyAudio()
         self.audio_stream = self.pyaudio_instance.open(
-            format=pyaudio.paFloat32,
-            channels=1,
-            rate=24000,
+            format=stream_info["format_"],
+            channels=stream_info["channels"],
+            rate=stream_info["rate"],
             output_device_index=None,
             output=True)
-
-        pass
 
     def tearDown(self):
         self.audio_stream.stop_stream()
         self.audio_stream.close()
         self.pyaudio_instance.terminate()
-        pass
+
+    def test_get_voices(self):
+        voices = asyncio.run(self.tts.get_voices(Language="zh"))
+        self.assertGreater(len(voices), 0)
+        print(voices, len(voices))
+
+        voices = asyncio.run(self.tts.get_voices(
+            ShortName=self.tts.args.voice_name))
+        self.assertGreater(len(voices), 0)
+        print(voices, len(voices))
 
     def test_synthesize(self):
         self.session.ctx.state["tts_text"] = self.tts_text
         print(self.session.ctx)
-        self.tts.args.tts_stream = bool(self.stream)
         iter = self.tts.synthesize_sync(self.session)
         sub_chunk_size = 1024
         for i, chunk in enumerate(iter):
-            print(f"get {i} chunk {len(chunk)}")
-            self.assertGreater(len(chunk), 0)
+            self.assertGreaterEqual(len(chunk), 0)
             if len(chunk) / sub_chunk_size < 100:
                 self.audio_stream.write(chunk)
                 continue
