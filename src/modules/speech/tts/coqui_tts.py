@@ -1,7 +1,8 @@
 import logging
-import asyncio
 from typing import AsyncGenerator, Iterator
 import time
+import os
+import random
 
 import torch
 import pyaudio
@@ -27,14 +28,19 @@ class CoquiTTS(BaseTTS, ITts):
         from TTS.api import TTS
         from TTS.tts.configs.xtts_config import XttsConfig
         from TTS.tts.models.xtts import Xtts
+        from TTS.tts.layers.xtts.xtts_manager import SpeakerManager
         self.args = CoquiTTSArgs(**args)
+        logging.debug(f"{self.TAG} args: {self.args}")
         info = CUDAInfo()
-        logging.debug("inference Loading model...")
         config = XttsConfig()
         config.load_json(self.args.conf_file)
         model = Xtts.init_from_config(config)
-        model.load_checkpoint(config, checkpoint_dir=self.args.model_path,
-                              use_deepspeed=info.is_cuda)
+        logging.debug("Loading model...")
+        model.load_checkpoint(
+            config,
+            checkpoint_dir=self.args.model_path,
+            use_deepspeed=self.args.tts_use_deepspeed,
+        )
         model_million_params = sum(p.numel() for p in model.parameters())/1e6
         logging.debug(f"{model_million_params}M parameters")
 
@@ -42,11 +48,23 @@ class CoquiTTS(BaseTTS, ITts):
             model.cuda()
         self.model = model
         self.config = config
+        speaker_file_path = os.path.join(
+            self.args.model_path, "speakers_xtts.pth")
+        self.speaker_manager = SpeakerManager(speaker_file_path)
 
         self.set_reference_audio(self.args.reference_audio_path)
 
     def set_reference_audio(self, reference_audio_path: str):
         logging.debug("Computing speaker latents...")
+        if not os.path.exists(reference_audio_path):
+            voices = self.get_voices()
+            voice = random.choice(voices)
+            self.gpt_cond_latent, self.speaker_embedding = \
+                self.speaker_manager.speakers[voice].values()
+            logging.debug(
+                f"reference_audio_path {reference_audio_path} don't exist; use speaker {voice}")
+            return
+
         self.gpt_cond_latent, self.speaker_embedding = self.model.get_conditioning_latents(
             audio_path=[reference_audio_path],
             gpt_cond_len=30, max_ref_length=60)
@@ -156,3 +174,9 @@ class CoquiTTS(BaseTTS, ITts):
         silent_chunk = np.zeros(silent_samples, dtype=np.float32)
         logging.debug(f"add silent_chunk {silent_chunk.shape}")
         return silent_chunk.tobytes()
+
+    def get_voices(self):
+        voices_list = []
+        for speaker_name in self.speaker_manager.name_to_id:
+            voices_list.append(speaker_name)
+        return voices_list

@@ -1,12 +1,12 @@
 import logging
 
 from src.common.interface import ILlm
-from src.common.factory import EngineClass
+from .base import BaseLLM
 from src.common.session import Session
 from src.common.types import LLamcppLLMArgs
 
 
-class LLamacppLLM(EngineClass, ILlm):
+class LLamacppLLM(BaseLLM, ILlm):
     TAG = "llm_llamacpp"
 
     @classmethod

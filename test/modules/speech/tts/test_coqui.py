@@ -13,7 +13,9 @@ from src.common.types import SessionCtx, MODELS_DIR, RECORDS_DIR
 from src.modules.speech.tts.coqui_tts import EngineClass, CoquiTTS
 
 r"""
+REFERENCE_AUDIO_PATH= python -m unittest test.modules.speech.tts.test_coqui.TestCoquiTTS.test_synthesize
 python -m unittest test.modules.speech.tts.test_coqui.TestCoquiTTS.test_synthesize
+STREAM=1 python -m unittest test.modules.speech.tts.test_coqui.TestCoquiTTS.test_synthesize
 """
 
 
@@ -21,7 +23,8 @@ class TestCoquiTTS(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tts_tag = os.getenv('TTS_TAG', "tts_coqui")
-        cls.tts_text = os.getenv('TTS_TEXT', "你好，我是机器人")
+        cls.tts_text = os.getenv(
+            'TTS_TEXT', "你好！有什么可以帮助你的吗？请描述一下您的问题或需求。")
         cls.stream = os.getenv('STREAM', "")
         cls.conf_file = os.getenv(
             'CONF_FILE', os.path.join(MODELS_DIR, "coqui/XTTS-v2/config.json"))
@@ -29,7 +32,7 @@ class TestCoquiTTS(unittest.TestCase):
             MODELS_DIR, "coqui/XTTS-v2"))
         cls.reference_audio_path = os.getenv('REFERENCE_AUDIO_PATH', os.path.join(
             RECORDS_DIR, "tmp.wav"))
-        Logger.init(logging.INFO, is_file=False)
+        Logger.init(logging.DEBUG, is_file=False)
 
     @classmethod
     def tearDownClass(cls):
@@ -45,7 +48,6 @@ class TestCoquiTTS(unittest.TestCase):
         self.session = Session(**SessionCtx("test_tts_client_id").__dict__)
 
         stream_info = self.tts.get_stream_info()
-        print(stream_info)
         self.pyaudio_instance = pyaudio.PyAudio()
         self.audio_stream = self.pyaudio_instance.open(
             format=stream_info["format_"],
@@ -54,13 +56,10 @@ class TestCoquiTTS(unittest.TestCase):
             output_device_index=None,
             output=True)
 
-        pass
-
     def tearDown(self):
         self.audio_stream.stop_stream()
         self.audio_stream.close()
         self.pyaudio_instance.terminate()
-        pass
 
     def test_synthesize(self):
         self.session.ctx.state["tts_text"] = self.tts_text
@@ -77,3 +76,8 @@ class TestCoquiTTS(unittest.TestCase):
             for i in range(0, len(chunk), sub_chunk_size):
                 sub_chunk = chunk[i:i + sub_chunk_size]
                 self.audio_stream.write(sub_chunk)
+
+    def test_get_voices(self):
+        voices = self.tts.get_voices()
+        self.assertGreater(len(voices), 0)
+        print(voices, len(voices))

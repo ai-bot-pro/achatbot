@@ -3,11 +3,13 @@ import logging
 
 import unittest
 
-from src.common.factory import EngineFactory
-from src.core.llm.llamacpp import EngineClass, LLamacppLLM
+from src.common.factory import EngineFactory, EngineClass
+from src.core.llm.llamacpp import LLamacppLLM
 from src.common.logger import Logger
 from src.common.session import Session
 from src.common.types import SessionCtx, MODELS_DIR
+from src.cmd.init import PromptInit
+import src.core.llm
 
 
 class TestLLamacppLLM(unittest.TestCase):
@@ -20,9 +22,10 @@ class TestLLamacppLLM(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.llm_tag = os.getenv('LLM_TAG', "llm_llamacpp")
-        cls.prompt = os.getenv('PROMPT', "你好不刷牙子蒙半,小朋友不刷牙子蒙半")
+        cls.prompt = os.getenv('PROMPT', "你好,今天天氣怎麼樣")
         cls.stream = os.getenv('STREAM', "")
         cls.model_type = os.getenv('MODEL_TYPE', "chat")
+        cls.model_name = os.getenv('MODEL_NAME', "qwen-2")
         cls.model_path = os.getenv('MODEL_PATH', os.path.join(
             MODELS_DIR, "qwen2-1_5b-instruct-q8_0.gguf"))
         Logger.init(logging.DEBUG, is_file=False)
@@ -33,6 +36,7 @@ class TestLLamacppLLM(unittest.TestCase):
 
     def setUp(self):
         kwargs = {}
+        kwargs["model_name"] = self.model_name
         kwargs["model_path"] = self.model_path
         kwargs["model_type"] = self.model_type
         kwargs["n_threads"] = os.cpu_count()
@@ -48,7 +52,23 @@ class TestLLamacppLLM(unittest.TestCase):
     def test_generate(self):
         self.llm.args.llm_stream = bool(self.stream)
         logging.debug(self.llm.args)
+        self.assertEqual(self.llm.model_name(), self.llm.args.model_name)
         self.session.ctx.state["prompt"] = self.prompt
+        logging.debug(self.session.ctx.state)
+        iter = self.llm.generate(self.session)
+        for item in iter:
+            print(item)
+            self.assertGreater(len(item), 0)
+
+    def test_generate_with_system(self):
+        self.llm.args.llm_stream = bool(self.stream)
+        logging.debug(self.llm.args)
+        self.assertEqual(self.llm.model_name(), self.llm.args.model_name)
+        history = []
+        history.append(PromptInit.get_user_prompt(
+            self.llm.model_name(), self.prompt))
+        self.session.ctx.state["prompt"] = PromptInit.create_prompt(
+            self.llm.model_name(), history, system_prompt="你是一个智能助手，回答请限制在1-5句话内。")
         logging.debug(self.session.ctx.state)
         iter = self.llm.generate(self.session)
         for item in iter:

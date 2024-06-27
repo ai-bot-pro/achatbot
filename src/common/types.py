@@ -234,9 +234,10 @@ class CoquiTTSArgs:
     tts_overlap_wav_len: int = 1024
     tts_enable_text_splitting: bool = False
     tts_language: str = "zh"
-    tts_default_silence_duration = 0.3
-    tts_comma_silence_duration = 0.3
-    tts_sentence_silence_duration = 0.6
+    tts_default_silence_duration: float = 0.3
+    tts_comma_silence_duration: float = 0.3
+    tts_sentence_silence_duration: float = 0.6
+    tts_use_deepspeed: bool = False
 
 
 @dataclass

@@ -88,6 +88,10 @@ class ILlm(ABC):
     def count_tokens(self, text: str | bytes):
         raise NotImplemented("must be implemented in the child class")
 
+    @abstractmethod
+    def model_name(self):
+        raise NotImplemented("must be implemented in the child class")
+
 
 class IFunction(ABC):
     @abstractmethod
