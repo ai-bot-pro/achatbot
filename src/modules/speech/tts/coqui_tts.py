@@ -43,9 +43,9 @@ class CoquiTTS(BaseTTS, ITts):
         self.model = model
         self.config = config
 
-        asyncio.run(self.set_reference_audio(self.args.reference_audio_path))
+        self.set_reference_audio(self.args.reference_audio_path)
 
-    async def set_reference_audio(self, reference_audio_path: str):
+    def set_reference_audio(self, reference_audio_path: str):
         logging.debug("Computing speaker latents...")
         self.gpt_cond_latent, self.speaker_embedding = self.model.get_conditioning_latents(
             audio_path=[reference_audio_path],

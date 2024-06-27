@@ -29,7 +29,7 @@ class TestCoquiTTS(unittest.TestCase):
             MODELS_DIR, "coqui/XTTS-v2"))
         cls.reference_audio_path = os.getenv('REFERENCE_AUDIO_PATH', os.path.join(
             RECORDS_DIR, "tmp.wav"))
-        Logger.init(logging.DEBUG, is_file=False)
+        Logger.init(logging.INFO, is_file=False)
 
     @classmethod
     def tearDownClass(cls):
@@ -44,11 +44,13 @@ class TestCoquiTTS(unittest.TestCase):
             EngineClass, self.tts_tag, **kwargs)
         self.session = Session(**SessionCtx("test_tts_client_id").__dict__)
 
+        stream_info = self.tts.get_stream_info()
+        print(stream_info)
         self.pyaudio_instance = pyaudio.PyAudio()
         self.audio_stream = self.pyaudio_instance.open(
-            format=pyaudio.paFloat32,
-            channels=1,
-            rate=24000,
+            format=stream_info["format_"],
+            channels=stream_info["channels"],
+            rate=stream_info["rate"],
             output_device_index=None,
             output=True)
 

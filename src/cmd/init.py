@@ -28,27 +28,45 @@ class PromptInit():
         if init_message:
             prompt += f"<|assistant|>\n{init_message}</s>\n"
 
-        return prompt + "".join(history) + "<|assistant|>"
+        return prompt + "".join(history) + "<|assistant|>\n"
+
+    def create_qwen_prompt(history: list[str],
+                           system_prompt: str = DEFAULT_SYSTEM_PROMPT,
+                           init_message: str = None):
+        prompt = f'<|im_start|>system\n{system_prompt}<|im_end|>\n'
+        if init_message:
+            prompt += f"<|im_start|>assistant\n{init_message}<|im_end|>\n"
+
+        return prompt + "".join(history) + "<|im_start|>assistant\n"
 
     @staticmethod
     def create_prompt(history: list[str],  init_message: str = None):
+        name = os.getenv('LLM_MODEL_NAME', 'phi-3').lower()
         system_prompt: str = os.getenv(
             'LLM_SYSTEM_PROMPT', DEFAULT_SYSTEM_PROMPT)
-        if "phi-3" in os.getenv('LLM_MODEL_NAME', 'phi-3').lower():
+        if "phi-3" in name:
             return Env.create_phi3_prompt(history, system_prompt, init_message)
+        if "qwen-chat" in name:
+            return Env.create_qwen_prompt(history, system_prompt, init_message)
 
-        return ""
+        return "".join(history)
 
     @staticmethod
     def get_user_prompt(text):
-        if "phi-3" in os.getenv('LLM_MODEL_NAME', 'phi-3').lower():
+        name = os.getenv('LLM_MODEL_NAME', 'phi-3').lower()
+        if "phi-3" in name:
             return (f"<|user|>\n{text}</s>\n")
-        return ""
+        if "qwen-chat" in name:
+            return (f"<|im_start|>user\n{text}<|im_end|>\n")
+        return text
 
     @staticmethod
     def get_assistant_prompt(text):
-        if "phi-3" in os.getenv('LLM_MODEL_NAME', 'phi-3').lower():
+        name = os.getenv('LLM_MODEL_NAME', 'phi-3').lower()
+        if "phi-3" in name:
             return (f"<|assistant|>\n{text}</s>\n")
+        if "qwen-chat" in name:
+            return (f"<|im_start|>assistant\n{text}<|im_end|>\n")
         return ""
 
 
@@ -81,9 +99,7 @@ class Env(PromptInit):
         # recorder
         tag = os.getenv('RECORDER_TAG', "rms_recorder")
         kwargs = {}
-        input_device_index = os.getenv('MIC_IDX', None)
-        kwargs["input_device_index"] = None if input_device_index is None else int(
-            input_device_index)
+        kwargs["input_device_index"] = os.getenv('INPUT_DEVICE_INDEX', None)
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         logging.info(f"initRecorderEngine: {tag}, {engine}")
         return engine
@@ -125,15 +141,16 @@ class Env(PromptInit):
         kwargs = {}
         kwargs["model_name"] = os.getenv('LLM_MODEL_NAME', 'phi-3')
         kwargs["model_path"] = os.getenv('LLM_MODEL_PATH', os.path.join(
-            MODELS_DIR, "qwen2-1_5b-instruct-q8_0.gguf"))
+            MODELS_DIR, "Phi-3-mini-4k-instruct-q4.gguf"))
         kwargs["model_type"] = os.getenv('LLM_MODEL_TYPE', "generation")
         kwargs["n_threads"] = os.cpu_count()
         kwargs["verbose"] = True
         kwargs["llm_stream"] = False
         # if logger.getEffectiveLevel() != logging.DEBUG:
         #    kwargs["verbose"] = False
-        kwargs['llm_stop'] = ["<|end|>", "</s>", "/s>",
-                              "</s", "<s>", "<|user|>", "<|assistant|>", "<|system|>"]
+        kwargs['llm_stop'] = ["<|end|>", "<|im_end|>"
+                              "</s>", "/s>", "</s", "<s>",
+                              "<|user|>", "<|assistant|>", "<|system|>"]
         kwargs["llm_chat_system"] = DEFAULT_SYSTEM_PROMPT
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         logging.info(f"initLLMEngine: {tag}, {engine}")
@@ -150,6 +167,7 @@ class Env(PromptInit):
             RECORDS_DIR, "tmp.wav"))
         return kwargs
 
+    @staticmethod
     def get_tts_chat_args() -> dict:
         kwargs = {}
         kwargs["local_path"] = os.getenv('LOCAL_PATH', os.path.join(
@@ -157,10 +175,32 @@ class Env(PromptInit):
         kwargs["source"] = os.getenv('TTS_CHAT_SOURCE', "local")
         return kwargs
 
+    @staticmethod
+    def get_tts_edge_args() -> dict:
+        kwargs = {}
+        kwargs["voice_name"] = os.getenv('VOICE_NAME', "zh-CN-XiaoxiaoNeural")
+        return kwargs
+
+    @staticmethod
+    def get_tts_edge_args() -> dict:
+        kwargs = {}
+        kwargs["voice_name"] = os.getenv('VOICE_NAME', "zh-CN-XiaoxiaoNeural")
+        kwargs["language"] = os.getenv('LANGUAGE', "zh")
+        return kwargs
+
+    @staticmethod
+    def get_tts_g_args() -> dict:
+        kwargs = {}
+        kwargs["language"] = os.getenv('LANGUAGE', "zh")
+        kwargs["speed_increase"] = float(os.getenv('SPEED_INCREASE', "1.5"))
+        return kwargs
+
     # TAG : config
     map_config_func = {
         'tts_coqui': get_tts_coqui_args,
         'tts_chat': get_tts_chat_args,
+        'tts_edge': get_tts_edge_args,
+        'tts_g': get_tts_g_args,
     }
 
     @staticmethod
@@ -184,9 +224,9 @@ class Env(PromptInit):
         if tts:
             info = tts.get_stream_info()
         info["chunk_size"] = CHUNK * 10
+        info["output_device_index"] = os.getenv('OUTPUT_DEVICE_INDEX', None)
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **info)
-        logging.info(
-            f"stream_info: {info}, initPlayerEngine: {tag},  {engine}")
+        logging.info(f"initPlayerEngine: {tag},  {engine}")
         return engine
 
     @classmethod
@@ -273,6 +313,7 @@ r"""
 CONF_ENV=local python -m src.cmd.init
 CONF_ENV=local python -m src.cmd.init -o init_engine -i env
 CONF_ENV=local python -m src.cmd.init -o env2yaml
+CONF_ENV=local TTS_TAG=tts_coqui python -m src.cmd.init -o env2yaml
 CONF_ENV=local python -m src.cmd.init -o init_engine -i config 
 CONF_ENV=local python -m src.cmd.init -o gather_load_configs
 """

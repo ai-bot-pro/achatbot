@@ -20,10 +20,14 @@ else:
 
 class TerminalChatClient:
     def __init__(self) -> None:
-        sid = uuid.uuid4()
-        self.session = Session(**SessionCtx(sid).__dict__)
+        self.sid = uuid.uuid4()
+        self.session = Session(**SessionCtx(self.sid).__dict__)
 
     def run(self, conn: interface.IConnector):
+        self.player = init.initPlayerEngine()
+        self.recorder = init.initRecorderEngine()
+        self.waker = init.initWakerEngine()
+
         start_record_event = threading.Event()
         play_t = threading.Thread(target=self.loop_play,
                                   args=(conn, start_record_event))
@@ -41,9 +45,7 @@ class TerminalChatClient:
                   end="", flush=True, file=sys.stderr)
 
     def loop_record(self, conn: interface.IConnector, e: threading.Event):
-        recorder = init.initRecorderEngine()
-        waker = init.initWakerEngine()
-        waker.set_args(on_wakeword_detected=self.on_wakeword_detected)
+        self.waker.set_args(on_wakeword_detected=self.on_wakeword_detected)
         logging.info(
             f"loop_record starting with session ctx: {self.session.ctx}")
         print("start loop_record...", flush=True, file=sys.stderr)
@@ -54,8 +56,8 @@ class TerminalChatClient:
                 print("\nme >> ", end="", flush=True, file=sys.stderr)
                 e.clear()
 
-                self.session.ctx.waker = waker
-                frames = recorder.record_audio(self.session)
+                self.session.ctx.waker = self.waker
+                frames = self.recorder.record_audio(self.session)
                 if len(frames) == 0:
                     continue
                 data = b''.join(frames)
@@ -71,7 +73,6 @@ class TerminalChatClient:
                     f"loop_record Exception {ex} sid:{self.session.ctx.client_id}")
 
     def loop_play(self, conn: interface.IConnector, e: threading.Event):
-        player = init.initPlayerEngine()
         print("start loop_play...", flush=True, file=sys.stderr)
         llm_gen_segments = 0
         while True:
@@ -84,7 +85,7 @@ class TerminalChatClient:
                     break
                 if msg == "PLAY_FRAMES":
                     self.session.ctx.state["tts_chunk"] = recv_data
-                    player.play_audio(self.session)
+                    self.player.play_audio(self.session)
                     e.set()
                     llm_gen_segments = 0
                 elif msg == "LLM_GENERATE_TEXT":
@@ -112,7 +113,7 @@ class TerminalChatClient:
                 else:
                     logging.warning(f"unsupport msg {msg}")
             except Exception as ex:
-                ex_trace = ''.join(traceback.format_tb(e.__traceback__))
+                ex_trace = ''.join(traceback.format_tb(ex.__traceback__))
                 logging.warning(f"loop_play Exception {ex}, trace: {ex_trace}")
                 e.set()
                 llm_gen_segments = 0

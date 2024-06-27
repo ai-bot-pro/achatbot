@@ -114,7 +114,7 @@ class AudioPlayerArgs:
     format_: str = FORMAT
     channels: int = CHANNELS
     rate: int = RATE
-    output_device_index = None
+    output_device_index: int = None
     chunk_size: int = CHUNK
 
 

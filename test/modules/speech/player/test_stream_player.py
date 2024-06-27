@@ -4,6 +4,7 @@ import asyncio
 
 import unittest
 
+from src.modules.speech.player.stream_player import StreamPlayer
 from src.common.logger import Logger
 from src.common.factory import EngineFactory, EngineClass
 from src.common.session import Session
@@ -29,8 +30,9 @@ class TestStreamPlayer(unittest.TestCase):
     def setUp(self):
         kwargs = {}
         kwargs["chunk_size"] = CHUNK
-        self.player = EngineFactory.get_engine_by_tag(
+        self.player: StreamPlayer = EngineFactory.get_engine_by_tag(
             EngineClass, self.tag, **kwargs)
+        print(self.player.args.__dict__)
         self.annotations_path = os.path.join(
             TEST_DIR, "audio_files/annotations.json")
         self.session = Session(**SessionCtx(

@@ -1,3 +1,4 @@
+import logging
 
 from src.common.interface import ILlm
 from src.common.factory import EngineClass
@@ -52,6 +53,7 @@ class LLamacppLLM(EngineClass, ILlm):
             top_p=self.args.llm_top_p,
             top_k=self.args.llm_top_k,
         )
+        logging.debug(f"llm generate: {output}")
         res = ""
         if self.args.llm_stream:
             for item in output:

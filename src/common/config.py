@@ -49,6 +49,7 @@ class Conf:
         for item in res:
             if item is None:
                 continue
+            print("item------------>",item)
             items.append(item)
             name, file_path, _tag = item
             manifests[name] = {"file_path": file_path, "tag": _tag}

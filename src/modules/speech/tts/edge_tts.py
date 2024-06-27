@@ -57,7 +57,8 @@ class EdgeTTS(BaseTTS, ITts):
         # "outputFormat":"audio-24khz-48kbitrate-mono-mp3"
         async for chunk in communicate.stream():
             if chunk["type"] == "audio":
-                logging.debug(f"{self.TAG} chunk_len: {len(chunk['data'])}")
+                logging.debug(
+                    f"{self.TAG} type:{chunk['type']} chunk_len: {len(chunk['data'])}")
                 with io.BytesIO() as f:
                     f.write(chunk['data'])
                     f.seek(0)

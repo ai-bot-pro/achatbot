@@ -20,12 +20,12 @@ class TestLLamacppLLM(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.llm_tag = os.getenv('LLM_TAG', "llm_llamacpp")
-        cls.prompt = os.getenv('PROMPT', "你好")
+        cls.prompt = os.getenv('PROMPT', "你好不刷牙子蒙半,小朋友不刷牙子蒙半")
         cls.stream = os.getenv('STREAM', "")
         cls.model_type = os.getenv('MODEL_TYPE', "chat")
         cls.model_path = os.getenv('MODEL_PATH', os.path.join(
             MODELS_DIR, "qwen2-1_5b-instruct-q8_0.gguf"))
-        Logger.init(logging.DEBUG)
+        Logger.init(logging.DEBUG, is_file=False)
 
     @classmethod
     def tearDownClass(cls):
@@ -36,6 +36,8 @@ class TestLLamacppLLM(unittest.TestCase):
         kwargs["model_path"] = self.model_path
         kwargs["model_type"] = self.model_type
         kwargs["n_threads"] = os.cpu_count()
+        kwargs["llm_stop"] = ["<|end|>", "<|im_end|>", "<s>", "</s>"]
+        kwargs["verbose"] = True
         self.llm: LLamacppLLM = EngineFactory.get_engine_by_tag(
             EngineClass, self.llm_tag, **kwargs)
         self.session = Session(**SessionCtx("test_client_id").__dict__)
@@ -47,7 +49,7 @@ class TestLLamacppLLM(unittest.TestCase):
         self.llm.args.llm_stream = bool(self.stream)
         logging.debug(self.llm.args)
         self.session.ctx.state["prompt"] = self.prompt
-        logging.debug(self.session.ctx)
+        logging.debug(self.session.ctx.state)
         iter = self.llm.generate(self.session)
         for item in iter:
             print(item)
@@ -55,7 +57,6 @@ class TestLLamacppLLM(unittest.TestCase):
 
     def test_chat_completion(self):
         self.llm.args.llm_stream = bool(self.stream)
-        self.llm.args.llm_stop = ["<|end|>", "</s>", "<s>", "<|user|>"]
         self.llm.args.llm_chat_system = "你是一个中国人,请用中文回答。回答限制在1-5句话内。要友好、乐于助人且简明扼要。保持对话简短而甜蜜。只用纯文本回答，不要包含链接或其他附加内容。不要回复计算机代码以及数学公式。"
         self.session.ctx.state["prompt"] = self.prompt
         logging.debug(self.session.ctx)
