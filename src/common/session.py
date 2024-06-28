@@ -47,7 +47,6 @@ class Session:
         return f"{self.file_counter}_{self.ctx.client_id}.wav"
 
     def process_audio(self):
-        # @TODO: use burr work flow
         if self.ctx.on_session_start:
             self.ctx.on_session_start(self)
         if self.ctx.buffering_strategy:

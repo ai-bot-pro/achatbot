@@ -5,13 +5,13 @@ import sys
 import traceback
 import os
 
-
 import uuid
 
 from src.common import interface
 from src.common.session import Session
 from src.common.utils.audio_utils import save_audio_to_file
 from src.common.types import SessionCtx, RECORDS_DIR
+from src.common.utils.time import get_current_formatted_time
 if os.getenv("INIT_TYPE", 'env') == 'yaml_config':
     from src.cmd.init import YamlConfig as init
 else:
@@ -20,16 +20,19 @@ else:
 
 class TerminalChatClient:
     def __init__(self) -> None:
-        sid = uuid.uuid4()
-        self.session = Session(**SessionCtx(sid).__dict__)
+        self.sid = uuid.uuid4()
+        self.session = Session(**SessionCtx(self.sid).__dict__)
+        self.player = init.initPlayerEngine()
+        self.recorder = init.initRecorderEngine()
+        self.waker = init.initWakerEngine()
+        self.start_record_event = threading.Event()
 
     def run(self, conn: interface.IConnector):
-        start_record_event = threading.Event()
         play_t = threading.Thread(target=self.loop_play,
-                                  args=(conn, start_record_event))
+                                  args=(conn,))
         play_t.start()
         record_t = threading.Thread(target=self.loop_record,
-                                    args=(conn, start_record_event))
+                                    args=(conn,))
         record_t.start()
 
         record_t.join()
@@ -40,10 +43,8 @@ class TerminalChatClient:
             print(f"{session.ctx.state['bot_name']}~ ",
                   end="", flush=True, file=sys.stderr)
 
-    def loop_record(self, conn: interface.IConnector, e: threading.Event):
-        recorder = init.initRecorderEngine()
-        waker = init.initWakerEngine()
-        waker.set_args(on_wakeword_detected=self.on_wakeword_detected)
+    def loop_record(self, conn: interface.IConnector):
+        self.waker.set_args(on_wakeword_detected=self.on_wakeword_detected)
         logging.info(
             f"loop_record starting with session ctx: {self.session.ctx}")
         print("start loop_record...", flush=True, file=sys.stderr)
@@ -51,12 +52,15 @@ class TerminalChatClient:
             try:
                 print(f"-- chat round {self.session.chat_round} --",
                       flush=True, file=sys.stdout)
-                print("\nme >> ", end="", flush=True, file=sys.stderr)
-                e.clear()
+                # self.start_record_event.clear()
+                print(f"\n({get_current_formatted_time()}) me >> ",
+                      end="", flush=True, file=sys.stderr)
 
-                self.session.ctx.waker = waker
-                frames = recorder.record_audio(self.session)
+                logging.info(f"start record audio")
+                self.session.ctx.waker = self.waker
+                frames = self.recorder.record_audio(self.session)
                 if len(frames) == 0:
+                    logging.info(f"record_audio return empty, continue")
                     continue
                 data = b''.join(frames)
                 conn.send(("RECORD_FRAMES", data, self.session), 'fe')
@@ -65,13 +69,16 @@ class TerminalChatClient:
                 self.session.increment_file_counter()
                 self.session.increment_chat_round()
 
-                e.wait()
+                if self.start_record_event.is_set():
+                    logging.info(f"start record audio event is set, clear it!")
+                    self.start_record_event.clear()
+                logging.info(f"wait start record audio event")
+                self.start_record_event.wait()
             except Exception as ex:
                 logging.warning(
                     f"loop_record Exception {ex} sid:{self.session.ctx.client_id}")
 
-    def loop_play(self, conn: interface.IConnector, e: threading.Event):
-        player = init.initPlayerEngine()
+    def loop_play(self, conn: interface.IConnector):
         print("start loop_play...", flush=True, file=sys.stderr)
         llm_gen_segments = 0
         while True:
@@ -79,20 +86,23 @@ class TerminalChatClient:
                 res = conn.recv('fe')
                 if res is None:
                     continue
+
                 msg, recv_data, self.session = res
                 if msg is None or msg.lower() == "stop":
                     break
+
                 if msg == "PLAY_FRAMES":
                     self.session.ctx.state["tts_chunk"] = recv_data
-                    player.play_audio(self.session)
-                    e.set()
+                    self.player.play_audio(self.session)
+                elif msg == "PLAY_FRAMES_DONE":
+                    self.start_record_event.set()
                     llm_gen_segments = 0
                 elif msg == "LLM_GENERATE_TEXT":
                     if llm_gen_segments == 0:
                         bot_name = self.session.ctx.state["bot_name"] if "bot_name" in self.session.ctx.state else "bot"
                         logging.info(f"bot_name: {bot_name}")
-                        print(f"\n{bot_name} >> ", end="",
-                              flush=True, file=sys.stderr)
+                        print(f"\n({get_current_formatted_time()}) {bot_name} >> ",
+                              end="", flush=True, file=sys.stderr)
                     print(recv_data.strip(), end="",
                           flush=True, file=sys.stderr)
                     llm_gen_segments += 1
@@ -107,14 +117,14 @@ class TerminalChatClient:
                 elif msg == "BE_EXCEPTION":
                     print(f"\nBE exception: {recv_data.strip()}",
                           end="", flush=True, file=sys.stderr)
-                    e.set()
+                    self.start_record_event.set()
                     llm_gen_segments = 0
                 else:
                     logging.warning(f"unsupport msg {msg}")
             except Exception as ex:
-                ex_trace = ''.join(traceback.format_tb(e.__traceback__))
+                ex_trace = ''.join(traceback.format_tb(ex.__traceback__))
                 logging.warning(f"loop_play Exception {ex}, trace: {ex_trace}")
-                e.set()
+                self.start_record_event.set()
                 llm_gen_segments = 0
 
     @staticmethod

@@ -124,7 +124,7 @@ if __name__ == '__main__':
     parser.add_argument('--lang', "-l", type=str,
                         default="zh", help='target language')
     parser.add_argument('--llm_model_path', "-lm", type=str,
-                        default="./models/Phi-3-mini-4k-instruct-q4.gguf", help='llm model path')
+                        default="./models/qwen2-1_5b-instruct-q8_0.gguf", help='llm model path')
     args = parser.parse_args()
 
     mp_queue = multiprocessing.Queue()

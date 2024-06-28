@@ -1,5 +1,5 @@
 import logging
-from typing import Iterator, Union
+from typing import AsyncGenerator, Iterator, Union
 import os
 
 import wave
@@ -7,6 +7,7 @@ import pyaudio
 from pydub.utils import mediainfo
 from pydub import AudioSegment
 
+from src.common.utils.audio_utils import read_audio_file
 from src.common.interface import ITts
 from src.common.session import Session
 from src.common.types import Pyttsx3TTSArgs, PYTTSX3_SYNTHESIS_FILE, RECORDS_DIR
@@ -27,14 +28,7 @@ class Pyttsx3TTS(BaseTTS, ITts):
         self.set_voice(self.args.voice_name)
         self.file_path = os.path.join(RECORDS_DIR, PYTTSX3_SYNTHESIS_FILE)
 
-    def get_stream_info(self) -> dict:
-        return {
-            "format_": pyaudio.paInt16,
-            "channels": 1,
-            "rate": 22050,
-        }
-
-    def _inference(self, session: Session, text: str) -> Iterator[bytes]:
+    async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
         logging.debug(
             f"{self.TAG} synthesis: {text} save to file: {self.file_path}")
         self.engine.save_to_file(text, self.file_path)
@@ -46,13 +40,11 @@ class Pyttsx3TTS(BaseTTS, ITts):
 
         # Check if the file format is AIFF and convert to WAV if necessary
         if info['format_name'] == 'aiff':
-            audio = AudioSegment.from_file(self.file_path, format="aiff")
+            audio = AudioSegment.from_(self.file_path, format="aiff")
             audio.export(self.file_path, format="wav")
 
-        # Open the WAV file
-        with wave.open(self.file_path, 'rb') as wf:
-            audio_data = wf.readframes(wf.getnframes())
-            yield audio_data
+        audio_data = await read_audio_file(self.file_path)
+        yield audio_data
 
     def get_voices(self):
         voice_objects = []
@@ -67,9 +59,11 @@ class Pyttsx3TTS(BaseTTS, ITts):
             self.engine.setProperty('voice', voice.id)
         else:
             installed_voices = self.engine.getProperty('voices')
-            if not voice is None:
+            if voice is not None:
                 for installed_voice in installed_voices:
                     if voice in installed_voice.name:
+                        logging.debug(
+                            f"{self.TAG} set voice: {voice} voice_id: {installed_voice.id}")
                         self.engine.setProperty('voice', installed_voice.id)
                         return
 

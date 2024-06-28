@@ -33,16 +33,17 @@ class AudioStream:
     """
 
     def __init__(self, args: AudioStreamArgs):
-        """
-        Args:
-            args (AudioStreamArgs): Object containing audio settings.
-        """
-        self.args = args
         self.stream = None
         self.pyaudio_instance = pyaudio.PyAudio()
-        if self.args.input is True and self.args.input_device_index is None:
+        if args.input is True and args.input_device_index is None:
             default_device = self.pyaudio_instance.get_default_input_device_info()
-            self.args.input_device_index = default_device['index']
+            args.input_device_index = default_device['index']
+        if args.output is True and args.input_device_index is None:
+            default_device = self.pyaudio_instance.get_default_output_device_info()
+            args.output_device_index = default_device['index']
+
+        logging.info(f"AudioStreamArgs: {args}")
+        self.args = args
 
     def open_stream(self):
         """Opens an audio stream."""
@@ -56,7 +57,6 @@ class AudioStream:
         logging.debug("Opening stream for wave audio chunks, "
                       f"pyFormat: {pyFormat}, pyChannels: {pyChannels}, "
                       f"pySampleRate: {pySampleRate}")
-
         try:
             self.stream = self.pyaudio_instance.open(
                 format=pyFormat,

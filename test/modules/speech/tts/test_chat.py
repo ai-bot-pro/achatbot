@@ -58,7 +58,7 @@ class TestChatTTS(unittest.TestCase):
         self.session.ctx.state["tts_text"] = self.tts_text
         print(self.session.ctx)
         self.tts.args.tts_stream = bool(self.stream)
-        iter = self.tts.synthesize(self.session)
+        iter = self.tts.synthesize_sync(self.session)
         sub_chunk_size = 1024
         for i, chunk in enumerate(iter):
             print(f"get {i} chunk {len(chunk)}")

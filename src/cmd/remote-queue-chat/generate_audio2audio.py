@@ -32,7 +32,9 @@ def main():
 
     op = os.getenv("RUN_OP", "fe")
     if op == "be":
-        TerminalChatClient().run(conn)
+        client = TerminalChatClient()
+        conn.send_key = client.sid
+        client.run(conn)
     else:
         ChatWorker().run(conn)
     conn.close()

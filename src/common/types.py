@@ -114,7 +114,7 @@ class AudioPlayerArgs:
     format_: str = FORMAT
     channels: int = CHANNELS
     rate: int = RATE
-    output_device_index = None
+    output_device_index: int = None
     chunk_size: int = CHUNK
 
 
@@ -234,9 +234,10 @@ class CoquiTTSArgs:
     tts_overlap_wav_len: int = 1024
     tts_enable_text_splitting: bool = False
     tts_language: str = "zh"
-    tts_default_silence_duration = 0.3
-    tts_comma_silence_duration = 0.3
-    tts_sentence_silence_duration = 0.6
+    tts_default_silence_duration: float = 0.3
+    tts_comma_silence_duration: float = 0.3
+    tts_sentence_silence_duration: float = 0.6
+    tts_use_deepspeed: bool = False
 
 
 @dataclass
@@ -262,3 +263,29 @@ PYTTSX3_SYNTHESIS_FILE = 'pyttsx3_synthesis.wav'
 @dataclass
 class Pyttsx3TTSArgs:
     voice_name: str = "Tingting"
+
+
+GTTS_SYNTHESIS_FILE = 'gtts_synthesis.wav'
+
+
+@dataclass
+class GTTSArgs:
+    language: str = "en"
+    tld: str = "com"
+    slow: bool = False
+    speed_increase: float = 1.0
+    chunk_size: int = 100
+    crossfade_lenght: int = 10
+
+
+EDGE_TTS_SYNTHESIS_FILE = 'edge_tts_synthesis.wav'
+
+
+@dataclass
+class EdgeTTSArgs:
+    language: str = "en"
+    gender: str = "Female"
+    voice_name: str = "en-GB-SoniaNeural"
+    rate: str = "+0%"
+    volume: str = "+0%"
+    pitch: str = "+0Hz"

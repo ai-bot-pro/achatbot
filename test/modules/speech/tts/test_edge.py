@@ -5,25 +5,26 @@ import asyncio
 import unittest
 import pyaudio
 
-from src.common.utils.audio_utils import save_audio_to_file
-from src.common.factory import EngineFactory
+from src.common.factory import EngineFactory, EngineClass
 from src.common.logger import Logger
 from src.common.session import Session
 from src.common.types import SessionCtx, MODELS_DIR, RECORDS_DIR
-from src.modules.speech.tts.pyttsx3_tts import EngineClass, Pyttsx3TTS
+import src.modules.speech
+from src.modules.speech.tts.edge_tts import EdgeTTS
 
 r"""
-python -m unittest test.modules.speech.tts.test_pyttsx3.TestPyttsx3TTS.test_synthesize
+python -m unittest test.modules.speech.tts.test_edge.TestEdgeTTS.test_get_voices
+python -m unittest test.modules.speech.tts.test_edge.TestEdgeTTS.test_synthesize
 """
 
 
-class TestPyttsx3TTS(unittest.TestCase):
+class TestEdgeTTS(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tts_tag = os.getenv('LLM_TAG', "tts_pyttsx3")
-        cls.tts_text = os.getenv('TTS_TEXT', "你好，我是机器人")
-        cls.voice_name = os.getenv('VOICE_NAME', "Tingting")
-        Logger.init(logging.DEBUG, is_file=False)
+        cls.tts_tag = os.getenv('TTS_TAG', "tts_edge")
+        cls.tts_text = os.getenv(
+            'TTS_TEXT', "hello, 你好，我是机器人, 有什么可以帮助您的吗？请告诉我您需要的信息或问题，我会尽力为您解答。")
+        Logger.init(logging.INFO, is_file=False)
 
     @classmethod
     def tearDownClass(cls):
@@ -31,8 +32,8 @@ class TestPyttsx3TTS(unittest.TestCase):
 
     def setUp(self):
         kwargs = {}
-        kwargs["voice_name"] = self.voice_name
-        self.tts: Pyttsx3TTS = EngineFactory.get_engine_by_tag(
+        kwargs['voice_name'] = "zh-CN-XiaoxiaoNeural"
+        self.tts: EdgeTTS = EngineFactory.get_engine_by_tag(
             EngineClass, self.tts_tag, **kwargs)
         self.session = Session(**SessionCtx("test_tts_client_id").__dict__)
 
@@ -45,18 +46,20 @@ class TestPyttsx3TTS(unittest.TestCase):
             output_device_index=None,
             output=True)
 
-        pass
-
     def tearDown(self):
         self.audio_stream.stop_stream()
         self.audio_stream.close()
         self.pyaudio_instance.terminate()
-        pass
 
     def test_get_voices(self):
-        voices = self.tts.get_voices()
+        voices = asyncio.run(self.tts.get_voices(Language="zh"))
         self.assertGreater(len(voices), 0)
-        print(voices)
+        print(voices, len(voices))
+
+        voices = asyncio.run(self.tts.get_voices(
+            ShortName=self.tts.args.voice_name))
+        self.assertGreater(len(voices), 0)
+        print(voices, len(voices))
 
     def test_synthesize(self):
         self.session.ctx.state["tts_text"] = self.tts_text
@@ -64,7 +67,6 @@ class TestPyttsx3TTS(unittest.TestCase):
         iter = self.tts.synthesize_sync(self.session)
         sub_chunk_size = 1024
         for i, chunk in enumerate(iter):
-            print(f"get {i} chunk {len(chunk)}")
             self.assertGreaterEqual(len(chunk), 0)
             if len(chunk) / sub_chunk_size < 100:
                 self.audio_stream.write(chunk)
@@ -72,3 +74,9 @@ class TestPyttsx3TTS(unittest.TestCase):
             for i in range(0, len(chunk), sub_chunk_size):
                 sub_chunk = chunk[i:i + sub_chunk_size]
                 self.audio_stream.write(sub_chunk)
+
+    def test_inference(self) -> None:
+        async def inference():
+            async for chunk in self.tts._inference(self.session, self.tts_text):
+                self.assertGreaterEqual(len(chunk), 0)
+        asyncio.run(inference())
