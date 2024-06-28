@@ -22,7 +22,7 @@ class TestLLamacppLLM(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.llm_tag = os.getenv('LLM_TAG', "llm_llamacpp")
-        cls.prompt = os.getenv('PROMPT', "你好,今天天氣怎麼樣")
+        cls.prompt = os.getenv('PROMPT', "你好")
         cls.stream = os.getenv('STREAM', "")
         cls.model_type = os.getenv('MODEL_TYPE', "chat")
         cls.model_name = os.getenv('MODEL_NAME', "qwen-2")
@@ -57,8 +57,13 @@ class TestLLamacppLLM(unittest.TestCase):
         logging.debug(self.session.ctx.state)
         iter = self.llm.generate(self.session)
         for item in iter:
-            print(item)
+            print(f"item--> {item}")
             self.assertGreater(len(item), 0)
+
+    def test_have_special_char(self):
+        index = self.llm._have_special_char("你好,中国")
+        print(index)
+        self.assertGreater(index, -1)
 
     def test_generate_with_system(self):
         self.llm.args.llm_stream = bool(self.stream)

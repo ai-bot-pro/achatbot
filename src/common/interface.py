@@ -101,7 +101,7 @@ class IFunction(ABC):
 
 class ITts(ABC):
     @abstractmethod
-    def synthesize_sync(self) -> Generator[bytes, None, None]:
+    def synthesize_sync(self, session) -> Generator[bytes, None, None]:
         raise NotImplemented("must be implemented in the child class")
 
     @abstractmethod

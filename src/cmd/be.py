@@ -87,19 +87,22 @@ class Audio2AudioChatWorker:
                 msg, text, session = text_buffer.get(timeout=q_get_timeout)
                 if msg is None or msg.lower() == "stop":
                     break
+                if msg == "LLM_GENERATE_DONE":
+                    conn.send(("PLAY_FRAMES_DONE", "", session), 'be')
+                    logging.info(f"PLAY_FRAMES_DONE")
+                    continue
+
                 if len(text.strip()) == 0:
                     raise Exception(
-                        f"tts_synthesize text is empty sid:{session.ctx.client_id}")
-
+                        f"tts_synthesize msg:{msg} text is empty sid:{session.ctx.client_id}")
                 logging.info(f"tts_text: {text}")
                 session.ctx.state["tts_text"] = text
                 audio_iter = self.tts.synthesize_sync(session)
                 for i, chunk in enumerate(audio_iter):
-                    logging.info(f"synthesize audio {i} chunk {len(chunk)}")
+                    logging.info(
+                        f"synthesize audio {i} chunk {len(chunk)}")
                     if len(chunk) > 0:
                         conn.send(("PLAY_FRAMES", chunk, session), 'be')
-                if msg == "LLM_GENERATE_DONE":
-                    conn.send(("PLAY_FRAMES_DONE", "", session), 'be')
             except queue.Empty:
                 logging.debug(
                     f"tts_synthesize's consumption queue is empty after block {q_get_timeout}s")
