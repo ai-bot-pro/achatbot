@@ -146,7 +146,7 @@ class Env(PromptInit):
         # if logger.getEffectiveLevel() != logging.DEBUG:
         #    kwargs["verbose"] = False
         kwargs['llm_stop'] = [
-            "<|end|>", "<|im_end|>", "<|endoftext|>", "<{/end}>"
+            "<|end|>", "<|im_end|>", "<|endoftext|>", "<{/end}>",
             "</s>", "/s>", "</s", "<s>",
             "<|user|>", "<|assistant|>", "<|system|>",
         ]

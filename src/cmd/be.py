@@ -98,7 +98,8 @@ class Audio2AudioChatWorker:
                     logging.info(f"synthesize audio {i} chunk {len(chunk)}")
                     if len(chunk) > 0:
                         conn.send(("PLAY_FRAMES", chunk, session), 'be')
-                conn.send(("PLAY_FRAMES_DONE", "", session), 'be')
+                if msg == "LLM_GENERATE_DONE":
+                    conn.send(("PLAY_FRAMES_DONE", "", session), 'be')
             except queue.Empty:
                 logging.debug(
                     f"tts_synthesize's consumption queue is empty after block {q_get_timeout}s")
@@ -131,8 +132,8 @@ class Audio2AudioChatWorker:
         for text in text_iter:
             assistant_text += text
             conn.send(("LLM_GENERATE_TEXT", text, session), 'be')
-            text_buffer.put_nowait(
-                ("LLM_GENERATE_TEXT", text, session))
+            text_buffer.put_nowait(("LLM_GENERATE_TEXT", text, session))
+
         logging.info(f"llm generate assistant_text: {assistant_text}")
         assistant_prompt = init.get_assistant_prompt(
             self.model_name, assistant_text)
@@ -143,6 +144,7 @@ class Audio2AudioChatWorker:
         print(f"{bot_name}: {out}", flush=True, file=sys.stdout)
 
         conn.send(("LLM_GENERATE_DONE", "", session), 'be')
+        text_buffer.put_nowait(("LLM_GENERATE_DONE", "", session))
         logging.info(f"send session.chat_history: {session.chat_history}")
 
     def llm_chat(self, text, session: Session,
