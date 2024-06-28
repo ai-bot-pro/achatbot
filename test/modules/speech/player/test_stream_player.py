@@ -29,7 +29,7 @@ class TestStreamPlayer(unittest.TestCase):
 
     def setUp(self):
         kwargs = {}
-        kwargs["chunk_size"] = CHUNK
+        kwargs["sub_chunk_size"] = CHUNK
         self.player: StreamPlayer = EngineFactory.get_engine_by_tag(
             EngineClass, self.tag, **kwargs)
         print(self.player.args.__dict__)
@@ -47,6 +47,7 @@ class TestStreamPlayer(unittest.TestCase):
             audio_file_path = os.path.join(
                 TEST_DIR, f"audio_files/{audio_file}")
             for segment in data["segments"]:
+                self.player.start(self.session)
                 audio_segment = asyncio.run(audio_utils.get_audio_segment(
                     audio_file_path,
                     segment["start"],
@@ -54,3 +55,4 @@ class TestStreamPlayer(unittest.TestCase):
                 self.session.ctx.state["tts_chunk"] = audio_segment.raw_data
                 logging.debug(f"chunk size: {len(audio_segment.raw_data)}")
                 self.player.play_audio(self.session)
+                self.player.stop(self.session)

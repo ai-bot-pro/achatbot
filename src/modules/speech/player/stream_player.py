@@ -141,7 +141,7 @@ class StreamPlayer(PyAudioPlayer, IPlayer):
         self.immediate_stop_event.clear()
         self.buffer_manager.clear_buffer()
         self.playback_thread = None
-        self.close()
+        self.audio.close_stream()
 
     def pause(self):
         self.pause_event.set()

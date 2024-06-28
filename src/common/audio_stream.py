@@ -134,8 +134,8 @@ class AudioStream:
                 input=self.args.input,
                 frames_per_buffer=self.args.frames_per_buffer
             )
-        except Exception as e:
-            raise Exception(f"Error opening stream: {e}")
+        except Exception as ex:
+            raise Exception(f"Error opening stream: {ex}")
 
     def start_stream(self):
         """Starts the audio stream."""
@@ -167,4 +167,5 @@ class AudioStream:
         """Closes the audio instance."""
         if self.stream:
             self.close_stream()
+        if self.pyaudio_instance:
             self.pyaudio_instance.terminate()

@@ -99,10 +99,10 @@ class TerminalChatClient:
                     self.session.ctx.state["tts_chunk"] = recv_data
                     self.player.play_audio(self.session)
                 elif msg == "PLAY_FRAMES_DONE":
-                    self.player.stop()
+                    self.player.stop(self.session)
                     self.start_record_event.set()
                     llm_gen_segments = 0
-                    self.player.start()
+                    self.player.start(self.session)
                 elif msg == "LLM_GENERATE_TEXT":
                     if llm_gen_segments == 0:
                         bot_name = self.session.ctx.state["bot_name"] if "bot_name" in self.session.ctx.state else "bot"
