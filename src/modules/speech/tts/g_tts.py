@@ -3,7 +3,6 @@ from typing import AsyncGenerator, Iterator, Union
 import os
 import io
 
-import pyaudio
 from pydub import AudioSegment
 
 from src.common.interface import ITts
@@ -23,13 +22,6 @@ class GTTS(BaseTTS, ITts):
     def __init__(self, **args) -> None:
         self.args = GTTSArgs(**args)
         self.file_path = os.path.join(RECORDS_DIR, GTTS_SYNTHESIS_FILE)
-
-    def get_stream_info(self) -> dict:
-        return {
-            "format_": pyaudio.paInt16,
-            "channels": 1,
-            "rate": 22050,
-        }
 
     async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
         from gtts import gTTS

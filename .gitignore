@@ -159,6 +159,7 @@ tmp.*
 *.wav
 *.mp3
 *.flv
+*.vtt
 
 #vim
 *~

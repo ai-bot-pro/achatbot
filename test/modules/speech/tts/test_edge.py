@@ -23,8 +23,8 @@ class TestEdgeTTS(unittest.TestCase):
     def setUpClass(cls):
         cls.tts_tag = os.getenv('TTS_TAG', "tts_edge")
         cls.tts_text = os.getenv(
-            'TTS_TEXT', "你好，我是机器人, hello, test.modules.speech.tts.test_gtts.TestGTTS.test_synthesize")
-        Logger.init(logging.DEBUG, is_file=False)
+            'TTS_TEXT', "hello, 你好，我是机器人, 有什么可以帮助您的吗？请告诉我您需要的信息或问题，我会尽力为您解答。")
+        Logger.init(logging.INFO, is_file=False)
 
     @classmethod
     def tearDownClass(cls):
@@ -74,3 +74,9 @@ class TestEdgeTTS(unittest.TestCase):
             for i in range(0, len(chunk), sub_chunk_size):
                 sub_chunk = chunk[i:i + sub_chunk_size]
                 self.audio_stream.write(sub_chunk)
+
+    def test_inference(self) -> None:
+        async def inference():
+            async for chunk in self.tts._inference(self.session, self.tts_text):
+                self.assertGreaterEqual(len(chunk), 0)
+        asyncio.run(inference())

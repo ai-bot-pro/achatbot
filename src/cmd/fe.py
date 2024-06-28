@@ -22,13 +22,12 @@ class TerminalChatClient:
     def __init__(self) -> None:
         self.sid = uuid.uuid4()
         self.session = Session(**SessionCtx(self.sid).__dict__)
-
-    def run(self, conn: interface.IConnector):
         self.player = init.initPlayerEngine()
         self.recorder = init.initRecorderEngine()
         self.waker = init.initWakerEngine()
-
         self.start_record_event = threading.Event()
+
+    def run(self, conn: interface.IConnector):
         play_t = threading.Thread(target=self.loop_play,
                                   args=(conn,))
         play_t.start()

@@ -28,13 +28,6 @@ class Pyttsx3TTS(BaseTTS, ITts):
         self.set_voice(self.args.voice_name)
         self.file_path = os.path.join(RECORDS_DIR, PYTTSX3_SYNTHESIS_FILE)
 
-    def get_stream_info(self) -> dict:
-        return {
-            "format_": pyaudio.paInt16,
-            "channels": 1,
-            "rate": 22050,
-        }
-
     async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
         logging.debug(
             f"{self.TAG} synthesis: {text} save to file: {self.file_path}")

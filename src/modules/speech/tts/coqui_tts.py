@@ -73,7 +73,8 @@ class CoquiTTS(BaseTTS, ITts):
         return {
             "format_": pyaudio.paFloat32,
             "channels": 1,
-            "rate": self.config.audio.output_sample_rate
+            "rate": self.config.audio.output_sample_rate,
+            "samples_width": 4,
         }
 
     async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
