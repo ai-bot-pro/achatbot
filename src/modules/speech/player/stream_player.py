@@ -67,25 +67,28 @@ class StreamPlayer(PyAudioPlayer, IPlayer):
             self.playback_thread.start()
 
     def _process_buffer(self, session: Session):
-        while (self.playback_active or
-               not self.buffer_manager.audio_buffer.empty()):
-            chunk = self.buffer_manager.get_from_buffer()
-            chunk and self._play_chunk(session, chunk)
+        while self.playback_active:
+            try:
+                chunk = self.buffer_manager.get_from_buffer()
+                chunk and self._play_chunk(session, chunk)
 
-            if self.immediate_stop_event.is_set():
-                logging.info(f"Immediate stop requested, aborting {self.TAG}")
-                break
+                if self.immediate_stop_event.is_set():
+                    logging.info(
+                        f"Immediate stop requested, aborting {self.TAG}")
+                    break
+            except queue.Empty:
+                continue
+            except Exception as ex:
+                raise ex
 
-        if self.args.on_play_end:
-            self.args.on_play_end(session)
-
+        self.args.on_play_end and self.args.on_play_end(session)
         self.playback_active = False
 
     def _play_chunk(self, session: Session, chunk):
         # handle mpeg
         if self.args.format_ == pyaudio.paCustomFormat:
             # convert to pcm using pydub
-            segment = AudioSegment.from_file(io.BytesIO(chunk), format="mp3")
+            segment = AudioSegment.from_mp3(io.BytesIO(chunk))
             chunk = segment.raw_data
 
         for i in range(0, len(chunk), self.args.sub_chunk_size):

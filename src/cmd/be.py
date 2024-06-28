@@ -80,8 +80,8 @@ class Audio2AudioChatWorker:
             conn: interface.IConnector,
             text_buffer: queue.Queue):
         print(
-            f"start loop_tts_synthesize with {self.tts.TAG}...", flush=True, file=sys.stderr)
-        q_get_timeout = 1
+            f"start loop_tts_synthesize with {self.tts.TAG} ...", flush=True, file=sys.stderr)
+        q_get_timeout = 0.1
         while True:
             try:
                 msg, text, session = text_buffer.get(timeout=q_get_timeout)

@@ -243,7 +243,7 @@ class Env(PromptInit):
         info = Env.map_tts_player_stream_info[tts_tag]
         if tts:
             info = tts.get_stream_info()
-        info["chunk_size"] = CHUNK * 10
+        info["sub_chunk_size"] = CHUNK * 10
         info["output_device_index"] = os.getenv('OUTPUT_DEVICE_INDEX', None)
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **info)
         logging.info(f"initPlayerEngine: {tag},  {engine}")
