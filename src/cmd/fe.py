@@ -28,11 +28,13 @@ class TerminalChatClient:
         self.start_record_event = threading.Event()
 
     def run(self, conn: interface.IConnector):
-        play_t = threading.Thread(target=self.loop_play,
+        self.player.start(self.session)
+
+        play_t = threading.Thread(target=self.loop_recv,
                                   args=(conn,))
-        play_t.start()
         record_t = threading.Thread(target=self.loop_record,
                                     args=(conn,))
+        play_t.start()
         record_t.start()
 
         record_t.join()
@@ -47,7 +49,8 @@ class TerminalChatClient:
         self.waker.set_args(on_wakeword_detected=self.on_wakeword_detected)
         logging.info(
             f"loop_record starting with session ctx: {self.session.ctx}")
-        print("start loop_record...", flush=True, file=sys.stderr)
+        print(
+            f"start loop_record with {self.recorder.TAG} ...", flush=True, file=sys.stderr)
         while True:
             try:
                 print(f"-- chat round {self.session.chat_round} --",
@@ -78,8 +81,9 @@ class TerminalChatClient:
                 logging.warning(
                     f"loop_record Exception {ex} sid:{self.session.ctx.client_id}")
 
-    def loop_play(self, conn: interface.IConnector):
-        print("start loop_play...", flush=True, file=sys.stderr)
+    def loop_recv(self, conn: interface.IConnector):
+        print(
+            f"start loop_recv with {self.player.TAG} ...", flush=True, file=sys.stderr)
         llm_gen_segments = 0
         while True:
             try:
@@ -122,8 +126,8 @@ class TerminalChatClient:
                 else:
                     logging.warning(f"unsupport msg {msg}")
             except Exception as ex:
-                ex_trace = ''.join(traceback.format_tb(ex.__traceback__))
-                logging.warning(f"loop_play Exception {ex}, trace: {ex_trace}")
+                ex_trace = traceback.format_exc()
+                logging.warning(f"loop_recv Exception {ex}, trace: {ex_trace}")
                 self.start_record_event.set()
                 llm_gen_segments = 0
 

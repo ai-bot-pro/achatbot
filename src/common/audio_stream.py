@@ -1,5 +1,6 @@
 import logging
 import collections
+import queue
 
 import pyaudio
 
@@ -26,6 +27,69 @@ class RingBuffer(object):
         return tmp
 
 
+class AudioBufferManager:
+    """
+    Manages an audio buffer, allowing addition and retrieval of audio data.
+    """
+
+    def __init__(self, audio_buffer: queue.Queue):
+        """
+        Args:
+            audio_buffer (queue.Queue): Queue to be used as the audio buffer.
+        """
+        self.audio_buffer = audio_buffer
+        self.total_samples = 0
+
+    def add_to_buffer(self, audio_data):
+        """
+        Adds audio data to the buffer.
+
+        Args:
+            audio_data: Audio data to be added.
+        """
+        self.audio_buffer.put(audio_data)
+        self.total_samples += len(audio_data) // 2
+
+    def clear_buffer(self):
+        """Clears all audio data from the buffer."""
+        while not self.audio_buffer.empty():
+            try:
+                self.audio_buffer.get_nowait()
+            except queue.Empty:
+                continue
+        self.total_samples = 0
+
+    def get_from_buffer(self, timeout: float = 0.05):
+        """
+        Retrieves audio data from the buffer.
+
+        Args:
+            timeout (float): Time (in seconds) to wait
+              before raising a queue.Empty exception.
+
+        Returns:
+            The audio data chunk or None if the buffer is empty.
+        """
+        try:
+            chunk = self.audio_buffer.get(timeout=timeout)
+            self.total_samples -= len(chunk) // 2
+            return chunk
+        except queue.Empty:
+            return None
+
+    def get_buffered_seconds(self, rate: int) -> float:
+        """
+        Calculates the duration (in seconds) of the buffered audio data.
+
+        Args:
+            rate (int): Sample rate of the audio data.
+
+        Returns:
+            float: Duration of buffered audio in seconds.
+        """
+        return self.total_samples / rate
+
+
 class AudioStream:
     """
     Handles audio stream operations
@@ -47,11 +111,13 @@ class AudioStream:
 
     def open_stream(self):
         """Opens an audio stream."""
+        if self.stream:
+            return
 
-        # check for mpeg format
         pyChannels = self.args.channels
         pySampleRate = self.args.rate
         pyFormat = self.args.format_
+        # check for mpeg format
         if pyFormat == pyaudio.paCustomFormat:
             pyFormat = self.pyaudio_instance.get_format_from_width(2)
         logging.debug("Opening stream for wave audio chunks, "

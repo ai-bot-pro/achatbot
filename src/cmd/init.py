@@ -142,11 +142,11 @@ class Env(PromptInit):
         kwargs["model_type"] = os.getenv('LLM_MODEL_TYPE', "generation")
         kwargs["n_threads"] = os.cpu_count()
         kwargs["verbose"] = True
-        kwargs["llm_stream"] = False
+        kwargs["llm_stream"] = True
         # if logger.getEffectiveLevel() != logging.DEBUG:
         #    kwargs["verbose"] = False
         kwargs['llm_stop'] = [
-            "<|end|>", "<|im_end|>", "<|endoftext|>",
+            "<|end|>", "<|im_end|>", "<|endoftext|>", "<{/end}>"
             "</s>", "/s>", "</s", "<s>",
             "<|user|>", "<|assistant|>", "<|system|>",
         ]

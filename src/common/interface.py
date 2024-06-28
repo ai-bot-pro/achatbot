@@ -115,7 +115,23 @@ class ITts(ABC):
 
 class IPlayer(ABC):
     @abstractmethod
+    def start(self, session):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
     def play_audio(self, session):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def pause(self):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def resume(self):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def stop(self, session):
         raise NotImplemented("must be implemented in the child class")
 
     @abstractmethod

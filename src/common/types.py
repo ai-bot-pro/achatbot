@@ -2,6 +2,7 @@ r"""
 use SOTA LLM like chatGPT to generate config file(json,yaml,toml) from dataclass type
 """
 import os
+import queue
 from dataclasses import dataclass
 from typing import (
     Optional,
@@ -115,7 +116,12 @@ class AudioPlayerArgs:
     channels: int = CHANNELS
     rate: int = RATE
     output_device_index: int = None
-    chunk_size: int = CHUNK
+    sub_chunk_size: int = CHUNK
+    audio_buffer: queue.Queue = None
+    on_play_start: Optional[str] = None
+    on_play_end: Optional[str] = None
+    on_play_chunk: Optional[str] = None
+    is_immediate_stop: bool = False
 
 
 @dataclass

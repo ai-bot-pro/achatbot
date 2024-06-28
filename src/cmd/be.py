@@ -9,6 +9,7 @@ import os
 
 
 from src.common.session import Session
+from src.common.factory import EngineClass
 from src.common import interface
 if os.getenv("INIT_TYPE", 'env') == 'yaml_config':
     from src.cmd.init import YamlConfig as init
@@ -22,10 +23,10 @@ HISTORY_LIMIT = 10240
 class Audio2AudioChatWorker:
 
     def run(self, conn: interface.IConnector, e: multiprocessing.Event = None):
-        # vad_detector = init.initVADEngine()
-        self.asr: interface.IAsr = init.initASREngine()
-        self.llm: interface.ILlm = init.initLLMEngine()
-        self.tts: interface.ITts = init.initTTSEngine()
+        # self.vad_detector: interface.IDetector | EngineClass = init.initVADEngine()
+        self.asr: interface.IAsr | EngineClass = init.initASREngine()
+        self.llm: interface.ILlm | EngineClass = init.initLLMEngine()
+        self.tts: interface.ITts | EngineClass = init.initTTSEngine()
         self.model_name = self.llm.model_name()
 
         th_q = queue.Queue()
@@ -48,7 +49,7 @@ class Audio2AudioChatWorker:
             conn: interface.IConnector,
             text_buffer: queue.Queue):
         logging.info(f"loop_asr starting with asr: {self.asr}")
-        print(f"start loop_asr_llm_generate with llm {self.model_name} ...",
+        print(f"start loop_asr_llm_generate with {self.asr.TAG} {self.llm.TAG} {self.model_name} ...",
               flush=True, file=sys.stderr)
         while True:
             try:
@@ -78,7 +79,8 @@ class Audio2AudioChatWorker:
             self,
             conn: interface.IConnector,
             text_buffer: queue.Queue):
-        print("start loop_tts_synthesize...", flush=True, file=sys.stderr)
+        print(
+            f"start loop_tts_synthesize with {self.tts.TAG}...", flush=True, file=sys.stderr)
         q_get_timeout = 1
         while True:
             try:
