@@ -49,8 +49,10 @@ class Audio2AudioChatWorker:
             conn: interface.IConnector,
             text_buffer: queue.Queue):
         logging.info(f"loop_asr starting with asr: {self.asr}")
-        print(f"start loop_asr_llm_generate with {self.asr.TAG} {self.llm.TAG} {self.model_name} ...",
-              flush=True, file=sys.stderr)
+        print(
+            f"start loop_asr_llm_generate with {self.asr.TAG} {self.llm.TAG} {self.model_name} ...",
+            flush=True,
+            file=sys.stderr)
         while True:
             try:
                 res = conn.recv('be')

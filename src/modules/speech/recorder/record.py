@@ -80,7 +80,7 @@ class RMSRecorder(PyAudioRecorder, IRecorder):
                 audio_started = True
             else:
                 if silence_timeout > 0 \
-                        and time.time()-start_time > silence_timeout:
+                        and time.time() - start_time > silence_timeout:
                     logging.warning(f"rms recording silence timeout")
                     break
 

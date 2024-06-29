@@ -24,8 +24,11 @@ def faster_whisper_transcribe(audio_path, download_root, model_size="base", targ
     info = CUDAInfo()
     if info.is_cuda:
         # this worked fast and reliably on NVIDIA L40
-        model = WhisperModel(model_size, device="cuda",
-                             compute_type="float16" if info.compute_capability_major >= 7 else "float32", download_root=download_root)
+        model = WhisperModel(
+            model_size,
+            device="cuda",
+            compute_type="float16" if info.compute_capability_major >= 7 else "float32",
+            download_root=download_root)
 
         # or run on GPU with INT8
         # tested: the transcripts were different, probably worse than with FP16, and it was slightly (appx 20%) slower
@@ -33,12 +36,13 @@ def faster_whisper_transcribe(audio_path, download_root, model_size="base", targ
     else:
         # or run on CPU with INT8
         # tested: works, but slow, appx 10-times than cuda FP16
-        # model = WhisperModel(modelsize, device="cpu", compute_type="int8") #, download_root="faster-disk-cache-dir/")
+        # model = WhisperModel(modelsize, device="cpu", compute_type="int8") #,
+        # download_root="faster-disk-cache-dir/")
         model = WhisperModel(model_size, device="cpu",
                              compute_type="float32", download_root=download_root)
 
-    segmentsIter, transcriptionInfo = model.transcribe(audio_path, language=target_lang,
-                                                       beam_size=5, word_timestamps=True, condition_on_previous_text=True)
+    segmentsIter, transcriptionInfo = model.transcribe(
+        audio_path, language=target_lang, beam_size=5, word_timestamps=True, condition_on_previous_text=True)
     print(transcriptionInfo)
     for segment in segmentsIter:
         print(segment)

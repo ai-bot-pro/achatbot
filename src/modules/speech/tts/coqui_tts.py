@@ -41,7 +41,7 @@ class CoquiTTS(BaseTTS, ITts):
             checkpoint_dir=self.args.model_path,
             use_deepspeed=self.args.tts_use_deepspeed,
         )
-        model_million_params = sum(p.numel() for p in model.parameters())/1e6
+        model_million_params = sum(p.numel() for p in model.parameters()) / 1e6
         logging.debug(f"{model_million_params}M parameters")
 
         if info.is_cuda:

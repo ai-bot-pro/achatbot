@@ -14,7 +14,12 @@ def getDefaultFormatter():
 class Logger():
 
     @staticmethod
-    def init(level=logging.INFO, app_name="chat-bot", log_dir=LOG_DIR, is_file=True, is_console=True):
+    def init(
+            level=logging.INFO,
+            app_name="chat-bot",
+            log_dir=LOG_DIR,
+            is_file=True,
+            is_console=True):
         os.makedirs(log_dir, exist_ok=True)
         # Create a logger
         logger = logging.getLogger()

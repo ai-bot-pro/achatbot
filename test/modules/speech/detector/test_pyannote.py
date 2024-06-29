@@ -20,6 +20,7 @@ r"""
 python -m unittest test.modules.speech.detector.test_pyannote.TestPyannoteDetector.test_detect_activity
 """
 
+
 class TestPyannoteDetector(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

@@ -92,7 +92,7 @@ def inference(model_path, conf_file, reference_audio_path="records/tmp.wav"):
     model.load_checkpoint(config, checkpoint_dir=model_path,
                           use_deepspeed=info.is_cuda)
     print(model)
-    model_million_params = sum(p.numel() for p in model.parameters())/1e6
+    model_million_params = sum(p.numel() for p in model.parameters()) / 1e6
     print(f"{model_million_params}M parameters")
 
     if info.is_cuda:
@@ -134,7 +134,7 @@ def inference_streaming(model_path, conf_file, reference_audio_path="records/tmp
     model.load_checkpoint(config, checkpoint_dir=model_path,
                           use_deepspeed=info.is_cuda)
     print(model)
-    model_million_params = sum(p.numel() for p in model.parameters())/1e6
+    model_million_params = sum(p.numel() for p in model.parameters()) / 1e6
     print(f"{model_million_params}M parameters")
 
     if info.is_cuda:
@@ -150,8 +150,7 @@ def inference_streaming(model_path, conf_file, reference_audio_path="records/tmp
         "It took me quite a long time to develop a voice and now that I have it I am not going to be silent.",
         "en",
         gpt_cond_latent,
-        speaker_embedding
-    )
+        speaker_embedding)
 
     wav_chuncks = []
     for i, chunk in enumerate(chunks):

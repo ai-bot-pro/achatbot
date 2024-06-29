@@ -23,7 +23,8 @@ def generate(model_path: str, prompt: str, stream=True):
         model_path=model_path,
         n_ctx=4096,  # The max sequence length to use - note that longer sequence lengths require much more resources
         n_threads=4,  # The number of CPU threads to use, tailor to your system and the resulting performance
-        # The number of layers to offload to GPU, if you have GPU acceleration available. Set to 0 if no GPU acceleration is available on your system.
+        # The number of layers to offload to GPU, if you have GPU acceleration
+        # available. Set to 0 if no GPU acceleration is available on your system.
         n_gpu_layers=0,
     )
     # Simple inference example
@@ -99,8 +100,12 @@ if __name__ == '__main__':
                         default="generate", help='choice generate or chat')
     parser.add_argument('--model_path', "-m", type=str,
                         default="./models/qwen2-1_5b-instruct-q8_0.gguf", help='model path')
-    parser.add_argument('--system', "-s", type=str,
-                        default="你是一个中国人,请用中文回答。回答限制在1-5句话内。要友好、乐于助人且简明扼要。默认使用公制单位。保持对话简短而甜蜜。只用纯文本回答，不要包含链接或其他附加内容。不要回复计算机代码，例如不要返回用户的经度。", help='system prompt')
+    parser.add_argument(
+        '--system',
+        "-s",
+        type=str,
+        default="你是一个中国人,请用中文回答。回答限制在1-5句话内。要友好、乐于助人且简明扼要。默认使用公制单位。保持对话简短而甜蜜。只用纯文本回答，不要包含链接或其他附加内容。不要回复计算机代码，例如不要返回用户的经度。",
+        help='system prompt')
     parser.add_argument('--query', "-q", type=str,
                         default="你好", help='query prompt')
     parser.add_argument('--stream', "-st", type=bool,
