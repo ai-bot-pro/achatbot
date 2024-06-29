@@ -20,7 +20,10 @@ class PyannoteDetector(EngineClass):
         return {**PyannoteDetectorArgs().__dict__, **kwargs}
 
     @staticmethod
-    def load_model(hf_auth_token, path_or_hf_repo="pyannote/segmentation-3.0", model_type="segmentation-3.0"):
+    def load_model(
+            hf_auth_token,
+            path_or_hf_repo="pyannote/segmentation-3.0",
+            model_type="segmentation-3.0"):
         auth_token = os.environ.get('HF_TOKEN') if os.environ.get(
             'HF_TOKEN') else hf_auth_token
         if auth_token is None:

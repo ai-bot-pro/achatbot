@@ -11,7 +11,7 @@ if __name__ == '__main__':
         while True:
             res = fe.recv()
             print(res)
-            if res == None:
+            if res is None:
                 break
             msg, data = res
             if msg == "text":

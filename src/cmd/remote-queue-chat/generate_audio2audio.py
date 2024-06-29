@@ -10,11 +10,11 @@ from src.common.logger import Logger
 
 r"""
 
-REDIS_PASSWORD=*** RUN_OP=fe python -m src.cmd.remote-queue-chat.generate_audio2audio > ./log/fe_std_out.log 
-REDIS_PASSWORD=*** RUN_OP=be TQDM_DISABLE=True python -m src.cmd.remote-queue-chat.generate_audio2audio > ./log/be_std_out.log 
+REDIS_PASSWORD=*** RUN_OP=fe python -m src.cmd.remote-queue-chat.generate_audio2audio > ./log/fe_std_out.log
+REDIS_PASSWORD=*** RUN_OP=be TQDM_DISABLE=True python -m src.cmd.remote-queue-chat.generate_audio2audio > ./log/be_std_out.log
 
 # with wakeword
-REDIS_PASSWORD=*** RUN_OP=fe RECORDER_TAG=wakeword_rms_recorder python -m src.cmd.remote-queue-chat.generate_audio2audio > ./log/fe_std_out.log 
+REDIS_PASSWORD=*** RUN_OP=fe RECORDER_TAG=wakeword_rms_recorder python -m src.cmd.remote-queue-chat.generate_audio2audio > ./log/fe_std_out.log
 REDIS_PASSWORD=*** RUN_OP=be TQDM_DISABLE=True python -m src.cmd.remote-queue-chat.generate_audio2audio > ./log/be_std_out.log
 """
 

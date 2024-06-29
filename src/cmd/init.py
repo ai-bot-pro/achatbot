@@ -339,7 +339,7 @@ CONF_ENV=local TTS_TAG=tts_chat python -m src.cmd.init -o env2yaml
 CONF_ENV=local TTS_TAG=tts_g python -m src.cmd.init -o env2yaml
 CONF_ENV=local TTS_TAG=tts_edge python -m src.cmd.init -o env2yaml
 
-CONF_ENV=local python -m src.cmd.init -o init_engine -i config 
+CONF_ENV=local python -m src.cmd.init -o init_engine -i config
 CONF_ENV=local python -m src.cmd.init -o gather_load_configs
 """
 if __name__ == "__main__":

@@ -32,7 +32,7 @@ class Conf:
         file_path = os.path.join(file_dir, f"{engine.TAG}.yaml")
         logging.debug(f"obj: {obj}, engine: {engine}, file_path: {file_path}")
         await Conf.save_to_yaml(engine.args.__dict__, file_path)
-        return name[4:len(name)-6].lower(), file_path, engine.TAG
+        return name[4:len(name) - 6].lower(), file_path, engine.TAG
 
     @staticmethod
     async def save_to_yamls(object, tag=None):
@@ -49,7 +49,7 @@ class Conf:
         for item in res:
             if item is None:
                 continue
-            print("item------------>",item)
+            print("item------------>", item)
             items.append(item)
             name, file_path, _tag = item
             manifests[name] = {"file_path": file_path, "tag": _tag}

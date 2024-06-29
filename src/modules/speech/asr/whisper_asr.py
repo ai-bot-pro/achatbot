@@ -57,15 +57,21 @@ class WhisperTimestampedAsr(WhisperAsr):
     async def transcribe(self, session: Session) -> dict:
         from whisper_timestamped import transcribe_timestamped
         transcription = transcribe_timestamped(
-            self.model, self.asr_audio, language=self.args.language,  condition_on_previous_text=True, verbose=self.args.verbose)
+            self.model,
+            self.asr_audio,
+            language=self.args.language,
+            condition_on_previous_text=True,
+            verbose=self.args.verbose)
         flattened_words = [
             word for segment in transcription["segments"] for word in segment["words"]]
-        res = {
-            "language": self.args.language,
-            "language_probability": transcription["language"],
-            "text": transcription["text"].strip(),
-            "words": [{'text': item['text'], 'start': item['start'], 'end': item['end'], 'probability': item['confidence']} for item in flattened_words],
-        }
+        res = {"language": self.args.language,
+               "language_probability": transcription["language"],
+               "text": transcription["text"].strip(),
+               "words": [{'text': item['text'],
+                          'start': item['start'],
+                          'end': item['end'],
+                          'probability': item['confidence']} for item in flattened_words],
+               }
         return res
 
 
@@ -132,11 +138,13 @@ class WhisperTransformersAsr(WhisperASRBase, IAsr):
         info = CUDAInfo()
         # Initialize the ASR pipeline
         if info.is_cuda:
-            self.pipe = pipeline("automatic-speech-recognition",
-                                 model=self.args.model_name_or_path,
-                                 device="cuda:0",
-                                 torch_dtype=torch.float16 if info.compute_capability_major >= 7 else torch.float32,
-                                 model_kwargs={"use_flash_attention_2": info.compute_capability_major >= 8})
+            self.pipe = pipeline(
+                "automatic-speech-recognition",
+                model=self.args.model_name_or_path,
+                device="cuda:0",
+                torch_dtype=torch.float16 if info.compute_capability_major >= 7 else torch.float32,
+                model_kwargs={
+                    "use_flash_attention_2": info.compute_capability_major >= 8})
 
             if info.compute_capability_major == 7 or info.compute_capability_major == 6:
                 self.pipe.model = self.pipe.model.to_bettertransformer()
@@ -154,17 +162,18 @@ class WhisperTransformersAsr(WhisperASRBase, IAsr):
         return
 
     async def transcribe(self, session: Session) -> dict:
-        # for Word-level timestamps batch-size must be 1. https://huggingface.co/openai/whisper-large-v3/discussions/12
+        # for Word-level timestamps batch-size must be 1.
+        # https://huggingface.co/openai/whisper-large-v3/discussions/12
         outputs = self.pipe(
             self.asr_audio, chunk_length_s=30, batch_size=1,
             generate_kwargs={"language": self.args.language},
             return_timestamps="word")
-        res = {
-            "language": self.args.language,
-            "language_probability": None,
-            "text": outputs['text'].strip(),
-            "words": [{"text": item["text"], "start": item["timestamp"][0], "end": item["timestamp"][1]} for item in outputs["chunks"]]
-        }
+        res = {"language": self.args.language,
+               "language_probability": None,
+               "text": outputs['text'].strip(),
+               "words": [{"text": item["text"],
+                          "start": item["timestamp"][0],
+                          "end": item["timestamp"][1]} for item in outputs["chunks"]]}
         return res
 
 
@@ -187,10 +196,12 @@ class WhisperMLXAsr(WhisperASRBase, IAsr):
             self.asr_audio,
             path_or_hf_repo=self.args.model_name_or_path,
             word_timestamps=True, **transcribe_kargs)
-        res = {
-            "language": self.args.language,
-            "language_probability": outputs["language"],
-            "text": outputs["text"].strip(),
-            "words": [{'text': item['text'], 'start': item['start'], 'end': item['end'], 'probability': item['confidence']} for item in outputs['words']],
-        }
+        res = {"language": self.args.language,
+               "language_probability": outputs["language"],
+               "text": outputs["text"].strip(),
+               "words": [{'text': item['text'],
+                          'start': item['start'],
+                          'end': item['end'],
+                          'probability': item['confidence']} for item in outputs['words']],
+               }
         return res

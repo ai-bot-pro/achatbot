@@ -8,11 +8,13 @@ def pipe_whisper_transcribe(audio_path, model_size="base", target_lang="zh"):
 
     # Initialize the ASR pipeline
     if info.is_cuda:
-        pipe = pipeline("automatic-speech-recognition",
-                        model=model_size,
-                        device="cuda:0",
-                        torch_dtype=torch.float16 if info.compute_capability_major >= 7 else torch.float32,
-                        model_kwargs={"use_flash_attention_2": info.compute_capability_major >= 8})
+        pipe = pipeline(
+            "automatic-speech-recognition",
+            model=model_size,
+            device="cuda:0",
+            torch_dtype=torch.float16 if info.compute_capability_major >= 7 else torch.float32,
+            model_kwargs={
+                "use_flash_attention_2": info.compute_capability_major >= 8})
 
         if info.compute_capability_major == 7 or info.compute_capability_major == 6:
             pipe.model = pipe.model.to_bettertransformer()
@@ -22,7 +24,8 @@ def pipe_whisper_transcribe(audio_path, model_size="base", target_lang="zh"):
                         device="cpu",
                         torch_dtype=torch.float32)
 
-        # for Word-level timestamps batch-size must be 1. https://huggingface.co/openai/whisper-large-v3/discussions/12
+        # for Word-level timestamps batch-size must be 1.
+        # https://huggingface.co/openai/whisper-large-v3/discussions/12
         outputs = pipe(audio_path, chunk_length_s=30, batch_size=1,
                        generate_kwargs={"language": target_lang, }, return_timestamps="word")
         print(outputs)

@@ -116,21 +116,36 @@ class CUDAInfo:
             print("Device: %d" % i)
             if cuda.cuDeviceGetName(ctypes.c_char_p(name), len(name), device) == CUDA_SUCCESS:
                 print("  Name: %s" % (name.split(b'\0', 1)[0].decode()))
-            if cuda.cuDeviceComputeCapability(ctypes.byref(cc_major), ctypes.byref(cc_minor), device) == CUDA_SUCCESS:
+            if cuda.cuDeviceComputeCapability(
+                    ctypes.byref(cc_major),
+                    ctypes.byref(cc_minor),
+                    device) == CUDA_SUCCESS:
                 print("  Compute Capability: %d.%d" %
                       (cc_major.value, cc_minor.value))
                 self.compute_capability_major = cc_major.value
                 self.compute_capability_minor = cc_minor.value
-            if cuda.cuDeviceGetAttribute(ctypes.byref(cores), CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, device) == CUDA_SUCCESS:
+            if cuda.cuDeviceGetAttribute(
+                    ctypes.byref(cores),
+                    CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT,
+                    device) == CUDA_SUCCESS:
                 print("  Multiprocessors: %d" % cores.value)
                 print("  CUDA Cores: %s" % (
                     cores.value * ConvertSMVer2Cores(cc_major.value, cc_minor.value) or "unknown"))
-                if cuda.cuDeviceGetAttribute(ctypes.byref(threads_per_core), CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_MULTIPROCESSOR, device) == CUDA_SUCCESS:
+                if cuda.cuDeviceGetAttribute(
+                        ctypes.byref(threads_per_core),
+                        CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_MULTIPROCESSOR,
+                        device) == CUDA_SUCCESS:
                     print("  Concurrent threads: %d" %
                           (cores.value * threads_per_core.value))
-            if cuda.cuDeviceGetAttribute(ctypes.byref(clockrate), CU_DEVICE_ATTRIBUTE_CLOCK_RATE, device) == CUDA_SUCCESS:
+            if cuda.cuDeviceGetAttribute(
+                    ctypes.byref(clockrate),
+                    CU_DEVICE_ATTRIBUTE_CLOCK_RATE,
+                    device) == CUDA_SUCCESS:
                 print("  GPU clock: %g MHz" % (clockrate.value / 1000.))
-            if cuda.cuDeviceGetAttribute(ctypes.byref(clockrate), CU_DEVICE_ATTRIBUTE_MEMORY_CLOCK_RATE, device) == CUDA_SUCCESS:
+            if cuda.cuDeviceGetAttribute(
+                    ctypes.byref(clockrate),
+                    CU_DEVICE_ATTRIBUTE_MEMORY_CLOCK_RATE,
+                    device) == CUDA_SUCCESS:
                 print("  Memory clock: %g MHz" % (clockrate.value / 1000.))
             try:
                 result = cuda.cuCtxCreate_v2(ctypes.byref(context), 0, device)

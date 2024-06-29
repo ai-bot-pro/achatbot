@@ -85,7 +85,7 @@ try:
         read_audio_frames = audio_stream.read(porcupine.frame_length)
         # print(type(keyword), len(keyword))
         keyword = struct.unpack_from(
-            "h"*porcupine.frame_length, read_audio_frames)
+            "h" * porcupine.frame_length, read_audio_frames)
         # print(type(keyword), len(keyword))
         keyword_index = porcupine.process(keyword)
         if keyword_index >= 0:

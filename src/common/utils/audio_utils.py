@@ -7,7 +7,13 @@ import torch
 from src.common.types import INT16_MAX_ABS_VALUE
 
 
-async def save_audio_to_file(audio_data, file_name, audio_dir="records", channles=1, sample_width=2, sample_rate=16000):
+async def save_audio_to_file(
+        audio_data,
+        file_name,
+        audio_dir="records",
+        channles=1,
+        sample_width=2,
+        sample_rate=16000):
     os.makedirs(audio_dir, exist_ok=True)
 
     file_path = os.path.join(audio_dir, file_name)

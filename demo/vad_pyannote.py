@@ -32,8 +32,11 @@ def init_model(hf_auth_token, path_or_hf_repo="pyannote/segmentation-3.0",):
     return model
 
 
-def pyannote_vad_pipeline(audio_path, hf_auth_token,
-                          path_or_hf_repo="pyannote/segmentation-3.0", model_type="segmentation-3.0"):
+def pyannote_vad_pipeline(
+        audio_path,
+        hf_auth_token,
+        path_or_hf_repo="pyannote/segmentation-3.0",
+        model_type="segmentation-3.0"):
     r"""
     voice activity detection (语音活动识别)
     """
@@ -59,8 +62,11 @@ def pyannote_vad_pipeline(audio_path, hf_auth_token,
         print(type(segment), segment, segment.start, segment.end)
 
 
-def pyannote_osd_pipeline(audio_path, hf_auth_token,
-                          path_or_hf_repo="pyannote/segmentation-3.0", model_type="segmentation-3.0"):
+def pyannote_osd_pipeline(
+        audio_path,
+        hf_auth_token,
+        path_or_hf_repo="pyannote/segmentation-3.0",
+        model_type="segmentation-3.0"):
     r"""
     Overlapped speech detection (重叠语音检测)
     """
@@ -86,8 +92,11 @@ def pyannote_osd_pipeline(audio_path, hf_auth_token,
         print(type(segment), segment, segment.start, segment.end)
 
 
-def pyannote_diarization_pipeline(audio_path, hf_auth_token,
-                                  path_or_hf_repo="pyannote/speaker-diarization-3.1", diarization_path="./records/diarization_audio.rttm"):
+def pyannote_diarization_pipeline(
+        audio_path,
+        hf_auth_token,
+        path_or_hf_repo="pyannote/speaker-diarization-3.1",
+        diarization_path="./records/diarization_audio.rttm"):
     r"""
     Speaker diarization (说话人分割或说话人辨识)
     """
@@ -142,14 +151,25 @@ if __name__ == '__main__':
     parser.add_argument('--path_or_hf_repo', "-m", type=str,
                         default="./models/pyannote/segmentation-3.0/pytorch_model.bin",
                         help='model ckpt file path or hf repo')
-    parser.add_argument('--model_type', "-mt", type=str,
-                        default="segmentation-3.0", choices=["segmentation-3.0", "segmentation", "diarization"],
-                        help='choice segmentation or segmentation-3.0 or diarization')
+    parser.add_argument(
+        '--model_type',
+        "-mt",
+        type=str,
+        default="segmentation-3.0",
+        choices=[
+            "segmentation-3.0",
+            "segmentation",
+            "diarization"],
+        help='choice segmentation or segmentation-3.0 or diarization')
     parser.add_argument('--detect_type', "-dt", type=str,
                         default="vad", choices=["vad", "osd", "diarization"],
                         help='choice vad, osd, diarization')
-    parser.add_argument('--diarization_path', "-dp", type=str,
-                        default="./records/diarization_audio.rttm", help='diarization rttm file path')
+    parser.add_argument(
+        '--diarization_path',
+        "-dp",
+        type=str,
+        default="./records/diarization_audio.rttm",
+        help='diarization rttm file path')
     args = parser.parse_args()
 
     if args.detect_type == "diarization":

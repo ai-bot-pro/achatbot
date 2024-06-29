@@ -54,8 +54,8 @@ class SilenceAtEndOfChunk(IBuffering):
         return session.ctx.state["vad_res"][-1]['end'] < last_segment_should_end_before
 
     async def process_audio_async(self, session: Session):
-        if session.ctx.vad == None \
-                or session.ctx.asr == None:
+        if session.ctx.vad is None \
+                or session.ctx.asr is None:
             self.processing_flag = False
             return
 

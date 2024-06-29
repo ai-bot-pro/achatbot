@@ -62,8 +62,8 @@ class LLamacppLLM(BaseLLM, ILlm):
                 res += content
                 pos = self._have_special_char(res)
                 if pos > -1:
-                    yield res[:pos+1]
-                    res = res[pos+1:]
+                    yield res[:pos + 1]
+                    res = res[pos + 1:]
             if len(res) > 0:
                 yield res
         else:
@@ -95,8 +95,8 @@ class LLamacppLLM(BaseLLM, ILlm):
                     res += content
                     pos = self._have_special_char(res)
                     if pos > -1:
-                        yield res[:pos+1]
-                        res = res[pos+1:]
+                        yield res[:pos + 1]
+                        res = res[pos + 1:]
             if len(res) > 0:
                 yield res
         else:

@@ -66,7 +66,8 @@ async def replay(websocket: WebSocketServerProtocol, game: Connect4):
         await websocket.send(json.dumps(event))
 
 
-async def play(websocket: WebSocketServerProtocol, game: Connect4, player, connected: Iterable[WebSocketCommonProtocol]):
+async def play(websocket: WebSocketServerProtocol, game: Connect4,
+               player, connected: Iterable[WebSocketCommonProtocol]):
     """
     Receive and process moves from a player.
 

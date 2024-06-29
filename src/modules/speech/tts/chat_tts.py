@@ -33,11 +33,11 @@ class ChatTTS(BaseTTS, ITts):
         r"""
         def infer_code(
             models,
-            text, 
+            text,
             spk_emb = None,
-            top_P = 0.7, 
-            top_K = 20, 
-            temperature = 0.3, 
+            top_P = 0.7,
+            top_K = 20,
+            temperature = 0.3,
             repetition_penalty = 1.05,
             max_new_token = 2048,
             **kwargs
@@ -56,11 +56,11 @@ class ChatTTS(BaseTTS, ITts):
 
         r"""
         def refine_text(
-            models, 
+            models,
             text,
-            top_P = 0.7, 
-            top_K = 20, 
-            temperature = 0.7, 
+            top_P = 0.7,
+            top_K = 20,
+            temperature = 0.7,
             repetition_penalty = 1.0,
             max_new_token = 384,
             prompt = '',
