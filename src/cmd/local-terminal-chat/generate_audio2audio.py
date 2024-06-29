@@ -16,6 +16,13 @@ TQDM_DISABLE=True \
     LLM_MODEL_PATH=./models/qwen2-1_5b-instruct-q8_0.gguf \
     python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
 
+TQDM_DISABLE=True \
+    TTS_TAG=tts_edge \
+    RECORDER_TAG=wakeword_rms_recorder \
+    LLM_MODEL_NAME=qwen \
+    LLM_MODEL_PATH=./models/qwen2-1_5b-instruct-q8_0.gguf \
+    python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
+
 
 KMP_DUPLICATE_LIB_OK=TRUE TQDM_DISABLE=True \
     RECORDER_TAG=wakeword_rms_recorder \
