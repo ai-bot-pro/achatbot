@@ -9,6 +9,7 @@ import os
 
 
 from src.common.session import Session
+from src.common.factory import EngineClass
 from src.common import interface
 if os.getenv("INIT_TYPE", 'env') == 'yaml_config':
     from src.cmd.init import YamlConfig as init
@@ -22,10 +23,10 @@ HISTORY_LIMIT = 10240
 class Audio2AudioChatWorker:
 
     def run(self, conn: interface.IConnector, e: multiprocessing.Event = None):
-        # vad_detector = init.initVADEngine()
-        self.asr: interface.IAsr = init.initASREngine()
-        self.llm: interface.ILlm = init.initLLMEngine()
-        self.tts: interface.ITts = init.initTTSEngine()
+        # self.vad_detector: interface.IDetector | EngineClass = init.initVADEngine()
+        self.asr: interface.IAsr | EngineClass = init.initASREngine()
+        self.llm: interface.ILlm | EngineClass = init.initLLMEngine()
+        self.tts: interface.ITts | EngineClass = init.initTTSEngine()
         self.model_name = self.llm.model_name()
 
         th_q = queue.Queue()
@@ -48,7 +49,7 @@ class Audio2AudioChatWorker:
             conn: interface.IConnector,
             text_buffer: queue.Queue):
         logging.info(f"loop_asr starting with asr: {self.asr}")
-        print(f"start loop_asr_llm_generate with llm {self.model_name} ...",
+        print(f"start loop_asr_llm_generate with {self.asr.TAG} {self.llm.TAG} {self.model_name} ...",
               flush=True, file=sys.stderr)
         while True:
             try:
@@ -78,25 +79,30 @@ class Audio2AudioChatWorker:
             self,
             conn: interface.IConnector,
             text_buffer: queue.Queue):
-        print("start loop_tts_synthesize...", flush=True, file=sys.stderr)
-        q_get_timeout = 1
+        print(
+            f"start loop_tts_synthesize with {self.tts.TAG} ...", flush=True, file=sys.stderr)
+        q_get_timeout = 0.1
         while True:
             try:
                 msg, text, session = text_buffer.get(timeout=q_get_timeout)
                 if msg is None or msg.lower() == "stop":
                     break
+                if msg == "LLM_GENERATE_DONE":
+                    conn.send(("PLAY_FRAMES_DONE", "", session), 'be')
+                    logging.info(f"PLAY_FRAMES_DONE")
+                    continue
+
                 if len(text.strip()) == 0:
                     raise Exception(
-                        f"tts_synthesize text is empty sid:{session.ctx.client_id}")
-
+                        f"tts_synthesize msg:{msg} text is empty sid:{session.ctx.client_id}")
                 logging.info(f"tts_text: {text}")
                 session.ctx.state["tts_text"] = text
                 audio_iter = self.tts.synthesize_sync(session)
                 for i, chunk in enumerate(audio_iter):
-                    logging.info(f"synthesize audio {i} chunk {len(chunk)}")
+                    logging.info(
+                        f"synthesize audio {i} chunk {len(chunk)}")
                     if len(chunk) > 0:
                         conn.send(("PLAY_FRAMES", chunk, session), 'be')
-                conn.send(("PLAY_FRAMES_DONE", "", session), 'be')
             except queue.Empty:
                 logging.debug(
                     f"tts_synthesize's consumption queue is empty after block {q_get_timeout}s")
@@ -129,8 +135,8 @@ class Audio2AudioChatWorker:
         for text in text_iter:
             assistant_text += text
             conn.send(("LLM_GENERATE_TEXT", text, session), 'be')
-            text_buffer.put_nowait(
-                ("LLM_GENERATE_TEXT", text, session))
+            text_buffer.put_nowait(("LLM_GENERATE_TEXT", text, session))
+
         logging.info(f"llm generate assistant_text: {assistant_text}")
         assistant_prompt = init.get_assistant_prompt(
             self.model_name, assistant_text)
@@ -141,6 +147,7 @@ class Audio2AudioChatWorker:
         print(f"{bot_name}: {out}", flush=True, file=sys.stdout)
 
         conn.send(("LLM_GENERATE_DONE", "", session), 'be')
+        text_buffer.put_nowait(("LLM_GENERATE_DONE", "", session))
         logging.info(f"send session.chat_history: {session.chat_history}")
 
     def llm_chat(self, text, session: Session,

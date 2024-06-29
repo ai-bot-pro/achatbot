@@ -141,12 +141,12 @@ class Env(PromptInit):
             MODELS_DIR, "Phi-3-mini-4k-instruct-q4.gguf"))
         kwargs["model_type"] = os.getenv('LLM_MODEL_TYPE', "generation")
         kwargs["n_threads"] = os.cpu_count()
-        kwargs["verbose"] = True
-        kwargs["llm_stream"] = False
+        kwargs["verbose"] = False
+        kwargs["llm_stream"] = True
         # if logger.getEffectiveLevel() != logging.DEBUG:
         #    kwargs["verbose"] = False
         kwargs['llm_stop'] = [
-            "<|end|>", "<|im_end|>", "<|endoftext|>",
+            "<|end|>", "<|im_end|>", "<|endoftext|>", "<{/end}>",
             "</s>", "/s>", "</s", "<s>",
             "<|user|>", "<|assistant|>", "<|system|>",
         ]
@@ -243,7 +243,7 @@ class Env(PromptInit):
         info = Env.map_tts_player_stream_info[tts_tag]
         if tts:
             info = tts.get_stream_info()
-        info["chunk_size"] = CHUNK * 10
+        info["sub_chunk_size"] = CHUNK * 10
         info["output_device_index"] = os.getenv('OUTPUT_DEVICE_INDEX', None)
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **info)
         logging.info(f"initPlayerEngine: {tag},  {engine}")

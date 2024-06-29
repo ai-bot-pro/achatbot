@@ -1,4 +1,5 @@
 import logging
+import re
 
 from src.common.interface import ILlm
 from .base import BaseLLM
@@ -59,9 +60,10 @@ class LLamacppLLM(BaseLLM, ILlm):
             for item in output:
                 content = item['choices'][0]['text']
                 res += content
-                if self._have_special_char(content):
-                    yield res
-                    res = ""
+                pos = self._have_special_char(res)
+                if pos > -1:
+                    yield res[:pos+1]
+                    res = res[pos+1:]
             if len(res) > 0:
                 yield res
         else:
@@ -91,17 +93,19 @@ class LLamacppLLM(BaseLLM, ILlm):
                 if 'content' in item['choices'][0]['delta']:
                     content = item['choices'][0]['delta']['content']
                     res += content
-                    if self._have_special_char(content):
-                        yield res
-                        res = ""
+                    pos = self._have_special_char(res)
+                    if pos > -1:
+                        yield res[:pos+1]
+                        res = res[pos+1:]
             if len(res) > 0:
                 yield res
         else:
             res = output['choices'][0]['message']['content'] if 'content' in output['choices'][0]['message'] else ""
             yield res
 
-    def _have_special_char(self, content: str) -> bool:
-        for char in ['.', '。', ',', '，', ';', '；', '!', '！', '?', '？']:
-            if char in content:
-                return True
-        return False
+    def _have_special_char(self, content: str) -> int:
+        pattern = r'[.。,，;；!！?？]'
+        matches = re.findall(pattern, content)
+        if len(matches) == 0:
+            return -1
+        return content.index(matches[0])

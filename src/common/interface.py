@@ -101,7 +101,7 @@ class IFunction(ABC):
 
 class ITts(ABC):
     @abstractmethod
-    def synthesize_sync(self) -> Generator[bytes, None, None]:
+    def synthesize_sync(self, session) -> Generator[bytes, None, None]:
         raise NotImplemented("must be implemented in the child class")
 
     @abstractmethod
@@ -115,7 +115,23 @@ class ITts(ABC):
 
 class IPlayer(ABC):
     @abstractmethod
+    def start(self, session):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
     def play_audio(self, session):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def pause(self):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def resume(self):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def stop(self, session):
         raise NotImplemented("must be implemented in the child class")
 
     @abstractmethod
