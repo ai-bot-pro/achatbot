@@ -67,9 +67,11 @@ class StreamPlayer(PyAudioPlayer, IPlayer):
             self.playback_thread.start()
 
     def _process_buffer(self, session: Session):
-        while self.playback_active:
+        logging.info(f"{self.TAG} start process buffer thread")
+        while (self.playback_active
+               or not self.buffer_manager.empty()):
             try:
-                chunk = self.buffer_manager.get_from_buffer()
+                chunk = self.buffer_manager.get_from_buffer(timeout=1.0)
                 chunk and self._play_chunk(session, chunk)
 
                 if self.immediate_stop_event.is_set():

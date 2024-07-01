@@ -28,6 +28,7 @@ class TerminalChatClient:
         self.start_record_event = threading.Event()
 
     def run(self, conn: interface.IConnector):
+        self.player.set_args(on_play_end=self.on_play_end)
         self.player.start(self.session)
 
         play_t = threading.Thread(target=self.loop_recv,
@@ -39,11 +40,15 @@ class TerminalChatClient:
 
         record_t.join()
         play_t.join()
+        self.player.stop(self.session)
 
-    def on_wakeword_detected(self, session, data):
+    def on_wakeword_detected(self, session: Session, data):
         if "bot_name" in session.ctx.state:
             print(f"{session.ctx.state['bot_name']}~ ",
                   end="", flush=True, file=sys.stderr)
+
+    def on_play_end(self, session: Session):
+        logging.info(f"play end with session.ctx.state {session.ctx.state}")
 
     def loop_record(self, conn: interface.IConnector):
         self.waker.set_args(on_wakeword_detected=self.on_wakeword_detected)
@@ -99,8 +104,10 @@ class TerminalChatClient:
                     self.session.ctx.state["tts_chunk"] = recv_data
                     self.player.play_audio(self.session)
                 elif msg == "PLAY_FRAMES_DONE":
+                    self.player.stop(self.session)
                     self.start_record_event.set()
                     llm_gen_segments = 0
+                    self.player.start(self.session)
                 elif msg == "LLM_GENERATE_TEXT":
                     if llm_gen_segments == 0:
                         bot_name = self.session.ctx.state["bot_name"] if "bot_name" in self.session.ctx.state else "bot"
