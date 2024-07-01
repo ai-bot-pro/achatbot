@@ -50,6 +50,9 @@ class AudioBufferManager:
         self.audio_buffer.put(audio_data)
         self.total_samples += len(audio_data) // 2
 
+    def empty(self):
+        return self.audio_buffer.empty()
+
     def clear_buffer(self):
         """Clears all audio data from the buffer."""
         while not self.audio_buffer.empty():

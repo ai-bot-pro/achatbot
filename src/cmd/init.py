@@ -163,7 +163,7 @@ class Env(PromptInit):
         kwargs["conf_file"] = os.getenv(
             'TTS_CONF_FILE', os.path.join(MODELS_DIR, "coqui/XTTS-v2/config.json"))
         kwargs["reference_audio_path"] = os.getenv('TTS_REFERENCE_AUDIO_PATH', os.path.join(
-            RECORDS_DIR, "tmp.wav"))
+            RECORDS_DIR, "me.wav"))
         return kwargs
 
     @staticmethod
@@ -172,12 +172,6 @@ class Env(PromptInit):
         kwargs["local_path"] = os.getenv('LOCAL_PATH', os.path.join(
             MODELS_DIR, "2Noise/ChatTTS"))
         kwargs["source"] = os.getenv('TTS_CHAT_SOURCE', "local")
-        return kwargs
-
-    @staticmethod
-    def get_tts_edge_args() -> dict:
-        kwargs = {}
-        kwargs["voice_name"] = os.getenv('VOICE_NAME', "zh-CN-XiaoxiaoNeural")
         return kwargs
 
     @staticmethod
