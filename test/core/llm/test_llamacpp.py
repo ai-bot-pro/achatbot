@@ -11,14 +11,16 @@ from src.common.types import SessionCtx, MODELS_DIR
 from src.cmd.init import PromptInit
 import src.core.llm
 
+r"""
+python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_have_special_char
+MODEL_TYPE=generate  python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_generate
+MODEL_TYPE=generate STREAM=1 python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_generate
+python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_chat_completion
+STREAM=1 python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_chat_completion
+"""
+
 
 class TestLLamacppLLM(unittest.TestCase):
-    r"""
-    MODEL_TYPE=generate  python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_generate
-    MODEL_TYPE=generate STREAM=1 python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_generate
-    python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_chat_completion
-    STREAM=1 python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_chat_completion
-    """
     @classmethod
     def setUpClass(cls):
         cls.llm_tag = os.getenv('LLM_TAG', "llm_llamacpp")
@@ -61,7 +63,7 @@ class TestLLamacppLLM(unittest.TestCase):
             self.assertGreater(len(item), 0)
 
     def test_have_special_char(self):
-        index = self.llm._have_special_char("你好,中国")
+        index = self.llm._have_special_char("""'你好',中国""")
         print(index)
         self.assertGreater(index, -1)
 

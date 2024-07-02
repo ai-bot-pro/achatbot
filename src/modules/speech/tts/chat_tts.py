@@ -83,7 +83,7 @@ class ChatTTS(BaseTTS, ITts):
             "format_": pyaudio.paFloat32,
             "channels": 1,
             "rate": 24000,
-            "samples_width": 4,
+            "sample_width": 4,
         }
 
     async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
