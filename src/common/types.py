@@ -38,12 +38,19 @@ TEST_DIR = os.path.normpath(
     os.path.join(SRC_PATH, os.pardir, "test")
 )
 
+# audio stream default configuration
+CHUNK = 1024
+FORMAT = pyaudio.paInt16
+CHANNELS = 1
+RATE = 16000
+SAMPLE_WIDTH = 2
+
 
 @dataclass
 class SessionCtx:
     client_id: str
-    sampling_rate: int = 16000
-    samples_width: int = 2
+    sampling_rate: int = RATE
+    sample_width: int = SAMPLE_WIDTH
     read_audio_frames = bytes()
     state = dict()
     buffering_strategy: IBuffering = None
@@ -55,11 +62,26 @@ class SessionCtx:
     on_session_start: callable = None
     on_session_end: callable = None
 
+    def __repr__(self) -> str:
+        d = {
+            "client_id": self.client_id,
+            "sampling_rate": self.sampling_rate,
+            "sample_width": self.sample_width,
+            "read_audio_frames_len": len(self.read_audio_frames),
+            "state": self.state,
+        }
+        if "tts_chunk" in self.state:
+            d['state']["tts_chunk_len"] = len(self.state['tts_chunk'])
+            d['state'].pop("tts_chunk")
+
+        res = f"session ctx: {d}"
+        return res
+
     def __getstate__(self):
         return {
             "client_id": self.client_id,
             "sampling_rate": self.sampling_rate,
-            "samples_width": self.samples_width,
+            "sample_width": self.sample_width,
             "read_audio_frames": self.read_audio_frames,
             "state": self.state,
         }
@@ -67,16 +89,10 @@ class SessionCtx:
     def __setstate__(self, state):
         self.client_id = state["client_id"]
         self.sampling_rate = state["sampling_rate"]
-        self.samples_width = state["samples_width"]
+        self.sample_width = state["sample_width"]
         self.read_audio_frames = state["read_audio_frames"]
         self.state = state["state"]
 
-
-# audio stream default configuration
-CHUNK = 1024
-FORMAT = pyaudio.paInt16
-CHANNELS = 1
-RATE = 16000
 
 # audio recorder default configuration
 SILENCE_THRESHOLD = 500
@@ -93,6 +109,7 @@ class AudioStreamArgs:
     format_: str = FORMAT
     channels: int = CHANNELS
     rate: int = RATE
+    sample_width: int = SAMPLE_WIDTH
     frames_per_buffer: int = CHUNK
     input_device_index: int = None
     output_device_index: int = None
@@ -105,6 +122,7 @@ class AudioRecoderArgs:
     format_: str = FORMAT
     channels: int = CHANNELS
     rate: int = RATE
+    sample_width: int = SAMPLE_WIDTH
     input_device_index: int = None
     frames_per_buffer: int = CHUNK
     silence_timeout_s: int = 10
@@ -115,6 +133,7 @@ class AudioPlayerArgs:
     format_: str = FORMAT
     channels: int = CHANNELS
     rate: int = RATE
+    sample_width: int = SAMPLE_WIDTH
     output_device_index: int = None
     sub_chunk_size: int = CHUNK
     audio_buffer: queue.Queue = None

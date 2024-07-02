@@ -19,6 +19,43 @@ import src.core.llm
 DEFAULT_SYSTEM_PROMPT = "你是一个中国人,请用中文回答。回答限制在1-5句话内。"
 
 
+class PlayStreamInit():
+    # TTS_TAG : stream_info
+    map_tts_player_stream_info = {
+        'tts_coqui': {
+            "format_": pyaudio.paFloat32,
+            "channels": 1,
+            "rate": 24000,
+            "sample_width": 4,
+        },
+        'tts_chat': {
+            "format_": pyaudio.paFloat32,
+            "channels": 1,
+            "rate": 24000,
+            "sample_width": 4,
+        },
+        'tts_edge': {
+            "format_": pyaudio.paInt16,
+            "channels": 1,
+            "rate": 22050,
+            "sample_width": 2,
+        },
+        'tts_g': {
+            "format_": pyaudio.paInt16,
+            "channels": 1,
+            "rate": 22050,
+            "sample_width": 2,
+        },
+    }
+
+    @staticmethod
+    def get_stream_info() -> dict:
+        tts_tag = os.getenv('TTS_TAG', "tts_chat")
+        if tts_tag in PlayStreamInit.map_tts_player_stream_info:
+            return PlayStreamInit.map_tts_player_stream_info[tts_tag]
+        return {}
+
+
 class PromptInit():
     @staticmethod
     def create_phi3_prompt(history: list[str],
@@ -67,7 +104,7 @@ class PromptInit():
         return None
 
 
-class Env(PromptInit):
+class Env(PromptInit, PlayStreamInit):
 
     @staticmethod
     def initWakerEngine() -> interface.IDetector | EngineClass:
@@ -205,36 +242,11 @@ class Env(PromptInit):
         logging.info(f"initTTSEngine: {tag}, {engine}")
         return engine
 
-    # TTS_TAG : stream_info
-    map_tts_player_stream_info = {
-        'tts_coqui': {
-            "format_": pyaudio.paFloat32,
-            "channels": 1,
-            "rate": 24000,
-        },
-        'tts_chat': {
-            "format_": pyaudio.paFloat32,
-            "channels": 1,
-            "rate": 24000,
-        },
-        'tts_edge': {
-            "format_": pyaudio.paInt16,
-            "channels": 1,
-            "rate": 22050,
-        },
-        'tts_g': {
-            "format_": pyaudio.paInt16,
-            "channels": 1,
-            "rate": 22050,
-        },
-    }
-
     @staticmethod
     def initPlayerEngine(tts: interface.ITts = None) -> interface.IPlayer | EngineClass:
         # player
         tag = os.getenv('PLAYER_TAG', "stream_player")
-        tts_tag = os.getenv('TTS_TAG', "tts_chat")
-        info = Env.map_tts_player_stream_info[tts_tag]
+        info = Env.get_stream_info()
         if tts:
             info = tts.get_stream_info()
         info["sub_chunk_size"] = CHUNK * 10

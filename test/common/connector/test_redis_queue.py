@@ -28,7 +28,7 @@ class TestRedisQueue(unittest.TestCase):
 
     def setUp(self):
         self.connector = RedisQueueConnector(
-            fe_send_key="TEST_FE_SEND", be_send_key="TEST_BE_SEND",
+            send_key="TEST_SEND",
             host=self.REDIS_HOST, port=self.REDIS_PORT)
 
     def tearDown(self):

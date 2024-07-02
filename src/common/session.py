@@ -5,7 +5,6 @@ class Session:
     def __init__(self, **args) -> None:
         self.ctx = SessionCtx(**args)
         self.config = {}
-        self.file_counter = 0
         self.chat_round = 0
         # just for local history,@todo: use kv store history
         self.chat_history = []
@@ -13,7 +12,6 @@ class Session:
     def __getstate__(self):
         return {
             "config": self.config,
-            "file_counter": self.file_counter,
             "chat_round": self.chat_round,
             "chat_history": self.chat_history,
             "ctx": self.ctx
@@ -21,10 +19,19 @@ class Session:
 
     def __setstate__(self, state):
         self.config = state["config"]
-        self.file_counter = state["file_counter"]
         self.chat_round = state["chat_round"]
         self.chat_history = state["chat_history"]
         self.ctx = state["ctx"]
+
+    def __repr__(self) -> str:
+        d = {
+            "config": self.config,
+            "chat_round": self.chat_round,
+            "chat_history": self.chat_history,
+            "ctx": self.ctx
+        }
+        s = f"session: {d}"
+        return s
 
     def update_config(self, config_data):
         self.config.update(config_data)
@@ -37,14 +44,14 @@ class Session:
         if self.ctx.buffering_strategy is not None:
             self.ctx.buffering_strategy.clear()
 
-    def increment_file_counter(self):
-        self.file_counter += 1
-
     def increment_chat_round(self):
         self.chat_round += 1
 
-    def get_file_name(self):
-        return f"{self.file_counter}_{self.ctx.client_id}.wav"
+    def get_record_audio_name(self):
+        return f"record_{self.chat_round}_{self.ctx.client_id}.wav"
+
+    def get_paly_audio_name(self):
+        return f"play_{self.chat_round}_{self.ctx.client_id}.wav"
 
     def process_audio(self):
         if self.ctx.on_session_start:

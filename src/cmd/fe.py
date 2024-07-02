@@ -19,16 +19,21 @@ else:
 
 
 class TerminalChatClient:
-    def __init__(self) -> None:
+    def __init__(self, is_save_record=False, is_save_play_chunks=False) -> None:
         self.sid = uuid.uuid4()
         self.session = Session(**SessionCtx(self.sid).__dict__)
         self.player = init.initPlayerEngine()
         self.recorder = init.initRecorderEngine()
         self.waker = init.initWakerEngine()
         self.start_record_event = threading.Event()
+        self.play_chunks = []
+        self.is_save_play_chunks = is_save_play_chunks
+        self.is_save_record = is_save_record
 
     def run(self, conn: interface.IConnector):
-        self.player.set_args(on_play_end=self.on_play_end)
+        if self.is_save_play_chunks:
+            self.player.set_args(on_play_chunk=self.on_play_chunk,
+                                 on_play_end=self.on_play_end)
         self.player.start(self.session)
 
         play_t = threading.Thread(target=self.loop_recv,
@@ -48,10 +53,26 @@ class TerminalChatClient:
                   end="", flush=True, file=sys.stderr)
 
     def on_play_end(self, session: Session):
-        logging.info(f"play end with session.ctx.state {session.ctx.state}")
+        sample_info = init.get_stream_info()
+        # @todo: need async save i/o
+        asyncio.run(save_audio_to_file(
+            b''.join(self.play_chunks),
+            self.session.get_paly_audio_name(),
+            sample_rate=sample_info["rate"],
+            channles=sample_info["channels"],
+            sample_width=sample_info["sample_width"],
+            audio_dir=RECORDS_DIR))
+        logging.info(
+            f"play end with session.ctx {session.ctx}, saved chunks_len {len(self.play_chunks)}")
+
+    def on_play_chunk(self, session: Session, sub_chunk: bytes):
+        logging.info(
+            f"play chunk with session.ctx {session.ctx}, sub_chunk_len {len(sub_chunk)}")
+        self.play_chunks.append(sub_chunk)
 
     def loop_record(self, conn: interface.IConnector):
-        self.waker.set_args(on_wakeword_detected=self.on_wakeword_detected)
+        if self.waker is not None:
+            self.waker.set_args(on_wakeword_detected=self.on_wakeword_detected)
         logging.info(
             f"loop_record starting with session ctx: {self.session.ctx}")
         print(
@@ -72,9 +93,10 @@ class TerminalChatClient:
                     continue
                 data = b''.join(frames)
                 conn.send(("RECORD_FRAMES", data, self.session), 'fe')
-                asyncio.run(save_audio_to_file(
-                    data, self.session.get_file_name(), audio_dir=RECORDS_DIR))
-                self.session.increment_file_counter()
+                if self.is_save_record:
+                    asyncio.run(save_audio_to_file(
+                        data, self.session.get_record_audio_name(),
+                        audio_dir=RECORDS_DIR))
                 self.session.increment_chat_round()
 
                 if self.start_record_event.is_set():
@@ -96,9 +118,27 @@ class TerminalChatClient:
                 if res is None:
                     continue
 
-                msg, recv_data, self.session = res
+                msg, recv_data, session = res
                 if msg is None or msg.lower() == "stop":
                     break
+                if isinstance(recv_data, str):
+                    logging.info(
+                        f'FE Received: {msg} recv_data: {recv_data}, session: {session}')
+                else:
+                    logging.info(
+                        f'FE Received: {msg} len(recv_data): {len(recv_data)}, session: {session}')
+
+                if msg == "BE_EXCEPTION":
+                    print(f"\nBE exception: {recv_data.strip()}",
+                          end="", flush=True, file=sys.stderr)
+                    self.start_record_event.set()
+                    llm_gen_segments = 0
+                    continue
+
+                if session.ctx.client_id != self.session.ctx.client_id:
+                    logging.warning(
+                        f"session.ctx.client_id: {session.ctx.client_id} != self.session.ctx.client_id: {self.session.ctx.client_id}")
+                    continue
 
                 if msg == "PLAY_FRAMES":
                     self.session.ctx.state["tts_chunk"] = recv_data
@@ -125,11 +165,6 @@ class TerminalChatClient:
                           flush=True, file=sys.stderr)
                 elif msg == "ASR_TEXT_DONE":
                     print("\n", end="", flush=True, file=sys.stderr)
-                elif msg == "BE_EXCEPTION":
-                    print(f"\nBE exception: {recv_data.strip()}",
-                          end="", flush=True, file=sys.stderr)
-                    self.start_record_event.set()
-                    llm_gen_segments = 0
                 else:
                     logging.warning(f"unsupport msg {msg}")
             except Exception as ex:

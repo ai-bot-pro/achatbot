@@ -87,7 +87,7 @@ class TestWhisperASR(unittest.TestCase):
                 self.asr.args.language = "en"
 
                 file_path = asyncio.run(save_audio_to_file(
-                    audio_frames, self.session.get_file_name(),
+                    audio_frames, self.session.get_record_audio_name(),
                     audio_dir=RECORDS_DIR))
                 self.asr.set_audio_data(file_path)
 

@@ -33,7 +33,7 @@ class SilenceAtEndOfChunk(IBuffering):
 
     def process_audio(self, session: Session):
         chunk_length_in_bytes = self.chunk_length_seconds * \
-            session.ctx.sampling_rate * session.ctx.samples_width
+            session.ctx.sampling_rate * session.ctx.sample_width
         if len(self.buffer) > chunk_length_in_bytes:
             if self.processing_flag:
                 exit("Error in realtime processing: tried processing a new chunk while the previous one was still being processed")
@@ -49,7 +49,7 @@ class SilenceAtEndOfChunk(IBuffering):
                 or len(session.ctx.state["vad_res"]) == 0:
             return False
         last_segment_should_end_before = ((len(self.scratch_buffer) / (
-            session.ctx.sampling_rate * session.ctx.samples_width))
+            session.ctx.sampling_rate * session.ctx.sample_width))
             - self.chunk_offset_seconds)
         return session.ctx.state["vad_res"][-1]['end'] < last_segment_should_end_before
 

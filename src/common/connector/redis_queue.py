@@ -1,5 +1,6 @@
 import asyncio
 import pickle
+import logging
 
 from src.common.interface import IConnector
 from src.common.queue.redis import RedisQueue

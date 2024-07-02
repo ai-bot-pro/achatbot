@@ -1,6 +1,7 @@
 import multiprocessing.connection
 import multiprocessing
 import threading
+import traceback
 import logging
 import asyncio
 import queue
@@ -61,7 +62,7 @@ class Audio2AudioChatWorker:
                 msg, frames, session = res
                 if msg is None or msg.lower() == "stop":
                     break
-                logging.info(f'Received: {msg} len(frames): {len(frames)}')
+                logging.info(f'BE Received: {msg} len(frames): {len(frames)}, session: {session}')
                 self.asr.set_audio_data(frames)
                 res = asyncio.run(self.asr.transcribe(session))
                 logging.info(f'transcribe res: {res}')
@@ -74,8 +75,10 @@ class Audio2AudioChatWorker:
                 self.llm_generate(res['text'], session, conn, text_buffer)
 
             except Exception as ex:
+                ex_trace = traceback.format_exc()
+                logging.warning(f"loop_recv Exception {ex}, trace: {ex_trace}")
                 conn.send(
-                    ("BE_EXCEPTION", f"asr_llm_generate's exception: {ex}", session), 'be')
+                    ("BE_EXCEPTION", f"asr_llm_generate's exception: {ex}", None), 'be')
 
     def loop_tts_synthesize(
             self,

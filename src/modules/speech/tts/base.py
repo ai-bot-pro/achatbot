@@ -1,10 +1,11 @@
 import asyncio
+import logging
+import re
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
 from typing import AsyncGenerator, Iterator, Generator
 
 import pyaudio
-
 
 from src.common.factory import EngineClass
 from src.common.session import Session
@@ -39,7 +40,7 @@ class BaseTTS(EngineClass):
         if hasattr(self.args, "chunk_length_seconds"):
             chunk_length_seconds = self.args.chunk_length_seconds
         chunk_length_in_bytes = chunk_length_seconds * \
-            stream_info["rate"] * stream_info["samples_width"]
+            stream_info["rate"] * stream_info["sample_width"]
 
         queue: Queue = Queue()
         with ThreadPoolExecutor() as executor:
@@ -62,6 +63,9 @@ class BaseTTS(EngineClass):
     async def synthesize(self, session: Session) -> AsyncGenerator[bytes, None]:
         if "tts_text_iter" in session.ctx.state:
             for text in session.ctx.state["tts_text_iter"]:
+                text: str = self.filter_special_chars(text)
+                if len(text.strip()) == 0:
+                    continue
                 async for chunk in self._inference(session, text):
                     yield chunk
                 silence_chunk = self._get_end_silence_chunk(session, text)
@@ -69,11 +73,13 @@ class BaseTTS(EngineClass):
                     yield silence_chunk
         elif "tts_text" in session.ctx.state:
             text = session.ctx.state["tts_text"]
-            async for chunk in self._inference(session, text):
-                yield chunk
-            silence_chunk = self._get_end_silence_chunk(session, text)
-            if silence_chunk:
-                yield silence_chunk
+            text = self.filter_special_chars(text)
+            if len(text.strip()) > 0:
+                async for chunk in self._inference(session, text):
+                    yield chunk
+                silence_chunk = self._get_end_silence_chunk(session, text)
+                if silence_chunk:
+                    yield silence_chunk
 
     async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
         raise NotImplementedError(
@@ -87,5 +93,28 @@ class BaseTTS(EngineClass):
             "format_": pyaudio.paInt16,
             "channels": 1,
             "rate": 22050,
-            "samples_width": 2,
+            "sample_width": 2,
         }
+
+    def filter_special_chars(self, text: str) -> str:
+        # @TODO: use nlp stream process sentence
+        special_chars = ".。,，;；!！?？」>》}\\]】)~"
+        return self._filter_special_chars(special_chars, text)
+
+    def remove_trailing_special_chars(self, special_chars: str, s: str) -> str:
+        pattern = rf'(.*?)([{special_chars}])[{special_chars}]*$'
+        return re.sub(pattern, r'\1\2', s)
+
+    def _filter_special_chars(self, special_chars: str, text: str) -> str:
+        pattern = rf'[{special_chars}]'
+        match = re.search(pattern, text)
+        res = text
+        if match:
+            first_special_index = match.start()
+            res = text[:first_special_index + 1] + \
+                re.sub(rf'[{special_chars}]+$', '', text[first_special_index + 1:])
+            if len(res) == 1:  # have a special char, return empty
+                res = ""
+        res = res.strip('\n')
+        logging.debug(f"text:{text} --filter--> res:{res} with match:{match}")
+        return res

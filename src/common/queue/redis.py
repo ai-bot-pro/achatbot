@@ -25,9 +25,6 @@ class RedisQueue:
     async def get(self, key: str, timeout_s=0) -> bytes:
         key = self._get_key(key)
         logging.debug(f"get key: {key}")
-        q_len = self.client.llen(key)
-        if q_len > 10:
-            self.client.expire(key, 1)
         res = self.client.blpop(key, timeout=timeout_s)
         if res is None:
             return None

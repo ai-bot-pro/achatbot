@@ -2,6 +2,8 @@ import os
 import logging
 import argparse
 
+import uuid
+
 from src.cmd.fe import TerminalChatClient
 from src.cmd.be import Audio2AudioChatWorker as ChatWorker
 from src.common.connector.redis_queue import RedisQueueConnector
@@ -25,15 +27,15 @@ Logger.init(logging.INFO, is_file=True, is_console=False)
 
 def main():
     conn = RedisQueueConnector(
+        send_key=os.getenv("SEND_KEY", "SEND"),
         host=os.getenv(
             "REDIS_HOST",
             "redis-12259.c240.us-east-1-3.ec2.redns.redis-cloud.com"),
         port=os.getenv("REDIS_PORT", "12259"))
 
     op = os.getenv("RUN_OP", "fe")
-    if op == "be":
+    if op == "fe":
         client = TerminalChatClient()
-        conn.send_key = client.sid
         client.run(conn)
     else:
         ChatWorker().run(conn)
