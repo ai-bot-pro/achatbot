@@ -25,6 +25,7 @@ class LLamacppLLM(BaseLLM, ILlm):
                 n_batch=self.args.n_batch,
                 n_threads=self.args.n_threads,
                 n_gpu_layers=self.args.n_gpu_layers,
+                flash_attn=self.args.flash_attn,
                 chat_format=self.args.chat_format)
         else:
             self.model = Llama(
@@ -33,6 +34,7 @@ class LLamacppLLM(BaseLLM, ILlm):
                 verbose=self.args.verbose,
                 n_batch=self.args.n_batch,
                 n_threads=self.args.n_threads,
+                flash_attn=self.args.flash_attn,
                 n_gpu_layers=self.args.n_gpu_layers)
 
     def encode(self, text: str | bytes):

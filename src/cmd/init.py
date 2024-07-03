@@ -179,6 +179,8 @@ class Env(PromptInit, PlayStreamInit):
         kwargs["model_type"] = os.getenv('LLM_MODEL_TYPE', "generation")
         kwargs["n_threads"] = os.cpu_count()
         kwargs["verbose"] = False
+        kwargs["n_gpu_layers"] = int(os.getenv('N_GPU_LAYERS', "0"))
+        kwargs["flash_attn"] = bool(os.getenv('FLASH_ATTN', ""))
         kwargs["llm_stream"] = True
         # if logger.getEffectiveLevel() != logging.DEBUG:
         #    kwargs["verbose"] = False
@@ -201,6 +203,7 @@ class Env(PromptInit, PlayStreamInit):
             'TTS_CONF_FILE', os.path.join(MODELS_DIR, "coqui/XTTS-v2/config.json"))
         kwargs["reference_audio_path"] = os.getenv('TTS_REFERENCE_AUDIO_PATH', os.path.join(
             RECORDS_DIR, "me.wav"))
+        kwargs["tts_stream"] = bool(os.getenv('TTS_STREAM', ""))
         return kwargs
 
     @staticmethod
