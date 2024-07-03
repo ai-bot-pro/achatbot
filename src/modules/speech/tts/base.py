@@ -33,14 +33,17 @@ class BaseTTS(EngineClass):
             loop.run_until_complete(get_items())
             loop.close()
 
-        buff = bytearray()
-        scratch_buff = bytearray()
-        stream_info = self.get_stream_info()
-        chunk_length_seconds = 3
-        if hasattr(self.args, "chunk_length_seconds"):
-            chunk_length_seconds = self.args.chunk_length_seconds
-        chunk_length_in_bytes = chunk_length_seconds * \
-            stream_info["rate"] * stream_info["sample_width"]
+        is_stream = self.args.tts_stream if hasattr(self.args, "tts_stream") else False
+        logging.debug(f"is_stream:{is_stream}")
+        if is_stream is False:
+            buff = bytearray()
+            scratch_buff = bytearray()
+            stream_info = self.get_stream_info()
+            chunk_length_seconds = 3
+            if hasattr(self.args, "chunk_length_seconds"):
+                chunk_length_seconds = self.args.chunk_length_seconds
+            chunk_length_in_bytes = chunk_length_seconds * \
+                stream_info["rate"] * stream_info["sample_width"]
 
         queue: Queue = Queue()
         with ThreadPoolExecutor() as executor:
@@ -48,17 +51,22 @@ class BaseTTS(EngineClass):
 
             while True:
                 item = queue.get()
-                if item is None:
-                    yield bytes(buff)
-                    buff.clear()
-                    scratch_buff.clear()
-                    break
-                if len(buff) > chunk_length_in_bytes:
-                    scratch_buff = buff
-                    yield bytes(scratch_buff)
-                    buff.clear()
+                if is_stream is True:
+                    if item is None:
+                        break
+                    yield item
                 else:
-                    buff.extend(item)
+                    if item is None:
+                        yield bytes(buff)
+                        buff.clear()
+                        scratch_buff.clear()
+                        break
+                    if len(buff) > chunk_length_in_bytes:
+                        scratch_buff = buff
+                        yield bytes(scratch_buff)
+                        buff.clear()
+                    else:
+                        buff.extend(item)
 
     async def synthesize(self, session: Session) -> AsyncGenerator[bytes, None]:
         if "tts_text_iter" in session.ctx.state:
@@ -98,7 +106,7 @@ class BaseTTS(EngineClass):
 
     def filter_special_chars(self, text: str) -> str:
         # @TODO: use nlp stream process sentence
-        special_chars = ".。,，;；!！?？」>》}\\]】)~"
+        special_chars = ".。,，;；!！?？」>》}\\]】\"”'‘)~"
         return self._filter_special_chars(special_chars, text)
 
     def remove_trailing_special_chars(self, special_chars: str, s: str) -> str:

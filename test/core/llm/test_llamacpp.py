@@ -38,12 +38,14 @@ class TestLLamacppLLM(unittest.TestCase):
 
     def setUp(self):
         kwargs = {}
+        kwargs["verbose"] = True
         kwargs["model_name"] = self.model_name
         kwargs["model_path"] = self.model_path
         kwargs["model_type"] = self.model_type
         kwargs["n_threads"] = os.cpu_count()
+        kwargs["n_gpu_layers"] = int(os.getenv('N_GPU_LAYERS', "0"))
+        kwargs["flash_attn"] = bool(os.getenv('FLASH_ATTN', ""))
         kwargs["llm_stop"] = ["<|end|>", "<|im_end|>", "<s>", "</s>"]
-        kwargs["verbose"] = True
         self.llm: LLamacppLLM = EngineFactory.get_engine_by_tag(
             EngineClass, self.llm_tag, **kwargs)
         self.session = Session(**SessionCtx("test_client_id").__dict__)

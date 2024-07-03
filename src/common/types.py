@@ -232,10 +232,11 @@ class LLamcppLLMArgs:
     n_ctx: int = 2048
     chat_format: str = "chatml"
     verbose: bool = True
+    flash_attn: bool = False
     # llm
     llm_prompt_tpl: str = "<|user|>\n{%s}<|end|>\n<|assistant|>"
     llm_stop: Optional[List[str]] = None
-    llm_max_tokens: int = 256
+    llm_max_tokens: int = 1024
     llm_temperature: float = 0.8
     llm_top_p: float = 0.95
     llm_top_k: int = 40

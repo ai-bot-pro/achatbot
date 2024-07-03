@@ -92,9 +92,9 @@ class TestTTSPlay(unittest.TestCase):
             {"text": "你好！"},
             {"text": "很高兴能帮助您。"},
             {"text": "。!>}]"},
-            # {"text": "请问有什么问题或主题需要我提供信息或者帮助吗？"},
-            # {"text": "请告诉我您的需求，我会尽力为您提供最佳答案。"},
-            # {"text": "祝您好运！"},
+            {"text": "请问有什么问题或主题需要我提供信息或者帮助吗？"},
+            {"text": "请告诉我您的需求，我会尽力为您提供最佳答案。"},
+            {"text": "祝您好运！"},
         ]
         for item in test_case:
             self.session.ctx.state["tts_text"] = item["text"]

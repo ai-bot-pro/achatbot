@@ -37,7 +37,7 @@ class TestWhisperASR(unittest.TestCase):
         cls.audio_file = os.getenv('AUDIO_FILE', audio_file)
         cls.verbose = os.getenv('ASR_VERBOSE', "")
         cls.model_name_or_path = os.getenv('MODEL_NAME_OR_PATH', 'base')
-        Logger.init(logging.DEBUG)
+        Logger.init(logging.DEBUG, is_file=False)
 
     @classmethod
     def tearDownClass(cls):
