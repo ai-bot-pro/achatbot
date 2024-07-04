@@ -21,6 +21,7 @@ class Conf:
     async def save_obj_to_yaml(name, obj, tag=None):
         if "init" not in name and "Engine" not in name:
             return
+        logging.info(f"name:{name}, obj:{obj} save to yaml")
         engine = obj()
         if tag and tag not in engine.TAG:
             return

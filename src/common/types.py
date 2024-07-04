@@ -1,8 +1,6 @@
 r"""
 use SOTA LLM like chatGPT to generate config file(json,yaml,toml) from dataclass type
 """
-import os
-import queue
 from dataclasses import dataclass
 from typing import (
     Optional,
@@ -10,9 +8,9 @@ from typing import (
     Union,
     List
 )
+import os
 
 import numpy as np
-from pyannote.audio.core.io import AudioFile
 import pyaudio
 import torch
 
@@ -136,7 +134,6 @@ class AudioPlayerArgs:
     sample_width: int = SAMPLE_WIDTH
     output_device_index: int = None
     frames_per_buffer: int = CHUNK
-    audio_buffer: queue.Queue = None
     on_play_start: Optional[str] = None
     on_play_end: Optional[str] = None
     on_play_chunk: Optional[str] = None
@@ -150,7 +147,23 @@ class SilenceAtEndOfChunkArgs:
 
 
 @dataclass
+class WebRTCVADArgs:
+    aggressiveness: int = 3  # 0,1,2,3
+
+
+@dataclass
+class SileroVADArgs:
+    repo_or_dir: str = "snakers4/silero-vad"
+    model: str = "silero_vad"
+    source: str = "github"  # github | local
+    force_reload: bool = False
+    verbose: bool = True
+    onnx: bool = False
+
+
+@dataclass
 class PyannoteDetectorArgs:
+    from pyannote.audio.core.io import AudioFile
     hf_auth_token: str = ""  # defualt use env HF_TOKEN
     path_or_hf_repo: str = "pyannote/segmentation-3.0"
     model_type: str = "segmentation-3.0"
@@ -208,7 +221,9 @@ class WhisperTimestampedASRArgs(WhisperASRArgs):
 
 @dataclass
 class WhisperFasterASRArgs(WhisperASRArgs):
-    pass
+    from faster_whisper.vad import VadOptions
+    vad_filter: bool = False
+    vad_parameters: Optional[Union[dict, VadOptions]] = None
 
 
 @dataclass

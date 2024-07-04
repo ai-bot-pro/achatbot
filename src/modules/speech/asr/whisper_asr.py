@@ -6,6 +6,7 @@ from src.common.session import Session
 from src.common.interface import IAsr
 from src.common.device_cuda import CUDAInfo
 from src.modules.speech.asr.base import WhisperASRBase
+from src.common.types import WhisperFasterASRArgs
 
 
 class WhisperAsr(WhisperASRBase):
@@ -95,6 +96,16 @@ class WhisperFasterAsr(WhisperASRBase):
         """
         super().__init__(**args)
         from faster_whisper import WhisperModel
+        self.args = WhisperFasterASRArgs(**self.args.__dict__)
+        if self.args.vad_parameters is None:
+            self.args.vad_parameters = {
+                "threshold": 0.5,
+                "min_speech_duration_ms": 250,
+                "max_speech_duration_s": float("inf"),
+                "min_silence_duration_ms": 2000,
+                "window_size_samples": 1024,
+                "speech_pad_ms": 400,
+            }
         info = CUDAInfo()
         if info.is_cuda:
             # this worked fast and reliably on NVIDIA L40

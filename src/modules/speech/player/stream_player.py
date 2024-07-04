@@ -50,10 +50,7 @@ class StreamPlayer(PyAudioPlayer, IPlayer):
         self.pause_event: threading.Event = threading.Event()
         self.immediate_stop_event: threading.Event = threading.Event()
 
-        if not self.args.audio_buffer:  # new a queue
-            self.args.audio_buffer = queue.Queue()
-        self.buffer_manager: AudioBufferManager = AudioBufferManager(
-            self.args.audio_buffer)
+        self.buffer_manager: AudioBufferManager = AudioBufferManager(queue.Queue())
 
     def start(self, session: Session):
         self.first_chunk_played = False
