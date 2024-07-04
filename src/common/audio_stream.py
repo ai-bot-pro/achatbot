@@ -100,17 +100,18 @@ class AudioStream:
     """
 
     def __init__(self, args: AudioStreamArgs):
+        self.args = args
         self.stream = None
         self.pyaudio_instance = pyaudio.PyAudio()
         if args.input is True and args.input_device_index is None:
             default_device = self.pyaudio_instance.get_default_input_device_info()
-            args.input_device_index = default_device['index']
+            self.args.input_device_index = default_device['index']
+            # self.args.rate = int(default_device['defaultSampleRate'])
         if args.output is True and args.input_device_index is None:
             default_device = self.pyaudio_instance.get_default_output_device_info()
             args.output_device_index = default_device['index']
 
-        logging.info(f"AudioStreamArgs: {args}")
-        self.args = args
+        logging.info(f"AudioStreamArgs: {self.args}")
 
     def open_stream(self):
         """Opens an audio stream."""
@@ -119,7 +120,7 @@ class AudioStream:
 
         pyChannels = self.args.channels
         pySampleRate = self.args.rate
-        pyFormat = self.args.format_
+        pyFormat = self.args.format
         # check for mpeg format
         if pyFormat == pyaudio.paCustomFormat:
             pyFormat = self.pyaudio_instance.get_format_from_width(2)

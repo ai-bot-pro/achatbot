@@ -80,7 +80,7 @@ class ChatTTS(BaseTTS, ITts):
 
     def get_stream_info(self) -> dict:
         return {
-            "format_": pyaudio.paFloat32,
+            "format": pyaudio.paFloat32,
             "channels": 1,
             "rate": 24000,
             "sample_width": 4,

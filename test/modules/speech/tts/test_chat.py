@@ -43,7 +43,7 @@ class TestChatTTS(unittest.TestCase):
         info = self.tts.get_stream_info()
         self.pyaudio_instance = pyaudio.PyAudio()
         self.audio_stream = self.pyaudio_instance.open(
-            format=info['format_'],
+            format=info['format'],
             channels=info['channels'],
             rate=info['rate'],
             output_device_index=None,

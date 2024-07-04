@@ -1,14 +1,14 @@
-import asyncio
 import logging
 import re
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
-from typing import AsyncGenerator, Iterator, Generator
+from typing import AsyncGenerator, Generator
 
 import pyaudio
 
 from src.common.factory import EngineClass
 from src.common.session import Session
+from src.common.utils import task
 
 
 class TTSVoice:
@@ -22,17 +22,6 @@ class TTSVoice:
 
 class BaseTTS(EngineClass):
     def synthesize_sync(self, session: Session) -> Generator[bytes, None, None]:
-        def fetch_async_items(queue: Queue, ss: Session) -> None:  # type: ignore
-            async def get_items() -> None:
-                async for item in self.synthesize(ss):
-                    queue.put(item)
-                queue.put(None)
-
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(get_items())
-            loop.close()
-
         is_stream = self.args.tts_stream if hasattr(self.args, "tts_stream") else False
         logging.debug(f"is_stream:{is_stream}")
         if is_stream is False:
@@ -47,7 +36,7 @@ class BaseTTS(EngineClass):
 
         queue: Queue = Queue()
         with ThreadPoolExecutor() as executor:
-            executor.submit(fetch_async_items, queue, session)
+            executor.submit(task.fetch_async_items, queue, self.synthesize, session)
 
             while True:
                 item = queue.get()
@@ -98,7 +87,7 @@ class BaseTTS(EngineClass):
 
     def get_stream_info(self) -> dict:
         return {
-            "format_": pyaudio.paInt16,
+            "format": pyaudio.paInt16,
             "channels": 1,
             "rate": 22050,
             "sample_width": 2,

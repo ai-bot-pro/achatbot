@@ -29,7 +29,7 @@ class TestStreamPlayer(unittest.TestCase):
 
     def setUp(self):
         kwargs = {}
-        kwargs["sub_chunk_size"] = CHUNK
+        kwargs["frames_per_buffer"] = CHUNK
         self.player: StreamPlayer = EngineFactory.get_engine_by_tag(
             EngineClass, self.tag, **kwargs)
         print(self.player.args.__dict__)

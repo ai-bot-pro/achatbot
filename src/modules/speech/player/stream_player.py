@@ -26,12 +26,12 @@ class PyAudioPlayer(EngineClass):
     def __init__(self, **args) -> None:
         self.args = AudioPlayerArgs(**args)
         self.audio = AudioStream(AudioStreamArgs(
-            format_=self.args.format_,
+            format=self.args.format,
             channels=self.args.channels,
             rate=self.args.rate,
             output_device_index=self.args.output_device_index,
             output=True,
-            frames_per_buffer=self.args.sub_chunk_size,
+            frames_per_buffer=self.args.frames_per_buffer,
         ))
 
     def close(self):
@@ -88,13 +88,13 @@ class StreamPlayer(PyAudioPlayer, IPlayer):
 
     def _play_chunk(self, session: Session, chunk):
         # handle mpeg
-        if self.args.format_ == pyaudio.paCustomFormat:
+        if self.args.format == pyaudio.paCustomFormat:
             # convert to pcm using pydub
             segment = AudioSegment.from_mp3(io.BytesIO(chunk))
             chunk = segment.raw_data
 
-        for i in range(0, len(chunk), self.args.sub_chunk_size):
-            sub_chunk = chunk[i:i + self.args.sub_chunk_size]
+        for i in range(0, len(chunk), self.args.frames_per_buffer):
+            sub_chunk = chunk[i:i + self.args.frames_per_buffer]
 
             if not self.first_chunk_played and self.args.on_play_start:
                 self.on_play_start(session, sub_chunk)

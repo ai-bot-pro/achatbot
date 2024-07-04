@@ -8,10 +8,6 @@ from src.common.interface import IDetector
 from src.common.types import PyannoteDetectorArgs, RATE, CHUNK
 from src.common.factory import EngineClass
 
-r"""
-python -m unittest test.modules.speech.detector.test_pyannote.TestPyannoteDetector.test_detect_activity
-"""
-
 
 class PyannoteDetector(EngineClass):
 

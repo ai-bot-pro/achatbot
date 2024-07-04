@@ -39,10 +39,10 @@ def record_audio():
     print("start recording")
     while True:
         data = stream.read(CHUNK)
-        frames.append(data)
         rms = compute_rms(data)
         print(f"rms:{rms} silence threshold:{SILENCE_THRESHOLD}")
         if audio_started:
+            frames.append(data)
             if rms < SILENCE_THRESHOLD:
                 silent_chunks += 1
                 if silent_chunks > SILENT_CHUNKS:
@@ -51,6 +51,7 @@ def record_audio():
                 silent_chunks = 0
         elif rms >= SILENCE_THRESHOLD:
             audio_started = True
+            frames.append(data)
 
     print("stop recording")
     stream.stop_stream()

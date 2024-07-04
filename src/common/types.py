@@ -106,7 +106,7 @@ INT16_MAX_ABS_VALUE = 32768.0
 
 @dataclass
 class AudioStreamArgs:
-    format_: str = FORMAT
+    format: str = FORMAT
     channels: int = CHANNELS
     rate: int = RATE
     sample_width: int = SAMPLE_WIDTH
@@ -119,7 +119,7 @@ class AudioStreamArgs:
 
 @dataclass
 class AudioRecoderArgs:
-    format_: str = FORMAT
+    format: str = FORMAT
     channels: int = CHANNELS
     rate: int = RATE
     sample_width: int = SAMPLE_WIDTH
@@ -130,12 +130,12 @@ class AudioRecoderArgs:
 
 @dataclass
 class AudioPlayerArgs:
-    format_: str = FORMAT
+    format: str = FORMAT
     channels: int = CHANNELS
     rate: int = RATE
     sample_width: int = SAMPLE_WIDTH
     output_device_index: int = None
-    sub_chunk_size: int = CHUNK
+    frames_per_buffer: int = CHUNK
     audio_buffer: queue.Queue = None
     on_play_start: Optional[str] = None
     on_play_end: Optional[str] = None

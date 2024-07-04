@@ -1,13 +1,18 @@
 r"""
 ASR_TAG=whisper_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
+ASR_TAG=whisper_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
 
 ASR_TAG=whisper_timestamped_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
+ASR_TAG=whisper_timestamped_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
 
-ASR_TAG=whisper_faster_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
+MODEL_NAME_OR_PATH=./models/Systran/faster-whisper-base ASR_VERBOSE=True ASR_TAG=whisper_faster_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
+MODEL_NAME_OR_PATH=./models/Systran/faster-whisper-base ASR_VERBOSE=True ASR_TAG=whisper_faster_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
 
 ASR_TAG=whisper_transformers_asr MODEL_NAME_OR_PATH=./models/openai/whisper-base python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
+ASR_TAG=whisper_transformers_asr MODEL_NAME_OR_PATH=./models/openai/whisper-base python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
 
 ASR_TAG=whisper_mlx_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
+ASR_TAG=whisper_mlx_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
 """
 import logging
 import unittest
@@ -17,14 +22,11 @@ import asyncio
 
 from src.common.logger import Logger
 from src.common.utils.audio_utils import save_audio_to_file, load_json, get_audio_segment
-from src.common.factory import EngineFactory
+from src.common.factory import EngineFactory, EngineClass
 from src.common.session import Session
+from src.common.interface import IAsr
 from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR
-from src.modules.speech.asr.whisper_asr import EngineClass
-
-r"""
-KMP_DUPLICATE_LIB_OK=TRUE MODEL_NAME_OR_PATH=./models/Systran/faster-whisper-base ASR_VERBOSE=True ASR_TAG=whisper_faster_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
-"""
+import src.modules.speech.asr
 
 
 class TestWhisperASR(unittest.TestCase):
@@ -48,7 +50,7 @@ class TestWhisperASR(unittest.TestCase):
         kwargs["model_name_or_path"] = self.model_name_or_path
         kwargs["download_path"] = MODELS_DIR
         kwargs["verbose"] = bool(self.verbose)
-        self.asr = EngineFactory.get_engine_by_tag(
+        self.asr: IAsr = EngineFactory.get_engine_by_tag(
             EngineClass, self.asr_tag, **kwargs)
 
         self.annotations_path = os.path.join(
@@ -59,6 +61,14 @@ class TestWhisperASR(unittest.TestCase):
 
     def tearDown(self):
         pass
+
+    def test_transcribe_stream(self):
+        self.asr.set_audio_data(self.audio_file)
+        self.asr.args.language = "zh"
+        res = self.asr.transcribe_stream_sync(self.session)
+        for word in res:
+            print(word)
+            self.assertGreater(len(word), 0)
 
     def test_transcribe(self):
         self.asr.set_audio_data(self.audio_file)

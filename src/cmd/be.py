@@ -64,15 +64,18 @@ class Audio2AudioChatWorker:
                     break
                 logging.info(f'BE Received: {msg} len(frames): {len(frames)}, session: {session}')
                 self.asr.set_audio_data(frames)
-                res = asyncio.run(self.asr.transcribe(session))
-                logging.info(f'transcribe res: {res}')
-                if len(res['text'].strip()) == 0:
+                text = ""
+                words_iter = self.asr.transcribe_stream_sync(session)
+                for word in words_iter:
+                    text += word
+                    conn.send(("ASR_TEXT", word, session), 'be')
+                if len(text.strip()) == 0:
                     raise Exception(
                         f"ASR transcribed text is empty sid: {session.ctx.client_id}")
-                conn.send(("ASR_TEXT", res['text'], session), 'be')
+                logging.info(f'{self.asr.TAG} transcribed text: {text}')
                 conn.send(("ASR_TEXT_DONE", "", session), 'be')
 
-                self.llm_generate(res['text'], session, conn, text_buffer)
+                self.llm_generate(text, session, conn, text_buffer)
 
             except Exception as ex:
                 ex_trace = traceback.format_exc()

@@ -23,25 +23,25 @@ class PlayStreamInit():
     # TTS_TAG : stream_info
     map_tts_player_stream_info = {
         'tts_coqui': {
-            "format_": pyaudio.paFloat32,
+            "format": pyaudio.paFloat32,
             "channels": 1,
             "rate": 24000,
             "sample_width": 4,
         },
         'tts_chat': {
-            "format_": pyaudio.paFloat32,
+            "format": pyaudio.paFloat32,
             "channels": 1,
             "rate": 24000,
             "sample_width": 4,
         },
         'tts_edge': {
-            "format_": pyaudio.paInt16,
+            "format": pyaudio.paInt16,
             "channels": 1,
             "rate": 22050,
             "sample_width": 2,
         },
         'tts_g': {
-            "format_": pyaudio.paInt16,
+            "format": pyaudio.paInt16,
             "channels": 1,
             "rate": 22050,
             "sample_width": 2,
@@ -133,7 +133,9 @@ class Env(PromptInit, PlayStreamInit):
         # recorder
         tag = os.getenv('RECORDER_TAG', "rms_recorder")
         kwargs = {}
-        kwargs["input_device_index"] = os.getenv('INPUT_DEVICE_INDEX', None)
+        input_device_index = os.getenv('INPUT_DEVICE_INDEX', None)
+        if input_device_index is not None:
+            kwargs["input_device_index"] = int(input_device_index)
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         logging.info(f"initRecorderEngine: {tag}, {engine}")
         return engine
@@ -252,8 +254,10 @@ class Env(PromptInit, PlayStreamInit):
         info = Env.get_stream_info()
         if tts:
             info = tts.get_stream_info()
-        info["sub_chunk_size"] = CHUNK * 10
-        info["output_device_index"] = os.getenv('OUTPUT_DEVICE_INDEX', None)
+        info["frames_per_buffer"] = CHUNK * 10
+        output_device_index = os.getenv('OUTPUT_DEVICE_INDEX', None)
+        if output_device_index is not None:
+            info["output_device_index"] = int(output_device_index)
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **info)
         logging.info(f"initPlayerEngine: {tag},  {engine}")
         return engine

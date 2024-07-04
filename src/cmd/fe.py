@@ -1,8 +1,9 @@
-import logging
-import asyncio
 import threading
-import sys
 import traceback
+import asyncio
+import logging
+import time
+import sys
 import os
 
 import uuid
@@ -105,8 +106,10 @@ class TerminalChatClient:
                 logging.info(f"wait start record audio event")
                 self.start_record_event.wait()
             except Exception as ex:
+                ex_trace = traceback.format_exc()
                 logging.warning(
-                    f"loop_record Exception {ex} sid:{self.session.ctx.client_id}")
+                    f"loop_record Exception {ex} sid:{self.session.ctx.client_id} Trace {ex_trace}")
+                time.sleep(1)
 
     def loop_recv(self, conn: interface.IConnector):
         print(
