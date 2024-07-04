@@ -19,7 +19,7 @@ class PyAudioRecorder(EngineClass):
     def __init__(self, **args) -> None:
         self.args = AudioRecoderArgs(**args)
         self.audio = AudioStream(AudioStreamArgs(
-            format_=self.args.format_,
+            format=self.args.format,
             channels=self.args.channels,
             rate=self.args.rate,
             input_device_index=self.args.input_device_index,
@@ -61,7 +61,7 @@ class RMSRecorder(PyAudioRecorder, IRecorder):
                 f"rms recording with silence_timeout {session.ctx.state['silence_timeout_s']} s")
             silence_timeout = int(session.ctx.state['silence_timeout_s'])
 
-        self.audio.stream.start_stream()
+        self.audio.start_stream()
         logging.debug("start rms recording")
         start_time = time.time()
         while True:
@@ -84,7 +84,7 @@ class RMSRecorder(PyAudioRecorder, IRecorder):
                     logging.warning(f"rms recording silence timeout")
                     break
 
-        self.audio.stream.stop_stream()
+        self.audio.stop_stream()
         logging.debug("end rms recording")
 
         return frames
@@ -106,14 +106,14 @@ class WakeWordsRMSRecorder(RMSRecorder, IRecorder):
         self.sample_rate, self.frame_length = sample_rate, frame_length
 
         # ring buffer
-        pre_recording_buffer_duration = 10.0
+        pre_recording_buffer_duration = 3.0
         maxlen = int((sample_rate // frame_length) *
                      pre_recording_buffer_duration)
         self.audio_buffer = RingBuffer(maxlen)
-        logging.debug(f"audio ring buffer maxlen: {maxlen}")
 
-        self.audio.stream.start_stream()
-        logging.debug("start wake words detector rms recording")
+        self.audio.start_stream()
+        logging.info(
+            f"start wake words detector rms recording; audio sample_rate: {self.sample_rate},frame_length:{self.frame_length}, ring buffer maxlen: {maxlen}")
 
         while True:
             data = self.audio.stream.read(self.frame_length)
@@ -125,7 +125,7 @@ class WakeWordsRMSRecorder(RMSRecorder, IRecorder):
                 break
             self.audio_buffer.extend(data)
 
-        self.audio.stream.stop_stream()
+        self.audio.stop_stream()
         logging.debug("end wake words detector rms recording")
 
         if self.args.silence_timeout_s > 0:

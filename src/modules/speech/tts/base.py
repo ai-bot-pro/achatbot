@@ -87,7 +87,7 @@ class BaseTTS(EngineClass):
 
     def get_stream_info(self) -> dict:
         return {
-            "format_": pyaudio.paInt16,
+            "format": pyaudio.paInt16,
             "channels": 1,
             "rate": 22050,
             "sample_width": 2,

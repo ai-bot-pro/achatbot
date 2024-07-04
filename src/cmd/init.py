@@ -23,25 +23,25 @@ class PlayStreamInit():
     # TTS_TAG : stream_info
     map_tts_player_stream_info = {
         'tts_coqui': {
-            "format_": pyaudio.paFloat32,
+            "format": pyaudio.paFloat32,
             "channels": 1,
             "rate": 24000,
             "sample_width": 4,
         },
         'tts_chat': {
-            "format_": pyaudio.paFloat32,
+            "format": pyaudio.paFloat32,
             "channels": 1,
             "rate": 24000,
             "sample_width": 4,
         },
         'tts_edge': {
-            "format_": pyaudio.paInt16,
+            "format": pyaudio.paInt16,
             "channels": 1,
             "rate": 22050,
             "sample_width": 2,
         },
         'tts_g': {
-            "format_": pyaudio.paInt16,
+            "format": pyaudio.paInt16,
             "channels": 1,
             "rate": 22050,
             "sample_width": 2,

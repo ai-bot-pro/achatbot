@@ -26,7 +26,7 @@ class PyAudioPlayer(EngineClass):
     def __init__(self, **args) -> None:
         self.args = AudioPlayerArgs(**args)
         self.audio = AudioStream(AudioStreamArgs(
-            format_=self.args.format_,
+            format=self.args.format,
             channels=self.args.channels,
             rate=self.args.rate,
             output_device_index=self.args.output_device_index,
@@ -88,7 +88,7 @@ class StreamPlayer(PyAudioPlayer, IPlayer):
 
     def _play_chunk(self, session: Session, chunk):
         # handle mpeg
-        if self.args.format_ == pyaudio.paCustomFormat:
+        if self.args.format == pyaudio.paCustomFormat:
             # convert to pcm using pydub
             segment = AudioSegment.from_mp3(io.BytesIO(chunk))
             chunk = segment.raw_data

@@ -35,7 +35,7 @@ class TestPorcupineWakeWordDetector(unittest.TestCase):
         cls.model_path = os.getenv('MODEL_PATH', model_path)
         cls.keyword_paths = os.getenv('KEYWORD_PATHS', keyword_paths)
 
-        Logger.init(logging.DEBUG, is_file=False)
+        Logger.init(logging.INFO, is_file=False)
 
     @classmethod
     def tearDownClass(cls):
@@ -55,7 +55,7 @@ class TestPorcupineWakeWordDetector(unittest.TestCase):
 
         sample_rate, frame_length = self.detector.get_sample_info()
         print(sample_rate, frame_length)
-        pre_recording_buffer_duration = 10.0
+        pre_recording_buffer_duration = 3.0
         maxlen = int((sample_rate // frame_length) *
                      pre_recording_buffer_duration)
         print(f"audio_buffer maxlen: {maxlen}")
@@ -81,7 +81,7 @@ class TestPorcupineWakeWordDetector(unittest.TestCase):
         paud = pyaudio.PyAudio()
         audio_stream = paud.open(rate=self.sample_rate, channels=1,
                                  format=pyaudio.paInt16, input=True,
-                                 frames_per_buffer=self.frame_length)
+                                 frames_per_buffer=1024)
 
         audio_stream.start_stream()
         logging.debug("start recording")

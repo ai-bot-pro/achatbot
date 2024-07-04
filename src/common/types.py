@@ -106,7 +106,7 @@ INT16_MAX_ABS_VALUE = 32768.0
 
 @dataclass
 class AudioStreamArgs:
-    format_: str = FORMAT
+    format: str = FORMAT
     channels: int = CHANNELS
     rate: int = RATE
     sample_width: int = SAMPLE_WIDTH
@@ -119,7 +119,7 @@ class AudioStreamArgs:
 
 @dataclass
 class AudioRecoderArgs:
-    format_: str = FORMAT
+    format: str = FORMAT
     channels: int = CHANNELS
     rate: int = RATE
     sample_width: int = SAMPLE_WIDTH
@@ -130,7 +130,7 @@ class AudioRecoderArgs:
 
 @dataclass
 class AudioPlayerArgs:
-    format_: str = FORMAT
+    format: str = FORMAT
     channels: int = CHANNELS
     rate: int = RATE
     sample_width: int = SAMPLE_WIDTH

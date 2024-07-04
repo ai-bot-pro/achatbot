@@ -42,7 +42,7 @@ class TestGTTS(unittest.TestCase):
         stream_info = self.tts.get_stream_info()
         self.pyaudio_instance = pyaudio.PyAudio()
         self.audio_stream = self.pyaudio_instance.open(
-            format=stream_info["format_"],
+            format=stream_info["format"],
             channels=stream_info["channels"],
             rate=stream_info["rate"],
             output_device_index=None,
