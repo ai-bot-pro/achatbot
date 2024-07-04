@@ -57,6 +57,14 @@ class IDetector(ABC):
 
 class IAsr(ABC):
     @abstractmethod
+    def transcribe_stream_sync(self, session) -> Generator[str, None, None]:
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    async def transcribe_stream(self, session) -> AsyncGenerator[str, None]:
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
     async def transcribe(self, session) -> dict:
         raise NotImplemented("must be implemented in the child class")
 

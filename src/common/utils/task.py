@@ -1,7 +1,8 @@
 #!/usr/bin/env python
-import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Any
+import asyncio
+import queue
 
 
 async def async_task(sync_func: Callable, *args, **kwargs) -> Any:
@@ -12,3 +13,15 @@ async def async_task(sync_func: Callable, *args, **kwargs) -> Any:
     with ThreadPoolExecutor() as pool:
         # Futures
         return await loop.run_in_executor(pool, sync_func, *args, **kwargs)
+
+
+def fetch_async_items(queue: queue.Queue, asyncFunc, *args) -> None:
+    async def get_items() -> None:
+        async for item in asyncFunc(*args):
+            queue.put(item)
+        queue.put(None)
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(get_items())
+    loop.close()

@@ -31,7 +31,7 @@ class PyAudioPlayer(EngineClass):
             rate=self.args.rate,
             output_device_index=self.args.output_device_index,
             output=True,
-            frames_per_buffer=self.args.sub_chunk_size,
+            frames_per_buffer=self.args.frames_per_buffer,
         ))
 
     def close(self):
@@ -93,8 +93,8 @@ class StreamPlayer(PyAudioPlayer, IPlayer):
             segment = AudioSegment.from_mp3(io.BytesIO(chunk))
             chunk = segment.raw_data
 
-        for i in range(0, len(chunk), self.args.sub_chunk_size):
-            sub_chunk = chunk[i:i + self.args.sub_chunk_size]
+        for i in range(0, len(chunk), self.args.frames_per_buffer):
+            sub_chunk = chunk[i:i + self.args.frames_per_buffer]
 
             if not self.first_chunk_played and self.args.on_play_start:
                 self.on_play_start(session, sub_chunk)

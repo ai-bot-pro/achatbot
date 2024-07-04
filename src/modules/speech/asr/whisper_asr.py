@@ -1,25 +1,14 @@
 
+from typing import AsyncGenerator
+
 from src.common.utils.audio_utils import bytes2NpArrayWith16, bytes2TorchTensorWith16
-from src.common.factory import EngineClass
 from src.common.session import Session
 from src.common.interface import IAsr
-from src.common.types import WhisperASRArgs
 from src.common.device_cuda import CUDAInfo
+from src.modules.speech.asr.base import WhisperASRBase
 
 
-class WhisperASRBase(EngineClass):
-    TAG = "whisper_asr_base"
-
-    @classmethod
-    def get_args(cls, **kwargs) -> dict:
-        return {**WhisperASRArgs().__dict__, **kwargs}
-
-    def __init__(self, **args) -> None:
-        self.args = WhisperASRArgs(**args)
-        self.asr_audio = None
-
-
-class WhisperAsr(WhisperASRBase, IAsr):
+class WhisperAsr(WhisperASRBase):
     TAG = "whisper_asr"
 
     def __init__(self, **args) -> None:
@@ -34,6 +23,15 @@ class WhisperAsr(WhisperASRBase, IAsr):
         if isinstance(audio_data, str):
             self.asr_audio = audio_data
         return
+
+    async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
+        transcription = self.model.transcribe(
+            self.asr_audio, verbose=self.args.verbose,
+            language=self.args.language, word_timestamps=True,
+            condition_on_previous_text=True)
+        for segment in transcription["segments"]:
+            for word in segment["words"]:
+                yield word['word']
 
     async def transcribe(self, session: Session) -> dict:
         transcription = self.model.transcribe(
@@ -53,6 +51,18 @@ class WhisperAsr(WhisperASRBase, IAsr):
 
 class WhisperTimestampedAsr(WhisperAsr):
     TAG = "whisper_timestamped_asr"
+
+    async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
+        from whisper_timestamped import transcribe_timestamped
+        transcription = transcribe_timestamped(
+            self.model,
+            self.asr_audio,
+            language=self.args.language,
+            condition_on_previous_text=True,
+            verbose=self.args.verbose)
+        for segment in transcription["segments"]:
+            for word in segment["words"]:
+                yield word["text"]
 
     async def transcribe(self, session: Session) -> dict:
         from whisper_timestamped import transcribe_timestamped
@@ -75,7 +85,7 @@ class WhisperTimestampedAsr(WhisperAsr):
         return res
 
 
-class WhisperFasterAsr(WhisperASRBase, IAsr):
+class WhisperFasterAsr(WhisperASRBase):
     TAG = "whisper_faster_asr"
 
     def __init__(self, **args) -> None:
@@ -106,6 +116,15 @@ class WhisperFasterAsr(WhisperASRBase, IAsr):
             self.asr_audio = audio_data
         return
 
+    async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
+        segmentsIter, _ = self.model.transcribe(
+            self.asr_audio, language=self.args.language,
+            beam_size=5, word_timestamps=True,
+            condition_on_previous_text=True)
+        for segment in segmentsIter:
+            for w in segment.words:
+                yield w.word
+
     async def transcribe(self, session: Session) -> dict:
         segmentsIter, info = self.model.transcribe(
             self.asr_audio, language=self.args.language,
@@ -128,7 +147,7 @@ class WhisperFasterAsr(WhisperASRBase, IAsr):
         return res
 
 
-class WhisperTransformersAsr(WhisperASRBase, IAsr):
+class WhisperTransformersAsr(WhisperASRBase):
     TAG = "whisper_transformers_asr"
 
     def __init__(self, **args) -> None:
@@ -161,6 +180,14 @@ class WhisperTransformersAsr(WhisperASRBase, IAsr):
             self.asr_audio = audio_data
         return
 
+    async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
+        outputs = self.pipe(
+            self.asr_audio, chunk_length_s=30, batch_size=1,
+            generate_kwargs={"language": self.args.language},
+            return_timestamps="word")
+        for item in outputs["chunks"]:
+            yield item["text"]
+
     async def transcribe(self, session: Session) -> dict:
         # for Word-level timestamps batch-size must be 1.
         # https://huggingface.co/openai/whisper-large-v3/discussions/12
@@ -177,7 +204,7 @@ class WhisperTransformersAsr(WhisperASRBase, IAsr):
         return res
 
 
-class WhisperMLXAsr(WhisperASRBase, IAsr):
+class WhisperMLXAsr(WhisperASRBase):
     TAG = "whisper_mlx_asr"
 
     def set_audio_data(self, audio_data):
@@ -186,6 +213,17 @@ class WhisperMLXAsr(WhisperASRBase, IAsr):
         if isinstance(audio_data, str):
             self.asr_audio = audio_data
         return
+
+    async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
+        import mlx_whisper
+        transcribe_kargs = {}
+        transcribe_kargs["language"] = self.args.language
+        outputs = mlx_whisper.transcribe(
+            self.asr_audio,
+            path_or_hf_repo=self.args.model_name_or_path,
+            word_timestamps=True, **transcribe_kargs)
+        for item in outputs['words']:
+            yield item['text']
 
     async def transcribe(self, session: Session) -> dict:
         import mlx_whisper

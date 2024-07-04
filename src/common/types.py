@@ -135,7 +135,7 @@ class AudioPlayerArgs:
     rate: int = RATE
     sample_width: int = SAMPLE_WIDTH
     output_device_index: int = None
-    sub_chunk_size: int = CHUNK
+    frames_per_buffer: int = CHUNK
     audio_buffer: queue.Queue = None
     on_play_start: Optional[str] = None
     on_play_end: Optional[str] = None
