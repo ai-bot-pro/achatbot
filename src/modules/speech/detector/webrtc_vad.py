@@ -1,25 +1,49 @@
+import logging
+
+from src.common.types import (
+    WEBRTC_CHECK_PER_FRAMES,
+    WEBRTC_CHECK_ALL_FRAMES,
+    WebRTCVADArgs,
+)
 from src.common.session import Session
-from src.common.interface import IDetector
-from src.common.types import WebRTCVADArgs, RATE
-from src.common.factory import EngineClass
+from .base import BaseVAD
 
 
-class WebrtcVAD(EngineClass, IDetector):
+class WebrtcVAD(BaseVAD):
     TAG = "webrtc_vad"
 
     def __init__(self, **args: WebRTCVADArgs) -> None:
         import webrtcvad
         self.args = WebRTCVADArgs(**args)
-        self.vad = webrtcvad.Vad(self.args.aggressiveness)
+        self.model = webrtcvad.Vad(self.args.aggressiveness)
+        self.audio_buffer = None
 
     async def detect(self, session: Session):
-        return self.vad.is_speech()
+        if self.args.check_frames_mode not in [WEBRTC_CHECK_ALL_FRAMES, WEBRTC_CHECK_PER_FRAMES]:
+            return False
 
-    def get_sample_info(self):
-        return RATE, int(len(self.audio_buffer) / 2)
+        # Number of audio frames per millisecond
+        frame_length = int(16000 * self.args.frame_duration_ms / 1000)
+        num_frames = int(len(self.audio_buffer) / (2 * frame_length))
+        speech_frames = 0
 
-    def set_audio_data(self, audio_data):
-        self.audio_buffer = audio_data
-
-    def close(self):
-        pass
+        for i in range(num_frames):
+            start_byte = i * frame_length * 2
+            end_byte = start_byte + frame_length * 2
+            frame = self.audio_buffer[start_byte:end_byte]
+            if self.model.is_speech(frame, 16000):
+                speech_frames += 1
+                if self.args.check_frames_mode == WEBRTC_CHECK_PER_FRAMES:
+                    logging.debug(f"Speech detected in frame {i + 1}"
+                                  f" of {num_frames}")
+                    return True
+        if self.args.check_frames_mode == WEBRTC_CHECK_ALL_FRAMES:
+            if speech_frames == num_frames:
+                logging.debug(f"Speech detected in {speech_frames} of "
+                              f"{num_frames} frames")
+            else:
+                logging.debug(f"Speech not detected in all {num_frames} frames")
+            return speech_frames == num_frames
+        else:
+            logging.debug(f"Speech not detected in any of {num_frames} frames")
+            return False

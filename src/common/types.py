@@ -146,19 +146,32 @@ class SilenceAtEndOfChunkArgs:
     chunk_offset_seconds: float
 
 
+WEBRTC_CHECK_PER_FRAMES = 1
+WEBRTC_CHECK_ALL_FRAMES = 2
+
+
 @dataclass
 class WebRTCVADArgs:
     aggressiveness: int = 3  # 0,1,2,3
+    sample_rate: int = RATE
+    check_frames_mode: int = WEBRTC_CHECK_PER_FRAMES
+    frame_duration_ms: int = 10  # ms
+
+
+INIT_SILERO_SENSITIVITY = 0.4
 
 
 @dataclass
 class SileroVADArgs:
+    sample_rate: int = RATE
     repo_or_dir: str = "snakers4/silero-vad"
     model: str = "silero_vad"
     source: str = "github"  # github | local
     force_reload: bool = False
     verbose: bool = True
     onnx: bool = False
+    silero_sensitivity: float = INIT_SILERO_SENSITIVITY
+    is_pad_tensor: bool = False
 
 
 @dataclass
