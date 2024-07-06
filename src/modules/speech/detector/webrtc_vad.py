@@ -1,8 +1,8 @@
 import logging
 
 from src.common.types import (
-    WEBRTC_CHECK_PER_FRAMES,
-    WEBRTC_CHECK_ALL_FRAMES,
+    VAD_CHECK_PER_FRAMES,
+    VAD_CHECK_ALL_FRAMES,
     WebRTCVADArgs,
 )
 from src.common.session import Session
@@ -19,7 +19,7 @@ class WebrtcVAD(BaseVAD):
         self.audio_buffer = None
 
     async def detect(self, session: Session):
-        if self.args.check_frames_mode not in [WEBRTC_CHECK_ALL_FRAMES, WEBRTC_CHECK_PER_FRAMES]:
+        if self.args.check_frames_mode not in [VAD_CHECK_ALL_FRAMES, VAD_CHECK_PER_FRAMES]:
             return False
 
         # Number of audio frames per millisecond
@@ -33,17 +33,17 @@ class WebrtcVAD(BaseVAD):
             frame = self.audio_buffer[start_byte:end_byte]
             if self.model.is_speech(frame, 16000):
                 speech_frames += 1
-                if self.args.check_frames_mode == WEBRTC_CHECK_PER_FRAMES:
-                    logging.debug(f"Speech detected in frame {i + 1}"
+                if self.args.check_frames_mode == VAD_CHECK_PER_FRAMES:
+                    logging.debug(f"{self.TAG} Speech detected in frame {i + 1}"
                                   f" of {num_frames}")
                     return True
-        if self.args.check_frames_mode == WEBRTC_CHECK_ALL_FRAMES:
+        if self.args.check_frames_mode == VAD_CHECK_ALL_FRAMES:
             if speech_frames == num_frames:
-                logging.debug(f"Speech detected in {speech_frames} of "
+                logging.debug(f"{self.TAG} Speech detected in {speech_frames} of "
                               f"{num_frames} frames")
             else:
-                logging.debug(f"Speech not detected in all {num_frames} frames")
+                logging.debug(f"{self.TAG} Speech not detected in all {num_frames} frames")
             return speech_frames == num_frames
-        else:
-            logging.debug(f"Speech not detected in any of {num_frames} frames")
-            return False
+
+        logging.debug(f"{self.TAG} Speech not detected in any of {num_frames} frames")
+        return False

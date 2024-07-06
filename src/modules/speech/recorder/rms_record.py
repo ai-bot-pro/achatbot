@@ -4,35 +4,13 @@ import asyncio
 import time
 
 
-from src.common.audio_stream import AudioStream, AudioStreamArgs, RingBuffer
-from src.common.factory import EngineClass
+from src.common.audio_stream import RingBuffer
 from src.common.session import Session
-from src.common.interface import IRecorder
-from src.common.types import AudioRecoderArgs, SILENCE_THRESHOLD, SILENT_CHUNKS, RATE
+from src.common.types import SILENCE_THRESHOLD, SILENT_CHUNKS, RATE
+from .base import PyAudioRecorder
 
 
-class PyAudioRecorder(EngineClass):
-    @classmethod
-    def get_args(cls, **kwargs) -> dict:
-        return {**AudioRecoderArgs().__dict__, **kwargs}
-
-    def __init__(self, **args) -> None:
-        self.args = AudioRecoderArgs(**args)
-        self.audio = AudioStream(AudioStreamArgs(
-            format=self.args.format,
-            channels=self.args.channels,
-            rate=self.args.rate,
-            input_device_index=self.args.input_device_index,
-            input=True,
-            frames_per_buffer=self.args.frames_per_buffer,
-        ))
-        self.audio.open_stream()
-
-    def close(self):
-        self.audio.close()
-
-
-class RMSRecorder(PyAudioRecorder, IRecorder):
+class RMSRecorder(PyAudioRecorder):
     TAG = "rms_recorder"
 
     def __init__(self, **args) -> None:
@@ -90,7 +68,7 @@ class RMSRecorder(PyAudioRecorder, IRecorder):
         return frames
 
 
-class WakeWordsRMSRecorder(RMSRecorder, IRecorder):
+class WakeWordsRMSRecorder(PyAudioRecorder):
     TAG = "wakeword_rms_recorder"
 
     def __init__(self, **args) -> None:
@@ -131,17 +109,3 @@ class WakeWordsRMSRecorder(RMSRecorder, IRecorder):
         if self.args.silence_timeout_s > 0:
             session.ctx.state["silence_timeout_s"] = self.args.silence_timeout_s
         return super().record_audio(session)
-
-
-class VADRecorder(PyAudioRecorder, IRecorder):
-    TAG = ""
-
-    def record_audio(self, session: Session) -> list[bytes]:
-        pass
-
-
-class WakeWordsVADRecorder(PyAudioRecorder, IRecorder):
-    TAG = ""
-
-    def record_audio(self, session: Session) -> list[bytes]:
-        pass

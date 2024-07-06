@@ -37,16 +37,17 @@ def record_audio():
     vad.set_mode(3)  # 敏感度，0 到 3，0 最不敏感，3 最敏感
     triggered = False
     frames.clear()
-    active_ratio = 0.7
+    active_ratio = 0.3
     silent_ratio = 0.8
     frame_size = FRAME_SIZE
     print(f"read audio frame size: {frame_size}")
     while True:
         frame = stream.read(frame_size)
         is_speech = vad.is_speech(frame, RATE)
+        if is_speech:
+            tmp.append(frame)
         if not triggered:
             frames.append((frame, is_speech))
-            tmp.append(frame)
             num_voiced = len([f for f, speech in frames if speech])
             print(f"num_voiced {num_voiced}")
             if num_voiced > active_ratio * frames.maxlen:
@@ -57,6 +58,7 @@ def record_audio():
             frames.append((frame, is_speech))
             tmp.append(frame)
             num_unvoiced = len([f for f, speech in frames if not speech])
+            print(f"num_unvoiced {num_voiced}")
             if num_unvoiced > silent_ratio * frames.maxlen:
                 print("stop recording...")
                 export_wav(tmp, './records/tmp_webrtcvad.wav')

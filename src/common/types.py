@@ -127,6 +127,11 @@ class AudioRecoderArgs:
 
 
 @dataclass
+class AudioRecoderArgs:
+    format: str = FORMAT
+
+
+@dataclass
 class AudioPlayerArgs:
     format: str = FORMAT
     channels: int = CHANNELS
@@ -146,15 +151,15 @@ class SilenceAtEndOfChunkArgs:
     chunk_offset_seconds: float
 
 
-WEBRTC_CHECK_PER_FRAMES = 1
-WEBRTC_CHECK_ALL_FRAMES = 2
+VAD_CHECK_PER_FRAMES = 1
+VAD_CHECK_ALL_FRAMES = 2
 
 
 @dataclass
 class WebRTCVADArgs:
-    aggressiveness: int = 3  # 0,1,2,3
+    aggressiveness: int = 1  # 0,1,2,3
     sample_rate: int = RATE
-    check_frames_mode: int = WEBRTC_CHECK_PER_FRAMES
+    check_frames_mode: int = VAD_CHECK_PER_FRAMES
     frame_duration_ms: int = 10  # ms
 
 
@@ -172,6 +177,7 @@ class SileroVADArgs:
     onnx: bool = False
     silero_sensitivity: float = INIT_SILERO_SENSITIVITY
     is_pad_tensor: bool = False
+    check_frames_mode: int = VAD_CHECK_PER_FRAMES
 
 
 @dataclass

@@ -1,1 +1,1 @@
-from . import record
+from . import rms_record
