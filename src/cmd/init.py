@@ -164,8 +164,8 @@ class Env(PromptInit, PlayStreamInit):
         kwargs["model_name_or_path"] = os.getenv(
             'ASR_MODEL_NAME_OR_PATH', 'base')
         kwargs["download_path"] = MODELS_DIR
-        kwargs["verbose"] = True
-        kwargs["language"] = "zh"
+        kwargs["verbose"] = bool(os.getenv('ASR_VERBOSE', 'True'))
+        kwargs["language"] = os.getenv('ASR_LANG', 'zh')
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         logging.info(f"initASREngine: {tag}, {engine}")
         return engine
