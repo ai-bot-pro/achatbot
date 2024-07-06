@@ -36,6 +36,7 @@ class TestWhisperASR(unittest.TestCase):
             RECORDS_DIR, f"tmp.wav")
         # Use an environment variable to get the ASR model TAG
         cls.asr_tag = os.getenv('ASR_TAG', "whisper_faster_asr")
+        cls.asr_lang = os.getenv('ASR_LANG', "zh")
         cls.audio_file = os.getenv('AUDIO_FILE', audio_file)
         cls.verbose = os.getenv('ASR_VERBOSE', "")
         cls.model_name_or_path = os.getenv('MODEL_NAME_OR_PATH', 'base')
@@ -64,7 +65,7 @@ class TestWhisperASR(unittest.TestCase):
 
     def test_transcribe_stream(self):
         self.asr.set_audio_data(self.audio_file)
-        self.asr.args.language = "zh"
+        self.asr.args.language = self.asr_lang
         res = self.asr.transcribe_stream_sync(self.session)
         for word in res:
             print(word)
@@ -72,7 +73,7 @@ class TestWhisperASR(unittest.TestCase):
 
     def test_transcribe(self):
         self.asr.set_audio_data(self.audio_file)
-        self.asr.args.language = "zh"
+        self.asr.args.language = self.asr_lang
         res = asyncio.run(
             self.asr.transcribe(self.session))
         print(res)

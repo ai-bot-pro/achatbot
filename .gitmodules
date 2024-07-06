@@ -1,3 +1,6 @@
 [submodule "deps/ChatTTS"]
 	path = deps/ChatTTS
 	url = https://github.com/weedge/ChatTTS.git
+[submodule "deps/SenseVoice"]
+	path = deps/SenseVoice
+	url = https://github.com/weedge/SenseVoice.git
