@@ -1,15 +1,14 @@
-
 from typing import AsyncGenerator
 
 from src.common.utils.audio_utils import bytes2NpArrayWith16, bytes2TorchTensorWith16
 from src.common.session import Session
 from src.common.interface import IAsr
 from src.common.device_cuda import CUDAInfo
-from src.modules.speech.asr.base import WhisperASRBase
+from src.modules.speech.asr.base import ASRBase
 from src.common.types import WhisperFasterASRArgs
 
 
-class WhisperAsr(WhisperASRBase):
+class WhisperAsr(ASRBase):
     TAG = "whisper_asr"
 
     def __init__(self, **args) -> None:
@@ -86,7 +85,7 @@ class WhisperTimestampedAsr(WhisperAsr):
         return res
 
 
-class WhisperFasterAsr(WhisperASRBase):
+class WhisperFasterAsr(ASRBase):
     TAG = "whisper_faster_asr"
 
     def __init__(self, **args) -> None:
@@ -158,7 +157,7 @@ class WhisperFasterAsr(WhisperASRBase):
         return res
 
 
-class WhisperTransformersAsr(WhisperASRBase):
+class WhisperTransformersAsr(ASRBase):
     TAG = "whisper_transformers_asr"
 
     def __init__(self, **args) -> None:
@@ -215,7 +214,7 @@ class WhisperTransformersAsr(WhisperASRBase):
         return res
 
 
-class WhisperMLXAsr(WhisperASRBase):
+class WhisperMLXAsr(ASRBase):
     TAG = "whisper_mlx_asr"
 
     def set_audio_data(self, audio_data):

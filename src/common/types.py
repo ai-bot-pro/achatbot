@@ -219,7 +219,7 @@ class PorcupineDetectorArgs:
 
 
 @dataclass
-class WhisperASRArgs:
+class ASRArgs:
     download_path: str = ""
     model_name_or_path: str = "base"
     # asr
@@ -228,30 +228,31 @@ class WhisperASRArgs:
     # - transformers whisper use torch tensor/tf tensor
     # - faster whisper don't use torch tensor, use np.ndarray or str(file_path)/~BinaryIO~
     # - mlx whisper don't use torch tensor, use str(file_path)/np.ndarray/~mlx.array~
+    # - funasr whisper, SenseVoiceSmall use str(file_path)/torch tensor
     asr_audio: str | np.ndarray | torch.Tensor = None
     language: str = "zh"
     verbose: bool = True
 
 
 @dataclass
-class WhisperTimestampedASRArgs(WhisperASRArgs):
+class WhisperTimestampedASRArgs(ASRArgs):
     pass
 
 
 @dataclass
-class WhisperFasterASRArgs(WhisperASRArgs):
+class WhisperFasterASRArgs(ASRArgs):
     from faster_whisper.vad import VadOptions
     vad_filter: bool = False
     vad_parameters: Optional[Union[dict, VadOptions]] = None
 
 
 @dataclass
-class WhisperMLXASRArgs(WhisperASRArgs):
+class WhisperMLXASRArgs(ASRArgs):
     pass
 
 
 @dataclass
-class WhisperTransformersASRArgs(WhisperASRArgs):
+class WhisperTransformersASRArgs(ASRArgs):
     pass
 
 
