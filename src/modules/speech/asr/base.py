@@ -4,18 +4,18 @@ from typing import Generator
 
 from src.common.session import Session
 from src.common.factory import EngineClass
-from src.common.types import WhisperASRArgs
+from src.common.types import ASRArgs
 from src.common.utils import task
 from src.common.interface import IAsr
 
 
-class WhisperASRBase(EngineClass, IAsr):
+class ASRBase(EngineClass, IAsr):
     @classmethod
     def get_args(cls, **kwargs) -> dict:
-        return {**WhisperASRArgs().__dict__, **kwargs}
+        return {**ASRArgs().__dict__, **kwargs}
 
     def __init__(self, **args) -> None:
-        self.args = WhisperASRArgs(**args)
+        self.args = ASRArgs(**args)
         self.asr_audio = None
 
     def transcribe_stream_sync(self, session: Session) -> Generator[str, None, None]:
