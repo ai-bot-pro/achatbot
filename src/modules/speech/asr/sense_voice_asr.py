@@ -1,10 +1,8 @@
 from typing import AsyncGenerator
 import re
 
-from src.common.utils.audio_utils import bytes2NpArrayWith16, bytes2TorchTensorWith16
+from src.common.utils.audio_utils import bytes2TorchTensorWith16
 from src.common.session import Session
-from src.common.interface import IAsr
-from src.common.device_cuda import CUDAInfo
 from src.modules.speech.asr.base import ASRBase
 
 

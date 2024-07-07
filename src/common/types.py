@@ -3,6 +3,7 @@ use SOTA LLM like chatGPT to generate config file(json,yaml,toml) from dataclass
 """
 from dataclasses import dataclass
 from typing import (
+    IO,
     Optional,
     Sequence,
     Union,
@@ -229,9 +230,12 @@ class ASRArgs:
     # - faster whisper don't use torch tensor, use np.ndarray or str(file_path)/~BinaryIO~
     # - mlx whisper don't use torch tensor, use str(file_path)/np.ndarray/~mlx.array~
     # - funasr whisper, SenseVoiceSmall use str(file_path)/torch tensor
-    asr_audio: str | np.ndarray | torch.Tensor = None
+    asr_audio: str | bytes | IO[bytes] | np.ndarray | torch.Tensor = None
+    # https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes
     language: str = "zh"
     verbose: bool = True
+    prompt: str = ""
+    sample_rate: int = RATE
 
 
 @dataclass
@@ -254,6 +258,21 @@ class WhisperMLXASRArgs(ASRArgs):
 @dataclass
 class WhisperTransformersASRArgs(ASRArgs):
     pass
+
+
+@dataclass
+class WhisperGroqASRArgs(ASRArgs):
+    timeout_s: float = None
+    """
+    temperature: The sampling temperature, between 0 and 1. Higher values like 0.8 will make the
+    output more random, while lower values like 0.2 will make it more focused and
+    deterministic. If set to 0, the model will use
+    [log probability](https://en.wikipedia.org/wiki/Log_probability) to
+    automatically increase the temperature until certain thresholds are hit.
+    """
+    temperature: float = 0.0
+    # timestamp_granularities: list = []
+    # response_format: str = "json"  # json, verbose_json, text
 
 
 @dataclass

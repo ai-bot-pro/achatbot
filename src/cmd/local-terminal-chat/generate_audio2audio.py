@@ -37,6 +37,14 @@ TQDM_DISABLE=True \
     ASR_MODEL_NAME_OR_PATH=./models/FunAudioLLM/SenseVoiceSmall \
     python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
 
+TQDM_DISABLE=True \
+    TTS_TAG=tts_edge \
+    RECORDER_TAG=rms_recorder \
+    ASR_TAG=whisper_groq_asr \
+    ASR_LANG=zh \
+    ASR_MODEL_NAME_OR_PATH=whisper-large-v3 \
+    python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
+
 INIT_TYPE=yaml_config TQDM_DISABLE=True \
     python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
 """
