@@ -13,12 +13,17 @@ ASR_TAG=whisper_transformers_asr MODEL_NAME_OR_PATH=./models/openai/whisper-base
 
 ASR_TAG=whisper_mlx_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
 ASR_TAG=whisper_mlx_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
+
+ASR_LANG=zn MODEL_NAME_OR_PATH=./models/FunAudioLLM/SenseVoiceSmall ASR_VERBOSE=True ASR_TAG=sense_voice_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
+
+ASR_LANG=zh MODEL_NAME_OR_PATH=whisper-large-v3 ASR_TAG=whisper_groq_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
 """
 import logging
 import unittest
 import os
 import asyncio
 
+import pyaudio
 
 from src.common.logger import Logger
 from src.common.utils.audio_utils import save_audio_to_file, load_json, get_audio_segment
@@ -32,15 +37,18 @@ import src.modules.speech.asr
 class TestWhisperASR(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        # wget
+        # https://isv-data.oss-cn-hangzhou.aliyuncs.com/ics/MaaS/ASR/test_audio/asr_example_zh.wav
+        # -O records/asr_example_zh.wav
         audio_file = os.path.join(
-            RECORDS_DIR, f"tmp.wav")
+            RECORDS_DIR, f"asr_example_zh.wav")
         # Use an environment variable to get the ASR model TAG
         cls.asr_tag = os.getenv('ASR_TAG', "whisper_faster_asr")
         cls.asr_lang = os.getenv('ASR_LANG', "zh")
         cls.audio_file = os.getenv('AUDIO_FILE', audio_file)
         cls.verbose = os.getenv('ASR_VERBOSE', "")
         cls.model_name_or_path = os.getenv('MODEL_NAME_OR_PATH', 'base')
-        Logger.init(logging.DEBUG, is_file=False)
+        Logger.init(logging.INFO, is_file=False)
 
     @classmethod
     def tearDownClass(cls):
@@ -70,6 +78,35 @@ class TestWhisperASR(unittest.TestCase):
         for word in res:
             print(word)
             self.assertGreater(len(word), 0)
+
+    def test_transcribe_with_record(self):
+        paud = pyaudio.PyAudio()
+        audio_stream = paud.open(rate=16000, channels=1,
+                                 format=pyaudio.paInt16, input=True,
+                                 frames_per_buffer=1024)
+
+        audio_stream.start_stream()
+        logging.debug("start recording")
+        while True:
+            # empty, need use vad
+            read_audio_frames = audio_stream.read(512)
+            self.asr.set_audio_data(read_audio_frames)
+            res = asyncio.run(self.asr.transcribe(self.session))
+            logging.info(res)
+            if len(res) > 0:
+                break
+
+        audio_stream.stop_stream()
+        audio_stream.close()
+        paud.terminate()
+
+    def test_transcribe_with_bytes(self):
+        with open(self.audio_file, "rb") as file:
+            self.asr.set_audio_data(file.read())
+            self.asr.args.language = self.asr_lang
+            res = asyncio.run(
+                self.asr.transcribe(self.session))
+            print(res)
 
     def test_transcribe(self):
         self.asr.set_audio_data(self.audio_file)
@@ -101,6 +138,7 @@ class TestWhisperASR(unittest.TestCase):
                     audio_frames, self.session.get_record_audio_name(),
                     audio_dir=RECORDS_DIR))
                 self.asr.set_audio_data(file_path)
+                # self.asr.set_audio_data(audio_frames)
 
                 transcription = asyncio.run(
                     self.asr.transcribe(self.session))["text"]
