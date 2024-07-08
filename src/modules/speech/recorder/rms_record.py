@@ -1,6 +1,5 @@
 import logging
 import struct
-import asyncio
 import time
 
 
@@ -29,7 +28,7 @@ class RMSRecorder(PyAudioRecorder):
         rms = (sum_squares / len(ints)) ** 0.5
         return rms
 
-    def record_audio(self, session: Session) -> list[bytes]:
+    async def record_audio(self, session: Session) -> list[bytes]:
         silent_chunks = 0
         audio_started = False
         frames = []
@@ -42,14 +41,19 @@ class RMSRecorder(PyAudioRecorder):
         self.audio.start_stream()
         logging.debug("start rms recording")
         start_time = time.time()
+        if self.args.is_stream_callback is False:
+            self.set_args(num_frames=self.args.frames_per_buffer)
         while True:
-            data = self.audio.stream.read(self.args.frames_per_buffer)
+            data = self.get_record_buf()
+            if len(data) == 0:
+                time.sleep(self.args.no_stream_sleep_time_s)
+                continue
             rms = self.compute_rms(data)
             if audio_started:
                 frames.append(data)
                 if rms < SILENCE_THRESHOLD:
                     silent_chunks += 1
-                    if silent_chunks > SILENT_CHUNKS:
+                    if silent_chunks > self.args.silent_chunks:
                         break
                 else:
                     silent_chunks = 0
@@ -68,17 +72,17 @@ class RMSRecorder(PyAudioRecorder):
         return frames
 
 
-class WakeWordsRMSRecorder(PyAudioRecorder):
+class WakeWordsRMSRecorder(RMSRecorder):
     TAG = "wakeword_rms_recorder"
 
     def __init__(self, **args) -> None:
         super().__init__(**args)
 
-    def record_audio(self, session: Session) -> list[bytes]:
+    async def record_audio(self, session: Session) -> list[bytes]:
         if session.ctx.waker is None:
             logging.warning(
                 f"WakeWordsRMSRecorder no waker instance in session ctx, use RMSRecorder")
-            return super().record_audio(session)
+            return await super().record_audio(session)
 
         sample_rate, frame_length = session.ctx.waker.get_sample_info()
         self.sample_rate, self.frame_length = sample_rate, frame_length
@@ -91,14 +95,19 @@ class WakeWordsRMSRecorder(PyAudioRecorder):
 
         self.audio.start_stream()
         logging.info(
-            f"start wake words detector rms recording; audio sample_rate: {self.sample_rate},frame_length:{self.frame_length}, ring buffer maxlen: {maxlen}")
+            f"start wake words detector rms recording; audio sample_rate: {self.sample_rate},frame_length:{self.frame_length}, audio buffer maxlen: {maxlen}")
+
+        if self.args.is_stream_callback is False:
+            self.set_args(num_frames=self.frame_length)
 
         while True:
-            data = self.audio.stream.read(self.frame_length)
+            data = self.get_record_buf()
+            if len(data) == 0:
+                time.sleep(self.args.no_stream_sleep_time_s)
+                continue
             session.ctx.read_audio_frames = data
             session.ctx.waker.set_audio_data(self.audio_buffer.get_buf())
-            res = asyncio.run(
-                session.ctx.waker.detect(session))
+            res = await session.ctx.waker.detect(session)
             if res is True:
                 break
             self.audio_buffer.extend(data)
@@ -108,4 +117,4 @@ class WakeWordsRMSRecorder(PyAudioRecorder):
 
         if self.args.silence_timeout_s > 0:
             session.ctx.state["silence_timeout_s"] = self.args.silence_timeout_s
-        return super().record_audio(session)
+        return await super().record_audio(session)

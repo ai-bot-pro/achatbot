@@ -44,7 +44,8 @@ class PorcupineDetector(EngineClass):
         return self.porcupine.sample_rate, self.porcupine.frame_length
 
     def set_audio_data(self, audio_data):
-        self.audio_buffer = audio_data
+        if isinstance(audio_data, collections.deque):
+            self.audio_buffer = audio_data
 
     def close(self):
         self.porcupine and self.porcupine.delete()

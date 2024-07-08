@@ -11,6 +11,7 @@ from src.common.session import Session
 from src.common.utils import audio_utils
 from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR, INT16_MAX_ABS_VALUE
 import src.modules.speech
+from src.modules.speech.recorder.base import PyAudioRecorder
 
 r"""
 python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_record
@@ -20,6 +21,8 @@ python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test
 RECODER_TAG=wakeword_rms_recorder python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_record
 RECODER_TAG=wakeword_rms_recorder python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_multi_record
 RECODER_TAG=wakeword_rms_recorder python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_wakeword_rms_record
+
+IS_STREAM_CALLBACK=1 RECODER_TAG=wakeword_rms_recorder python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_wakeword_record
 """
 
 
@@ -52,7 +55,8 @@ class TestRMSRecorder(unittest.TestCase):
         self.kwargs = {}
         self.kwargs["input_device_index"] = None if self.input_device_index is None else int(
             self.input_device_index)
-        self.recorder: IRecorder = EngineFactory.get_engine_by_tag(
+        self.kwargs["is_stream_callback"] = bool(os.getenv('IS_STREAM_CALLBACK', None))
+        self.recorder: IRecorder | EngineClass = EngineFactory.get_engine_by_tag(
             EngineClass, self.tag, **self.kwargs)
         self.session = Session(**SessionCtx(
             "test_client_id").__dict__)
@@ -62,7 +66,7 @@ class TestRMSRecorder(unittest.TestCase):
         self.session.close()
 
     def test_record(self):
-        frames = self.recorder.record_audio(self.session)
+        frames = asyncio.run(self.recorder.record_audio(self.session))
         self.assertGreater(len(frames), 0)
         data = b''.join(frames)
         file_path = asyncio.run(audio_utils.save_audio_to_file(
@@ -70,7 +74,7 @@ class TestRMSRecorder(unittest.TestCase):
         print(file_path)
 
     def test_multi_record(self):
-        frames = self.recorder.record_audio(self.session)
+        frames = asyncio.run(self.recorder.record_audio(self.session))
         self.assertGreater(len(frames), 0)
         data = b''.join(frames)
         file_path = asyncio.run(audio_utils.save_audio_to_file(
@@ -79,7 +83,7 @@ class TestRMSRecorder(unittest.TestCase):
 
         self.recorder2 = EngineFactory.get_engine_by_tag(
             EngineClass, self.tag, **self.kwargs)
-        frames = self.recorder2.record_audio(self.session)
+        frames = asyncio.run(self.recorder2.record_audio(self.session))
         self.assertGreater(len(frames), 0)
         data = b''.join(frames)
         file_path = asyncio.run(audio_utils.save_audio_to_file(
@@ -87,10 +91,10 @@ class TestRMSRecorder(unittest.TestCase):
         print(file_path)
         self.recorder2.close()
 
-    def test_wakeword_rms_record(self):
+    def test_wakeword_record(self):
         def on_wakeword_detected(session, data):
             print(
-                f"bot_name:{session.ctx.state['bot_name']} wakeword detected")
+                f"bot_name:{session.ctx.state['bot_name']} wakeword detected, data_len:{len(data)}")
         kwargs = {}
         kwargs["access_key"] = self.access_key
         kwargs["wake_words"] = self.wake_words
@@ -104,7 +108,7 @@ class TestRMSRecorder(unittest.TestCase):
 
         round = 1
         for i in range(round):
-            frames = self.recorder.record_audio(self.session)
+            frames = asyncio.run(self.recorder.record_audio(self.session))
             self.assertGreaterEqual(len(frames), 0)
             data = b''.join(frames)
             file_path = asyncio.run(audio_utils.save_audio_to_file(

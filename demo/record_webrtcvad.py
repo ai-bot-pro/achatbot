@@ -34,11 +34,11 @@ def record_audio():
     frames = collections.deque(maxlen=30)  # 保存最近 30 个帧
     tmp = collections.deque(maxlen=1000)
     vad = webrtcvad.Vad()
-    vad.set_mode(3)  # 敏感度，0 到 3，0 最不敏感，3 最敏感
+    vad.set_mode(1)  # 敏感度，0 到 3，0 最不敏感，3 最敏感
     triggered = False
     frames.clear()
-    active_ratio = 0.3
-    silent_ratio = 0.8
+    active_ratio = 0.7
+    silent_ratio = 0.5
     frame_size = FRAME_SIZE
     print(f"read audio frame size: {frame_size}")
     while True:
@@ -56,7 +56,6 @@ def record_audio():
                 frames.clear()
         else:
             frames.append((frame, is_speech))
-            tmp.append(frame)
             num_unvoiced = len([f for f, speech in frames if not speech])
             print(f"num_unvoiced {num_voiced}")
             if num_unvoiced > silent_ratio * frames.maxlen:

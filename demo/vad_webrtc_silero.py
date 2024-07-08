@@ -23,7 +23,9 @@ class Audio(object):
             callback(in_data)
             return (None, pyaudio.paContinue)
         if callback is None:
-            def callback(in_data): return self.buffer_queue.put(in_data)
+            def callback(in_data):
+                print(len(in_data), self.buffer_queue.qsize())
+                return self.buffer_queue.put(in_data)
         self.buffer_queue = queue.Queue()
         self.device = device
         self.input_rate = input_rate
@@ -127,7 +129,8 @@ def main(ARGS):
     model, utils = torch.hub.load(repo_or_dir='snakers4/silero-vad',
                                   model=ARGS.silaro_model_name,
                                   force_reload=ARGS.reload)
-    (get_speech_ts, _, _, _, _, _, _) = utils
+    print(len(utils), utils)
+    (get_speech_ts, _, _, _, _,) = utils
 
     # Stream from microphone to DeepSpeech using VAD
     spinner = None
@@ -150,12 +153,7 @@ def main(ARGS):
             time_stamps = get_speech_ts(
                 audio_float32,
                 model,
-                num_steps=ARGS.num_steps,
-                trig_sum=ARGS.trig_sum,
-                neg_trig_sum=ARGS.neg_trig_sum,
-                num_samples_per_window=ARGS.num_samples_per_window,
-                min_speech_samples=ARGS.min_speech_samples,
-                min_silence_samples=ARGS.min_silence_samples)
+                sampling_rate=ARGS.rate)
 
             if (len(time_stamps) > 0):
                 print("silero VAD has detected a possible speech")

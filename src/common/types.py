@@ -38,7 +38,7 @@ TEST_DIR = os.path.normpath(
 )
 
 # audio stream default configuration
-CHUNK = 1024
+CHUNK = 512
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 16000
@@ -95,8 +95,10 @@ class SessionCtx:
 
 # audio recorder default configuration
 SILENCE_THRESHOLD = 500
-# two seconds of silence marks the end of user voice input
+# 2 seconds of silence marks the end of user voice input
 SILENT_CHUNKS = 2 * RATE / CHUNK
+# record silence timeout (10s)
+SILENCE_TIMEOUT_S = 10
 # Set microphone id. Use list_microphones.py to see a device list.
 MIC_IDX = 1
 # 2^(16-1)
@@ -105,7 +107,7 @@ INT16_MAX_ABS_VALUE = 32768.0
 
 @dataclass
 class AudioStreamArgs:
-    format: str = FORMAT
+    format: int = FORMAT
     channels: int = CHANNELS
     rate: int = RATE
     sample_width: int = SAMPLE_WIDTH
@@ -114,27 +116,27 @@ class AudioStreamArgs:
     output_device_index: int = None
     input: bool = False
     output: bool = False
+    stream_callback: Optional[str] = None
 
 
 @dataclass
 class AudioRecoderArgs:
-    format: str = FORMAT
+    format: int = FORMAT
     channels: int = CHANNELS
     rate: int = RATE
     sample_width: int = SAMPLE_WIDTH
     input_device_index: int = None
     frames_per_buffer: int = CHUNK
-    silence_timeout_s: int = 10
-
-
-@dataclass
-class AudioRecoderArgs:
-    format: str = FORMAT
+    silent_chunks: int = SILENT_CHUNKS
+    silence_timeout_s: int = SILENCE_TIMEOUT_S
+    num_frames: int = CHUNK
+    is_stream_callback: bool = False
+    no_stream_sleep_time_s: float = 0.03  # for dequeue get
 
 
 @dataclass
 class AudioPlayerArgs:
-    format: str = FORMAT
+    format: int = FORMAT
     channels: int = CHANNELS
     rate: int = RATE
     sample_width: int = SAMPLE_WIDTH

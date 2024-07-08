@@ -16,14 +16,17 @@ class RingBuffer(object):
     def get_buf(self):
         return self._buf
 
+    def lenght(self):
+        return len(self._buf)
+
     def extend(self, data):
         """Adds data to the end of buffer"""
         self._buf.extend(data)
 
-    def get(self):
+    def get(self, is_clear=True):
         """Retrieves data from the beginning of buffer and clears it"""
         tmp = bytes(bytearray(self._buf))
-        self._buf.clear()
+        is_clear and self._buf.clear()
         return tmp
 
 
@@ -129,14 +132,15 @@ class AudioStream:
                       f"pySampleRate: {pySampleRate}")
         try:
             self.stream = self.pyaudio_instance.open(
-                format=pyFormat,
+                format=int(pyFormat),
                 channels=pyChannels,
                 rate=pySampleRate,
                 output_device_index=self.args.output_device_index,
                 input_device_index=self.args.input_device_index,
                 output=self.args.output,
                 input=self.args.input,
-                frames_per_buffer=self.args.frames_per_buffer
+                frames_per_buffer=self.args.frames_per_buffer,
+                stream_callback=self.args.stream_callback,
             )
         except Exception as ex:
             raise Exception(f"Error opening stream: {ex}")

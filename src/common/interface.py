@@ -11,7 +11,7 @@ class IModel(ABC):
 
 class IRecorder(ABC):
     @abstractmethod
-    def record_audio(self, session) -> list[bytes]:
+    async def record_audio(self, session) -> list[bytes]:
         raise NotImplemented("must be implemented in the child class")
 
     @abstractmethod
