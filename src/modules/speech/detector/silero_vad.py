@@ -26,7 +26,7 @@ class SileroVAD(BaseVAD):
         8000: 256,
     }
 
-    def __init__(self, **args: SileroVADArgs) -> None:
+    def __init__(self, **args) -> None:
         self.args = SileroVADArgs(**args)
         torch.set_num_threads(1)
         # torchaudio.set_audio_backend("soundfile")

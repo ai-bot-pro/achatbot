@@ -9,7 +9,7 @@ from src.common.logger import Logger
 from src.common.factory import EngineFactory, EngineClass
 from src.common.session import Session
 from src.common.utils import audio_utils
-from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR, INT16_MAX_ABS_VALUE, WebRTCVADArgs, SileroVADArgs
+from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR, INT16_MAX_ABS_VALUE, WebRTCVADArgs, SileroVADArgs, WebRTCSileroVADArgs
 import src.modules.speech
 from src.modules.speech.recorder.base import PyAudioRecorder
 
@@ -20,11 +20,17 @@ IS_STREAM_CALLBACK=1 python -m unittest test.modules.speech.recorder.test_vad_re
 DETECTOR_VAD_TAG=silero_vad python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
 IS_STREAM_CALLBACK=1 DETECTOR_VAD_TAG=silero_vad python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
 
+DETECTOR_VAD_TAG=webrtc_silero_vad python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
+IS_STREAM_CALLBACK=1 DETECTOR_VAD_TAG=webrtc_silero_vad python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
+
 RECODER_TAG=wakeword_vad_recorder python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_wakeword_record
 IS_STREAM_CALLBACK=1 RECODER_TAG=wakeword_vad_recorder python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_wakeword_record
 
 DETECTOR_VAD_TAG=silero_vad RECODER_TAG=wakeword_vad_recorder python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_wakeword_record
 IS_STREAM_CALLBACK=1 DETECTOR_VAD_TAG=silero_vad RECODER_TAG=wakeword_vad_recorder python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_wakeword_record
+
+DETECTOR_VAD_TAG=webrtc_silero_vad RECODER_TAG=wakeword_vad_recorder python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_wakeword_record
+IS_STREAM_CALLBACK=1 DETECTOR_VAD_TAG=webrtc_silero_vad RECODER_TAG=wakeword_vad_recorder python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_wakeword_record
 """
 
 
@@ -78,6 +84,7 @@ class TestVADRecorder(unittest.TestCase):
         map_args = {
             "webrtc_vad": WebRTCVADArgs().__dict__,
             "silero_vad": SileroVADArgs().__dict__,
+            "webrtc_silero_vad": WebRTCSileroVADArgs().__dict__,
         }
         return map_args[self.detector_vad_tag]
 

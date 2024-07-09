@@ -192,6 +192,11 @@ class SileroVADArgs:
 
 
 @dataclass
+class WebRTCSileroVADArgs(WebRTCVADArgs, SileroVADArgs):
+    pass
+
+
+@dataclass
 class PyannoteDetectorArgs:
     from pyannote.audio.core.io import AudioFile
     hf_auth_token: str = ""  # defualt use env HF_TOKEN

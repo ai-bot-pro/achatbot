@@ -15,7 +15,7 @@ from src.common.utils.audio_utils import save_audio_to_file
 class WebrtcVAD(BaseVAD):
     TAG = "webrtc_vad"
 
-    def __init__(self, **args: WebRTCVADArgs) -> None:
+    def __init__(self, **args) -> None:
         import webrtcvad
         self.args = WebRTCVADArgs(**args)
         self.model = webrtcvad.Vad(self.args.aggressiveness)
