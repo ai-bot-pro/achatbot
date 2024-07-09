@@ -24,7 +24,6 @@ class Audio(object):
             return (None, pyaudio.paContinue)
         if callback is None:
             def callback(in_data):
-                print(len(in_data), self.buffer_queue.qsize())
                 return self.buffer_queue.put(in_data)
         self.buffer_queue = queue.Queue()
         self.device = device
@@ -87,6 +86,7 @@ class VADAudio(Audio):
         if frames is None:
             frames = self.frame_generator()
         num_padding_frames = padding_ms // self.frame_duration_ms
+        print('------', num_padding_frames, self.frame_duration_ms)
         ring_buffer = collections.deque(maxlen=num_padding_frames)
         triggered = False
 
@@ -95,6 +95,7 @@ class VADAudio(Audio):
                 return
 
             is_speech = self.vad.is_speech(frame, self.sample_rate)
+            print(is_speech)
 
             if not triggered:
                 ring_buffer.append((frame, is_speech))

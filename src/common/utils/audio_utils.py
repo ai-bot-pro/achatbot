@@ -6,13 +6,13 @@ from scipy.io.wavfile import read, write
 import numpy as np
 import torch
 
-from src.common.types import INT16_MAX_ABS_VALUE
+from src.common.types import INT16_MAX_ABS_VALUE, RECORDS_DIR
 
 
 async def save_audio_to_file(
         audio_data,
         file_name,
-        audio_dir="records",
+        audio_dir=RECORDS_DIR,
         channles=1,
         sample_width=2,
         sample_rate=16000):

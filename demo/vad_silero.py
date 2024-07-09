@@ -104,7 +104,7 @@ if __name__ == "__main__":
 
     audio = pyaudio.PyAudio()
 
-    #num_samples = 1536
+    # num_samples = 1536
     num_samples = 512
     stream = audio.open(format=FORMAT,
                         channels=CHANNELS,
@@ -126,6 +126,7 @@ if __name__ == "__main__":
         audio_int16 = np.frombuffer(audio_chunk, np.int16)
 
         audio_float32 = int2float(audio_int16)
+        print(len(audio_float32))
 
         # get the confidences and add them to the list to plot them later
         new_confidence = model(torch.from_numpy(audio_float32), 16000).item()

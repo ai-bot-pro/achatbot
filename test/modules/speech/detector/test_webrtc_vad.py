@@ -5,7 +5,7 @@ import logging
 import unittest
 import pyaudio
 
-from src.common.utils.audio_utils import get_audio_segment, save_audio_to_file, convert_sampling_rate_to_16k
+from src.common.utils.audio_utils import get_audio_segment, save_audio_to_file, convert_sampling_rate_to_16k, read_audio_file
 from src.common.logger import Logger
 from src.common.factory import EngineFactory, EngineClass
 from src.common.session import Session
@@ -24,9 +24,9 @@ class TestWebRTCVADDetector(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tag = os.getenv('DETECTOR_TAG', "webrtc_vad")
-        audio_file = os.path.join(RECORDS_DIR, f"tmp.wav")
+        audio_file = os.path.join(TEST_DIR, f"audio_files", f"vad_test.wav")
         cls.audio_file = os.getenv('AUDIO_FILE', audio_file)
-        cls.check_frames_mode = os.getenv('CHECK_FRAMES_MODE', "1")
+        cls.check_frames_mode = int(os.getenv('CHECK_FRAMES_MODE', "1"))
 
         Logger.init(logging.DEBUG, is_file=False)
 
@@ -36,8 +36,8 @@ class TestWebRTCVADDetector(unittest.TestCase):
 
     def setUp(self):
         kwargs = WebRTCVADArgs(
-            aggressiveness=3,
-            check_frames_mode=int(self.check_frames_mode),
+            aggressiveness=1,
+            check_frames_mode=self.check_frames_mode,
         ).__dict__
         print(kwargs)
         self.detector: IDetector | EngineClass = EngineFactory.get_engine_by_tag(
@@ -51,6 +51,13 @@ class TestWebRTCVADDetector(unittest.TestCase):
     def test_convert_sampling_rate_to_16k(self):
         convert_sampling_rate_to_16k(self.audio_file, os.path.join(
             RECORDS_DIR, "test_convert_sampling_rate_to_16k.wav"))
+
+    def test_is_speech(self):
+        import webrtcvad
+        frame = asyncio.run(read_audio_file(self.audio_file))
+        vad = webrtcvad.Vad(1)
+        is_speech = vad.is_speech(frame, 16000)
+        logging.debug(f"is_speech:{is_speech}")
 
     def test_detect(self):
         audio_segment = asyncio.run(get_audio_segment(self.audio_file))
@@ -66,7 +73,10 @@ class TestWebRTCVADDetector(unittest.TestCase):
             print(file_path)
         res = asyncio.run(self.detector.detect(self.session))
         logging.debug(res)
-        self.assertEqual(res, False)
+        if self.check_frames_mode == 1:
+            self.assertEqual(res, True)
+        else:
+            self.assertEqual(res, False)
 
     def test_record_detect(self):
         rate, frame_len = self.detector.get_sample_info()

@@ -24,7 +24,7 @@ class EngineClass(object):
     @classmethod
     def get_instance(cls, **kwargs):
         dict_args = cls.get_args(**kwargs)
-        logging.info(f"get_instance args: {dict_args}")
+        logging.info(f"get_instance {cls.TAG} args: {dict_args}")
         instance = cls(**dict_args)
         return instance
 

@@ -55,6 +55,8 @@ class SileroVAD(BaseVAD):
             self.audio_buff = torch.from_numpy(bytes2NpArrayWith16(self.audio_buffer))
 
     async def detect(self, session: Session):
+        if self.args.check_frames_mode not in [VAD_CHECK_ALL_FRAMES, VAD_CHECK_PER_FRAMES]:
+            return False
         speech_frames = 0
         window_size_samples = self.map_rate_num_samples[16000]
         num_frames = math.ceil(len(self.audio_buff) / window_size_samples)
@@ -63,8 +65,8 @@ class SileroVAD(BaseVAD):
             if await self.detect_chunk(chunk, session):
                 speech_frames += 1
                 if self.args.check_frames_mode == VAD_CHECK_PER_FRAMES:
-                    logging.debug(f"{self.TAG} Speech detected in frame {i + 1}"
-                                  f" of {num_frames}")
+                    logging.debug(f"{self.TAG} Speech detected in frame offset {i}"
+                                  f" of {len(self.audio_buff)}, {num_frames} frames")
                     return True
         if self.args.check_frames_mode == VAD_CHECK_ALL_FRAMES:
             if speech_frames == num_frames:

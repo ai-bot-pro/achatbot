@@ -1,16 +1,19 @@
-import queue
-from typing import Generator
+from concurrent.futures import ThreadPoolExecutor
+from queue import Queue
+from typing import Generator, AsyncGenerator
 
 import pyaudio
 
 from src.common.audio_stream import AudioStream, RingBuffer
 from src.common.factory import EngineClass
+from src.common.session import Session
 from src.common.interface import IRecorder
+from src.common.utils import task
 from src.common.types import AudioRecoderArgs, AudioStreamArgs
 
 
 class PyAudioRecorder(EngineClass, IRecorder):
-    buffer_queue = queue.Queue()
+    buffer_queue = Queue()
 
     @classmethod
     def get_args(cls, **kwargs) -> dict:
@@ -35,7 +38,6 @@ class PyAudioRecorder(EngineClass, IRecorder):
             frames_per_buffer=self.args.frames_per_buffer,
             stream_callback=stream_callback,
         ))
-        self.audio.open_stream()
 
     def get_record_buf(self) -> bytes:
         if self.args.is_stream_callback is False:
@@ -45,9 +47,6 @@ class PyAudioRecorder(EngineClass, IRecorder):
     def frame_genrator(self) -> Generator[bytes, None, None]:
         while True:
             yield self.get_record_buf()
-
-    async def record_audio(self, session) -> list[bytes]:
-        return []
 
     def close(self):
         self.audio.close()

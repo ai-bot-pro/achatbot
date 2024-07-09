@@ -57,6 +57,8 @@ class PorcupineWakeWordDetector(PorcupineDetector, IDetector):
     async def detect(self, session: Session):
         if len(self.args.wake_words) == 0:
             return
+        logging.debug(
+            f"{self.TAG} detect porcupine frame_len:{self.porcupine.frame_length}, read_audio_frames_len:{len(session.ctx.read_audio_frames)}")
         pcm = struct.unpack_from(
             "h" * self.porcupine.frame_length,
             session.ctx.read_audio_frames,

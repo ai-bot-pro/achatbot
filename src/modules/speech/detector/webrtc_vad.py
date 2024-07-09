@@ -1,12 +1,15 @@
 import logging
+import math
 
 from src.common.types import (
     VAD_CHECK_PER_FRAMES,
     VAD_CHECK_ALL_FRAMES,
     WebRTCVADArgs,
+    RATE
 )
 from src.common.session import Session
 from .base import BaseVAD
+from src.common.utils.audio_utils import save_audio_to_file
 
 
 class WebrtcVAD(BaseVAD):
@@ -23,19 +26,23 @@ class WebrtcVAD(BaseVAD):
             return False
 
         # Number of audio frames per millisecond
-        frame_length = int(16000 * self.args.frame_duration_ms / 1000)
+        frame_length = int(RATE * self.args.frame_duration_ms / 1000)
         num_frames = int(len(self.audio_buffer) / (2 * frame_length))
         speech_frames = 0
+        logging.debug(
+            f"{self.TAG} Speech detected audio_len:{len(self.audio_buffer)} frame_len:{frame_length} num_frames {num_frames}")
 
         for i in range(num_frames):
             start_byte = i * frame_length * 2
             end_byte = start_byte + frame_length * 2
             frame = self.audio_buffer[start_byte:end_byte]
-            if self.model.is_speech(frame, 16000):
+            # print(len(frame))
+            if self.model.is_speech(frame, RATE):
                 speech_frames += 1
                 if self.args.check_frames_mode == VAD_CHECK_PER_FRAMES:
                     logging.debug(f"{self.TAG} Speech detected in frame {i + 1}"
                                   f" of {num_frames}")
+                    # await save_audio_to_file(frame, "webrtc_vad_frame.wav")
                     return True
         if self.args.check_frames_mode == VAD_CHECK_ALL_FRAMES:
             if speech_frames == num_frames:

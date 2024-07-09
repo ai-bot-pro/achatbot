@@ -16,6 +16,7 @@ import pyaudio
 import torch
 
 from .interface import IBuffering, IDetector, IAsr, ILlm, ITts
+from .factory import EngineClass
 
 
 SRC_PATH = os.path.normpath(
@@ -53,11 +54,11 @@ class SessionCtx:
     read_audio_frames = bytes()
     state = dict()
     buffering_strategy: IBuffering = None
-    waker: IDetector = None
-    vad: IDetector = None
-    asr: IAsr = None
-    llm: ILlm = None
-    tts: ITts = None
+    waker: IDetector | EngineClass = None
+    vad: IDetector | EngineClass = None
+    asr: IAsr | EngineClass = None
+    llm: ILlm | EngineClass = None
+    tts: ITts | EngineClass = None
     on_session_start: callable = None
     on_session_end: callable = None
 
@@ -135,6 +136,13 @@ class AudioRecoderArgs:
 
 
 @dataclass
+class VADRecoderArgs(AudioRecoderArgs):
+    padding_ms: int = 300
+    active_ratio: float = 0.75
+    silent_ratio: float = 0.75
+
+
+@dataclass
 class AudioPlayerArgs:
     format: int = FORMAT
     channels: int = CHANNELS
@@ -160,10 +168,10 @@ VAD_CHECK_ALL_FRAMES = 2
 
 @dataclass
 class WebRTCVADArgs:
-    aggressiveness: int = 1  # 0,1,2,3
+    aggressiveness: int = 3  # 0,1,2,3
     sample_rate: int = RATE
     check_frames_mode: int = VAD_CHECK_PER_FRAMES
-    frame_duration_ms: int = 10  # ms
+    frame_duration_ms: int = 20  # ms
 
 
 INIT_SILERO_SENSITIVITY = 0.4
