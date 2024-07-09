@@ -1,8 +1,6 @@
 r"""
 use SOTA LLM like chatGPT to generate config file(json,yaml,toml) from dataclass type
 """
-import os
-import queue
 from dataclasses import dataclass
 from typing import (
     IO,
@@ -11,13 +9,14 @@ from typing import (
     Union,
     List
 )
+import os
 
 import numpy as np
-from pyannote.audio.core.io import AudioFile
 import pyaudio
 import torch
 
 from .interface import IBuffering, IDetector, IAsr, ILlm, ITts
+from .factory import EngineClass
 
 
 SRC_PATH = os.path.normpath(
@@ -40,7 +39,7 @@ TEST_DIR = os.path.normpath(
 )
 
 # audio stream default configuration
-CHUNK = 1024
+CHUNK = 512
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 16000
@@ -55,11 +54,11 @@ class SessionCtx:
     read_audio_frames = bytes()
     state = dict()
     buffering_strategy: IBuffering = None
-    waker: IDetector = None
-    vad: IDetector = None
-    asr: IAsr = None
-    llm: ILlm = None
-    tts: ITts = None
+    waker: IDetector | EngineClass = None
+    vad: IDetector | EngineClass = None
+    asr: IAsr | EngineClass = None
+    llm: ILlm | EngineClass = None
+    tts: ITts | EngineClass = None
     on_session_start: callable = None
     on_session_end: callable = None
 
@@ -97,8 +96,10 @@ class SessionCtx:
 
 # audio recorder default configuration
 SILENCE_THRESHOLD = 500
-# two seconds of silence marks the end of user voice input
+# 2 seconds of silence marks the end of user voice input
 SILENT_CHUNKS = 2 * RATE / CHUNK
+# record silence timeout (10s)
+SILENCE_TIMEOUT_S = 10
 # Set microphone id. Use list_microphones.py to see a device list.
 MIC_IDX = 1
 # 2^(16-1)
@@ -107,7 +108,7 @@ INT16_MAX_ABS_VALUE = 32768.0
 
 @dataclass
 class AudioStreamArgs:
-    format: str = FORMAT
+    format: int = FORMAT
     channels: int = CHANNELS
     rate: int = RATE
     sample_width: int = SAMPLE_WIDTH
@@ -116,28 +117,39 @@ class AudioStreamArgs:
     output_device_index: int = None
     input: bool = False
     output: bool = False
+    stream_callback: Optional[str] = None
 
 
 @dataclass
 class AudioRecoderArgs:
-    format: str = FORMAT
+    format: int = FORMAT
     channels: int = CHANNELS
     rate: int = RATE
     sample_width: int = SAMPLE_WIDTH
     input_device_index: int = None
     frames_per_buffer: int = CHUNK
-    silence_timeout_s: int = 10
+    silent_chunks: int = SILENT_CHUNKS
+    silence_timeout_s: int = SILENCE_TIMEOUT_S
+    num_frames: int = CHUNK
+    is_stream_callback: bool = False
+    no_stream_sleep_time_s: float = 0.03  # for dequeue get
+
+
+@dataclass
+class VADRecoderArgs(AudioRecoderArgs):
+    padding_ms: int = 300
+    active_ratio: float = 0.75
+    silent_ratio: float = 0.75
 
 
 @dataclass
 class AudioPlayerArgs:
-    format: str = FORMAT
+    format: int = FORMAT
     channels: int = CHANNELS
     rate: int = RATE
     sample_width: int = SAMPLE_WIDTH
     output_device_index: int = None
     frames_per_buffer: int = CHUNK
-    audio_buffer: queue.Queue = None
     on_play_start: Optional[str] = None
     on_play_end: Optional[str] = None
     on_play_chunk: Optional[str] = None
@@ -150,8 +162,43 @@ class SilenceAtEndOfChunkArgs:
     chunk_offset_seconds: float
 
 
+VAD_CHECK_PER_FRAMES = 1
+VAD_CHECK_ALL_FRAMES = 2
+
+
+@dataclass
+class WebRTCVADArgs:
+    aggressiveness: int = 3  # 0,1,2,3
+    sample_rate: int = RATE
+    check_frames_mode: int = VAD_CHECK_PER_FRAMES
+    frame_duration_ms: int = 20  # ms
+
+
+INIT_SILERO_SENSITIVITY = 0.4
+
+
+@dataclass
+class SileroVADArgs:
+    sample_rate: int = RATE
+    repo_or_dir: str = "snakers4/silero-vad"
+    model: str = "silero_vad"
+    source: str = "github"  # github | local
+    force_reload: bool = False
+    verbose: bool = True
+    onnx: bool = False
+    silero_sensitivity: float = INIT_SILERO_SENSITIVITY
+    is_pad_tensor: bool = False
+    check_frames_mode: int = VAD_CHECK_PER_FRAMES
+
+
+@dataclass
+class WebRTCSileroVADArgs(WebRTCVADArgs, SileroVADArgs):
+    pass
+
+
 @dataclass
 class PyannoteDetectorArgs:
+    from pyannote.audio.core.io import AudioFile
     hf_auth_token: str = ""  # defualt use env HF_TOKEN
     path_or_hf_repo: str = "pyannote/segmentation-3.0"
     model_type: str = "segmentation-3.0"
@@ -213,7 +260,9 @@ class WhisperTimestampedASRArgs(ASRArgs):
 
 @dataclass
 class WhisperFasterASRArgs(ASRArgs):
-    pass
+    from faster_whisper.vad import VadOptions
+    vad_filter: bool = False
+    vad_parameters: Optional[Union[dict, VadOptions]] = None
 
 
 @dataclass

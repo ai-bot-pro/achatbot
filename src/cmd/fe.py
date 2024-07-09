@@ -88,7 +88,7 @@ class TerminalChatClient:
 
                 logging.info(f"start record audio")
                 self.session.ctx.waker = self.waker
-                frames = self.recorder.record_audio(self.session)
+                frames = asyncio.run(self.recorder.record_audio(self.session))
                 if len(frames) == 0:
                     logging.info(f"record_audio return empty, continue")
                     continue

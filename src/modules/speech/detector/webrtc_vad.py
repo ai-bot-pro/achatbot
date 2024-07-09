@@ -1,31 +1,56 @@
 import logging
-import os
+import math
 
-from pyannote.audio.core.io import AudioFile
-
+from src.common.types import (
+    VAD_CHECK_PER_FRAMES,
+    VAD_CHECK_ALL_FRAMES,
+    WebRTCVADArgs,
+    RATE
+)
 from src.common.session import Session
-from src.common.interface import IDetector
-from src.common.types import PyannoteDetectorArgs, RATE, CHUNK
-from src.common.factory import EngineClass
+from .base import BaseVAD
+from src.common.utils.audio_utils import save_audio_to_file
 
 
-class PyannoteVAD(IDetector):
-    TAG = "pyannote_vad"
+class WebrtcVAD(BaseVAD):
+    TAG = "webrtc_vad"
 
-    def __init__(self, **args: PyannoteDetector) -> None:
-        super().__init__(**args)
-
-        from pyannote.audio.pipelines import VoiceActivityDetection
-        self.pipeline = VoiceActivityDetection(segmentation=self.model)
-        self.pipeline.instantiate(self.hyper_parameters)
+    def __init__(self, **args) -> None:
+        import webrtcvad
+        self.args = WebRTCVADArgs(**args)
+        self.model = webrtcvad.Vad(self.args.aggressiveness)
+        self.audio_buffer = None
 
     async def detect(self, session: Session):
-        vad_res = self.pipeline(self.args.vad_pyannote_audio)
-        # `vad_res` is a pyannote.core.Annotation instance containing speech regions
-        vad_segments = []
-        for segment in vad_res.itersegments():
-            logging.debug(f"vad_segment: {segment}")
-            vad_segments.append(
-                {"start": segment.start, "end": segment.end, "confidence": 1.0})
-        logging.debug(f"vad_segments: {vad_segments}")
-        return vad_segments
+        if self.args.check_frames_mode not in [VAD_CHECK_ALL_FRAMES, VAD_CHECK_PER_FRAMES]:
+            return False
+
+        # Number of audio frames per millisecond
+        frame_length = int(RATE * self.args.frame_duration_ms / 1000)
+        num_frames = int(len(self.audio_buffer) / (2 * frame_length))
+        speech_frames = 0
+        logging.debug(
+            f"{self.TAG} Speech detected audio_len:{len(self.audio_buffer)} frame_len:{frame_length} num_frames {num_frames}")
+
+        for i in range(num_frames):
+            start_byte = i * frame_length * 2
+            end_byte = start_byte + frame_length * 2
+            frame = self.audio_buffer[start_byte:end_byte]
+            # print(len(frame))
+            if self.model.is_speech(frame, RATE):
+                speech_frames += 1
+                if self.args.check_frames_mode == VAD_CHECK_PER_FRAMES:
+                    logging.debug(f"{self.TAG} Speech detected in frame {i + 1}"
+                                  f" of {num_frames}")
+                    # await save_audio_to_file(frame, "webrtc_vad_frame.wav")
+                    return True
+        if self.args.check_frames_mode == VAD_CHECK_ALL_FRAMES:
+            if speech_frames == num_frames:
+                logging.debug(f"{self.TAG} Speech detected in {speech_frames} of "
+                              f"{num_frames} frames")
+            else:
+                logging.debug(f"{self.TAG} Speech not detected in all {num_frames} frames")
+            return speech_frames == num_frames
+
+        logging.debug(f"{self.TAG} Speech not detected in any of {num_frames} frames")
+        return False

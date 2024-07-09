@@ -136,6 +136,7 @@ class Env(PromptInit, PlayStreamInit):
         input_device_index = os.getenv('INPUT_DEVICE_INDEX', None)
         if input_device_index is not None:
             kwargs["input_device_index"] = int(input_device_index)
+        kwargs["is_stream_callback"] = bool(os.getenv('IS_STREAM_CALLBACK', "True"))
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         logging.info(f"initRecorderEngine: {tag}, {engine}")
         return engine
@@ -351,6 +352,13 @@ CONF_ENV=local TTS_TAG=tts_coqui python -m src.cmd.init -o env2yaml
 CONF_ENV=local TTS_TAG=tts_chat python -m src.cmd.init -o env2yaml
 CONF_ENV=local TTS_TAG=tts_g python -m src.cmd.init -o env2yaml
 CONF_ENV=local TTS_TAG=tts_edge python -m src.cmd.init -o env2yaml
+CONF_ENV=local \
+    TTS_TAG=tts_edge \
+    RECORDER_TAG=rms_recorder \
+    ASR_TAG=whisper_groq_asr \
+    ASR_LANG=zh \
+    ASR_MODEL_NAME_OR_PATH=whisper-large-v3 \
+    python -m src.cmd.init -o env2yaml
 
 CONF_ENV=local python -m src.cmd.init -o init_engine -i config
 CONF_ENV=local python -m src.cmd.init -o gather_load_configs

@@ -1,16 +1,18 @@
 import json
 import os
 
+from scipy.signal import resample_poly
+from scipy.io.wavfile import read, write
 import numpy as np
 import torch
 
-from src.common.types import INT16_MAX_ABS_VALUE
+from src.common.types import INT16_MAX_ABS_VALUE, RECORDS_DIR
 
 
 async def save_audio_to_file(
         audio_data,
         file_name,
-        audio_dir="records",
+        audio_dir=RECORDS_DIR,
         channles=1,
         sample_width=2,
         sample_rate=16000):
@@ -50,16 +52,15 @@ async def read_audio_file(file_path):
     return frames
 
 
-def bytes2NpArrayWith16(frames: bytearray):
+def bytes2NpArrayWith16(frames: bytes | bytearray):
     # Convert the buffer frames to a NumPy array
     audio_array = np.frombuffer(frames, dtype=np.int16)
     # Normalize the array to a [-1, 1] range
-    float_data = audio_array.astype(
-        np.float32) / INT16_MAX_ABS_VALUE
+    float_data = audio_array.astype(np.float32) / INT16_MAX_ABS_VALUE
     return float_data
 
 
-def bytes2TorchTensorWith16(frames: bytearray):
+def bytes2TorchTensorWith16(frames: bytes | bytearray):
     float_data = bytes2NpArrayWith16(frames)
     waveform_tensor = torch.tensor(float_data, dtype=torch.float32)
     # don't Stereo, just Mono, reshape(1,-1) (1(channel),size(time))
@@ -95,3 +96,25 @@ def postprocess_tts_wave(chunk: torch.Tensor | list) -> bytes:
     chunk = np.clip(chunk, -1, 1)
     chunk = chunk.astype(np.float32)
     return chunk.tobytes()
+
+
+def convertSampleRateTo16khz(audio_data: bytes | bytearray, sample_rate):
+    if sample_rate == 16000:
+        return audio_data
+
+    pcm_data = np.frombuffer(audio_data, dtype=np.int16)
+    data_16000 = resample_poly(
+        pcm_data, 16000, sample_rate)
+    audio_data = data_16000.astype(np.int16).tobytes()
+
+    return audio_data
+
+
+def convert_sampling_rate_to_16k(input_file, output_file):
+    original_rate, data = read(input_file)
+    if original_rate == 16000:
+        return
+    up = 16000
+    down = original_rate
+    resampled_data = resample_poly(data, up, down)
+    write(output_file, 16000, resampled_data.astype(np.int16))

@@ -44,7 +44,8 @@ class PorcupineDetector(EngineClass):
         return self.porcupine.sample_rate, self.porcupine.frame_length
 
     def set_audio_data(self, audio_data):
-        self.audio_buffer = audio_data
+        if isinstance(audio_data, collections.deque):
+            self.audio_buffer = audio_data
 
     def close(self):
         self.porcupine and self.porcupine.delete()
@@ -56,6 +57,8 @@ class PorcupineWakeWordDetector(PorcupineDetector, IDetector):
     async def detect(self, session: Session):
         if len(self.args.wake_words) == 0:
             return
+        logging.debug(
+            f"{self.TAG} detect porcupine frame_len:{self.porcupine.frame_length}, read_audio_frames_len:{len(session.ctx.read_audio_frames)}")
         pcm = struct.unpack_from(
             "h" * self.porcupine.frame_length,
             session.ctx.read_audio_frames,

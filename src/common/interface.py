@@ -11,7 +11,11 @@ class IModel(ABC):
 
 class IRecorder(ABC):
     @abstractmethod
-    def record_audio(self, session) -> list[bytes]:
+    async def record_audio(self, session) -> list[bytes]:
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    async def record_audio_generator(self, session) -> AsyncGenerator[bytes, None]:
         raise NotImplemented("must be implemented in the child class")
 
     @abstractmethod
@@ -39,7 +43,7 @@ class IBuffering(ABC):
 
 class IDetector(ABC):
     @abstractmethod
-    async def detect(self, session):
+    async def detect(self, session) -> list[bytes | None]:
         raise NotImplemented("must be implemented in the child class")
 
     @abstractmethod
