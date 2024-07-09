@@ -16,15 +16,12 @@ from src.modules.speech.recorder.base import PyAudioRecorder
 r"""
 python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_record
 python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_multi_record
-python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_wakeword_rms_record
+python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_wakeword_record
 
 RECODER_TAG=wakeword_rms_recorder python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_record
 RECODER_TAG=wakeword_rms_recorder python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_multi_record
-RECODER_TAG=wakeword_rms_recorder python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_wakeword_rms_record
 
-IS_STREAM_CALLBACK=1 RECODER_TAG=wakeword_rms_recorder python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_wakeword_record
-
-RECODER_TAG=vad_recorder python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_record
+RECODER_TAG=wakeword_rms_recorder python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_wakeword_record
 
 IS_STREAM_CALLBACK=1 RECODER_TAG=wakeword_rms_recorder python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_wakeword_record
 """

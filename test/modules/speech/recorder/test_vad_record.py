@@ -15,8 +15,16 @@ from src.modules.speech.recorder.base import PyAudioRecorder
 
 r"""
 python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
+IS_STREAM_CALLBACK=1 python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
 
+DETECTOR_VAD_TAG=silero_vad python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
+IS_STREAM_CALLBACK=1 DETECTOR_VAD_TAG=silero_vad python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
+
+RECODER_TAG=wakeword_vad_recorder python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_wakeword_record
 IS_STREAM_CALLBACK=1 RECODER_TAG=wakeword_vad_recorder python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_wakeword_record
+
+DETECTOR_VAD_TAG=silero_vad RECODER_TAG=wakeword_vad_recorder python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_wakeword_record
+IS_STREAM_CALLBACK=1 DETECTOR_VAD_TAG=silero_vad RECODER_TAG=wakeword_vad_recorder python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_wakeword_record
 """
 
 
