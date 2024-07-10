@@ -10,7 +10,14 @@ from src.common.logger import Logger
 from src.common import interface
 from src.common.config import Conf
 from src.common.factory import EngineFactory, EngineClass
-from src.common.types import MODELS_DIR, RECORDS_DIR, CHUNK, CONFIG_DIR
+from src.common.types import (
+    MODELS_DIR, RECORDS_DIR, CHUNK, CONFIG_DIR,
+    SileroVADArgs,
+    WebRTCVADArgs,
+    WebRTCSileroVADArgs,
+    AudioRecoderArgs,
+    VADRecoderArgs,
+)
 # need import engine class -> EngineClass.__subclasses__
 import src.modules.speech
 import src.core.llm
@@ -132,11 +139,7 @@ class Env(PromptInit, PlayStreamInit):
     def initRecorderEngine() -> interface.IRecorder | EngineClass:
         # recorder
         tag = os.getenv('RECORDER_TAG', "rms_recorder")
-        kwargs = {}
-        input_device_index = os.getenv('INPUT_DEVICE_INDEX', None)
-        if input_device_index is not None:
-            kwargs["input_device_index"] = int(input_device_index)
-        kwargs["is_stream_callback"] = bool(os.getenv('IS_STREAM_CALLBACK', "True"))
+        kwargs = Env.map_config_func[tag]()
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         logging.info(f"initRecorderEngine: {tag}, {engine}")
         return engine
@@ -144,15 +147,8 @@ class Env(PromptInit, PlayStreamInit):
     @staticmethod
     def initVADEngine() -> interface.IDetector | EngineClass:
         # vad detector
-        tag = os.getenv('VAD_DETECTOR_TAG', "pyannote_vad")
-        model_type = os.getenv(
-            'VAD_MODEL_TYPE', 'segmentation-3.0')
-        model_ckpt_path = os.path.join(
-            MODELS_DIR, 'pyannote', model_type, "pytorch_model.bin")
-        kwargs = {}
-        kwargs["path_or_hf_repo"] = os.getenv(
-            'VAD_PATH_OR_HF_REPO', model_ckpt_path)
-        kwargs["model_type"] = model_type
+        tag = os.getenv('VAD_DETECTOR_TAG', "webrtc_vad")
+        kwargs = Env.map_config_func[tag]()
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         logging.info(f"initVADEngine: {tag}, {engine}")
         return engine
@@ -231,12 +227,81 @@ class Env(PromptInit, PlayStreamInit):
         kwargs["speed_increase"] = float(os.getenv('SPEED_INCREASE', "1.5"))
         return kwargs
 
+    @staticmethod
+    def get_silero_vad_args() -> dict:
+        kwargs = SileroVADArgs(
+            repo_or_dir=os.getenv('REPO_OR_DIR', "snakers4/silero-vad"),
+            model=os.getenv('SILERO_MODEL', "silero_vad"),
+            check_frames_mode=int(os.getenv('CHECK_FRAMES_MODE', "1")),
+        ).__dict__
+        return kwargs
+
+    @staticmethod
+    def get_webrtc_vad_args() -> dict:
+        kwargs = WebRTCVADArgs(
+            aggressiveness=int(os.getenv('AGGRESSIVENESS', "1")),
+            check_frames_mode=int(os.getenv('CHECK_FRAMES_MODE', "1")),
+        ).__dict__
+        return kwargs
+
+    @staticmethod
+    def get_webrtc_silero_vad_args() -> dict:
+        kwargs = WebRTCSileroVADArgs(
+            aggressiveness=int(os.getenv('AGGRESSIVENESS', "1")),
+            check_frames_mode=int(os.getenv('CHECK_FRAMES_MODE', "1")),
+            repo_or_dir=os.getenv('REPO_OR_DIR', "snakers4/silero-vad"),
+            model=os.getenv('SILERO_MODEL', "silero_vad"),
+        ).__dict__
+        return kwargs
+
+    @staticmethod
+    def get_pyannote_vad_args() -> dict:
+        model_type = os.getenv(
+            'VAD_MODEL_TYPE', 'segmentation-3.0')
+        model_ckpt_path = os.path.join(
+            MODELS_DIR, 'pyannote', model_type, "pytorch_model.bin")
+        kwargs = {}
+        kwargs["path_or_hf_repo"] = os.getenv(
+            'VAD_PATH_OR_HF_REPO', model_ckpt_path)
+        kwargs["model_type"] = model_type
+        return kwargs
+
+    @staticmethod
+    def get_rms_recorder_args() -> dict:
+        input_device_index = os.getenv('INPUT_DEVICE_INDEX', None)
+        if input_device_index is not None:
+            input_device_index = int(input_device_index)
+        kwargs = AudioRecoderArgs(
+            is_stream_callback=bool(os.getenv('IS_STREAM_CALLBACK', "True")),
+            input_device_index=input_device_index,
+        ).__dict__
+        return kwargs
+
+    @staticmethod
+    def get_vad_recorder_args() -> dict:
+        input_device_index = os.getenv('INPUT_DEVICE_INDEX', None)
+        if input_device_index is not None:
+            input_device_index = int(input_device_index)
+        kwargs = VADRecoderArgs(
+            is_stream_callback=bool(os.getenv('IS_STREAM_CALLBACK', "True")),
+            input_device_index=input_device_index,
+        ).__dict__
+        return kwargs
+
     # TAG : config
     map_config_func = {
         'tts_coqui': get_tts_coqui_args,
         'tts_chat': get_tts_chat_args,
         'tts_edge': get_tts_edge_args,
         'tts_g': get_tts_g_args,
+        'silero_vad': get_silero_vad_args,
+        'webrtc_vad': get_webrtc_vad_args,
+        'webrtc_silero_vad': get_webrtc_silero_vad_args,
+        'pyannote_vad': get_pyannote_vad_args,
+        'rms_recorder': get_rms_recorder_args,
+        'wakeword_rms_recorder': get_rms_recorder_args,
+        'vad_recorder': get_vad_recorder_args,
+        'wakeword_vad_recorder': get_vad_recorder_args,
     }
 
     @staticmethod
@@ -359,13 +424,29 @@ CONF_ENV=local \
     ASR_LANG=zh \
     ASR_MODEL_NAME_OR_PATH=whisper-large-v3 \
     python -m src.cmd.init -o env2yaml
+CONF_ENV=local \
+    TTS_TAG=tts_edge \
+    VAD_DETECTOR_TAG=webrtc_silero_vad \
+    RECORDER_TAG=vad_recorder \
+    ASR_TAG=whisper_groq_asr \
+    ASR_LANG=zh \
+    ASR_MODEL_NAME_OR_PATH=whisper-large-v3 \
+    python -m src.cmd.init -o env2yaml
+CONF_ENV=local \
+    TTS_TAG=tts_edge \
+    VAD_DETECTOR_TAG=webrtc_silero_vad \
+    RECORDER_TAG=wakeword_vad_recorder \
+    ASR_TAG=whisper_groq_asr \
+    ASR_LANG=zh \
+    ASR_MODEL_NAME_OR_PATH=whisper-large-v3 \
+    python -m src.cmd.init -o env2yaml
 
 CONF_ENV=local python -m src.cmd.init -o init_engine -i config
 CONF_ENV=local python -m src.cmd.init -o gather_load_configs
 """
 if __name__ == "__main__":
-    os.environ['CONF_ENV'] = 'local'
-    os.environ['RECORDER_TAG'] = 'wakeword_rms_recorder'
+    # os.environ['CONF_ENV'] = 'local'
+    # os.environ['RECORDER_TAG'] = 'wakeword_rms_recorder'
 
     Logger.init(logging.INFO, is_file=False)
 

@@ -23,6 +23,8 @@ class Conf:
             return
         logging.info(f"name:{name}, obj:{obj} save to yaml")
         engine = obj()
+        if engine is None:
+            return
         if tag and tag not in engine.TAG:
             return
         # u can use local, dev, test, stress, gray, online
@@ -44,13 +46,14 @@ class Conf:
             async_tasks.append(async_task)
             # await async_task
         logging.debug(f"{async_tasks}, len(async_tasks):{len(async_tasks)}")
-        res = await asyncio.gather(*async_tasks, return_exceptions=True)
+        res = await asyncio.gather(*async_tasks, return_exceptions=False)
         manifests = {}
         items = []
         for item in res:
             if item is None:
                 continue
-            print("item------------>", item)
+
+            print("item------------>", type(item), item)
             items.append(item)
             name, file_path, _tag = item
             manifests[name] = {"file_path": file_path, "tag": _tag}
