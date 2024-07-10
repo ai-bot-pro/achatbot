@@ -45,6 +45,35 @@ TQDM_DISABLE=True \
     ASR_MODEL_NAME_OR_PATH=whisper-large-v3 \
     python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
 
+TQDM_DISABLE=True \
+    TTS_TAG=tts_edge \
+    VAD_DETECTOR_TAG=webrtc_silero_vad \
+    RECORDER_TAG=wakeword_vad_recorder \
+    ASR_TAG=whisper_groq_asr \
+    ASR_LANG=zh \
+    ASR_MODEL_NAME_OR_PATH=whisper-large-v3 \
+    python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
+
+TQDM_DISABLE=True \
+    VAD_DETECTOR_TAG=webrtc_silero_vad \
+    RECORDER_TAG=wakeword_vad_recorder \
+    ASR_TAG=sense_voice_asr \
+    ASR_LANG=zn \
+    ASR_MODEL_NAME_OR_PATH=./models/FunAudioLLM/SenseVoiceSmall \
+    TTS_TAG=tts_edge \
+    python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
+
+TQDM_DISABLE=True \
+    VAD_DETECTOR_TAG=webrtc_silero_vad \
+    RECORDER_TAG=wakeword_vad_recorder \
+    ASR_TAG=sense_voice_asr \
+    ASR_LANG=zn \
+    ASR_MODEL_NAME_OR_PATH=./models/FunAudioLLM/SenseVoiceSmall \
+    LLM_MODEL_NAME=qwen \
+    LLM_MODEL_PATH=./models/qwen2-1_5b-instruct-q8_0.gguf \
+    TTS_TAG=tts_edge \
+    python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
+
 INIT_TYPE=yaml_config TQDM_DISABLE=True \
     python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
 """

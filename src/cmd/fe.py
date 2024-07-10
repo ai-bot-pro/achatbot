@@ -26,6 +26,7 @@ class TerminalChatClient:
         self.player = init.initPlayerEngine()
         self.recorder = init.initRecorderEngine()
         self.waker = init.initWakerEngine()
+        self.vad = init.initVADEngine()
         self.start_record_event = threading.Event()
         self.play_chunks = []
         self.is_save_play_chunks = is_save_play_chunks
@@ -88,6 +89,7 @@ class TerminalChatClient:
 
                 logging.info(f"start record audio")
                 self.session.ctx.waker = self.waker
+                self.session.ctx.vad = self.vad
                 frames = asyncio.run(self.recorder.record_audio(self.session))
                 if len(frames) == 0:
                     logging.info(f"record_audio return empty, continue")

@@ -57,7 +57,6 @@ class VADRecorder(PyAudioRecorder):
 
         frames_duration_ms = 1000 * self.args.frames_per_buffer // self.args.rate
         num_padding_frames = self.args.padding_ms // frames_duration_ms
-        print("-->", self.args, frames_duration_ms, num_padding_frames)
         ring_buffer = collections.deque(maxlen=num_padding_frames)
         triggered = False
 
