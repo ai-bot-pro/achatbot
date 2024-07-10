@@ -384,3 +384,17 @@ class EdgeTTSArgs:
     rate: str = "+0%"
     volume: str = "+0%"
     pitch: str = "+0Hz"
+
+
+@dataclass
+class CosyVoiceTTSArgs:
+    r"""
+    For zero_shot/cross_lingual inference, please use CosyVoice-300M model.
+    For sft inference, please use CosyVoice-300M-SFT model.
+    For instruct inference, please use CosyVoice-300M-Instruct model.
+    """
+    model_dir: str = os.path.join(MODELS_DIR, "CosyVoice-300M-SFT")  # sft model
+    reference_audio_path: str = ""  # 16k sample rate audio file for base pt model
+    instruct_text: str = ""  # use with instruct model
+    spk_id: str = ""  # use with sft and instruct model
+    pass

@@ -4,3 +4,6 @@
 [submodule "deps/SenseVoice"]
 	path = deps/SenseVoice
 	url = https://github.com/weedge/SenseVoice.git
+[submodule "deps/CosyVoice"]
+	path = deps/CosyVoice
+	url = https://github.com/weedge/CosyVoice.git
