@@ -101,8 +101,10 @@ class Audio2AudioChatWorker:
                     continue
 
                 if len(text.strip()) == 0:
-                    raise Exception(
-                        f"tts_synthesize msg:{msg} text is empty sid:{session.ctx.client_id}")
+                    logging.info(
+                        f"tts_synthesize msg:{msg} text is empty,"
+                        f"sid:{session.ctx.client_id}")
+                    continue
                 logging.info(f"tts_text: {text}")
                 session.ctx.state["tts_text"] = text
                 audio_iter = self.tts.synthesize_sync(session)
