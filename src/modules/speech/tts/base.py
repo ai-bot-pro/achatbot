@@ -5,6 +5,7 @@ from queue import Queue
 from typing import AsyncGenerator, Generator
 
 import pyaudio
+import numpy as np
 
 from src.common.factory import EngineClass
 from src.common.session import Session
@@ -46,11 +47,14 @@ class BaseTTS(EngineClass):
                     yield item
                 else:
                     if item is None:
-                        yield bytes(buff)
+                        if len(buff) > 0:
+                            yield bytes(buff)
                         buff.clear()
                         scratch_buff.clear()
                         break
                     if len(buff) > chunk_length_in_bytes:
+                        logging.debug(
+                            f"len(buff) {len(buff)} > chunk_length_in_bytes {chunk_length_in_bytes} to yield")
                         scratch_buff = buff
                         yield bytes(scratch_buff)
                         buff.clear()
@@ -83,7 +87,30 @@ class BaseTTS(EngineClass):
             "The _inference method must be implemented by the derived subclass.")
 
     def _get_end_silence_chunk(self, session: Session, text: str) -> bytes:
-        b''
+        # Send silent audio
+        info = self.get_stream_info()
+        sample_rate = info["rate"]
+        np_dtype = info['np_dtype']
+
+        end_sentence_delimeters = ".。!！?？…。¡¿"
+        mid_sentence_delimeters = ";；:：,，\n（()）【[]】「{}」-“”„\"—/|《》"
+
+        silence_duration = 0.3
+        if text[-1] in end_sentence_delimeters:
+            if hasattr(self.args, "tts_sentence_silence_duration"):
+                silence_duration = self.args.tts_sentence_silence_duration
+        elif text[-1] in mid_sentence_delimeters:
+            if hasattr(self.args, "tts_comma_silence_duration"):
+                silence_duration = self.args.tts_comma_silence_duration
+        else:
+            if hasattr(self.args, "tts_default_silence_duration"):
+                silence_duration = self.args.tts_default_silence_duration
+
+        silent_samples = int(sample_rate * silence_duration)
+        silent_chunk = np.zeros(silent_samples, dtype=np_dtype)
+        res = silent_chunk.tobytes()
+        logging.debug(f"add silent_chunk {silent_chunk.shape},tobytes len {len(res)}")
+        return res
 
     def get_stream_info(self) -> dict:
         return {
@@ -91,6 +118,7 @@ class BaseTTS(EngineClass):
             "channels": 1,
             "rate": 22050,
             "sample_width": 2,
+            "np_dtype": np.int16,
         }
 
     def filter_special_chars(self, text: str) -> str:
