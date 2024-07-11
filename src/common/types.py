@@ -398,3 +398,6 @@ class CosyVoiceTTSArgs:
     instruct_text: str = ""  # use with instruct model
     spk_id: str = ""  # use with sft and instruct model
     language: str = "zh"
+    tts_default_silence_duration: float = 0.3
+    tts_comma_silence_duration: float = 0.3
+    tts_sentence_silence_duration: float = 0.6

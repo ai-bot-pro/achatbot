@@ -26,7 +26,7 @@ TTS_TAG=tts_cosy_voice \
   python -m src.cmd.remote-queue-chat.generate_audio2audio > ./log/fe_std_out.log
 
 # sense_voice (asr) -> qwen (llm) -> cosy_voice (tts)
-!RUN_OP=be \
+RUN_OP=be \
   TQDM_DISABLE=True \
   REDIS_PASSWORD=$redis_pwd \
   ASR_TAG=sense_voice_asr \

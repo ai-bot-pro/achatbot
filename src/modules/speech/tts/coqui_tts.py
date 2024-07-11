@@ -75,6 +75,7 @@ class CoquiTTS(BaseTTS, ITts):
             "channels": 1,
             "rate": self.config.audio.output_sample_rate,
             "sample_width": 4,
+            "np_dtype": np.float32,
         }
 
     async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
@@ -159,25 +160,6 @@ class CoquiTTS(BaseTTS, ITts):
                 f"seconds to first chunk: {seconds_to_first_chunk:.2f}s"
                 f" raw_inference_factor: {raw_inference_factor:.2f}x"
             )
-
-    def _get_end_silence_chunk(self, session: Session, text: str) -> bytes:
-        # Send silent audio
-        sample_rate = self.config.audio.sample_rate
-
-        end_sentence_delimeters = ".。!！?？…。¡¿"
-        mid_sentence_delimeters = ";；:：,，\n（()）【[]】「{}」-“”„\"—/|《》"
-
-        if text[-1] in end_sentence_delimeters:
-            silence_duration = self.args.tts_sentence_silence_duration
-        elif text[-1] in mid_sentence_delimeters:
-            silence_duration = self.args.tts_comma_silence_duration
-        else:
-            silence_duration = self.args.tts_default_silence_duration
-
-        silent_samples = int(sample_rate * silence_duration)
-        silent_chunk = np.zeros(silent_samples, dtype=np.float32)
-        logging.debug(f"add silent_chunk {silent_chunk.shape}")
-        return silent_chunk.tobytes()
 
     def get_voices(self):
         voices_list = []

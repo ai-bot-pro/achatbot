@@ -3,6 +3,7 @@ from typing import AsyncGenerator, Iterator
 
 import pyaudio
 import torch
+import numpy as np
 
 from src.common.interface import ITts
 from src.common.session import Session
@@ -84,6 +85,7 @@ class ChatTTS(BaseTTS, ITts):
             "channels": 1,
             "rate": 24000,
             "sample_width": 4,
+            "np_dtype": np.float32,
         }
 
     async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:

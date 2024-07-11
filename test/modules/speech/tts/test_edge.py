@@ -24,7 +24,7 @@ class TestEdgeTTS(unittest.TestCase):
         cls.tts_tag = os.getenv('TTS_TAG', "tts_edge")
         cls.tts_text = os.getenv(
             'TTS_TEXT', "hello, 你好，我是机器人, 有什么可以帮助您的吗？请告诉我您需要的信息或问题，我会尽力为您解答。")
-        Logger.init(logging.INFO, is_file=False)
+        Logger.init(logging.DEBUG, is_file=False)
 
     @classmethod
     def tearDownClass(cls):
