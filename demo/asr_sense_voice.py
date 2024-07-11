@@ -9,7 +9,7 @@ print(m, kwargs)
 
 start = time.time()
 res = m.inference(
-    #data_in="https://isv-data.oss-cn-hangzhou.aliyuncs.com/ics/MaaS/ASR/test_audio/asr_example_zh.wav",
+    # data_in="https://isv-data.oss-cn-hangzhou.aliyuncs.com/ics/MaaS/ASR/test_audio/asr_example_zh.wav",
     data_in="./records/asr_example_zh.wav",
     language="auto",  # "zn", "en", "yue", "ja", "ko", "nospeech"
     use_itn=False,

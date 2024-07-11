@@ -9,7 +9,8 @@ from src.modules.speech.tts.cosy_voice_tts import CosyVoiceTTS
 from src.common.factory import EngineFactory, EngineClass
 from src.common.logger import Logger
 from src.common.session import Session
-from src.common.types import SessionCtx, CosyVoiceTTSArgs, MODELS_DIR
+from src.common.utils.audio_utils import save_audio_to_file
+from src.common.types import SessionCtx, CosyVoiceTTSArgs, MODELS_DIR, RECORDS_DIR
 import src.modules.speech
 
 r"""
@@ -43,7 +44,38 @@ class TestCosyVoiceTTS(unittest.TestCase):
         self.tts: CosyVoiceTTS = EngineFactory.get_engine_by_tag(
             EngineClass, self.tts_tag, **kwargs)
         self.session = Session(**SessionCtx("test_tts_client_id").__dict__)
+        self.pyaudio_instance = None
+        self.audio_stream = None
 
+    def tearDown(self):
+        self.audio_stream and self.audio_stream.stop_stream()
+        self.audio_stream and self.audio_stream.close()
+        self.pyaudio_instance and self.pyaudio_instance.terminate()
+
+    def test_get_voices(self):
+        voices = self.tts.get_voices()
+        self.assertGreater(len(voices), 0)
+        print(voices)
+
+    def test_synthesize(self):
+        stream_info = self.tts.get_stream_info()
+        self.session.ctx.state["tts_text"] = self.tts_text
+        print(self.session.ctx)
+        iter = self.tts.synthesize_sync(self.session)
+        res = bytearray()
+        for i, chunk in enumerate(iter):
+            print(i, len(chunk))
+            res.extend(chunk)
+        path = asyncio.run(save_audio_to_file(
+            res,
+            f"test_{self.tts.TAG}.wav",
+            sample_rate=stream_info["rate"],
+            sample_width=stream_info["sample_width"],
+            channles=stream_info["channels"],
+        ))
+        print(path)
+
+    def test_synthesize_speak(self):
         stream_info = self.tts.get_stream_info()
         self.pyaudio_instance = pyaudio.PyAudio()
         self.audio_stream = self.pyaudio_instance.open(
@@ -53,17 +85,6 @@ class TestCosyVoiceTTS(unittest.TestCase):
             output_device_index=None,
             output=True)
 
-    def tearDown(self):
-        self.audio_stream.stop_stream()
-        self.audio_stream.close()
-        self.pyaudio_instance.terminate()
-
-    def test_get_voices(self):
-        voices = self.tts.get_voices()
-        self.assertGreater(len(voices), 0)
-        print(voices)
-
-    def test_synthesize(self):
         self.session.ctx.state["tts_text"] = self.tts_text
         print(self.session.ctx)
         iter = self.tts.synthesize_sync(self.session)

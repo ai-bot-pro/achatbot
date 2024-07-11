@@ -7,7 +7,7 @@ import random
 import torch
 import pyaudio
 import numpy as np
-# import torchaudio
+import torchaudio
 
 from src.common.device_cuda import CUDAInfo
 from src.common.interface import ITts
@@ -92,7 +92,10 @@ class CoquiTTS(BaseTTS, ITts):
                 speed=self.args.tts_speed,
                 num_beams=self.args.tts_num_beams,
             )
+
             tensor_wave = torch.tensor(out["wav"]).unsqueeze(0).cpu()
+            logging.debug(
+                f"{self.TAG} inference out tensor {torch.tensor(out['wav']).shape}, tensor_wave: {tensor_wave.shape}")
             # torchaudio.save("records/tts_coqui_infer_zh_test.wav", tensor_wave, 24000)
 
             res = postprocess_tts_wave(tensor_wave)

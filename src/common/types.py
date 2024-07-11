@@ -397,4 +397,4 @@ class CosyVoiceTTSArgs:
     reference_audio_path: str = ""  # 16k sample rate audio file for base pt model
     instruct_text: str = ""  # use with instruct model
     spk_id: str = ""  # use with sft and instruct model
-    pass
+    language: str = "zh"
