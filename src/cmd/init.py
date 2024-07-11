@@ -17,6 +17,7 @@ from src.common.types import (
     WebRTCSileroVADArgs,
     AudioRecoderArgs,
     VADRecoderArgs,
+    CosyVoiceTTSArgs,
 )
 # need import engine class -> EngineClass.__subclasses__
 import src.modules.speech
@@ -48,6 +49,12 @@ class PlayStreamInit():
             "sample_width": 2,
         },
         'tts_g': {
+            "format": pyaudio.paInt16,
+            "channels": 1,
+            "rate": 22050,
+            "sample_width": 2,
+        },
+        'tts_cosy_voice': {
             "format": pyaudio.paInt16,
             "channels": 1,
             "rate": 22050,
@@ -194,6 +201,11 @@ class Env(PromptInit, PlayStreamInit):
         return engine
 
     @staticmethod
+    def get_tts_cosy_voice_args() -> dict:
+        kwargs = CosyVoiceTTSArgs().__dict__
+        return kwargs
+
+    @staticmethod
     def get_tts_coqui_args() -> dict:
         kwargs = {}
         kwargs["model_path"] = os.getenv('TTS_MODEL_PATH', os.path.join(
@@ -291,6 +303,7 @@ class Env(PromptInit, PlayStreamInit):
     # TAG : config
     map_config_func = {
         'tts_coqui': get_tts_coqui_args,
+        'tts_cosy_voice': get_tts_cosy_voice_args,
         'tts_chat': get_tts_chat_args,
         'tts_edge': get_tts_edge_args,
         'tts_g': get_tts_g_args,
