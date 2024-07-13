@@ -5,6 +5,9 @@ import grpc
 from src.cmd.grpc.idl.tts_pb2 import SynthesizeRequest, SynthesizeResponse
 from src.cmd.grpc.idl.tts_pb2_grpc import TTSStub
 from src.cmd.grpc.interceptors.authentication_client import add_authentication
+from src.common.logger import Logger
+
+Logger.init(logging.INFO, app_name="chat-bot-tts-client", is_file=True, is_console=False)
 
 
 def synthesize_us(channel):

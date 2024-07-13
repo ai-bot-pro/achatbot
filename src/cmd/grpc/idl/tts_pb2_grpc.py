@@ -39,6 +39,11 @@ class TTSStub(object):
         Args:
             channel: A grpc.Channel.
         """
+        self.LoadModel = channel.unary_stream(
+            '/chat_bot.tts.TTS/LoadModel',
+            request_serializer=tts__pb2.LoadModelRequest.SerializeToString,
+            response_deserializer=tts__pb2.LoadModelResponse.FromString,
+            _registered_method=True)
         self.SynthesizeUS = channel.unary_stream(
             '/chat_bot.tts.TTS/SynthesizeUS',
             request_serializer=tts__pb2.SynthesizeRequest.SerializeToString,
@@ -49,6 +54,12 @@ class TTSStub(object):
 class TTSServicer(object):
     """Missing associated documentation comment in .proto file."""
 
+    def LoadModel(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def SynthesizeUS(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -58,6 +69,11 @@ class TTSServicer(object):
 
 def add_TTSServicer_to_server(servicer, server):
     rpc_method_handlers = {
+        'LoadModel': grpc.unary_stream_rpc_method_handler(
+            servicer.LoadModel,
+            request_deserializer=tts__pb2.LoadModelRequest.FromString,
+            response_serializer=tts__pb2.LoadModelResponse.SerializeToString,
+        ),
         'SynthesizeUS': grpc.unary_stream_rpc_method_handler(
             servicer.SynthesizeUS,
             request_deserializer=tts__pb2.SynthesizeRequest.FromString,
@@ -74,6 +90,33 @@ def add_TTSServicer_to_server(servicer, server):
 
 class TTS(object):
     """Missing associated documentation comment in .proto file."""
+
+    @staticmethod
+    def LoadModel(request,
+                  target,
+                  options=(),
+                  channel_credentials=None,
+                  call_credentials=None,
+                  insecure=False,
+                  compression=None,
+                  wait_for_ready=None,
+                  timeout=None,
+                  metadata=None):
+        return grpc.experimental.unary_stream(
+            request,
+            target,
+            '/chat_bot.tts.TTS/LoadModel',
+            tts__pb2.LoadModelRequest.SerializeToString,
+            tts__pb2.LoadModelResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
 
     @staticmethod
     def SynthesizeUS(request,
