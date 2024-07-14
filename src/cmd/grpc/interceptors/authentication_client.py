@@ -68,7 +68,7 @@ class AuthenticationInterceptor(
 
 def add_authentication(header, value):
     def postprocess(response):
-        logging.debug(f"response: {response}")
+        logging.debug(f"postprocess response: {response}")
         return response
 
     def intercept_call(client_call_details,

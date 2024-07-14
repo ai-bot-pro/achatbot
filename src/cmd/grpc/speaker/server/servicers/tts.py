@@ -1,4 +1,5 @@
 import logging
+import json
 
 import grpc
 import uuid
@@ -15,8 +16,9 @@ import src.modules.speech.tts
 
 
 def get_session_id(context: grpc.ServicerContext):
-    if context.invocation_metadata.key == "client_id":
-        return context.invocation_metadata.key
+    for item in context.invocation_metadata():
+        if item.key == "client_id":
+            return item.value
     return uuid.uuid4()
 
 
@@ -26,17 +28,21 @@ class TTS(TTSServicer):
         self.tts = None
 
     def LoadModel(self, request: LoadModelRequest, context: grpc.ServicerContext):
-        kwargs = request.kwargs
-        if self.tts is not None and request.is_reload is False:
+        logging.debug(f"LoadModel request: {request}")
+        kwargs = json.loads(request.json_kwargs)
+        logging.debug(f"LoadModel kwargs: {kwargs}")
+        if self.tts is not None and request.is_reload == False:
+            logging.debug(f"Already initialized {self.tts.TAG} args: {self.tts.args} -> {self.tts}")
             return LoadModelResponse()
         self.tts: EngineClass | ITts = EngineFactory.get_engine_by_tag(
-            EngineClass, self.tts_tag, **kwargs)
+            EngineClass, request.tts_tag, **kwargs)
+        logging.debug(f"init {self.tts.TAG} args:{self.tts.args} -> {self.tts}")
         return LoadModelResponse()
 
     def SynthesizeUS(self,
                      request: SynthesizeRequest,
                      context: grpc.ServicerContext):
-        logging.info(f"SynthesizeUS request: {request}")
+        logging.debug(f"SynthesizeUS request: {request}")
         self.session = Session(**SessionCtx(get_session_id(context)).__dict__)
         self.session.ctx.state["tts_text"] = request.tts_text
         iter = self.tts.synthesize_sync(self.session)

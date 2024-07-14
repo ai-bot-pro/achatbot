@@ -1,42 +1,79 @@
+import traceback
 import logging
+import json
+import time
+import os
 
 import grpc
+import uuid
 
-from src.cmd.grpc.idl.tts_pb2 import SynthesizeRequest, SynthesizeResponse
+from src.cmd.grpc.idl.tts_pb2 import (
+    LoadModelRequest, LoadModelResponse,
+    SynthesizeRequest, SynthesizeResponse,
+)
 from src.cmd.grpc.idl.tts_pb2_grpc import TTSStub
 from src.cmd.grpc.interceptors.authentication_client import add_authentication
 from src.common.logger import Logger
+from src.common.types import SessionCtx
+from src.common.session import Session
+from src.cmd.init import Env
 
-Logger.init(logging.INFO, app_name="chat-bot-tts-client", is_file=True, is_console=False)
+Logger.init(logging.DEBUG, app_name="chat-bot-tts-client", is_file=True, is_console=True)
+
+
+def load_model(channel):
+    tag = os.getenv("TTS_TAG", "tts_edge")
+    is_reload = bool(os.getenv("IS_RELOAD", None))
+    kwargs = Env.map_config_func[tag]()
+    tts_stub = TTSStub(channel)
+    request = LoadModelRequest(tts_tag=tag, is_reload=is_reload, json_kwargs=json.dumps(kwargs))
+    logging.debug(request)
+    response = tts_stub.LoadModel(request)
+    logging.debug(response)
 
 
 def synthesize_us(channel):
     tts_stub = TTSStub(channel)
-    request_data = SynthesizeRequest(tts_tag="tts_edge", tts_text="hello world", kawa_params={})
+    request_data = SynthesizeRequest(tts_text="你好，我是机器人")
     response_iterator = tts_stub.SynthesizeUS(request_data)
     for response in response_iterator:
-        print(len(response.tts_audio))
+        yield response.tts_audio
 
 
 logging.basicConfig(level=logging.DEBUG)
 
-# python -m src.cmd.grpc.speaker.client 2> ./log/tts_cli_err.log
+"""
+TTS_TAG=tts_edge python -m src.cmd.grpc.speaker.client
+TTS_TAG=tts_g IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+TTS_TAG=tts_coqui IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+TTS_TAG=tts_chat IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+TTS_TAG=tts_cosy_voice IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+"""
 if __name__ == "__main__":
     try:
+        client_id = uuid.uuid4()
+        session = Session(**SessionCtx(client_id).__dict__)
         # todo: up to the rpc gateway to auth
         token = "oligei-tts"
         authentication = add_authentication('authorization', token)
-        channel = grpc.insecure_channel('localhost:50052')
+        port = os.getenv('PORT', "50052")
+        channel = grpc.insecure_channel(f'localhost:{port}')
         channel = grpc.intercept_channel(channel, authentication)
 
-        ops = [synthesize_us]
-        for op in ops:
-            print(f"--{op}--")
-            try:
-                op(channel)
-            except grpc.RpcError as e:
-                logging.error(e)
+        load_model(channel)
+        tts_audio_iter = synthesize_us(channel)
+
+        player = Env.initPlayerEngine()
+        player.start(session)
+        for tts_audio in tts_audio_iter:
+            logging.debug(f"play tts_chunk len:{len(tts_audio)}")
+            session.ctx.state["tts_chunk"] = tts_audio
+            player.play_audio(session)
+        player.stop(session)
+    except grpc.RpcError as e:
+        logging.error(f"grpc.RpcError: {e}")
     except Exception as e:
-        logging.error(f"Exception: {e}")
+        tb_str = traceback.format_exc()
+        logging.error(f"Exception: {e}; traceback: {tb_str}")
     finally:
         channel and channel.close()

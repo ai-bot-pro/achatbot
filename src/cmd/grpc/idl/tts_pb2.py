@@ -14,25 +14,21 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ttts.proto\x12\x0c\x63hat_bot.tts\"\xa1\x01\n\x10LoadModelRequest\x12\x0f\n\x07tts_tag\x18\x01 \x01(\t\x12\x11\n\tis_reload\x18\x02 \x01(\x08\x12:\n\x06kwargs\x18\x03 \x03(\x0b\x32*.chat_bot.tts.LoadModelRequest.KwargsEntry\x1a-\n\x0bKwargsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"\x13\n\x11LoadModelResponse\"%\n\x11SynthesizeRequest\x12\x10\n\x08tts_text\x18\x01 \x01(\t\"\'\n\x12SynthesizeResponse\x12\x11\n\ttts_audio\x18\x01 \x01(\x0c\x32\xae\x01\n\x03TTS\x12P\n\tLoadModel\x12\x1e.chat_bot.tts.LoadModelRequest\x1a\x1f.chat_bot.tts.LoadModelResponse\"\x00\x30\x01\x12U\n\x0cSynthesizeUS\x12\x1f.chat_bot.tts.SynthesizeRequest\x1a .chat_bot.tts.SynthesizeResponse\"\x00\x30\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ttts.proto\x12\x0c\x63hat_bot.tts\"K\n\x10LoadModelRequest\x12\x0f\n\x07tts_tag\x18\x01 \x01(\t\x12\x11\n\tis_reload\x18\x02 \x01(\x08\x12\x13\n\x0bjson_kwargs\x18\x03 \x01(\t\"\x13\n\x11LoadModelResponse\"%\n\x11SynthesizeRequest\x12\x10\n\x08tts_text\x18\x01 \x01(\t\"\'\n\x12SynthesizeResponse\x12\x11\n\ttts_audio\x18\x01 \x01(\x0c\x32\xac\x01\n\x03TTS\x12N\n\tLoadModel\x12\x1e.chat_bot.tts.LoadModelRequest\x1a\x1f.chat_bot.tts.LoadModelResponse\"\x00\x12U\n\x0cSynthesizeUS\x12\x1f.chat_bot.tts.SynthesizeRequest\x1a .chat_bot.tts.SynthesizeResponse\"\x00\x30\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'tts_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_LOADMODELREQUEST_KWARGSENTRY']._loaded_options = None
-  _globals['_LOADMODELREQUEST_KWARGSENTRY']._serialized_options = b'8\001'
-  _globals['_LOADMODELREQUEST']._serialized_start=28
-  _globals['_LOADMODELREQUEST']._serialized_end=189
-  _globals['_LOADMODELREQUEST_KWARGSENTRY']._serialized_start=144
-  _globals['_LOADMODELREQUEST_KWARGSENTRY']._serialized_end=189
-  _globals['_LOADMODELRESPONSE']._serialized_start=191
-  _globals['_LOADMODELRESPONSE']._serialized_end=210
-  _globals['_SYNTHESIZEREQUEST']._serialized_start=212
-  _globals['_SYNTHESIZEREQUEST']._serialized_end=249
-  _globals['_SYNTHESIZERESPONSE']._serialized_start=251
-  _globals['_SYNTHESIZERESPONSE']._serialized_end=290
-  _globals['_TTS']._serialized_start=293
-  _globals['_TTS']._serialized_end=467
+  _globals['_LOADMODELREQUEST']._serialized_start=27
+  _globals['_LOADMODELREQUEST']._serialized_end=102
+  _globals['_LOADMODELRESPONSE']._serialized_start=104
+  _globals['_LOADMODELRESPONSE']._serialized_end=123
+  _globals['_SYNTHESIZEREQUEST']._serialized_start=125
+  _globals['_SYNTHESIZEREQUEST']._serialized_end=162
+  _globals['_SYNTHESIZERESPONSE']._serialized_start=164
+  _globals['_SYNTHESIZERESPONSE']._serialized_end=203
+  _globals['_TTS']._serialized_start=206
+  _globals['_TTS']._serialized_end=378
 # @@protoc_insertion_point(module_scope)

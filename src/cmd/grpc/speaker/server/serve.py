@@ -9,7 +9,7 @@ from src.cmd.grpc.idl.tts_pb2_grpc import add_TTSServicer_to_server
 from src.cmd.grpc.interceptors.authentication_server import AuthenticationInterceptor
 from src.cmd.grpc.speaker.server.servicers.tts import TTS
 
-Logger.init(logging.DEBUG, app_name="chat-bot-tts-serve", is_file=True, is_console=False)
+Logger.init(logging.DEBUG, app_name="chat-bot-tts-serve", is_file=True, is_console=True)
 
 
 def serve() -> None:
@@ -28,10 +28,10 @@ def serve() -> None:
     add_TTSServicer_to_server(TTS(), server)
     server.add_insecure_port(f"[::]:{port}")
     server.start()
-    logging.info("Server started")
+    logging.info(f"Server started port: {port}")
     server.wait_for_termination()
 
 
-# python -m src.cmd.grpc.speaker.server.serve 2> .log/tts_serve_err.log
+# python -m src.cmd.grpc.speaker.server.serve
 if __name__ == "__main__":
     serve()

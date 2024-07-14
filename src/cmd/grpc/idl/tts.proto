@@ -15,7 +15,7 @@ package chat_bot.tts;
 message LoadModelRequest {
   string tts_tag = 1;
   bool is_reload = 2;
-  map<string, string> kwargs = 4;
+  string json_kwargs = 3;
 }
 
 message LoadModelResponse {}
@@ -25,6 +25,6 @@ message SynthesizeRequest { string tts_text = 1; }
 message SynthesizeResponse { bytes tts_audio = 1; }
 
 service TTS {
-  rpc LoadModel(LoadModelRequest) returns (stream LoadModelResponse) {}
+  rpc LoadModel(LoadModelRequest) returns (LoadModelResponse) {}
   rpc SynthesizeUS(SynthesizeRequest) returns (stream SynthesizeResponse) {}
 }

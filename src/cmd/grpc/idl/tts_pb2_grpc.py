@@ -39,7 +39,7 @@ class TTSStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.LoadModel = channel.unary_stream(
+        self.LoadModel = channel.unary_unary(
             '/chat_bot.tts.TTS/LoadModel',
             request_serializer=tts__pb2.LoadModelRequest.SerializeToString,
             response_deserializer=tts__pb2.LoadModelResponse.FromString,
@@ -69,7 +69,7 @@ class TTSServicer(object):
 
 def add_TTSServicer_to_server(servicer, server):
     rpc_method_handlers = {
-        'LoadModel': grpc.unary_stream_rpc_method_handler(
+        'LoadModel': grpc.unary_unary_rpc_method_handler(
             servicer.LoadModel,
             request_deserializer=tts__pb2.LoadModelRequest.FromString,
             response_serializer=tts__pb2.LoadModelResponse.SerializeToString,
@@ -102,7 +102,7 @@ class TTS(object):
                   wait_for_ready=None,
                   timeout=None,
                   metadata=None):
-        return grpc.experimental.unary_stream(
+        return grpc.experimental.unary_unary(
             request,
             target,
             '/chat_bot.tts.TTS/LoadModel',
