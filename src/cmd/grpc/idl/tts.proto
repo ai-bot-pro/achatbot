@@ -1,0 +1,30 @@
+// https://protobuf.dev/programming-guides/proto3
+/*
+python -m grpc_tools.protoc \
+  --proto_path=./src/cmd/grpc/idl \
+  --python_out=./src/cmd/grpc/idl \
+  --pyi_out=./src/cmd/grpc/idl \
+  --grpc_python_out=./src/cmd/grpc/idl \
+  ./src/cmd/grpc/idl/tts.proto
+*/
+
+syntax = "proto3";
+
+package chat_bot.tts;
+
+message LoadModelRequest {
+  string tts_tag = 1;
+  bool is_reload = 2;
+  string json_kwargs = 3;
+}
+
+message LoadModelResponse {}
+
+message SynthesizeRequest { string tts_text = 1; }
+
+message SynthesizeResponse { bytes tts_audio = 1; }
+
+service TTS {
+  rpc LoadModel(LoadModelRequest) returns (LoadModelResponse) {}
+  rpc SynthesizeUS(SynthesizeRequest) returns (stream SynthesizeResponse) {}
+}

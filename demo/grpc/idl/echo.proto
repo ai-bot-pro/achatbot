@@ -1,0 +1,19 @@
+/*
+python -m grpc_tools.protoc --proto_path=./demo/grpc/idl \
+    --python_out=./demo/grpc/idl --pyi_out=./demo/grpc/idl \
+    --grpc_python_out=./demo/grpc/idl ./demo/grpc/idl/echo.proto
+*/
+
+syntax = "proto3";
+package demo;
+
+message EchoRequest { string name = 1; }
+
+message EchoResponse { string echo = 1; }
+
+service Echo {
+  rpc EchoUU(EchoRequest) returns (EchoResponse);
+  rpc EchoSU(stream EchoRequest) returns (EchoResponse);
+  rpc EchoUS(EchoRequest) returns (stream EchoResponse);
+  rpc EchoSS(stream EchoRequest) returns (stream EchoResponse);
+}
