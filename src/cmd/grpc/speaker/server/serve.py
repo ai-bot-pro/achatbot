@@ -1,12 +1,12 @@
-import grpc
 from concurrent import futures
 import logging
 import os
 
+import grpc
 
 from src.common.logger import Logger
-from src.cmd.grpc.idl.tts_pb2_grpc import add_TTSServicer_to_server
-from src.cmd.grpc.interceptors.authentication_server import AuthenticationInterceptor
+from src.common.grpc.idl.tts_pb2_grpc import add_TTSServicer_to_server
+from src.common.grpc.interceptors.authentication_server import AuthenticationInterceptor
 from src.cmd.grpc.speaker.server.servicers.tts import TTS
 
 Logger.init(logging.DEBUG, app_name="chat-bot-tts-serve", is_file=True, is_console=True)

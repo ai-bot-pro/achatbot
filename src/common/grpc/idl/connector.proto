@@ -1,0 +1,22 @@
+// https://protobuf.dev/programming-guides/proto3
+/*
+python -m grpc_tools.protoc \
+  --proto_path=./src/common/grpc/idl \
+  --python_out=./src/common/grpc/idl \
+  --pyi_out=./src/common/grpc/idl \
+  --grpc_python_out=./src/common/grpc/idl \
+  ./src/common/grpc/idl/connector.proto
+*/
+
+syntax = "proto3";
+
+package chat_bot.connector;
+
+message ConnectStreamRequest { bytes frame = 1; }
+
+message ConnectStreamResponse { bytes frame = 1; }
+
+service Connector {
+  rpc ConnectStream(stream ConnectStreamRequest)
+      returns (stream ConnectStreamResponse) {}
+}

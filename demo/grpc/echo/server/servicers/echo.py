@@ -1,3 +1,7 @@
+import time
+import queue
+import threading
+
 import grpc
 
 from demo.grpc.idl.echo_pb2_grpc import EchoServicer
@@ -18,5 +22,20 @@ class Echo(EchoServicer):
         yield EchoResponse(echo=f"stream response: {request.name}!")
 
     def EchoSS(self, request_iterator, context: grpc.ServicerContext):
-        for request in request_iterator:
-            yield EchoResponse(echo=f"Welcome, {request.name}!")
+        q = queue.Queue()
+
+        def in_yield(request_iterator, q: queue.Queue):
+            for request in request_iterator:
+                q.put(request.name)
+
+        in_thread = threading.Thread(target=in_yield, args=(request_iterator, q,))
+        in_thread.start()
+
+        cn = 1
+        while True:
+            request_name = q.get()
+            yield EchoResponse(echo=f"welcome {request_name},serve echo {cn}")
+            time.sleep(1)
+            cn += 1
+
+        in_thread.join()

@@ -4,8 +4,8 @@ import json
 import grpc
 import uuid
 
-from src.cmd.grpc.idl.tts_pb2_grpc import TTSServicer
-from src.cmd.grpc.idl.tts_pb2 import (
+from src.common.grpc.idl.tts_pb2_grpc import TTSServicer
+from src.common.grpc.idl.tts_pb2 import (
     LoadModelRequest, LoadModelResponse,
     SynthesizeRequest, SynthesizeResponse,
 )

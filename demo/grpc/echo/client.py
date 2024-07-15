@@ -1,4 +1,5 @@
 import logging
+import time
 
 import grpc
 
@@ -36,15 +37,17 @@ def echo_us(channel):
         print(response.echo)
 
 
+def echo_iter():
+    cn = 1
+    while True:
+        yield EchoRequest(name=f"client_echo_iter{cn}")
+        cn += 1
+        time.sleep(1)
+
+
 def echo_ss(channel):
     echo_stub = EchoStub(channel)
-    request_iterator = iter(
-        [
-            EchoRequest(name="xiaohei"),
-            EchoRequest(name="xiaowu")
-        ]
-    )
-    response_iterator = echo_stub.EchoSS(request_iterator)
+    response_iterator = echo_stub.EchoSS(echo_iter())
     for response in response_iterator:
         print(response.echo)
 
