@@ -26,29 +26,32 @@ class Connector(ConnectorServicer):
 
     def ConnectStream(self, request_iterator, context):
         def recv_to_queue(request_iterator):
-            logging.debug("ConnectStream api recv_to_queue thread start")
-            for request in request_iterator:
-                if request.frame is None:
-                    logging.debug("connectStream request frame is None, break")
-                    self.is_active = False
-                    break
-                logging.debug(f"be in_q put ----> len(request.frame):{len(request.frame)}")
-                self.in_q.put(request.frame)
+            logging.info("ConnectStream api recv_to_queue thread start")
+            try:
+                for request in request_iterator:
+                    if request.frame is None:
+                        logging.debug("connectStream request frame is None, break")
+                        self.is_active = False
+                        break
+                    logging.debug(f"be in_q put ----> len(request.frame):{len(request.frame)}")
+                    self.in_q.put(request.frame)
+            except Exception as e:
+                logging.error(f"ConnectStream api recv_to_queue error:{e}")
 
-        if self.recv_thread is None or self.recv_thread.is_alive() is False:
-            self.recv_thread = threading.Thread(
-                target=recv_to_queue, args=(request_iterator,))
-            self.recv_thread.start()
-            self.is_active = True
+        # if self.recv_thread is None or self.recv_thread.is_alive() is False:
+        self.recv_thread = threading.Thread(
+            target=recv_to_queue, args=(request_iterator,))
+        self.recv_thread.start()
+        self.is_active = True
 
-            logging.debug("ConnectStream api wait out_q frame to yield")
-            while self.is_active:
-                frame = self.out_q.get()
-                if frame is None:
-                    logging.debug("connectStream response frame is None, break")
-                    break
-                logging.debug(f"be out_q put ----> len(frame):{len(frame)}")
-                yield ConnectStreamResponse(frame=frame)
+        logging.info("ConnectStream api wait out_q frame to yield")
+        while self.is_active:
+            frame = self.out_q.get()
+            if frame is None:
+                logging.debug("connectStream response frame is None, break")
+                break
+            logging.debug(f"be out_q put ----> len(frame):{len(frame)}")
+            yield ConnectStreamResponse(frame=frame)
 
     def close(self):
         self.out_q.put(None)
