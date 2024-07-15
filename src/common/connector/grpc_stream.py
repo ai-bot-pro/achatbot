@@ -7,10 +7,12 @@ from src.common.grpc.connector.client import StreamClient
 
 
 class GrpcStreamClientConnector(IConnector):
-    def __init__(self) -> None:
+    def __init__(self, target="localhost:50052") -> None:
         self.in_q = queue.Queue()
         self.out_q = queue.Queue()
-        self.cli = StreamClient(in_q=self.in_q, out_q=self.out_q)
+        self.cli = StreamClient(
+            in_q=self.in_q, out_q=self.out_q,
+            target=target)
         self.cli.start()
 
     def send(self, data, at: str = "fe"):
@@ -29,17 +31,18 @@ class GrpcStreamClientConnector(IConnector):
 
 
 class GrpcStreamServeConnector(IConnector):
-    def __init__(self) -> None:
+    def __init__(self, port="50052") -> None:
         self.in_q = queue.Queue()
         self.out_q = queue.Queue()
-        self.serve = StreamServe(in_q=self.in_q, out_q=self.out_q)
+        self.serve = StreamServe(in_q=self.in_q, out_q=self.out_q, port=port)
+        self.serve.start()
 
     def send(self, data, at: str = "be"):
         data = pickle.dumps(data)
-        self.in_q.put(data)
+        self.out_q.put(data)
 
     def recv(self, at: str = "be"):
-        res = self.out_q.get()
+        res = self.in_q.get()
         if res is None:
             return None
 

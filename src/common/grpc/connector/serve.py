@@ -26,8 +26,14 @@ class Connector(ConnectorServicer):
 
     def ConnectStream(self, request_iterator, context):
         def recv_to_queue(request_iterator):
+            logging.debug("ConnectStream api recv_to_queue thread start")
             for request in request_iterator:
-                self.in_q.put(request)
+                if request.frame is None:
+                    logging.debug("connectStream request frame is None, break")
+                    self.is_active = False
+                    break
+                logging.debug(f"be in_q put ----> len(request.frame):{len(request.frame)}")
+                self.in_q.put(request.frame)
 
         if self.recv_thread is None or self.recv_thread.is_alive() is False:
             self.recv_thread = threading.Thread(
@@ -35,11 +41,17 @@ class Connector(ConnectorServicer):
             self.recv_thread.start()
             self.is_active = True
 
+            logging.debug("ConnectStream api wait out_q frame to yield")
             while self.is_active:
                 frame = self.out_q.get()
+                if frame is None:
+                    logging.debug("connectStream response frame is None, break")
+                    break
+                logging.debug(f"be out_q put ----> len(frame):{len(frame)}")
                 yield ConnectStreamResponse(frame=frame)
 
     def close(self):
+        self.out_q.put(None)
         self.is_active = False
         if self.recv_thread is not None and self.recv_thread.is_alive():
             self.recv_thread.join()
@@ -47,32 +59,17 @@ class Connector(ConnectorServicer):
 
 class StreamServe():
     def __init__(self, in_q: queue.Queue, out_q: queue.Queue,
+                 token="chat-bot-connenctor",
                  port="50052", max_workers=1) -> None:
-        self.in_q = in_q
-        self.out_q = out_q
+        self.token = token
         self.port = port
         self.max_workers = max_workers
-        self.serve_thread: threading.Thread = None
         self.connector = Connector(in_q, out_q)
+        self.serve_thread: threading.Thread = None
 
-    def start(self):
-        if self.serve_thread is None or self.serve_thread.is_alive() is False:
-            self.serve_thread = threading.Thread(target=self._serve, args=())
-            self.serve_thread.start()
-
-    def stop(self):
-        if self.serve_thread is not None or self.serve_thread.is_alive():
-            self.serve_thread.join()
-
-    def close(self):
-        self.connector.close()
-        self.stop()
-
-    def _serve(self) -> None:
         logging.info(f"serve port: {self.port} max_workers: {self.max_workers}")
-        token = "chat-bot-connector"
         authenticator = AuthenticationInterceptor(
-            'authorization', token,
+            'authorization', self.token,
             grpc.StatusCode.UNAUTHENTICATED, 'Access denied!'
         )
         server = grpc.server(
@@ -81,6 +78,26 @@ class StreamServe():
         )
         add_ConnectorServicer_to_server(self.connector, server)
         server.add_insecure_port(f"[::]:{self.port}")
-        server.start()
+        self.server = server
+
+    def start(self):
+        if self.serve_thread is None or self.serve_thread.is_alive() is False:
+            self.serve_thread = threading.Thread(target=self._serve, args=())
+            self.serve_thread.start()
+
+    def stop(self):
+        logging.debug("Server stoping...")
+        self.server.stop(1).wait()
+        logging.info("Server stop")
+        if self.serve_thread is not None or self.serve_thread.is_alive():
+            self.serve_thread.join()
+            logging.info("serve_thread stop")
+
+    def close(self):
+        self.connector.close()
+        self.stop()
+
+    def _serve(self) -> None:
+        self.server.start()
         logging.info(f"Server started port: {self.port}")
-        server.wait_for_termination()
+        self.server.wait_for_termination()
