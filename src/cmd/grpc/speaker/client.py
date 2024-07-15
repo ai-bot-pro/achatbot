@@ -7,12 +7,12 @@ import os
 import grpc
 import uuid
 
-from src.cmd.grpc.idl.tts_pb2 import (
+from src.common.grpc.idl.tts_pb2 import (
     LoadModelRequest, LoadModelResponse,
     SynthesizeRequest, SynthesizeResponse,
 )
-from src.cmd.grpc.idl.tts_pb2_grpc import TTSStub
-from src.cmd.grpc.interceptors.authentication_client import add_authentication
+from src.common.grpc.idl.tts_pb2_grpc import TTSStub
+from src.common.grpc.interceptors.authentication_client import add_authentication
 from src.common.logger import Logger
 from src.common.types import SessionCtx
 from src.common.session import Session
