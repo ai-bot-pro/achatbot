@@ -82,12 +82,14 @@ class LLamacppLLM(BaseLLM, ILlm):
                 {"role": "user", "content": query},
             ],
             # response_format={"type": "json_object"},
-            max_tokens=self.args.llm_max_tokens,  # Generate up to 256 tokens
+            max_tokens=self.args.llm_max_tokens,
             stop=self.args.llm_stop,
             stream=self.args.llm_stream,
             temperature=self.args.llm_temperature,
             top_p=self.args.llm_top_p,
             top_k=self.args.llm_top_k,
+            tool_choice=self.args.llm_tool_choice,
+            tools=self.args.llm_tools,
         )
         res = ""
         if self.args.llm_stream:

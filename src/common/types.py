@@ -311,6 +311,8 @@ class LLamcppLLMArgs:
     llm_top_k: int = 40
     llm_stream: bool = False
     llm_chat_system: str = ""
+    llm_tools: list = None
+    llm_tool_choice = None
 
 
 @dataclass
