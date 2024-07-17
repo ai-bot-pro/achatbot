@@ -225,7 +225,7 @@ def chat_completion_func_call(
                 out_str = output['choices'][0]['message']['content']
     else:
         for item in output:
-            print(item['choices'][0]['delta'])
+            print(item['choices'][0])
             if 'tool_calls' in item['choices'][0]['delta']:
                 is_tool_call = True
                 tool_calls = item['choices'][0]['delta']['tool_calls']

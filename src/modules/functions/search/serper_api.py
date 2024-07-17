@@ -10,6 +10,9 @@ import os
 from src.common.types import SerperApiArgs
 from .api import SearchBaseApi
 
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
 
 class SerperApi(SearchBaseApi):
     BASE_URL = "https://google.serper.dev/search"
@@ -18,7 +21,7 @@ class SerperApi(SearchBaseApi):
     def __init__(self, **args) -> None:
         self.args = SerperApiArgs(**args)
 
-    def _web_search(self, query: str) -> str:
+    def _web_search(self, session, query: str) -> str:
         api_key = os.getenv("SERPER_API_KEY", "")
         url = self.BASE_URL
         headers = {

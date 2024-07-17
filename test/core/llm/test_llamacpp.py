@@ -11,6 +11,10 @@ from src.common.types import SessionCtx, MODELS_DIR
 from src.cmd.init import PromptInit
 import src.core.llm
 
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
+
 r"""
 python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_have_special_char
 
@@ -33,6 +37,30 @@ MODEL_TYPE=chat-func STREAM=1 \
     TOKENIZER_PATH="./models/meetkai/functionary-small-v2.4-GGUF" \
     CHAT_FORMAT=functionary-v2 \
     python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_chat_completion
+
+MODEL_TYPE=chat-func \
+    MODEL_NAME="functionary" \
+    MODEL_PATH="./models/meetkai/functionary-small-v2.4-GGUF/functionary-small-v2.4.Q4_0.gguf" \
+    TOKENIZER_PATH="./models/meetkai/functionary-small-v2.4-GGUF" \
+    CHAT_FORMAT=functionary-v2 \
+    LLM_TOOL_CHOICE=auto \
+    python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_chat_completion
+
+MODEL_TYPE=chat-func PROMPT="查询下今日美股股价行情" \
+    MODEL_NAME="functionary" \
+    MODEL_PATH="./models/meetkai/functionary-small-v2.4-GGUF/functionary-small-v2.4.Q4_0.gguf" \
+    TOKENIZER_PATH="./models/meetkai/functionary-small-v2.4-GGUF" \
+    CHAT_FORMAT=functionary-v2 \
+    LLM_TOOL_CHOICE=auto \
+    python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_chat_completion
+
+MODEL_TYPE=chat-func STREAM=1 PROMPT="查询下今日美股股价行情" \
+    MODEL_NAME="functionary" \
+    MODEL_PATH="./models/meetkai/functionary-small-v2.4-GGUF/functionary-small-v2.4.Q4_0.gguf" \
+    TOKENIZER_PATH="./models/meetkai/functionary-small-v2.4-GGUF" \
+    CHAT_FORMAT=functionary-v2 \
+    LLM_TOOL_CHOICE=auto \
+    python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_chat_completion
 """
 
 
@@ -44,6 +72,7 @@ class TestLLamacppLLM(unittest.TestCase):
         cls.stream = os.getenv('STREAM', "")
         cls.model_type = os.getenv('MODEL_TYPE', "generate")
         cls.chat_format = os.getenv('CHAT_FORMAT', None)
+        cls.llm_tool_choice = os.getenv('LLM_TOOL_CHOICE', None)
         cls.model_name = os.getenv('MODEL_NAME', "qwen-2")
         cls.model_path = os.getenv('MODEL_PATH', os.path.join(
             MODELS_DIR, "qwen2-1_5b-instruct-q8_0.gguf"))
@@ -62,6 +91,7 @@ class TestLLamacppLLM(unittest.TestCase):
         kwargs["tokenizer_path"] = self.tokenizer_path
         kwargs["model_type"] = self.model_type
         kwargs["chat_format"] = self.chat_format
+        kwargs["llm_tool_choice"] = self.llm_tool_choice
         kwargs["n_threads"] = os.cpu_count()
         kwargs["n_gpu_layers"] = int(os.getenv('N_GPU_LAYERS', "0"))
         kwargs["flash_attn"] = bool(os.getenv('FLASH_ATTN', ""))

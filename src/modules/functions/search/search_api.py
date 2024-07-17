@@ -6,6 +6,9 @@ import os
 from src.common.types import SearchApiArgs
 from .api import SearchBaseApi
 
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
 
 class SearchApi(SearchBaseApi):
     BASE_URL = "https://www.searchapi.io/api/v1/search"
@@ -14,7 +17,7 @@ class SearchApi(SearchBaseApi):
     def __init__(self, **args) -> None:
         self.args = SearchApiArgs(**args)
 
-    def _web_search(self, query: str) -> str:
+    def _web_search(self, session, query: str) -> str:
         api_key = os.getenv('SEARCH_API_KEY', "")
         params = {
             "engine": self.args.engine,

@@ -312,7 +312,7 @@ class LLamcppLLMArgs:
     llm_stream: bool = False
     llm_chat_system: str = ""
     # "none" | "auto" | dict function like this: { "type": "function", "function": { "name": "get_current_weather" } },
-    llm_tool_choice = None
+    llm_tool_choice: str = None
 
 
 @dataclass

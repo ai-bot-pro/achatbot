@@ -8,6 +8,37 @@ from src.common.types import OpenWeatherMapArgs
 import src.modules.functions.weather
 
 
+class WeatherBaseApi(EngineClass, interface.IFunction):
+    def get_tool_call(self):
+        return {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get the current weather",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "longitude": {
+                            "type": "number",
+                            "description": "The longitude to get the weather for",
+                        },
+                        "latitude": {
+                            "type": "number",
+                            "description": "The latitude to get the weather for",
+                        },
+                    },
+                    "required": ["longitude", "latitude"],
+                },
+            },
+        }
+
+    def execute(self, session, **args):
+        return self._get_weather(session, **args)
+
+    def _get_weather(self, session, **args) -> str:
+        pass
+
+
 class WeatherFuncEnvInit:
     engine: interface.IFunction | EngineClass = None
 

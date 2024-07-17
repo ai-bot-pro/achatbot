@@ -25,6 +25,9 @@ from src.modules.functions.weather.api import WeatherFuncEnvInit
 import src.modules.speech
 import src.core.llm
 
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
 
 DEFAULT_SYSTEM_PROMPT = "你是一个中国人,请用中文回答。回答限制在1-5句话内。"
 

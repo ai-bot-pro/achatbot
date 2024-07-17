@@ -3,12 +3,11 @@ import logging
 import json
 import os
 
-from src.common.interface import IFunction
 from src.common.types import OpenWeatherMapArgs
-from src.common.factory import EngineClass
+from src.modules.functions.weather.api import WeatherBaseApi
 
 
-class OpenWeatherMap(EngineClass, IFunction):
+class OpenWeatherMap(WeatherBaseApi):
     """
     - https://openweathermap.org/api/one-call-3#data
     - https://openweathermap.org/api/one-call-3#multi
@@ -19,7 +18,7 @@ class OpenWeatherMap(EngineClass, IFunction):
     def __init__(self, **args) -> None:
         self.args = OpenWeatherMapArgs(**args)
 
-    def _get_weather(self,
+    def _get_weather(self, session,
                      longitude: float,
                      latitude: float) -> str:
         api_key = os.getenv("OPENWEATHERMAP_API_KEY", "")
@@ -36,30 +35,3 @@ class OpenWeatherMap(EngineClass, IFunction):
         except Exception as err:
             logging.error(f"An error occurred: {err}")
             return json.dumps({"error": "Failed to fetch weather data"})
-
-    def get_tool_call(self):
-        return {
-            "type": "function",
-            "function": {
-                "name": "get_weather",
-                "description": "Get the current weather",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "longitude": {
-                            "type": "number",
-                            "description": "The longitude to get the weather for",
-                        },
-                        "latitude": {
-                            "type": "number",
-                            "description": "The latitude to get the weather for",
-                        },
-                    },
-                    "required": ["longitude", "latitude"],
-                },
-            },
-
-        }
-
-    def execute(self, session, **args):
-        return self._get_weather(session, **args)
