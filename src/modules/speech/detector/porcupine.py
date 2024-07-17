@@ -3,6 +3,7 @@ import itertools
 import logging
 import struct
 import time
+import os
 
 
 from src.common.session import Session
@@ -29,7 +30,7 @@ class PorcupineDetector(EngineClass):
             ]
 
             self.porcupine: pvporcupine.Porcupine = pvporcupine.create(
-                access_key=self.args.access_key,
+                access_key=os.getenv('PORCUPINE_ACCESS_KEY', ""),
                 library_path=self.args.library_path,
                 model_path=self.args.model_path,
                 keyword_paths=self.args.keyword_paths,

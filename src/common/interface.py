@@ -107,7 +107,11 @@ class ILlm(ABC):
 
 class IFunction(ABC):
     @abstractmethod
-    def excute(self, session):
+    def execute(self, session, **args):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def get_tool_call(self):
         raise NotImplemented("must be implemented in the child class")
 
 
