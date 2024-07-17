@@ -19,6 +19,8 @@ from src.common.types import (
     VADRecoderArgs,
     CosyVoiceTTSArgs,
 )
+from src.modules.functions.search.api import SearchFuncEnvInit
+from src.modules.functions.weather.api import WeatherFuncEnvInit
 # need import engine class -> EngineClass.__subclasses__
 import src.modules.speech
 import src.core.llm
@@ -118,7 +120,10 @@ class PromptInit():
         return None
 
 
-class Env(PromptInit, PlayStreamInit):
+class Env(
+    PromptInit, PlayStreamInit,
+    SearchFuncEnvInit, WeatherFuncEnvInit,
+):
 
     @staticmethod
     def initWakerEngine() -> interface.IDetector | EngineClass:
@@ -134,7 +139,6 @@ class Env(PromptInit, PlayStreamInit):
         keyword_paths = os.path.join(
             MODELS_DIR, "小黑_zh_mac_v3_0_0.ppn")
         kwargs = {}
-        kwargs["access_key"] = os.getenv('PORCUPINE_ACCESS_KEY', "")
         kwargs["wake_words"] = wake_words
         kwargs["keyword_paths"] = os.getenv(
             'KEYWORD_PATHS', keyword_paths).split(',')
@@ -412,13 +416,10 @@ def env2yaml():
         logging.info(file_path)
 
 
-def init_engines(object) -> dict:
-    engines = {}
-    for name, obj in inspect.getmembers(object, inspect.isfunction):
-        if "init" not in name and "Engine" not in name:
-            continue
-        engines[name] = obj()
-    return engines
+def get_engines(init_type="env"):
+    if init_type == "config":
+        return EngineFactory.get_init_engines(YamlConfig)
+    return EngineFactory.get_init_engines(Env)
 
 
 r"""
@@ -454,6 +455,12 @@ CONF_ENV=local \
     ASR_MODEL_NAME_OR_PATH=whisper-large-v3 \
     python -m src.cmd.init -o env2yaml
 
+CONF_ENV=local FUNC_SEARCH_TAG=search_api python -m src.cmd.init -o env2yaml
+CONF_ENV=local FUNC_SEARCH_TAG=search1_api python -m src.cmd.init -o env2yaml
+CONF_ENV=local FUNC_SEARCH_TAG=serper_api python -m src.cmd.init -o env2yaml
+
+CONF_ENV=local FUNC_WEATHER_TAG=openweathermap_api python -m src.cmd.init -o env2yaml
+
 CONF_ENV=local python -m src.cmd.init -o init_engine -i config
 CONF_ENV=local python -m src.cmd.init -o gather_load_configs
 """
@@ -462,11 +469,6 @@ if __name__ == "__main__":
     # os.environ['RECORDER_TAG'] = 'wakeword_rms_recorder'
 
     Logger.init(logging.INFO, is_file=False)
-
-    def get_engines(init_type="env"):
-        if init_type == "config":
-            return init_engines(YamlConfig)
-        return init_engines(Env)
 
     import argparse
     parser = argparse.ArgumentParser()

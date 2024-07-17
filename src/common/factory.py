@@ -1,5 +1,6 @@
 from abc import ABCMeta
 import logging
+import inspect
 
 logger = logging.getLogger(__name__)
 
@@ -64,3 +65,12 @@ class EngineFactory:
             engine
             for engine in list(get_subclasses(cls))
         ]
+
+    @staticmethod
+    def get_init_engines(object) -> dict:
+        engines = {}
+        for name, obj in inspect.getmembers(object, inspect.isfunction):
+            if "init" not in name and "Engine" not in name:
+                continue
+            engines[name] = obj()
+        return engines

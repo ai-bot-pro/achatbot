@@ -50,7 +50,6 @@ class TestVADRecorder(unittest.TestCase):
             MODELS_DIR, "porcupine_params_zh.pv")
         keyword_paths = os.path.join(
             MODELS_DIR, "小黑_zh_mac_v3_0_0.ppn")
-        cls.access_key = os.getenv('PORCUPINE_ACCESS_KEY', "")
         cls.audio_file = os.getenv('AUDIO_FILE', audio_file)
         cls.model_path = os.getenv('MODEL_PATH', model_path)
         cls.keyword_paths = os.getenv('KEYWORD_PATHS', keyword_paths)
@@ -119,7 +118,6 @@ class TestVADRecorder(unittest.TestCase):
             print(
                 f"bot_name:{session.ctx.state['bot_name']} wakeword detected, data_len:{len(data)}")
         kwargs = {}
-        kwargs["access_key"] = self.access_key
         kwargs["wake_words"] = self.wake_words
         kwargs["model_path"] = self.model_path
         # kwargs["on_wakeword_detected"] = on_wakeword_detected

@@ -220,7 +220,6 @@ INIT_WAKE_WORD_TIMEOUT = 5.0
 
 @dataclass
 class PorcupineDetectorArgs:
-    access_key: str = ""
     keyword_paths: Optional[Sequence[str]] = None
     model_path: Optional[str] = None
     library_path: Optional[str] = None
@@ -293,13 +292,14 @@ class WhisperGroqASRArgs(ASRArgs):
 @dataclass
 class LLamcppLLMArgs:
     model_name: str = ""
-    model_type: str = ""
+    model_type: str = "generate"  # generate < chat | chat-func
     model_path: str = ""
     n_threads: int = 1
     n_batch: int = 8
     n_gpu_layers: int = 0
     n_ctx: int = 2048
-    chat_format: str = "chatml"
+    chat_format: Optional[str] = None  # chatml | chatml-function-calling | functionary-v2 ..
+    tokenizer_path: Optional[str] = None
     verbose: bool = True
     flash_attn: bool = False
     # llm
@@ -311,7 +311,7 @@ class LLamcppLLMArgs:
     llm_top_k: int = 40
     llm_stream: bool = False
     llm_chat_system: str = ""
-    llm_tools: list = None
+    # "none" | "auto" | dict function like this: { "type": "function", "function": { "name": "get_current_weather" } },
     llm_tool_choice = None
 
 
@@ -403,3 +403,35 @@ class CosyVoiceTTSArgs:
     tts_default_silence_duration: float = 0.3
     tts_comma_silence_duration: float = 0.3
     tts_sentence_silence_duration: float = 0.6
+
+
+# ------------- llm function calling -----------------
+@dataclass
+class OpenWeatherMapArgs:
+    lang: str = "zh_cn"
+    units: str = "metric"
+
+
+@dataclass
+class SearchApiArgs:
+    engine: str = "google"
+    gl: str = "cn"
+    hl: str = "zh-cn"
+    page: int = 1
+    num: int = 5
+
+
+@dataclass
+class Search1ApiArgs:
+    search_service: str = "google"
+    image: bool = False
+    crawl_results: int = 0
+    max_results: int = 5
+
+
+@dataclass
+class SerperApiArgs:
+    gl: str = "cn"
+    hl: str = "zh-cn"
+    page: int = 1
+    num: int = 5

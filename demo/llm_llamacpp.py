@@ -193,6 +193,7 @@ def chat_completion_func_call(
 
     output = llm.create_chat_completion(
         messages=messages,
+        # tools=None,
         tools=tools,
         # tool_choice="none",
         tool_choice="auto",
@@ -214,7 +215,7 @@ def chat_completion_func_call(
     function_name = ""
     is_tool_call = False
     if stream is False:
-        print(output['choices'][0]['message'])
+        print(output['choices'])
         if 'tool_calls' in output['choices'][0]['message']:
             is_tool_call = True
             args_str = output['choices'][0]['message']['tool_calls'][0]["function"]["arguments"]
@@ -250,8 +251,10 @@ python demo/llm_llamacpp.py -t chat-func  -q "今天天气怎么样"
 
 TOKENIZERS_PARALLELISM=true python demo/llm_llamacpp.py -t chat-func  -mn functionary -m ./models/meetkai/functionary-small-v2.4-GGUF/functionary-small-v2.4.Q4_0.gguf
 TOKENIZERS_PARALLELISM=true python demo/llm_llamacpp.py -t chat-func  -mn functionary -m ./models/meetkai/functionary-small-v2.4-GGUF/functionary-small-v2.4.Q4_0.gguf -q "今天天气怎么样"
-TOKENIZERS_PARALLELISM=true python demo/llm_llamacpp.py -t chat-func  -mn functionary -st 1
-TOKENIZERS_PARALLELISM=true python demo/llm_llamacpp.py -t chat-func -q "今天天气怎么样" -mn functionary -st 1
+TOKENIZERS_PARALLELISM=true python demo/llm_llamacpp.py -t chat-func  -mn functionary -m ./models/meetkai/functionary-small-v2.4-GGUF/functionary-small-v2.4.Q4_0.gguf -q "查下今天的美股股票价格"
+TOKENIZERS_PARALLELISM=true python demo/llm_llamacpp.py -t chat-func  -mn functionary -st 1 -m ./models/meetkai/functionary-small-v2.4-GGUF/functionary-small-v2.4.Q4_0.gguf
+TOKENIZERS_PARALLELISM=true python demo/llm_llamacpp.py -t chat-func -q "今天天气怎么样" -mn functionary -st 1 -m ./models/meetkai/functionary-small-v2.4-GGUF/functionary-small-v2.4.Q4_0.gguf
+TOKENIZERS_PARALLELISM=true python demo/llm_llamacpp.py -t chat-func -q "查下今天的美股股票价格" -mn functionary -st 1 -m ./models/meetkai/functionary-small-v2.4-GGUF/functionary-small-v2.4.Q4_0.gguf
 """
 if __name__ == '__main__':
     import argparse
@@ -266,7 +269,7 @@ if __name__ == '__main__':
         '--system',
         "-s",
         type=str,
-        default="你是一个中国人,请用中文回答。回答限制在1-5句话内。要友好、乐于助人且简明扼要。默认使用公制单位。保持对话简短而甜蜜。只用纯文本回答，不要包含链接或其他附加内容。不要回复计算机代码，例如不要返回用户的经度。",
+        default="你是一个中国人,智能助手,请用中文回答。回答限制在1-5句话内。要友好、乐于助人且简明扼要。默认使用公制单位。保持对话简短而甜蜜。只用纯文本回答，不要包含链接或其他附加内容。不要回复计算机代码，例如不要返回用户的经度。",
         help='system prompt')
     parser.add_argument('--query', "-q", type=str,
                         default="你好", help='query prompt')

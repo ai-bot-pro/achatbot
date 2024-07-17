@@ -13,10 +13,26 @@ import src.core.llm
 
 r"""
 python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_have_special_char
+
 MODEL_TYPE=generate  python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_generate
 MODEL_TYPE=generate STREAM=1 python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_generate
-python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_chat_completion
-STREAM=1 python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_chat_completion
+
+MODEL_TYPE=chat CHAT_FORMAT=chatml python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_chat_completion
+MODEL_TYPE=chat CHAT_FORMAT=chatml STREAM=1 python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_chat_completion
+
+MODEL_TYPE=chat-func \
+    MODEL_NAME="functionary" \
+    MODEL_PATH="./models/meetkai/functionary-small-v2.4-GGUF/functionary-small-v2.4.Q4_0.gguf" \
+    TOKENIZER_PATH="./models/meetkai/functionary-small-v2.4-GGUF" \
+    CHAT_FORMAT=functionary-v2 \
+    python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_chat_completion
+
+MODEL_TYPE=chat-func STREAM=1 \
+    MODEL_NAME="functionary" \
+    MODEL_PATH="./models/meetkai/functionary-small-v2.4-GGUF/functionary-small-v2.4.Q4_0.gguf" \
+    TOKENIZER_PATH="./models/meetkai/functionary-small-v2.4-GGUF" \
+    CHAT_FORMAT=functionary-v2 \
+    python -m unittest test.core.llm.test_llamacpp.TestLLamacppLLM.test_chat_completion
 """
 
 
@@ -26,10 +42,12 @@ class TestLLamacppLLM(unittest.TestCase):
         cls.llm_tag = os.getenv('LLM_TAG', "llm_llamacpp")
         cls.prompt = os.getenv('PROMPT', "你好")
         cls.stream = os.getenv('STREAM', "")
-        cls.model_type = os.getenv('MODEL_TYPE', "chat")
+        cls.model_type = os.getenv('MODEL_TYPE', "generate")
+        cls.chat_format = os.getenv('CHAT_FORMAT', None)
         cls.model_name = os.getenv('MODEL_NAME', "qwen-2")
         cls.model_path = os.getenv('MODEL_PATH', os.path.join(
             MODELS_DIR, "qwen2-1_5b-instruct-q8_0.gguf"))
+        cls.tokenizer_path = os.getenv('TOKENIZER_PATH', None)
         Logger.init(logging.DEBUG, is_file=False)
 
     @classmethod
@@ -41,7 +59,9 @@ class TestLLamacppLLM(unittest.TestCase):
         kwargs["verbose"] = True
         kwargs["model_name"] = self.model_name
         kwargs["model_path"] = self.model_path
+        kwargs["tokenizer_path"] = self.tokenizer_path
         kwargs["model_type"] = self.model_type
+        kwargs["chat_format"] = self.chat_format
         kwargs["n_threads"] = os.cpu_count()
         kwargs["n_gpu_layers"] = int(os.getenv('N_GPU_LAYERS', "0"))
         kwargs["flash_attn"] = bool(os.getenv('FLASH_ATTN', ""))
