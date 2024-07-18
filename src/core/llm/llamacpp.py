@@ -135,7 +135,7 @@ class LLamacppLLM(BaseLLM, ILlm):
 
     def _chat_completion_functions(self, session: Session):
         tools = FunctionManager.get_tool_calls()
-        logging.debug(f"tools: {tools}")
+        logging.info(f"tools: {tools}")
         while True:
             messages = [
                 {
@@ -144,7 +144,7 @@ class LLamacppLLM(BaseLLM, ILlm):
                 },
                 *session.chat_history,
             ]
-            logging.debug(f"messages: {messages}")
+            logging.info(f"messages: {messages}")
             output = self.model.create_chat_completion(
                 messages=messages,
                 max_tokens=self.args.llm_max_tokens,

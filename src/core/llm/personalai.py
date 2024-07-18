@@ -77,7 +77,7 @@ class PersonalAIProxy(BaseLLM, ILlm):
                 "latitude": self.geo.latlng[0],
                 "longitude": self.geo.latlng[1],
             },
-            "chat_type": self.args.chat_type,
+            "chat_type": self.args.model_type,
             "chat_bot": self.args.chat_bot,
             "chat_id": session.ctx.client_id,
             "input": session.ctx.state["prompt"],

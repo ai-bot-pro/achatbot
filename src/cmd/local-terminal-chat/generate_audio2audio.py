@@ -74,6 +74,20 @@ TQDM_DISABLE=True \
     TTS_TAG=tts_edge \
     python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
 
+TQDM_DISABLE=True TOKENIZERS_PARALLELISM=true \
+    ASR_TAG=sense_voice_asr \
+    ASR_LANG=zn \
+    ASR_MODEL_NAME_OR_PATH=./models/FunAudioLLM/SenseVoiceSmall \
+    RECORDER_TAG=wakeword_rms_recorder \
+    LLM_MODEL_TYPE=chat-func \
+    LLM_MODEL_NAME=functionary \
+    LLM_MODEL_PATH=./models/meetkai/functionary-small-v2.4-GGUF/functionary-small-v2.4.Q4_0.gguf \
+    LLM_TOKENIZER_PATH=./models/meetkai/functionary-small-v2.4-GGUF \
+    LLM_CHAT_FORMAT=functionary-v2 \
+    LLM_TOOL_CHOICE=auto \
+    TTS_TAG=tts_edge \
+    python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
+
 TQDM_DISABLE=True \
     VAD_DETECTOR_TAG=webrtc_silero_vad \
     RECORDER_TAG=wakeword_vad_recorder \

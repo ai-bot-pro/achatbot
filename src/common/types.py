@@ -321,7 +321,7 @@ class PersonalAIProxyArgs:
     api_url: str = "http://localhost:8787/"
     chat_bot: str = "openai"  # openai | qianfan
     openai_api_base_url: str = "https://api.groq.com/openai/v1/"
-    chat_type: str = "chat_only"  # chat_only | chat_with_functions
+    model_type: str = "chat_only"  # chat_only | chat_with_functions
     model_name: str = ""
     llm_chat_system: str = ""
     llm_max_tokens: int = 1024

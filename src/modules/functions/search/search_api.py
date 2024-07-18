@@ -36,7 +36,7 @@ class SearchApi(SearchBaseApi):
             response.raise_for_status()  # Raises for HTTP errors
             data = response.json()
             snippets = [item['snippet'] for item in data['organic_results']]
-            return json.dumps(snippets)
+            return f"{json.dumps(snippets)}"
         except requests.exceptions.HTTPError as http_err:
             print(f"HTTP error occurred: {http_err}")
             return json.dumps({"error": "Failed to fetch search results"})
