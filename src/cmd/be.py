@@ -75,7 +75,11 @@ class Audio2AudioChatWorker:
                 logging.info(f'{self.asr.TAG} transcribed text: {text}')
                 conn.send(("ASR_TEXT_DONE", "", session), 'be')
 
-                self.llm_generate(text, session, conn, text_buffer)
+                if hasattr(self.llm.args, 'model_type') \
+                        and "chat" in self.llm.args.model_type:
+                    self.llm_chat(text, session, conn, text_buffer)
+                else:
+                    self.llm_generate(text, session, conn, text_buffer)
 
             except Exception as ex:
                 ex_trace = traceback.format_exc()
@@ -163,4 +167,20 @@ class Audio2AudioChatWorker:
     def llm_chat(self, text, session: Session,
                  conn: interface.IConnector,
                  text_buffer: queue.Queue):
-        pass
+        session.ctx.state["prompt"] = text
+        logging.info(f"llm chat prompt: {session.ctx.state['prompt']}")
+        print(f"me: {session.ctx.state['prompt']}",
+              flush=True, file=sys.stdout)
+
+        assistant_text = ""
+        text_iter = self.llm.chat_completion(session)
+        for text in text_iter:
+            assistant_text += text
+            conn.send(("LLM_GENERATE_TEXT", text, session), 'be')
+            text_buffer.put_nowait(("LLM_GENERATE_TEXT", text, session))
+        logging.info(f"llm chat assistant_text: {assistant_text}")
+        bot_name = session.ctx.state["bot_name"] if "bot_name" in session.ctx.state else "bot"
+        print(f"{bot_name}: {assistant_text}", flush=True, file=sys.stdout)
+
+        conn.send(("LLM_GENERATE_DONE", "", session), 'be')
+        text_buffer.put_nowait(("LLM_GENERATE_DONE", "", session))
