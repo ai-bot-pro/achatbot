@@ -21,7 +21,7 @@ else:
 
 class TerminalChatClient:
     def __init__(self, is_save_record=False, is_save_play_chunks=False) -> None:
-        self.sid = uuid.uuid4()
+        self.sid = str(uuid.uuid4())
         self.session = Session(**SessionCtx(self.sid).__dict__)
         self.player = init.initPlayerEngine()
         self.recorder = init.initRecorderEngine()

@@ -19,6 +19,7 @@ class SerperApi(SearchBaseApi):
     TAG = "serper_api"
 
     def __init__(self, **args) -> None:
+        super().__init__()
         self.args = SerperApiArgs(**args)
 
     def _web_search(self, session, query: str) -> str:
@@ -37,7 +38,7 @@ class SerperApi(SearchBaseApi):
         }
 
         try:
-            response = requests.post(url, headers=headers, json=payload)
+            response = self.requests.post(url, headers=headers, json=payload)
             response.raise_for_status()  # Raises for HTTP errors
             data = response.json()
             snippets = [item['snippet'] for item in data['organic']]

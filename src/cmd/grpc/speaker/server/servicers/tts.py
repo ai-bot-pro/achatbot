@@ -19,7 +19,7 @@ def get_session_id(context: grpc.ServicerContext):
     for item in context.invocation_metadata():
         if item.key == "client_id":
             return item.value
-    return uuid.uuid4()
+    return str(uuid.uuid4())
 
 
 class TTS(TTSServicer):

@@ -1,6 +1,7 @@
 import os
 import logging
 
+from src.common.http import HTTPRequest
 from src.common.factory import EngineFactory, EngineClass
 from src.common import interface
 from src.modules.functions.function import FunctionManager
@@ -9,6 +10,9 @@ import src.modules.functions.weather
 
 
 class WeatherBaseApi(EngineClass, interface.IFunction):
+    def __init__(self) -> None:
+        self.requests = HTTPRequest()
+
     def get_tool_call(self):
         return {
             "type": "function",

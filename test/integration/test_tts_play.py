@@ -41,7 +41,7 @@ class TestTTSPlay(unittest.TestCase):
             f"play chunk with session.ctx.state {session.ctx.state} sub_chunk_len {len(sub_chunk)}")
 
     def setUp(self):
-        self.sid = uuid.uuid4()
+        self.sid = str(uuid.uuid4())
         self.session = Session(**SessionCtx(self.sid).__dict__)
         self.tts: interface.ITts | EngineClass = init.initTTSEngine()
         self.conn = RedisQueueConnector(
