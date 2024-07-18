@@ -3,6 +3,7 @@ import logging
 import json
 import os
 
+
 from src.common.types import SearchApiArgs
 from .api import SearchBaseApi
 
@@ -15,6 +16,7 @@ class SearchApi(SearchBaseApi):
     TAG = "search_api"
 
     def __init__(self, **args) -> None:
+        super().__init__()
         self.args = SearchApiArgs(**args)
 
     def _web_search(self, session, query: str) -> str:
@@ -30,7 +32,7 @@ class SearchApi(SearchBaseApi):
         }
 
         try:
-            response = requests.get(self.BASE_URL, params=params)
+            response = self.requests.get(self.BASE_URL, params=params)
             response.raise_for_status()  # Raises for HTTP errors
             data = response.json()
             snippets = [item['snippet'] for item in data['organic_results']]

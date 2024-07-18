@@ -15,6 +15,7 @@ class Search1Api(SearchBaseApi):
     TAG = "search1_api"
 
     def __init__(self, **args) -> None:
+        super().__init__()
         self.args = Search1ApiArgs(**args)
 
     def _web_search(self, session, query: str) -> str:
@@ -33,7 +34,7 @@ class Search1Api(SearchBaseApi):
         }
 
         try:
-            response = requests.post(url, headers=headers, data=json.dumps(payload))
+            response = self.requests.post(url, headers=headers, data=json.dumps(payload))
             response.raise_for_status()  # Raises for HTTP errors
             data = response.json()
             snippets = [item['snippet'] for item in data['results']]

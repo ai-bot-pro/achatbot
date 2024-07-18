@@ -51,7 +51,7 @@ TTS_TAG=tts_cosy_voice IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 """
 if __name__ == "__main__":
     try:
-        client_id = uuid.uuid4()
+        client_id = str(uuid.uuid4())
         session = Session(**SessionCtx(client_id).__dict__)
         # todo: up to the rpc gateway to auth
         token = "oligei-tts"

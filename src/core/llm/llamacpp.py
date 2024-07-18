@@ -80,6 +80,9 @@ class LLamacppLLM(BaseLLM, ILlm):
             yield output['choices'][0]['text']
 
     def chat_completion(self, session: Session):
+        if self.args.model_type not in ["chat", "chat-func"]:
+            yield from self.generate(session)
+            return
         query = session.ctx.state["prompt"]
         session.chat_history.append({"role": "user", "content": query})
         res = ""
@@ -92,6 +95,7 @@ class LLamacppLLM(BaseLLM, ILlm):
                 res += item
                 yield item
         session.chat_history.append({"role": "assistant", "content": res})
+        logging.debug(f"chat_history:{session.chat_history}")
 
     def _chat_completion(self, session: Session):
         output = self.model.create_chat_completion(
@@ -194,8 +198,8 @@ class LLamacppLLM(BaseLLM, ILlm):
                         tool_calls[i]["function"]["name"] = function_names[i]
                         tool_calls[i]["function"]["arguments"] = args_strs[i]
             else:
-                if "finish_reason" in item['choices'][0]:
-                    finish_reason = item['choices'][0]["finish_reason"]
+                if "finish_reason" in output['choices'][0]:
+                    finish_reason = output['choices'][0]["finish_reason"]
                 if 'tool_calls' in output['choices'][0]['message']:
                     is_tool_call = True
                     tool_calls = output['choices'][0]['message']['tool_calls']

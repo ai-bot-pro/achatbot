@@ -16,6 +16,7 @@ class OpenWeatherMap(WeatherBaseApi):
     TAG = "openweathermap_api"
 
     def __init__(self, **args) -> None:
+        super().__init__()
         self.args = OpenWeatherMapArgs(**args)
 
     def _get_weather(self, session,

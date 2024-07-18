@@ -74,6 +74,30 @@ TQDM_DISABLE=True \
     TTS_TAG=tts_edge \
     python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
 
+TQDM_DISABLE=True \
+    VAD_DETECTOR_TAG=webrtc_silero_vad \
+    RECORDER_TAG=wakeword_vad_recorder \
+    ASR_TAG=sense_voice_asr \
+    ASR_LANG=zn \
+    ASR_MODEL_NAME_OR_PATH=./models/FunAudioLLM/SenseVoiceSmall \
+    LLM_TAG=llm_personalai_proxy \
+    API_URL=https://personal-ai-ts.weedge.workers.dev/ \
+    LLM_MODEL_NAME=llama3-70b-8192 \
+    TTS_TAG=tts_edge \
+    python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
+TQDM_DISABLE=True \
+    VAD_DETECTOR_TAG=webrtc_silero_vad \
+    RECORDER_TAG=wakeword_vad_recorder \
+    ASR_TAG=sense_voice_asr \
+    ASR_LANG=zn \
+    ASR_MODEL_NAME_OR_PATH=./models/FunAudioLLM/SenseVoiceSmall \
+    LLM_TAG=llm_personalai_proxy \
+    API_URL=https://personal-ai-ts.weedge.workers.dev/ \
+    LLM_MODEL_NAME=llama3-70b-8192 \
+    CHAT_TYPE=chat_with_functions \
+    TTS_TAG=tts_edge \
+    python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
+
 INIT_TYPE=yaml_config TQDM_DISABLE=True \
     python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
 """

@@ -18,6 +18,7 @@ from src.common.types import (
     AudioRecoderArgs,
     VADRecoderArgs,
     CosyVoiceTTSArgs,
+    PersonalAIProxyArgs
 )
 from src.modules.functions.search.api import SearchFuncEnvInit
 from src.modules.functions.weather.api import WeatherFuncEnvInit
@@ -29,7 +30,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 
-DEFAULT_SYSTEM_PROMPT = "你是一个中国人,请用中文回答。回答限制在1-5句话内。"
+DEFAULT_SYSTEM_PROMPT = "你是一个中国人,一名中文助理，请用中文简短回答，回答限制在1-5句话内。要友好、乐于助人且简明扼要。保持对话简短而甜蜜。只用纯文本回答，不要包含链接或其他附加内容。不要回复计算机代码以及数学公式。"
 
 
 class PlayStreamInit():
@@ -185,6 +186,13 @@ class Env(
     def initLLMEngine() -> interface.ILlm | EngineClass:
         # llm
         tag = os.getenv('LLM_TAG', "llm_llamacpp")
+        kwargs = Env.map_config_func[tag]()
+        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
+        logging.info(f"initLLMEngine: {tag}, {engine}")
+        return engine
+
+    @staticmethod
+    def get_llm_llamacpp_args() -> dict:
         kwargs = {}
         kwargs["model_name"] = os.getenv('LLM_MODEL_NAME', 'phi-3')
         kwargs["model_path"] = os.getenv('LLM_MODEL_PATH', os.path.join(
@@ -202,10 +210,24 @@ class Env(
             "</s>", "/s>", "</s", "<s>",
             "<|user|>", "<|assistant|>", "<|system|>",
         ]
-        kwargs["llm_chat_system"] = DEFAULT_SYSTEM_PROMPT
-        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
-        logging.info(f"initLLMEngine: {tag}, {engine}")
-        return engine
+        kwargs["llm_chat_system"] = os.getenv('LLM_CHAT_SYSTEM', DEFAULT_SYSTEM_PROMPT),
+        return kwargs
+
+    @staticmethod
+    def get_llm_personal_ai_proxy_args() -> dict:
+        kwargs = PersonalAIProxyArgs(
+            api_url=os.getenv('API_URL', "http://localhost:8787/"),
+            chat_bot=os.getenv('CHAT_BOT', "openai"),
+            chat_type=os.getenv('CHAT_TYPE', "chat_only"),
+            openai_api_base_url=os.getenv('OPENAI_API_BASE_URL', "https://api.groq.com/openai/v1/"),
+            model_name=os.getenv('LLM_MODEL_NAME', "llama3-70b-8192"),
+            llm_chat_system=os.getenv('LLM_CHAT_SYSTEM', DEFAULT_SYSTEM_PROMPT),
+            llm_stream=False,
+            llm_max_tokens=int(os.getenv('LLM_MAX_TOKENS', "1024")),
+            func_search_name=os.getenv('FUNC_SEARCH_NAME', "search_api"),
+            func_weather_name=os.getenv('FUNC_WEATHER_NAME', "openweathermap_api"),
+        ).__dict__
+        return kwargs
 
     @staticmethod
     def get_tts_cosy_voice_args() -> dict:
@@ -322,6 +344,8 @@ class Env(
         'wakeword_rms_recorder': get_rms_recorder_args,
         'vad_recorder': get_vad_recorder_args,
         'wakeword_vad_recorder': get_vad_recorder_args,
+        'llm_llamacpp': get_llm_llamacpp_args,
+        'llm_personalai_proxy': get_llm_personal_ai_proxy_args,
     }
 
     @staticmethod
@@ -463,6 +487,8 @@ CONF_ENV=local FUNC_SEARCH_TAG=search1_api python -m src.cmd.init -o env2yaml
 CONF_ENV=local FUNC_SEARCH_TAG=serper_api python -m src.cmd.init -o env2yaml
 
 CONF_ENV=local FUNC_WEATHER_TAG=openweathermap_api python -m src.cmd.init -o env2yaml
+
+CONF_ENV=local LLM_TAG=llm_personalai_proxy  python -m src.cmd.init -o env2yaml
 
 CONF_ENV=local python -m src.cmd.init -o init_engine -i config
 CONF_ENV=local python -m src.cmd.init -o gather_load_configs

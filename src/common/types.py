@@ -316,6 +316,24 @@ class LLamcppLLMArgs:
 
 
 @dataclass
+class PersonalAIProxyArgs:
+    max_retry_cn: int = 2
+    api_url: str = "http://localhost:8787/"
+    chat_bot: str = "openai"  # openai | qianfan
+    openai_api_base_url: str = "https://api.groq.com/openai/v1/"
+    chat_type: str = "chat_only"  # chat_only | chat_with_functions
+    model_name: str = ""
+    llm_chat_system: str = ""
+    llm_max_tokens: int = 1024
+    llm_stream: bool = False
+    llm_stop: Optional[List[str]] = None
+    llm_temperature: float = 0.8
+    llm_top_p: float = 0.95
+    func_search_name: str = "search_api"
+    func_weather_name: str = "openweathermap_api"
+
+
+@dataclass
 class CoquiTTSArgs:
     conf_file: str = ""
     model_path: str = ""
