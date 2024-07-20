@@ -45,7 +45,6 @@ def create_room(name: str | None = None) -> tuple[str, str]:
         raise Exception(f"Unable to create room: {res.text}")
 
     data = res.json()
-    print(data)
     room_url: str = data.get("url")
     room_name: str = data.get("name")
     if room_url is None or room_name is None:

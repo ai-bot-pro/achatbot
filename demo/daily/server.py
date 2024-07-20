@@ -8,6 +8,7 @@ use daily-python (wrape rust lib.so)
 - more details: https://docs.cerebrium.ai/v4/examples/realtime-voice-agents
 """
 import subprocess
+import logging
 import atexit
 import os
 
@@ -46,13 +47,12 @@ app.add_middleware(
 
 @app.get("/create_room/{name}")
 def create_room(name):
-    print(f"!!! Creating room")
     try:
         room_url, room_name = daily_helpers.create_room(name)
     except Exception as ex:
         raise HTTPException(
             status_code=500, detail=f"Failed to create room: {ex}")
-    print(f"!!! Room URL: {room_url}")
+    print(f"create ok, room_url:{room_url},room_name:{room_name}")
     # Ensure the room property is present
     if not room_url:
         raise HTTPException(
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     config = parser.parse_args()
 
     uvicorn.run(
-        "server:app",
+        "demo.daily.server:app",
         host=config.host,
         port=config.port,
         reload=config.reload,
