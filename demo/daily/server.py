@@ -3,7 +3,7 @@
 - https://reference-python.daily.co/api_reference.html
 - https://docs.daily.co/guides
 
-use daily-python (wrape rust lib.so)
+use daily-python (wrap rust lib.so)
 
 - more details: https://docs.cerebrium.ai/v4/examples/realtime-voice-agents
 """
@@ -13,10 +13,10 @@ import atexit
 import os
 
 import argparse
-
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
+from pydantic import BaseModel
 
 from . import daily_helpers
 
@@ -26,11 +26,17 @@ MAX_BOTS_PER_ROOM = 1
 bot_procs = {}
 
 
+class RoomInfo(BaseModel):
+    room_name: str
+    room_url: str
+
+
 def cleanup():
     # Clean up function, just to be extra safe
-    for proc in bot_procs.values():
+    for proc, url in bot_procs.values():
         proc.terminate()
         proc.wait()
+        print(f"url:{url} proc: {proc} terminate")
 
 
 atexit.register(cleanup)
@@ -62,8 +68,16 @@ def create_room(name):
     return RedirectResponse(room_url)
 
 
-@app.get("/agent_join/{room_url}")
-def agent_join(room_url):
+"""
+curl -XPOST "http://0.0.0.0:6789/agent_join/" \
+    -H "Content-Type: application/json" \
+    -d '{"room_url": "https://weedge.daily.co/chat-bot","room_name":"chat-bot"}'
+"""
+
+
+@app.post("/agent_join/")
+def agent_join(roominfo: RoomInfo):
+    room_url = roominfo.room_url
     # Check if there is already an existing process running in this room
     num_bots_in_room = sum(
         1 for proc in bot_procs.values() if proc[1] == room_url and proc[0].poll() is None)
@@ -80,8 +94,10 @@ def agent_join(room_url):
     # Spawn a new agent, and join the user session
     # Note: this is mostly for demonstration purposes (refer to 'deployment' in README)
     try:
+        cmd = f"cd ../.. && python3 -m demo.daily.chat_bot_pyaudio_echo -u {room_url} -t {token} -e 1"
+        print(cmd)
         proc = subprocess.Popen(
-            [f"python3 -m chat_bot_be -u {room_url} -t {token}"],
+            [cmd],
             shell=True,
             bufsize=1,
             cwd=os.path.dirname(os.path.abspath(__file__))
@@ -91,11 +107,13 @@ def agent_join(room_url):
         raise HTTPException(
             status_code=500, detail=f"Failed to start subprocess: {e}")
 
+    return JSONResponse({"bot_id": proc.pid, "status": "running"})
+
 
 @app.get("/status/{pid}")
 def get_status(pid: int):
     # Look up the subprocess
-    proc = bot_procs.get(pid)
+    proc, url = bot_procs.get(pid)
 
     # If the subprocess doesn't exist, return an error
     if not proc:
@@ -108,7 +126,7 @@ def get_status(pid: int):
     else:
         status = "finished"
 
-    return JSONResponse({"bot_id": pid, "status": status})
+    return JSONResponse({"bot_id": pid, "status": status, "room_url": url})
 
 
 if __name__ == "__main__":

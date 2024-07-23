@@ -499,6 +499,7 @@ class DailyDialinSettings(BaseModel):
     call_domain: str = ""
 
 
+# https://reference-python.daily.co/types.html#transcriptionsettings
 class DailyTranscriptionSettings(BaseModel):
     language: str = "en"
     tier: str = "nova"
