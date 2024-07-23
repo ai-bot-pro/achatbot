@@ -59,6 +59,16 @@ class IDetector(ABC):
         raise NotImplemented("must be implemented in the child class")
 
 
+class IVADAnalyzer(ABC):
+    @abstractmethod
+    def voice_confidence(self, buffer) -> float:
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def analyze_audio(self, buffer):
+        raise NotImplemented("must be implemented in the child class")
+
+
 class IAsr(ABC):
     @abstractmethod
     def transcribe_stream_sync(self, session) -> Generator[str, None, None]:

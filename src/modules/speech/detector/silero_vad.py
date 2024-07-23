@@ -1,6 +1,7 @@
 import logging
 import os
 import math
+import time
 
 import torch
 import torchaudio
@@ -14,9 +15,10 @@ from src.common.types import (
     VAD_CHECK_PER_FRAMES,
     VAD_CHECK_ALL_FRAMES,
     SileroVADArgs,
-    RATE,
+    SILERO_MODEL_RESET_STATES_TIME,
 )
 from .base import BaseVAD
+from src.common.interface import IVADAnalyzer
 
 
 class SileroVAD(BaseVAD):
@@ -28,6 +30,8 @@ class SileroVAD(BaseVAD):
 
     def __init__(self, **args) -> None:
         self.args = SileroVADArgs(**args)
+        if self.args.sample_rate != 16000 and self.args.sample_rate != 8000:
+            raise ValueError("Silero VAD sample rate needs to be 16000 or 8000")
         torch.set_num_threads(1)
         # torchaudio.set_audio_backend("soundfile")
         self.model, utils = torch.hub.load(
@@ -47,7 +51,7 @@ class SileroVAD(BaseVAD):
          self.read_audio,
          VADIterator,
          self.collect_chunks) = utils
-        self.vad_iterator = VADIterator(self.model, sampling_rate=RATE)
+        self.vad_iterator = VADIterator(self.model, sampling_rate=self.args.sample_rate)
 
     def set_audio_data(self, audio_data):
         super().set_audio_data(audio_data)
@@ -80,29 +84,14 @@ class SileroVAD(BaseVAD):
         return False
 
     async def detect_chunk(self, chunk, session: Session):
-        audio_chunk = chunk
-        if isinstance(chunk, (bytes, bytearray)):
-            audio_chunk = torch.from_numpy(bytes2NpArrayWith16(chunk))
-        if len(audio_chunk) != self.map_rate_num_samples[16000]:
-            if self.args.is_pad_tensor is False:
-                logging.debug(
-                    f"len(audio_chunk):{len(audio_chunk)} dont't pad to {self.map_rate_num_samples[16000]} return False")
-                return False
-            logging.debug(
-                f"len(audio_chunk):{len(audio_chunk)} pad to {self.map_rate_num_samples[16000]} ")
-            audio_chunk = torch.nn.functional.pad(
-                audio_chunk,
-                (0, self.map_rate_num_samples[16000] - len(audio_chunk)),
-                "constant",
-                0,
-            )
-        vad_prob = self.model(audio_chunk, RATE).item()
+        audio_chunk = self.process_audio_buffer(chunk)
+        vad_prob = self.model(audio_chunk, self.args.sample_rate).item()
         is_silero_speech_active = vad_prob > (1 - self.args.silero_sensitivity)
         return is_silero_speech_active
 
     def get_speech_timestamps(self):
         speech_timestamps = self.get_speech_timestamps(
-            self.audio_buff, self.model, sampling_rate=RATE)
+            self.audio_buff, self.model, sampling_rate=self.args.sample_rate)
         logging.debug(f"speech_timestamps:{speech_timestamps}")
         return speech_timestamps
 
@@ -113,23 +102,23 @@ class SileroVAD(BaseVAD):
             self.collect_chunks(
                 self.get_speech_timestamps(),
                 self.audio_buff),
-            sampling_rate=RATE
+            sampling_rate=self.args.sample_rate
         )
 
     def vad_iterator(self):
-        window_size_samples = self.map_rate_num_samples[RATE]
+        window_size_samples = self.map_rate_num_samples[self.args.sample_rate]
         for i in range(0, len(self.audio_buff), window_size_samples):
             audio_chunk = self.audio_buff[i: i + window_size_samples]
             if len(audio_chunk) < window_size_samples:
                 if self.args.is_pad_tensor is False:
                     logging.debug(
-                        f"len(audio_chunk):{len(audio_chunk)} dont't pad to {self.map_rate_num_samples[16000]} return False")
+                        f"len(audio_chunk):{len(audio_chunk)} dont't pad to {self.map_rate_num_samples[self.args.sample_rate]} return False")
                     continue
                 logging.debug(
-                    f"len(audio_chunk):{len(audio_chunk)} pad to {self.map_rate_num_samples[16000]} ")
+                    f"len(audio_chunk):{len(audio_chunk)} pad to {self.map_rate_num_samples[self.args.sample_rate]} ")
                 audio_chunk = torch.nn.functional.pad(
                     audio_chunk,
-                    (0, self.map_rate_num_samples[16000] - len(audio_chunk)),
+                    (0, self.map_rate_num_samples[self.args.sample_rate] - len(audio_chunk)),
                     "constant",
                     0,
                 )
@@ -138,7 +127,26 @@ class SileroVAD(BaseVAD):
                 yield speech_dict
 
     def get_sample_info(self):
-        return RATE, self.map_rate_num_samples[RATE]
+        return self.args.sample_rate, self.map_rate_num_samples[self.args.sample_rate]
 
     def close(self):
         self.model.reset_states()
+
+    def process_audio_buffer(self, buffer):
+        audio_chunk = buffer
+        if isinstance(buffer, (bytes, bytearray)):
+            audio_chunk = torch.from_numpy(bytes2NpArrayWith16(buffer))
+        if len(audio_chunk) != self.map_rate_num_samples[self.args.sample_rate]:
+            if self.args.is_pad_tensor is False:
+                logging.debug(
+                    f"len(audio_chunk):{len(audio_chunk)} dont't pad to {self.map_rate_num_samples[self.args.sample_rate]} return False")
+                return False
+            logging.debug(
+                f"len(audio_chunk):{len(audio_chunk)} pad to {self.map_rate_num_samples[self.args.sample_rate]} ")
+            audio_chunk = torch.nn.functional.pad(
+                audio_chunk,
+                (0, self.map_rate_num_samples[self.args.sample_rate] - len(audio_chunk)),
+                "constant",
+                0,
+            )
+        return audio_chunk

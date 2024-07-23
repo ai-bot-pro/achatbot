@@ -2,21 +2,30 @@ r"""
 use SOTA LLM like chatGPT to generate config file(json,yaml,toml) from dataclass type
 """
 from dataclasses import dataclass
+from enum import Enum
 from typing import (
     IO,
     Optional,
     Sequence,
     Union,
-    List
+    List,
+    Any,
+    Mapping,
 )
 import os
 
 import numpy as np
 import pyaudio
 import torch
+from pydantic.main import BaseModel
+from pydantic import ConfigDict
 
-from .interface import IBuffering, IDetector, IAsr, ILlm, ITts
+from .interface import (
+    IBuffering, IDetector, IAsr,
+    ILlm, ITts, IVADAnalyzer
+)
 from .factory import EngineClass
+from src.types.frames.data_frames import TransportMessageFrame
 
 
 SRC_PATH = os.path.normpath(
@@ -175,6 +184,8 @@ class WebRTCVADArgs:
 
 
 INIT_SILERO_SENSITIVITY = 0.4
+# How often should we reset internal model state
+SILERO_MODEL_RESET_STATES_TIME = 5.0
 
 
 @dataclass
@@ -453,3 +464,88 @@ class SerperApiArgs:
     hl: str = "zh-cn"
     page: int = 1
     num: int = 5
+
+
+# --------------- vad analyzer------------------
+DAILY_WEBRTC_VAD_RESET_PERIOD_MS = 2000
+
+
+class VADState(Enum):
+    QUIET = 1
+    STARTING = 2
+    SPEAKING = 3
+    STOPPING = 4
+
+
+@dataclass
+class VADAnalyzerArgs:
+    sample_rate: int = RATE
+    num_channels: int = CHANNELS
+    confidence: float = 0.7
+    start_secs: float = 0.2
+    stop_secs: float = 0.8
+    min_volume: float = 0.6
+
+# --------------- daily -------------------------------
+
+
+@dataclass
+class DailyTransportMessageFrame(TransportMessageFrame):
+    participant_id: str | None = None
+
+
+class DailyDialinSettings(BaseModel):
+    call_id: str = ""
+    call_domain: str = ""
+
+
+class DailyTranscriptionSettings(BaseModel):
+    language: str = "en"
+    tier: str = "nova"
+    model: str = "2-conversationalai"
+    profanity_filter: bool = True
+    redact: bool = False
+    endpointing: bool = True
+    punctuate: bool = True
+    includeRawResponse: bool = True
+    extra: Mapping[str, Any] = {
+        "interim_results": True
+    }
+
+
+class AudioParams(BaseModel):
+    audio_out_enabled: bool = False
+    audio_out_sample_rate: int = RATE
+    audio_out_channels: int = CHANNELS
+    audio_in_enabled: bool = False
+    audio_in_sample_rate: int = RATE
+    audio_in_channels: int = CHANNELS
+
+
+class AudioVADParams(AudioParams):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    vad_enabled: bool = False
+    vad_audio_passthrough: bool = False
+    vad_analyzer: IVADAnalyzer | None = None
+
+
+class CameraParams(BaseModel):
+    camera_out_enabled: bool = False
+    camera_out_is_live: bool = False
+    camera_out_width: int = 1024
+    camera_out_height: int = 768
+    camera_out_bitrate: int = 800000
+    camera_out_framerate: int = 30
+    camera_out_color_format: str = "RGB"
+
+
+class AudioCameraParams(CameraParams, AudioVADParams):
+    pass
+
+
+class DailyParams(AudioCameraParams):
+    api_url: str = "https://api.daily.co/v1"
+    api_key: str = ""
+    dialin_settings: DailyDialinSettings | None = None
+    transcription_enabled: bool = False
+    transcription_settings: DailyTranscriptionSettings = DailyTranscriptionSettings()
