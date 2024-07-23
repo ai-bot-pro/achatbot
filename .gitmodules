@@ -10,6 +10,3 @@
 [submodule "ui/web-client-ui"]
 	path = ui/web-client-ui
 	url = https://github.com/weedge/web-client-ui.git
-[submodule "deps/pipeline"]
-	path = deps/pipeline
-	url = https://github.com/weedge/pipeline-py.git

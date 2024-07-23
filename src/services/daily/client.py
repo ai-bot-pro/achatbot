@@ -1,14 +1,5 @@
-#
-# Copyright (c) 2024, Daily
-#
-# SPDX-License-Identifier: BSD 2-Clause License
-#
-
 import logging
 import asyncio
-import time
-
-from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 
@@ -20,94 +11,19 @@ from daily import (
     VirtualMicrophoneDevice,
     VirtualSpeakerDevice)
 from pydantic.main import BaseModel
-from pydantic import ConfigDict
 import aiohttp
 
-
-
-try:
-    from daily import (EventHandler, CallClient, Daily)
-except ModuleNotFoundError as e:
-    logging.error(f"Exception: {e}")
-    logging.error(
-        "In order to use the Daily transport, you need to `pip install pipecat-ai[daily]`.")
-    raise Exception(f"Missing module: {e}")
-
-VAD_RESET_PERIOD_MS = 2000
-
-
-@dataclass
-class DailyTransportMessageFrame(TransportMessageFrame):
-    participant_id: str | None = None
-
-
-class WebRTCVADAnalyzer(VADAnalyzer):
-
-    def __init__(self, sample_rate=16000, num_channels=1, params: VADParams = VADParams()):
-        super().__init__(sample_rate, num_channels, params)
-
-        self._webrtc_vad = Daily.create_native_vad(
-            reset_period_ms=VAD_RESET_PERIOD_MS,
-            sample_rate=sample_rate,
-            channels=num_channels
-        )
-        logging.debug("Loaded native WebRTC VAD")
-
-    def num_frames_required(self) -> int:
-        return int(self.sample_rate / 100.0)
-
-    def voice_confidence(self, buffer) -> float:
-        confidence = 0
-        if len(buffer) > 0:
-            confidence = self._webrtc_vad.analyze_frames(buffer)
-        return confidence
-
-
-class DailyDialinSettings(BaseModel):
-    call_id: str = ""
-    call_domain: str = ""
-
-
-class DailyTranscriptionSettings(BaseModel):
-    language: str = "en"
-    tier: str = "nova"
-    model: str = "2-conversationalai"
-    profanity_filter: bool = True
-    redact: bool = False
-    endpointing: bool = True
-    punctuate: bool = True
-    includeRawResponse: bool = True
-    extra: Mapping[str, Any] = {
-        "interim_results": True
-    }
-
-
-class TransportParams(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    camera_out_enabled: bool = False
-    camera_out_is_live: bool = False
-    camera_out_width: int = 1024
-    camera_out_height: int = 768
-    camera_out_bitrate: int = 800000
-    camera_out_framerate: int = 30
-    camera_out_color_format: str = "RGB"
-    audio_out_enabled: bool = False
-    audio_out_sample_rate: int = 16000
-    audio_out_channels: int = 1
-    audio_in_enabled: bool = False
-    audio_in_sample_rate: int = 16000
-    audio_in_channels: int = 1
-    vad_enabled: bool = False
-    vad_audio_passthrough: bool = False
-
-
-class DailyParams(TransportParams):
-    api_url: str = "https://api.daily.co/v1"
-    api_key: str = ""
-    dialin_settings: DailyDialinSettings | None = None
-    transcription_enabled: bool = False
-    transcription_settings: DailyTranscriptionSettings = DailyTranscriptionSettings()
+from apipeline.frames.data_frames import AudioRawFrame, ImageRawFrame
+from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
+from src.processors.daily_input_transport_processor import DailyInputTransportProcessor
+from src.processors.daily_output_transport_processor import DailyOutputTransportProcessor
+from src.common.event import EventManager
+from src.types.frames.data_frames import (
+    InterimTranscriptionFrame,
+    SpriteFrame,
+    TranscriptionFrame,
+)
+from src.common.types import DailyParams, DailyTransportMessageFrame
 
 
 class DailyCallbacks(BaseModel):
@@ -504,179 +420,7 @@ class DailyTransportClient(EventHandler):
         future.result()
 
 
-class DailyInputTransport(BaseInputTransport):
-
-    def __init__(self, client: DailyTransportClient, params: DailyParams, **kwargs):
-        super().__init__(params, **kwargs)
-
-        self._client = client
-
-        self._video_renderers = {}
-
-        self._vad_analyzer: VADAnalyzer | None = params.vad_analyzer
-        if params.vad_enabled and not params.vad_analyzer:
-            self._vad_analyzer = WebRTCVADAnalyzer(
-                sample_rate=self._params.audio_in_sample_rate,
-                num_channels=self._params.audio_in_channels)
-
-    async def start(self, frame: StartFrame):
-        # Parent start.
-        await super().start(frame)
-        # Join the room.
-        await self._client.join()
-        # Create audio task. It reads audio frames from Daily and push them
-        # internally for VAD processing.
-        if self._params.audio_in_enabled or self._params.vad_enabled:
-            self._audio_in_task = self.get_event_loop().create_task(self._audio_in_task_handler())
-
-    async def stop(self):
-        # Parent stop.
-        await super().stop()
-        # Leave the room.
-        await self._client.leave()
-        # Stop audio thread.
-        if self._params.audio_in_enabled or self._params.vad_enabled:
-            self._audio_in_task.cancel()
-            await self._audio_in_task
-
-    async def cleanup(self):
-        await super().cleanup()
-        await self._client.cleanup()
-
-    def vad_analyzer(self) -> VADAnalyzer | None:
-        return self._vad_analyzer
-
-    #
-    # FrameProcessor
-    #
-
-    async def process_frame(self, frame: Frame, direction: FrameDirection):
-        await super().process_frame(frame, direction)
-
-        if isinstance(frame, UserImageRequestFrame):
-            self.request_participant_image(frame.user_id)
-
-    #
-    # Frames
-    #
-
-    async def push_transcription_frame(self, frame: TranscriptionFrame | InterimTranscriptionFrame):
-        await self._internal_push_frame(frame)
-
-    async def push_app_message(self, message: Any, sender: str):
-        frame = DailyTransportMessageFrame(message=message, participant_id=sender)
-        await self._internal_push_frame(frame)
-
-    #
-    # Audio in
-    #
-
-    async def _audio_in_task_handler(self):
-        while True:
-            try:
-                frame = await self._client.read_next_audio_frame()
-                if frame:
-                    await self.push_audio_frame(frame)
-            except asyncio.CancelledError:
-                break
-
-    #
-    # Camera in
-    #
-
-    def capture_participant_video(
-            self,
-            participant_id: str,
-            framerate: int = 30,
-            video_source: str = "camera",
-            color_format: str = "RGB"):
-        self._video_renderers[participant_id] = {
-            "framerate": framerate,
-            "timestamp": 0,
-            "render_next_frame": False,
-        }
-
-        self._client.capture_participant_video(
-            participant_id,
-            self._on_participant_video_frame,
-            framerate,
-            video_source,
-            color_format
-        )
-
-    def request_participant_image(self, participant_id: str):
-        if participant_id in self._video_renderers:
-            self._video_renderers[participant_id]["render_next_frame"] = True
-
-    async def _on_participant_video_frame(self, participant_id: str, buffer, size, format):
-        render_frame = False
-
-        curr_time = time.time()
-        prev_time = self._video_renderers[participant_id]["timestamp"] or curr_time
-        framerate = self._video_renderers[participant_id]["framerate"]
-
-        if framerate > 0:
-            next_time = prev_time + 1 / framerate
-            render_frame = (curr_time - next_time) < 0.1
-        elif self._video_renderers[participant_id]["render_next_frame"]:
-            self._video_renderers[participant_id]["render_next_frame"] = False
-            render_frame = True
-
-        if render_frame:
-            frame = UserImageRawFrame(
-                user_id=participant_id,
-                image=buffer,
-                size=size,
-                format=format)
-            await self._internal_push_frame(frame)
-
-        self._video_renderers[participant_id]["timestamp"] = curr_time
-
-
-class DailyOutputTransport(BaseOutputTransport):
-
-    def __init__(self, client: DailyTransportClient, params: DailyParams, **kwargs):
-        super().__init__(params, **kwargs)
-
-        self._client = client
-
-    async def start(self, frame: StartFrame):
-        # Parent start.
-        await super().start(frame)
-        # Join the room.
-        await self._client.join()
-
-    async def stop(self):
-        # Parent stop.
-        await super().stop()
-        # Leave the room.
-        await self._client.leave()
-
-    async def cleanup(self):
-        await super().cleanup()
-        await self._client.cleanup()
-
-    async def send_message(self, frame: DailyTransportMessageFrame):
-        await self._client.send_message(frame)
-
-    async def send_metrics(self, frame: MetricsFrame):
-        ttfb = [{"name": n, "time": t} for n, t in frame.ttfb.items()]
-        message = DailyTransportMessageFrame(message={
-            "type": "pipecat-metrics",
-            "metrics": {
-                "ttfb": ttfb
-            },
-        })
-        await self._client.send_message(message)
-
-    async def write_raw_audio_frames(self, frames: bytes):
-        await self._client.write_raw_audio_frames(frames)
-
-    async def write_frame_to_camera(self, frame: ImageRawFrame):
-        await self._client.write_frame_to_camera(frame)
-
-
-class DailyTransport(BaseTransport):
+class DailyTransportEvent(EventManager):
 
     def __init__(
             self,
@@ -709,8 +453,8 @@ class DailyTransport(BaseTransport):
 
         self._client = DailyTransportClient(
             room_url, token, bot_name, params, callbacks, self._loop)
-        self._input: DailyInputTransport | None = None
-        self._output: DailyOutputTransport | None = None
+        self._input: DailyInputTransportProcessor | None = None
+        self._output: DailyOutputTransportProcessor | None = None
 
         # Register supported handlers. The user will only be able to register
         # these handlers.
@@ -728,18 +472,16 @@ class DailyTransport(BaseTransport):
         self._register_event_handler("on_participant_joined")
         self._register_event_handler("on_participant_left")
 
-    #
-    # BaseTransport
-    #
-
     def input(self) -> FrameProcessor:
         if not self._input:
-            self._input = DailyInputTransport(self._client, self._params, name=self._input_name)
+            self._input = DailyInputTransportProcessor(
+                self._client, self._params, name=self._input_name)
         return self._input
 
     def output(self) -> FrameProcessor:
         if not self._output:
-            self._output = DailyOutputTransport(self._client, self._params, name=self._output_name)
+            self._output = DailyOutputTransportProcessor(
+                self._client, self._params, name=self._output_name)
         return self._output
 
     #

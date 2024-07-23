@@ -1,27 +1,10 @@
 from dataclasses import dataclass
 
-from .base import Frame
+from apipeline.frames.control_frames import ControlFrame
 
 #
 # Control frames
 #
-
-
-@dataclass
-class ControlFrame(Frame):
-    pass
-
-
-@dataclass
-class EndFrame(ControlFrame):
-    """Indicates that a pipeline has ended and frame processors and pipelines
-    should be shut down. If the transport receives this frame, it will stop
-    sending frames to its output channel(s) and close all its threads. Note,
-    that this is a control frame, which means it will received in the order it
-    was sent (unline system frames).
-
-    """
-    pass
 
 
 @dataclass
@@ -93,3 +76,14 @@ class UserImageRequestFrame(ControlFrame):
 
     def __str__(self):
         return f"{self.name}, user: {self.user_id}"
+
+
+@dataclass
+class BotSpeakingFrame(ControlFrame):
+    """Emitted by transport outputs while the bot is still speaking. This can be
+    used, for example, to detect when a user is idle. That is, while the bot is
+    speaking we don't want to trigger any user idle timeout since the user might
+    be listening.
+
+    """
+    pass
