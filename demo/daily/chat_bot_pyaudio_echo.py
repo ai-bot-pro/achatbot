@@ -20,8 +20,10 @@ NUM_CHANNELS = 1
 
 
 class ReceiveDailyAudio:
-    def __init__(self, sample_rate, num_channels, is_echo=False):
+    def __init__(self, sample_rate, num_channels,
+                 is_echo=False, bot_name="chat_bot_pyaudio_echo"):
         self.__sample_rate = sample_rate
+        self._bot_name = bot_name
 
         self.__speaker_device = Daily.create_speaker_device(
             "my-speaker",
@@ -33,8 +35,9 @@ class ReceiveDailyAudio:
         self.__client = CallClient()
         self.__client.update_subscription_profiles({
             "base": {
+                "screenVideo": "unsubscribed",
                 "camera": "unsubscribed",
-                "microphone": "subscribed"
+                # "microphone": "subscribed"
             }
         })
 
@@ -66,6 +69,8 @@ class ReceiveDailyAudio:
         self.__start_event.set()
 
     def run(self, meeting_url, meeting_token):
+        print(f"run {self._bot_name}")
+        self.__client.set_user_name(self._bot_name)
         self.__client.join(meeting_url, meeting_token, completion=self.on_joined)
         self.__thread.join()
 
@@ -89,8 +94,8 @@ class ReceiveDailyAudio:
             # Read 100ms worth of audio frames.
             buffer = self.__speaker_device.read_frames(
                 int(self.__sample_rate / 10))
+            # print(len(buffer), self._is_echo)
             if len(buffer) > 0:
-                print(len(buffer), self._is_echo)
                 if self._is_echo:
                     self.session.ctx.state["tts_chunk"] = buffer
                     self.player.play_audio(self.session)
@@ -100,7 +105,8 @@ class ReceiveDailyAudio:
 
 def run_app(args):
     Daily.init()
-    app = ReceiveDailyAudio(args.rate, args.channels, args.echo != 0)
+    app = ReceiveDailyAudio(args.rate, args.channels,
+                            args.echo != 0, args.name)
     try:
         app.run(args.u, args.t)
     except KeyboardInterrupt:
@@ -131,6 +137,11 @@ if __name__ == "__main__":
         type=int,
         default=0,
         help="is echo audio")
+    parser.add_argument(
+        "--name",
+        type=str,
+        default="chat_bot_pyaudio_echo",
+        help="enable send audio")
 
     args = parser.parse_args()
     run_app(args)

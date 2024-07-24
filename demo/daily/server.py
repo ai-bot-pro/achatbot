@@ -3,7 +3,7 @@
 - https://reference-python.daily.co/api_reference.html
 - https://docs.daily.co/guides
 
-use daily-python (wrap rust lib.so)
+use daily-python (wrap rust client call lib.so)
 
 - more details: https://docs.cerebrium.ai/v4/examples/realtime-voice-agents
 """
@@ -11,6 +11,7 @@ import subprocess
 import logging
 import atexit
 import os
+import typing
 
 import argparse
 from fastapi import FastAPI, Request, HTTPException
@@ -20,7 +21,7 @@ from pydantic import BaseModel
 
 from . import daily_helpers
 
-MAX_BOTS_PER_ROOM = 1
+MAX_BOTS_PER_ROOM = 10
 
 # Bot sub-process dict for status reporting and concurrency control
 bot_procs = {}
@@ -29,6 +30,12 @@ bot_procs = {}
 class RoomInfo(BaseModel):
     room_name: str
     room_url: str
+
+
+class AgentInfo(RoomInfo):
+    is_agent: bool = False
+    chat_bot_name: str = "chat_bot_pyaudio_echo"
+    args: str = "-e 1"
 
 
 def cleanup():
@@ -72,12 +79,16 @@ def create_room(name):
 curl -XPOST "http://0.0.0.0:6789/agent_join/" \
     -H "Content-Type: application/json" \
     -d '{"room_url": "https://weedge.daily.co/chat-bot","room_name":"chat-bot"}'
+
+curl -XPOST "http://0.0.0.0:6789/agent_join/" \
+    -H "Content-Type: application/json" \
+    -d '{"room_url": "https://weedge.daily.co/chat-bot","room_name":"chat-bot","chat_bot_name":"chat_bot_daily_echo","args":"--receive 1 --send 1"}'
 """
 
 
 @app.post("/agent_join/")
-def agent_join(roominfo: RoomInfo):
-    room_url = roominfo.room_url
+def agent_join(info: AgentInfo):
+    room_url = info.room_url
     # Check if there is already an existing process running in this room
     num_bots_in_room = sum(
         1 for proc in bot_procs.values() if proc[1] == room_url and proc[0].poll() is None)
@@ -92,10 +103,12 @@ def agent_join(roominfo: RoomInfo):
             status_code=500, detail=f"Failed to get token for room: {room_url}")
 
     # Spawn a new agent, and join the user session
-    # Note: this is mostly for demonstration purposes (refer to 'deployment' in README)
+    # Note: this is mostly for demonstration purposes
+    cmd = f"cd ../.. && python3 -m demo.daily.{info.chat_bot_name} -u {room_url} -t {token} {info.args}"
+    if info.is_agent:
+        cmd = f"cd ../.. && python3 -m demo.daily.agents.{info.chat_bot_name} -u {room_url} -t {token} {info.args}"
+    print(cmd)
     try:
-        cmd = f"cd ../.. && python3 -m demo.daily.chat_bot_pyaudio_echo -u {room_url} -t {token} -e 1"
-        print(cmd)
         proc = subprocess.Popen(
             [cmd],
             shell=True,
