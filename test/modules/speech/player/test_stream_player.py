@@ -4,6 +4,8 @@ import asyncio
 
 import unittest
 
+from src.cmd.init import Env
+from src.common.interface import IAudioStream
 from src.modules.speech.player.stream_player import StreamPlayer
 from src.common.logger import Logger
 from src.common.factory import EngineFactory, EngineClass
@@ -33,6 +35,8 @@ class TestStreamPlayer(unittest.TestCase):
         self.player: StreamPlayer = EngineFactory.get_engine_by_tag(
             EngineClass, self.tag, **kwargs)
         print(self.player.args.__dict__)
+        self.audio_out_stream: IAudioStream | EngineClass = Env.initAudioOutStreamEngine()
+        self.player.set_args(audio_stream=self.audio_out_stream)
         self.annotations_path = os.path.join(
             TEST_DIR, "audio_files/annotations.json")
         self.session = Session(**SessionCtx(

@@ -6,12 +6,7 @@ import io
 
 import pyaudio
 from pydub import AudioSegment
-
-from src.common.audio_stream import (
-    AudioStream,
-    AudioStreamArgs,
-    AudioBufferManager,
-)
+from src.common.audio_stream.helper import AudioBufferManager
 from src.common.factory import EngineClass
 from src.common.interface import IPlayer
 from src.common.session import Session
@@ -25,14 +20,17 @@ class PyAudioPlayer(EngineClass):
 
     def __init__(self, **args) -> None:
         self.args = AudioPlayerArgs(**args)
-        self.audio = AudioStream(AudioStreamArgs(
-            format=self.args.format,
-            channels=self.args.channels,
-            rate=self.args.rate,
-            output_device_index=self.args.output_device_index,
-            output=True,
-            frames_per_buffer=self.args.frames_per_buffer,
-        ))
+        if self.args.audio_stream is None:
+            raise Exception("audio_stream is None")
+        self.audio = self.args.audio_stream
+        # self.audio = PyAudioStream(PyAudioStreamArgs(
+        #    format=self.args.format,
+        #    channels=self.args.channels,
+        #    rate=self.args.rate,
+        #    output_device_index=self.args.output_device_index,
+        #    output=True,
+        #    frames_per_buffer=self.args.frames_per_buffer,
+        # ))
 
     def close(self):
         self.audio.close()
@@ -100,7 +98,7 @@ class StreamPlayer(PyAudioPlayer, IPlayer):
             if self.args.on_play_chunk:
                 self.args.on_play_chunk(session, sub_chunk)
 
-            self.audio.stream.write(sub_chunk)
+            self.audio.write_stream(sub_chunk)
 
             while self.pause_event.is_set():
                 time.sleep(0.01)

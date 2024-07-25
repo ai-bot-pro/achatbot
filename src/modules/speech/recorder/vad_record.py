@@ -4,13 +4,14 @@ import logging
 import time
 import asyncio
 
-from src.common.audio_stream import RingBuffer
+from src.common.interface import IRecorder
+from src.common.audio_stream.helper import RingBuffer
 from src.common.session import Session
 from src.common.types import VADRecoderArgs, AudioRecoderArgs
-from .base import PyAudioRecorder
+from .base import AudioRecorder
 
 
-class VADRecorder(PyAudioRecorder):
+class VADRecorder(AudioRecorder, IRecorder):
     TAG = "vad_recorder"
 
     @classmethod
@@ -20,7 +21,6 @@ class VADRecorder(PyAudioRecorder):
     def __init__(self, **args) -> None:
         vad_args = VADRecoderArgs(**args)
         super().__init__(**AudioRecoderArgs(
-            format=vad_args.format,
             channels=vad_args.channels,
             rate=vad_args.rate,
             sample_width=vad_args.sample_width,

@@ -4,14 +4,14 @@ import asyncio
 
 import unittest
 
-from src.common.interface import IDetector, IRecorder
+from src.cmd.init import Env
+from src.common.interface import IAudioStream, IRecorder
 from src.common.logger import Logger
 from src.common.factory import EngineFactory, EngineClass
 from src.common.session import Session
 from src.common.utils import audio_utils
-from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR, INT16_MAX_ABS_VALUE, WebRTCVADArgs, SileroVADArgs, WebRTCSileroVADArgs
+from src.common.types import SessionCtx, MODELS_DIR, RECORDS_DIR, INT16_MAX_ABS_VALUE, WebRTCVADArgs, SileroVADArgs, WebRTCSileroVADArgs
 import src.modules.speech
-from src.modules.speech.recorder.base import PyAudioRecorder
 
 r"""
 python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
@@ -68,6 +68,8 @@ class TestVADRecorder(unittest.TestCase):
         self.kwargs["padding_ms"] = int(os.getenv('PADDING_MS', 300))
         self.recorder: IRecorder | EngineClass = EngineFactory.get_engine_by_tag(
             EngineClass, self.tag, **self.kwargs)
+        self.audio_in_stream: IAudioStream | EngineClass = Env.initAudioInStreamEngine()
+        self.recorder.set_args(audio_stream=self.audio_in_stream)
         self.session = Session(**SessionCtx(
             "test_client_id").__dict__)
 

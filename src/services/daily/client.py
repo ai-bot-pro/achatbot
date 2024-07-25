@@ -1,3 +1,4 @@
+import os
 import logging
 import asyncio
 from typing import Any, Awaitable, Callable, Mapping
@@ -17,7 +18,7 @@ from apipeline.frames.data_frames import AudioRawFrame, ImageRawFrame
 from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
 from src.processors.daily_input_transport_processor import DailyInputTransportProcessor
 from src.processors.daily_output_transport_processor import DailyOutputTransportProcessor
-from src.common.event import EventManager
+from src.common.event import EventHandlerManager
 from src.types.frames.data_frames import (
     InterimTranscriptionFrame,
     SpriteFrame,
@@ -420,7 +421,7 @@ class DailyTransportClient(EventHandler):
         future.result()
 
 
-class DailyTransportEvent(EventManager):
+class DailyTransportEvent(EventHandlerManager):
 
     def __init__(
             self,
@@ -450,6 +451,7 @@ class DailyTransportEvent(EventManager):
             on_participant_left=self._on_participant_left,
         )
         self._params = params
+        self._params.api_key = os.getenv("DAILY_API_KEY")
 
         self._client = DailyTransportClient(
             room_url, token, bot_name, params, callbacks, self._loop)

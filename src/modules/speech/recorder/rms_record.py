@@ -5,13 +5,14 @@ import struct
 import time
 
 
-from src.common.audio_stream import RingBuffer
+from src.common.interface import IRecorder
+from src.common.audio_stream.helper import RingBuffer
 from src.common.session import Session
-from src.common.types import SILENCE_THRESHOLD, SILENT_CHUNKS, RATE
-from .base import PyAudioRecorder
+from src.common.types import SILENCE_THRESHOLD, RATE
+from .base import AudioRecorder
 
 
-class RMSRecorder(PyAudioRecorder):
+class RMSRecorder(AudioRecorder, IRecorder):
     TAG = "rms_recorder"
 
     def __init__(self, **args) -> None:

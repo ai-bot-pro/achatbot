@@ -23,8 +23,12 @@ class TerminalChatClient:
     def __init__(self, is_save_record=False, is_save_play_chunks=False) -> None:
         self.sid = str(uuid.uuid4())
         self.session = Session(**SessionCtx(self.sid).__dict__)
+        self.audio_in_stream = init.initAudioInStreamEngine()
+        self.audio_out_stream = init.initAudioOutStreamEngine()
         self.player = init.initPlayerEngine()
+        self.player.set_args(audio_stream=self.audio_out_stream)
         self.recorder = init.initRecorderEngine()
+        self.recorder.set_args(audio_stream=self.audio_in_stream)
         self.waker = init.initWakerEngine()
         self.vad = init.initVADEngine()
         self.start_record_event = threading.Event()
