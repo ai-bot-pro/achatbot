@@ -80,13 +80,28 @@ class PyAudioStream(EngineClass, IAudioStream):
         Returns:
             bool: True if the stream is active, False otherwise.
         """
+        if self.stream is None:
+            return False
+
         return self.stream and self.stream.is_active()
 
     def write_stream(self, data):
         self.stream.write(data)
 
+    def get_stream_info(self):
+        return {
+            "in_channels": self.args.channels,
+            "in_sample_rate": self.args.rate,
+            "in_sample_width": self.args.sample_width,
+            "out_channels": self.args.channels,
+            "out_sample_rate": self.args.rate,
+            "out_sample_width": self.args.sample_width,
+            "frames_per_buffer": self.args.frames_per_buffer,
+            "pyaudio_out_format": pyaudio.paInt16,
+        }
+
     def read_stream(self, num_frames):
-        self.stream.read(num_frames)
+        return self.stream.read(num_frames)
 
     def close(self) -> None:
         """Closes the audio instance."""

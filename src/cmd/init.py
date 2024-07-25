@@ -18,7 +18,9 @@ from src.common.types import (
     AudioRecoderArgs,
     VADRecoderArgs,
     CosyVoiceTTSArgs,
-    PersonalAIProxyArgs
+    PersonalAIProxyArgs,
+    PyAudioStreamArgs,
+    DailyAudioStreamArgs,
 )
 from src.modules.functions.search.api import SearchFuncEnvInit
 from src.modules.functions.weather.api import WeatherFuncEnvInit
@@ -67,6 +69,12 @@ class PlayStreamInit():
             "sample_width": 2,
         },
         'tts_daily_speaker': {
+            "format": pyaudio.paInt16,
+            "channels": 1,
+            "rate": 16000,
+            "sample_width": 2,
+        },
+        'tts_16k_speaker': {
             "format": pyaudio.paInt16,
             "channels": 1,
             "rate": 16000,
@@ -134,6 +142,24 @@ class Env(
     PromptInit, PlayStreamInit,
     SearchFuncEnvInit, WeatherFuncEnvInit,
 ):
+
+    @staticmethod
+    def initAudioInStreamEngine() -> interface.IAudioStream | EngineClass:
+        # audio stream
+        tag = os.getenv('AUDIO_IN_STREAM_TAG', "pyaudio_in_stream")
+        kwargs = Env.map_config_func[tag]()
+        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
+        logging.info(f"initAudioInStreamEngine: {tag}, {engine}")
+        return engine
+
+    @staticmethod
+    def initAudioOutStreamEngine() -> interface.IAudioStream | EngineClass:
+        # audio stream
+        tag = os.getenv('AUDIO_OUT_STREAM_TAG', "pyaudio_out_stream")
+        kwargs = Env.map_config_func[tag]()
+        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
+        logging.info(f"initAudioOutStreamEngine: {tag}, {engine}")
+        return engine
 
     @staticmethod
     def initWakerEngine() -> interface.IDetector | EngineClass:
@@ -338,8 +364,66 @@ class Env(
         ).__dict__
         return kwargs
 
+    @staticmethod
+    def get_pyaudio_in_stream_args() -> dict:
+        input_device_index = os.getenv('INPUT_DEVICE_INDEX', None)
+        if input_device_index is not None:
+            input_device_index = int(input_device_index)
+        kwargs = PyAudioStreamArgs(
+            input=True,
+            output=False,
+            input_device_index=input_device_index,
+            channels=int(os.getenv('IN_CHANNELS', "1")),
+            rate=int(os.getenv('IN_SAMPLE_RATE', "16000")),
+            sample_width=int(os.getenv('IN_SAMPLE_WIDTH', "2")),
+        ).__dict__
+        return kwargs
+
+    def get_pyaudio_out_stream_args() -> dict:
+        info = Env.get_stream_info()
+        info['input'] = False
+        info['output'] = True
+        output_device_index = os.getenv('OUTPUT_DEVICE_INDEX', None)
+        if output_device_index is not None:
+            output_device_index = int(output_device_index)
+        info['output_device_index'] = output_device_index
+
+        return info
+
+    @staticmethod
+    def get_daily_room_audio_in_stream_args() -> dict:
+        kwargs = DailyAudioStreamArgs(
+            bot_name=os.getenv('BOT_NAME', "chat-bot"),
+            input=True,
+            output=False,
+            in_channels=int(os.getenv('IN_CHANNELS', "1")),
+            in_sample_rate=int(os.getenv('IN_SAMPLE_RATE', "16000")),
+            in_sample_width=int(os.getenv('IN_SAMPLE_WIDTH', "2")),
+            meeting_room_token=os.getenv('MEETING_ROOM_TOKEN', ""),
+            meeting_room_url=os.getenv('MEETING_ROOM_URL', ""),
+        ).__dict__
+        return kwargs
+
+    @staticmethod
+    def get_daily_room_audio_out_stream_args() -> dict:
+        kwargs = DailyAudioStreamArgs(
+            bot_name=os.getenv('BOT_NAME', "chat-bot"),
+            input=False,
+            output=True,
+            out_channels=int(os.getenv('OUT_CHANNELS', "1")),
+            out_sample_rate=int(os.getenv('OUT_SAMPLE_RATE', "16000")),
+            out_sample_width=int(os.getenv('OUT_SAMPLE_WIDTH', "2")),
+            meeting_room_token=os.getenv('MEETING_ROOM_TOKEN', ""),
+            meeting_room_url=os.getenv('MEETING_ROOM_URL', ""),
+        ).__dict__
+        return kwargs
+
     # TAG : config
     map_config_func = {
+        'pyaudio_in_stream': get_pyaudio_in_stream_args,
+        'pyaudio_out_stream': get_pyaudio_out_stream_args,
+        'daily_room_audio_in_stream': get_daily_room_audio_in_stream_args,
+        'daily_room_audio_out_stream': get_daily_room_audio_out_stream_args,
         'tts_coqui': get_tts_coqui_args,
         'tts_cosy_voice': get_tts_cosy_voice_args,
         'tts_chat': get_tts_chat_args,

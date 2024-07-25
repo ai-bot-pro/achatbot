@@ -9,6 +9,62 @@ class IModel(ABC):
         raise NotImplemented("must be implemented in the child class")
 
 
+class IAudioStream(ABC):
+    """
+    Handles audio stream operations
+    - opening, starting, stopping, and closing
+    """
+
+    @abstractmethod
+    def open_stream(self):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def start_stream(self):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def stop_stream(self):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def close_stream(self):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def is_stream_active(self) -> bool:
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def write_stream(self, data):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def get_stream_info(self) -> dict:
+        """
+        e.g:
+        return {
+            "in_channels": 1,
+            "in_sample_rate": 16000,
+            "in_sample_width": 2,
+            "out_channels": 1,
+            "out_sample_rate": 16000,
+            "out_sample_width": 2,
+            "pyaudio_out_format": pyaudio.paInt16,
+            "frames_per_buffer": 512,
+        }
+        """
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def read_stream(self, num_frames) -> bytes:
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def close(self) -> None:
+        raise NotImplemented("must be implemented in the child class")
+
+
 class IRecorder(ABC):
     @abstractmethod
     async def record_audio(self, session) -> list[bytes]:

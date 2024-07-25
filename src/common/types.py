@@ -121,6 +121,7 @@ class AudioStreamArgs:
     stream_callback: Optional[str] = None
     input: bool = False
     output: bool = False
+    frames_per_buffer: int = CHUNK
 
 
 @dataclass
@@ -129,13 +130,15 @@ class PyAudioStreamArgs(AudioStreamArgs):
     channels: int = CHANNELS
     rate: int = RATE
     sample_width: int = SAMPLE_WIDTH
-    frames_per_buffer: int = CHUNK
     input_device_index: int = None
     output_device_index: int = None
 
 
 @dataclass
 class DailyAudioStreamArgs(AudioStreamArgs):
+    """
+    in live room,one joined client instance need diff in/out stream sample rate
+    """
     meeting_room_url: str = ""
     bot_name: str = "chat-bot"
     meeting_room_token: str = ""
@@ -145,11 +148,11 @@ class DailyAudioStreamArgs(AudioStreamArgs):
     out_channels: int = CHANNELS
     out_sample_rate: int = RATE
     out_sample_width: int = SAMPLE_WIDTH
+    out_queue_timeout_s: float = 0.1
 
 
 @dataclass
 class AudioRecoderArgs:
-    format: int = FORMAT
     channels: int = CHANNELS
     rate: int = RATE
     sample_width: int = SAMPLE_WIDTH
