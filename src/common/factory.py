@@ -33,12 +33,20 @@ class EngineClass(object):
 class EngineFactory:
     @staticmethod
     def get_engine_by_tag(cls, tag: str, **kwargs):
-        if not tag or type(tag) is not str:
+        if not tag or (type(tag) is not str and type(tag) is not list):
             raise TypeError(f"empty tag")
+
+        def filter_tag(engine):
+            if hasattr(engine, "TAG") is False:
+                return False
+            if engine.TAG == tag:
+                return True
+            if type(engine.TAG) is list and tag in engine.TAG:
+                return True
 
         selected_engines = list(
             filter(
-                lambda engine: hasattr(engine, "TAG") and engine.TAG == tag,
+                filter_tag,
                 EngineFactory.get_engines(cls),
             )
         )

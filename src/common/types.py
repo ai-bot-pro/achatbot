@@ -21,8 +21,9 @@ from pydantic.main import BaseModel
 from pydantic import ConfigDict
 
 from .interface import (
+    IAudioStream,
     IBuffering, IDetector, IAsr,
-    ILlm, ITts, IVADAnalyzer
+    ILlm, ITts, IVADAnalyzer,
 )
 from .factory import EngineClass
 from src.types.frames.data_frames import TransportMessageFrame
@@ -117,6 +118,13 @@ INT16_MAX_ABS_VALUE = 32768.0
 
 @dataclass
 class AudioStreamArgs:
+    stream_callback: Optional[str] = None
+    input: bool = False
+    output: bool = False
+
+
+@dataclass
+class PyAudioStreamArgs(AudioStreamArgs):
     format: int = FORMAT
     channels: int = CHANNELS
     rate: int = RATE
@@ -124,9 +132,19 @@ class AudioStreamArgs:
     frames_per_buffer: int = CHUNK
     input_device_index: int = None
     output_device_index: int = None
-    input: bool = False
-    output: bool = False
-    stream_callback: Optional[str] = None
+
+
+@dataclass
+class DailyAudioStreamArgs(AudioStreamArgs):
+    meeting_room_url: str = ""
+    bot_name: str = "chat-bot"
+    meeting_room_token: str = ""
+    in_channels: int = CHANNELS
+    in_sample_rate: int = RATE
+    in_sample_width: int = SAMPLE_WIDTH
+    out_channels: int = CHANNELS
+    out_sample_rate: int = RATE
+    out_sample_width: int = SAMPLE_WIDTH
 
 
 @dataclass
@@ -142,6 +160,7 @@ class AudioRecoderArgs:
     num_frames: int = CHUNK
     is_stream_callback: bool = False
     no_stream_sleep_time_s: float = 0.03  # for dequeue get
+    audio_stream: IAudioStream | EngineClass = None
 
 
 @dataclass
@@ -163,6 +182,7 @@ class AudioPlayerArgs:
     on_play_end: Optional[str] = None
     on_play_chunk: Optional[str] = None
     is_immediate_stop: bool = False
+    audio_stream: IAudioStream | EngineClass = None
 
 
 @dataclass
