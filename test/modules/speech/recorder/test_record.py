@@ -23,7 +23,23 @@ RECODER_TAG=wakeword_rms_recorder python -m unittest test.modules.speech.recorde
 
 RECODER_TAG=wakeword_rms_recorder python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_wakeword_record
 
+IS_STREAM_CALLBACK=1 RECODER_TAG=rms_recorder python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_record
 IS_STREAM_CALLBACK=1 RECODER_TAG=wakeword_rms_recorder python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_wakeword_record
+
+# need create daily room, get room_url
+AUDIO_IN_STREAM_TAG=daily_room_audio_in_stream \
+    MEETING_ROOM_URL=https://weedge.daily.co/chat-bot \
+    RECODER_TAG=rms_recorder \
+    python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_record
+AUDIO_IN_STREAM_TAG=daily_room_audio_in_stream \
+    MEETING_ROOM_URL=https://weedge.daily.co/chat-bot \
+    IS_STREAM_CALLBACK=1 RECODER_TAG=rms_recorder \
+    python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_record
+
+AUDIO_IN_STREAM_TAG=daily_room_audio_in_stream \
+    MEETING_ROOM_URL=https://weedge.daily.co/chat-bot \
+    IS_STREAM_CALLBACK=1 RECODER_TAG=wakeword_rms_recorder \
+    python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_record
 """
 
 
@@ -59,7 +75,7 @@ class TestRMSRecorder(unittest.TestCase):
         self.recorder: IRecorder | EngineClass = EngineFactory.get_engine_by_tag(
             EngineClass, self.tag, **self.kwargs)
         self.audio_in_stream: IAudioStream | EngineClass = Env.initAudioInStreamEngine()
-        self.recorder.set_args(audio_stream=self.audio_in_stream)
+        self.recorder.set_in_stream(self.audio_in_stream)
         self.session = Session(**SessionCtx(
             "test_client_id").__dict__)
 
@@ -85,6 +101,7 @@ class TestRMSRecorder(unittest.TestCase):
 
         self.recorder2 = EngineFactory.get_engine_by_tag(
             EngineClass, self.tag, **self.kwargs)
+        self.recorder2.set_in_stream(self.audio_in_stream)
         frames = asyncio.run(self.recorder2.record_audio(self.session))
         self.assertGreater(len(frames), 0)
         data = b''.join(frames)

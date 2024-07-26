@@ -106,8 +106,8 @@ class SessionCtx:
 
 # audio recorder default configuration
 SILENCE_THRESHOLD = 500
-# 2 seconds of silence marks the end of user voice input
-SILENT_CHUNKS = 2 * RATE / CHUNK
+# 1 seconds of silence marks the end of user voice input
+SILENT_CHUNKS = 1 * RATE / CHUNK
 # record silence timeout (10s)
 SILENCE_TIMEOUT_S = 10
 # Set microphone id. Use list_microphones.py to see a device list.
@@ -163,7 +163,6 @@ class AudioRecoderArgs:
     num_frames: int = CHUNK
     is_stream_callback: bool = False
     no_stream_sleep_time_s: float = 0.03  # for dequeue get
-    audio_stream: IAudioStream | EngineClass = None
 
 
 @dataclass
@@ -185,7 +184,6 @@ class AudioPlayerArgs:
     on_play_end: Optional[str] = None
     on_play_chunk: Optional[str] = None
     is_immediate_stop: bool = False
-    audio_stream: IAudioStream | EngineClass = None
 
 
 @dataclass

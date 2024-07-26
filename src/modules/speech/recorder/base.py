@@ -5,6 +5,7 @@ import pyaudio
 
 from src.common.factory import EngineClass
 from src.common.types import AudioRecoderArgs
+from src.common.interface import IAudioStream
 
 
 class AudioRecorder(EngineClass):
@@ -23,13 +24,6 @@ class AudioRecorder(EngineClass):
 
     def __init__(self, **args) -> None:
         self.args = AudioRecoderArgs(**args)
-        if self.args.audio_stream is None:
-            raise Exception("audio_stream is None")
-        stream_callback = AudioRecorder.stream_callback if self.args.is_stream_callback else None
-        self.args.audio_stream.set_args(
-            stream_callback=stream_callback,
-        )
-        self.audio = self.args.audio_stream
         # self.audio = PyAudioStream(PyAudioStreamArgs(
         #    format=self.args.format,
         #    channels=self.args.channels,
@@ -51,3 +45,10 @@ class AudioRecorder(EngineClass):
 
     def close(self):
         self.audio.close()
+
+    def set_in_stream(self, audio_stream: EngineClass | IAudioStream):
+        stream_callback = AudioRecorder.stream_callback if self.args.is_stream_callback else None
+        audio_stream.set_args(
+            stream_callback=stream_callback,
+        )
+        self.audio = audio_stream

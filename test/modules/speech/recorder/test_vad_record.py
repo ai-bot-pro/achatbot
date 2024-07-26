@@ -69,7 +69,7 @@ class TestVADRecorder(unittest.TestCase):
         self.recorder: IRecorder | EngineClass = EngineFactory.get_engine_by_tag(
             EngineClass, self.tag, **self.kwargs)
         self.audio_in_stream: IAudioStream | EngineClass = Env.initAudioInStreamEngine()
-        self.recorder.set_args(audio_stream=self.audio_in_stream)
+        self.recorder.set_in_stream(self.audio_in_stream)
         self.session = Session(**SessionCtx(
             "test_client_id").__dict__)
 
@@ -105,8 +105,9 @@ class TestVADRecorder(unittest.TestCase):
             data, os.path.join(RECORDS_DIR, "test.wav")))
         print(file_path)
 
-        self.recorder2 = EngineFactory.get_engine_by_tag(
+        self.recorder2: IRecorder | EngineClass = EngineFactory.get_engine_by_tag(
             EngineClass, self.tag, **self.kwargs)
+        self.recorder2.set_in_stream(self.audio_in_stream)
         frames = asyncio.run(self.recorder2.record_audio(self.session))
         self.assertGreater(len(frames), 0)
         data = b''.join(frames)

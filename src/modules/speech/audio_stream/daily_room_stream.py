@@ -133,8 +133,10 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
 
     def open_stream(self):
         client = JoinedClients.get_room_client(
-            self.args.meeting_room_token, self.args.bot_name)
+            self.args.meeting_room_url, self.args.bot_name)
         if client is not None:
+            logging.info(
+                f"{self.args.meeting_room_url} {self.args.bot_name} get joined client {client}")
             self._client = client
             return
 
@@ -188,10 +190,11 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
             return self._out_thread is not None and self._out_thread.is_alive()
 
     def close(self) -> None:
-        if self._stream_quit is False:
+        if self._client is not None:
             self.close_stream()
-        self._client.release()
-        logging.debug(f"client released")
+            self._client.release()
+            self._client = None
+            logging.debug(f"client released")
 
     def _receive_audio(self):
         self._join_event.wait()

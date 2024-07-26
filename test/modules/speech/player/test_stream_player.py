@@ -15,7 +15,15 @@ from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR, CHUN
 import src.modules.speech
 
 r"""
-python -m unittest test.modules.speech.player.test_stream_player.TestStreamPlayer.test_play_audio
+
+TTS_TAG=tts_16k_speaker \
+    python -m unittest test.modules.speech.player.test_stream_player.TestStreamPlayer.test_play_audio
+
+# need create daily room, get room_url
+AUDIO_OUT_STREAM_TAG=daily_room_audio_out_stream \
+    MEETING_ROOM_URL=https://weedge.daily.co/chat-bot \
+    TTS_TAG=tts_16k_speaker \
+    python -m unittest test.modules.speech.player.test_stream_player.TestStreamPlayer.test_play_audio
 """
 
 
@@ -36,16 +44,18 @@ class TestStreamPlayer(unittest.TestCase):
             EngineClass, self.tag, **kwargs)
         print(self.player.args.__dict__)
         self.audio_out_stream: IAudioStream | EngineClass = Env.initAudioOutStreamEngine()
-        self.player.set_args(audio_stream=self.audio_out_stream)
+        self.player.set_out_stream(self.audio_out_stream)
         self.annotations_path = os.path.join(
             TEST_DIR, "audio_files/annotations.json")
         self.session = Session(**SessionCtx(
             "test_client_id").__dict__)
+        self.out_stream_info = self.audio_out_stream.get_stream_info()
 
     def tearDown(self):
         self.player.close()
 
     def test_play_audio(self):
+        self.player.open()
         annotations = asyncio.run(audio_utils.load_json(self.annotations_path))
         for audio_file, data in annotations.items():
             audio_file_path = os.path.join(
@@ -56,6 +66,7 @@ class TestStreamPlayer(unittest.TestCase):
                     audio_file_path,
                     segment["start"],
                     segment["end"]))
+                self.assertEqual(audio_segment.frame_rate, self.out_stream_info['out_sample_rate'])
                 self.session.ctx.state["tts_chunk"] = audio_segment.raw_data
                 logging.debug(f"chunk size: {len(audio_segment.raw_data)}")
                 self.player.play_audio(self.session)

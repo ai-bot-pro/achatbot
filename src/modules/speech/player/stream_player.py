@@ -8,21 +8,18 @@ import pyaudio
 from pydub import AudioSegment
 from src.common.audio_stream.helper import AudioBufferManager
 from src.common.factory import EngineClass
-from src.common.interface import IPlayer
+from src.common.interface import IAudioStream, IPlayer
 from src.common.session import Session
 from src.common.types import AudioPlayerArgs
 
 
-class PyAudioPlayer(EngineClass):
+class AudioPlayer(EngineClass):
     @classmethod
     def get_args(cls, **kwargs) -> dict:
         return {**AudioPlayerArgs().__dict__, **kwargs}
 
     def __init__(self, **args) -> None:
         self.args = AudioPlayerArgs(**args)
-        if self.args.audio_stream is None:
-            raise Exception("audio_stream is None")
-        self.audio = self.args.audio_stream
         # self.audio = PyAudioStream(PyAudioStreamArgs(
         #    format=self.args.format,
         #    channels=self.args.channels,
@@ -35,8 +32,11 @@ class PyAudioPlayer(EngineClass):
     def close(self):
         self.audio.close()
 
+    def set_out_stream(self, audio_stream: EngineClass | IAudioStream):
+        self.audio = audio_stream
 
-class StreamPlayer(PyAudioPlayer, IPlayer):
+
+class StreamPlayer(AudioPlayer, IPlayer):
     TAG = "stream_player"
 
     def __init__(self, **args) -> None:
@@ -50,10 +50,12 @@ class StreamPlayer(PyAudioPlayer, IPlayer):
 
         self.buffer_manager: AudioBufferManager = AudioBufferManager(queue.Queue())
 
+    def open(self):
+        self.audio.open_stream()
+
     def start(self, session: Session):
         self.first_chunk_played = False
         self.playback_active = True
-        self.audio.open_stream()
         self.audio.start_stream()
 
         if not self.playback_thread or not self.playback_thread.is_alive():
@@ -138,7 +140,7 @@ class StreamPlayer(PyAudioPlayer, IPlayer):
         self.immediate_stop_event.clear()
         self.buffer_manager.clear_buffer()
         self.playback_thread = None
-        self.audio.close_stream()
+        self.audio.stop_stream()
 
     def pause(self):
         self.pause_event.set()
