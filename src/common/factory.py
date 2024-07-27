@@ -12,10 +12,6 @@ class EngineClass(object):
     args = None
     TAG = ""
 
-    @property
-    def Args(self):
-        return self.args
-
     @classmethod
     def get_args(cls, **kwargs) -> dict:
         return kwargs

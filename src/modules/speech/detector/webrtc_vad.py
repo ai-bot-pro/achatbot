@@ -26,8 +26,9 @@ class WebrtcVAD(BaseVAD):
             return False
 
         # Number of audio frames per millisecond
-        frame_length = int(RATE * self.args.frame_duration_ms / 1000)
-        num_frames = int(len(self.audio_buffer) / (2 * frame_length))
+        frame_length = int(self.args.sample_rate * self.args.frame_duration_ms / 1000)
+        # just process channels:1 sample_width:2 audio
+        num_frames = math.ceil(len(self.audio_buffer) / (2 * frame_length))
         speech_frames = 0
         logging.debug(
             f"{self.TAG} Speech detected audio_len:{len(self.audio_buffer)} frame_len:{frame_length} num_frames {num_frames}")
@@ -37,7 +38,7 @@ class WebrtcVAD(BaseVAD):
             end_byte = start_byte + frame_length * 2
             frame = self.audio_buffer[start_byte:end_byte]
             # print(len(frame))
-            if self.model.is_speech(frame, RATE):
+            if self.model.is_speech(frame, self.args.sample_rate):
                 speech_frames += 1
                 if self.args.check_frames_mode == VAD_CHECK_PER_FRAMES:
                     logging.debug(f"{self.TAG} Speech detected in frame {i + 1}"

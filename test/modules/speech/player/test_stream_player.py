@@ -11,7 +11,7 @@ from src.common.logger import Logger
 from src.common.factory import EngineFactory, EngineClass
 from src.common.session import Session
 from src.common.utils import audio_utils
-from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR, CHUNK
+from src.common.types import AudioStreamInfo, SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR, CHUNK
 import src.modules.speech
 
 r"""
@@ -31,17 +31,14 @@ class TestStreamPlayer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tag = os.getenv('PLAYER_TAG', "stream_player")
-        Logger.init(logging.DEBUG)
+        Logger.init(logging.DEBUG, is_file=False)
 
     @classmethod
     def tearDownClass(cls):
         pass
 
     def setUp(self):
-        kwargs = {}
-        kwargs["frames_per_buffer"] = CHUNK
-        self.player: StreamPlayer = EngineFactory.get_engine_by_tag(
-            EngineClass, self.tag, **kwargs)
+        self.player: StreamPlayer = Env.initPlayerEngine()
         print(self.player.args.__dict__)
         self.audio_out_stream: IAudioStream | EngineClass = Env.initAudioOutStreamEngine()
         self.player.set_out_stream(self.audio_out_stream)
@@ -49,7 +46,7 @@ class TestStreamPlayer(unittest.TestCase):
             TEST_DIR, "audio_files/annotations.json")
         self.session = Session(**SessionCtx(
             "test_client_id").__dict__)
-        self.out_stream_info = self.audio_out_stream.get_stream_info()
+        self.out_stream_info: AudioStreamInfo = self.audio_out_stream.get_stream_info()
 
     def tearDown(self):
         self.player.close()
@@ -66,7 +63,17 @@ class TestStreamPlayer(unittest.TestCase):
                     audio_file_path,
                     segment["start"],
                     segment["end"]))
-                self.assertEqual(audio_segment.frame_rate, self.out_stream_info['out_sample_rate'])
+                print(
+                    f"channels:{audio_segment.channels},sample_width:{audio_segment.sample_width},frame_rate:{audio_segment.frame_rate},frame_width:{audio_segment.frame_width}")
+                self.assertEqual(
+                    audio_segment.frame_rate,
+                    self.out_stream_info.out_sample_rate)
+                self.assertEqual(
+                    audio_segment.channels,
+                    self.out_stream_info.out_channels)
+                self.assertEqual(
+                    audio_segment.sample_width,
+                    self.out_stream_info.out_sample_width)
                 self.session.ctx.state["tts_chunk"] = audio_segment.raw_data
                 logging.debug(f"chunk size: {len(audio_segment.raw_data)}")
                 self.player.play_audio(self.session)

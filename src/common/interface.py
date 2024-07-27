@@ -40,19 +40,9 @@ class IAudioStream(ABC):
         raise NotImplemented("must be implemented in the child class")
 
     @abstractmethod
-    def get_stream_info(self) -> dict:
+    def get_stream_info(self):
         """
-        e.g:
-        return {
-            "in_channels": 1,
-            "in_sample_rate": 16000,
-            "in_sample_width": 2,
-            "out_channels": 1,
-            "out_sample_rate": 16000,
-            "out_sample_width": 2,
-            "pyaudio_out_format": pyaudio.paInt16,
-            "frames_per_buffer": 512,
-        }
+        return AudioStreamInfo
         """
         raise NotImplemented("must be implemented in the child class")
 
@@ -66,6 +56,10 @@ class IAudioStream(ABC):
 
 
 class IRecorder(ABC):
+    @abstractmethod
+    def open(self):
+        raise NotImplemented("must be implemented in the child class")
+
     @abstractmethod
     async def record_audio(self, session) -> list[bytes]:
         raise NotImplemented("must be implemented in the child class")

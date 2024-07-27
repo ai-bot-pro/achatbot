@@ -46,17 +46,19 @@ class TerminalChatClient:
                                  on_play_end=self.on_play_end)
         self.player.open()
         self.player.start(self.session)
-
         play_t = threading.Thread(target=self.loop_recv,
                                   args=(conn,))
+        play_t.start()
+
+        self.recorder.open()
         record_t = threading.Thread(target=self.loop_record,
                                     args=(conn,))
-        play_t.start()
         record_t.start()
 
         record_t.join()
         play_t.join()
         self.player.close()
+        self.recorder.close()
 
     def on_wakeword_detected(self, session: Session, data):
         if "bot_name" in session.ctx.state:

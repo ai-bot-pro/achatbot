@@ -17,31 +17,38 @@ r"""
 python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
 IS_STREAM_CALLBACK=1 python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
 
-DETECTOR_VAD_TAG=silero_vad python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
-IS_STREAM_CALLBACK=1 DETECTOR_VAD_TAG=silero_vad python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
+IS_PAD_TENSOR=1 VAD_DETECTOR_TAG=silero_vad python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
+IS_PAD_TENSOR=1 IS_STREAM_CALLBACK=1 VAD_DETECTOR_TAG=silero_vad python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
 
-DETECTOR_VAD_TAG=webrtc_silero_vad python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
-IS_STREAM_CALLBACK=1 DETECTOR_VAD_TAG=webrtc_silero_vad python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
+IS_PAD_TENSOR=1 VAD_DETECTOR_TAG=webrtc_silero_vad python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
+IS_PAD_TENSOR=1 IS_STREAM_CALLBACK=1 VAD_DETECTOR_TAG=webrtc_silero_vad python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
+
+# need create daily room, get room_url
+AUDIO_IN_STREAM_TAG=daily_room_audio_in_stream \
+    MEETING_ROOM_URL=https://weedge.daily.co/chat-bot \
+    RECODER_TAG=vad_recorder \
+    IS_PAD_TENSOR=1 VAD_DETECTOR_TAG=webrtc_silero_vad \
+    python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
+AUDIO_IN_STREAM_TAG=daily_room_audio_in_stream \
+    MEETING_ROOM_URL=https://weedge.daily.co/chat-bot \
+    IS_STREAM_CALLBACK=1 RECODER_TAG=vad_recorder \
+    IS_PAD_TENSOR=1 VAD_DETECTOR_TAG=webrtc_silero_vad \
+    python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
 
 RECODER_TAG=wakeword_vad_recorder python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_wakeword_record
 IS_STREAM_CALLBACK=1 RECODER_TAG=wakeword_vad_recorder python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_wakeword_record
 
-DETECTOR_VAD_TAG=silero_vad RECODER_TAG=wakeword_vad_recorder python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_wakeword_record
-IS_STREAM_CALLBACK=1 DETECTOR_VAD_TAG=silero_vad RECODER_TAG=wakeword_vad_recorder python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_wakeword_record
+IS_PAD_TENSOR=1 VAD_DETECTOR_TAG=silero_vad RECODER_TAG=wakeword_vad_recorder python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_wakeword_record
+IS_PAD_TENSOR=1 IS_STREAM_CALLBACK=1 VAD_DETECTOR_TAG=silero_vad RECODER_TAG=wakeword_vad_recorder python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_wakeword_record
 
-DETECTOR_VAD_TAG=webrtc_silero_vad RECODER_TAG=wakeword_vad_recorder python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_wakeword_record
-IS_STREAM_CALLBACK=1 DETECTOR_VAD_TAG=webrtc_silero_vad RECODER_TAG=wakeword_vad_recorder python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_wakeword_record
+VAD_DETECTOR_TAG=webrtc_silero_vad RECODER_TAG=wakeword_vad_recorder python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_wakeword_record
+IS_PAD_TENSOR=1 IS_STREAM_CALLBACK=1 VAD_DETECTOR_TAG=webrtc_silero_vad RECODER_TAG=wakeword_vad_recorder python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_wakeword_record
 """
 
 
 class TestVADRecorder(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tag = os.getenv('RECODER_TAG', "vad_recorder")
-        cls.input_device_index = os.getenv('MIC_IDX', None)
-
-        cls.detector_vad_tag = os.getenv('DETECTOR_VAD_TAG', "webrtc_vad")
-
         cls.detector_wake_tag = os.getenv('DETECTOR_WAKE_TAG', "porcupine_wakeword")
         cls.wake_words = os.getenv('WAKE_WORDS', "小黑")
         audio_file = os.path.join(
@@ -61,33 +68,20 @@ class TestVADRecorder(unittest.TestCase):
         pass
 
     def setUp(self):
-        self.kwargs = {}
-        self.kwargs["input_device_index"] = None if self.input_device_index is None else int(
-            self.input_device_index)
-        self.kwargs["is_stream_callback"] = bool(os.getenv('IS_STREAM_CALLBACK', None))
-        self.kwargs["padding_ms"] = int(os.getenv('PADDING_MS', 300))
-        self.recorder: IRecorder | EngineClass = EngineFactory.get_engine_by_tag(
-            EngineClass, self.tag, **self.kwargs)
+        os.environ['RECORDER_TAG'] = 'vad_recorder'
+        os.environ['IS_STREAM_CALLBACK'] = os.getenv("IS_STREAM_CALLBACK", "")
+        self.recorder: IRecorder | EngineClass = Env.initRecorderEngine()
         self.audio_in_stream: IAudioStream | EngineClass = Env.initAudioInStreamEngine()
         self.recorder.set_in_stream(self.audio_in_stream)
+        self.recorder.open()
         self.session = Session(**SessionCtx(
             "test_client_id").__dict__)
 
-        kwargs = self.get_vad_args()
-        self.session.ctx.vad = EngineFactory.get_engine_by_tag(
-            EngineClass, self.detector_vad_tag, **kwargs)
+        self.session.ctx.vad = Env.initVADEngine()
 
     def tearDown(self):
         self.recorder and self.recorder.close()
         self.session.close()
-
-    def get_vad_args(self) -> dict:
-        map_args = {
-            "webrtc_vad": WebRTCVADArgs().__dict__,
-            "silero_vad": SileroVADArgs().__dict__,
-            "webrtc_silero_vad": WebRTCSileroVADArgs().__dict__,
-        }
-        return map_args[self.detector_vad_tag]
 
     def test_record(self):
         frames = asyncio.run(self.recorder.record_audio(self.session))
@@ -105,9 +99,9 @@ class TestVADRecorder(unittest.TestCase):
             data, os.path.join(RECORDS_DIR, "test.wav")))
         print(file_path)
 
-        self.recorder2: IRecorder | EngineClass = EngineFactory.get_engine_by_tag(
-            EngineClass, self.tag, **self.kwargs)
+        self.recorder2: IRecorder | EngineClass = Env.initRecorderEngine()
         self.recorder2.set_in_stream(self.audio_in_stream)
+        self.recorder2.open()
         frames = asyncio.run(self.recorder2.record_audio(self.session))
         self.assertGreater(len(frames), 0)
         data = b''.join(frames)

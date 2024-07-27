@@ -10,14 +10,10 @@ from src.common.audio_stream.helper import AudioBufferManager
 from src.common.factory import EngineClass
 from src.common.interface import IAudioStream, IPlayer
 from src.common.session import Session
-from src.common.types import AudioPlayerArgs
+from src.common.types import AudioPlayerArgs, AudioStreamInfo
 
 
 class AudioPlayer(EngineClass):
-    @classmethod
-    def get_args(cls, **kwargs) -> dict:
-        return {**AudioPlayerArgs().__dict__, **kwargs}
-
     def __init__(self, **args) -> None:
         self.args = AudioPlayerArgs(**args)
         # self.audio = PyAudioStream(PyAudioStreamArgs(
@@ -34,6 +30,7 @@ class AudioPlayer(EngineClass):
 
     def set_out_stream(self, audio_stream: EngineClass | IAudioStream):
         self.audio = audio_stream
+        self.stream_info: AudioStreamInfo = audio_stream.get_stream_info()
 
 
 class StreamPlayer(AudioPlayer, IPlayer):
@@ -85,13 +82,15 @@ class StreamPlayer(AudioPlayer, IPlayer):
 
     def _play_chunk(self, session: Session, chunk):
         # handle mpeg
-        if self.args.format == pyaudio.paCustomFormat:
+        if self.stream_info.pyaudio_out_format == pyaudio.paCustomFormat:
             # convert to pcm using pydub
             segment = AudioSegment.from_mp3(io.BytesIO(chunk))
             chunk = segment.raw_data
 
-        for i in range(0, len(chunk), self.args.frames_per_buffer):
-            sub_chunk = chunk[i:i + self.args.frames_per_buffer]
+        sub_chunk_len = self.stream_info.out_frames_per_buffer * \
+            self.stream_info.out_channels * self.stream_info.out_sample_width
+        for i in range(0, len(chunk), sub_chunk_len):
+            sub_chunk = chunk[i:i + sub_chunk_len]
 
             if not self.first_chunk_played and self.args.on_play_start:
                 self.on_play_start(session, sub_chunk)

@@ -8,7 +8,7 @@ import wave
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 16000
-CHUNK = 256
+CHUNK = 1600
 FRAME_DURATION = 30  # 毫秒
 FRAME_SIZE = int(RATE * FRAME_DURATION / 1000)
 

@@ -112,8 +112,9 @@ class ReceiveSendDailyAudio:
 
         while not self.__app_quit:
             # Read 100ms worth of audio frames.
-            buffer = self.__speaker_device.read_frames(
-                int(self.__sample_rate / 10))
+            num_frames = int(self.__sample_rate / 10)
+            # num_frames = 512
+            buffer = self.__speaker_device.read_frames(num_frames)
             if len(buffer) > 0:
                 if self._enable_send:  # put to queue
                     self._queue.put(buffer)

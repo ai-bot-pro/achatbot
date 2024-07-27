@@ -1,7 +1,6 @@
 import os
 import logging
-import inspect
-from typing import (Any)
+from types import MappingProxyType
 import asyncio
 
 import pyaudio
@@ -11,16 +10,16 @@ from src.common import interface
 from src.common.config import Conf
 from src.common.factory import EngineFactory, EngineClass
 from src.common.types import (
-    MODELS_DIR, RECORDS_DIR, CHUNK, CONFIG_DIR,
+    MODELS_DIR, RECORDS_DIR, CONFIG_DIR,
     SileroVADArgs,
     WebRTCVADArgs,
-    WebRTCSileroVADArgs,
     AudioRecoderArgs,
     VADRecoderArgs,
     CosyVoiceTTSArgs,
     PersonalAIProxyArgs,
     PyAudioStreamArgs,
     DailyAudioStreamArgs,
+    AudioPlayerArgs,
 )
 from src.modules.functions.search.api import SearchFuncEnvInit
 from src.modules.functions.weather.api import WeatherFuncEnvInit
@@ -36,8 +35,8 @@ DEFAULT_SYSTEM_PROMPT = "你是一个中国人,一名中文助理，请用中文
 
 
 class PlayStreamInit():
-    # TTS_TAG : stream_info
-    map_tts_player_stream_info = {
+    # TTS_TAG : stream_info, read_only dict
+    map_tts_player_stream_info = MappingProxyType({
         'tts_coqui': {
             "format": pyaudio.paFloat32,
             "channels": 1,
@@ -80,12 +79,14 @@ class PlayStreamInit():
             "rate": 16000,
             "sample_width": 2,
         },
-    }
+    })
 
     @staticmethod
     def get_stream_info() -> dict:
         tts_tag = os.getenv('TTS_TAG', "tts_chat")
         if tts_tag in PlayStreamInit.map_tts_player_stream_info:
+            # !NOTE: return map_tts_player_stream_info is ref can change it,
+            # so don't change it, just read only map (use MappingProxyType)
             return PlayStreamInit.map_tts_player_stream_info[tts_tag]
         return {}
 
@@ -306,6 +307,10 @@ class Env(
     @staticmethod
     def get_silero_vad_args() -> dict:
         kwargs = SileroVADArgs(
+            sample_rate=int(os.getenv('SAMPLE_RATE', "16000")),
+            force_reload=bool(os.getenv('FORCE_RELOAD', "")),
+            is_pad_tensor=bool(os.getenv('IS_PAD_TENSOR', "1")),
+            onnx=bool(os.getenv('ONNX', "")),
             repo_or_dir=os.getenv('REPO_OR_DIR', "snakers4/silero-vad"),
             model=os.getenv('SILERO_MODEL', "silero_vad"),
             check_frames_mode=int(os.getenv('CHECK_FRAMES_MODE', "1")),
@@ -322,13 +327,7 @@ class Env(
 
     @staticmethod
     def get_webrtc_silero_vad_args() -> dict:
-        kwargs = WebRTCSileroVADArgs(
-            aggressiveness=int(os.getenv('AGGRESSIVENESS', "1")),
-            check_frames_mode=int(os.getenv('CHECK_FRAMES_MODE', "1")),
-            repo_or_dir=os.getenv('REPO_OR_DIR', "snakers4/silero-vad"),
-            model=os.getenv('SILERO_MODEL', "silero_vad"),
-        ).__dict__
-        return kwargs
+        return {**Env.get_webrtc_vad_args(), **Env.get_silero_vad_args()}
 
     @staticmethod
     def get_pyannote_vad_args() -> dict:
@@ -344,23 +343,15 @@ class Env(
 
     @staticmethod
     def get_rms_recorder_args() -> dict:
-        input_device_index = os.getenv('INPUT_DEVICE_INDEX', None)
-        if input_device_index is not None:
-            input_device_index = int(input_device_index)
         kwargs = AudioRecoderArgs(
             is_stream_callback=bool(os.getenv('IS_STREAM_CALLBACK', "True")),
-            input_device_index=input_device_index,
         ).__dict__
         return kwargs
 
     @staticmethod
     def get_vad_recorder_args() -> dict:
-        input_device_index = os.getenv('INPUT_DEVICE_INDEX', None)
-        if input_device_index is not None:
-            input_device_index = int(input_device_index)
         kwargs = VADRecoderArgs(
             is_stream_callback=bool(os.getenv('IS_STREAM_CALLBACK', "True")),
-            input_device_index=input_device_index,
         ).__dict__
         return kwargs
 
@@ -376,19 +367,27 @@ class Env(
             channels=int(os.getenv('IN_CHANNELS', "1")),
             rate=int(os.getenv('IN_SAMPLE_RATE', "16000")),
             sample_width=int(os.getenv('IN_SAMPLE_WIDTH', "2")),
+            format=int(os.getenv('pyaudio_format', "8")),
         ).__dict__
         return kwargs
 
+    @staticmethod
     def get_pyaudio_out_stream_args() -> dict:
         info = Env.get_stream_info()
-        info['input'] = False
-        info['output'] = True
         output_device_index = os.getenv('OUTPUT_DEVICE_INDEX', None)
         if output_device_index is not None:
             output_device_index = int(output_device_index)
-        info['output_device_index'] = output_device_index
+        kwargs = PyAudioStreamArgs(
+            input=False,
+            output=True,
+            output_device_index=output_device_index,
+            channels=info["channels"],
+            rate=info["rate"],
+            sample_width=info["sample_width"],
+            format=info["format"],
+        ).__dict__
 
-        return info
+        return kwargs
 
     @staticmethod
     def get_daily_room_audio_in_stream_args() -> dict:
@@ -406,13 +405,14 @@ class Env(
 
     @staticmethod
     def get_daily_room_audio_out_stream_args() -> dict:
+        info = Env.get_stream_info()
         kwargs = DailyAudioStreamArgs(
             bot_name=os.getenv('BOT_NAME', "chat-bot"),
             input=False,
             output=True,
-            out_channels=int(os.getenv('OUT_CHANNELS', "1")),
-            out_sample_rate=int(os.getenv('OUT_SAMPLE_RATE', "16000")),
-            out_sample_width=int(os.getenv('OUT_SAMPLE_WIDTH', "2")),
+            out_channels=info["channels"],
+            out_sample_rate=info["rate"],
+            out_sample_width=info["sample_width"],
             meeting_room_token=os.getenv('MEETING_ROOM_TOKEN', ""),
             meeting_room_url=os.getenv('MEETING_ROOM_URL', ""),
         ).__dict__
@@ -451,17 +451,13 @@ class Env(
         return engine
 
     @staticmethod
-    def initPlayerEngine(tts: interface.ITts = None) -> interface.IPlayer | EngineClass:
+    def initPlayerEngine() -> interface.IPlayer | EngineClass:
         # player
         tag = os.getenv('PLAYER_TAG', "stream_player")
-        info = Env.get_stream_info()
-        if tts:
-            info = tts.get_stream_info()
-        info["frames_per_buffer"] = CHUNK * 10
-        output_device_index = os.getenv('OUTPUT_DEVICE_INDEX', None)
-        if output_device_index is not None:
-            info["output_device_index"] = int(output_device_index)
-        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **info)
+        kwargs = AudioPlayerArgs(
+            is_immediate_stop=bool(os.getenv('IS_IMMEDIATE_STOP', "")),
+        ).__dict__
+        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         logging.info(f"initPlayerEngine: {tag},  {engine}")
         return engine
 

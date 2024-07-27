@@ -3,7 +3,7 @@ import pyaudio
 
 from src.common.interface import IAudioStream
 from src.common.factory import EngineClass
-from src.common.types import PyAudioStreamArgs
+from src.common.types import AudioStreamInfo, PyAudioStreamArgs
 
 
 class PyAudioStream(EngineClass, IAudioStream):
@@ -88,17 +88,18 @@ class PyAudioStream(EngineClass, IAudioStream):
     def write_stream(self, data):
         self.stream.write(data)
 
-    def get_stream_info(self):
-        return {
-            "in_channels": self.args.channels,
-            "in_sample_rate": self.args.rate,
-            "in_sample_width": self.args.sample_width,
-            "out_channels": self.args.channels,
-            "out_sample_rate": self.args.rate,
-            "out_sample_width": self.args.sample_width,
-            "frames_per_buffer": self.args.frames_per_buffer,
-            "pyaudio_out_format": pyaudio.paInt16,
-        }
+    def get_stream_info(self) -> AudioStreamInfo:
+        return AudioStreamInfo(
+            in_channels=self.args.channels,
+            in_sample_rate=self.args.rate,
+            in_sample_width=self.args.sample_width,
+            in_frames_per_buffer=self.args.frames_per_buffer,
+            out_channels=self.args.channels,
+            out_sample_rate=self.args.rate,
+            out_sample_width=self.args.sample_width,
+            out_frames_per_buffer=self.args.frames_per_buffer,
+            pyaudio_out_format=self.args.format,
+        )
 
     def read_stream(self, num_frames):
         return self.stream.read(num_frames)

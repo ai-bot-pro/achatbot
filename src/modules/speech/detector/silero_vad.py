@@ -62,7 +62,7 @@ class SileroVAD(BaseVAD):
         if self.args.check_frames_mode not in [VAD_CHECK_ALL_FRAMES, VAD_CHECK_PER_FRAMES]:
             return False
         speech_frames = 0
-        window_size_samples = self.map_rate_num_samples[16000]
+        window_size_samples = self.map_rate_num_samples[self.args.sample_rate]
         num_frames = math.ceil(len(self.audio_buff) / window_size_samples)
         for i in range(0, len(self.audio_buff), window_size_samples):
             chunk = self.audio_buff[i: i + window_size_samples]
@@ -138,9 +138,8 @@ class SileroVAD(BaseVAD):
             audio_chunk = torch.from_numpy(bytes2NpArrayWith16(buffer))
         if len(audio_chunk) != self.map_rate_num_samples[self.args.sample_rate]:
             if self.args.is_pad_tensor is False:
-                logging.debug(
+                raise Exception(
                     f"len(audio_chunk):{len(audio_chunk)} dont't pad to {self.map_rate_num_samples[self.args.sample_rate]} return False")
-                return False
             logging.debug(
                 f"len(audio_chunk):{len(audio_chunk)} pad to {self.map_rate_num_samples[self.args.sample_rate]} ")
             audio_chunk = torch.nn.functional.pad(

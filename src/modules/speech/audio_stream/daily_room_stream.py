@@ -10,7 +10,7 @@ from daily import (
 
 from src.common.interface import IAudioStream
 from src.common.factory import EngineClass
-from src.common.types import DailyAudioStreamArgs
+from src.common.types import DailyAudioStreamArgs, AudioStreamInfo
 
 
 class JoinedClients():
@@ -56,13 +56,18 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
         "daily_room_audio_in_stream",
         "daily_room_audio_out_stream",
     ]
+    is_daily_init = False
 
     def __init__(self, **args):
         self.args = DailyAudioStreamArgs(**args)
         if self.args.input is False and self.args.output is False:
             logging.warning("input and output don't all be False")
 
-        Daily.init()
+        if DailyRoomAudioStream.is_daily_init is False:
+            # init once
+            Daily.init()
+            DailyRoomAudioStream.is_daily_init = True
+
         if self.args.input:
             self._speaker_device = Daily.create_speaker_device(
                 "my-speaker",
@@ -218,17 +223,18 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
                 else:  # write to stdout pipe stream
                     sys.stdout.buffer.write(buffer)
 
-    def get_stream_info(self):
-        return {
-            "in_channels": self.args.in_channels,
-            "in_sample_rate": self.args.in_sample_rate,
-            "in_sample_width": self.args.in_sample_width,
-            "out_channels": self.args.out_channels,
-            "out_sample_rate": self.args.out_sample_rate,
-            "out_sample_width": self.args.out_sample_width,
-            "frames_per_buffer": self.args.frames_per_buffer,
-            "pyaudio_out_format": None,
-        }
+    def get_stream_info(self) -> AudioStreamInfo:
+        return AudioStreamInfo(
+            in_channels=self.args.in_channels,
+            in_sample_rate=self.args.in_sample_rate,
+            in_sample_width=self.args.in_sample_width,
+            in_frames_per_buffer=self.args.frames_per_buffer,
+            out_channels=self.args.out_channels,
+            out_sample_rate=self.args.out_sample_rate,
+            out_sample_width=self.args.out_sample_width,
+            out_frames_per_buffer=self.args.frames_per_buffer,
+            pyaudio_out_format=None,
+        )
 
     def read_stream(self, num_frames) -> bytes:
         if self.args.stream_callback:

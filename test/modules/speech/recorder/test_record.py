@@ -69,13 +69,12 @@ class TestRMSRecorder(unittest.TestCase):
 
     def setUp(self):
         self.kwargs = {}
-        self.kwargs["input_device_index"] = None if self.input_device_index is None else int(
-            self.input_device_index)
         self.kwargs["is_stream_callback"] = bool(os.getenv('IS_STREAM_CALLBACK', None))
         self.recorder: IRecorder | EngineClass = EngineFactory.get_engine_by_tag(
             EngineClass, self.tag, **self.kwargs)
         self.audio_in_stream: IAudioStream | EngineClass = Env.initAudioInStreamEngine()
         self.recorder.set_in_stream(self.audio_in_stream)
+        self.recorder.open()
         self.session = Session(**SessionCtx(
             "test_client_id").__dict__)
 
@@ -99,9 +98,10 @@ class TestRMSRecorder(unittest.TestCase):
             data, os.path.join(RECORDS_DIR, "test.wav")))
         print(file_path)
 
-        self.recorder2 = EngineFactory.get_engine_by_tag(
+        self.recorder2: IRecorder | EngineClass = EngineFactory.get_engine_by_tag(
             EngineClass, self.tag, **self.kwargs)
         self.recorder2.set_in_stream(self.audio_in_stream)
+        self.recorder2.open()
         frames = asyncio.run(self.recorder2.record_audio(self.session))
         self.assertGreater(len(frames), 0)
         data = b''.join(frames)
