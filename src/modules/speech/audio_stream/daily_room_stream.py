@@ -39,6 +39,7 @@ class JoinedClients():
     def get_room_client(url, name):
         if JoinedClients.room_joined_clients.get(url):
             return JoinedClients.room_joined_clients.get(url).get(name)
+        return None
 
     @staticmethod
     def remove_room_client(url, name):
@@ -57,6 +58,7 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
         "daily_room_audio_out_stream",
     ]
     is_daily_init = False
+    is_client_released = False
 
     def __init__(self, **args):
         self.args = DailyAudioStreamArgs(**args)
@@ -83,15 +85,7 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
                 channels=self.args.out_channels,
             )
 
-        if self.args.input or self.args.output:
-            self._client = CallClient()
-            self._client.update_subscription_profiles({
-                "base": {
-                    "screenVideo": "unsubscribed",
-                    "camera": "unsubscribed",
-                    "microphone": "subscribed"
-                }
-            })
+        self._client: CallClient = None
 
         self._join_event = threading.Event()
         self._stream_quit = False
@@ -104,6 +98,13 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
 
     def _join(self):
         logging.info(f"{self.args.bot_name} joining")
+        self._client.update_subscription_profiles({
+            "base": {
+                "screenVideo": "unsubscribed",
+                "camera": "unsubscribed",
+                "microphone": "subscribed"
+            }
+        })
         self._client.set_user_name(self.args.bot_name)
         self._client.join(
             self.args.meeting_room_url,
@@ -121,6 +122,7 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
             },
             completion=self.on_joined,
         )
+        self._join_event.wait()
 
     def on_joined(self, data, error):
         if error:
@@ -143,8 +145,10 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
             logging.info(
                 f"{self.args.meeting_room_url} {self.args.bot_name} get joined client {client}")
             self._client = client
+            self._join_event.set()
             return
 
+        self._client: CallClient = CallClient()
         if self._join_event.is_set() is False:
             self._join()
 
@@ -153,12 +157,13 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
         if self._app_error:
             logging.error(f"Unable to receive audio!")
             return
+        self._stream_quit = False
         if self.args.input and self._in_thread is None:
             self._in_queue = queue.Queue()  # old queue no ref count to gc free
             self._in_thread = threading.Thread(target=self._receive_audio)
             self._in_thread.start()
 
-        if self.args.output and self._out_thread is None:
+        if self.args.is_async_output and self._out_thread is None:
             self._out_queue = queue.Queue()
             self._out_thread = threading.Thread(target=self._send_raw_audio)
             self._out_thread.start()
@@ -168,13 +173,18 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
         if self._in_thread and self._in_thread.is_alive():
             self._in_thread.join()
             self._in_thread = None
-            logging.debug(f"in thread stoped")
+            logging.info(f"in thread stoped")
         if self._out_thread and self._out_thread.is_alive():
             self._out_thread.join()
             self._out_thread = None
-            logging.debug(f"out thread stoped")
+            logging.info(f"out thread stoped")
 
     def close_stream(self):
+        client = JoinedClients.get_room_client(
+            self.args.meeting_room_url, self.args.bot_name)
+        if client is None:
+            logging.info(f"client leave, stream already closed")
+            return
         self.stop_stream()
         self._join_event.clear()
         self._client.leave()
@@ -182,24 +192,31 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
             self.args.meeting_room_url,
             self.args.bot_name
         )
-        logging.debug(f"stream closed")
+        logging.info(f"stream closed")
 
     def is_stream_active(self) -> bool:
         if self._join_event.is_set() is False:
             return False
         if self._app_error:
             return False
+        if self._stream_quit is True:
+            return False
         if self.args.input:
             return self._in_thread is not None and self._in_thread.is_alive()
-        if self.args.output:
+        if self.args.is_async_output:
             return self._out_thread is not None and self._out_thread.is_alive()
+        if self.args.output:
+            return True
 
     def close(self) -> None:
-        if self._client is not None:
-            self.close_stream()
-            self._client.release()
-            self._client = None
-            logging.debug(f"client released")
+        if DailyRoomAudioStream.is_client_released:
+            logging.info(f"client already released")
+            return
+
+        self.close_stream()
+        self._client.release()
+        DailyRoomAudioStream.is_client_released = True
+        logging.info(f"client released")
 
     def _receive_audio(self):
         self._join_event.wait()
@@ -222,6 +239,8 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
                     self._in_queue.put(buffer)
                 else:  # write to stdout pipe stream
                     sys.stdout.buffer.write(buffer)
+
+        logging.info(f"stop run receive audio!")
 
     def get_stream_info(self) -> AudioStreamInfo:
         return AudioStreamInfo(
@@ -248,7 +267,7 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
                 self._read_bytes.extend(read_bytes)
             return_bytes = self._read_bytes[:num_read_bytes]
             self._read_bytes = self._read_bytes[num_read_bytes:]
-            return return_bytes
+            return bytes(return_bytes)
 
         if num_frames < 0:
             raise ValueError("num_frames must be non-negative")
@@ -257,11 +276,10 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
         return self._speaker_device.read_frames(num_frames)
 
     def write_stream(self, data):
-        data and self._mic_device.write_frames(data)
-
-    def async_write_stream(self, data):
-        if self._out_queue:
+        if self.args.is_async_output:  # async write frames
             self._out_queue.put(data)
+        else:
+            data and self._mic_device.write_frames(data)
 
     def _send_raw_audio(self):
         self._join_event.wait()
@@ -285,3 +303,5 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
                     self.args.out_channels * 2
                 buffer = sys.stdin.buffer.read(num_bytes)
             buffer and self._mic_device.write_frames(buffer)
+
+        logging.info(f"stop run send audio!")

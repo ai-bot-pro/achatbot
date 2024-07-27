@@ -421,7 +421,7 @@ class DailyTransportClient(EventHandler):
         future.result()
 
 
-class DailyTransportEvent(EventHandlerManager):
+class DailyTransport(EventHandlerManager):
 
     def __init__(
             self,
@@ -474,17 +474,23 @@ class DailyTransportEvent(EventHandlerManager):
         self._register_event_handler("on_participant_joined")
         self._register_event_handler("on_participant_left")
 
-    def input(self) -> FrameProcessor:
+    def input_processor(self) -> FrameProcessor:
         if not self._input:
             self._input = DailyInputTransportProcessor(
                 self._client, self._params, name=self._input_name)
         return self._input
 
-    def output(self) -> FrameProcessor:
+    def output_processor(self) -> FrameProcessor:
         if not self._output:
             self._output = DailyOutputTransportProcessor(
                 self._client, self._params, name=self._output_name)
         return self._output
+
+    def input_audio_stream(self):
+        pass
+
+    def output_audio_stream(self):
+        pass
 
     #
     # DailyTransport

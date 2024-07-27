@@ -28,7 +28,7 @@ bot_procs = {}
 
 
 class RoomInfo(BaseModel):
-    room_name: str
+    room_name: str = "chat-bot"
     room_url: str
 
 
@@ -84,6 +84,13 @@ curl -XPOST "http://0.0.0.0:6789/agent_join/" \
     -H "Content-Type: application/json" \
     -d '{"room_url": "https://weedge.daily.co/chat-bot","room_name":"chat-bot","chat_bot_name":"chat_bot_daily_echo","args":"--receive 1 --send 1"}'
 """
+
+
+@app.post("/token/")
+def token(info: AgentInfo):
+    # Get the token for the room
+    token = daily_helpers.get_token(info.room_url)
+    return JSONResponse({"token": token})
 
 
 @app.post("/agent_join/")

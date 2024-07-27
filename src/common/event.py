@@ -3,7 +3,7 @@ import inspect
 import asyncio
 
 
-class EventHanlderManager:
+class EventHandlerManager:
 
     def __init__(self,
                  loop: asyncio.AbstractEventLoop | None = None):

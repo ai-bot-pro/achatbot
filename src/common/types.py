@@ -177,6 +177,7 @@ class DailyAudioStreamArgs(AudioStreamArgs):
     out_sample_rate: int = RATE
     out_sample_width: int = SAMPLE_WIDTH
     out_queue_timeout_s: float = 0.1
+    is_async_output: bool = False
 
 
 @dataclass
