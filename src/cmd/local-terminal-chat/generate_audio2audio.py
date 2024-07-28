@@ -113,6 +113,8 @@ TQDM_DISABLE=True \
     python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
 
 TQDM_DISABLE=True \
+    AUDIO_IN_STREAM_TAG=pyaudio_in_stream \
+    AUDIO_OUT_STREAM_TAG=pyaudio_out_stream \
     VAD_DETECTOR_TAG=webrtc_silero_vad \
     RECORDER_TAG=vad_recorder \
     ASR_TAG=sense_voice_asr \
@@ -126,6 +128,7 @@ TQDM_DISABLE=True \
     python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
 
 TQDM_DISABLE=True \
+    AUDIO_IN_STREAM_TAG=pyaudio_in_stream \
     AUDIO_OUT_STREAM_TAG=daily_room_audio_out_stream \
     MEETING_ROOM_URL=https://weedge.daily.co/chat-bot \
     VAD_DETECTOR_TAG=webrtc_silero_vad \
@@ -142,6 +145,7 @@ TQDM_DISABLE=True \
 
 TQDM_DISABLE=True \
     AUDIO_IN_STREAM_TAG=daily_room_audio_in_stream \
+    AUDIO_OUT_STREAM_TAG=pyaudio_out_stream \
     MEETING_ROOM_URL=https://weedge.daily.co/chat-bot \
     VAD_DETECTOR_TAG=webrtc_silero_vad \
     RECORDER_TAG=vad_recorder \

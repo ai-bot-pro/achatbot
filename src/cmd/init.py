@@ -444,7 +444,7 @@ class Env(
     @staticmethod
     def initTTSEngine() -> interface.ITts | EngineClass:
         # tts
-        tag = os.getenv('TTS_TAG', "tts_chat")
+        tag = os.getenv('TTS_TAG', "tts_edge")
         kwargs = Env.map_config_func[tag]()
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         logging.info(f"initTTSEngine: {tag}, {engine}")
@@ -496,6 +496,14 @@ class YamlConfig(PromptInit):
             logging.info(f"{key} engine: {engine} args: {engine.args}")
             engines[key] = engine
         return engines
+
+    @staticmethod
+    def initAudioInStreamEngine() -> interface.IAudioStream | EngineClass:
+        return asyncio.run(YamlConfig.load(engine_name="audioinstream"))["audioinstream"]
+
+    @staticmethod
+    def initAudioOutStreamEngine() -> interface.IAudioStream | EngineClass:
+        return asyncio.run(YamlConfig.load(engine_name="audiooutstream"))["audiooutstream"]
 
     @staticmethod
     def initWakerEngine() -> interface.IDetector | EngineClass:
@@ -578,6 +586,19 @@ CONF_ENV=local FUNC_SEARCH_TAG=serper_api python -m src.cmd.init -o env2yaml
 CONF_ENV=local FUNC_WEATHER_TAG=openweathermap_api python -m src.cmd.init -o env2yaml
 
 CONF_ENV=local LLM_TAG=llm_personalai_proxy  python -m src.cmd.init -o env2yaml
+
+CONF_ENV=local \
+    AUDIO_IN_STREAM_TAG=pyaudio_in_stream \
+    AUDIO_OUT_STREAM_TAG=daily_room_audio_out_stream \
+    python -m src.cmd.init -o env2yaml
+CONF_ENV=local \
+    AUDIO_IN_STREAM_TAG=daily_room_audio_in_stream \
+    AUDIO_OUT_STREAM_TAG=pyaudio_out_stream \
+    python -m src.cmd.init -o env2yaml
+CONF_ENV=local \
+    AUDIO_IN_STREAM_TAG=daily_room_audio_in_stream \
+    AUDIO_OUT_STREAM_TAG=daily_room_audio_out_stream \
+    python -m src.cmd.init -o env2yaml
 
 CONF_ENV=local python -m src.cmd.init -o init_engine -i config
 CONF_ENV=local python -m src.cmd.init -o gather_load_configs

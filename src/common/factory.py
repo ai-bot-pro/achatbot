@@ -11,6 +11,7 @@ class EngineClass(object):
 
     args = None
     TAG = ""
+    SELECTED_TAG = ""
 
     @classmethod
     def get_args(cls, **kwargs) -> dict:
@@ -58,6 +59,7 @@ class EngineFactory:
                 logger.warning(f"have multi {tag}, just use first one")
             engine = selected_engines[0]
             logger.info(f"use {tag} engine")
+            engine.SELECTED_TAG = tag
             return engine.get_instance(**kwargs)
 
     @staticmethod

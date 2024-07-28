@@ -149,6 +149,7 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
             return
 
         self._client: CallClient = CallClient()
+        DailyRoomAudioStream.is_client_released = False
         if self._join_event.is_set() is False:
             self._join()
 

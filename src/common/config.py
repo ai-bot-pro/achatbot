@@ -32,10 +32,10 @@ class Conf:
         file_dir = os.path.join(CONFIG_DIR, env)
         if not os.path.exists(file_dir):
             os.makedirs(file_dir)
-        file_path = os.path.join(file_dir, f"{engine.TAG}.yaml")
+        file_path = os.path.join(file_dir, f"{engine.SELECTED_TAG}.yaml")
         logging.debug(f"obj: {obj}, engine: {engine}, file_path: {file_path}")
         await Conf.save_to_yaml(engine.args.__dict__, file_path)
-        return name[4:len(name) - 6].lower(), file_path, engine.TAG
+        return name[4:len(name) - 6].lower(), file_path, engine.SELECTED_TAG
 
     @staticmethod
     async def save_to_yamls(object, tag=None):
