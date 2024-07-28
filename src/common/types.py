@@ -2,21 +2,31 @@ r"""
 use SOTA LLM like chatGPT to generate config file(json,yaml,toml) from dataclass type
 """
 from dataclasses import dataclass
+from enum import Enum
 from typing import (
     IO,
     Optional,
     Sequence,
     Union,
-    List
+    List,
+    Any,
+    Mapping,
 )
 import os
 
 import numpy as np
 import pyaudio
 import torch
+from pydantic.main import BaseModel
+from pydantic import ConfigDict
 
-from .interface import IBuffering, IDetector, IAsr, ILlm, ITts
+from .interface import (
+    IAudioStream,
+    IBuffering, IDetector, IAsr,
+    ILlm, ITts, IVADAnalyzer,
+)
 from .factory import EngineClass
+from src.types.frames.data_frames import TransportMessageFrame
 
 
 SRC_PATH = os.path.normpath(
@@ -39,7 +49,22 @@ TEST_DIR = os.path.normpath(
 )
 
 # audio stream default configuration
-CHUNK = 512
+CHUNK = 1600  # 100ms 16k rate num_frames
+# pyaudio format
+#   >>> print(int(pyaudio.paInt16))
+#   8
+#   >>> print(int(pyaudio.paInt24))
+#   4
+#   >>> print(int(pyaudio.paInt32))
+#   2
+#   >>> print(int(pyaudio.paFloat32))
+#   1
+#   >>> print(int(pyaudio.paInt8))
+#   16
+#   >>> print(int(pyaudio.paUInt8))
+#   32
+#   >>> print(int(pyaudio.paCustomFormat))
+#   65536
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 16000
@@ -96,8 +121,8 @@ class SessionCtx:
 
 # audio recorder default configuration
 SILENCE_THRESHOLD = 500
-# 2 seconds of silence marks the end of user voice input
-SILENT_CHUNKS = 2 * RATE / CHUNK
+# 1 seconds of silence marks the end of user voice input
+SILENT_CHUNKS = 1 * RATE / CHUNK
 # record silence timeout (10s)
 SILENCE_TIMEOUT_S = 10
 # Set microphone id. Use list_microphones.py to see a device list.
@@ -107,27 +132,56 @@ INT16_MAX_ABS_VALUE = 32768.0
 
 
 @dataclass
+class AudioStreamInfo:
+    in_channels: int = CHANNELS
+    in_sample_rate: int = RATE
+    in_sample_width: int = SAMPLE_WIDTH
+    in_frames_per_buffer: int = CHUNK
+    out_channels: int = CHANNELS
+    out_sample_rate: int = RATE
+    out_sample_width: int = SAMPLE_WIDTH
+    out_frames_per_buffer: int = CHUNK
+    pyaudio_out_format: int | None = FORMAT
+
+
+@dataclass
 class AudioStreamArgs:
+    stream_callback: Optional[str] = None
+    input: bool = False
+    output: bool = False
+    frames_per_buffer: int = CHUNK
+
+
+@dataclass
+class PyAudioStreamArgs(AudioStreamArgs):
     format: int = FORMAT
     channels: int = CHANNELS
     rate: int = RATE
     sample_width: int = SAMPLE_WIDTH
-    frames_per_buffer: int = CHUNK
     input_device_index: int = None
     output_device_index: int = None
-    input: bool = False
-    output: bool = False
-    stream_callback: Optional[str] = None
+
+
+@dataclass
+class DailyAudioStreamArgs(AudioStreamArgs):
+    """
+    in live room,one joined client instance need diff in/out stream sample rate
+    """
+    meeting_room_url: str = ""
+    bot_name: str = "chat-bot"
+    meeting_room_token: str = ""
+    in_channels: int = CHANNELS
+    in_sample_rate: int = RATE
+    in_sample_width: int = SAMPLE_WIDTH
+    out_channels: int = CHANNELS
+    out_sample_rate: int = RATE
+    out_sample_width: int = SAMPLE_WIDTH
+    out_queue_timeout_s: float = 0.1
+    is_async_output: bool = False
 
 
 @dataclass
 class AudioRecoderArgs:
-    format: int = FORMAT
-    channels: int = CHANNELS
-    rate: int = RATE
-    sample_width: int = SAMPLE_WIDTH
-    input_device_index: int = None
-    frames_per_buffer: int = CHUNK
     silent_chunks: int = SILENT_CHUNKS
     silence_timeout_s: int = SILENCE_TIMEOUT_S
     num_frames: int = CHUNK
@@ -144,12 +198,6 @@ class VADRecoderArgs(AudioRecoderArgs):
 
 @dataclass
 class AudioPlayerArgs:
-    format: int = FORMAT
-    channels: int = CHANNELS
-    rate: int = RATE
-    sample_width: int = SAMPLE_WIDTH
-    output_device_index: int = None
-    frames_per_buffer: int = CHUNK
     on_play_start: Optional[str] = None
     on_play_end: Optional[str] = None
     on_play_chunk: Optional[str] = None
@@ -175,6 +223,8 @@ class WebRTCVADArgs:
 
 
 INIT_SILERO_SENSITIVITY = 0.4
+# How often should we reset internal model state
+SILERO_MODEL_RESET_STATES_TIME = 5.0
 
 
 @dataclass
@@ -453,3 +503,89 @@ class SerperApiArgs:
     hl: str = "zh-cn"
     page: int = 1
     num: int = 5
+
+
+# --------------- vad analyzer------------------
+DAILY_WEBRTC_VAD_RESET_PERIOD_MS = 2000
+
+
+class VADState(Enum):
+    QUIET = 1
+    STARTING = 2
+    SPEAKING = 3
+    STOPPING = 4
+
+
+@dataclass
+class VADAnalyzerArgs:
+    sample_rate: int = RATE
+    num_channels: int = CHANNELS
+    confidence: float = 0.7
+    start_secs: float = 0.2
+    stop_secs: float = 0.8
+    min_volume: float = 0.6
+
+# --------------- daily -------------------------------
+
+
+@dataclass
+class DailyTransportMessageFrame(TransportMessageFrame):
+    participant_id: str | None = None
+
+
+class DailyDialinSettings(BaseModel):
+    call_id: str = ""
+    call_domain: str = ""
+
+
+# https://reference-python.daily.co/types.html#transcriptionsettings
+class DailyTranscriptionSettings(BaseModel):
+    language: str = "en"
+    tier: str = "nova"
+    model: str = "2-conversationalai"
+    profanity_filter: bool = True
+    redact: bool = False
+    endpointing: bool = True
+    punctuate: bool = True
+    includeRawResponse: bool = True
+    extra: Mapping[str, Any] = {
+        "interim_results": True
+    }
+
+
+class AudioParams(BaseModel):
+    audio_out_enabled: bool = False
+    audio_out_sample_rate: int = RATE
+    audio_out_channels: int = CHANNELS
+    audio_in_enabled: bool = False
+    audio_in_sample_rate: int = RATE
+    audio_in_channels: int = CHANNELS
+
+
+class AudioVADParams(AudioParams):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    vad_enabled: bool = False
+    vad_audio_passthrough: bool = False
+    vad_analyzer: IVADAnalyzer | None = None
+
+
+class CameraParams(BaseModel):
+    camera_out_enabled: bool = False
+    camera_out_is_live: bool = False
+    camera_out_width: int = 1024
+    camera_out_height: int = 768
+    camera_out_bitrate: int = 800000
+    camera_out_framerate: int = 30
+    camera_out_color_format: str = "RGB"
+
+
+class AudioCameraParams(CameraParams, AudioVADParams):
+    pass
+
+
+class DailyParams(AudioCameraParams):
+    api_url: str = "https://api.daily.co/v1"
+    api_key: str = ""
+    dialin_settings: DailyDialinSettings | None = None
+    transcription_enabled: bool = False
+    transcription_settings: DailyTranscriptionSettings = DailyTranscriptionSettings()

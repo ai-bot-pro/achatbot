@@ -77,3 +77,4 @@ if __name__ == "__main__":
         logging.error(f"Exception: {e}; traceback: {tb_str}")
     finally:
         channel and channel.close()
+        player and player.close()

@@ -4,7 +4,7 @@ import unittest
 from src.common.factory import EngineFactory, EngineClass
 
 r"""
-python -m unittest test.common.test_factory
+python -m unittest test.common.test_factory.TestEngineFactory.test_get_engines
 python -m unittest test.common.test_factory.TestEngineFactory.test_get_engine_by_tag
 """
 
@@ -36,7 +36,19 @@ class TestEngineFactory(unittest.TestCase):
 
     def test_get_engine_by_tag(self):
         import src.modules.speech
+        stream_engine = EngineFactory.get_engine_by_tag(
+            EngineClass, "pyaudio_stream")
+        print(stream_engine)
+        self.assertIsInstance(stream_engine, EngineClass)
+
+        stream_engine = EngineFactory.get_engine_by_tag(
+            EngineClass, "daily_room_audio_stream")
+        print(stream_engine)
+        self.assertIsInstance(stream_engine, EngineClass)
+
+        kwargs = {}
+        kwargs["audio_stream"] = stream_engine
         engine = EngineFactory.get_engine_by_tag(
-            EngineClass, "whisper_asr_base")
+            EngineClass, "stream_player", **kwargs)
         print(engine)
         self.assertIsInstance(engine, EngineClass)

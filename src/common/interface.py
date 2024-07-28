@@ -9,7 +9,57 @@ class IModel(ABC):
         raise NotImplemented("must be implemented in the child class")
 
 
+class IAudioStream(ABC):
+    """
+    Handles audio stream operations
+    - opening, starting, stopping, and closing
+    """
+
+    @abstractmethod
+    def open_stream(self):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def start_stream(self):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def stop_stream(self):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def close_stream(self):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def is_stream_active(self) -> bool:
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def write_stream(self, data):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def get_stream_info(self):
+        """
+        return AudioStreamInfo
+        """
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def read_stream(self, num_frames) -> bytes:
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def close(self) -> None:
+        raise NotImplemented("must be implemented in the child class")
+
+
 class IRecorder(ABC):
+    @abstractmethod
+    def open(self):
+        raise NotImplemented("must be implemented in the child class")
+
     @abstractmethod
     async def record_audio(self, session) -> list[bytes]:
         raise NotImplemented("must be implemented in the child class")
@@ -20,6 +70,10 @@ class IRecorder(ABC):
 
     @abstractmethod
     def close(self):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def set_in_stream(self, audio_stream):
         raise NotImplemented("must be implemented in the child class")
 
 
@@ -56,6 +110,16 @@ class IDetector(ABC):
 
     @abstractmethod
     def close(self):
+        raise NotImplemented("must be implemented in the child class")
+
+
+class IVADAnalyzer(ABC):
+    @abstractmethod
+    def voice_confidence(self, buffer) -> float:
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def analyze_audio(self, buffer):
         raise NotImplemented("must be implemented in the child class")
 
 
@@ -131,6 +195,10 @@ class ITts(ABC):
 
 class IPlayer(ABC):
     @abstractmethod
+    def open(self):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
     def start(self, session):
         raise NotImplemented("must be implemented in the child class")
 
@@ -152,6 +220,10 @@ class IPlayer(ABC):
 
     @abstractmethod
     def close(self):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def set_out_stream(self, audio_stream):
         raise NotImplemented("must be implemented in the child class")
 
 

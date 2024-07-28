@@ -4,28 +4,19 @@ import logging
 import time
 import asyncio
 
-from src.common.audio_stream import RingBuffer
+from src.common.interface import IRecorder
+from src.common.audio_stream.helper import RingBuffer
 from src.common.session import Session
 from src.common.types import VADRecoderArgs, AudioRecoderArgs
-from .base import PyAudioRecorder
+from .base import AudioRecorder
 
 
-class VADRecorder(PyAudioRecorder):
+class VADRecorder(AudioRecorder, IRecorder):
     TAG = "vad_recorder"
-
-    @classmethod
-    def get_args(cls, **kwargs) -> dict:
-        return {**VADRecoderArgs().__dict__, **kwargs}
 
     def __init__(self, **args) -> None:
         vad_args = VADRecoderArgs(**args)
         super().__init__(**AudioRecoderArgs(
-            format=vad_args.format,
-            channels=vad_args.channels,
-            rate=vad_args.rate,
-            sample_width=vad_args.sample_width,
-            input_device_index=vad_args.input_device_index,
-            frames_per_buffer=vad_args.frames_per_buffer,
             silent_chunks=vad_args.silent_chunks,
             silence_timeout_s=vad_args.silence_timeout_s,
             num_frames=vad_args.num_frames,
@@ -55,17 +46,16 @@ class VADRecorder(PyAudioRecorder):
                 f"{self.TAG} recording with silence_timeout {session.ctx.state['silence_timeout_s']} s")
             silence_timeout = int(session.ctx.state['silence_timeout_s'])
 
-        frames_duration_ms = 1000 * self.args.frames_per_buffer // self.args.rate
+        frames_duration_ms = 1000 * self.stream_info.in_frames_per_buffer // self.stream_info.in_sample_rate
         num_padding_frames = self.args.padding_ms // frames_duration_ms
         ring_buffer = collections.deque(maxlen=num_padding_frames)
         triggered = False
 
-        self.audio.open_stream()
         self.audio.start_stream()
         logging.debug(f"start {self.TAG} recording")
         start_time = time.time()
         if self.args.is_stream_callback is False:
-            self.set_args(num_frames=self.args.frames_per_buffer)
+            self.set_args(num_frames=self.stream_info.in_frames_per_buffer)
 
         for frame in self.frame_genrator():
             if len(frame) == 0:
@@ -122,7 +112,6 @@ class WakeWordsVADRecorder(VADRecorder):
                      pre_recording_buffer_duration)
         self.audio_buffer = RingBuffer(maxlen)
 
-        self.audio.open_stream()
         self.audio.start_stream()
         logging.info(
             f"start {self.TAG} recording; audio sample_rate: {self.sample_rate},frame_length:{self.frame_length}, audio buffer maxlen: {maxlen}")

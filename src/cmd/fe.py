@@ -23,10 +23,18 @@ class TerminalChatClient:
     def __init__(self, is_save_record=False, is_save_play_chunks=False) -> None:
         self.sid = str(uuid.uuid4())
         self.session = Session(**SessionCtx(self.sid).__dict__)
+
+        audio_out_stream = init.initAudioOutStreamEngine()
         self.player = init.initPlayerEngine()
+        self.player.set_out_stream(audio_out_stream)
+
+        audio_in_stream = init.initAudioInStreamEngine()
         self.recorder = init.initRecorderEngine()
+        self.recorder.set_in_stream(audio_in_stream)
+
         self.waker = init.initWakerEngine()
         self.vad = init.initVADEngine()
+
         self.start_record_event = threading.Event()
         self.play_chunks = []
         self.is_save_play_chunks = is_save_play_chunks
@@ -36,18 +44,21 @@ class TerminalChatClient:
         if self.is_save_play_chunks:
             self.player.set_args(on_play_chunk=self.on_play_chunk,
                                  on_play_end=self.on_play_end)
+        self.player.open()
         self.player.start(self.session)
-
         play_t = threading.Thread(target=self.loop_recv,
                                   args=(conn,))
+        play_t.start()
+
+        self.recorder.open()
         record_t = threading.Thread(target=self.loop_record,
                                     args=(conn,))
-        play_t.start()
         record_t.start()
 
         record_t.join()
         play_t.join()
-        self.player.stop(self.session)
+        self.player.close()
+        self.recorder.close()
 
     def on_wakeword_detected(self, session: Session, data):
         if "bot_name" in session.ctx.state:

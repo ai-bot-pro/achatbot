@@ -11,6 +11,7 @@ class EngineClass(object):
 
     args = None
     TAG = ""
+    SELECTED_TAG = ""
 
     @classmethod
     def get_args(cls, **kwargs) -> dict:
@@ -25,7 +26,7 @@ class EngineClass(object):
     @classmethod
     def get_instance(cls, **kwargs):
         dict_args = cls.get_args(**kwargs)
-        logging.info(f"get_instance {cls.TAG} args: {dict_args}")
+        logging.info(f"class: {cls} args: {dict_args}")
         instance = cls(**dict_args)
         return instance
 
@@ -33,12 +34,20 @@ class EngineClass(object):
 class EngineFactory:
     @staticmethod
     def get_engine_by_tag(cls, tag: str, **kwargs):
-        if not tag or type(tag) is not str:
+        if not tag or (type(tag) is not str and type(tag) is not list):
             raise TypeError(f"empty tag")
+
+        def filter_tag(engine):
+            if hasattr(engine, "TAG") is False:
+                return False
+            if engine.TAG == tag:
+                return True
+            if type(engine.TAG) is list and tag in engine.TAG:
+                return True
 
         selected_engines = list(
             filter(
-                lambda engine: hasattr(engine, "TAG") and engine.TAG == tag,
+                filter_tag,
                 EngineFactory.get_engines(cls),
             )
         )
@@ -49,7 +58,8 @@ class EngineFactory:
             if len(selected_engines) > 1:
                 logger.warning(f"have multi {tag}, just use first one")
             engine = selected_engines[0]
-            logger.info(f"use {engine.TAG} engine")
+            logger.info(f"use {tag} engine")
+            engine.SELECTED_TAG = tag
             return engine.get_instance(**kwargs)
 
     @staticmethod

@@ -4,14 +4,14 @@ import asyncio
 
 import unittest
 
-from src.common.interface import IDetector, IRecorder
+from src.cmd.init import Env
+from src.common.interface import IAudioStream, IRecorder
 from src.common.logger import Logger
 from src.common.factory import EngineFactory, EngineClass
 from src.common.session import Session
 from src.common.utils import audio_utils
-from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR, INT16_MAX_ABS_VALUE
+from src.common.types import SessionCtx, MODELS_DIR, RECORDS_DIR
 import src.modules.speech
-from src.modules.speech.recorder.base import PyAudioRecorder
 
 r"""
 python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_record
@@ -23,7 +23,23 @@ RECODER_TAG=wakeword_rms_recorder python -m unittest test.modules.speech.recorde
 
 RECODER_TAG=wakeword_rms_recorder python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_wakeword_record
 
+IS_STREAM_CALLBACK=1 RECODER_TAG=rms_recorder python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_record
 IS_STREAM_CALLBACK=1 RECODER_TAG=wakeword_rms_recorder python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_wakeword_record
+
+# need create daily room, get room_url
+AUDIO_IN_STREAM_TAG=daily_room_audio_in_stream \
+    MEETING_ROOM_URL=https://weedge.daily.co/chat-bot \
+    RECODER_TAG=rms_recorder \
+    python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_record
+AUDIO_IN_STREAM_TAG=daily_room_audio_in_stream \
+    MEETING_ROOM_URL=https://weedge.daily.co/chat-bot \
+    IS_STREAM_CALLBACK=1 RECODER_TAG=rms_recorder \
+    python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_record
+
+AUDIO_IN_STREAM_TAG=daily_room_audio_in_stream \
+    MEETING_ROOM_URL=https://weedge.daily.co/chat-bot \
+    IS_STREAM_CALLBACK=1 RECODER_TAG=wakeword_rms_recorder \
+    python -m unittest test.modules.speech.recorder.test_record.TestRMSRecorder.test_record
 """
 
 
@@ -53,11 +69,12 @@ class TestRMSRecorder(unittest.TestCase):
 
     def setUp(self):
         self.kwargs = {}
-        self.kwargs["input_device_index"] = None if self.input_device_index is None else int(
-            self.input_device_index)
         self.kwargs["is_stream_callback"] = bool(os.getenv('IS_STREAM_CALLBACK', None))
         self.recorder: IRecorder | EngineClass = EngineFactory.get_engine_by_tag(
             EngineClass, self.tag, **self.kwargs)
+        self.audio_in_stream: IAudioStream | EngineClass = Env.initAudioInStreamEngine()
+        self.recorder.set_in_stream(self.audio_in_stream)
+        self.recorder.open()
         self.session = Session(**SessionCtx(
             "test_client_id").__dict__)
 
@@ -81,8 +98,10 @@ class TestRMSRecorder(unittest.TestCase):
             data, os.path.join(RECORDS_DIR, "test.wav")))
         print(file_path)
 
-        self.recorder2 = EngineFactory.get_engine_by_tag(
+        self.recorder2: IRecorder | EngineClass = EngineFactory.get_engine_by_tag(
             EngineClass, self.tag, **self.kwargs)
+        self.recorder2.set_in_stream(self.audio_in_stream)
+        self.recorder2.open()
         frames = asyncio.run(self.recorder2.record_audio(self.session))
         self.assertGreater(len(frames), 0)
         data = b''.join(frames)

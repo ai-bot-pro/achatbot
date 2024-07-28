@@ -1,6 +1,5 @@
 import logging
 
-from src.common.interface import IFunction
 from src.common.register import Register
 
 

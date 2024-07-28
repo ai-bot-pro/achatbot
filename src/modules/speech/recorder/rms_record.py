@@ -5,20 +5,18 @@ import struct
 import time
 
 
-from src.common.audio_stream import RingBuffer
+from src.common.interface import IRecorder
+from src.common.audio_stream.helper import RingBuffer
 from src.common.session import Session
-from src.common.types import SILENCE_THRESHOLD, SILENT_CHUNKS, RATE
-from .base import PyAudioRecorder
+from src.common.types import SILENCE_THRESHOLD, RATE
+from .base import AudioRecorder
 
 
-class RMSRecorder(PyAudioRecorder):
+class RMSRecorder(AudioRecorder, IRecorder):
     TAG = "rms_recorder"
 
     def __init__(self, **args) -> None:
         super().__init__(**args)
-        if self.args.rate != RATE:
-            raise Exception(
-                f"Sampling rate of the audio just support 16000Hz at now")
 
     def compute_rms(self, data):
         # Assuming data is in 16-bit samples
@@ -42,6 +40,10 @@ class RMSRecorder(PyAudioRecorder):
             yield item
 
     async def _record_audio_generator(self, session: Session) -> AsyncGenerator[bytes, None]:
+
+        if self.stream_info.in_sample_rate != RATE:
+            raise Exception(
+                f"rms recorder's sampling rate of the audio just support 16000Hz at now")
         silent_chunks = 0
         audio_started = False
         silence_timeout = 0
@@ -50,12 +52,11 @@ class RMSRecorder(PyAudioRecorder):
                 f"rms recording with silence_timeout {session.ctx.state['silence_timeout_s']} s")
             silence_timeout = int(session.ctx.state['silence_timeout_s'])
 
-        self.audio.open_stream()
         self.audio.start_stream()
-        logging.debug("start rms recording")
+        logging.debug(f"start {self.TAG} recording")
         start_time = time.time()
         if self.args.is_stream_callback is False:
-            self.set_args(num_frames=self.args.frames_per_buffer)
+            self.set_args(num_frames=self.stream_info.in_frames_per_buffer)
         while True:
             data = self.get_record_buf()
             if len(data) == 0:
@@ -81,7 +82,7 @@ class RMSRecorder(PyAudioRecorder):
                     break
 
         self.audio.stop_stream()
-        logging.debug("end rms recording")
+        logging.debug(f"end {self.TAG} recording")
 
 
 class WakeWordsRMSRecorder(RMSRecorder):
@@ -101,7 +102,6 @@ class WakeWordsRMSRecorder(RMSRecorder):
                      pre_recording_buffer_duration)
         self.audio_buffer = RingBuffer(maxlen)
 
-        self.audio.open_stream()
         self.audio.start_stream()
         logging.info(
             f"start {self.TAG} recording; audio sample_rate: {self.sample_rate},frame_length:{self.frame_length}, audio buffer maxlen: {maxlen}")

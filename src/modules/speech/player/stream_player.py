@@ -6,39 +6,34 @@ import io
 
 import pyaudio
 from pydub import AudioSegment
-
-from src.common.audio_stream import (
-    AudioStream,
-    AudioStreamArgs,
-    AudioBufferManager,
-)
+from src.common.audio_stream.helper import AudioBufferManager
 from src.common.factory import EngineClass
-from src.common.interface import IPlayer
+from src.common.interface import IAudioStream, IPlayer
 from src.common.session import Session
-from src.common.types import AudioPlayerArgs
+from src.common.types import AudioPlayerArgs, AudioStreamInfo
 
 
-class PyAudioPlayer(EngineClass):
-    @classmethod
-    def get_args(cls, **kwargs) -> dict:
-        return {**AudioPlayerArgs().__dict__, **kwargs}
-
+class AudioPlayer(EngineClass):
     def __init__(self, **args) -> None:
         self.args = AudioPlayerArgs(**args)
-        self.audio = AudioStream(AudioStreamArgs(
-            format=self.args.format,
-            channels=self.args.channels,
-            rate=self.args.rate,
-            output_device_index=self.args.output_device_index,
-            output=True,
-            frames_per_buffer=self.args.frames_per_buffer,
-        ))
+        # self.audio = PyAudioStream(PyAudioStreamArgs(
+        #    format=self.args.format,
+        #    channels=self.args.channels,
+        #    rate=self.args.rate,
+        #    output_device_index=self.args.output_device_index,
+        #    output=True,
+        #    frames_per_buffer=self.args.frames_per_buffer,
+        # ))
 
     def close(self):
         self.audio.close()
 
+    def set_out_stream(self, audio_stream: EngineClass | IAudioStream):
+        self.audio = audio_stream
+        self.stream_info: AudioStreamInfo = audio_stream.get_stream_info()
 
-class StreamPlayer(PyAudioPlayer, IPlayer):
+
+class StreamPlayer(AudioPlayer, IPlayer):
     TAG = "stream_player"
 
     def __init__(self, **args) -> None:
@@ -52,10 +47,12 @@ class StreamPlayer(PyAudioPlayer, IPlayer):
 
         self.buffer_manager: AudioBufferManager = AudioBufferManager(queue.Queue())
 
+    def open(self):
+        self.audio.open_stream()
+
     def start(self, session: Session):
         self.first_chunk_played = False
         self.playback_active = True
-        self.audio.open_stream()
         self.audio.start_stream()
 
         if not self.playback_thread or not self.playback_thread.is_alive():
@@ -85,13 +82,15 @@ class StreamPlayer(PyAudioPlayer, IPlayer):
 
     def _play_chunk(self, session: Session, chunk):
         # handle mpeg
-        if self.args.format == pyaudio.paCustomFormat:
+        if self.stream_info.pyaudio_out_format == pyaudio.paCustomFormat:
             # convert to pcm using pydub
             segment = AudioSegment.from_mp3(io.BytesIO(chunk))
             chunk = segment.raw_data
 
-        for i in range(0, len(chunk), self.args.frames_per_buffer):
-            sub_chunk = chunk[i:i + self.args.frames_per_buffer]
+        sub_chunk_len = self.stream_info.out_frames_per_buffer * \
+            self.stream_info.out_channels * self.stream_info.out_sample_width
+        for i in range(0, len(chunk), sub_chunk_len):
+            sub_chunk = chunk[i:i + sub_chunk_len]
 
             if not self.first_chunk_played and self.args.on_play_start:
                 self.on_play_start(session, sub_chunk)
@@ -100,7 +99,7 @@ class StreamPlayer(PyAudioPlayer, IPlayer):
             if self.args.on_play_chunk:
                 self.args.on_play_chunk(session, sub_chunk)
 
-            self.audio.stream.write(sub_chunk)
+            self.audio.write_stream(sub_chunk)
 
             while self.pause_event.is_set():
                 time.sleep(0.01)
@@ -140,7 +139,7 @@ class StreamPlayer(PyAudioPlayer, IPlayer):
         self.immediate_stop_event.clear()
         self.buffer_manager.clear_buffer()
         self.playback_thread = None
-        self.audio.close_stream()
+        self.audio.stop_stream()
 
     def pause(self):
         self.pause_event.set()
