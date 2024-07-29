@@ -7,6 +7,3 @@
 [submodule "deps/CosyVoice"]
 	path = deps/CosyVoice
 	url = https://github.com/weedge/CosyVoice.git
-[submodule "ui/web-client-ui"]
-	path = ui/web-client-ui
-	url = https://github.com/weedge/web-client-ui.git
