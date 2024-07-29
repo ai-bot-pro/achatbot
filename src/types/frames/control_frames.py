@@ -87,3 +87,17 @@ class BotSpeakingFrame(ControlFrame):
 
     """
     pass
+
+
+@dataclass
+class LLMModelUpdateFrame(ControlFrame):
+    """A control frame containing a request to update to a new LLM model.
+    """
+    model: str
+
+
+@dataclass
+class TTSVoiceUpdateFrame(ControlFrame):
+    """A control frame containing a request to update to a new TTS voice.
+    """
+    voice: str

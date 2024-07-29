@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any, List
 
 
-from apipeline.frames.data_frames import Frame, DataFrame, ImageRawFrame
+from apipeline.frames.data_frames import Frame, DataFrame, TextFrame, ImageRawFrame
 
 
 @dataclass
@@ -55,18 +55,6 @@ class SpriteFrame(Frame):
 
 
 @dataclass
-class TextFrame(DataFrame):
-    """A chunk of text. Emitted by LLM services, consumed by TTS services, can
-    be used to send text through pipelines.
-
-    """
-    text: str
-
-    def __str__(self):
-        return f"{self.name}(text: {self.text})"
-
-
-@dataclass
 class TranscriptionFrame(TextFrame):
     """A text frame with transcription-specific data. Will be placed in the
     transport's receive queue when a participant speaks.
@@ -108,3 +96,31 @@ class TransportMessageFrame(DataFrame):
 
     def __str__(self):
         return f"{self.name}(message: {self.message})"
+
+
+@dataclass
+class LLMMessagesAppendFrame(DataFrame):
+    """A frame containing a list of LLM messages that neeed to be added to the
+    current context.
+
+    """
+    messages: List[dict]
+
+
+@dataclass
+class LLMMessagesUpdateFrame(DataFrame):
+    """A frame containing a list of new LLM messages. These messages will
+    replace the current context LLM messages and should generate a new
+    LLMMessagesFrame.
+
+    """
+    messages: List[dict]
+
+
+@dataclass
+class TTSSpeakFrame(DataFrame):
+    """A frame that contains a text that should be spoken by the TTS in the
+    pipeline (if any).
+
+    """
+    text: str
