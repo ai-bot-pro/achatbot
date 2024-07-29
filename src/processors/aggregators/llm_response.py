@@ -6,22 +6,27 @@
 
 from typing import List
 
-from pipecat.services.openai import OpenAILLMContextFrame, OpenAILLMContext
+from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
 
-from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
-from pipecat.frames.frames import (
-    Frame,
-    InterimTranscriptionFrame,
+from src.processors.aggregators.openai_llm_context import OpenAILLMContextFrame, OpenAILLMContext
+from src.types.frames.sys_frames import (
+    StartInterruptionFrame,
+)
+from src.types.frames.control_frames import (
     LLMFullResponseEndFrame,
     LLMFullResponseStartFrame,
+    UserStartedSpeakingFrame,
+    UserStoppedSpeakingFrame,
+)
+from src.types.frames.data_frames import (
+    Frame,
+    InterimTranscriptionFrame,
     LLMMessagesAppendFrame,
     LLMMessagesFrame,
     LLMMessagesUpdateFrame,
-    StartInterruptionFrame,
     TranscriptionFrame,
     TextFrame,
-    UserStartedSpeakingFrame,
-    UserStoppedSpeakingFrame)
+)
 
 
 class LLMResponseAggregator(FrameProcessor):

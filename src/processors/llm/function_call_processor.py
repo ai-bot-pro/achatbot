@@ -2,7 +2,7 @@ import logging
 
 from apipeline.processors.frame_processor import FrameProcessor, FrameDirection
 
-from processors.rtvi_processor import RTVIJSONCompletion
+from src.processors.rtvi_processor import RTVIJSONCompletion
 from src.types.frames.control_frames import LLMFullResponseEndFrame, LLMFullResponseStartFrame
 from src.types.frames.data_frames import Frame, TextFrame, TransportMessageFrame
 
