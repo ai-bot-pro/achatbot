@@ -7,11 +7,9 @@
 from typing import List
 
 from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
+from apipeline.frames.sys_frames import StartInterruptionFrame
 
 from src.processors.aggregators.openai_llm_context import OpenAILLMContextFrame, OpenAILLMContext
-from src.types.frames.sys_frames import (
-    StartInterruptionFrame,
-)
 from src.types.frames.control_frames import (
     LLMFullResponseEndFrame,
     LLMFullResponseStartFrame,

@@ -32,6 +32,7 @@ class DailyRoomProperties(BaseModel, extra="allow"):
     enable_chat: bool = False
     enable_emoji_reactions: bool = False
     eject_at_room_exp: bool = True
+    enable_prejoin_ui: bool = False  # Important for the bot to be able to join headlessly
     enable_dialout: Optional[bool] = None
     sip: Optional[DailyRoomSipParams] = None
     sip_uri: Optional[dict] = None
@@ -87,7 +88,7 @@ class DailyRESTHelper:
 
         return room
 
-    def _get_room_from_name(self, room_name: str) -> DailyRoomObject:
+    def get_room_from_name(self, room_name: str) -> DailyRoomObject:
         res: requests.Response = requests.get(
             f"{self.daily_api_url}/rooms/{room_name}",
             headers={"Authorization": f"Bearer {self.daily_api_key}"}
@@ -107,7 +108,7 @@ class DailyRESTHelper:
 
     def get_room_from_url(self, room_url: str,) -> DailyRoomObject:
         room_name = self._get_name_from_url(room_url)
-        return self._get_room_from_name(room_name)
+        return self.get_room_from_name(room_name)
 
     def get_token(self, room_url: str, expiry_time: float = 60 * 60, owner: bool = True) -> str:
         if not room_url:

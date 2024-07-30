@@ -15,9 +15,7 @@ from pydantic.main import BaseModel
 import aiohttp
 
 from apipeline.frames.data_frames import AudioRawFrame, ImageRawFrame
-from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
-from src.processors.daily_input_transport_processor import DailyInputTransportProcessor
-from src.processors.daily_output_transport_processor import DailyOutputTransportProcessor
+from apipeline.processors.frame_processor import FrameDirection
 from src.common.event import EventHandlerManager
 from src.types.frames.data_frames import (
     InterimTranscriptionFrame,
@@ -429,10 +427,8 @@ class DailyTransport(EventHandlerManager):
             token: str | None,
             bot_name: str,
             params: DailyParams,
-            input_name: str | None = None,
-            output_name: str | None = None,
             loop: asyncio.AbstractEventLoop | None = None):
-        super().__init__(input_name=input_name, output_name=output_name, loop=loop)
+        super().__init__(loop=loop)
 
         callbacks = DailyCallbacks(
             on_joined=self._on_joined,
@@ -455,8 +451,6 @@ class DailyTransport(EventHandlerManager):
 
         self._client = DailyTransportClient(
             room_url, token, bot_name, params, callbacks, self._loop)
-        self._input: DailyInputTransportProcessor | None = None
-        self._output: DailyOutputTransportProcessor | None = None
 
         # Register supported handlers. The user will only be able to register
         # these handlers.
@@ -474,24 +468,6 @@ class DailyTransport(EventHandlerManager):
         self._register_event_handler("on_participant_joined")
         self._register_event_handler("on_participant_left")
 
-    def input_processor(self) -> FrameProcessor:
-        if not self._input:
-            self._input = DailyInputTransportProcessor(
-                self._client, self._params, name=self._input_name)
-        return self._input
-
-    def output_processor(self) -> FrameProcessor:
-        if not self._output:
-            self._output = DailyOutputTransportProcessor(
-                self._client, self._params, name=self._output_name)
-        return self._output
-
-    def input_audio_stream(self):
-        pass
-
-    def output_audio_stream(self):
-        pass
-
     #
     # DailyTransport
     #
@@ -499,6 +475,14 @@ class DailyTransport(EventHandlerManager):
     @ property
     def participant_id(self) -> str:
         return self._client.participant_id
+
+    @ property
+    def client(self) -> str:
+        return self._client
+
+    @ property
+    def params(self) -> str:
+        return self._params
 
     async def send_image(self, frame: ImageRawFrame | SpriteFrame):
         if self._output:

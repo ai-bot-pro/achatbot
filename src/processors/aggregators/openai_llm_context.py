@@ -5,22 +5,19 @@
 #
 
 from dataclasses import dataclass
+from typing import List
 import io
 import json
 
-from typing import List
-
 from PIL import Image
-
-from types.frames.data_frames import Frame, VisionImageRawFrame
-
 from openai._types import NOT_GIVEN, NotGiven
-
 from openai.types.chat import (
     ChatCompletionToolParam,
     ChatCompletionToolChoiceOptionParam,
     ChatCompletionMessageParam
 )
+
+from src.types.frames.data_frames import Frame, VisionImageRawFrame
 
 # JSON custom encoder to handle bytes arrays so that we can log contexts
 # with images to the console.

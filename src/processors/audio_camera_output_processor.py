@@ -1,20 +1,17 @@
 import logging
 import asyncio
 import itertools
-from concurrent.futures import ThreadPoolExecutor
 from typing import List
 
 from PIL import Image
-
-from src.common.interface import IVADAnalyzer
-from src.common.types import AudioCameraParams, VADState
-from apipeline.frames.base import Frame
-from apipeline.frames.sys_frames import StartFrame, StartInterruptionFrame, StopInterruptionFrame
-from apipeline.frames.data_frames import AudioRawFrame, DataFrame, ImageRawFrame
+from apipeline.frames.control_frames import StartFrame
+from apipeline.frames.data_frames import Frame, AudioRawFrame, DataFrame, ImageRawFrame
 from apipeline.processors.frame_processor import FrameDirection
 from apipeline.processors.output_processor import OutputProcessor
-from types.frames.control_frames import BotSpeakingFrame, UserStartedSpeakingFrame, UserStoppedSpeakingFrame
-from types.frames.data_frames import SpriteFrame, TransportMessageFrame
+
+from src.common.types import AudioCameraParams
+from src.types.frames.control_frames import BotSpeakingFrame
+from src.types.frames.data_frames import SpriteFrame, TransportMessageFrame
 
 
 class AudioCameraOutputProcessor(OutputProcessor):

@@ -2,14 +2,16 @@ import logging
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
-from src.common.interface import IVADAnalyzer
-from src.common.types import AudioVADParams, VADState
 from apipeline.frames.base import Frame
-from apipeline.frames.sys_frames import StartFrame, StartInterruptionFrame, StopInterruptionFrame
+from apipeline.frames.control_frames import StartFrame
+from apipeline.frames.sys_frames import StartInterruptionFrame, StopInterruptionFrame
 from apipeline.frames.data_frames import AudioRawFrame
 from apipeline.processors.frame_processor import FrameDirection
 from apipeline.processors.input_processor import InputProcessor
-from types.frames.control_frames import UserStartedSpeakingFrame, UserStoppedSpeakingFrame
+
+from src.common.interface import IVADAnalyzer
+from src.common.types import AudioVADParams, VADState
+from src.types.frames.control_frames import UserStartedSpeakingFrame, UserStoppedSpeakingFrame
 
 
 class AudioVADInputProcessor(InputProcessor):
