@@ -16,6 +16,8 @@ from apipeline.frames.sys_frames import SystemFrame, MetricsFrame
 from apipeline.frames.control_frames import StartFrame
 
 from src.processors.ai_processor import AIProcessor
+from src.processors.llm.openai_llm_processor import OpenAILLMProcessor
+from src.processors.speech.tts.cartesia_tts_processor import CartesiaTTSProcessor
 from src.types.frames.sys_frames import BotInterruptionFrame
 from src.types.frames.control_frames import (
     LLMModelUpdateFrame,
@@ -51,12 +53,12 @@ DEFAULT_MESSAGES = [
         "role": "system",
         "content": os.getenv(
             "LLM_CHAT_SYSTEM",
-            "You are a helpful LLM in a WebRTC call. Your goal is to demonstrate your capabilities in a succinct way. Your output will be converted to audio so don't include special characters in your answers. Respond to what the user said in a creative and helpful way."),
+            "在WebRTC中，你是一位很有帮助的LLM。你的目标是用简洁的方式展示你的能力。你的输出将转换为音频，所以不要在你的答案中包含特殊字符。以创造性和有帮助的方式回应用户说的话。"),
     }]
 
-DEFAULT_MODEL = "llama3-70b-8192"
+DEFAULT_MODEL = "llama-3.1-70b-versatile"
 
-DEFAULT_VOICE = "79a125e8-cd45-4c13-8a67-188112f4dd22"
+DEFAULT_VOICE = "3a63e2d1-1c1e-425d-8e79-5100bc910e90"
 
 
 class RTVILLMConfig(BaseModel):
@@ -284,8 +286,8 @@ class RTVIProcessor(FrameProcessor):
             llm_api_key: str = "",
             llm_base_url: str = "https://api.groq.com/openai/v1",
             tts_api_key: str = "",
-            llm_cls: Type[AIProcessor],
-            tts_cls: Type[AIProcessor]):
+            llm_cls: Type[AIProcessor] = OpenAILLMProcessor,
+            tts_cls: Type[AIProcessor] = CartesiaTTSProcessor):
         super().__init__()
         self._transport = transport
         self._setup = setup

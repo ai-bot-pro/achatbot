@@ -9,8 +9,8 @@ from apipeline.frames.control_frames import EndFrame
 
 from src.processors.ai_processor import AIProcessor
 from src.types.frames.control_frames import LLMFullResponseEndFrame, TTSStartedFrame, TTSStoppedFrame, TTSVoiceUpdateFrame
-from src.types.frames.data_frames import Frame, TTSSpeakFrame, TextFrame, VisionImageRawFrame
-from src.types.frames.sys_frames import StartInterruptionFrame
+from src.types.frames.data_frames import Frame, TTSSpeakFrame, TextFrame
+from apipeline.frames.sys_frames import StartInterruptionFrame
 
 
 ENDOFSENTENCE_PATTERN_STR = r"""

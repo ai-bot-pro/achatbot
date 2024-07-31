@@ -1,15 +1,12 @@
 import logging
-import time
+import asyncio
 
-from .base import BaseBot, register_rtvi_bots
+from .base import DailyRoomBot, register_daily_room_bots
 
 
-@register_rtvi_bots.register
-class DummyBot(BaseBot):
-    def run(self):
-        try:
-            logging.info("dummy bot run")
-            time.sleep(60)
-            logging.info("dummy bot over")
-        except KeyboardInterrupt:
-            logging.info("Ctrl-C detected. Exiting!")
+@register_daily_room_bots.register
+class DummyBot(DailyRoomBot):
+    async def _run(self):
+        logging.info("dummy bot run")
+        await asyncio.sleep(10)
+        logging.info("dummy bot over")

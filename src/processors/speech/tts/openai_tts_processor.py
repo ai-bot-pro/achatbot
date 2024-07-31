@@ -4,13 +4,12 @@ from typing import AsyncGenerator, Literal
 try:
     from openai import AsyncOpenAI, BadRequestError
 except ModuleNotFoundError as e:
-    logging.error(f"Exception: {e}")
     logging.error(
         "In order to use OpenAI, you need to `pip install openai`. Also, set `OPENAI_API_KEY` environment variable.")
     raise Exception(f"Missing module: {e}")
+from apipeline.frames.sys_frames import ErrorFrame
 
 from src.processors.speech.tts.base import TTSProcessor
-from apipeline.frames.sys_frames import ErrorFrame
 from src.types.frames.data_frames import Frame, AudioRawFrame
 
 

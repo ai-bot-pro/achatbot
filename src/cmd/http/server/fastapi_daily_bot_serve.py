@@ -1,42 +1,37 @@
+import time
 import atexit
 import logging
 import multiprocessing
 import os
 import argparse
-from typing import Optional
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
-from pydantic import BaseModel
 
+from src.common.types import DailyRoomBotArgs
 from src.common.logger import Logger
 from src.common.interface import IBot
 from src.services.help.daily_rest import DailyRESTHelper, \
     DailyRoomObject, DailyRoomProperties, DailyRoomParams
-from src.processors.rtvi_processor import RTVIConfig
-from src.cmd.bots.base import register_rtvi_bots
+from src.cmd.bots.base import register_daily_room_bots
 
 from dotenv import load_dotenv
 load_dotenv(override=True)
 
-# global logging
-Logger.init(logging.DEBUG, is_file=False, is_console=True)
+
+Logger.init(logging.INFO, is_file=False, is_console=True)
 
 
-class RoomInfo(BaseModel):
-    room_name: str = "chat-bot"
-    room_url: str
-
-
-class AgentInfo(RoomInfo):
-    chat_bot_name: str = "DummyBot"
-    config: Optional[RTVIConfig] = None
-
+DAILY_API_URL = os.getenv("DAILY_API_URL", "https://api.daily.co/v1")
+DAILY_API_KEY = os.getenv("DAILY_API_KEY", "")
+ROOM_EXPIRE_TIME = 30 * 60  # 30 minutes
+ROOM_TOKEN_EXPIRE_TIME = 30 * 60  # 30 minutes
 
 # --------------------- Bot ----------------------------
 
 MAX_BOTS_PER_ROOM = 10
+
 
 # Bot sub-process dict for status reporting and concurrency control
 bot_procs = {}
@@ -47,6 +42,7 @@ def cleanup():
     for pid, (proc, url) in bot_procs.items():
         if proc.is_alive():
             proc.join()
+            proc.terminate()
             proc.close()
             logging.info(f"pid:{pid} url:{url} proc: {proc} close")
         else:
@@ -56,10 +52,6 @@ def cleanup():
 atexit.register(cleanup)
 
 # ------------ Fast API Config ------------ #
-
-DAILY_API_URL = os.getenv("DAILY_API_URL", "https://api.daily.co/v1")
-DAILY_API_KEY = os.getenv("DAILY_API_KEY", "")
-ROOM_TOKEN_EXPIRE_TIME = 30 * 60  # 30 minutes
 
 app = FastAPI()
 app.add_middleware(
@@ -116,7 +108,9 @@ def create_room(name):
     daily_rest_helper = DailyRESTHelper(DAILY_API_KEY, DAILY_API_URL)
     # Create a new room
     try:
-        params = DailyRoomParams(name=name, properties=DailyRoomProperties())
+        params = DailyRoomParams(name=name, properties=DailyRoomProperties(
+            exp=time.time() + ROOM_EXPIRE_TIME,
+        ))
         room: DailyRoomObject = daily_rest_helper.create_room(params=params)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"{e}")
@@ -133,8 +127,8 @@ def create_room(name):
 
 @app.post("/agent_join/{bot_name}")
 async def agent_join(bot_name: str, request: Request) -> JSONResponse:
-    logging.debug(f"register bots: {register_rtvi_bots.items()}")
-    if bot_name not in register_rtvi_bots:
+    logging.debug(f"register bots: {register_daily_room_bots.items()}")
+    if bot_name not in register_daily_room_bots:
         raise HTTPException(status_code=500, detail=f"bot {bot_name} don't exist")
 
     try:
@@ -144,16 +138,8 @@ async def agent_join(bot_name: str, request: Request) -> JSONResponse:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"{e}")
 
-    try:
-        logging.debug(f'config: {data["config"]}')
-        bot_config = RTVIConfig(**data["config"])
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to parse bot configuration")
     # Create a Daily rest helper
     daily_rest_helper = DailyRESTHelper(DAILY_API_KEY, DAILY_API_URL)
-
     room: DailyRoomObject | None = None
     try:
         room = daily_rest_helper.get_room_from_name(bot_name)
@@ -161,7 +147,12 @@ async def agent_join(bot_name: str, request: Request) -> JSONResponse:
         logging.warning(f"Failed to get room {bot_name} from Daily REST API: {ex}")
         # Create a new room
         try:
-            params = DailyRoomParams(name=bot_name, properties=DailyRoomProperties())
+            params = DailyRoomParams(
+                name=bot_name,
+                properties=DailyRoomProperties(
+                    exp=time.time() + ROOM_EXPIRE_TIME,
+                ),
+            )
             room = daily_rest_helper.create_room(params=params)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"{e}")
@@ -176,7 +167,13 @@ async def agent_join(bot_name: str, request: Request) -> JSONResponse:
     logging.info(f"room: {room}")
     pid = 0
     try:
-        bot_obj: IBot = register_rtvi_bots[bot_name](room.url, token, bot_config, bot_name)
+        kwargs = DailyRoomBotArgs(
+            bot_config=data['config'],
+            room_url=room.url,
+            token=token,
+            bot_name=bot_name,
+        ).__dict__
+        bot_obj: IBot = register_daily_room_bots[bot_name](**kwargs)
         bot_process: multiprocessing.Process = multiprocessing.Process(target=bot_obj.run)
         bot_process.start()
         pid = bot_process.pid
@@ -194,17 +191,19 @@ async def agent_join(bot_name: str, request: Request) -> JSONResponse:
         "room_name": room.name,
         "room_url": room.url,
         "token": user_token,
-        "bot_config": bot_config.model_dump_json(),
+        "bot_config": bot_obj.bot_config(),
         "bot_id": pid,
         "status": "running",
     })
 
 
-@app.get("/status/{pid}")
+@ app.get("/status/{pid}")
 def get_status(pid: int):
     # Look up the subprocess
-    proc, url = bot_procs.get(pid)
-
+    val = bot_procs.get(pid)
+    if val is None:
+        raise HTTPException(status_code=404, detail="Bot not found")
+    proc, url = val
     # If the subprocess doesn't exist, return an error
     if not proc:
         raise HTTPException(
@@ -237,7 +236,7 @@ if __name__ == "__main__":
     config = parser.parse_args()
 
     uvicorn.run(
-        "src.cmd.http.server.fastapi_rtvi_serve:app",
+        "src.cmd.http.server.fastapi_daily_bot_serve:app",
         host=config.host,
         port=config.port,
         reload=config.reload

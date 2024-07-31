@@ -7,7 +7,6 @@ from typing import AsyncGenerator, Literal
 try:
     from openai import AsyncOpenAI
 except ModuleNotFoundError as e:
-    logging.error(f"Exception: {e}")
     logging.error(
         "In order to use OpenAI, you need to `pip install openai`. Also, set `OPENAI_API_KEY` environment variable.")
     raise Exception(f"Missing module: {e}")

@@ -19,7 +19,6 @@ except ModuleNotFoundError as e:
         "In order to use OpenAI, you need to `pip install openai`. Also, set `OPENAI_API_KEY` environment variable.")
     raise Exception(f"Missing module: {e}")
 import httpx
-from PIL import Image
 from apipeline.frames.data_frames import TextFrame, Frame
 from apipeline.pipeline.pipeline import FrameDirection
 
@@ -220,5 +219,5 @@ class BaseOpenAILLMProcessor(LLMProcessor):
 
 class OpenAILLMProcessor(BaseOpenAILLMProcessor):
 
-    def __init__(self, *, model: str = "gpt-4o", **kwargs):
+    def __init__(self, model: str = "gpt-4o", **kwargs):
         super().__init__(model=model, **kwargs)
