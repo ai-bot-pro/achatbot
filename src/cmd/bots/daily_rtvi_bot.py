@@ -31,7 +31,7 @@ class DailyRTVIBot(DailyRoomBot):
             raise Exception("Failed to parse bot configuration")
 
     def bot_config(self):
-        return self._bot_config.__dict__
+        return self._bot_config.model_dump()
 
     async def _run(self):
         transport = DailyTransport(
