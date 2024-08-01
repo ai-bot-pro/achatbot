@@ -96,7 +96,7 @@ class AudioVADInputProcessor(InputProcessor):
                 frame = UserStoppedSpeakingFrame()
 
             if frame:
-                await self._handle_interruptions(frame)
+                await self._handle_interruptions(frame, True)
 
             vad_state = new_vad_state
         return vad_state

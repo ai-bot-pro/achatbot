@@ -16,7 +16,7 @@ except ModuleNotFoundError as e:
     raise Exception(f"Missing module: {e}")
 from apipeline.pipeline.pipeline import FrameDirection
 from apipeline.frames.data_frames import TextFrame, Frame, AudioRawFrame
-from apipeline.frames.sys_frames import StartInterruptionFrame
+from apipeline.frames.sys_frames import StartInterruptionFrame, CancelFrame
 from apipeline.frames.control_frames import StartFrame, EndFrame
 
 from src.processors.speech.tts.base import TTSProcessor
@@ -27,8 +27,8 @@ class CartesiaTTSProcessor(TTSProcessor):
 
     def __init__(
             self,
-            api_key: str,
             voice_id: str,
+            api_key: str = "",
             cartesia_version: str = "2024-06-10",
             url: str = "wss://api.cartesia.ai/tts/websocket",
             model_id: str = "sonic-english",
@@ -85,6 +85,11 @@ class CartesiaTTSProcessor(TTSProcessor):
         await super().stop(frame)
         await self._disconnect()
 
+    async def cancel(self, frame: CancelFrame):
+        await super().cancel(frame)
+        await self._disconnect()
+        logging.info("cancel done")
+
     async def _connect(self):
         try:
             self._websocket = await websockets.connect(
@@ -99,17 +104,20 @@ class CartesiaTTSProcessor(TTSProcessor):
     async def _disconnect(self):
         try:
             if self._context_appending_task:
+                logging.debug("context_appending_task.cancel......")
                 self._context_appending_task.cancel()
                 await self._context_appending_task
                 self._context_appending_task = None
-            if self._receive_task:
-                self._receive_task.cancel()
-                await self._receive_task
-                self._receive_task = None
             if self._websocket:
+                logging.debug("websocket close......")
                 ws = self._websocket
                 self._websocket = None
                 await ws.close()
+            if self._receive_task:
+                logging.debug("receive_task.cancel......")
+                self._receive_task.cancel()
+                await self._receive_task
+                self._receive_task = None
             self._context_id = None
             self._context_id_start_timestamp = None
             self._timestamped_words_buffer = []
@@ -126,13 +134,19 @@ class CartesiaTTSProcessor(TTSProcessor):
         await self.push_frame(LLMFullResponseEndFrame())
 
     async def _receive_task_handler(self):
-        try:
-            async for message in self._websocket:
+        while True:
+            try:
+                if self._websocket is None:
+                    break
+                async with asyncio.timeout(0.1):
+                    message = await self._websocket.recv()
                 msg = json.loads(message)
-                # logging.debug(f"Received message: {msg['type']} {msg['context_id']}")
+                # logging.info(f"Received message: {msg['type']} {msg['context_id']}")
                 if not msg or msg["context_id"] != self._context_id:
                     continue
-                if msg["type"] == "done":
+                if msg["type"] == "error":
+                    logging.error(f"Received message error msg: {msg}")
+                elif msg["type"] == "done":
                     await self.stop_ttfb_metrics()
                     # unset _context_id but not the _context_id_start_timestamp because we are likely still
                     # playing out audio and need the timestamp to set send context frames
@@ -153,30 +167,36 @@ class CartesiaTTSProcessor(TTSProcessor):
                         num_channels=1
                     )
                     await self.push_frame(frame)
-        except Exception as e:
-            logging.exception(f"{self} exception: {e}")
+            except TimeoutError:
+                continue
+            except asyncio.CancelledError:
+                break
 
     async def _context_appending_task_handler(self):
         try:
             while True:
-                await asyncio.sleep(0.1)
-                if not self._context_id_start_timestamp:
-                    continue
-                elapsed_seconds = time.time() - self._context_id_start_timestamp
-                # pop all words from self._timestamped_words_buffer that are older than the
-                # elapsed time and print a message about them to the console
-                while self._timestamped_words_buffer and self._timestamped_words_buffer[0][1] <= elapsed_seconds:
-                    word, timestamp = self._timestamped_words_buffer.pop(0)
-                    if word == "LLMFullResponseEndFrame" and timestamp == 0:
-                        await self.push_frame(LLMFullResponseEndFrame())
+                try:
+                    await asyncio.sleep(0.1)
+                    if not self._context_id_start_timestamp:
                         continue
-                    # print(f"Word '{word}' with timestamp {timestamp:.2f}s has been spoken.")
-                    await self.push_frame(TextFrame(word))
+                    elapsed_seconds = time.time() - self._context_id_start_timestamp
+                    # pop all words from self._timestamped_words_buffer that are older than the
+                    # elapsed time and print a message about them to the console
+                    while self._timestamped_words_buffer and self._timestamped_words_buffer[
+                            0][1] <= elapsed_seconds:
+                        word, timestamp = self._timestamped_words_buffer.pop(0)
+                        if word == "LLMFullResponseEndFrame" and timestamp == 0:
+                            await self.push_frame(LLMFullResponseEndFrame())
+                            continue
+                        # print(f"Word '{word}' with timestamp {timestamp:.2f}s has been spoken.")
+                        await self.push_frame(TextFrame(word))
+                except asyncio.CancelledError:
+                    break
         except Exception as e:
             logging.exception(f"{self} exception: {e}")
 
     async def run_tts(self, text: str) -> AsyncGenerator[Frame, None]:
-        logging.debug(f"Generating TTS: [{text}]")
+        logging.info(f"Generating TTS: [{text}]")
 
         try:
             if not self._websocket:
@@ -193,13 +213,18 @@ class CartesiaTTSProcessor(TTSProcessor):
                 "model_id": self._model_id,
                 "voice": {
                     "mode": "id",
-                    "id": self._voice_id
+                    "id": self._voice_id,
+                    "__experimental_controls": {
+                        "speed": "normal",
+                    }
                 },
                 "output_format": self._output_format,
                 "language": self._language,
                 "add_timestamps": True,
             }
-            # logging.debug(f"SENDING MESSAGE {json.dumps(msg)}")
+            if self._language == "zh":
+                msg["add_timestamps"] = False
+            # logging.info(f"SENDING MESSAGE {json.dumps(msg)}")
             try:
                 await self._websocket.send(json.dumps(msg))
             except Exception as e:

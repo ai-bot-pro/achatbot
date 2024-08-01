@@ -20,7 +20,7 @@ ENDOFSENTENCE_PATTERN_STR = r"""
     (?<!Mr|Ms|Dr)    # Negative lookbehind: not preceded by Mr, Ms, Dr (combined bc. length is the same)
     (?<!Mrs)         # Negative lookbehind: not preceded by "Mrs"
     (?<!Prof)        # Negative lookbehind: not preceded by "Prof"
-    [\.\?\!:]        # Match a period, question mark, exclamation point, or colon
+    [\.。\?？\!！:：]        # Match a period, question mark, exclamation point, or colon
     $                # End of string
 """
 ENDOFSENTENCE_PATTERN = re.compile(ENDOFSENTENCE_PATTERN_STR, re.VERBOSE)
@@ -68,7 +68,10 @@ class TTSProcessor(AIProcessor):
             if match_endofsentence(self._current_sentence):
                 text = self._current_sentence
                 self._current_sentence = ""
+            else:
+                text = self._current_sentence
 
+        # print(f"frame: {frame} text: {text}")
         if text:
             await self._push_tts_frames(text)
 

@@ -5,6 +5,7 @@
 #
 
 import os
+import logging
 import asyncio
 import dataclasses
 from typing import List, Literal, Optional, Type
@@ -42,7 +43,7 @@ from src.processors.aggregators.llm_response import (
     LLMAssistantResponseAggregator, LLMUserResponseAggregator,
 )
 from src.processors.aggregators.openai_llm_context import OpenAILLMContext
-from src.common.event import EventHandlerManager
+from src.transports.base import BaseTransport
 
 from dotenv import load_dotenv
 load_dotenv(override=True)
@@ -277,11 +278,10 @@ class FunctionCallProcessor(FrameProcessor):
 
 
 class RTVIProcessor(FrameProcessor):
-
     def __init__(
             self,
             *,
-            transport: EventHandlerManager,
+            transport: BaseTransport,
             setup: RTVISetup | None = None,
             llm_api_key: str = "",
             llm_base_url: str = "https://api.groq.com/openai/v1",
@@ -324,6 +324,7 @@ class RTVIProcessor(FrameProcessor):
             try:
                 await self._handle_setup(self._setup)
             except Exception as e:
+                logging.error(f"unable to setup RTVI, exception: {e}")
                 await self._send_error(f"unable to setup RTVI: {e}")
 
     async def cleanup(self):
@@ -462,12 +463,12 @@ class RTVIProcessor(FrameProcessor):
             self._tts,
             self._tts_text,
             self._tma_out,
-            self._transport.output(),
+            self._transport.output_processor(),
         ])
 
-        parent = self.get_parent()
-        if parent and self._start_frame:
-            parent.link(pipeline)
+        parent_pipeline: Pipeline = self.get_parent_pipeline()
+        if parent_pipeline and self._start_frame:
+            parent_pipeline.link(pipeline)
 
             # We need to initialize the new pipeline with the same settings
             # as the initial one.
@@ -475,7 +476,7 @@ class RTVIProcessor(FrameProcessor):
             await self.push_frame(start_frame)
 
             # Send new initial metrics with the new processors
-            processors = parent.processors_with_metrics()
+            processors = parent_pipeline.processors_with_metrics()
             processors.extend(pipeline.processors_with_metrics())
             ttfb = [{"processor": p.name, "value": 0.0} for p in processors]
             processing = [{"processor": p.name, "value": 0.0} for p in processors]
@@ -546,12 +547,12 @@ class RTVIProcessor(FrameProcessor):
         # send any messages. So, we setup a super basic pipeline with just the
         # output transport so we can send messages.
         if not self._pipeline:
-            pipeline = Pipeline([self._transport.output()])
+            pipeline = Pipeline([self._transport.output_processor()])
             self._pipeline = pipeline
 
-            parent = self.get_parent()
-            if parent and self._start_frame:
-                parent.link(pipeline)
+            parent_pipeline = self.get_parent_pipeline()
+            if parent_pipeline and self._start_frame:
+                parent_pipeline.link(pipeline)
 
         message = RTVIResponse(id=id, data=RTVIResponseData(success=success, error=error))
         frame = TransportMessageFrame(message=message.model_dump(exclude_none=True))

@@ -4,13 +4,14 @@ import itertools
 from typing import List
 
 from PIL import Image
-from apipeline.frames.control_frames import StartFrame
+from apipeline.frames.sys_frames import SystemFrame
+from apipeline.frames.control_frames import StartFrame, ControlFrame
 from apipeline.frames.data_frames import Frame, AudioRawFrame, DataFrame, ImageRawFrame
 from apipeline.processors.frame_processor import FrameDirection
 from apipeline.processors.output_processor import OutputProcessor
 
 from src.common.types import AudioCameraParams
-from src.types.frames.control_frames import BotSpeakingFrame
+from src.types.frames.control_frames import BotSpeakingFrame, TTSStartedFrame, TTSStoppedFrame, BotStartedSpeakingFrame, BotStoppedSpeakingFrame
 from src.types.frames.data_frames import SpriteFrame, TransportMessageFrame
 
 
@@ -54,6 +55,9 @@ class AudioCameraOutputProcessor(OutputProcessor):
     async def send_message(self, frame: TransportMessageFrame):
         pass
 
+    #
+    # Sink frame
+    #
     async def sink(self, frame: DataFrame):
         if isinstance(frame, TransportMessageFrame):
             await self.send_message(frame)
@@ -63,6 +67,18 @@ class AudioCameraOutputProcessor(OutputProcessor):
             await self._set_camera_image(frame)
         elif isinstance(frame, SpriteFrame) and self._params.camera_out_enabled:
             await self._set_camera_images(frame.images)
+        self._sink_event.set()
+
+    async def sink_sys_frame(self, frame: SystemFrame):
+        return await super().sink_sys_frame(frame)
+
+    async def sink_control_frame(self, frame: ControlFrame):
+        if isinstance(frame, TTSStartedFrame):
+            await self.queue_frame(BotStartedSpeakingFrame(), FrameDirection.UPSTREAM)
+            await self.queue_frame(frame)
+        elif isinstance(frame, TTSStoppedFrame):
+            await self.queue_frame(BotStoppedSpeakingFrame(), FrameDirection.UPSTREAM)
+            await self.queue_frame(frame)
 
     #
     # Audio out
@@ -73,8 +89,9 @@ class AudioCameraOutputProcessor(OutputProcessor):
 
     async def _handle_audio(self, frame: AudioRawFrame):
         audio = frame.audio
+        # print(f"len audio:{len(audio)}, audio_chunk_size{self._audio_chunk_size}")
         for i in range(0, len(audio), self._audio_chunk_size):
-            chunk = audio[i: i + self._audio_chunk_size],
+            chunk = audio[i: i + self._audio_chunk_size]
             await self.write_raw_audio_frames(chunk)
             await self.push_frame(BotSpeakingFrame(), FrameDirection.UPSTREAM)
 

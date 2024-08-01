@@ -1,13 +1,10 @@
 import logging
 import inspect
-import asyncio
 
 
 class EventHandlerManager:
 
-    def __init__(self,
-                 loop: asyncio.AbstractEventLoop | None = None):
-        self._loop = loop or asyncio.get_running_loop()
+    def __init__(self):
         self._event_handlers: dict = {}
 
     def event_handler(self, event_name: str):

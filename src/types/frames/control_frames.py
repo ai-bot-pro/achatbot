@@ -79,6 +79,21 @@ class UserImageRequestFrame(ControlFrame):
 
 
 @dataclass
+class BotStartedSpeakingFrame(ControlFrame):
+    """Emitted upstream by transport outputs to indicate the bot started speaking.
+
+    """
+    pass
+
+
+@dataclass
+class BotStoppedSpeakingFrame(ControlFrame):
+    """Emitted upstream by transport outputs to indicate the bot stopped speaking.
+
+    """
+    pass
+
+@dataclass
 class BotSpeakingFrame(ControlFrame):
     """Emitted by transport outputs while the bot is still speaking. This can be
     used, for example, to detect when a user is idle. That is, while the bot is

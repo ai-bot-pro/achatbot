@@ -8,7 +8,7 @@ from apipeline.frames.control_frames import StartFrame
 from apipeline.processors.frame_processor import FrameDirection
 
 from src.processors.audio_input_processor import AudioVADInputProcessor
-from src.services.daily.client import DailyTransportClient
+from src.services.daily_client import DailyTransportClient
 from src.types.frames.data_frames import (
     InterimTranscriptionFrame,
     TranscriptionFrame,
@@ -66,11 +66,11 @@ class DailyInputTransportProcessor(AudioVADInputProcessor):
     #
 
     async def push_transcription_frame(self, frame: TranscriptionFrame | InterimTranscriptionFrame):
-        await self._internal_push_frame(frame)
+        await self.queue_frame(frame)
 
     async def push_app_message(self, message: Any, sender: str):
         frame = DailyTransportMessageFrame(message=message, participant_id=sender)
-        await self._internal_push_frame(frame)
+        await self.queue_frame(frame)
 
     #
     # Audio in
@@ -111,6 +111,7 @@ class DailyInputTransportProcessor(AudioVADInputProcessor):
 
     def request_participant_image(self, participant_id: str):
         if participant_id in self._video_renderers:
+
             self._video_renderers[participant_id]["render_next_frame"] = True
 
     async def _on_participant_video_frame(self, participant_id: str, buffer, size, format):
@@ -133,6 +134,6 @@ class DailyInputTransportProcessor(AudioVADInputProcessor):
                 image=buffer,
                 size=size,
                 format=format)
-            await self._internal_push_frame(frame)
+            await self.queue_frame(frame)
 
         self._video_renderers[participant_id]["timestamp"] = curr_time

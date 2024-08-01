@@ -4,9 +4,10 @@ from apipeline.frames.sys_frames import MetricsFrame
 from apipeline.frames.data_frames import ImageRawFrame
 from apipeline.frames.control_frames import StartFrame
 
-from src.services.daily.client import DailyTransportClient
+from src.services.daily_client import DailyTransportClient
 from src.processors.audio_camera_output_processor import AudioCameraOutputProcessor
 from src.common.types import DailyParams, DailyTransportMessageFrame
+from src.types.frames.data_frames import TransportMessageFrame
 
 
 class DailyOutputTransportProcessor(AudioCameraOutputProcessor):
@@ -32,16 +33,19 @@ class DailyOutputTransportProcessor(AudioCameraOutputProcessor):
         await super().cleanup()
         await self._client.cleanup()
 
-    async def send_message(self, frame: DailyTransportMessageFrame):
+    async def send_message(self, frame: TransportMessageFrame):
         await self._client.send_message(frame)
 
     async def send_metrics(self, frame: MetricsFrame):
-        ttfb = [{"name": n, "time": t} for n, t in frame.ttfb.items()]
+        metrics = {}
+        if frame.ttfb:
+            metrics["ttfb"] = frame.ttfb
+        if frame.processing:
+            metrics["processing"] = frame.processing
+
         message = DailyTransportMessageFrame(message={
             "type": "pipecat-metrics",
-            "metrics": {
-                "ttfb": ttfb
-            },
+            "metrics": metrics
         })
         await self._client.send_message(message)
 

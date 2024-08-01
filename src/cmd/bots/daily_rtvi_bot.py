@@ -12,8 +12,8 @@ from apipeline.pipeline.runner import PipelineRunner
 from src.processors.daily_input_transport_processor import DailyInputTransportProcessor
 from src.processors.rtvi_processor import RTVIConfig, RTVIProcessor, RTVISetup
 from src.modules.speech.vad_analyzer.silero import SileroVADAnalyzer
-from src.common.types import DailyParams, DailyRoomBotArgs
-from src.services.daily.client import DailyTransport
+from src.common.types import DailyParams, DailyRoomBotArgs, DailyTranscriptionSettings
+from src.transports.daily import DailyTransport
 from .base import DailyRoomBot, register_daily_room_bots
 
 from dotenv import load_dotenv
@@ -42,10 +42,11 @@ class DailyRTVIBot(DailyRoomBot):
                 audio_out_enabled=True,
                 transcription_enabled=True,
                 vad_enabled=True,
-                vad_analyzer=SileroVADAnalyzer()
+                vad_analyzer=SileroVADAnalyzer(),
+                transcription_settings=DailyTranscriptionSettings(
+                    language="en",
+                ),
             ))
-        input_processor = DailyInputTransportProcessor(
-            transport.client, transport.params)
 
         rtai = RTVIProcessor(
             transport=transport,
@@ -53,7 +54,7 @@ class DailyRTVIBot(DailyRoomBot):
             llm_api_key=os.getenv("OPENAI_API_KEY", ""),
             tts_api_key=os.getenv("CARTESIA_API_KEY", ""))
 
-        pipeline = Pipeline([input_processor, rtai])
+        pipeline = Pipeline([transport.input_processor(), rtai])
 
         self.task = PipelineTask(
             pipeline,
