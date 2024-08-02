@@ -2,14 +2,18 @@ import logging
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
-from src.common.interface import IVADAnalyzer
-from src.common.types import AudioVADParams, VADState
 from apipeline.frames.base import Frame
-from apipeline.frames.sys_frames import StartFrame, StartInterruptionFrame, StopInterruptionFrame
+from apipeline.frames.control_frames import StartFrame
+from apipeline.frames.sys_frames import StartInterruptionFrame, StopInterruptionFrame, SystemFrame
 from apipeline.frames.data_frames import AudioRawFrame
 from apipeline.processors.frame_processor import FrameDirection
 from apipeline.processors.input_processor import InputProcessor
-from types.frames.control_frames import UserStartedSpeakingFrame, UserStoppedSpeakingFrame
+
+from src.modules.speech.vad_analyzer.daily_webrtc import DailyWebRTCVADAnalyzer
+from src.common.interface import IVADAnalyzer
+from src.common.types import AudioVADParams, VADState
+from src.types.frames.control_frames import UserStartedSpeakingFrame, UserStoppedSpeakingFrame
+from src.types.frames.sys_frames import BotInterruptionFrame
 
 
 class AudioVADInputProcessor(InputProcessor):
@@ -22,6 +26,12 @@ class AudioVADInputProcessor(InputProcessor):
         super().__init__(name=name, loop=loop, **kwargs)
         self._params = params
         self._executor = ThreadPoolExecutor(max_workers=3)
+
+        self._vad_analyzer: IVADAnalyzer | None = params.vad_analyzer
+        if params.vad_enabled and not params.vad_analyzer:
+            self._vad_analyzer = DailyWebRTCVADAnalyzer(
+                sample_rate=self._params.audio_in_sample_rate,
+                num_channels=self._params.audio_in_channels)
 
     @property
     def vad_analyzer(self) -> IVADAnalyzer | None:
@@ -69,6 +79,13 @@ class AudioVADInputProcessor(InputProcessor):
             except Exception as e:
                 logging.exception(f"{self} error reading audio frames: {e}")
 
+    async def _vad_analyze(self, audio_frames: bytes) -> VADState:
+        state = VADState.QUIET
+        if self.vad_analyzer:
+            state = await self.get_event_loop().run_in_executor(
+                self._executor, self.vad_analyzer.analyze_audio, audio_frames)
+        return state
+
     async def _handle_vad(self, audio_frames: bytes, vad_state: VADState):
         new_vad_state = await self._vad_analyze(audio_frames)
         if new_vad_state != vad_state and new_vad_state != VADState.STARTING and new_vad_state != VADState.STOPPING:
@@ -79,7 +96,7 @@ class AudioVADInputProcessor(InputProcessor):
                 frame = UserStoppedSpeakingFrame()
 
             if frame:
-                await self._handle_interruptions(frame)
+                await self._handle_interruptions(frame, True)
 
             vad_state = new_vad_state
         return vad_state
@@ -87,20 +104,56 @@ class AudioVADInputProcessor(InputProcessor):
     #
     # Handle interruptions
     #
+    async def _start_interruption(self):
+        if not self.interruptions_allowed:
+            return
 
-    async def _handle_interruptions(self, frame: Frame):
+        # Cancel the task. This will stop pushing frames downstream.
+        self._push_frame_task.cancel()
+        await self._push_frame_task
+        # Push an out-of-band frame (i.e. not using the ordered push
+        # frame task) to stop everything, specially at the output
+        # transport.
+        await self.push_frame(StartInterruptionFrame())
+        # Create a new queue and task.
+        self._create_push_task()
+
+    async def _stop_interruption(self):
+        if not self.interruptions_allowed:
+            return
+
+        await self.push_frame(StopInterruptionFrame())
+
+    async def _handle_interruptions(self, frame: Frame, push_frame: bool):
         if self.interruptions_allowed:
             # Make sure we notify about interruptions quickly out-of-band
-            if isinstance(frame, UserStartedSpeakingFrame):
+            if isinstance(frame, BotInterruptionFrame):
+                logging.debug("Bot interruption")
+                await self._start_interruption()
+            elif isinstance(frame, UserStartedSpeakingFrame):
                 logging.debug("User started speaking")
-                await super()._handle_interruptions(StartInterruptionFrame())
+                await self._start_interruption()
             elif isinstance(frame, UserStoppedSpeakingFrame):
                 logging.debug("User stopped speaking")
-                await self.push_frame(StopInterruptionFrame())
-        await self.queue_frame(frame)
+                await self._stop_interruption()
 
+        if push_frame:
+            await self.queue_frame(frame)
     #
     # Process frame
     #
+
+    async def process_sys_frame(self, frame: Frame, direction: FrameDirection):
+        logging.info(f"f{self.__class__.__name__} process_sys_frame doing")
+        if isinstance(frame, BotInterruptionFrame):
+            await self._handle_interruptions(frame, False)
+        elif isinstance(frame, StartInterruptionFrame):
+            await self._start_interruption()
+        elif isinstance(frame, StopInterruptionFrame):
+            await self._stop_interruption()
+        # All other system frames
+        elif isinstance(frame, SystemFrame):
+            await self.push_frame(frame, direction)
+
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         return await super().process_frame(frame, direction)

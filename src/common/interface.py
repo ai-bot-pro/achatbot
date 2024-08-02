@@ -239,3 +239,13 @@ class IConnector(ABC):
     @abstractmethod
     def close(self):
         raise NotImplemented("must be implemented in the child class")
+
+
+class IBot(ABC):
+    @abstractmethod
+    def run(self):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def bot_config(self) -> dict:
+        raise NotImplemented("must be implemented in the child class")

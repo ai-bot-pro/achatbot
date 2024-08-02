@@ -525,6 +525,11 @@ class VADAnalyzerArgs:
     stop_secs: float = 0.8
     min_volume: float = 0.6
 
+
+@dataclass
+class SileroVADAnalyzerArgs(SileroVADArgs, VADAnalyzerArgs):
+    pass
+
 # --------------- daily -------------------------------
 
 
@@ -589,3 +594,13 @@ class DailyParams(AudioCameraParams):
     dialin_settings: DailyDialinSettings | None = None
     transcription_enabled: bool = False
     transcription_settings: DailyTranscriptionSettings = DailyTranscriptionSettings()
+
+
+# ---------------- Bots -------------
+
+@dataclass
+class DailyRoomBotArgs:
+    room_url: str = ""
+    token: str = ""
+    bot_config: dict = None
+    bot_name: str | None = None

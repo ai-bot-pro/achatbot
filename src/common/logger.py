@@ -12,6 +12,10 @@ def getDefaultFormatter():
 
 
 class Logger():
+    """
+    set root or app logger at once
+    """
+    inited = False
 
     @staticmethod
     def init(
@@ -19,18 +23,26 @@ class Logger():
             app_name="chat-bot",
             log_dir=LOG_DIR,
             is_file=True,
-            is_console=True):
+            is_console=True,
+            is_root_logger=True):
+        if Logger.inited:
+            return
         os.makedirs(log_dir, exist_ok=True)
-        # Create a logger
-        logger = logging.getLogger()
-        logger.setLevel(level)  # Set the root logger's level
-        logger.name = app_name
+        if is_root_logger:
+            # get root logger to set, global logger, use logging
+            logger = logging.getLogger()
+            logger.setLevel(level)  # Set the root logger's level
+            logger.name = app_name
+        else:
+            # create app logger, u can use init logger
+            logger = logging.getLogger(name=app_name)
+            logger.setLevel(level)  # Set the app logger's level
 
         if is_file:
             # Create a file handler and set its level
             log_path = os.path.join(log_dir, f"{app_name}.log")
             file_handler = logging.FileHandler(log_path)
-            file_handler.setLevel(logging.DEBUG)
+            file_handler.setLevel(level)
             file_handler.setFormatter(getDefaultFormatter())
             logger.addHandler(file_handler)
 
@@ -40,5 +52,7 @@ class Logger():
             console_handler.setLevel(level)
             console_handler.setFormatter(getDefaultFormatter())
             logger.addHandler(console_handler)
+
+        Logger.inited = True
 
         return logger
