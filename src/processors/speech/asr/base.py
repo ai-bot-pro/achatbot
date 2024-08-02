@@ -48,6 +48,12 @@ class ASRProcessor(AIProcessor):
         ww.setframerate(self._sample_rate)
         return (content, ww)
 
+    async def stop(self, frame: EndFrame):
+        self._wave.close()
+
+    async def cancel(self, frame: CancelFrame):
+        self._wave.close()
+
     def _get_smoothed_volume(self, frame: AudioRawFrame) -> float:
         volume = calculate_audio_volume(frame.audio, frame.sample_rate)
         return exp_smoothing(volume, self._prev_volume, self._smoothing_factor)
@@ -81,10 +87,7 @@ class ASRProcessor(AIProcessor):
         """Processes a frame of audio data, either buffering or transcribing it."""
         await super().process_frame(frame, direction)
 
-        if isinstance(frame, CancelFrame) or isinstance(frame, EndFrame):
-            self._wave.close()
-            await self.push_frame(frame, direction)
-        elif isinstance(frame, AudioRawFrame):
+        if isinstance(frame, AudioRawFrame):
             # In this processor we accumulate audio internally and at the end we
             # push a TextFrame. We don't really want to push audio frames down.
             await self._append_audio(frame)

@@ -447,6 +447,7 @@ class RTVIProcessor(FrameProcessor):
             api_key=self._llm_api_key,
             model=model)
 
+        # TODO: add voice selection to config @weedge
         self._tts = self._tts_cls(name="TTS", api_key=self._tts_api_key, voice_id=voice)
 
         # TODO-CB: Eventually we'll need to switch the context aggregators to use the

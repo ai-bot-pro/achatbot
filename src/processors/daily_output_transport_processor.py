@@ -1,8 +1,8 @@
 import logging
 
-from apipeline.frames.sys_frames import MetricsFrame
+from apipeline.frames.sys_frames import MetricsFrame, CancelFrame
 from apipeline.frames.data_frames import ImageRawFrame
-from apipeline.frames.control_frames import StartFrame
+from apipeline.frames.control_frames import StartFrame, EndFrame
 
 from src.services.daily_client import DailyTransportClient
 from src.processors.audio_camera_output_processor import AudioCameraOutputProcessor
@@ -23,9 +23,15 @@ class DailyOutputTransportProcessor(AudioCameraOutputProcessor):
         # Join the room.
         await self._client.join()
 
-    async def stop(self):
+    async def stop(self, frame: EndFrame):
         # Parent stop.
-        await super().stop()
+        await super().stop(EndFrame)
+        # Leave the room.
+        await self._client.leave()
+
+    async def cancel(self, frame: CancelFrame):
+        # Parent stop.
+        await super().cancel(frame)
         # Leave the room.
         await self._client.leave()
 

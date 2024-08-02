@@ -4,8 +4,8 @@ import itertools
 from typing import List
 
 from PIL import Image
-from apipeline.frames.sys_frames import SystemFrame
-from apipeline.frames.control_frames import StartFrame, ControlFrame
+from apipeline.frames.sys_frames import SystemFrame, CancelFrame
+from apipeline.frames.control_frames import StartFrame, ControlFrame, EndFrame
 from apipeline.frames.data_frames import Frame, AudioRawFrame, DataFrame, ImageRawFrame
 from apipeline.processors.frame_processor import FrameDirection
 from apipeline.processors.output_processor import OutputProcessor
@@ -36,18 +36,24 @@ class AudioCameraOutputProcessor(OutputProcessor):
         self._audio_chunk_size = audio_bytes_10ms * 2
 
     async def start(self, frame: StartFrame):
+        await super().start(frame)
         # Create media threads queues and task
         if self._params.camera_out_enabled:
             self._camera_out_queue = asyncio.Queue()
             self._camera_out_task = self.get_event_loop().create_task(self._camera_out_task_handler())
 
-    async def stop(self):
-        # Wait on the threads to finish.
+    async def stop(self, frame: EndFrame):
+        await super().stop(frame)
+        # Cancel and wait for the camera output task to finish.
         if self._params.camera_out_enabled:
             self._camera_out_task.cancel()
             await self._camera_out_task
 
-        await super().stop()
+    async def cancel(self, frame: CancelFrame):
+        await super().cancel(frame)
+        if self._params.camera_out_enabled:
+            self._camera_out_task.cancel()
+            await self._camera_out_task
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
@@ -69,9 +75,6 @@ class AudioCameraOutputProcessor(OutputProcessor):
             await self._set_camera_images(frame.images)
         self._sink_event.set()
 
-    async def sink_sys_frame(self, frame: SystemFrame):
-        return await super().sink_sys_frame(frame)
-
     async def sink_control_frame(self, frame: ControlFrame):
         if isinstance(frame, TTSStartedFrame):
             await self.queue_frame(BotStartedSpeakingFrame(), FrameDirection.UPSTREAM)
@@ -79,6 +82,7 @@ class AudioCameraOutputProcessor(OutputProcessor):
         elif isinstance(frame, TTSStoppedFrame):
             await self.queue_frame(BotStoppedSpeakingFrame(), FrameDirection.UPSTREAM)
             await self.queue_frame(frame)
+        return await super().sink_control_frame(frame)
 
     #
     # Audio out

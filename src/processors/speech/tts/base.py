@@ -1,4 +1,5 @@
 import re
+import asyncio
 import logging
 from abc import abstractmethod
 from typing import AsyncGenerator
@@ -37,11 +38,17 @@ class TTSProcessor(AIProcessor):
             aggregate_sentences: bool = True,
             # if True, subclass is responsible for pushing TextFrames and LLMFullResponseEndFrames
             push_text_frames: bool = True,
+            sync_order_send: bool = False,
             **kwargs):
         super().__init__(**kwargs)
         self._aggregate_sentences: bool = aggregate_sentences
         self._push_text_frames: bool = push_text_frames
         self._current_sentence: str = ""
+
+        # sync event: tts done, step by step slow,
+        # e.g. for test, push EndFrame in the end.
+        self._tts_done_event = asyncio.Event()
+        self._sync_order_send = sync_order_send
 
     @abstractmethod
     async def set_voice(self, voice: str):
@@ -68,9 +75,6 @@ class TTSProcessor(AIProcessor):
             if match_endofsentence(self._current_sentence):
                 text = self._current_sentence
                 self._current_sentence = ""
-            else:
-                text = self._current_sentence
-
         # print(f"frame: {frame} text: {text}")
         if text:
             await self._push_tts_frames(text)
@@ -82,9 +86,18 @@ class TTSProcessor(AIProcessor):
 
         await self.push_frame(TTSStartedFrame())
         await self.start_processing_metrics()
+
+        # !NOTE: when open sync order send frame, u need set sync order
+        # run_tts send audio frames over then send tts stopped frame
+        # need subclass _tts_done_event to set;
         await self.process_generator(self.run_tts(text))
+        if self._sync_order_send is True:
+            await self._tts_done_event.wait()
+            self._tts_done_event.clear()
+
         await self.stop_processing_metrics()
         await self.push_frame(TTSStoppedFrame())
+
         if self._push_text_frames:
             # We send the original text after the audio. This way, if we are
             # interrupted, the text is not added to the assistant context.

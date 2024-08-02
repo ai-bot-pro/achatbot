@@ -62,11 +62,14 @@ class OpenAITTSProcessor(TTSProcessor):
                     logging.error(
                         f"{self} error getting audio (status: {r.status_code}, error: {error})")
                     yield ErrorFrame(f"Error getting audio (status: {r.status_code}, error: {error})")
+                    self._tts_done_event.set()
                     return
                 async for chunk in r.iter_bytes(8192):
                     if len(chunk) > 0:
                         await self.stop_ttfb_metrics()
                         frame = AudioRawFrame(chunk, 24_000, 1)
                         yield frame
+                self._tts_done_event.set()
         except BadRequestError as e:
             logging.exception(f"{self} error generating TTS: {e}")
+            self._tts_done_event.set()

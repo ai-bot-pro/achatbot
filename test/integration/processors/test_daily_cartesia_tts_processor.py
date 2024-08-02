@@ -1,11 +1,11 @@
-
+import asyncio
 import os
 import logging
 
 import unittest
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.runner import PipelineRunner
-from apipeline.pipeline.task import PipelineTask
+from apipeline.pipeline.task import PipelineTask, PipelineParams
 from apipeline.frames.control_frames import EndFrame
 from apipeline.frames.data_frames import TextFrame
 
@@ -64,9 +64,11 @@ class TestCartesiaTTSProcessor(unittest.IsolatedAsyncioTestCase):
             cartesia_version="2024-06-10",
             model_id="sonic-multilingual",
             language="zh",
+            sync_order_send=True,  # for send EndFrame in the end to test
         )
 
-        task = PipelineTask(Pipeline([tts, transport.output_processor()]))
+        task = PipelineTask(Pipeline([tts, transport.output_processor()]),
+                            params=PipelineParams(all_interruptions=True))
 
         # Register an event handler so we can play the audio when the
         # participant joins.
@@ -75,11 +77,11 @@ class TestCartesiaTTSProcessor(unittest.IsolatedAsyncioTestCase):
             participant_name = bot_name
             if "userName" in participant["info"]:
                 participant_name = participant["info"]["userName"]
-            print(participant_name)
             await task.queue_frames([
-                TextFrame(f"你好，Hello there, {participant_name}!"),
-                TextFrame(f"你是一个中国人"),
-                TextFrame(f"一名中文助理，请用中文简短回答，回答限制在5句话内。要友好、乐于助人且简明扼要。保持对话简短而甜蜜。只用纯文本回答，不显示emoji表情符号，不要包含链接或其他附加内容，不要回复计算机代码以及数学公式。"),
+                TextFrame(f"你好，Hello there. {participant_name}"),
+                TextFrame(f"你是一个中国人。"),
+                TextFrame(f"一名中文助理，请用中文简短回答，回答限制在5句话内。"),
+                EndFrame(),
             ])
 
         runner = PipelineRunner()

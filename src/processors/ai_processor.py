@@ -31,10 +31,10 @@ class AIProcessor(FrameProcessor):
 
         if isinstance(frame, StartFrame):
             await self.start(frame)
-        elif isinstance(frame, CancelFrame):
-            await self.cancel(frame)
         elif isinstance(frame, EndFrame):
             await self.stop(frame)
+        elif isinstance(frame, CancelFrame):
+            await self.cancel(frame)
 
     async def process_generator(self, generator: AsyncGenerator[Frame, None]):
         async for f in generator:

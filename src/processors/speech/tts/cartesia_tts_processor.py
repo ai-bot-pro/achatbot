@@ -103,25 +103,24 @@ class CartesiaTTSProcessor(TTSProcessor):
 
     async def _disconnect(self):
         try:
+            await self.stop_all_metrics()
             if self._context_appending_task:
-                logging.debug("context_appending_task.cancel......")
+                logging.info("context_appending_task.cancel......")
                 self._context_appending_task.cancel()
                 await self._context_appending_task
                 self._context_appending_task = None
             if self._websocket:
-                logging.debug("websocket close......")
-                ws = self._websocket
+                logging.info("websocket close......")
+                await self._websocket.close()
                 self._websocket = None
-                await ws.close()
             if self._receive_task:
-                logging.debug("receive_task.cancel......")
+                logging.info("receive_task.cancel......")
                 self._receive_task.cancel()
                 await self._receive_task
                 self._receive_task = None
             self._context_id = None
             self._context_id_start_timestamp = None
             self._timestamped_words_buffer = []
-            await self.stop_all_metrics()
         except Exception as e:
             logging.exception(f"{self} error closing websocket: {e}")
 
@@ -146,12 +145,15 @@ class CartesiaTTSProcessor(TTSProcessor):
                     continue
                 if msg["type"] == "error":
                     logging.error(f"Received message error msg: {msg}")
+                    self._tts_done_event.set()
                 elif msg["type"] == "done":
                     await self.stop_ttfb_metrics()
-                    # unset _context_id but not the _context_id_start_timestamp because we are likely still
-                    # playing out audio and need the timestamp to set send context frames
+                    # unset _context_id but not the _context_id_start_timestamp
+                    # because we are likely still playing out audio
+                    # and need the timestamp to set send context frames
                     self._context_id = None
                     self._timestamped_words_buffer.append(("LLMFullResponseEndFrame", 0))
+                    self._tts_done_event.set()
                 elif msg["type"] == "timestamps":
                     # logging.debug(f"TIMESTAMPS: {msg}")
                     self._timestamped_words_buffer.extend(
@@ -170,28 +172,31 @@ class CartesiaTTSProcessor(TTSProcessor):
             except TimeoutError:
                 continue
             except asyncio.CancelledError:
+                self._tts_done_event.set()
                 break
+            except Exception as e:
+                logging.exception(f"{self} exception: {e}")
+                self._tts_done_event.set()
 
     async def _context_appending_task_handler(self):
         try:
             while True:
-                try:
-                    await asyncio.sleep(0.1)
-                    if not self._context_id_start_timestamp:
+                await asyncio.sleep(0.1)
+                if not self._context_id_start_timestamp:
+                    continue
+                elapsed_seconds = time.time() - self._context_id_start_timestamp
+                # pop all words from self._timestamped_words_buffer that are older than the
+                # elapsed time and print a message about them to the console
+                while self._timestamped_words_buffer and self._timestamped_words_buffer[
+                        0][1] <= elapsed_seconds:
+                    word, timestamp = self._timestamped_words_buffer.pop(0)
+                    if word == "LLMFullResponseEndFrame" and timestamp == 0:
+                        await self.push_frame(LLMFullResponseEndFrame())
                         continue
-                    elapsed_seconds = time.time() - self._context_id_start_timestamp
-                    # pop all words from self._timestamped_words_buffer that are older than the
-                    # elapsed time and print a message about them to the console
-                    while self._timestamped_words_buffer and self._timestamped_words_buffer[
-                            0][1] <= elapsed_seconds:
-                        word, timestamp = self._timestamped_words_buffer.pop(0)
-                        if word == "LLMFullResponseEndFrame" and timestamp == 0:
-                            await self.push_frame(LLMFullResponseEndFrame())
-                            continue
-                        # print(f"Word '{word}' with timestamp {timestamp:.2f}s has been spoken.")
-                        await self.push_frame(TextFrame(word))
-                except asyncio.CancelledError:
-                    break
+                    # print(f"Word '{word}' with timestamp {timestamp:.2f}s has been spoken.")
+                    await self.push_frame(TextFrame(word))
+        except asyncio.CancelledError:
+            pass
         except Exception as e:
             logging.exception(f"{self} exception: {e}")
 
@@ -231,7 +236,9 @@ class CartesiaTTSProcessor(TTSProcessor):
                 logging.exception(f"{self} error sending message: {e}")
                 await self._disconnect()
                 await self._connect()
+                self._tts_done_event.set()
                 return
             yield None
         except Exception as e:
             logging.exception(f"{self} exception: {e}")
+            self._tts_done_event.set()
