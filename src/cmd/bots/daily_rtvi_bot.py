@@ -9,7 +9,6 @@ from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
 
-from src.processors.daily_input_transport_processor import DailyInputTransportProcessor
 from src.processors.rtvi_processor import RTVIConfig, RTVIProcessor, RTVISetup
 from src.modules.speech.vad_analyzer.silero import SileroVADAnalyzer
 from src.common.types import DailyParams, DailyRoomBotArgs, DailyTranscriptionSettings

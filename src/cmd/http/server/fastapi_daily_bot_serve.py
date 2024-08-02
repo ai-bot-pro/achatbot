@@ -22,14 +22,14 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 
-Logger.init(logging.DEBUG, is_file=False, is_console=True)
+Logger.init(logging.INFO, is_file=False, is_console=True)
 
 
 # --------------------- API -----------------
 class BotInfo(BaseModel):
     is_agent: bool = False
     chat_bot_name: str = "DailyRTVIBot"
-    bot_config: dict = {}
+    config: dict = {}
     room_name: str = "chat-room"
 
 
@@ -153,7 +153,11 @@ def create_room(name):
 """
 curl -XPOST "http://0.0.0.0:4321/bot_join" \
     -H "Content-Type: application/json" \
-    -d $'{"chat_bot_name":"DummyBot","room_name":"chat-bot","bot_config":{"llm":{"messages":[{"role":"system","content":"你是聊天机器人，一个友好、乐于助人的机器人。您的输出将被转换为音频，所以不要包含除“!”以外的特殊字符。'或'?的答案。以一种创造性和有用的方式回应用户 所说的话，但要保持简短。从打招呼开始。"}]},"tts":{"voice":"e90c6678-f0d3-4767-9883-5d0ecf5894a8"}}}' | jq .
+    -d $'{"chat_bot_name":"DummyBot","room_name":"chat-bot","config":{"llm":{"messages":[{"role":"system","content":"你是聊天机器人，一个友好、乐于助人的机器人。您的输出将被转换为音频，所以不要包含除“!”以外的特殊字符。'或'?的答案。以一种创造性和有用的方式回应用户 所说的话，但要保持简短。从打招呼开始。"}]},"tts":{"voice":"e90c6678-f0d3-4767-9883-5d0ecf5894a8"}}}' | jq .
+
+curl -XPOST "http://0.0.0.0:4321/bot_join" \
+    -H "Content-Type: application/json" \
+    -d $'{"chat_bot_name":"DailyRTVIBot","room_name":"chat-bot","config":{"llm":{"model":"llama-3.1-70b-versatile","messages":[{"role":"system","content":"You are ai assistant. Answer in 1-5 sentences. Be friendly, helpful and concise. Default to metric units when possible. Keep the conversation short and sweet. You only answer in raw text, no markdown format. Don\'t include links or any other extras"}]},"tts":{"voice":"2ee87190-8f84-4925-97da-e52547f9462c"}}}' | jq .
 """
 
 
@@ -201,7 +205,7 @@ async def bot_join(info: BotInfo) -> JSONResponse:
     pid = 0
     try:
         kwargs = DailyRoomBotArgs(
-            bot_config=info.bot_config,
+            bot_config=info.config,
             room_url=room.url,
             token=token,
             bot_name=info.chat_bot_name,
@@ -226,7 +230,7 @@ async def bot_join(info: BotInfo) -> JSONResponse:
         "room_name": room.name,
         "room_url": room.url,
         "token": user_token,
-        "bot_config": bot_obj.bot_config(),
+        "config": bot_obj.bot_config(),
         "bot_id": pid,
         "status": "running",
     })

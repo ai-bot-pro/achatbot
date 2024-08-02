@@ -133,50 +133,45 @@ class CartesiaTTSProcessor(TTSProcessor):
         await self.push_frame(LLMFullResponseEndFrame())
 
     async def _receive_task_handler(self):
-        while True:
-            try:
-                if self._websocket is None:
-                    break
-                async with asyncio.timeout(0.1):
-                    message = await self._websocket.recv()
-                msg = json.loads(message)
-                # logging.info(f"Received message: {msg['type']} {msg['context_id']}")
-                if not msg or msg["context_id"] != self._context_id:
-                    continue
-                if msg["type"] == "error":
-                    logging.error(f"Received message error msg: {msg}")
-                    self._tts_done_event.set()
-                elif msg["type"] == "done":
-                    await self.stop_ttfb_metrics()
-                    # unset _context_id but not the _context_id_start_timestamp
-                    # because we are likely still playing out audio
-                    # and need the timestamp to set send context frames
-                    self._context_id = None
-                    self._timestamped_words_buffer.append(("LLMFullResponseEndFrame", 0))
-                    self._tts_done_event.set()
-                elif msg["type"] == "timestamps":
-                    # logging.debug(f"TIMESTAMPS: {msg}")
-                    self._timestamped_words_buffer.extend(
-                        list(zip(msg["word_timestamps"]["words"], msg["word_timestamps"]["end"]))
-                    )
-                elif msg["type"] == "chunk":
-                    await self.stop_ttfb_metrics()
-                    if not self._context_id_start_timestamp:
-                        self._context_id_start_timestamp = time.time()
-                    frame = AudioRawFrame(
-                        audio=base64.b64decode(msg["data"]),
-                        sample_rate=self._output_format["sample_rate"],
-                        num_channels=1
-                    )
-                    await self.push_frame(frame)
-            except TimeoutError:
-                continue
-            except asyncio.CancelledError:
-                self._tts_done_event.set()
-                break
-            except Exception as e:
-                logging.exception(f"{self} exception: {e}")
-                self._tts_done_event.set()
+        try:
+            while True:
+                async for message in self._websocket:
+                    msg = json.loads(message)
+                    # logging.info(f"Received message: {msg['type']} {msg['context_id']}")
+                    if not msg or msg["context_id"] != self._context_id:
+                        continue
+                    if msg["type"] == "error":
+                        logging.error(f"Received message error msg: {msg}")
+                        self._tts_done_event.set()
+                    elif msg["type"] == "done":
+                        await self.stop_ttfb_metrics()
+                        # unset _context_id but not the _context_id_start_timestamp
+                        # because we are likely still playing out audio
+                        # and need the timestamp to set send context frames
+                        self._context_id = None
+                        self._timestamped_words_buffer.append(("LLMFullResponseEndFrame", 0))
+                        self._tts_done_event.set()
+                    elif msg["type"] == "timestamps":
+                        # logging.debug(f"TIMESTAMPS: {msg}")
+                        self._timestamped_words_buffer.extend(
+                            list(zip(msg["word_timestamps"]["words"],
+                                 msg["word_timestamps"]["end"]))
+                        )
+                    elif msg["type"] == "chunk":
+                        await self.stop_ttfb_metrics()
+                        if not self._context_id_start_timestamp:
+                            self._context_id_start_timestamp = time.time()
+                        frame = AudioRawFrame(
+                            audio=base64.b64decode(msg["data"]),
+                            sample_rate=self._output_format["sample_rate"],
+                            num_channels=1
+                        )
+                        await self.push_frame(frame)
+        except asyncio.CancelledError:
+            self._tts_done_event.set()
+        except Exception as e:
+            logging.exception(f"{self} exception: {e}")
+            self._tts_done_event.set()
 
     async def _context_appending_task_handler(self):
         try:
