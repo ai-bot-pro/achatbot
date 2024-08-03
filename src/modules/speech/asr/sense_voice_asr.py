@@ -1,4 +1,5 @@
 from typing import AsyncGenerator
+import asyncio
 import re
 
 from src.common.utils.audio_utils import bytes2TorchTensorWith16
@@ -24,7 +25,8 @@ class SenseVoiceAsr(ASRBase):
         return
 
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
-        transcription, _ = self.model.inference(
+        transcription, _ = await asyncio.to_thread(
+            self.model.inference,
             data_in=self.asr_audio,
             language=self.args.language,  # "zn", "en", "yue", "ja", "ko", "nospeech"
             use_itn=False,  # use Inverse Text Normalization，ITN
@@ -35,7 +37,8 @@ class SenseVoiceAsr(ASRBase):
             yield clean_text
 
     async def transcribe(self, session: Session) -> dict:
-        transcription, meta_data = self.model.inference(
+        transcription, meta_data = await asyncio.to_thread(
+            self.model.inference,
             data_in=self.asr_audio,
             language=self.args.language,  # "zn", "en", "yue", "ja", "ko", "nospeech"
             use_itn=False,  # use Inverse Text Normalization，ITN

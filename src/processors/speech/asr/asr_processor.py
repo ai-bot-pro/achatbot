@@ -8,7 +8,7 @@ from src.common.session import Session
 from src.common.utils.time import time_now_iso8601
 from src.common.interface import IAsr
 from src.processors.speech.asr.base import ASRProcessorBase
-from types.frames.data_frames import TranscriptionFrame
+from src.types.frames.data_frames import TranscriptionFrame
 
 
 class AsrProcessor(ASRProcessorBase):
@@ -45,8 +45,8 @@ class AsrProcessor(ASRProcessorBase):
         await self.start_ttfb_metrics()
         self._asr.set_audio_data(audio)
         text: str = ""
-        for segment in self._asr.transcribe_stream(self._session):
-            text += f"{segment.text} "
+        async for segment in self._asr.transcribe_stream(self._session):
+            text += f"{segment} "
 
         if text:
             await self.stop_ttfb_metrics()
