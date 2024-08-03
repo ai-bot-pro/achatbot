@@ -124,3 +124,8 @@ class TTSSpeakFrame(DataFrame):
 
     """
     text: str
+
+
+@dataclass
+class DailyTransportMessageFrame(TransportMessageFrame):
+    participant_id: str | None = None

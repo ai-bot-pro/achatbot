@@ -1,3 +1,4 @@
+import asyncio
 from typing import AsyncGenerator
 
 from src.common.utils.audio_utils import bytes2NpArrayWith16, bytes2TorchTensorWith16
@@ -127,7 +128,8 @@ class WhisperFasterAsr(ASRBase):
         return
 
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
-        segmentsIter, _ = self.model.transcribe(
+        segmentsIter, _ = await asyncio.to_thread(
+            self.model.transcribe,
             self.asr_audio, language=self.args.language,
             beam_size=5, word_timestamps=True,
             condition_on_previous_text=True)

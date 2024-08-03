@@ -6,8 +6,8 @@ from apipeline.frames.control_frames import StartFrame, EndFrame
 
 from src.services.daily_client import DailyTransportClient
 from src.processors.audio_camera_output_processor import AudioCameraOutputProcessor
-from src.common.types import DailyParams, DailyTransportMessageFrame
-from src.types.frames.data_frames import TransportMessageFrame
+from src.common.types import DailyParams
+from src.types.frames.data_frames import TransportMessageFrame, DailyTransportMessageFrame
 
 
 class DailyOutputTransportProcessor(AudioCameraOutputProcessor):
