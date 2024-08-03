@@ -230,6 +230,7 @@ class DailyTransport(BaseTransport):
         await self._call_event_handler("on_first_participant_joined", participant)
 
     async def _on_transcription_message(self, participant_id, message):
+        logging.debug(f"participant_id: {participant_id} Received transcription message: {message}")
         text = message["text"]
         timestamp = message["timestamp"]
         is_final = message["rawResponse"]["is_final"]
