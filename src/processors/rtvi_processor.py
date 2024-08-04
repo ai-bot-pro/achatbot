@@ -8,15 +8,14 @@ import os
 import logging
 import asyncio
 import dataclasses
-from typing import List, Literal, Optional, Type
+from typing import Any, Awaitable, Callable, Dict, List, Literal, Optional, Type
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, PrivateAttr, ValidationError
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
 from apipeline.frames.sys_frames import SystemFrame, MetricsFrame
 from apipeline.frames.control_frames import StartFrame
 
-from src.processors.ai_processor import AIProcessor
 from src.processors.llm.openai_llm_processor import OpenAILLMProcessor
 from src.processors.speech.tts.cartesia_tts_processor import CartesiaTTSProcessor
 from src.types.frames.sys_frames import BotInterruptionFrame
@@ -54,7 +53,7 @@ DEFAULT_MESSAGES = [
         "role": "system",
         "content": os.getenv(
             "LLM_CHAT_SYSTEM",
-            "在WebRTC中，你是一位很有帮助的LLM。你的目标是用简洁的方式展示你的能力。你的输出将转换为音频，所以不要在你的答案中包含特殊字符。以创造性和有帮助的方式回应用户说的话。"),
+            "你是一位很有帮助中文AI助理机器人。你的目标是用简洁的方式展示你的能力,请用中文简短回答，回答限制在1-5句话内。你的输出将转换为音频，所以不要在你的答案中包含特殊字符。以创造性和有帮助的方式回应用户说的话。"),
     }]
 
 DEFAULT_MODEL = "llama-3.1-70b-versatile"
@@ -283,22 +282,18 @@ class RTVIProcessor(FrameProcessor):
             *,
             transport: BaseTransport,
             setup: RTVISetup | None = None,
-            llm_api_key: str = "",
-            llm_base_url: str = "https://api.groq.com/openai/v1",
-            tts_api_key: str = "",
-            llm_cls: Type[AIProcessor] = OpenAILLMProcessor,
-            tts_cls: Type[AIProcessor] = CartesiaTTSProcessor):
+            llm_processor: FrameProcessor | None = None,
+            tts_processor: FrameProcessor | None = None):
+        if llm_processor is None or tts_processor is None:
+            raise ValueError("llm_processor and tts_processor must be provided")
+
         super().__init__()
         self._transport = transport
         self._setup = setup
-        self._llm_api_key = llm_api_key
-        self._llm_base_url = llm_base_url
-        self._tts_api_key = tts_api_key
-        self._llm_cls = llm_cls
-        self._tts_cls = tts_cls
+        self._llm_processor = llm_processor
+        self._tts_processor = tts_processor
+
         self._start_frame: Frame | None = None
-        self._llm: FrameProcessor | None = None
-        self._tts: FrameProcessor | None = None
         self._pipeline: FrameProcessor | None = None
         self._first_participant_joined: bool = False
 
@@ -441,15 +436,6 @@ class RTVIProcessor(FrameProcessor):
         self._tma_in = LLMUserResponseAggregator(messages)
         self._tma_out = LLMAssistantResponseAggregator(messages)
 
-        self._llm = self._llm_cls(
-            name="LLM",
-            base_url=self._llm_base_url,
-            api_key=self._llm_api_key,
-            model=model)
-
-        # TODO: add voice selection to config @weedge
-        self._tts = self._tts_cls(name="TTS", api_key=self._tts_api_key, voice_id=voice)
-
         # TODO-CB: Eventually we'll need to switch the context aggregators to use the
         # OpenAI context frames instead of message frames
         context = OpenAILLMContext(messages=messages)
@@ -459,9 +445,9 @@ class RTVIProcessor(FrameProcessor):
 
         pipeline = Pipeline([
             self._tma_in,
-            self._llm,
+            self._llm_processor,
             self._fc,
-            self._tts,
+            self._tts_processor,
             self._tts_text,
             self._tma_out,
             self._transport.output_processor(),

@@ -151,41 +151,45 @@ def create_room(name):
 
 
 """
-curl -XPOST "http://0.0.0.0:4321/bot_join" \
+curl -XPOST "http://0.0.0.0:4321/bot_join/chat-bot/DummyBot" \
     -H "Content-Type: application/json" \
-    -d $'{"chat_bot_name":"DummyBot","room_name":"chat-bot","config":{"llm":{"messages":[{"role":"system","content":"你是聊天机器人，一个友好、乐于助人的机器人。您的输出将被转换为音频，所以不要包含除“!”以外的特殊字符。'或'?的答案。以一种创造性和有用的方式回应用户 所说的话，但要保持简短。从打招呼开始。"}]},"tts":{"voice":"e90c6678-f0d3-4767-9883-5d0ecf5894a8"}}}' | jq .
+    -d $'{"config":{"llm":{"messages":[{"role":"system","content":"你是聊天机器人，一个友好、乐于助人的机器人。您的输出将被转换为音频，所以不要包含除“!”以外的特殊字符。'或'?的答案。以一种创造性和有用的方式回应用户 所说的话，但要保持简短。从打招呼开始。"}]},"tts":{"voice":"e90c6678-f0d3-4767-9883-5d0ecf5894a8"}}}' | jq .
 
-curl -XPOST "http://0.0.0.0:4321/bot_join" \
+curl -XPOST "http://0.0.0.0:4321/bot_join/chat-bot/DailyRTVIBot" \
     -H "Content-Type: application/json" \
-    -d $'{"chat_bot_name":"DailyRTVIBot","room_name":"chat-bot","config":{"llm":{"model":"llama-3.1-70b-versatile","messages":[{"role":"system","content":"You are ai assistant. Answer in 1-5 sentences. Be friendly, helpful and concise. Default to metric units when possible. Keep the conversation short and sweet. You only answer in raw text, no markdown format. Don\'t include links or any other extras"}]},"tts":{"voice":"2ee87190-8f84-4925-97da-e52547f9462c"}}}' | jq .
+    -d $'{"config":{"llm":{"model":"llama-3.1-70b-versatile","messages":[{"role":"system","content":"You are ai assistant. Answer in 1-5 sentences. Be friendly, helpful and concise. Default to metric units when possible. Keep the conversation short and sweet. You only answer in raw text, no markdown format. Don\'t include links or any other extras"}]},"tts":{"voice":"2ee87190-8f84-4925-97da-e52547f9462c"}}}' | jq .
+
+curl -XPOST "http://0.0.0.0:4321/bot_join/chat-bot/DailyAsrRTVIBot" \
+    -H "Content-Type: application/json" \
+    -d $'{"config":{"llm":{"model":"llama-3.1-70b-versatile","messages":[{"role":"system","content":"你是一位很有帮助中文AI助理机器人。你的目标是用简洁的方式展示你的能力,请用中文简短回答，回答限制在1-5句话内。你的输出将转换为音频，所以不要在你的答案中包含特殊字符。以创造性和有帮助的方式回应用户说的话。"}]},"tts":{"voice":"2ee87190-8f84-4925-97da-e52547f9462c"}}}' | jq .
 """
 
 
-@app.post("/bot_join")
-async def bot_join(info: BotInfo) -> JSONResponse:
-    logging.info(f"request bot info: {info}")
+@app.post("/bot_join/{room_name}/{chat_bot_name}")
+async def bot_join(room_name: str, chat_bot_name: str, info: BotInfo) -> JSONResponse:
+    logging.info(f"room_name: {room_name} chat_bot_name: {chat_bot_name} request bot info: {info}")
 
-    num_bots_in_room = get_room_bot_proces_num(info.room_name)
+    num_bots_in_room = get_room_bot_proces_num(room_name)
     logging.info(f"num_bots_in_room: {num_bots_in_room}")
     if num_bots_in_room >= MAX_BOTS_PER_ROOM:
         raise HTTPException(
-            status_code=500, detail=f"Max bot limited reach for room: {info.room_name}")
+            status_code=500, detail=f"Max bot limited reach for room: {room_name}")
 
     logging.info(f"register bots: {register_daily_room_bots.items()}")
-    if info.chat_bot_name not in register_daily_room_bots:
-        raise HTTPException(status_code=500, detail=f"bot {info.chat_bot_name} don't exist")
+    if chat_bot_name not in register_daily_room_bots:
+        raise HTTPException(status_code=500, detail=f"bot {chat_bot_name} don't exist")
 
     # Create a Daily rest helper
     daily_rest_helper = DailyRESTHelper(DAILY_API_KEY, DAILY_API_URL)
     room: DailyRoomObject | None = None
     try:
-        room = daily_rest_helper.get_room_from_name(info.room_name)
+        room = daily_rest_helper.get_room_from_name(room_name)
     except Exception as ex:
-        logging.warning(f"Failed to get room {info.room_name} from Daily REST API: {ex}")
+        logging.warning(f"Failed to get room {room_name} from Daily REST API: {ex}")
         # Create a new room
         try:
             params = DailyRoomParams(
-                name=info.room_name,
+                name=room_name,
                 properties=DailyRoomProperties(
                     exp=time.time() + ROOM_EXPIRE_TIME,
                 ),
@@ -208,12 +212,12 @@ async def bot_join(info: BotInfo) -> JSONResponse:
             bot_config=info.config,
             room_url=room.url,
             token=token,
-            bot_name=info.chat_bot_name,
+            bot_name=chat_bot_name,
         ).__dict__
-        bot_obj: IBot = register_daily_room_bots[info.chat_bot_name](**kwargs)
+        bot_obj: IBot = register_daily_room_bots[chat_bot_name](**kwargs)
         bot_process: multiprocessing.Process = multiprocessing.Process(
             target=bot_obj.run,
-            name=info.chat_bot_name)
+            name=chat_bot_name)
         bot_process.start()
         pid = bot_process.pid
         bot_procs[pid] = (bot_process, room)
@@ -221,7 +225,7 @@ async def bot_join(info: BotInfo) -> JSONResponse:
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"bot {info.chat_bot_name} failed to start process: {e}")
+            detail=f"bot {chat_bot_name} failed to start process: {e}")
 
     # Grab a token for the user to join with
     user_token = daily_rest_helper.get_token(room.url, ROOM_TOKEN_EXPIRE_TIME)
@@ -273,7 +277,7 @@ curl -XGET "http://0.0.0.0:4321/room/num_bots/chat-bot" | jq .
 
 
 @app.get("/room/num_bots/{room_name}")
-def get_status(room_name: str):
+def get_num_bots(room_name: str):
     return JSONResponse({
         "num_bots": get_room_bot_proces_num(room_name),
     })
@@ -285,7 +289,7 @@ curl -XGET "http://0.0.0.0:4321/room/bots/chat-bot" | jq .
 
 
 @app.get("/room/bots/{room_name}")
-def get_status(room_name: str):
+def get_room_bots(room_name: str):
     procs = []
     _room = None
     for val in bot_procs.values():
@@ -341,6 +345,7 @@ if __name__ == "__main__":
 
     config = parser.parse_args()
 
+    # api docs: http://0.0.0.0:4321/docs
     uvicorn.run(
         "src.cmd.http.server.fastapi_daily_bot_serve:app",
         host=config.host,
