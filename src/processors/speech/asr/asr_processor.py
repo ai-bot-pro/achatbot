@@ -46,7 +46,7 @@ class AsrProcessor(ASRProcessorBase):
         self._asr.set_audio_data(audio)
         text: str = ""
         async for segment in self._asr.transcribe_stream(self._session):
-            text += f"{segment} "
+            text += f"{segment}"
 
         if text:
             await self.stop_ttfb_metrics()

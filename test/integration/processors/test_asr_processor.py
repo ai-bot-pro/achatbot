@@ -9,6 +9,7 @@ from apipeline.frames.data_frames import DataFrame, TextFrame, Frame
 from apipeline.frames.control_frames import EndFrame
 from apipeline.processors.frame_processor import FrameProcessor
 
+from src.modules.speech.vad_analyzer.silero import SileroVADAnalyzer
 from src.processors.speech.asr.asr_processor import AsrProcessor
 from src.common.types import DailyParams, DailyTranscriptionSettings
 from src.common.logger import Logger
@@ -41,6 +42,12 @@ ASR_TAG="whisper_groq_asr" \
     ASR_LANG=zh \
     ASR_MODEL_NAME_OR_PATH=whisper-large-v3 \
     python -m unittest test.integration.processors.test_asr_processor.TestASRProcessor
+
+ASR_TAG="whisper_groq_asr" \
+    ASR_LANG=zh \
+    ASR_MODEL_NAME_OR_PATH=whisper-large-v3 \
+    DAILY_VAD_ENABLED=1 \
+    python -m unittest test.integration.processors.test_asr_processor.TestASRProcessor
 """
 
 
@@ -50,7 +57,7 @@ class TranscriptionLogger(FrameProcessor):
         await super().process_frame(frame, direction)
 
         if isinstance(frame, TranscriptionFrame):
-            print(f"Transcription: {frame.text}")
+            print(f"get Transcription Frame: {frame}, text len:{len(frame.text)}")
 
 
 class TestASRProcessor(unittest.IsolatedAsyncioTestCase):
@@ -60,16 +67,27 @@ class TestASRProcessor(unittest.IsolatedAsyncioTestCase):
         Logger.init(logging.INFO, is_file=False)
         cls.room_url = os.getenv("DAILY_ROOM_URL", "https://weedge.daily.co/chat-bot")
         cls.room_token = os.getenv("DAILY_ROOM_TOKEN", None)
+        cls.vad_enabled = bool(os.getenv("DAILY_VAD_ENABLED", ""))
 
     @classmethod
     def tearDownClass(cls):
         pass
 
     async def asyncSetUp(self):
-        transport = DailyTransport(self.room_url,
-                                   self.room_token,
-                                   "Transcription bot",
-                                   DailyParams(audio_in_enabled=True))
+        daily_pramams: DailyParams = DailyParams(
+            audio_in_enabled=True,
+            transcription_enabled=False,
+        )
+        if self.vad_enabled is True:
+            daily_pramams.vad_enabled = True
+            daily_pramams.vad_analyzer = SileroVADAnalyzer()
+            daily_pramams.vad_audio_passthrough = True
+        transport = DailyTransport(
+            self.room_url,
+            self.room_token,
+            "Transcription bot",
+            daily_pramams,
+        )
 
         asr = Env.initASREngine()
         session = Session(**SessionCtx("test_client_id", 16000, 2).__dict__)
