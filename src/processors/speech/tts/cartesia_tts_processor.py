@@ -24,6 +24,7 @@ from src.types.frames.control_frames import LLMFullResponseEndFrame
 
 
 class CartesiaTTSProcessor(TTSProcessor):
+    TAG = "cartesia_tts_processor"
 
     def __init__(
             self,

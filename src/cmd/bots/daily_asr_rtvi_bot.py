@@ -9,6 +9,8 @@ from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
 
+from src.processors.llm.openai_llm_processor import OpenAILLMProcessor
+from src.processors.speech.tts.cartesia_tts_processor import CartesiaTTSProcessor
 from src.processors.rtvi_processor import RTVIConfig, RTVIProcessor, RTVISetup
 from src.processors.speech.asr.asr_processor import AsrProcessor
 from src.modules.speech.vad_analyzer.silero import SileroVADAnalyzer
@@ -25,6 +27,10 @@ load_dotenv(override=True)
 
 @register_daily_room_bots.register
 class DailyAsrRTVIBot(DailyRoomBot):
+    """
+    !NOTE: just for Chinese(zh) chat bot
+    """
+
     def __init__(self, **args) -> None:
         super().__init__(**args)
         try:
@@ -50,15 +56,33 @@ class DailyAsrRTVIBot(DailyRoomBot):
                 transcription_enabled=False,
             ))
 
+        # !NOTE: u can config env in .env file
         asr = Env.initASREngine()
         self.session = Session(**SessionCtx("").__dict__)
         asr_processor = AsrProcessor(asr=asr, session=self.session)
 
+        # !TODO: need config processor with bot config (redefine api params) @weedge
+        # bot config: Dict[str, Dict[str,Any]]
+        # e.g. {"llm":{"key":val,"tag":TAG}, "tts":{"key":val,"tag":TAG}}
+        llm_processor = OpenAILLMProcessor(
+            model=self._bot_config.llm.model,
+            base_url="https://api.groq.com/openai/v1",
+        )
+        # https://docs.cartesia.ai/getting-started/available-models
+        # !NOTE: Timestamps are not supported for language 'zh'
+        tts_processor = CartesiaTTSProcessor(
+            voice_id=self._bot_config.tts.voice,
+            cartesia_version="2024-06-10",
+            model_id="sonic-multilingual",
+            language="zh",
+        )
+
         rtai = RTVIProcessor(
             transport=transport,
             setup=RTVISetup(config=self._bot_config),
-            llm_api_key=os.getenv("OPENAI_API_KEY", ""),
-            tts_api_key=os.getenv("CARTESIA_API_KEY", ""))
+            llm_processor=llm_processor,
+            tts_processor=tts_processor,
+        )
 
         self.task = PipelineTask(
             Pipeline([
@@ -100,7 +124,7 @@ class DailyAsrRTVIBot(DailyRoomBot):
 
 
 r"""
-python -m src.cmd.bots.daily_rtvi_bot -u https://weedge.daily.co/chat-room -c $'{"llm":{"model":"llama-3.1-8b-instant","messages":[{"role":"system","content":"You are Chatbot, a friendly, helpful robot. Your output will be converted to audio so don\'t include special characters other than \'\u0021\' or \'?\' in your answers. Respond to what the user said in a creative and helpful way, but keep your responses brief. Start by saying hello."}]},"tts":{"voice":"79a125e8-cd45-4c13-8a67-188112f4dd22"}}'
+python -m src.cmd.bots.daily_rtvi_bot -u https://weedge.daily.co/chat-room -c $'{"llm":{"model":"llama-3.1-8b-instant","messages":[{"role":"system","content":"你是一位很有帮助中文AI助理机器人。你的目标是用简洁的方式展示你的能力,请用中文简短回答，回答限制在1-5句话内。你的输出将转换为音频，所以不要在你的答案中包含特殊字符。以创造性和有帮助的方式回应用户说的话。"}]},"tts":{"voice":"2ee87190-8f84-4925-97da-e52547f9462c"}}'
 """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="RTVI Bot Example")

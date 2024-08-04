@@ -218,6 +218,7 @@ class BaseOpenAILLMProcessor(LLMProcessor):
 
 
 class OpenAILLMProcessor(BaseOpenAILLMProcessor):
+    TAG = "openai_llm_processor"
 
     def __init__(self, model: str = "gpt-4o", **kwargs):
         super().__init__(model=model, **kwargs)

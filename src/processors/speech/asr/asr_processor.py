@@ -50,5 +50,5 @@ class AsrProcessor(ASRProcessorBase):
 
         if text:
             await self.stop_ttfb_metrics()
-            logging.debug(f"Transcription: [{text}]")
+            logging.info(f"Transcription: [{text}]")
             yield TranscriptionFrame(text, "", time_now_iso8601())
