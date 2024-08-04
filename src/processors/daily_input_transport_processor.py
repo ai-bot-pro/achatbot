@@ -15,7 +15,8 @@ from src.types.frames.data_frames import (
     UserImageRawFrame
 )
 from src.types.frames.control_frames import UserImageRequestFrame
-from src.common.types import DailyParams, DailyTransportMessageFrame
+from src.common.types import DailyParams
+from src.types.frames.data_frames import DailyTransportMessageFrame
 
 
 class DailyInputTransportProcessor(AudioVADInputProcessor):

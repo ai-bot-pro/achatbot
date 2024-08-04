@@ -33,6 +33,9 @@ class Session:
         s = f"session: {d}"
         return s
 
+    def set_client_id(self, client_id):
+        self.ctx.client_id = client_id
+
     def update_config(self, config_data):
         self.config.update(config_data)
 

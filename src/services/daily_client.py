@@ -13,8 +13,8 @@ from daily import (
 from pydantic.main import BaseModel
 from apipeline.frames.data_frames import AudioRawFrame, ImageRawFrame
 
-from src.common.types import DailyParams, DailyTransportMessageFrame
-from src.types.frames.data_frames import TransportMessageFrame
+from src.common.types import DailyParams
+from src.types.frames.data_frames import TransportMessageFrame, DailyTransportMessageFrame
 
 
 class DailyCallbacks(BaseModel):

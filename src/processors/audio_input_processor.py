@@ -144,7 +144,6 @@ class AudioVADInputProcessor(InputProcessor):
     #
 
     async def process_sys_frame(self, frame: Frame, direction: FrameDirection):
-        logging.info(f"f{self.__class__.__name__} process_sys_frame doing")
         if isinstance(frame, BotInterruptionFrame):
             await self._handle_interruptions(frame, False)
         elif isinstance(frame, StartInterruptionFrame):

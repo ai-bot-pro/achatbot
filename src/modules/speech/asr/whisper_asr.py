@@ -1,3 +1,4 @@
+import asyncio
 from typing import AsyncGenerator
 
 from src.common.utils.audio_utils import bytes2NpArrayWith16, bytes2TorchTensorWith16
@@ -25,7 +26,8 @@ class WhisperAsr(ASRBase):
         return
 
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
-        transcription = self.model.transcribe(
+        transcription = await asyncio.to_thread(
+            self.model.transcribe,
             self.asr_audio, verbose=self.args.verbose,
             language=self.args.language, word_timestamps=True,
             condition_on_previous_text=True)
@@ -34,7 +36,8 @@ class WhisperAsr(ASRBase):
                 yield word['word']
 
     async def transcribe(self, session: Session) -> dict:
-        transcription = self.model.transcribe(
+        transcription = await asyncio.to_thread(
+            self.model.transcribe,
             self.asr_audio, verbose=self.args.verbose,
             language=self.args.language, word_timestamps=True,
             condition_on_previous_text=True)
@@ -54,7 +57,8 @@ class WhisperTimestampedAsr(WhisperAsr):
 
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
         from whisper_timestamped import transcribe_timestamped
-        transcription = transcribe_timestamped(
+        transcription = await asyncio.to_thread(
+            transcribe_timestamped,
             self.model,
             self.asr_audio,
             language=self.args.language,
@@ -66,7 +70,8 @@ class WhisperTimestampedAsr(WhisperAsr):
 
     async def transcribe(self, session: Session) -> dict:
         from whisper_timestamped import transcribe_timestamped
-        transcription = transcribe_timestamped(
+        transcription = await asyncio.to_thread(
+            transcribe_timestamped,
             self.model,
             self.asr_audio,
             language=self.args.language,
@@ -127,7 +132,8 @@ class WhisperFasterAsr(ASRBase):
         return
 
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
-        segmentsIter, _ = self.model.transcribe(
+        segmentsIter, _ = await asyncio.to_thread(
+            self.model.transcribe,
             self.asr_audio, language=self.args.language,
             beam_size=5, word_timestamps=True,
             condition_on_previous_text=True)
@@ -136,7 +142,8 @@ class WhisperFasterAsr(ASRBase):
                 yield w.word
 
     async def transcribe(self, session: Session) -> dict:
-        segmentsIter, info = self.model.transcribe(
+        segmentsIter, info = await asyncio.to_thread(
+            self.model.transcribe,
             self.asr_audio, language=self.args.language,
             beam_size=5, word_timestamps=True,
             condition_on_previous_text=True)
@@ -185,13 +192,14 @@ class WhisperTransformersAsr(ASRBase):
 
     def set_audio_data(self, audio_data):
         if isinstance(audio_data, (bytes, bytearray)):
-            self.asr_audio = bytes2TorchTensorWith16(audio_data)
+            self.asr_audio = bytes2NpArrayWith16(audio_data)
         if isinstance(audio_data, str):
             self.asr_audio = audio_data
         return
 
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
-        outputs = self.pipe(
+        outputs = await asyncio.to_thread(
+            self.pipe,
             self.asr_audio, chunk_length_s=30, batch_size=1,
             generate_kwargs={"language": self.args.language},
             return_timestamps="word")
@@ -201,7 +209,8 @@ class WhisperTransformersAsr(ASRBase):
     async def transcribe(self, session: Session) -> dict:
         # for Word-level timestamps batch-size must be 1.
         # https://huggingface.co/openai/whisper-large-v3/discussions/12
-        outputs = self.pipe(
+        outputs = await asyncio.to_thread(
+            self.pipe,
             self.asr_audio, chunk_length_s=30, batch_size=1,
             generate_kwargs={"language": self.args.language},
             return_timestamps="word")
@@ -228,7 +237,8 @@ class WhisperMLXAsr(ASRBase):
         import mlx_whisper
         transcribe_kargs = {}
         transcribe_kargs["language"] = self.args.language
-        outputs = mlx_whisper.transcribe(
+        outputs = await asyncio.to_thread(
+            mlx_whisper.transcribe,
             self.asr_audio,
             path_or_hf_repo=self.args.model_name_or_path,
             word_timestamps=True, **transcribe_kargs)
@@ -240,7 +250,8 @@ class WhisperMLXAsr(ASRBase):
 
         transcribe_kargs = {}
         transcribe_kargs["language"] = self.args.language
-        outputs = mlx_whisper.transcribe(
+        outputs = await asyncio.to_thread(
+            mlx_whisper.transcribe,
             self.asr_audio,
             path_or_hf_repo=self.args.model_name_or_path,
             word_timestamps=True, **transcribe_kargs)

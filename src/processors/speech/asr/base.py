@@ -12,8 +12,8 @@ from src.processors.ai_processor import AIProcessor
 from src.common.utils.audio_utils import calculate_audio_volume, exp_smoothing
 
 
-class ASRProcessor(AIProcessor):
-    """ASRProcessor is a base class for speech-to-text processors."""
+class ASRProcessorBase(AIProcessor):
+    """ASRProcessorBase is a base class for speech-to-text processors."""
 
     def __init__(self,
                  *,

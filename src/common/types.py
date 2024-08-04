@@ -26,7 +26,6 @@ from .interface import (
     ILlm, ITts, IVADAnalyzer,
 )
 from .factory import EngineClass
-from src.types.frames.data_frames import TransportMessageFrame
 
 
 SRC_PATH = os.path.normpath(
@@ -531,11 +530,6 @@ class SileroVADAnalyzerArgs(SileroVADArgs, VADAnalyzerArgs):
     pass
 
 # --------------- daily -------------------------------
-
-
-@dataclass
-class DailyTransportMessageFrame(TransportMessageFrame):
-    participant_id: str | None = None
 
 
 class DailyDialinSettings(BaseModel):
