@@ -23,10 +23,11 @@ class TestChatTTS(unittest.TestCase):
         cls.tts_tag = os.getenv('LLM_TAG', "tts_chat")
         cls.tts_text = os.getenv('TTS_TEXT', "你好，我是机器人")
         cls.stream = os.getenv('STREAM', "")
-        cls.source = os.getenv('SOURCE', "local")
+        cls.compile = os.getenv('COMPILE', "")
+        cls.source = os.getenv('SOURCE', "custom")
         cls.local_path = os.getenv('LOCAL_PATH', os.path.join(
             MODELS_DIR, "2Noise/ChatTTS"))
-        Logger.init(logging.DEBUG, is_file=False)
+        Logger.init(logging.INFO, is_file=False)
 
     @classmethod
     def tearDownClass(cls):
@@ -36,6 +37,7 @@ class TestChatTTS(unittest.TestCase):
         kwargs = {}
         kwargs["local_path"] = self.local_path
         kwargs["source"] = self.source
+        kwargs["compile"] = bool(self.compile)
         self.tts: ChatTTS = EngineFactory.get_engine_by_tag(
             EngineClass, self.tts_tag, **kwargs)
         self.session = Session(**SessionCtx("test_tts_client_id").__dict__)

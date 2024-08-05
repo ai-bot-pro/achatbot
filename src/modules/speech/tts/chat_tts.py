@@ -23,12 +23,13 @@ class ChatTTS(BaseTTS, ITts):
         import deps.ChatTTS.ChatTTS as ChatTTS
         self.args = ChatTTSArgs(**args)
         self.chat = ChatTTS.Chat()
-        self.chat.load_models(
+        self.chat.load(
             source=self.args.source,
             force_redownload=self.args.force_redownload,
-            local_path=self.args.local_path,
+            custom_path=self.args.local_path,
             compile=self.args.compile,
             device=self.args.device,
+            use_flash_attn=self.args.use_flash_attn,
         )
 
         r"""
@@ -100,6 +101,7 @@ class ChatTTS(BaseTTS, ITts):
             use_decoder=self.args.use_decoder,
             do_text_normalization=self.args.do_text_normalization,
             lang=self.args.lang,
+            stream=self.args.tts_stream,
         )
 
         yield audio_utils.postprocess_tts_wave(torch.from_numpy(wav[0]))

@@ -411,6 +411,7 @@ class ChatTTSArgs:
     local_path: str = ''
     compile: bool = True
     device: str = None
+    use_flash_attn: bool = False
     skip_refine_text: bool = False
     refine_text_only: bool = False
     params_refine_text: dict = None
