@@ -14,6 +14,7 @@ from src.modules.speech.tts.chat_tts import EngineClass, ChatTTS
 
 r"""
 python -m unittest test.modules.speech.tts.test_chat.TestChatTTS.test_synthesize
+python -m unittest test.modules.speech.tts.test_chat.TestChatTTS.test_synthesize_speak
 """
 
 
@@ -42,6 +43,30 @@ class TestChatTTS(unittest.TestCase):
             EngineClass, self.tts_tag, **kwargs)
         self.session = Session(**SessionCtx("test_tts_client_id").__dict__)
 
+    def tearDown(self):
+        self.audio_stream.stop_stream()
+        self.audio_stream.close()
+        self.pyaudio_instance.terminate()
+
+    def test_synthesize(self):
+        stream_info = self.tts.get_stream_info()
+        self.session.ctx.state["tts_text"] = self.tts_text
+        print(self.session.ctx)
+        iter = self.tts.synthesize_sync(self.session)
+        res = bytearray()
+        for i, chunk in enumerate(iter):
+            print(i, len(chunk))
+            res.extend(chunk)
+        path = asyncio.run(save_audio_to_file(
+            res,
+            f"test_{self.tts.TAG}.wav",
+            sample_rate=stream_info["rate"],
+            sample_width=stream_info["sample_width"],
+            channles=stream_info["channels"],
+        ))
+        print(path)
+
+    def test_synthesize_speak(self):
         info = self.tts.get_stream_info()
         self.pyaudio_instance = pyaudio.PyAudio()
         self.audio_stream = self.pyaudio_instance.open(
@@ -51,12 +76,6 @@ class TestChatTTS(unittest.TestCase):
             output_device_index=None,
             output=True)
 
-    def tearDown(self):
-        self.audio_stream.stop_stream()
-        self.audio_stream.close()
-        self.pyaudio_instance.terminate()
-
-    def test_synthesize(self):
         self.session.ctx.state["tts_text"] = self.tts_text
         print(self.session.ctx)
         self.tts.args.tts_stream = bool(self.stream)
