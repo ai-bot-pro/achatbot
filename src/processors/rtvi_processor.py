@@ -388,7 +388,11 @@ class RTVIProcessor(FrameProcessor):
         except ValidationError as e:
             await self._send_error(f"invalid message: {e}")
             return
+        logging.info(f"handle message: {message}")
 
+        # https://github.com/rtvi-ai#docs-events-and-data-structures-and-extensions
+        # js sdk:
+        # https://github.com/rtvi-ai/rtvi-client-web/blob/main/rtvi-client-js/src/messages.ts
         try:
             success = True
             error = None
@@ -421,24 +425,12 @@ class RTVIProcessor(FrameProcessor):
             await self._send_response(message.id, False, f"{e}")
 
     async def _handle_setup(self, setup: RTVISetup | None):
-        model = DEFAULT_MODEL
-        if setup and setup.config and setup.config.llm and setup.config.llm.model:
-            model = setup.config.llm.model
-
-        messages = DEFAULT_MESSAGES
-        if setup and setup.config and setup.config.llm and setup.config.llm.messages:
-            messages = setup.config.llm.messages
-
-        voice = DEFAULT_VOICE
-        if setup and setup.config and setup.config.tts and setup.config.tts.voice:
-            voice = setup.config.tts.voice
-
-        self._tma_in = LLMUserResponseAggregator(messages)
-        self._tma_out = LLMAssistantResponseAggregator(messages)
+        self._tma_in = LLMUserResponseAggregator()
+        self._tma_out = LLMAssistantResponseAggregator()
 
         # TODO-CB: Eventually we'll need to switch the context aggregators to use the
         # OpenAI context frames instead of message frames
-        context = OpenAILLMContext(messages=messages)
+        context = OpenAILLMContext()
         self._fc = FunctionCallProcessor(context)
 
         self._tts_text = RTVITTSTextProcessor()

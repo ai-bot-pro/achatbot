@@ -48,6 +48,8 @@ DAILY_API_URL = os.getenv("DAILY_API_URL", "https://api.daily.co/v1")
 DAILY_API_KEY = os.getenv("DAILY_API_KEY", "")
 ROOM_EXPIRE_TIME = 30 * 60  # 30 minutes
 ROOM_TOKEN_EXPIRE_TIME = 30 * 60  # 30 minutes
+RANDOM_ROOM_EXPIRE_TIME = 5 * 60  # 5 minutes
+RANDOM_ROOM_TOKEN_EXPIRE_TIME = 5 * 60  # 5 minutes
 
 # --------------------- Bot ----------------------------
 
@@ -149,6 +151,84 @@ def create_room(name):
 
     return RedirectResponse(room.url)
 
+
+"""
+curl -XPOST "http://0.0.0.0:4321/bot_join/DummyBot" \
+    -H "Content-Type: application/json" \
+    -d $'{"config":{"llm":{"messages":[{"role":"system","content":"你是聊天机器人，一个友好、乐于助人的机器人。您的输出将被转换为音频，所以不要包含除“!”以外的特殊字符。'或'?的答案。以一种创造性和有用的方式回应用户 所说的话，但要保持简短。从打招呼开始。"}]},"tts":{"voice":"e90c6678-f0d3-4767-9883-5d0ecf5894a8"}}}' | jq .
+
+curl -XPOST "http://0.0.0.0:4321/bot_join/DailyRTVIBot" \
+    -H "Content-Type: application/json" \
+    -d $'{"config":{"llm":{"model":"llama-3.1-70b-versatile","messages":[{"role":"system","content":"You are ai assistant. Answer in 1-5 sentences. Be friendly, helpful and concise. Default to metric units when possible. Keep the conversation short and sweet. You only answer in raw text, no markdown format. Don\'t include links or any other extras"}]},"tts":{"voice":"2ee87190-8f84-4925-97da-e52547f9462c"}}}' | jq .
+
+curl -XPOST "http://0.0.0.0:4321/bot_join/DailyAsrRTVIBot" \
+    -H "Content-Type: application/json" \
+    -d $'{"config":{"llm":{"model":"llama-3.1-70b-versatile","messages":[{"role":"system","content":"你是一位很有帮助中文AI助理机器人。你的目标是用简洁的方式展示你的能力,请用中文简短回答，回答限制在1-5句话内。你的输出将转换为音频，所以不要在你的答案中包含特殊字符。以创造性和有帮助的方式回应用户说的话。"}]},"tts":{"voice":"2ee87190-8f84-4925-97da-e52547f9462c"}}}' | jq .
+"""
+
+
+@app.post("/bot_join/{chat_bot_name}")
+async def bot_join(chat_bot_name: str, info: BotInfo) -> JSONResponse:
+    logging.info(f"chat_bot_name: {chat_bot_name} request bot info: {info}")
+
+    logging.info(f"register bots: {register_daily_room_bots.items()}")
+    if chat_bot_name not in register_daily_room_bots:
+        raise HTTPException(status_code=500, detail=f"bot {chat_bot_name} don't exist")
+
+    # Create a Daily rest helper
+    daily_rest_helper = DailyRESTHelper(DAILY_API_KEY, DAILY_API_URL)
+    room: DailyRoomObject | None = None
+    # Create a new room
+    try:
+        params = DailyRoomParams(
+            properties=DailyRoomProperties(
+                exp=time.time() + RANDOM_ROOM_EXPIRE_TIME,
+            ),
+        )
+        room = daily_rest_helper.create_room(params=params)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"{e}")
+
+    # Give the agent a token to join the session
+    token = daily_rest_helper.get_token(room.url, RANDOM_ROOM_TOKEN_EXPIRE_TIME)
+
+    if not room or not token:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get token for room: {room.name}")
+
+    logging.info(f"room: {room}")
+    pid = 0
+    try:
+        kwargs = DailyRoomBotArgs(
+            bot_config=info.config,
+            room_url=room.url,
+            token=token,
+            bot_name=chat_bot_name,
+        ).__dict__
+        bot_obj: IBot = register_daily_room_bots[chat_bot_name](**kwargs)
+        bot_process: multiprocessing.Process = multiprocessing.Process(
+            target=bot_obj.run,
+            name=chat_bot_name)
+        bot_process.start()
+        pid = bot_process.pid
+        bot_procs[pid] = (bot_process, room)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"bot {chat_bot_name} failed to start process: {e}")
+
+    # Grab a token for the user to join with
+    user_token = daily_rest_helper.get_token(room.url, ROOM_TOKEN_EXPIRE_TIME)
+
+    return JSONResponse({
+        "room_name": room.name,
+        "room_url": room.url,
+        "token": user_token,
+        "config": bot_obj.bot_config(),
+        "bot_id": pid,
+        "status": "running",
+    })
 
 """
 curl -XPOST "http://0.0.0.0:4321/bot_join/chat-bot/DummyBot" \
