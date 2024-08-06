@@ -17,10 +17,10 @@ from src.common.types import (
     VADRecoderArgs,
     CosyVoiceTTSArgs,
     PersonalAIProxyArgs,
-    PyAudioStreamArgs,
     DailyAudioStreamArgs,
     AudioPlayerArgs,
 )
+from src.types.speech.audio_stream.pyaudio import PyAudioStreamArgs
 from src.modules.functions.search.api import SearchFuncEnvInit
 from src.modules.functions.weather.api import WeatherFuncEnvInit
 # need import engine class -> EngineClass.__subclasses__
@@ -44,10 +44,10 @@ class PlayStreamInit():
             "sample_width": 4,
         },
         'tts_chat': {
-            "format": pyaudio.paFloat32,
+            "format": pyaudio.paInt16,
             "channels": 1,
             "rate": 24000,
-            "sample_width": 4,
+            "sample_width": 2,
         },
         'tts_edge': {
             "format": pyaudio.paInt16,
@@ -287,7 +287,7 @@ class Env(
         kwargs = {}
         kwargs["local_path"] = os.getenv('LOCAL_PATH', os.path.join(
             MODELS_DIR, "2Noise/ChatTTS"))
-        kwargs["source"] = os.getenv('TTS_CHAT_SOURCE', "local")
+        kwargs["source"] = os.getenv('TTS_CHAT_SOURCE', "custom")
         return kwargs
 
     @staticmethod
@@ -444,7 +444,7 @@ class Env(
     @staticmethod
     def initTTSEngine() -> interface.ITts | EngineClass:
         # tts
-        tag = os.getenv('TTS_TAG', "tts_edge")
+        tag = os.getenv('TTS_TAG', "tts_chat")
         kwargs = Env.map_config_func[tag]()
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         logging.info(f"initTTSEngine: {tag}, {engine}")

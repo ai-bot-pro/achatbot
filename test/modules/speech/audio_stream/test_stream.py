@@ -10,7 +10,8 @@ import unittest
 from src.common.factory import EngineClass
 from src.common.utils.audio_utils import get_audio_segment
 from src.common.session import Session
-from src.common.types import TEST_DIR, AudioStreamInfo, SessionCtx
+from src.common.types import TEST_DIR, SessionCtx
+from src.types.speech.audio_stream.pyaudio import AudioStreamInfo
 from src.common.logger import Logger
 from src.common.interface import IAudioStream
 from src.cmd.init import Env

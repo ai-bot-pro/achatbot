@@ -3,7 +3,7 @@ import pyaudio
 
 from src.common.interface import IAudioStream
 from src.common.factory import EngineClass
-from src.common.types import AudioStreamInfo, PyAudioStreamArgs
+from src.types.speech.audio_stream.pyaudio import AudioStreamInfo, PyAudioStreamArgs
 
 
 class PyAudioStream(EngineClass, IAudioStream):

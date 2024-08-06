@@ -7,7 +7,7 @@ import numpy as np
 
 from src.common.interface import ITts
 from src.common.session import Session
-from src.common.types import ChatTTSArgs
+from src.types.speech.tts.chat import ChatTTSArgs
 from src.common.utils import audio_utils
 from .base import BaseTTS, EngineClass, TTSVoice
 
@@ -32,61 +32,35 @@ class ChatTTS(BaseTTS, ITts):
             use_flash_attn=self.args.use_flash_attn,
         )
 
-        r"""
-        def infer_code(
-            models,
-            text,
-            spk_emb = None,
-            top_P = 0.7,
-            top_K = 20,
-            temperature = 0.3,
-            repetition_penalty = 1.05,
-            max_new_token = 2048,
-            **kwargs
-        ):
-        """
         self.rand_speaker = self.chat.sample_random_speaker()
-        self.args.params_infer_code = {
+        self.args.params_infer_code = ChatTTS.Chat.InferCodeParams(
             # Sample a speaker from Gaussian.
-            'spk_emb': None,
-            'temperature': 0.3,
-            'top_P': 0.7,
-            'top_K': 20,
-            'repetition_penalty': 1.05,
-            'max_new_token': 2048,
-        }
+            spk_emb=None,
+            temperature=0.3,
+            top_P=0.7,
+            top_K=20,
+            repetition_penalty=1.05,
+            max_new_token=2048,
+        )
 
-        r"""
-        def refine_text(
-            models,
-            text,
-            top_P = 0.7,
-            top_K = 20,
-            temperature = 0.7,
-            repetition_penalty = 1.0,
-            max_new_token = 384,
-            prompt = '',
-            **kwargs
-        ):
-        """
         # For sentence level manual control.
         # use oral_(0-9), laugh_(0-2), break_(0-7)
         # to generate special token in text to synthesize.
-        self.args.params_refine_text = {
-            'prompt': '[oral_2][laugh_0][break_6]',
-            'max_new_token': 1024,
-        }
+        self.args.params_refine_text = ChatTTS.Chat.RefineTextParams(
+            prompt='[oral_2][laugh_0][break_6]',
+            max_new_token=1024,
+        )
 
-    def set_speaker(self, speaker: torch.Tensor) -> None:
-        self.args.params_infer_code['spk_emb'] = speaker
+    def set_speaker(self, speaker: str) -> None:
+        self.args.params_infer_code.spk_emb = speaker
 
     def get_stream_info(self) -> dict:
         return {
-            "format": pyaudio.paFloat32,
+            "format": pyaudio.paInt16,
             "channels": 1,
             "rate": 24000,
-            "sample_width": 4,
-            "np_dtype": np.float32,
+            "sample_width": 2,
+            "np_dtype": np.int16,
         }
 
     async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
@@ -104,4 +78,8 @@ class ChatTTS(BaseTTS, ITts):
             stream=self.args.tts_stream,
         )
 
-        yield audio_utils.postprocess_tts_wave(torch.from_numpy(wav[0]))
+        if self.args.tts_stream is False:
+            yield audio_utils.postprocess_tts_wave_int16(torch.from_numpy(wav[0]))
+        else:
+            for chunk in wav:
+                yield audio_utils.postprocess_tts_wave_int16(torch.from_numpy(chunk))

@@ -4,19 +4,14 @@ use SOTA LLM like chatGPT to generate config file(json,yaml,toml) from dataclass
 from dataclasses import dataclass
 from enum import Enum
 from typing import (
-    IO,
     Optional,
     Sequence,
-    Union,
     List,
     Any,
     Mapping,
 )
 import os
 
-import numpy as np
-import pyaudio
-import torch
 from pydantic.main import BaseModel
 from pydantic import ConfigDict
 
@@ -48,22 +43,6 @@ TEST_DIR = os.path.normpath(
 
 # audio stream default configuration
 CHUNK = 1600  # 100ms 16k rate num_frames
-# pyaudio format
-#   >>> print(int(pyaudio.paInt16))
-#   8
-#   >>> print(int(pyaudio.paInt24))
-#   4
-#   >>> print(int(pyaudio.paInt32))
-#   2
-#   >>> print(int(pyaudio.paFloat32))
-#   1
-#   >>> print(int(pyaudio.paInt8))
-#   16
-#   >>> print(int(pyaudio.paUInt8))
-#   32
-#   >>> print(int(pyaudio.paCustomFormat))
-#   65536
-FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 16000
 SAMPLE_WIDTH = 2
@@ -130,34 +109,11 @@ INT16_MAX_ABS_VALUE = 32768.0
 
 
 @dataclass
-class AudioStreamInfo:
-    in_channels: int = CHANNELS
-    in_sample_rate: int = RATE
-    in_sample_width: int = SAMPLE_WIDTH
-    in_frames_per_buffer: int = CHUNK
-    out_channels: int = CHANNELS
-    out_sample_rate: int = RATE
-    out_sample_width: int = SAMPLE_WIDTH
-    out_frames_per_buffer: int = CHUNK
-    pyaudio_out_format: int | None = FORMAT
-
-
-@dataclass
 class AudioStreamArgs:
     stream_callback: Optional[str] = None
     input: bool = False
     output: bool = False
     frames_per_buffer: int = CHUNK
-
-
-@dataclass
-class PyAudioStreamArgs(AudioStreamArgs):
-    format: int = FORMAT
-    channels: int = CHANNELS
-    rate: int = RATE
-    sample_width: int = SAMPLE_WIDTH
-    input_device_index: int = None
-    output_device_index: int = None
 
 
 @dataclass
@@ -281,8 +237,6 @@ class PorcupineDetectorArgs:
     # on_wakeword_detection_end: Optional[str] = None
 
 
-
-
 @dataclass
 class LLamcppLLMArgs:
     model_name: str = ""
@@ -347,24 +301,6 @@ class CoquiTTSArgs:
     tts_comma_silence_duration: float = 0.3
     tts_sentence_silence_duration: float = 0.6
     tts_use_deepspeed: bool = False
-
-
-@dataclass
-class ChatTTSArgs:
-    source: str = 'huggingface'  # local | huggingface
-    force_redownload: bool = False
-    local_path: str = ''
-    compile: bool = True
-    device: str = None
-    use_flash_attn: bool = False
-    skip_refine_text: bool = False
-    refine_text_only: bool = False
-    params_refine_text: dict = None
-    params_infer_code: dict = None
-    use_decoder: bool = True
-    do_text_normalization: bool = False
-    lang: str = None
-    tts_stream: bool = False
 
 
 PYTTSX3_SYNTHESIS_FILE = 'pyttsx3_synthesis.wav'

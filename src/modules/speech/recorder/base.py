@@ -4,8 +4,9 @@ from typing import Generator, AsyncGenerator
 import pyaudio
 
 from src.common.factory import EngineClass
-from src.common.types import AudioRecoderArgs, AudioStreamInfo
+from src.common.types import AudioRecoderArgs
 from src.common.interface import IAudioStream
+from src.types.speech.audio_stream.pyaudio import AudioStreamInfo
 
 
 class AudioRecorder(EngineClass):

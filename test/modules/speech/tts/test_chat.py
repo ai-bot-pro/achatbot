@@ -44,12 +44,11 @@ class TestChatTTS(unittest.TestCase):
         self.session = Session(**SessionCtx("test_tts_client_id").__dict__)
 
     def tearDown(self):
-        self.audio_stream.stop_stream()
-        self.audio_stream.close()
-        self.pyaudio_instance.terminate()
+        pass
 
     def test_synthesize(self):
         stream_info = self.tts.get_stream_info()
+        print(stream_info)
         self.session.ctx.state["tts_text"] = self.tts_text
         print(self.session.ctx)
         iter = self.tts.synthesize_sync(self.session)
@@ -90,3 +89,8 @@ class TestChatTTS(unittest.TestCase):
             for i in range(0, len(chunk), sub_chunk_size):
                 sub_chunk = chunk[i:i + sub_chunk_size]
                 self.audio_stream.write(sub_chunk)
+
+        self.audio_stream.stop_stream()
+        self.audio_stream.close()
+
+        self.pyaudio_instance.terminate()
