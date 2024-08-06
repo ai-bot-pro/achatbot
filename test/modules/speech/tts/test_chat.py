@@ -15,6 +15,7 @@ from src.modules.speech.tts.chat_tts import EngineClass, ChatTTS
 r"""
 python -m unittest test.modules.speech.tts.test_chat.TestChatTTS.test_synthesize
 python -m unittest test.modules.speech.tts.test_chat.TestChatTTS.test_synthesize_speak
+STREAM=1 python -m unittest test.modules.speech.tts.test_chat.TestChatTTS.test_synthesize_speak
 """
 
 
@@ -78,6 +79,7 @@ class TestChatTTS(unittest.TestCase):
         self.session.ctx.state["tts_text"] = self.tts_text
         print(self.session.ctx)
         self.tts.args.tts_stream = bool(self.stream)
+        print(self.tts.args)
         iter = self.tts.synthesize_sync(self.session)
         sub_chunk_size = 1024
         for i, chunk in enumerate(iter):

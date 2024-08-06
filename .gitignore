@@ -172,4 +172,4 @@ config/*
 
 .vscode/
 
-assert/
+asset/

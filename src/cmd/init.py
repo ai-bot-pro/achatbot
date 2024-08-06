@@ -83,7 +83,7 @@ class PlayStreamInit():
 
     @staticmethod
     def get_stream_info() -> dict:
-        tts_tag = os.getenv('TTS_TAG', "tts_chat")
+        tts_tag = os.getenv('TTS_TAG', "tts_edge")
         if tts_tag in PlayStreamInit.map_tts_player_stream_info:
             # !NOTE: return map_tts_player_stream_info is ref can change it,
             # so don't change it, just read only map (use MappingProxyType)
@@ -444,7 +444,7 @@ class Env(
     @staticmethod
     def initTTSEngine() -> interface.ITts | EngineClass:
         # tts
-        tag = os.getenv('TTS_TAG', "tts_chat")
+        tag = os.getenv('TTS_TAG', "tts_edge")
         kwargs = Env.map_config_func[tag]()
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         logging.info(f"initTTSEngine: {tag}, {engine}")
