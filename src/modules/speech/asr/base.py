@@ -4,7 +4,7 @@ from typing import Generator
 
 from src.common.session import Session
 from src.common.factory import EngineClass
-from src.common.types import ASRArgs
+from src.types.speech.asr.base import ASRArgs
 from src.common.utils import task
 from src.common.interface import IAsr
 

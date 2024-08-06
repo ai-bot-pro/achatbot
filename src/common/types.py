@@ -21,7 +21,6 @@ from pydantic.main import BaseModel
 from pydantic import ConfigDict
 
 from .interface import (
-    IAudioStream,
     IBuffering, IDetector, IAsr,
     ILlm, ITts, IVADAnalyzer,
 )
@@ -282,60 +281,6 @@ class PorcupineDetectorArgs:
     # on_wakeword_detection_end: Optional[str] = None
 
 
-@dataclass
-class ASRArgs:
-    download_path: str = ""
-    model_name_or_path: str = "base"
-    # asr
-    # NOTE:
-    # - openai-whisper or whispertimestamped use str(file_path)/np.ndarray/torch tensor
-    # - transformers whisper use torch tensor/tf tensor
-    # - faster whisper don't use torch tensor, use np.ndarray or str(file_path)/~BinaryIO~
-    # - mlx whisper don't use torch tensor, use str(file_path)/np.ndarray/~mlx.array~
-    # - funasr whisper, SenseVoiceSmall use str(file_path)/torch tensor
-    asr_audio: str | bytes | IO[bytes] | np.ndarray | torch.Tensor = None
-    # https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes
-    language: str = "zh"
-    verbose: bool = True
-    prompt: str = ""
-    sample_rate: int = RATE
-
-
-@dataclass
-class WhisperTimestampedASRArgs(ASRArgs):
-    pass
-
-
-@dataclass
-class WhisperFasterASRArgs(ASRArgs):
-    from faster_whisper.vad import VadOptions
-    vad_filter: bool = False
-    vad_parameters: Optional[Union[dict, VadOptions]] = None
-
-
-@dataclass
-class WhisperMLXASRArgs(ASRArgs):
-    pass
-
-
-@dataclass
-class WhisperTransformersASRArgs(ASRArgs):
-    pass
-
-
-@dataclass
-class WhisperGroqASRArgs(ASRArgs):
-    timeout_s: float = None
-    """
-    temperature: The sampling temperature, between 0 and 1. Higher values like 0.8 will make the
-    output more random, while lower values like 0.2 will make it more focused and
-    deterministic. If set to 0, the model will use
-    [log probability](https://en.wikipedia.org/wiki/Log_probability) to
-    automatically increase the temperature until certain thresholds are hit.
-    """
-    temperature: float = 0.0
-    # timestamp_granularities: list = []
-    # response_format: str = "json"  # json, verbose_json, text
 
 
 @dataclass
