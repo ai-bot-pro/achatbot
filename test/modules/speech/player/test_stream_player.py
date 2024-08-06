@@ -11,7 +11,8 @@ from src.common.logger import Logger
 from src.common.factory import EngineFactory, EngineClass
 from src.common.session import Session
 from src.common.utils import audio_utils
-from src.common.types import AudioStreamInfo, SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR, CHUNK
+from src.common.types import SessionCtx, TEST_DIR
+from src.types.speech.audio_stream.pyaudio import AudioStreamInfo
 import src.modules.speech
 
 r"""

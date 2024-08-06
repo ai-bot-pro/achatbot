@@ -10,7 +10,8 @@ from src.common.audio_stream.helper import AudioBufferManager
 from src.common.factory import EngineClass
 from src.common.interface import IAudioStream, IPlayer
 from src.common.session import Session
-from src.common.types import AudioPlayerArgs, AudioStreamInfo
+from src.common.types import AudioPlayerArgs
+from src.types.speech.audio_stream.pyaudio import AudioStreamInfo
 
 
 class AudioPlayer(EngineClass):

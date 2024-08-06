@@ -4,24 +4,18 @@ use SOTA LLM like chatGPT to generate config file(json,yaml,toml) from dataclass
 from dataclasses import dataclass
 from enum import Enum
 from typing import (
-    IO,
     Optional,
     Sequence,
-    Union,
     List,
     Any,
     Mapping,
 )
 import os
 
-import numpy as np
-import pyaudio
-import torch
 from pydantic.main import BaseModel
 from pydantic import ConfigDict
 
 from .interface import (
-    IAudioStream,
     IBuffering, IDetector, IAsr,
     ILlm, ITts, IVADAnalyzer,
 )
@@ -49,22 +43,6 @@ TEST_DIR = os.path.normpath(
 
 # audio stream default configuration
 CHUNK = 1600  # 100ms 16k rate num_frames
-# pyaudio format
-#   >>> print(int(pyaudio.paInt16))
-#   8
-#   >>> print(int(pyaudio.paInt24))
-#   4
-#   >>> print(int(pyaudio.paInt32))
-#   2
-#   >>> print(int(pyaudio.paFloat32))
-#   1
-#   >>> print(int(pyaudio.paInt8))
-#   16
-#   >>> print(int(pyaudio.paUInt8))
-#   32
-#   >>> print(int(pyaudio.paCustomFormat))
-#   65536
-FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 16000
 SAMPLE_WIDTH = 2
@@ -131,34 +109,11 @@ INT16_MAX_ABS_VALUE = 32768.0
 
 
 @dataclass
-class AudioStreamInfo:
-    in_channels: int = CHANNELS
-    in_sample_rate: int = RATE
-    in_sample_width: int = SAMPLE_WIDTH
-    in_frames_per_buffer: int = CHUNK
-    out_channels: int = CHANNELS
-    out_sample_rate: int = RATE
-    out_sample_width: int = SAMPLE_WIDTH
-    out_frames_per_buffer: int = CHUNK
-    pyaudio_out_format: int | None = FORMAT
-
-
-@dataclass
 class AudioStreamArgs:
     stream_callback: Optional[str] = None
     input: bool = False
     output: bool = False
     frames_per_buffer: int = CHUNK
-
-
-@dataclass
-class PyAudioStreamArgs(AudioStreamArgs):
-    format: int = FORMAT
-    channels: int = CHANNELS
-    rate: int = RATE
-    sample_width: int = SAMPLE_WIDTH
-    input_device_index: int = None
-    output_device_index: int = None
 
 
 @dataclass
@@ -245,22 +200,6 @@ class WebRTCSileroVADArgs(WebRTCVADArgs, SileroVADArgs):
     pass
 
 
-@dataclass
-class PyannoteDetectorArgs:
-    from pyannote.audio.core.io import AudioFile
-    hf_auth_token: str = ""  # defualt use env HF_TOKEN
-    path_or_hf_repo: str = "pyannote/segmentation-3.0"
-    model_type: str = "segmentation-3.0"
-    # remove speech regions shorter than that many seconds.
-    min_duration_on: float = 0.3
-    # fill non-speech regions shorter than that many seconds.
-    min_duration_off: float = 0.3
-    # if use pyannote/segmentation open onset/offset activation thresholds
-    onset: float = 0.5
-    offset: float = 0.5
-    # vad
-    vad_pyannote_audio: AudioFile = None
-
 
 INIT_WAKE_WORDS_SENSITIVITY = 0.6
 INIT_WAKE_WORD_ACTIVATION_DELAY = 0.0
@@ -280,62 +219,6 @@ class PorcupineDetectorArgs:
     # on_wakeword_timeout: Optional[str] = None
     # on_wakeword_detection_start: Optional[str] = None
     # on_wakeword_detection_end: Optional[str] = None
-
-
-@dataclass
-class ASRArgs:
-    download_path: str = ""
-    model_name_or_path: str = "base"
-    # asr
-    # NOTE:
-    # - openai-whisper or whispertimestamped use str(file_path)/np.ndarray/torch tensor
-    # - transformers whisper use torch tensor/tf tensor
-    # - faster whisper don't use torch tensor, use np.ndarray or str(file_path)/~BinaryIO~
-    # - mlx whisper don't use torch tensor, use str(file_path)/np.ndarray/~mlx.array~
-    # - funasr whisper, SenseVoiceSmall use str(file_path)/torch tensor
-    asr_audio: str | bytes | IO[bytes] | np.ndarray | torch.Tensor = None
-    # https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes
-    language: str = "zh"
-    verbose: bool = True
-    prompt: str = ""
-    sample_rate: int = RATE
-
-
-@dataclass
-class WhisperTimestampedASRArgs(ASRArgs):
-    pass
-
-
-@dataclass
-class WhisperFasterASRArgs(ASRArgs):
-    from faster_whisper.vad import VadOptions
-    vad_filter: bool = False
-    vad_parameters: Optional[Union[dict, VadOptions]] = None
-
-
-@dataclass
-class WhisperMLXASRArgs(ASRArgs):
-    pass
-
-
-@dataclass
-class WhisperTransformersASRArgs(ASRArgs):
-    pass
-
-
-@dataclass
-class WhisperGroqASRArgs(ASRArgs):
-    timeout_s: float = None
-    """
-    temperature: The sampling temperature, between 0 and 1. Higher values like 0.8 will make the
-    output more random, while lower values like 0.2 will make it more focused and
-    deterministic. If set to 0, the model will use
-    [log probability](https://en.wikipedia.org/wiki/Log_probability) to
-    automatically increase the temperature until certain thresholds are hit.
-    """
-    temperature: float = 0.0
-    # timestamp_granularities: list = []
-    # response_format: str = "json"  # json, verbose_json, text
 
 
 @dataclass
@@ -402,23 +285,6 @@ class CoquiTTSArgs:
     tts_comma_silence_duration: float = 0.3
     tts_sentence_silence_duration: float = 0.6
     tts_use_deepspeed: bool = False
-
-
-@dataclass
-class ChatTTSArgs:
-    source: str = 'huggingface'  # local | huggingface
-    force_redownload: bool = False
-    local_path: str = ''
-    compile: bool = True
-    device: str = None
-    skip_refine_text: bool = False
-    refine_text_only: bool = False
-    params_refine_text: dict = None
-    params_infer_code: dict = None
-    use_decoder: bool = True
-    do_text_normalization: bool = False
-    lang: str = None
-    tts_stream: bool = False
 
 
 PYTTSX3_SYNTHESIS_FILE = 'pyttsx3_synthesis.wav'

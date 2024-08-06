@@ -1,14 +1,11 @@
-import asyncio
 from pathlib import Path
-import tempfile
 from typing import AsyncGenerator
 import logging
-import os
-import io
 
 from src.common.utils.audio_utils import save_audio_to_file
 from src.common.session import Session
-from src.common.types import WhisperGroqASRArgs, RECORDS_DIR
+from src.common.types import RECORDS_DIR
+from src.types.speech.asr.whisper import WhisperGroqASRArgs
 from src.modules.speech.asr.base import ASRBase
 
 

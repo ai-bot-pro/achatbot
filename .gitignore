@@ -171,3 +171,5 @@ log/*
 config/*
 
 .vscode/
+
+asset/

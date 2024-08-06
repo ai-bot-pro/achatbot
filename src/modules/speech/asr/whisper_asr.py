@@ -1,12 +1,10 @@
 import asyncio
 from typing import AsyncGenerator
 
-from src.common.utils.audio_utils import bytes2NpArrayWith16, bytes2TorchTensorWith16
+from src.common.utils.audio_utils import bytes2NpArrayWith16
 from src.common.session import Session
-from src.common.interface import IAsr
 from src.common.device_cuda import CUDAInfo
 from src.modules.speech.asr.base import ASRBase
-from src.common.types import WhisperFasterASRArgs
 
 
 class WhisperAsr(ASRBase):
@@ -100,6 +98,7 @@ class WhisperFasterAsr(ASRBase):
         """
         super().__init__(**args)
         from faster_whisper import WhisperModel
+        from src.types.speech.asr.faster_whisper import WhisperFasterASRArgs
         self.args = WhisperFasterASRArgs(**self.args.__dict__)
         if self.args.vad_parameters is None:
             self.args.vad_parameters = {

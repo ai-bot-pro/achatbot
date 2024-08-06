@@ -17,10 +17,10 @@ from src.common.types import (
     VADRecoderArgs,
     CosyVoiceTTSArgs,
     PersonalAIProxyArgs,
-    PyAudioStreamArgs,
     DailyAudioStreamArgs,
     AudioPlayerArgs,
 )
+from src.types.speech.audio_stream.pyaudio import PyAudioStreamArgs
 from src.modules.functions.search.api import SearchFuncEnvInit
 from src.modules.functions.weather.api import WeatherFuncEnvInit
 # need import engine class -> EngineClass.__subclasses__
@@ -44,10 +44,10 @@ class PlayStreamInit():
             "sample_width": 4,
         },
         'tts_chat': {
-            "format": pyaudio.paFloat32,
+            "format": pyaudio.paInt16,
             "channels": 1,
             "rate": 24000,
-            "sample_width": 4,
+            "sample_width": 2,
         },
         'tts_edge': {
             "format": pyaudio.paInt16,
@@ -83,7 +83,7 @@ class PlayStreamInit():
 
     @staticmethod
     def get_stream_info() -> dict:
-        tts_tag = os.getenv('TTS_TAG', "tts_chat")
+        tts_tag = os.getenv('TTS_TAG', "tts_edge")
         if tts_tag in PlayStreamInit.map_tts_player_stream_info:
             # !NOTE: return map_tts_player_stream_info is ref can change it,
             # so don't change it, just read only map (use MappingProxyType)
@@ -287,7 +287,7 @@ class Env(
         kwargs = {}
         kwargs["local_path"] = os.getenv('LOCAL_PATH', os.path.join(
             MODELS_DIR, "2Noise/ChatTTS"))
-        kwargs["source"] = os.getenv('TTS_CHAT_SOURCE', "local")
+        kwargs["source"] = os.getenv('TTS_CHAT_SOURCE', "custom")
         return kwargs
 
     @staticmethod
