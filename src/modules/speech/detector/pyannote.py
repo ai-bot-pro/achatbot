@@ -1,19 +1,14 @@
 import logging
 import os
 
-from pyannote.audio.core.io import AudioFile
 
 from src.common.session import Session
 from src.common.interface import IDetector
-from src.common.types import PyannoteDetectorArgs, RATE, CHUNK
+from src.common.types import RATE, CHUNK
 from src.common.factory import EngineClass
 
 
 class PyannoteDetector(EngineClass):
-
-    @classmethod
-    def get_args(cls, **kwargs) -> dict:
-        return {**PyannoteDetectorArgs().__dict__, **kwargs}
 
     @staticmethod
     def load_model(
@@ -43,7 +38,8 @@ class PyannoteDetector(EngineClass):
 
         return model
 
-    def __init__(self, **args: PyannoteDetectorArgs) -> None:
+    def __init__(self, **args) -> None:
+        from src.types.speech.detector.pyannote import PyannoteDetectorArgs
         self.args = PyannoteDetectorArgs(**args)
         self.hyper_parameters = {
             # remove speech regions shorter than that many seconds.
@@ -60,6 +56,7 @@ class PyannoteDetector(EngineClass):
             self.args.hf_auth_token, self.args.path_or_hf_repo, self.args.model_type)
 
     def set_audio_data(self, audio_data):
+        from pyannote.audio.core.io import AudioFile
         if isinstance(audio_data, AudioFile):
             self.args.vad_pyannote_audio = audio_data
 
@@ -76,7 +73,7 @@ class PyannoteVAD(PyannoteDetector, IDetector):
     """
     TAG = "pyannote_vad"
 
-    def __init__(self, **args: PyannoteDetector) -> None:
+    def __init__(self, **args) -> None:
         super().__init__(**args)
 
         from pyannote.audio.pipelines import VoiceActivityDetection
@@ -101,7 +98,7 @@ class PyannoteOSD(PyannoteDetector, IDetector):
     """
     TAG = "pyannote_osd"
 
-    def __init__(self, **args: PyannoteDetector) -> None:
+    def __init__(self, **args) -> None:
         super().__init__(**args)
 
         from pyannote.audio.pipelines import OverlappedSpeechDetection
@@ -128,7 +125,7 @@ class PyannoteDiarization(PyannoteDetector, IDetector):
     """
     TAG = "pyannote_diarization"
 
-    def __init__(self, **args: PyannoteDetector) -> None:
+    def __init__(self, **args) -> None:
         super().__init__(**args)
         self.pipeline = self.model
 

@@ -3,7 +3,6 @@ import logging
 import asyncio
 
 import unittest
-import pyaudio
 
 from src.common.utils.audio_utils import save_audio_to_file
 from src.common.factory import EngineFactory
@@ -67,6 +66,7 @@ class TestChatTTS(unittest.TestCase):
         print(path)
 
     def test_synthesize_speak(self):
+        import pyaudio
         info = self.tts.get_stream_info()
         self.pyaudio_instance = pyaudio.PyAudio()
         self.audio_stream = self.pyaudio_instance.open(
