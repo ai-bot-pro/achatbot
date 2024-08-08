@@ -6,7 +6,7 @@ class Session:
         self.ctx = SessionCtx(**args)
         self.config = {}
         self.chat_round = 0
-        # just for local history,@todo: use kv store history
+        # just for local history,@todo: use kv store history like mem0
         self.chat_history = []
 
     def __getstate__(self):

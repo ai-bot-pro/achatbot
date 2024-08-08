@@ -58,7 +58,6 @@ class DailyAsrRTVIBot(DailyRoomBot):
 
         # !NOTE: u can config env in .env file
         asr = Env.initASREngine()
-        self.session = Session(**SessionCtx("").__dict__)
         asr_processor = AsrProcessor(asr=asr, session=self.session)
 
         # !TODO: need config processor with bot config (redefine api params) @weedge
@@ -109,18 +108,6 @@ class DailyAsrRTVIBot(DailyRoomBot):
 
         await PipelineRunner().run(self.task)
 
-    async def on_first_participant_joined(self, transport, participant):
-        self.session.set_client_id(participant['id'])
-        logging.info(f"First participant {participant['id']} joined")
-
-    async def on_participant_left(self, transport, participant, reason):
-        await self.task.queue_frame(EndFrame())
-        logging.info("Partcipant left. Exiting.")
-
-    async def on_call_state_updated(self, transport, state):
-        logging.info("Call state %s " % state)
-        if state == "left":
-            await self.task.queue_frame(EndFrame())
 
 
 r"""

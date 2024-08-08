@@ -37,6 +37,9 @@ MODELS_DIR = os.path.normpath(
 RECORDS_DIR = os.path.normpath(
     os.path.join(SRC_PATH, os.pardir, "records")
 )
+VIDEOS_DIR = os.path.normpath(
+    os.path.join(SRC_PATH, os.pardir, "videos")
+)
 TEST_DIR = os.path.normpath(
     os.path.join(SRC_PATH, os.pardir, "test")
 )
@@ -198,7 +201,6 @@ class SileroVADArgs:
 @dataclass
 class WebRTCSileroVADArgs(WebRTCVADArgs, SileroVADArgs):
     pass
-
 
 
 INIT_WAKE_WORDS_SENSITIVITY = 0.6

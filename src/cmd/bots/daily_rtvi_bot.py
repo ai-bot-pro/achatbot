@@ -97,18 +97,9 @@ class DailyRTVIBot(DailyRoomBot):
 
         await PipelineRunner().run(self.task)
 
-    async def on_first_participant_joined(self, transport, participant):
+    async def on_first_participant_joined(self, transport: DailyTransport, participant):
         transport.capture_participant_transcription(participant["id"])
         logging.info("First participant joined")
-
-    async def on_participant_left(self, transport, participant, reason):
-        await self.task.queue_frame(EndFrame())
-        logging.info("Partcipant left. Exiting.")
-
-    async def on_call_state_updated(self, transport, state):
-        logging.info("Call state %s " % state)
-        if state == "left":
-            await self.task.queue_frame(EndFrame())
 
 
 r"""
