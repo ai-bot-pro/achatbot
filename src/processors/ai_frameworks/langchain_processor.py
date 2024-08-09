@@ -39,8 +39,7 @@ class LangchainProcessor(FrameProcessor):
         else:
             await self.push_frame(frame, direction)
 
-    @staticmethod
-    def __get_token_value(text: Union[str, AIMessageChunk]) -> str:
+    def _get_token_value(self, text: Union[str, AIMessageChunk]) -> str:
         match text:
             case str():
                 return text
@@ -59,7 +58,7 @@ class LangchainProcessor(FrameProcessor):
                 {self._transcript_key: text},
                 config={"configurable": {"session_id": self._participant_id}},
             ):
-                await self.push_frame(TextFrame(self.__get_token_value(token)))
+                await self.push_frame(TextFrame(self._get_token_value(token)))
         except GeneratorExit:
             logging.warning(f"{self} generator was closed prematurely")
         except Exception as e:

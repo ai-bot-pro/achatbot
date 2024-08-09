@@ -17,7 +17,7 @@ from src.types.frames.control_frames import (
 from src.types.frames.data_frames import (TextFrame, TranscriptionFrame)
 from src.processors.aggregators.llm_response import (
     LLMAssistantResponseAggregator, LLMUserResponseAggregator)
-from src.processors.langchain_processor import LangchainProcessor
+from src.processors.ai_frameworks.langchain_processor import LangchainProcessor
 
 
 r"""

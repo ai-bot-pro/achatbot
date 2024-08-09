@@ -62,7 +62,7 @@ class DailyAsrRTVIBot(DailyRoomBot):
 
         # !TODO: need config processor with bot config (redefine api params) @weedge
         # bot config: Dict[str, Dict[str,Any]]
-        # e.g. {"llm":{"key":val,"tag":TAG}, "tts":{"key":val,"tag":TAG}}
+        # e.g. {"llm":{"key":val,"tag":TAG,"args":{}}, "tts":{"key":val,"tag":TAG,"args":{}}}
         llm_processor = OpenAILLMProcessor(
             model=self._bot_config.llm.model,
             base_url="https://api.groq.com/openai/v1",
@@ -107,7 +107,6 @@ class DailyAsrRTVIBot(DailyRoomBot):
             self.on_call_state_updated)
 
         await PipelineRunner().run(self.task)
-
 
 
 r"""

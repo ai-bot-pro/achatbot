@@ -10,6 +10,7 @@ from apipeline.frames.sys_frames import CancelFrame, MetricsFrame
 from apipeline.frames.control_frames import EndFrame
 from apipeline.frames.data_frames import Frame, AudioRawFrame
 
+from src.processors.speech.audio_volume_time_processor import AudioVolumeTimeProcessor
 from src.processors.ai_processor import AIProcessor
 from src.common.utils.audio_utils import calculate_audio_volume, exp_smoothing
 from src.types.frames.data_frames import TranscriptionFrame
@@ -101,7 +102,7 @@ class ASRProcessorBase(AIProcessor):
 class TranscriptionTimingLogProcessor(FrameProcessor):
     """asr transcription timing log processor"""
 
-    def __init__(self, avt):
+    def __init__(self, avt: "AudioVolumeTimeProcessor"):
         super().__init__()
         self.name = "Transcription"
         self._avt = avt

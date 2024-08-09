@@ -45,7 +45,7 @@ class LangchainRAGProcessor(LangchainProcessor):
                 config={"configurable": {"session_id": self._participant_id}},
             ):
                 await self.push_frame(LLMResponseStartFrame())
-                await self.push_frame(TextFrame(self.__get_token_value(token)))
+                await self.push_frame(TextFrame(self._get_token_value(token)))
                 await self.push_frame(LLMResponseEndFrame())
         except GeneratorExit:
             logging.warning(f"{self} generator was closed prematurely")

@@ -1,9 +1,16 @@
+from datetime import datetime
+import math
 import re
 import logging
 import os
+import time
+import subprocess
+
 
 from pytube import YouTube, cipher
 from pytube.innertube import _default_clients
+from pytube.exceptions import RegexMatchError
+from deep_translator import GoogleTranslator
 
 from deepgram import DeepgramClient, PrerecordedOptions, FileSource
 import httpx
@@ -13,11 +20,45 @@ from langchain_community.embeddings import JinaEmbeddings
 
 from src.common.types import VIDEOS_DIR
 from src.common.logger import Logger
+from src.cmd.bots.rag.helper import get_tidb_url
 
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
 load_dotenv(override=True)
+
+
+def time_str_to_seconds(time_str):
+    time_format = "%H:%M:%S.%f"
+    dt = datetime.strptime(time_str, time_format)
+    total_seconds = dt.hour * 3600 + dt.minute * 60 + dt.second + dt.microsecond / 1e6
+
+    return total_seconds
+
+
+def get_video_duration(video_file):
+    ffmpeg_command = ['ffmpeg', '-i', video_file]
+    grep_command = ['grep', 'Duration']
+    cut_command = ['cut', '-d', ' ', '-f', '4']
+    sed_command = ['sed', 's/,//']
+
+    ffmpeg_process = subprocess.Popen(
+        ffmpeg_command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT)
+    grep_process = subprocess.Popen(
+        grep_command,
+        stdin=ffmpeg_process.stdout,
+        stdout=subprocess.PIPE)
+    ffmpeg_process.stdout.close()
+    cut_process = subprocess.Popen(cut_command, stdin=grep_process.stdout, stdout=subprocess.PIPE)
+    grep_process.stdout.close()
+    sed_process = subprocess.Popen(sed_command, stdin=cut_process.stdout, stdout=subprocess.PIPE)
+    cut_process.stdout.close()
+
+    duration = sed_process.communicate()[0].decode('utf-8').strip()
+
+    return duration
 
 
 # issue: https://github.com/pytube/pytube/issues/1973
@@ -27,10 +68,6 @@ _default_clients["ANDROID_EMBED"]["context"]["client"]["clientVersion"] = "19.08
 _default_clients["IOS_EMBED"]["context"]["client"]["clientVersion"] = "19.08.35"
 _default_clients["IOS_MUSIC"]["context"]["client"]["clientVersion"] = "6.41"
 _default_clients["ANDROID_MUSIC"] = _default_clients["ANDROID_CREATOR"]
-
-
-class RegexMatchError(Exception):
-    pass
 
 
 def get_throttling_function_name(js: str) -> str:
@@ -43,16 +80,18 @@ def get_throttling_function_name(js: str) -> str:
         The name of the function used to compute the throttling parameter.
     """
     function_patterns = [
+        r'a\.[a-zA-Z]\s*&&\s*\([a-z]\s*=\s*a\.get\("n"\)\)\s*&&.*?\|\|\s*([a-z]+)',
         r'a\.[a-zA-Z]\s*&&\s*\([a-z]\s*=\s*a\.get\("n"\)\)\s*&&\s*'
         r'\([a-z]\s*=\s*([a-zA-Z0-9$]+)(\[\d+\])?\([a-z]\)',
         r'\([a-z]\s*=\s*([a-zA-Z0-9$]+)(\[\d+\])\([a-z]\)',
+
     ]
-    # logger.debug('Finding throttling function name')
+    # logging.debug('Finding throttling function name')
     for pattern in function_patterns:
         regex = re.compile(pattern)
         function_match = regex.search(js)
         if function_match:
-            # logger.debug("finished regex search, matched: %s", pattern)
+            logging.debug("finished regex search, matched: %s", pattern)
             if len(function_match.groups()) == 1:
                 return function_match.group(1)
             idx = function_match.group(2)
@@ -98,12 +137,21 @@ def download_videos(link: str, download_path: str):
     return yt.title, download_file_path,
 
 
+def splite_chunk_videos(video_file: str, ss: str, duration: float):
+    duration = get_video_duration(video_file)
+    d_time = time_str_to_seconds(duration)
+    if d_time / 3600 > 0:
+        #!TODO
+        pass
+
+
 def transcribe_file(audio_file: str, text_file_name: str = ""):
     """
     see: https://developers.deepgram.com/docs/getting-started-with-pre-recorded-audio
     """
 
     text_file_path = f'{VIDEOS_DIR}/{text_file_name}.txt'
+    transcribe_respone_file_path = f'{VIDEOS_DIR}/{text_file_name}.json'
     text_done_file_path = f'{VIDEOS_DIR}/{text_file_name}_done.txt'
     if os.path.exists(text_done_file_path) and os.path.exists(text_file_path):
         logging.info(f"{text_file_path} is exists, skip transcribe, read from file")
@@ -128,12 +176,12 @@ def transcribe_file(audio_file: str, text_file_name: str = ""):
             language="en",
         )
         # Call the transcribe_file method with the text payload and options
-        response = deepgram.listen.prerecorded.v("1").transcribe_file(
+        response = deepgram.listen.rest.v("1").transcribe_file(
             payload, options,
-            timeout=httpx.Timeout(300.0, connect=10.0),
+            timeout=httpx.Timeout(1800.0, connect=10.0),
         )
-        logging.info(f'transcribing {audio_file} response {response}')
         transcript = response.results.channels[0].alternatives[0].transcript
+        logging.info(f'transcribing {audio_file} transcript text len {len(transcript)}')
 
         if len(text_file_name) > 0:
             with open(text_file_path, 'w', encoding='utf-8') as file:
@@ -144,11 +192,50 @@ def transcribe_file(audio_file: str, text_file_name: str = ""):
         return transcript
 
     except Exception as e:
-        logging.exception(f"Exception: {e}")
+        logging.error(f"Exception: {e}")
+        raise e
+
+
+def translate_text(text: str, src: str = "en", target: str = "zh-CN", text_file_name: str = ""):
+    text_file_path = f'{VIDEOS_DIR}/{text_file_name}_{target}.txt'
+    if os.path.exists(text_file_path):
+        logging.info(f"{text_file_path} is exists, skip translate, read from file")
+        with open(text_file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+        return content
+
+    try_cn = 10
+    translated_texts = []
+    pattern = '|'.join(map(re.escape, ["!", ".", "！", "。"]))
+    result = list(filter(None, re.split('(' + pattern + ')', text, maxsplit=0, flags=re.UNICODE)))
+    sentences = []
+    for i in range(0, len(result) - 1, 2):
+        sentences.append(result[i] + result[i + 1])
+    if len(result) % 2 != 0:
+        sentences.append(result[-1])
+    logging.info(f"translate sentences len: {len(sentences)}")
+    while try_cn > 0:
+        try:
+            translated_texts = GoogleTranslator(
+                source=src, target=target
+            ).translate_batch(sentences)
+            break
+        except Exception as e:
+            logging.error("An error occurred:", e)
+            time.sleep(1)
+            try_cn -= 1
+
+    res = "".join(translated_texts)
+    if len(text_file_name) > 0 and len(translated_texts) > 0:
+        with open(text_file_path, 'w', encoding='utf-8') as file:
+            file.write(res)
+
+    return res
 
 
 def split_to_chunk_texts(text: str):
     # !NOTE: maybe don't to check split to chunk doc task done
+    # just simple split by len
     logging.info(f'Spliting text len:{len(text)}')
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=800,
@@ -159,12 +246,6 @@ def split_to_chunk_texts(text: str):
     split_text_list = text_splitter.split_text(text)
     logging.debug(f'splited chunk text list len {len(split_text_list)}')
     return split_text_list
-
-
-def get_tidb_url():
-    url = f"mysql+pymysql://{os.getenv('TIDB_USERNAME')}:{os.getenv('TIDB_PASSWORD')}@{os.getenv('TIDB_HOST')}:{os.getenv('TIDB_PORT')}/{os.getenv('TIDB_DATABASE')}?ssl_ca={os.getenv('TIDB_SSL_CA')}&ssl_verify_cert=true&ssl_verify_identity=true"
-    logging.debug(f"tidb url: {url}")
-    return url
 
 
 def save_embeddings_to_db(table_name: str, title: str, texts: list[str]):
@@ -211,7 +292,12 @@ if __name__ == "__main__":
 
     video_links = {
         "ThreeBlueOneBrown": [
-            "https://www.youtube.com/watch?v=eMlx5fFNoYc&t=786s",
+            "https://www.youtube.com/watch?v=aircAruvnKk",
+            "https://www.youtube.com/watch?v=IHZwWFHWa-w",
+            "https://www.youtube.com/watch?v=Ilg3gGewQ5U",
+            "https://www.youtube.com/watch?v=tIeHLnjs5U8",
+            "https://www.youtube.com/watch?v=wjZofJX0v4M",
+            "https://www.youtube.com/watch?v=eMlx5fFNoYc",
         ],
         "AndrejKarpathy": [
             "https://www.youtube.com/watch?v=zjkBMFhNj_g",
@@ -223,7 +309,16 @@ if __name__ == "__main__":
 
     for name, links in video_links.items():
         for link in links:
-            title, download_path = download_videos(link, VIDEOS_DIR)
-            transcribe_text = transcribe_file(download_path, title)
-            chunk_texts = split_to_chunk_texts(transcribe_text)
-            save_embeddings_to_db(name, title=title, texts=chunk_texts)
+            try:
+                title, download_path = download_videos(link, VIDEOS_DIR)
+                transcribed_text = transcribe_file(download_path, title)
+                chunk_texts = split_to_chunk_texts(transcribed_text)
+                save_embeddings_to_db(name, title=title, texts=chunk_texts)
+
+                translated_text = translate_text(
+                    transcribed_text, target="zh-CN", text_file_name=title)
+                chunk_texts = split_to_chunk_texts(translated_text)
+                save_embeddings_to_db(name, title=title + "zh-CN", texts=chunk_texts)
+            except Exception as e:
+                logging.exception(f"name:{name}, link:{link}, Exception: {e}")
+                continue

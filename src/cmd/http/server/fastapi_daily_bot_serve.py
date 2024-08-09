@@ -28,9 +28,11 @@ Logger.init(logging.INFO, is_file=False, is_console=True)
 # --------------------- API -----------------
 class BotInfo(BaseModel):
     is_agent: bool = False
-    chat_bot_name: str = "DailyRTVIBot"
+    chat_bot_name: str = ""
     config: dict = {}
     room_name: str = "chat-room"
+    room_url: str = ""
+    token: str = ""
 
 
 class APIResponse(BaseModel):
@@ -138,6 +140,7 @@ async def allowed_hosts_middleware(request: Request, call_next):
 
 @app.get("/create_room/{name}")
 def create_room(name):
+    """create room then redirect to room url"""
     # Create a Daily rest helper
     daily_rest_helper = DailyRESTHelper(DAILY_API_KEY, DAILY_API_URL)
     # Create a new room
@@ -153,6 +156,43 @@ def create_room(name):
 
 
 """
+curl -XPOST "http://0.0.0.0:4321/create_room" \
+    -H "Content-Type: application/json"
+"""
+
+
+@app.post("/create_room")
+def create_random_room():
+    """create random room and token return"""
+    # Create a Daily rest helper
+    daily_rest_helper = DailyRESTHelper(DAILY_API_KEY, DAILY_API_URL)
+    # Create a new room
+    try:
+        params = DailyRoomParams(properties=DailyRoomProperties(
+            exp=time.time() + RANDOM_ROOM_EXPIRE_TIME,
+        ))
+        room: DailyRoomObject = daily_rest_helper.create_room(params=params)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"{e}")
+
+    # Give the agent a token to join the session
+    token = daily_rest_helper.get_token(room.url, RANDOM_ROOM_TOKEN_EXPIRE_TIME)
+
+    if not room or not token:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get token for room: {room.name}")
+
+    data = {"room": room, "token": token}
+    return JSONResponse(APIResponse(data=data).model_dump())
+
+
+# @app.post("/start_bot")
+def start_bot(info: BotInfo):
+    """start run bot"""
+    logging.info(f"start bot info:{info}")
+
+
+"""
 curl -XPOST "http://0.0.0.0:4321/bot_join/DummyBot" \
     -H "Content-Type: application/json" \
     -d $'{"config":{"llm":{"messages":[{"role":"system","content":"你是聊天机器人，一个友好、乐于助人的机器人。您的输出将被转换为音频，所以不要包含除“!”以外的特殊字符。'或'?的答案。以一种创造性和有用的方式回应用户 所说的话，但要保持简短。从打招呼开始。"}]},"tts":{"voice":"e90c6678-f0d3-4767-9883-5d0ecf5894a8"}}}' | jq .
@@ -164,11 +204,17 @@ curl -XPOST "http://0.0.0.0:4321/bot_join/DailyRTVIBot" \
 curl -XPOST "http://0.0.0.0:4321/bot_join/DailyAsrRTVIBot" \
     -H "Content-Type: application/json" \
     -d $'{"config":{"llm":{"model":"llama-3.1-70b-versatile","messages":[{"role":"system","content":"你是一位很有帮助中文AI助理机器人。你的目标是用简洁的方式展示你的能力,请用中文简短回答，回答限制在1-5句话内。你的输出将转换为音频，所以不要在你的答案中包含特殊字符。以创造性和有帮助的方式回应用户说的话。"}]},"tts":{"voice":"2ee87190-8f84-4925-97da-e52547f9462c"}}}' | jq .
+
+curl -XPOST "http://0.0.0.0:4321/bot_join/DailyLangchainRAGBot" \
+    -H "Content-Type: application/json" \
+    -d $'{"config":{"llm":{"model":"llama-3.1-70b-versatile","messages":[{"role":"system","content":""}]},"tts":{"voice":"2ee87190-8f84-4925-97da-e52547f9462c"},"asr":{"tag":"whisper_groq_asr","args":{"language":"en"}}}}' | jq .
 """
 
 
 @app.post("/bot_join/{chat_bot_name}")
 async def bot_join(chat_bot_name: str, info: BotInfo) -> JSONResponse:
+    """join random room chat with bot"""
+
     logging.info(f"chat_bot_name: {chat_bot_name} request bot info: {info}")
 
     logging.info(f"register bots: {register_daily_room_bots.items()}")
@@ -242,11 +288,17 @@ curl -XPOST "http://0.0.0.0:4321/bot_join/chat-bot/DailyRTVIBot" \
 curl -XPOST "http://0.0.0.0:4321/bot_join/chat-bot/DailyAsrRTVIBot" \
     -H "Content-Type: application/json" \
     -d $'{"config":{"llm":{"model":"llama-3.1-70b-versatile","messages":[{"role":"system","content":"你是一位很有帮助中文AI助理机器人。你的目标是用简洁的方式展示你的能力,请用中文简短回答，回答限制在1-5句话内。你的输出将转换为音频，所以不要在你的答案中包含特殊字符。以创造性和有帮助的方式回应用户说的话。"}]},"tts":{"voice":"2ee87190-8f84-4925-97da-e52547f9462c"}}}' | jq .
+
+curl -XPOST "http://0.0.0.0:4321/bot_join/chat-bot/DailyLangchainRAGBot" \
+    -H "Content-Type: application/json" \
+    -d $'{"config":{"llm":{"model":"llama-3.1-70b-versatile","messages":[{"role":"system","content":""}]},"tts":{"voice":"2ee87190-8f84-4925-97da-e52547f9462c"}}}' | jq .
 """
 
 
 @app.post("/bot_join/{room_name}/{chat_bot_name}")
 async def bot_join(room_name: str, chat_bot_name: str, info: BotInfo) -> JSONResponse:
+    """join room chat with bot"""
+
     logging.info(f"room_name: {room_name} chat_bot_name: {chat_bot_name} request bot info: {info}")
 
     num_bots_in_room = get_room_bot_proces_num(room_name)
