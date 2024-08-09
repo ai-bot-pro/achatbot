@@ -1,15 +1,19 @@
 import io
+import time
 import wave
+import logging
 from abc import abstractmethod
 from typing import AsyncGenerator
 
-from apipeline.processors.frame_processor import FrameDirection
-from apipeline.frames.sys_frames import CancelFrame
+from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
+from apipeline.frames.sys_frames import CancelFrame, MetricsFrame
 from apipeline.frames.control_frames import EndFrame
 from apipeline.frames.data_frames import Frame, AudioRawFrame
 
+from src.processors.speech.audio_volume_time_processor import AudioVolumeTimeProcessor
 from src.processors.ai_processor import AIProcessor
 from src.common.utils.audio_utils import calculate_audio_volume, exp_smoothing
+from src.types.frames.data_frames import TranscriptionFrame
 
 
 class ASRProcessorBase(AIProcessor):
@@ -93,3 +97,24 @@ class ASRProcessorBase(AIProcessor):
             await self._append_audio(frame)
         else:
             await self.push_frame(frame, direction)
+
+
+class TranscriptionTimingLogProcessor(FrameProcessor):
+    """asr transcription timing log processor"""
+
+    def __init__(self, avt: "AudioVolumeTimeProcessor"):
+        super().__init__()
+        self.name = "Transcription"
+        self._avt = avt
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection):
+        try:
+            await super().process_frame(frame, direction)
+            if isinstance(frame, TranscriptionFrame):
+                elapsed = time.time() - self._avt.last_transition_ts
+                logging.debug(f"Transcription TTF: {elapsed}")
+                await self.push_frame(MetricsFrame(ttfb=[{self.name: elapsed}]))
+
+            await self.push_frame(frame, direction)
+        except Exception as e:
+            logging.debug(f"Exception {e}")

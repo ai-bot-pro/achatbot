@@ -154,6 +154,8 @@ cython_debug/
 .DS_Store
 models/*
 records/*
+videos/*
+asset/*
 main-dev.py
 tmp.*
 *.wav
@@ -171,5 +173,3 @@ log/*
 config/*
 
 .vscode/
-
-asset/

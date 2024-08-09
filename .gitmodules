@@ -10,3 +10,6 @@
 [submodule "ui/rtvi-web-demo"]
 	path = ui/rtvi-web-demo
 	url = https://github.com/weedge/rtvi-web-demo.git
+[submodule "ui/educator-client"]
+	path = ui/educator-client
+	url = https://github.com/ai-bot-pro/educator-client.git

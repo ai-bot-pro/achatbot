@@ -11,7 +11,7 @@ from apipeline.processors.frame_processor import FrameProcessor
 
 from src.modules.speech.vad_analyzer.silero import SileroVADAnalyzer
 from src.processors.speech.asr.asr_processor import AsrProcessor
-from src.common.types import DailyParams, DailyTranscriptionSettings
+from src.common.types import DailyParams
 from src.common.logger import Logger
 from src.transports.daily import DailyTransport
 from src.types.frames.data_frames import TranscriptionFrame

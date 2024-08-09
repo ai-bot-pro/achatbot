@@ -68,9 +68,18 @@ class RTVILLMConfig(BaseModel):
 
 class RTVITTSConfig(BaseModel):
     voice: Optional[str] = None
+    language: Optional[str] = None
+    tag: Optional[str] = None
+    args: Optional[dict] = None
+
+
+class RTVIASRConfig(BaseModel):
+    tag: Optional[str] = None
+    args: Optional[dict] = None
 
 
 class RTVIConfig(BaseModel):
+    asr: Optional[RTVIASRConfig] = None
     llm: Optional[RTVILLMConfig] = None
     tts: Optional[RTVITTSConfig] = None
 
