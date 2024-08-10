@@ -32,6 +32,15 @@ def time_str_to_seconds(time_str):
     return total_seconds
 
 
+def copy_video_to_filter(video_file):
+    ffmpeg_command = ['ffmpeg', '-i', video_file, '-c', 'copy', f'{video_file}_tmp.mp4']
+    ffmpeg_process = subprocess.Popen(ffmpeg_command)
+    ffmpeg_process.wait()
+    mv_command = ['mv', f'{video_file}_tmp.mp4', video_file]
+    mv_process = subprocess.Popen(mv_command)
+    mv_process.wait()
+
+
 def get_video_duration(video_file):
     ffmpeg_command = ['ffmpeg', '-i', video_file]
     grep_command = ['grep', 'Duration']
@@ -186,6 +195,7 @@ def translate_text(
 def split_to_chunk_texts(text: str):
     # !NOTE: maybe don't to check split to chunk doc task done
     # just simple split by len
+    # see: https://chunkviz.up.railway.app/
     logging.info(f'Spliting text len:{len(text)}')
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=800,
@@ -254,8 +264,6 @@ if __name__ == "__main__":
         ],
         "AndrejKarpathy": [
             "https://www.youtube.com/watch?v=zjkBMFhNj_g",
-            "https://www.youtube.com/watch?v=zduSFxRajkE",
-            "https://www.youtube.com/watch?v=kCc8FmEb1nY"
             # zero2hero
             "https://www.youtube.com/watch?v=VMj-3S1tku0",
             "https://www.youtube.com/watch?v=PaCmpygFfXo",
@@ -275,6 +283,8 @@ if __name__ == "__main__":
             try:
                 dir_path = f"{VIDEOS_DIR}/{name}"
                 title, download_file_path = download_videos(link, dir_path)
+                copy_video_to_filter(download_file_path)
+                exit()
                 transcribed_text = transcribe_file(download_file_path, title, dir_path)
                 chunk_texts = split_to_chunk_texts(transcribed_text)
                 save_embeddings_to_db(name, title=title, texts=chunk_texts, path=dir_path)
