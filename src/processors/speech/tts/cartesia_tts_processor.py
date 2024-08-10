@@ -93,9 +93,8 @@ class CartesiaTTSProcessor(TTSProcessor):
 
     async def _connect(self):
         try:
-            self._websocket = await websockets.connect(
-                f"{self._url}?api_key={self._api_key}&cartesia_version={self._cartesia_version}"
-            )
+            uri = f"{self._url}?api_key={self._api_key}&cartesia_version={self._cartesia_version}"
+            self._websocket = await websockets.connect(uri)
             self._receive_task = self.get_event_loop().create_task(self._receive_task_handler())
             self._context_appending_task = self.get_event_loop().create_task(self._context_appending_task_handler())
         except Exception as e:

@@ -17,6 +17,8 @@ from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
 
+from src.common import interface
+from src.common.factory import EngineClass, EngineFactory
 from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
 from src.processors.ai_frameworks.langchain_rag_processor import LangchainRAGProcessor
 from src.processors.speech.tts.cartesia_tts_processor import CartesiaTTSProcessor
@@ -96,11 +98,16 @@ class DailyLangchainRAGBot(DailyRoomBot):
 
         # !NOTE: u can config env in .env file to init default
         # or api config
-        if self._bot_config.asr and self._bot_config.asr.tag:
-            os.environ["ASR_TAG"] = self._bot_config.asr.tag
-        asr = Env.initASREngine()
-        if self._bot_config.asr and self._bot_config.asr.args:
-            asr.set_args(**self._bot_config.asr.args)
+        asr: interface.IAsr = None
+        if self._bot_config.asr \
+                and self._bot_config.asr.tag \
+                and self._bot_config.asr.args:
+            asr = EngineFactory.get_engine_by_tag(
+                EngineClass,
+                self._bot_config.asr.tag,
+                **self._bot_config.asr.args)
+        else:
+            asr = Env.initASREngine()
         asr_processor = AsrProcessor(
             asr=asr,
             session=self.session

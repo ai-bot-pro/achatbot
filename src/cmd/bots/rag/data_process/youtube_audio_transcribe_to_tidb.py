@@ -284,7 +284,6 @@ if __name__ == "__main__":
                 dir_path = f"{VIDEOS_DIR}/{name}"
                 title, download_file_path = download_videos(link, dir_path)
                 copy_video_to_filter(download_file_path)
-                exit()
                 transcribed_text = transcribe_file(download_file_path, title, dir_path)
                 chunk_texts = split_to_chunk_texts(transcribed_text)
                 save_embeddings_to_db(name, title=title, texts=chunk_texts, path=dir_path)
