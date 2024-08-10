@@ -87,14 +87,15 @@ def splite_chunk_videos(video_file: str, ss: str, duration: float):
         pass
 
 
-def transcribe_file(audio_file: str, text_file_name: str = ""):
+def transcribe_file(audio_file: str, text_file_name: str = "",
+                    path: str = VIDEOS_DIR):
     """
     see: https://developers.deepgram.com/docs/getting-started-with-pre-recorded-audio
     """
 
-    text_file_path = f'{VIDEOS_DIR}/{text_file_name}.txt'
-    transcribe_respone_file_path = f'{VIDEOS_DIR}/{text_file_name}.json'
-    text_done_file_path = f'{VIDEOS_DIR}/{text_file_name}_done.txt'
+    text_file_path = f'{path}/{text_file_name}.txt'
+    transcribe_respone_file_path = f'{path}/{text_file_name}.json'
+    text_done_file_path = f'{path}/{text_file_name}_done.txt'
     if os.path.exists(text_done_file_path) and os.path.exists(text_file_path):
         logging.info(f"{text_file_path} is exists, skip transcribe, read from file")
         with open(text_file_path, 'r', encoding='utf-8') as file:
@@ -128,6 +129,8 @@ def transcribe_file(audio_file: str, text_file_name: str = ""):
         if len(text_file_name) > 0:
             with open(text_file_path, 'w', encoding='utf-8') as file:
                 file.write(transcript)
+            with open(transcribe_respone_file_path, 'w', encoding='utf-8') as file:
+                file.write(response.to_json())
             with open(text_done_file_path, 'a'):
                 os.utime(text_done_file_path, None)
 
@@ -138,8 +141,13 @@ def transcribe_file(audio_file: str, text_file_name: str = ""):
         raise e
 
 
-def translate_text(text: str, src: str = "en", target: str = "zh-CN", text_file_name: str = ""):
-    text_file_path = f'{VIDEOS_DIR}/{text_file_name}_{target}.txt'
+def translate_text(
+        text: str,
+        src: str = "en",
+        target: str = "zh-CN",
+        text_file_name: str = "",
+        path: str = VIDEOS_DIR):
+    text_file_path = f'{path}/{text_file_name}_{target}.txt'
     if os.path.exists(text_file_path):
         logging.info(f"{text_file_path} is exists, skip translate, read from file")
         with open(text_file_path, 'r', encoding='utf-8') as file:
@@ -190,9 +198,11 @@ def split_to_chunk_texts(text: str):
     return split_text_list
 
 
-def save_embeddings_to_db(table_name: str, title: str, texts: list[str]):
+def save_embeddings_to_db(
+        table_name: str, title: str,
+        texts: list[str], path: str = VIDEOS_DIR):
     # just a simple done, need use task meta info to manage
-    save_done_file_path = f'{VIDEOS_DIR}/{title}_{table_name}_save_done.txt'
+    save_done_file_path = f'{path}/{title}_{table_name}_save_done.txt'
     if os.path.exists(save_done_file_path):
         logging.info(f"{save_done_file_path} is exists, skip save embeddings to table {table_name}")
         return
@@ -234,6 +244,7 @@ if __name__ == "__main__":
 
     video_links = {
         "ThreeBlueOneBrown": [
+            # NN
             "https://www.youtube.com/watch?v=aircAruvnKk",
             "https://www.youtube.com/watch?v=IHZwWFHWa-w",
             "https://www.youtube.com/watch?v=Ilg3gGewQ5U",
@@ -243,24 +254,35 @@ if __name__ == "__main__":
         ],
         "AndrejKarpathy": [
             "https://www.youtube.com/watch?v=zjkBMFhNj_g",
-            "https://www.youtube.com/watch?v=l8pRSuU81PU",
             "https://www.youtube.com/watch?v=zduSFxRajkE",
             "https://www.youtube.com/watch?v=kCc8FmEb1nY"
+            # zero2hero
+            "https://www.youtube.com/watch?v=VMj-3S1tku0",
+            "https://www.youtube.com/watch?v=PaCmpygFfXo",
+            "https://www.youtube.com/watch?v=TCH_1BHY58I",
+            "https://www.youtube.com/watch?v=P6sfmUTpUmc",
+            "https://www.youtube.com/watch?v=q8SA3rM6ckI",
+            "https://www.youtube.com/watch?v=t3YJ5hKiMQ0",
+            "https://www.youtube.com/watch?v=kCc8FmEb1nY",
+            "https://www.youtube.com/watch?v=bZQun8Y4L2A",
+            "https://www.youtube.com/watch?v=zduSFxRajkE",
+            "https://www.youtube.com/watch?v=l8pRSuU81PU",
         ],
     }
 
     for name, links in video_links.items():
         for link in links:
             try:
-                title, download_path = download_videos(link, VIDEOS_DIR)
-                transcribed_text = transcribe_file(download_path, title)
+                dir_path = f"{VIDEOS_DIR}/{name}"
+                title, download_file_path = download_videos(link, dir_path)
+                transcribed_text = transcribe_file(download_file_path, title, dir_path)
                 chunk_texts = split_to_chunk_texts(transcribed_text)
-                save_embeddings_to_db(name, title=title, texts=chunk_texts)
+                save_embeddings_to_db(name, title=title, texts=chunk_texts, path=dir_path)
 
                 translated_text = translate_text(
-                    transcribed_text, target="zh-CN", text_file_name=title)
+                    transcribed_text, target="zh-CN", text_file_name=title, path=dir_path)
                 chunk_texts = split_to_chunk_texts(translated_text)
-                save_embeddings_to_db(name, title=title + "zh-CN", texts=chunk_texts)
+                save_embeddings_to_db(name, title=title + "zh-CN", texts=chunk_texts, path=dir_path)
             except Exception as e:
                 logging.exception(f"name:{name}, link:{link}, Exception: {e}")
                 continue
