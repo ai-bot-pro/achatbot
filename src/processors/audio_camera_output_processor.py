@@ -95,6 +95,7 @@ class AudioCameraOutputProcessor(OutputProcessor):
 
     async def _handle_audio(self, frame: AudioRawFrame):
         audio = frame.audio
+        #!TODO: if tts processor is slow(network,best way to deloy all model on local machine(CPU,GPU)), we need to buffer the audio,e.g.buff 1 second :)
         # print(f"len audio:{len(audio)}, audio_chunk_size{self._audio_chunk_size}")
         # self._audio_out_buff.extend(audio)
         # if len(audio) >= self._audio_chunk_size:
