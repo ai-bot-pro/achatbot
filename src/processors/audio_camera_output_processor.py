@@ -34,6 +34,8 @@ class AudioCameraOutputProcessor(OutputProcessor):
         audio_bytes_10ms = int(self._params.audio_out_sample_rate / 100) * \
             self._params.audio_out_channels * 2
         self._audio_chunk_size = audio_bytes_10ms * 2
+        # Audio accumlation buffer for 16-bit samples to write out stream device
+        self._audio_out_buff = bytearray()
 
     async def start(self, frame: StartFrame):
         await super().start(frame)
@@ -94,10 +96,16 @@ class AudioCameraOutputProcessor(OutputProcessor):
     async def _handle_audio(self, frame: AudioRawFrame):
         audio = frame.audio
         # print(f"len audio:{len(audio)}, audio_chunk_size{self._audio_chunk_size}")
-        for i in range(0, len(audio), self._audio_chunk_size):
-            chunk = audio[i: i + self._audio_chunk_size]
-            await self.write_raw_audio_frames(chunk)
-            await self.push_frame(BotSpeakingFrame(), FrameDirection.UPSTREAM)
+        self._audio_out_buff.extend(audio)
+        if len(self._audio_out_buff) >= self._audio_chunk_size:
+            # print( f"len audio_out_buff:{len(self._audio_out_buff)}, audio_chunk_size{self._audio_chunk_size}")
+            for i in range(0, len(self._audio_out_buff), self._audio_chunk_size):
+                chunk = bytes(self._audio_out_buff[i: i + self._audio_chunk_size])
+                if len(chunk) % 2 != 0:
+                    chunk = chunk[:len(chunk) - 1]
+                await self.write_raw_audio_frames(chunk)
+                await self.push_frame(BotSpeakingFrame(), FrameDirection.UPSTREAM)
+            self._audio_out_buff.clear()
 
     async def write_raw_audio_frames(self, frames: bytes):
         pass

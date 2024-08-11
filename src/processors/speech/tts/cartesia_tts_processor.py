@@ -22,17 +22,20 @@ from apipeline.frames.control_frames import StartFrame, EndFrame
 from src.processors.speech.tts.base import TTSProcessor
 from src.types.frames.control_frames import LLMFullResponseEndFrame
 
+# https://docs.cartesia.ai/getting-started/available-models
+# !NOTE: Timestamps are not supported for language 'zh'
+
 
 class CartesiaTTSProcessor(TTSProcessor):
     TAG = "cartesia_tts_processor"
 
     def __init__(
             self,
-            voice_id: str,
+            voice_id: str = "2ee87190-8f84-4925-97da-e52547f9462c",
             api_key: str = "",
             cartesia_version: str = "2024-06-10",
             url: str = "wss://api.cartesia.ai/tts/websocket",
-            model_id: str = "sonic-english",
+            model_id: str = "sonic-multilingual",
             encoding: str = "pcm_s16le",
             sample_rate: int = 16000,
             language: str = "en",
