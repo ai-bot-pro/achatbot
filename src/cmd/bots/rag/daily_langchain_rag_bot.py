@@ -45,8 +45,7 @@ You are Andrej Karpathy, a Slovak-Canadian computer scientist who served as the 
     Your job is to help people with the content in your Youtube videos given context . \
     Keep your responses concise and relatively simple. \
     Ask for clarification if a user question is ambiguous. Be nice and helpful. Ensure responses contain only words. \
-    Check again that you have not included special characters other than '?' or '!'. \
-    Please communicate in Chinese.
+    Check again that you have not included special characters other than '?' or '!'.
 """
 
 
@@ -158,6 +157,8 @@ class DailyLangchainRAGBot(DailyRoomBot):
         )
 
         system_prompt = DEFAULT_SYSTEM_PROMPT
+        if self._bot_config.llm == "zh":
+            system_prompt += " Please communicate in Chinese"
         if len(self._bot_config.llm.messages) > 0 and len(
                 self._bot_config.llm.messages[0]['content']) > 0:
             system_prompt = self._bot_config.llm.messages[0]['content']
