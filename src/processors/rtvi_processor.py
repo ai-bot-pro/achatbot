@@ -64,6 +64,7 @@ DEFAULT_VOICE = "3a63e2d1-1c1e-425d-8e79-5100bc910e90"
 class RTVILLMConfig(BaseModel):
     model: Optional[str] = None
     messages: Optional[List[dict]] = None
+    language: Optional[str] = None
 
 
 class RTVITTSConfig(BaseModel):
