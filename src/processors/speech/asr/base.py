@@ -112,7 +112,7 @@ class TranscriptionTimingLogProcessor(FrameProcessor):
             await super().process_frame(frame, direction)
             if isinstance(frame, TranscriptionFrame):
                 elapsed = time.time() - self._avt.last_transition_ts
-                logging.debug(f"Transcription TTF: {elapsed}")
+                logging.info(f"Transcription TTF: {elapsed}")
                 await self.push_frame(MetricsFrame(ttfb=[{self.name: elapsed}]))
 
             await self.push_frame(frame, direction)

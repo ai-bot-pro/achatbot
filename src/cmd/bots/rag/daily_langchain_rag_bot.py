@@ -16,6 +16,7 @@ from langchain_core.runnables.history import RunnableWithMessageHistory
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
+from apipeline.processors.frame_processor import FrameProcessor
 
 from src.common import interface
 from src.common.factory import EngineClass, EngineFactory
@@ -24,6 +25,7 @@ from src.processors.ai_frameworks.langchain_rag_processor import LangchainRAGPro
 from src.processors.speech.tts.cartesia_tts_processor import CartesiaTTSProcessor
 from src.processors.speech.audio_volume_time_processor import AudioVolumeTimeProcessor
 from src.processors.speech.asr.base import TranscriptionTimingLogProcessor
+from src.processors.speech.asr.deepgram_asr_processor import DeepgramAsrProcessor
 from src.processors.rtvi_processor import RTVIConfig
 from src.processors.speech.asr.asr_processor import AsrProcessor
 from src.modules.speech.vad_analyzer.silero import SileroVADAnalyzer
@@ -43,7 +45,8 @@ You are Andrej Karpathy, a Slovak-Canadian computer scientist who served as the 
     Your job is to help people with the content in your Youtube videos given context . \
     Keep your responses concise and relatively simple. \
     Ask for clarification if a user question is ambiguous. Be nice and helpful. Ensure responses contain only words. \
-    Check again that you have not included special characters other than '?' or '!'.
+    Check again that you have not included special characters other than '?' or '!'. \
+    Please communicate in Chinese.
 """
 
 
@@ -98,20 +101,28 @@ class DailyLangchainRAGBot(DailyRoomBot):
 
         # !NOTE: u can config env in .env file to init default
         # or api config
-        asr: interface.IAsr = None
+        asr_processor: FrameProcessor = None
         if self._bot_config.asr \
-                and self._bot_config.asr.tag \
+                and self._bot_config.asr.tag == "deepgram_asr_processor" \
                 and self._bot_config.asr.args:
-            asr = EngineFactory.get_engine_by_tag(
-                EngineClass,
-                self._bot_config.asr.tag,
+            asr_processor = DeepgramAsrProcessor(
+                api_key=os.getenv("DEEPGRAM_API_KEY"),
                 **self._bot_config.asr.args)
         else:
-            asr = Env.initASREngine()
-        asr_processor = AsrProcessor(
-            asr=asr,
-            session=self.session
-        )
+            asr: interface.IAsr = None
+            if self._bot_config.asr \
+                    and self._bot_config.asr.tag \
+                    and self._bot_config.asr.args:
+                asr = EngineFactory.get_engine_by_tag(
+                    EngineClass,
+                    self._bot_config.asr.tag,
+                    **self._bot_config.asr.args)
+            else:
+                asr = Env.initASREngine()
+            asr_processor = AsrProcessor(
+                asr=asr,
+                session=self.session
+            )
 
         # https://docs.cartesia.ai/getting-started/available-models
         # !NOTE: Timestamps are not supported for language 'zh'
