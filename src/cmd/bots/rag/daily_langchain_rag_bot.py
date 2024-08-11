@@ -18,6 +18,7 @@ from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.processors.frame_processor import FrameProcessor
 
+from src.processors.speech.tts.elevenlabs_tts_processor import ElevenLabsTTSProcessor
 from src.common import interface
 from src.common.factory import EngineClass, EngineFactory
 from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
@@ -123,14 +124,17 @@ class DailyLangchainRAGBot(DailyRoomBot):
                 session=self.session
             )
 
-        # https://docs.cartesia.ai/getting-started/available-models
-        # !NOTE: Timestamps are not supported for language 'zh'
-        tts_processor = CartesiaTTSProcessor(
-            voice_id=self._bot_config.tts.voice,
-            cartesia_version="2024-06-10",
-            model_id="sonic-multilingual",
-            language=self._bot_config.tts.language if self._bot_config.tts.language else "en",
-        )
+        tts_processor: FrameProcessor = None
+        if self._bot_config.tts.tag == "elevenlabs_tts_processor":
+            tts_processor = ElevenLabsTTSProcessor(**self._bot_config.tts.args)
+        else:
+            tts_processor = CartesiaTTSProcessor(
+                # voice_id=self._bot_config.tts.voice,
+                # cartesia_version="2024-06-10",
+                # model_id="sonic-multilingual",
+                # language=self._bot_config.tts.language if self._bot_config.tts.language else "en",
+                **self._bot_config.tts.args
+            )
 
         # now just reuse rtvi bot config
         # !TODO: need config processor with bot config (redefine api params) @weedge
@@ -157,7 +161,7 @@ class DailyLangchainRAGBot(DailyRoomBot):
         )
 
         system_prompt = DEFAULT_SYSTEM_PROMPT
-        if self._bot_config.llm == "zh":
+        if self._bot_config.llm.language == "zh":
             system_prompt += " Please communicate in Chinese"
         if len(self._bot_config.llm.messages) > 0 and len(
                 self._bot_config.llm.messages[0]['content']) > 0:
