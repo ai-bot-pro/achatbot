@@ -1,0 +1,9 @@
+version = 0.1
+
+[default.global.parameters]
+stack_name = "fastapi-daily-chat-bot"
+
+[default.deploy]
+[default.deploy.parameters]
+confirm_changeset = true
+capabilities = "CAPABILITY_NAMED_IAM"

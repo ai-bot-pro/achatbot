@@ -173,3 +173,11 @@ log/*
 config/*
 
 .vscode/
+
+
+# deploy
+## cloudflare
+.wrangler
+## aws
+.aws-sam
+cdk.out
