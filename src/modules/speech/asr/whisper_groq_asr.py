@@ -8,7 +8,6 @@ from src.common.types import RECORDS_DIR
 from src.types.speech.asr.whisper import WhisperGroqASRArgs
 from src.modules.speech.asr.base import ASRBase
 
-
 class WhisperGroqAsr(ASRBase):
     TAG = "whisper_groq_asr"
 

@@ -181,3 +181,6 @@ config/*
 ## aws
 .aws-sam
 cdk.out
+
+# pipy build
+pipy_build/

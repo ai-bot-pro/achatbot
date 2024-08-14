@@ -14,7 +14,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "achatbot"
-dynamic = ["version"]
+#dynamic = ["version"]
+version = "0.0.4"
 requires-python = ">= 3.10"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
@@ -85,16 +86,17 @@ fastapi_daily_bot_server = [
 ]
 
 
-# !TODO: if use library, need add achatbot dir in src dir, change import codes @weedge
+# if use library, need add achatbot dir in pypi_build/app dir, change import codes
 [tool.setuptools.packages.find]
 # All the following settings are optional:
-where = ["."]
-include = ["./deps", "./src", "./tests"]
+where = ["pipy_build/app"]
+#where = ["src","deps"]
+#include = ["deps", "src", "tests"]
 #exclude = ["./config", "./docs", "./log", "./demo", "./deploy"]
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
-include = ["tests"]
+pythonpath = ["tests"]
+#include = ["tests"]
 
 [tool.setuptools_scm]
 local_scheme = "no-local-version"
