@@ -4,7 +4,7 @@ import os
 
 from src.common.session import Session
 from src.common.interface import IDetector
-from src.common.types import RATE, CHUNK
+from src.common.types import MODELS_DIR, RATE, CHUNK
 from src.common.factory import EngineClass
 
 

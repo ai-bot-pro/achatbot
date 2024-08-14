@@ -4,13 +4,11 @@ import logging
 import unittest
 from dotenv import load_dotenv
 
-from src.common.factory import EngineFactory, EngineClass
 from src.core.llm.personalai import PersonalAIProxy
 from src.common.logger import Logger
 from src.common.session import Session
-from src.common.types import SessionCtx, PersonalAIProxyArgs
-from src.cmd.init import Env
-import src.core.llm
+from src.common.types import SessionCtx
+from src.core.llm import LLMEnvInit
 
 load_dotenv(override=True)
 
@@ -54,7 +52,6 @@ API_URL=https://personal-ai-ts.weedge.workers.dev/ \
 class TestPersonalAIProxy(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.llm_tag = os.getenv('LLM_TAG', "llm_personalai_proxy")
         cls.prompt = os.getenv('LLM_PROMPT', "你好")
         Logger.init(logging.DEBUG, is_file=False)
 
@@ -63,9 +60,8 @@ class TestPersonalAIProxy(unittest.TestCase):
         pass
 
     def setUp(self):
-        kwargs = Env.map_config_func[self.llm_tag]()
-        self.engine: PersonalAIProxy = EngineFactory.get_engine_by_tag(
-            EngineClass, self.llm_tag, **kwargs)
+        kwargs = LLMEnvInit.map_config_func[self.llm_tag]()
+        self.engine: PersonalAIProxy = PersonalAIProxy(**kwargs)
         logging.info(f"initLLMEngine: {self.llm_tag}, {self.engine}")
         self.session = Session(**SessionCtx(f"test_{self.llm_tag}_client_id").__dict__)
 

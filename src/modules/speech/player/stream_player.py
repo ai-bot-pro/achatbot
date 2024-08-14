@@ -1,17 +1,28 @@
+from types import MappingProxyType
 import threading
 import logging
 import queue
 import time
 import io
+import os
 
-import pyaudio
 from pydub import AudioSegment
+
 from src.common.audio_stream.helper import AudioBufferManager
 from src.common.factory import EngineClass
 from src.common.interface import IAudioStream, IPlayer
 from src.common.session import Session
-from src.common.types import AudioPlayerArgs
-from src.types.speech.audio_stream.pyaudio import AudioStreamInfo
+from src.common.types import (
+    AudioPlayerArgs,
+    PYAUDIO_PAINT16,
+    PYAUDIO_PAINT24,
+    PYAUDIO_PAINT32,
+    PYAUDIO_PAFLOAT32,
+    PYAUDIO_PAINT8,
+    PYAUDIO_PAUINT8,
+    PYAUDIO_PACUSTOMFORMAT,
+)
+from src.types.speech.audio_stream import AudioStreamInfo
 
 
 class AudioPlayer(EngineClass):
@@ -83,7 +94,7 @@ class StreamPlayer(AudioPlayer, IPlayer):
 
     def _play_chunk(self, session: Session, chunk):
         # handle mpeg
-        if self.stream_info.pyaudio_out_format == pyaudio.paCustomFormat:
+        if self.stream_info.pyaudio_out_format == PYAUDIO_PACUSTOMFORMAT:
             # convert to pcm using pydub
             segment = AudioSegment.from_mp3(io.BytesIO(chunk))
             chunk = segment.raw_data
@@ -147,3 +158,60 @@ class StreamPlayer(AudioPlayer, IPlayer):
 
     def resume(self):
         self.pause_event.clear()
+
+
+class PlayStreamInit():
+    # TTS_TAG : stream_info, read_only dict
+    map_tts_player_stream_info = MappingProxyType({
+        'tts_coqui': {
+            "format": PYAUDIO_PAFLOAT32,
+            "channels": 1,
+            "rate": 24000,
+            "sample_width": 4,
+        },
+        'tts_chat': {
+            "format": PYAUDIO_PAINT16,
+            "channels": 1,
+            "rate": 24000,
+            "sample_width": 2,
+        },
+        'tts_edge': {
+            "format": PYAUDIO_PAINT16,
+            "channels": 1,
+            "rate": 22050,
+            "sample_width": 2,
+        },
+        'tts_g': {
+            "format": PYAUDIO_PAINT16,
+            "channels": 1,
+            "rate": 22050,
+            "sample_width": 2,
+        },
+        'tts_cosy_voice': {
+            "format": PYAUDIO_PAINT16,
+            "channels": 1,
+            "rate": 22050,
+            "sample_width": 2,
+        },
+        'tts_daily_speaker': {
+            "format": PYAUDIO_PAINT16,
+            "channels": 1,
+            "rate": 16000,
+            "sample_width": 2,
+        },
+        'tts_16k_speaker': {
+            "format": PYAUDIO_PAINT16,
+            "channels": 1,
+            "rate": 16000,
+            "sample_width": 2,
+        },
+    })
+
+    @staticmethod
+    def get_stream_info() -> dict:
+        tts_tag = os.getenv('TTS_TAG', "tts_edge")
+        if tts_tag in PlayStreamInit.map_tts_player_stream_info:
+            # !NOTE: return map_tts_player_stream_info is ref can change it,
+            # so don't change it, just read only map (use MappingProxyType)
+            return PlayStreamInit.map_tts_player_stream_info[tts_tag]
+        return {}

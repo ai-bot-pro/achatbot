@@ -1,18 +1,15 @@
 import argparse
-import asyncio
 import json
 import logging
-import os
 
-from apipeline.frames.control_frames import EndFrame
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
 
+from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.processors.llm.openai_llm_processor import OpenAILLMProcessor
 from src.processors.speech.tts.cartesia_tts_processor import CartesiaTTSProcessor
 from src.processors.rtvi_processor import RTVIConfig, RTVIProcessor, RTVISetup
-from src.modules.speech.vad_analyzer.silero import SileroVADAnalyzer
 from src.common.types import DailyParams, DailyRoomBotArgs, DailyTranscriptionSettings
 from src.transports.daily import DailyTransport
 from .base import DailyRoomBot, register_daily_room_bots
@@ -39,6 +36,7 @@ class DailyRTVIBot(DailyRoomBot):
         return self._bot_config.model_dump()
 
     async def _run(self):
+        vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
         transport = DailyTransport(
             self.args.room_url,
             self.args.token,
@@ -47,7 +45,7 @@ class DailyRTVIBot(DailyRoomBot):
                 audio_out_enabled=True,
                 transcription_enabled=True,
                 vad_enabled=True,
-                vad_analyzer=SileroVADAnalyzer(),
+                vad_analyzer=vad_analyzer,
                 transcription_settings=DailyTranscriptionSettings(
                     language="en",
                 ),

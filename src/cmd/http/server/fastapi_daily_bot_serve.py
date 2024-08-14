@@ -17,6 +17,8 @@ from src.common.interface import IBot
 from src.services.help.daily_rest import DailyRESTHelper, \
     DailyRoomObject, DailyRoomProperties, DailyRoomParams
 from src.cmd.bots.base import register_daily_room_bots
+from mangum import Mangum
+
 
 from dotenv import load_dotenv
 load_dotenv(override=True)
@@ -139,7 +141,7 @@ async def allowed_hosts_middleware(request: Request, call_next):
 
 
 @app.get("/create_room/{name}")
-def create_room(name):
+async def create_room(name):
     """create room then redirect to room url"""
     # Create a Daily rest helper
     daily_rest_helper = DailyRESTHelper(DAILY_API_KEY, DAILY_API_URL)
@@ -162,7 +164,7 @@ curl -XPOST "http://0.0.0.0:4321/create_room" \
 
 
 @app.post("/create_room")
-def create_random_room():
+async def create_random_room():
     """create random room and token return"""
     # Create a Daily rest helper
     daily_rest_helper = DailyRESTHelper(DAILY_API_KEY, DAILY_API_URL)
@@ -378,7 +380,7 @@ curl -XGET "http://0.0.0.0:4321/status/53187" | jq .
 
 
 @ app.get("/status/{pid}")
-def get_status(pid: int):
+async def get_status(pid: int):
     # Look up the subprocess
     val = bot_procs.get(pid)
     if val is None:
@@ -409,7 +411,7 @@ curl -XGET "http://0.0.0.0:4321/room/num_bots/chat-bot" | jq .
 
 
 @app.get("/room/num_bots/{room_name}")
-def get_num_bots(room_name: str):
+async def get_num_bots(room_name: str):
     return JSONResponse({
         "num_bots": get_room_bot_proces_num(room_name),
     })
@@ -421,7 +423,7 @@ curl -XGET "http://0.0.0.0:4321/room/bots/chat-bot" | jq .
 
 
 @app.get("/room/bots/{room_name}")
-def get_room_bots(room_name: str):
+async def get_room_bots(room_name: str):
     procs = []
     _room = None
     for val in bot_procs.values():
@@ -459,6 +461,7 @@ def get_room_bots(room_name: str):
 
     return JSONResponse(response.model_dump())
 
+handler = Mangum(app)
 
 if __name__ == "__main__":
     import uvicorn

@@ -46,8 +46,6 @@ You can now browse to the above endpoints to invoke your functions.
 ### Call the API
 ```bash
 $ curl http://127.0.0.1:3000
-
-{"message":"FastAPI running in a Lambda function"}
 ```
 
 ## Deploy

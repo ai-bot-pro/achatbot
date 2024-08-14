@@ -1,6 +1,5 @@
 import os
 import logging
-import asyncio
 
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.chains.combine_documents import create_stuff_documents_chain
@@ -18,6 +17,8 @@ from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.processors.frame_processor import FrameProcessor
 
+from src.modules.speech.asr import ASREnvInit
+from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.processors.speech.tts.elevenlabs_tts_processor import ElevenLabsTTSProcessor
 from src.common import interface
 from src.common.factory import EngineClass, EngineFactory
@@ -29,7 +30,6 @@ from src.processors.speech.asr.base import TranscriptionTimingLogProcessor
 from src.processors.speech.asr.deepgram_asr_processor import DeepgramAsrProcessor
 from src.processors.rtvi_processor import RTVIConfig
 from src.processors.speech.asr.asr_processor import AsrProcessor
-from src.modules.speech.vad_analyzer.silero import SileroVADAnalyzer
 from src.common.types import DailyParams
 from src.transports.daily import DailyTransport
 from src.cmd.init import Env
@@ -86,6 +86,7 @@ class DailyLangchainRAGBot(DailyRoomBot):
         return self.message_store[session_id]
 
     async def _run(self):
+        vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
         transport = DailyTransport(
             self.args.room_url,
             self.args.token,
@@ -94,7 +95,7 @@ class DailyLangchainRAGBot(DailyRoomBot):
                 audio_in_enabled=True,
                 audio_out_enabled=True,
                 vad_enabled=True,
-                vad_analyzer=SileroVADAnalyzer(),
+                vad_analyzer=vad_analyzer,
                 vad_audio_passthrough=True,
                 transcription_enabled=False,
             ))
@@ -118,7 +119,7 @@ class DailyLangchainRAGBot(DailyRoomBot):
                     self._bot_config.asr.tag,
                     **self._bot_config.asr.args)
             else:
-                asr = Env.initASREngine()
+                asr = ASREnvInit.initASREngine()
             asr_processor = AsrProcessor(
                 asr=asr,
                 session=self.session

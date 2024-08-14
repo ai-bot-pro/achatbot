@@ -4,16 +4,16 @@ import asyncio
 
 import unittest
 
-from src.cmd.init import Env
+from src.modules.speech.audio_stream import AudioStreamEnvInit
+from src.modules.speech.player import PlayerEnvInit
 from src.common.interface import IAudioStream
 from src.modules.speech.player.stream_player import StreamPlayer
 from src.common.logger import Logger
-from src.common.factory import EngineFactory, EngineClass
+from src.common.factory import EngineClass
 from src.common.session import Session
 from src.common.utils import audio_utils
 from src.common.types import SessionCtx, TEST_DIR
-from src.types.speech.audio_stream.pyaudio import AudioStreamInfo
-import src.modules.speech
+from src.types.speech.audio_stream import AudioStreamInfo
 
 r"""
 
@@ -39,9 +39,9 @@ class TestStreamPlayer(unittest.TestCase):
         pass
 
     def setUp(self):
-        self.player: StreamPlayer = Env.initPlayerEngine()
+        self.player: StreamPlayer = PlayerEnvInit.initPlayerEngine()
         print(self.player.args.__dict__)
-        self.audio_out_stream: IAudioStream | EngineClass = Env.initAudioOutStreamEngine()
+        self.audio_out_stream: IAudioStream | EngineClass = AudioStreamEnvInit.initAudioOutStreamEngine()
         self.player.set_out_stream(self.audio_out_stream)
         self.annotations_path = os.path.join(
             TEST_DIR, "audio_files/annotations.json")

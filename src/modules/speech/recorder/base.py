@@ -1,12 +1,10 @@
 from queue import Queue
 from typing import Generator, AsyncGenerator
 
-import pyaudio
-
 from src.common.factory import EngineClass
-from src.common.types import AudioRecoderArgs
+from src.common.types import AudioRecoderArgs, PYAUDIO_PACONTINUE
 from src.common.interface import IAudioStream
-from src.types.speech.audio_stream.pyaudio import AudioStreamInfo
+from src.types.speech.audio_stream import AudioStreamInfo
 
 
 class AudioRecorder(EngineClass):
@@ -17,7 +15,7 @@ class AudioRecorder(EngineClass):
         # print(len(in_data), frame_count, time_info, status, cls.buffer_queue and cls.buffer_queue.qsize())
         cls.buffer_queue and cls.buffer_queue.put_nowait(in_data)
         play_data = chr(0) * len(in_data)
-        return play_data, pyaudio.paContinue
+        return play_data, PYAUDIO_PACONTINUE
 
     def __init__(self, **args) -> None:
         self.args = AudioRecoderArgs(**args)

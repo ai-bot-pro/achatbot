@@ -4,6 +4,9 @@ import asyncio
 
 import unittest
 
+from src.modules.speech.audio_stream import AudioStreamEnvInit
+from src.modules.speech.detector import VADEnvInit
+from src.modules.speech.recorder import RecorderEnvInit
 from src.cmd.init import Env
 from src.common.interface import IAudioStream, IRecorder
 from src.common.logger import Logger
@@ -11,7 +14,8 @@ from src.common.factory import EngineFactory, EngineClass
 from src.common.session import Session
 from src.common.utils import audio_utils
 from src.common.types import SessionCtx, MODELS_DIR, RECORDS_DIR, INT16_MAX_ABS_VALUE, WebRTCVADArgs, SileroVADArgs, WebRTCSileroVADArgs
-import src.modules.speech
+
+import src.modules.speech.detector.porcupine
 
 r"""
 python -m unittest test.modules.speech.recorder.test_vad_record.TestVADRecorder.test_record
@@ -70,14 +74,14 @@ class TestVADRecorder(unittest.TestCase):
     def setUp(self):
         os.environ['RECORDER_TAG'] = 'vad_recorder'
         os.environ['IS_STREAM_CALLBACK'] = os.getenv("IS_STREAM_CALLBACK", "")
-        self.recorder: IRecorder | EngineClass = Env.initRecorderEngine()
-        self.audio_in_stream: IAudioStream | EngineClass = Env.initAudioInStreamEngine()
+        self.recorder: IRecorder | EngineClass = RecorderEnvInit.initRecorderEngine()
+        self.audio_in_stream: IAudioStream | EngineClass = AudioStreamEnvInit.initAudioInStreamEngine()
         self.recorder.set_in_stream(self.audio_in_stream)
         self.recorder.open()
         self.session = Session(**SessionCtx(
             "test_client_id").__dict__)
 
-        self.session.ctx.vad = Env.initVADEngine()
+        self.session.ctx.vad = VADEnvInit.initVADEngine()
 
     def tearDown(self):
         self.recorder and self.recorder.close()
@@ -99,7 +103,7 @@ class TestVADRecorder(unittest.TestCase):
             data, os.path.join(RECORDS_DIR, "test.wav")))
         print(file_path)
 
-        self.recorder2: IRecorder | EngineClass = Env.initRecorderEngine()
+        self.recorder2: IRecorder | EngineClass = RecorderEnvInit.initRecorderEngine()
         self.recorder2.set_in_stream(self.audio_in_stream)
         self.recorder2.open()
         frames = asyncio.run(self.recorder2.record_audio(self.session))

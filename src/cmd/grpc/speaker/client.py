@@ -7,6 +7,8 @@ import os
 import grpc
 import uuid
 
+from src.modules.speech.player import PlayerEnvInit
+from src.modules.speech.tts import TTSEnvInit
 from src.common.grpc.idl.tts_pb2 import (
     LoadModelRequest, LoadModelResponse,
     SynthesizeRequest, SynthesizeResponse,
@@ -16,7 +18,6 @@ from src.common.grpc.interceptors.authentication_client import add_authenticatio
 from src.common.logger import Logger
 from src.common.types import SessionCtx
 from src.common.session import Session
-from src.cmd.init import Env
 
 Logger.init(logging.DEBUG, app_name="chat-bot-tts-client", is_file=True, is_console=True)
 
@@ -24,7 +25,7 @@ Logger.init(logging.DEBUG, app_name="chat-bot-tts-client", is_file=True, is_cons
 def load_model(channel):
     tag = os.getenv("TTS_TAG", "tts_edge")
     is_reload = bool(os.getenv("IS_RELOAD", None))
-    kwargs = Env.map_config_func[tag]()
+    kwargs = TTSEnvInit.map_config_func[tag]()
     tts_stub = TTSStub(channel)
     request = LoadModelRequest(tts_tag=tag, is_reload=is_reload, json_kwargs=json.dumps(kwargs))
     logging.debug(request)
@@ -63,7 +64,7 @@ if __name__ == "__main__":
         load_model(channel)
         tts_audio_iter = synthesize_us(channel)
 
-        player = Env.initPlayerEngine()
+        player = PlayerEnvInit.initPlayerEngine()
         player.start(session)
         for tts_audio in tts_audio_iter:
             logging.debug(f"play tts_chunk len:{len(tts_audio)}")

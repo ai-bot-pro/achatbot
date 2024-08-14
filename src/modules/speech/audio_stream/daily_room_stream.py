@@ -11,7 +11,7 @@ from daily import (
 from src.common.interface import IAudioStream
 from src.common.factory import EngineClass
 from src.common.types import DailyAudioStreamArgs
-from src.types.speech.audio_stream.pyaudio import AudioStreamInfo
+from src.types.speech.audio_stream import AudioStreamInfo
 
 
 class JoinedClients():
