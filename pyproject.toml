@@ -85,6 +85,7 @@ fastapi_daily_bot_server = [
 ]
 
 
+# !TODO: if use library, need add achatbot dir in src dir, change import codes @weedge
 [tool.setuptools.packages.find]
 # All the following settings are optional:
 where = ["."]
