@@ -3,14 +3,10 @@ import random
 import os
 from typing import AsyncGenerator
 
-import torchaudio
-import numpy as np
-import pyaudio
-
 
 from src.common.interface import ITts
 from src.common.session import Session
-from src.common.types import CosyVoiceTTSArgs, RATE, RECORDS_DIR
+from src.common.types import CosyVoiceTTSArgs, RATE
 from src.common.utils.audio_utils import postprocess_tts_wave_int16
 from .base import BaseTTS
 

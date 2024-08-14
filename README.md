@@ -1,4 +1,5 @@
 # chat-bot
+[![PyPI](https://img.shields.io/pypi/v/achatbot)](https://pypi.org/project/achatbot/)
 
 ## audio (voice)
 - stream-stt (realtime-recorder)

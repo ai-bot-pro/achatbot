@@ -4,9 +4,9 @@ from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
 from typing import AsyncGenerator, Generator
 
-import pyaudio
 import numpy as np
 
+from src.common.types import PYAUDIO_PAINT16
 from src.common.factory import EngineClass
 from src.common.session import Session
 from src.common.utils import task
@@ -114,7 +114,7 @@ class BaseTTS(EngineClass):
 
     def get_stream_info(self) -> dict:
         return {
-            "format": pyaudio.paInt16,
+            "format": PYAUDIO_PAINT16,
             "channels": 1,
             "rate": 22050,
             "sample_width": 2,

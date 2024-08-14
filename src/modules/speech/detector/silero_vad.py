@@ -1,24 +1,18 @@
 import logging
-import os
 import math
-import time
 
 import torch
-import torchaudio
 
 from src.common.utils.audio_utils import (
     bytes2NpArrayWith16,
-    bytes2TorchTensorWith16,
 )
 from src.common.session import Session
 from src.common.types import (
     VAD_CHECK_PER_FRAMES,
     VAD_CHECK_ALL_FRAMES,
     SileroVADArgs,
-    SILERO_MODEL_RESET_STATES_TIME,
 )
 from .base import BaseVAD
-from src.common.interface import IVADAnalyzer
 
 
 class SileroVAD(BaseVAD):

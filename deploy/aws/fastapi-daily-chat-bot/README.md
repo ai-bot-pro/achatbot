@@ -16,6 +16,7 @@ build with pip install requirements.txt, need some time to install dependencies
 
 ```bash
 $ sam build
+#$ DOCKER_HOST=unix://$HOME/.docker/run/docker.sock sam build -u
 
 ...
 
@@ -34,8 +35,8 @@ Commands you can use next
 need local install docker and run it with img public.ecr.aws/lambda/python:3.11-x86_64
 
 ```bash
-$ sam local invoke
-$ sam local start-api
+$ DOCKER_HOST=unix://$HOME/.docker/run/docker.sock sam local invoke
+$ DOCKER_HOST=unix://$HOME/.docker/run/docker.sock sam local start-api
 
 Mounting Function at http://127.0.0.1:3000$default [X-AMAZON-APIGATEWAY-ANY-METHOD]
 You can now browse to the above endpoints to invoke your functions.
@@ -80,8 +81,9 @@ Successfully created/updated stack - FastAPIOnLambda in eu-west-1
 
 The URL of your API Gateway is shown in the outputs section of the `sam deploy` command.
 
-```bash
-$ curl https://API_ID.execute-api.eu-west-1.amazonaws.com/
 
-{"message":"FastAPI running in a Lambda function"}
-```
+# Reference
+- https://serverlessland.com/learn
+- https://github.com/aws/aws-sam-cli
+- https://github.com/aws/aws-lambda-builders
+- https://github.com/weedge/craftsman/tree/main/cloud/aws/cdk/serverless-openai-chatbot

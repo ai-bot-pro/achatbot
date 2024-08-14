@@ -1,0 +1,99 @@
+# https://packaging.python.org/en/latest/guides/writing-pyproject-toml/
+# https://packaging.python.org/en/latest/tutorials/packaging-projects/
+
+# rm -rf dist && python3 -m build 
+# twine upload --verbose --skip-existing --repository testpypi  dist/*
+# twine upload --verbose --skip-existing --repository pypi  dist/*
+
+# https://test.pypi.org/project/achatbot/
+# https://pypi.org/project/achatbot/
+
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "achatbot"
+dynamic = ["version"]
+requires-python = ">= 3.10"
+authors = [{ name = "weedge", email = "weege007@gmail.com" }]
+maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
+description = "An open source chat bot for voice (and multimodal) assistants"
+readme = "README.md"
+license = { file = "LICENSE" }
+keywords = ["ai", "chat bot", "audio", "speech"]
+# https://pypi.org/classifiers/
+classifiers = [
+    # How mature is this project? Common values are
+    #   3 - Alpha
+    #   4 - Beta
+    #   5 - Production/Stable
+    "Development Status :: 4 - Beta",
+
+    # Indicate who your project is intended for
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Multimedia :: Video",
+
+    # BSD 3-Clause License
+    "License :: OSI Approved :: BSD License",
+
+    # Specify the Python versions you support here.
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "requests==2.32.3",
+    "apipeline==0.1.7",
+    "python-dotenv==1.0.1",
+    "pydub==0.25.1",
+    "pillow==10.4.0",
+    "websockets==12.0",
+    "aiohttp==3.10.3",
+    "scipy==1.14.0",
+    "pyloudnorm==0.1.1",
+    "numpy==1.26.4",
+    "torch==2.2.2",
+    "torchaudio==2.2.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/ai-bot-pro/chat-bot"
+Documentation = "https://github.com/ai-bot-pro/chat-bot/blob/main/docs"
+Repository = "https://github.com/ai-bot-pro/chat-bot.git"
+Issues = "https://github.com/ai-bot-pro/chat-bot/issues"
+Changelog = "https://github.com/ai-bot-pro/chat-bot/blob/main/CHANGELOG.md"
+
+
+[project.optional-dependencies]
+fastapi_daily_bot_server = [
+    "fastapi==0.112.0",
+    "daily-python==0.10.1",
+    "langchain==0.2.13",
+    "openai==1.40.6",
+    "langchain-openai==0.1.21",
+    "langchain-community==0.2.12",
+    "deepgram-sdk==3.4.0",
+    "mangum==0.17.0",
+    "uvicorn==0.30.6",
+    "tidb-vector==0.0.10",
+    "pymysql==1.1.1",
+]
+
+
+[tool.setuptools.packages.find]
+# All the following settings are optional:
+where = ["."]
+include = ["./deps", "./src", "./tests"]
+#exclude = ["./config", "./docs", "./log", "./demo", "./deploy"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+include = ["tests"]
+
+[tool.setuptools_scm]
+local_scheme = "no-local-version"

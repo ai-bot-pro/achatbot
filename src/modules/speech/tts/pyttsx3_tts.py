@@ -2,8 +2,6 @@ import logging
 from typing import AsyncGenerator, Iterator, Union
 import os
 
-import wave
-import pyaudio
 from pydub.utils import mediainfo
 from pydub import AudioSegment
 

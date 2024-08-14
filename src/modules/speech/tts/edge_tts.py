@@ -1,11 +1,9 @@
 import logging
-from typing import Any, AsyncGenerator, Iterator
-import asyncio
+from typing import AsyncGenerator
 import random
 import io
 import os
 
-import pyaudio
 from pydub import AudioSegment
 
 from src.common.utils.audio_utils import read_audio_file
