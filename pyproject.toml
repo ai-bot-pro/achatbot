@@ -14,7 +14,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.4"
+version = "0.0.5"
 requires-python = ">= 3.10"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
@@ -87,56 +87,18 @@ fastapi_daily_bot_server = [
 # PyAudio need install python3-pyaudio 
 # e.g. ubuntu `apt-get install python3-pyaudio`
 
-local_terminal_chat_bot = [
-    "PyAudio==0.2.14",
-    "achatbot[speech_waker]",
-    "achatbot[speech_vad]",
-    "achatbot[speech_asr]",
-    "achatbot[core_llm]",
-    "achatbot[speech_tts]",
-    "achatbot[stream_player]",
-]
+local_terminal_chat_bot = "achatbot[pyaudio_stream,speech_waker,speech_vad,speech_asr,core_llm,speech_tts,stream_player]"
 
-daily_webrtc_terminal_chat_bot = [
-    "daily-python==0.10.1",
-    "achatbot[speech_waker]",
-    "achatbot[speech_vad]",
-    "achatbot[speech_asr]",
-    "achatbot[core_llm]",
-    "achatbot[speech_tts]",
-    "achatbot[stream_player]",
-]
+daily_webrtc_terminal_chat_bot = "achatbot[daily_room_audio_stream,speech_waker,speech_vad,speech_asr,core_llm,speech_tts,stream_player]"
 
-remote_queue_chat_bot_fe = [
-    "achatbot[speech_audio_stream]",
-    "achatbot[queue]",
-    "achatbot[stream_player]",
-]
-remote_queue_chat_bot_be_worker = [
-    "achatbot[queue]",
-    "achatbot[speech_waker]",
-    "achatbot[speech_vad]",
-    "achatbot[speech_asr]",
-    "achatbot[core_llm]",
-    "achatbot[speech_tts]",
-]
+remote_queue_chat_bot_fe = "achatbot[speech_audio_stream,queue,stream_player]"
+remote_queue_chat_bot_be_worker = "achatbot[queue,speech_waker,speech_vad,speech_asr,core_llm,speech_tts]"
 
-remote_rpc_chat_bot_fe = [
-    "achatbot[speech_audio_stream]",
-    "achatbot[rpc]",
-    "achatbot[stream_player]",
-]
-remote_rpc_chat_bot_be_worker = [
-    "achatbot[rpc]",
-    "achatbot[speech_waker]",
-    "achatbot[speech_vad]",
-    "achatbot[speech_asr]",
-    "achatbot[core_llm]",
-    "achatbot[speech_tts]",
-]
+remote_rpc_chat_bot_fe = "achatbot[speech_audio_stream,rpc,stream_player]"
+remote_rpc_chat_bot_be_worker = "achatbot[rpc,speech_waker,speech_vad,speech_asr,core_llm,speech_tts]"
 
-remote_grpc_tts_client = ["grpcio==1.65.0", "achatbot[stream_player]"]
-remote_grpc_tts_server = ["grpcio==1.65.0", "achatbot[speech_tts]"]
+remote_grpc_tts_client = "achatbot[grpc,stream_player]"
+remote_grpc_tts_server = "achatbot[grpc,speech_tts]"
 
 # multi modules
 speech_audio_stream = ["PyAudio==0.2.14", "daily-python==0.10.1"]
@@ -162,6 +124,8 @@ queue = ["redis==5.0.0"]
 rpc = ["grpcio==1.65.0"]
 grpc_tools = ["grpcio-tools==1.65.0"]
 conf = ["omegaconf==2.3.0"]
+grpc = ["grpcio==1.65.0"]
+redis = ["redis==5.0.0"]
 
 # processor
 asr_processor = ["achatbot[speech_asr]", "deepgram-sdk==3.4.0"]

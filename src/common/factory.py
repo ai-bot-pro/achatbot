@@ -2,8 +2,6 @@ from abc import ABCMeta
 import logging
 import inspect
 
-logger = logging.getLogger(__name__)
-
 
 class EngineClass(object):
     # the same as ABC(Abstract Base Classe)
@@ -56,9 +54,9 @@ class EngineFactory:
             raise ValueError(f"error: can't find {tag} engine")
         else:
             if len(selected_engines) > 1:
-                logger.warning(f"have multi {tag}, just use first one")
+                logging.warning(f"have multi {tag}, just use first one")
             engine = selected_engines[0]
-            logger.info(f"use {tag} engine")
+            logging.info(f"use {tag} engine")
             engine.SELECTED_TAG = tag
             return engine.get_instance(**kwargs)
 
