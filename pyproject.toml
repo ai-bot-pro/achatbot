@@ -6,6 +6,9 @@
 # https://test.pypi.org/project/achatbot/
 # https://pypi.org/project/achatbot/
 
+# pip install pip-tools
+# pip-compile --all-extras pyproject.toml
+
 [build-system]
 requires = ["setuptools >= 61.0"]
 #requires = ["setuptools", "setuptools-scm"]
@@ -14,7 +17,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.5"
+version = "0.0.5.2"
 requires-python = ">= 3.10"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
@@ -87,18 +90,36 @@ fastapi_daily_bot_server = [
 # PyAudio need install python3-pyaudio 
 # e.g. ubuntu `apt-get install python3-pyaudio`
 
-local_terminal_chat_bot = "achatbot[pyaudio_stream,speech_waker,speech_vad,speech_asr,core_llm,speech_tts,stream_player]"
+local_terminal_chat_bot = [
+    "achatbot[pyaudio_stream,speech_waker,speech_vad,speech_asr,core_llm,speech_tts,stream_player]",
+]
 
-daily_webrtc_terminal_chat_bot = "achatbot[daily_room_audio_stream,speech_waker,speech_vad,speech_asr,core_llm,speech_tts,stream_player]"
+daily_webrtc_terminal_chat_bot = [
+    "achatbot[daily_room_audio_stream,speech_waker,speech_vad,speech_asr,core_llm,speech_tts,stream_player]",
+]
 
-remote_queue_chat_bot_fe = "achatbot[speech_audio_stream,queue,stream_player]"
-remote_queue_chat_bot_be_worker = "achatbot[queue,speech_waker,speech_vad,speech_asr,core_llm,speech_tts]"
+remote_queue_chat_bot_fe = ["achatbot[speech_audio_stream,queue,stream_player]"]
+remote_queue_chat_bot_be_worker = [
+    "achatbot[queue,speech_waker,speech_vad,speech_asr,core_llm,speech_tts]",
+]
 
-remote_rpc_chat_bot_fe = "achatbot[speech_audio_stream,rpc,stream_player]"
-remote_rpc_chat_bot_be_worker = "achatbot[rpc,speech_waker,speech_vad,speech_asr,core_llm,speech_tts]"
+remote_rpc_chat_bot_fe = ["achatbot[speech_audio_stream,rpc,stream_player]"]
 
-remote_grpc_tts_client = "achatbot[grpc,stream_player]"
-remote_grpc_tts_server = "achatbot[grpc,speech_tts]"
+remote_rpc_chat_bot_be_worker = [
+    "achatbot[rpc,speech_waker,speech_vad,speech_asr,core_llm,speech_tts]",
+]
+
+remote_grpc_tts_client = ["achatbot[grpc,stream_player]"]
+remote_grpc_tts_server = ["achatbot[grpc,speech_tts]"]
+
+
+# processor
+asr_processor = ["achatbot[speech_asr]", "deepgram-sdk==3.4.0"]
+llm_processor = ["openai==1.40.6"]
+img_processor = ["openai==1.40.6"]
+tts_processor = ["openai==1.40.6"]
+ai_frameworks_processor = ["langchain==0.2.13"]
+
 
 # multi modules
 speech_audio_stream = ["PyAudio==0.2.14", "daily-python==0.10.1"]
@@ -117,22 +138,16 @@ speech_tts = [
     "edge-tts==6.1.12",
     "gTTS==2.5.1",
     "pyttsx3==2.90",
-    "achatbot[cosy_voice]",
-    "achatbot[chat_tts]",
+    "achatbot[tts_cosy_voice]",
+    "achatbot[tts_chat]",
 ]
 queue = ["redis==5.0.0"]
-rpc = ["grpcio==1.65.0"]
-grpc_tools = ["grpcio-tools==1.65.0"]
+rpc = ["grpcio==1.65.1"]
+grpc_tools = ["grpcio-tools==1.65.1"]
 conf = ["omegaconf==2.3.0"]
-grpc = ["grpcio==1.65.0"]
+grpc = ["grpcio==1.65.1"]
 redis = ["redis==5.0.0"]
 
-# processor
-asr_processor = ["achatbot[speech_asr]", "deepgram-sdk==3.4.0"]
-llm_processor = ["openai==1.40.6"]
-img_processor = ["openai==1.40.6"]
-tts_processor = ["openai==1.40.6"]
-ai_frameworks_processor = ["langchain==0.2.13"]
 
 # audio_stream module tag -> pkgs
 pyaudio_stream = ["PyAudio==0.2.14"]
@@ -150,7 +165,6 @@ webrtc_silero_vad = ["webrtcvad==2.0.10", "torch==2.2.2"]
 # recorder module tag -> pkgs
 rms_recorder = []
 vad_recorder = ["achatbot[speech_vad]"]
-
 
 # asr module tag -> pkgs
 whisper_asr = ["openai-whisper==20231117"]
@@ -173,7 +187,7 @@ tts_cosy_voice = [
     "onnxruntime==1.18.1; sys_platform == 'darwin' or sys_platform == 'windows'",
     "onnxruntime-gpu==1.18.1; sys_platform == 'linux'",
     "openai-whisper==20231117",
-    "WeTextProcessing==1.0.4.1",
+    "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
     "conformer==0.3.2",
     "diffusers[torch]==0.30.0",
     "lightning==2.4.0",
@@ -183,7 +197,9 @@ tts_chat = [
     "vocos==0.1.0",
     "pybase16384==0.3.7",
     "vector_quantize_pytorch==1.16.1",
-    "WeTextProcessing==1.0.4.1",
+    "pynini==2.1.5; sys_platform == 'linux'",
+    "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
+    "nemo_text_processing; sys_platform == 'linux'",
     "transformers>=4.40.2",
     "numpy<2.0.0",
 ]

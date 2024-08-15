@@ -11,7 +11,9 @@ from typing import (
     Mapping,
 )
 import os
+from pathlib import Path
 
+from dotenv import load_dotenv
 from pydantic.main import BaseModel
 from pydantic import ConfigDict
 
@@ -21,25 +23,33 @@ from .interface import (
 )
 from .factory import EngineClass
 
+load_dotenv(override=True)
+
 
 SRC_PATH = os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir)
 )
+DIR_PATH = os.path.join(SRC_PATH, os.pardir)
+if bool(os.getenv("ACHATBOT_PKG", "")):
+    home_dir = Path.home()
+    DIR_PATH = os.path.join(home_dir, ".achatbot")
+
 LOG_DIR = os.path.normpath(
-    os.path.join(SRC_PATH, os.pardir, "log")
+    os.path.join(DIR_PATH, "log")
 )
 CONFIG_DIR = os.path.normpath(
-    os.path.join(SRC_PATH, os.pardir, "config")
+    os.path.join(DIR_PATH, "config")
 )
 MODELS_DIR = os.path.normpath(
-    os.path.join(SRC_PATH, os.pardir, "models")
+    os.path.join(DIR_PATH, "models")
 )
 RECORDS_DIR = os.path.normpath(
-    os.path.join(SRC_PATH, os.pardir, "records")
+    os.path.join(DIR_PATH, "records")
 )
 VIDEOS_DIR = os.path.normpath(
-    os.path.join(SRC_PATH, os.pardir, "videos")
+    os.path.join(DIR_PATH, "videos")
 )
+
 TEST_DIR = os.path.normpath(
     os.path.join(SRC_PATH, os.pardir, "test")
 )

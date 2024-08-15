@@ -184,3 +184,6 @@ cdk.out
 
 # pypi build
 pypi_build/
+
+# venv
+.venv_achatbot

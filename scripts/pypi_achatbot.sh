@@ -29,6 +29,7 @@ find pypi_build/app/achatbot/ -type f -print0 | xargs -0 perl -i -pe 's/deps\./a
 
 
 if [ -n "$pypi" ]; then
+    pip install -q build
     rm -rf dist && python3 -m build 
     if [ "$pypi" == "devpypi" ]; then
         pip install dist/*.whl

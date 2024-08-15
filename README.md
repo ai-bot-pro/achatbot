@@ -1,7 +1,26 @@
 # chat-bot
 [![PyPI](https://img.shields.io/pypi/v/achatbot)](https://pypi.org/project/achatbot/)
 
+# install
+```
+python3 -m venv .venv_achatbot
+source .venv_achatbot/bin/activate
+pip install achatbot
+```
+
+# run bots
+1. run `pip install achatbot[local_terminal_chat_bot]` to install dependencies;
+2. create achatbot data dir in `$HOME` dir `mkdir -p ~/.achatbot/{log,config,models,records,videos}`
+4. `cp .env.example .env`, and check `.env`, add key/value
+3. run local terminal chat bot with env; e.g. 
+```
+ACHATBOT_PKG=1 \
+    TQDM_DISABLE=True python -m src.cmd.local-terminal-chat.generate_audio2audio > ~/.achatbot/log/std_out.log
+```
+
 ## audio (voice)
+
+
 - stream-stt (realtime-recorder)
 ![audio-text](https://github.com/user-attachments/assets/44bcec7d-f0a1-47db-bd95-21feee43a361)
 
