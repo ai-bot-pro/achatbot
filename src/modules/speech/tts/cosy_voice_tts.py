@@ -23,8 +23,12 @@ class CosyVoiceTTS(BaseTTS, ITts):
 
     def __init__(self, **args) -> None:
         import sys
-        sys.path.insert(1, os.path.join(sys.path[0], 'deps/CosyVoice'))
-        sys.path.insert(2, os.path.join(sys.path[0], 'deps/CosyVoice/third_party/Matcha-TTS'))
+        if bool(os.getenv("ACHATBOT_PKG", "")):
+            sys.path.insert(1, '../../../CosyVoice')
+            sys.path.insert(2, '../../../CosyVoice/third_party/Matcha-TTS')
+        else:
+            sys.path.insert(1, os.path.join(sys.path[0], 'deps/CosyVoice'))
+            sys.path.insert(2, os.path.join(sys.path[0], 'deps/CosyVoice/third_party/Matcha-TTS'))
         from deps.CosyVoice.cosyvoice.cli.cosyvoice import CosyVoice
         from deps.CosyVoice.cosyvoice.utils.file_utils import load_wav
         self.args = CosyVoiceTTSArgs(**args)

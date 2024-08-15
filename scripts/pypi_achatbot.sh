@@ -1,0 +1,40 @@
+#!/bin/bash
+# bash scripts/pypi_achatbot.sh [dev|test|prod]
+
+set -e 
+
+pypi=
+if [ $# -ge 1 ] && [ "$1" == "prod" ]; then
+    pypi=pypi
+fi
+if [ $# -ge 1 ] && [ "$1" == "test" ]; then
+    pypi=testpypi
+fi
+if [ $# -ge 1 ] && [ "$1" == "dev" ]; then
+    pypi=devpypi
+fi
+echo "upload to $pypi"
+
+mkdir -p pypi_build/app/achatbot
+
+cp -r src/* pypi_build/app/achatbot/
+rm -f deps/CosyVoice/third_party/Matcha-TTS/data
+cp -r deps/* pypi_build/app/achatbot/
+
+
+find pypi_build/app/achatbot/ | grep -E "(/__pycache__$|\.pyc$|\.pyo$)" | xargs rm -rf
+
+find pypi_build/app/achatbot/ -type f -print0 | xargs -0 perl -i -pe 's/src\./achatbot\./g'
+find pypi_build/app/achatbot/ -type f -print0 | xargs -0 perl -i -pe 's/deps\./achatbot\./g'
+
+
+if [ -n "$pypi" ]; then
+    rm -rf dist && python3 -m build 
+    if [ "$pypi" == "devpypi" ]; then
+        pip install dist/*.whl
+    else
+        twine upload --verbose --skip-existing --repository $pypi dist/*
+    fi
+    rm -rf pypi_build
+fi 
+

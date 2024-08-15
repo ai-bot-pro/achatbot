@@ -84,6 +84,7 @@ fastapi_daily_bot_server = [
     "pymysql==1.1.1",
 ]
 
+# multi modules
 speech_audio_stream = ["PyAudio==0.2.14", "daily-python==0.10.1"]
 speech_waker = ["pvporcupine==3.0.2"]
 speech_vad = ["pyannote.audio==3.2.0", "webrtcvad==2.0.10"]
@@ -93,9 +94,6 @@ speech_asr = [
     "faster-whisper==1.0.2",
     "transformers>=4.40.2",
     "groq==0.9.0",
-]
-mlx_whisper = [
-    "mlx_whisper==0.2.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
 ]
 core_llm = ["llama_cpp_python==0.2.82", "geocoder==1.38.1"]
 speech_tts = [
@@ -111,12 +109,22 @@ rpc = ["grpcio==1.65.0"]
 grpc_tools = ["grpcio-tools==1.65.0"]
 conf = ["omegaconf==2.3.0"]
 
+# processor
 asr_processor = ["achatbot[speech_asr]", "deepgram-sdk==3.4.0"]
 llm_processor = ["openai==1.40.6", "deepgram-sdk==3.4.0"]
 img_processor = ["openai==1.40.6"]
 tts_processor = ["openai==1.40.6"]
 ai_frameworks_processor = ["langchain==0.2.13"]
 
+# single module
+mlx_whisper = [
+    "mlx_whisper==0.2.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
+]
+openai-whisper = ["openai-whisper==20231117"]
+whisper-timestamped = ["whisper-timestamped==1.14.2"]
+faster-whisper = ["faster-whisper==1.0.2"]
+transformers = ["transformers>=4.40.2"]
+groq = ["groq==0.9.0"]
 openai = ["openai==1.40.6"]
 sense_voice = ["funasr==1.1.5"]
 cosy_voice = [
@@ -142,31 +150,11 @@ chat_tts = [
 
 # if use library, need add achatbot dir in pypi_build/app dir, change import codes
 [tool.setuptools.packages.find]
+# !NOTE: packages find .py file, other file don't to exclude
 # All the following settings are optional:
 where = ["pypi_build/app"]
 #include = ["deps", "src", "tests"]
-exclude = [
-    "./config",
-    "./docs",
-    "./models",
-    "./scripts",
-    "./log",
-    "./records",
-    "./videos",
-    "./demo",
-    "./deploy",
-    "*.mp3",
-    "*.wav",
-    ".github",
-    ".git*",
-    "tests",
-    "examples",
-    "*.md",
-    "*.json",
-    "asset",
-    "data",
-    "image",
-]
+exclude = []
 
 
 [tool.pytest.ini_options]
