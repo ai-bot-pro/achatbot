@@ -84,10 +84,64 @@ fastapi_daily_bot_server = [
     "pymysql==1.1.1",
 ]
 
+# PyAudio need install python3-pyaudio 
+# e.g. ubuntu `apt-get install python3-pyaudio`
+
+local_terminal_chat_bot = [
+    "PyAudio==0.2.14",
+    "achatbot[speech_waker]",
+    "achatbot[speech_vad]",
+    "achatbot[speech_asr]",
+    "achatbot[core_llm]",
+    "achatbot[speech_tts]",
+    "achatbot[stream_player]",
+]
+
+daily_webrtc_terminal_chat_bot = [
+    "daily-python==0.10.1",
+    "achatbot[speech_waker]",
+    "achatbot[speech_vad]",
+    "achatbot[speech_asr]",
+    "achatbot[core_llm]",
+    "achatbot[speech_tts]",
+    "achatbot[stream_player]",
+]
+
+remote_queue_chat_bot_fe = [
+    "achatbot[speech_audio_stream]",
+    "achatbot[queue]",
+    "achatbot[stream_player]",
+]
+remote_queue_chat_bot_be_worker = [
+    "achatbot[queue]",
+    "achatbot[speech_waker]",
+    "achatbot[speech_vad]",
+    "achatbot[speech_asr]",
+    "achatbot[core_llm]",
+    "achatbot[speech_tts]",
+]
+
+remote_rpc_chat_bot_fe = [
+    "achatbot[speech_audio_stream]",
+    "achatbot[rpc]",
+    "achatbot[stream_player]",
+]
+remote_rpc_chat_bot_be_worker = [
+    "achatbot[rpc]",
+    "achatbot[speech_waker]",
+    "achatbot[speech_vad]",
+    "achatbot[speech_asr]",
+    "achatbot[core_llm]",
+    "achatbot[speech_tts]",
+]
+
+remote_grpc_tts_client = ["grpcio==1.65.0", "achatbot[stream_player]"]
+remote_grpc_tts_server = ["grpcio==1.65.0", "achatbot[speech_tts]"]
+
 # multi modules
 speech_audio_stream = ["PyAudio==0.2.14", "daily-python==0.10.1"]
 speech_waker = ["pvporcupine==3.0.2"]
-speech_vad = ["pyannote.audio==3.2.0", "webrtcvad==2.0.10"]
+speech_vad = ["pyannote.audio==3.2.0", "webrtcvad==2.0.10", "torch==2.2.2"]
 speech_asr = [
     "openai-whisper==20231117",
     "whisper-timestamped==1.14.2",
@@ -111,23 +165,46 @@ conf = ["omegaconf==2.3.0"]
 
 # processor
 asr_processor = ["achatbot[speech_asr]", "deepgram-sdk==3.4.0"]
-llm_processor = ["openai==1.40.6", "deepgram-sdk==3.4.0"]
+llm_processor = ["openai==1.40.6"]
 img_processor = ["openai==1.40.6"]
 tts_processor = ["openai==1.40.6"]
 ai_frameworks_processor = ["langchain==0.2.13"]
 
-# single module
-mlx_whisper = [
+# audio_stream module tag -> pkgs
+pyaudio_stream = ["PyAudio==0.2.14"]
+daily_room_audio_stream = ["daily-python==0.10.1"]
+
+# waker module tag -> pkgs
+porcupine_wakeword = ["pvporcupine==3.0.2"]
+
+# vad module tag -> pkgs
+pyannote_vad = ["pyannote.audio==3.2.0"]
+webrtcvad = ["webrtcvad==2.0.10"]
+silero_vad = ["torch==2.2.2"]
+webrtc_silero_vad = ["webrtcvad==2.0.10", "torch==2.2.2"]
+
+# recorder module tag -> pkgs
+rms_recorder = []
+vad_recorder = ["achatbot[speech_vad]"]
+
+
+# asr module tag -> pkgs
+whisper_asr = ["openai-whisper==20231117"]
+whisper_timestamped_asr = ["whisper-timestamped==1.14.2"]
+whisper_faster_asr = ["faster-whisper==1.0.2"]
+whisper_transformers_asr = ["transformers>=4.40.2"]
+whisper_mlx_asr = [
     "mlx_whisper==0.2.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
 ]
-openai-whisper = ["openai-whisper==20231117"]
-whisper-timestamped = ["whisper-timestamped==1.14.2"]
-faster-whisper = ["faster-whisper==1.0.2"]
-transformers = ["transformers>=4.40.2"]
-groq = ["groq==0.9.0"]
+whisper_groq_asr = ["groq==0.9.0"]
+sense_voice_asr = ["funasr==1.1.5"]
+
+# llm module tag -> pkgs
 openai = ["openai==1.40.6"]
-sense_voice = ["funasr==1.1.5"]
-cosy_voice = [
+llm_personalai_proxy = ["geocoder==1.38.1"]
+
+# tts module tag -> pkgs
+tts_cosy_voice = [
     "hyperpyyaml==1.2.2",
     "onnxruntime==1.18.1; sys_platform == 'darwin' or sys_platform == 'windows'",
     "onnxruntime-gpu==1.18.1; sys_platform == 'linux'",
@@ -138,7 +215,7 @@ cosy_voice = [
     "lightning==2.4.0",
     "wget==3.2",
 ]
-chat_tts = [
+tts_chat = [
     "vocos==0.1.0",
     "pybase16384==0.3.7",
     "vector_quantize_pytorch==1.16.1",
@@ -146,6 +223,17 @@ chat_tts = [
     "transformers>=4.40.2",
     "numpy<2.0.0",
 ]
+tts_coqui = ["TTS==0.22.0"]
+tts_edge = ["edge-tts==6.1.12"]
+tts_g = ["gTTS==2.5.1"]
+tts_pyttsx3 = ["pyttsx3==2.90"]
+
+# vad_analyzer module tag -> pkgs
+daily_webrtc_vad_analyzer = ["daily-python==0.10.1"]
+silero_vad_analyzer = ["torch==2.2.2"]
+
+# player module tag -> pkgs
+stream_player = []
 
 
 # if use library, need add achatbot dir in pypi_build/app dir, change import codes

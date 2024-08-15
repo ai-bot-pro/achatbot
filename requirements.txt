@@ -8,7 +8,7 @@ absl-py==2.1.0
     # via tensorboard
 accelerate==0.33.0
     # via diffusers
-achatbot[chat-tts,cosy-voice,speech-asr,speech_asr] @ file:///Users/wuyong/project/python/chat-bot
+achatbot[chat-tts,core-llm,cosy-voice,queue,rpc,speech-asr,speech-audio-stream,speech-tts,speech-vad,speech-waker,speech_asr,stream-player] @ file:///Users/wuyong/project/python/chat-bot
     # via achatbot (pyproject.toml)
 aenum==3.1.15
     # via deepgram-sdk
@@ -111,9 +111,7 @@ confection==0.1.5
     #   thinc
     #   weasel
 conformer==0.3.2
-    # via
-    #   achatbot
-    #   achatbot (pyproject.toml)
+    # via achatbot (pyproject.toml)
 contourpy==1.2.1
     # via matplotlib
 coqpit==0.0.17
@@ -138,7 +136,9 @@ cython==3.0.11
     #   tts
     #   whisper-timestamped
 daily-python==0.10.1
-    # via achatbot (pyproject.toml)
+    # via
+    #   achatbot
+    #   achatbot (pyproject.toml)
 dataclasses-json==0.6.7
     # via
     #   deepgram-sdk
@@ -154,9 +154,7 @@ deepgram-sdk==3.4.0
 deprecation==2.1.0
     # via deepgram-sdk
 diffusers[torch]==0.30.0
-    # via
-    #   achatbot
-    #   achatbot (pyproject.toml)
+    # via achatbot (pyproject.toml)
 diskcache==5.6.3
     # via llama-cpp-python
 distro==1.9.0
@@ -171,7 +169,9 @@ docopt==0.6.2
 dtw-python==1.5.1
     # via whisper-timestamped
 edge-tts==6.1.12
-    # via achatbot (pyproject.toml)
+    # via
+    #   achatbot
+    #   achatbot (pyproject.toml)
 editdistance==0.8.1
     # via funasr
 einops==0.8.0
@@ -230,7 +230,9 @@ future==1.0.0
 g2pkk==0.1.2
     # via tts
 geocoder==1.38.1
-    # via achatbot (pyproject.toml)
+    # via
+    #   achatbot
+    #   achatbot (pyproject.toml)
 greenlet==3.0.3
     # via sqlalchemy
 groq==0.9.0
@@ -239,6 +241,7 @@ groq==0.9.0
     #   achatbot (pyproject.toml)
 grpcio==1.65.0
     # via
+    #   achatbot
     #   achatbot (pyproject.toml)
     #   grpcio-tools
     #   tensorboard
@@ -257,7 +260,9 @@ gruut-lang-es==2.0.1
 gruut-lang-fr==2.0.2
     # via gruut
 gtts==2.5.1
-    # via achatbot (pyproject.toml)
+    # via
+    #   achatbot
+    #   achatbot (pyproject.toml)
 h11==0.14.0
     # via
     #   httpcore
@@ -287,7 +292,6 @@ hydra-core==1.3.2
     # via funasr
 hyperpyyaml==1.2.2
     # via
-    #   achatbot
     #   achatbot (pyproject.toml)
     #   speechbrain
 idna==3.7
@@ -378,7 +382,6 @@ librosa==0.10.2.post1
     #   tts
 lightning==2.4.0
     # via
-    #   achatbot
     #   achatbot (pyproject.toml)
     #   pyannote-audio
 lightning-utilities==0.11.6
@@ -387,7 +390,9 @@ lightning-utilities==0.11.6
     #   pytorch-lightning
     #   torchmetrics
 llama-cpp-python==0.2.82
-    # via achatbot (pyproject.toml)
+    # via
+    #   achatbot
+    #   achatbot (pyproject.toml)
 llvmlite==0.43.0
     # via
     #   numba
@@ -505,7 +510,6 @@ omegaconf==2.3.0
     #   pyannote-audio
 onnxruntime==1.18.1 ; sys_platform == "darwin" or sys_platform == "windows"
     # via
-    #   achatbot
     #   achatbot (pyproject.toml)
     #   faster-whisper
 openai==1.40.6
@@ -582,9 +586,13 @@ psutil==6.0.0
     #   accelerate
     #   trainer
 pvporcupine==3.0.2
-    # via achatbot (pyproject.toml)
+    # via
+    #   achatbot
+    #   achatbot (pyproject.toml)
 pyannote-audio==3.2.0
-    # via achatbot (pyproject.toml)
+    # via
+    #   achatbot
+    #   achatbot (pyproject.toml)
 pyannote-core==5.0.0
     # via
     #   pyannote-audio
@@ -601,11 +609,11 @@ pyannote-metrics==3.2.1
 pyannote-pipeline==3.0.1
     # via pyannote-audio
 pyaudio==0.2.14
-    # via achatbot (pyproject.toml)
-pybase16384==0.3.7
     # via
     #   achatbot
     #   achatbot (pyproject.toml)
+pybase16384==0.3.7
+    # via achatbot (pyproject.toml)
 pycparser==2.22
     # via cffi
 pycryptodome==3.20.0
@@ -1326,7 +1334,9 @@ pytorch-metric-learning==2.6.0
 pytorch-wpe==0.0.1
     # via funasr
 pyttsx3==2.90
-    # via achatbot (pyproject.toml)
+    # via
+    #   achatbot
+    #   achatbot (pyproject.toml)
 pytz==2024.1
     # via
     #   dateparser
@@ -1353,7 +1363,9 @@ pyyaml==6.0.2
 ratelim==0.1.6
     # via geocoder
 redis==5.0.0
-    # via achatbot (pyproject.toml)
+    # via
+    #   achatbot
+    #   achatbot (pyproject.toml)
 regex==2024.7.24
     # via
     #   dateparser
@@ -1585,7 +1597,9 @@ transformers==4.44.0
     #   achatbot (pyproject.toml)
     #   tts
 tts==0.22.0
-    # via achatbot (pyproject.toml)
+    # via
+    #   achatbot
+    #   achatbot (pyproject.toml)
 typeguard==4.3.0
     # via inflect
 typer==0.12.3
@@ -1632,13 +1646,9 @@ urllib3==2.2.2
 uvicorn==0.30.6
     # via achatbot (pyproject.toml)
 vector-quantize-pytorch==1.16.1
-    # via
-    #   achatbot
-    #   achatbot (pyproject.toml)
+    # via achatbot (pyproject.toml)
 vocos==0.1.0
-    # via
-    #   achatbot
-    #   achatbot (pyproject.toml)
+    # via achatbot (pyproject.toml)
 wasabi==1.1.3
     # via
     #   spacy
@@ -1647,7 +1657,9 @@ wasabi==1.1.3
 weasel==0.4.1
     # via spacy
 webrtcvad==2.0.10
-    # via achatbot (pyproject.toml)
+    # via
+    #   achatbot
+    #   achatbot (pyproject.toml)
 websockets==12.0
     # via
     #   achatbot
@@ -1658,13 +1670,9 @@ werkzeug==3.0.3
     #   flask
     #   tensorboard
 wetextprocessing==1.0.4.1
-    # via
-    #   achatbot
-    #   achatbot (pyproject.toml)
+    # via achatbot (pyproject.toml)
 wget==3.2
-    # via
-    #   achatbot
-    #   achatbot (pyproject.toml)
+    # via achatbot (pyproject.toml)
 whisper-timestamped==1.14.2
     # via
     #   achatbot

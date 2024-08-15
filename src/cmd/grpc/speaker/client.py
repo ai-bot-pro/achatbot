@@ -3,9 +3,9 @@ import logging
 import json
 import time
 import os
+import uuid
 
 import grpc
-import uuid
 
 from src.modules.speech.player import PlayerEnvInit
 from src.modules.speech.tts import TTSEnvInit
