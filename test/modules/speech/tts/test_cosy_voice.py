@@ -3,15 +3,13 @@ import logging
 import asyncio
 
 import unittest
-import pyaudio
 
 from src.modules.speech.tts.cosy_voice_tts import CosyVoiceTTS
 from src.common.factory import EngineFactory, EngineClass
 from src.common.logger import Logger
 from src.common.session import Session
 from src.common.utils.audio_utils import save_audio_to_file
-from src.common.types import SessionCtx, CosyVoiceTTSArgs, MODELS_DIR, RECORDS_DIR
-import src.modules.speech
+from src.common.types import SessionCtx, CosyVoiceTTSArgs, MODELS_DIR
 
 r"""
 python -m unittest test.modules.speech.tts.test_cosy_voice.TestCosyVoiceTTS.test_synthesize
@@ -76,6 +74,7 @@ class TestCosyVoiceTTS(unittest.TestCase):
         print(path)
 
     def test_synthesize_speak(self):
+        import pyaudio
         stream_info = self.tts.get_stream_info()
         self.pyaudio_instance = pyaudio.PyAudio()
         self.audio_stream = self.pyaudio_instance.open(

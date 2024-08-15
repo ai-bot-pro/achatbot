@@ -23,7 +23,6 @@ import unittest
 import os
 import asyncio
 
-import pyaudio
 
 from src.common.logger import Logger
 from src.common.utils.audio_utils import save_audio_to_file, load_json, get_audio_segment
@@ -31,7 +30,9 @@ from src.common.factory import EngineFactory, EngineClass
 from src.common.session import Session
 from src.common.interface import IAsr
 from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR
-import src.modules.speech.asr
+import src.modules.speech.asr.whisper_asr
+import src.modules.speech.asr.whisper_groq_asr
+import src.modules.speech.asr.sense_voice_asr
 
 
 class TestWhisperASR(unittest.TestCase):
@@ -41,7 +42,7 @@ class TestWhisperASR(unittest.TestCase):
         # https://isv-data.oss-cn-hangzhou.aliyuncs.com/ics/MaaS/ASR/test_audio/asr_example_zh.wav
         # -O records/asr_example_zh.wav
         audio_file = os.path.join(
-            RECORDS_DIR, f"asr_example_zh.wav")
+            TEST_DIR, f"audio_files/asr_example_zh.wav")
         # Use an environment variable to get the ASR model TAG
         cls.asr_tag = os.getenv('ASR_TAG', "whisper_faster_asr")
         cls.asr_lang = os.getenv('ASR_LANG', "zh")
@@ -80,6 +81,7 @@ class TestWhisperASR(unittest.TestCase):
             self.assertGreater(len(word), 0)
 
     def test_transcribe_with_record(self):
+        import pyaudio
         paud = pyaudio.PyAudio()
         audio_stream = paud.open(rate=16000, channels=1,
                                  format=pyaudio.paInt16, input=True,

@@ -179,7 +179,6 @@ INIT_TYPE=yaml_config TQDM_DISABLE=True \
     python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
 """
 import multiprocessing
-import multiprocessing.connection
 import logging
 
 from src.common.logger import Logger

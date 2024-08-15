@@ -1,5 +1,4 @@
-import multiprocessing.connection
-import multiprocessing
+from multiprocessing.synchronize import Event
 import threading
 import traceback
 import logging
@@ -23,7 +22,7 @@ HISTORY_LIMIT = 10240
 
 class Audio2AudioChatWorker:
 
-    def run(self, conn: interface.IConnector, e: multiprocessing.Event = None):
+    def run(self, conn: interface.IConnector, e: Event = None):
         # self.vad_detector: interface.IDetector | EngineClass = init.initVADEngine()
         self.asr: interface.IAsr | EngineClass = init.initASREngine()
         self.llm: interface.ILlm | EngineClass = init.initLLMEngine()

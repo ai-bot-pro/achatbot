@@ -182,5 +182,5 @@ config/*
 .aws-sam
 cdk.out
 
-# pipy build
-pipy_build/
+# pypi build
+pypi_build/

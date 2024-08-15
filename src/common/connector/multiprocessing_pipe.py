@@ -1,5 +1,4 @@
 import multiprocessing
-import multiprocessing.connection
 
 
 from src.common.interface import IConnector

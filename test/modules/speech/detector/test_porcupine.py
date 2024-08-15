@@ -4,15 +4,14 @@ import asyncio
 import logging
 
 import unittest
-import pyaudio
 
 from src.common.utils.audio_utils import get_audio_segment
 from src.common.logger import Logger
 from src.common.factory import EngineFactory, EngineClass
 from src.common.session import Session
-from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR
+from src.common.types import SessionCtx, MODELS_DIR, RECORDS_DIR
 from src.common.interface import IDetector
-import src.modules.speech.detector
+import src.modules.speech.detector.porcupine
 
 r"""
 python -m unittest test.modules.speech.detector.test_porcupine.TestPorcupineWakeWordDetector.test_detect
@@ -76,6 +75,7 @@ class TestPorcupineWakeWordDetector(unittest.TestCase):
         self.assertEqual(res, False)
 
     def test_record_detect(self):
+        import pyaudio
         paud = pyaudio.PyAudio()
         audio_stream = paud.open(rate=self.sample_rate, channels=1,
                                  format=pyaudio.paInt16, input=True,
