@@ -28,7 +28,7 @@ class VADEnvInit():
     @staticmethod
     def initVADEngine() -> interface.IDetector | EngineClass:
         # vad detector
-        tag = os.getenv('VAD_DETECTOR_TAG', "webrtc_vad")
+        tag = os.getenv('VAD_DETECTOR_TAG', "silero_vad")
         kwargs = VADEnvInit.map_config_func[tag]()
         engine = VADEnvInit.getEngine(tag, **kwargs)
         logging.info(f"initVADEngine: {tag}, {engine}")

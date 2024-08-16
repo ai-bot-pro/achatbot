@@ -14,9 +14,9 @@ class RecorderEnvInit():
 
     @staticmethod
     def getEngine(tag, **kwargs) -> interface.IRecorder | EngineClass:
-        if "rms_record" in tag:
+        if "rms_recorder" in tag:
             from . import rms_record
-        elif "vad_record" in tag:
+        elif "vad_recorder" in tag:
             from . import vad_record
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         return engine
@@ -26,7 +26,7 @@ class RecorderEnvInit():
         # recorder
         tag = os.getenv('RECORDER_TAG', "rms_recorder")
         kwargs = RecorderEnvInit.map_config_func[tag]()
-        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
+        engine = RecorderEnvInit.getEngine(tag, **kwargs)
         logging.info(f"initRecorderEngine: {tag}, {engine}")
         return engine
 
