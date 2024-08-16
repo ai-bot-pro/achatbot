@@ -1,14 +1,14 @@
 # chat-bot
 [![PyPI](https://img.shields.io/pypi/v/achatbot)](https://pypi.org/project/achatbot/)
 
-# install
+# Install
 ```
 python3 -m venv .venv_achatbot
 source .venv_achatbot/bin/activate
 pip install achatbot
 ```
 
-# run bots
+# Run local chat bots
 > [!NOTE]
 > PyAudio need install python3-pyaudio 
 > e.g. ubuntu `apt-get install python3-pyaudio`, macos `brew install portaudio`
@@ -21,21 +21,21 @@ pip install achatbot
     - vad model ckpt (default vad ckpt model use [silero vad](https://github.com/snakers4/silero-vad))
     ```
     # vad pyannote segmentation ckpt
-    huggingface-cli download pyannote/segmentation-3.0  --local-dir ./models/pyannote/segmentation-3.0 --local-dir-use-symlinks False
+    huggingface-cli download pyannote/segmentation-3.0  --local-dir ~/.achatbot/models/pyannote/segmentation-3.0 --local-dir-use-symlinks False
     ```
     - asr model ckpt (default whipser ckpt model use base size)
     ```
     # asr openai whisper ckpt
-    wget https://openaipublic.azureedge.net/main/whisper/~/.achatbot/models/ed3a0b6b1c0edf879ad9b11b1af5a0e6ab5db9205f891f668f8b0e6c6326e34e/base.pt -O ~/.achatbot/~/.achatbot/models/base.pt
+    wget https://openaipublic.azureedge.net/main/whisper/~/.achatbot/models/ed3a0b6b1c0edf879ad9b11b1af5a0e6ab5db9205f891f668f8b0e6c6326e34e/base.pt -O ~/.achatbot/models/base.pt
 
     # asr hf openai whisper ckpt for transformers pipeline to load
-    huggingface-cli download openai/whisper-base  --local-dir ~/.achatbot/~/.achatbot/models/openai/whisper-base --local-dir-use-symlinks False
+    huggingface-cli download openai/whisper-base  --local-dir ~/.achatbot/models/openai/whisper-base --local-dir-use-symlinks False
 
     # asr hf faster whisper (CTranslate2)
-    huggingface-cli download Systran/faster-whisper-base  --local-dir ~/.achatbot/~/.achatbot/models/Systran/faster-whisper-base --local-dir-use-symlinks False
+    huggingface-cli download Systran/faster-whisper-base  --local-dir ~/.achatbot/models/Systran/faster-whisper-base --local-dir-use-symlinks False
 
     # asr SenseVoice ckpt
-    huggingface-cli download FunAudioLLM/SenseVoiceSmall  --local-dir ~/.achatbot/~/.achatbot/models/FunAudioLLM/SenseVoiceSmall --local-dir-use-symlinks False
+    huggingface-cli download FunAudioLLM/SenseVoiceSmall  --local-dir ~/.achatbot/models/FunAudioLLM/SenseVoiceSmall --local-dir-use-symlinks False
     ```
     - llm model ckpt (default llamacpp ckpt(ggml) model use qwen-2 instruct 1.5B size)
     ```
@@ -52,10 +52,10 @@ pip install achatbot
     - tts model ckpt (default whipser ckpt model use base size)
     ```
     # tts chatTTS
-    !huggingface-cli download 2Noise/ChatTTS  --local-dir ~/.achatbot/~/.achatbot/models/2Noise/ChatTTS --local-dir-use-symlinks False
+    !huggingface-cli download 2Noise/ChatTTS  --local-dir ~/.achatbot/models/2Noise/ChatTTS --local-dir-use-symlinks False
     
     # tts coquiTTS
-    !huggingface-cli download coqui/XTTS-v2  --local-dir ~/.achatbot/~/.achatbot/models/coqui/XTTS-v2 --local-dir-use-symlinks False
+    !huggingface-cli download coqui/XTTS-v2  --local-dir ~/.achatbot/models/coqui/XTTS-v2 --local-dir-use-symlinks False
     
     # tts cosy voice
     git lfs install
@@ -71,7 +71,20 @@ pip install achatbot
     ACHATBOT_PKG=1 TQDM_DISABLE=True \
         python -m achatbot.cmd.local-terminal-chat.generate_audio2audio > ~/.achatbot/log/std_out.log
     ```
+## Run remote http fastapi daily chat bots
+1. run `pip install "achatbot[fastapi_daily_bot_server]"` to install dependencies to run http fastapi daily chat bot; 
 
+2. run below cmd to start http server, see api docs: http://0.0.0.0:4321/docs
+    ```
+    ACHATBOT_PKG=1 python -m achatbot.cmd.http.server.fastapi_daily_bot_serve
+    ```
+
+## Run remote grpc tts speaker bots
+
+## Run remote queue-redis chat worker bots
+
+
+# Architecture
 ## audio (voice)
 
 
