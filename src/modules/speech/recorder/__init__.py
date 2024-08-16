@@ -24,7 +24,7 @@ class RecorderEnvInit():
     @staticmethod
     def initRecorderEngine() -> interface.IRecorder | EngineClass:
         # recorder
-        tag = os.getenv('RECORDER_TAG', "rms_recorder")
+        tag = os.getenv('RECORDER_TAG', "vad_recorder")
         kwargs = RecorderEnvInit.map_config_func[tag]()
         engine = RecorderEnvInit.getEngine(tag, **kwargs)
         logging.info(f"initRecorderEngine: {tag}, {engine}")

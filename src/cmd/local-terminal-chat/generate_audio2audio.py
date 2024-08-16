@@ -188,7 +188,7 @@ from src.cmd.fe import TerminalChatClient
 
 
 # global logging
-Logger.init(logging.INFO, is_file=True, is_console=False)
+Logger.init(logging.DEBUG, is_file=True, is_console=False)
 
 
 def main():

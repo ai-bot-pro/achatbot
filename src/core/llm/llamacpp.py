@@ -1,6 +1,7 @@
 import logging
 import json
 import re
+import os
 
 from src.common.interface import ILlm
 from .base import BaseLLM
@@ -11,8 +12,7 @@ from src.modules.functions.function import FunctionManager
 
 class PromptInit():
     @staticmethod
-    def create_phi3_prompt(history: list[str],
-                           system_prompt: str = DEFAULT_SYSTEM_PROMPT,
+    def create_phi3_prompt(history: list[str], system_prompt: str,
                            init_message: str = None):
         prompt = f'<|system|>\n{system_prompt}</s>\n'
         if init_message:
@@ -20,8 +20,7 @@ class PromptInit():
 
         return prompt + "".join(history) + "<|assistant|>\n"
 
-    def create_qwen_prompt(history: list[str],
-                           system_prompt: str = DEFAULT_SYSTEM_PROMPT,
+    def create_qwen_prompt(history: list[str], system_prompt: str,
                            init_message: str = None):
         prompt = f'<|system|>\n{system_prompt}<|end|>\n'
         if init_message:
@@ -31,8 +30,8 @@ class PromptInit():
 
     @staticmethod
     def create_prompt(name: str, history: list[str],
-                      system_prompt: str = DEFAULT_SYSTEM_PROMPT,
                       init_message: str = None):
+        system_prompt = os.getenv("LLM_CHAT_SYSTEM", DEFAULT_SYSTEM_PROMPT)
         if "phi-3" == name:
             return PromptInit.create_phi3_prompt(history, system_prompt, init_message)
         if "qwen-2" == name:

@@ -28,6 +28,9 @@ class EngineClass(object):
         instance = cls(**dict_args)
         return instance
 
+    def __str__(self):
+        return f"TAG:{self.TAG} | {self.__class__.__name__}"
+
 
 class EngineFactory:
     @staticmethod

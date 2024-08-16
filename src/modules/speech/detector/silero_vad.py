@@ -74,7 +74,7 @@ class SileroVAD(BaseVAD):
                 logging.debug(f"{self.TAG} Speech not detected in all {num_frames} frames")
             return speech_frames == num_frames
 
-        logging.debug(f"{self.TAG} Speech not detected in any of {num_frames} frames")
+        # logging.debug(f"{self.TAG} Speech not detected in any of {num_frames} frames")
         return False
 
     async def detect_chunk(self, chunk, session: Session):
@@ -134,8 +134,7 @@ class SileroVAD(BaseVAD):
             if self.args.is_pad_tensor is False:
                 raise Exception(
                     f"len(audio_chunk):{len(audio_chunk)} dont't pad to {self.map_rate_num_samples[self.args.sample_rate]} return False")
-            logging.debug(
-                f"len(audio_chunk):{len(audio_chunk)} pad to {self.map_rate_num_samples[self.args.sample_rate]} ")
+            # logging.debug( f"len(audio_chunk):{len(audio_chunk)} pad to {self.map_rate_num_samples[self.args.sample_rate]} ")
             audio_chunk = torch.nn.functional.pad(
                 audio_chunk,
                 (0, self.map_rate_num_samples[self.args.sample_rate] - len(audio_chunk)),

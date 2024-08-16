@@ -117,8 +117,7 @@ class Audio2AudioChatWorker:
                     if len(chunk) > 0:
                         conn.send(("PLAY_FRAMES", chunk, session), 'be')
             except queue.Empty:
-                logging.debug(
-                    f"tts_synthesize's consumption queue is empty after block {q_get_timeout}s")
+                # logging.debug( f"tts_synthesize's consumption queue is empty after block {q_get_timeout}s")
                 continue
             except Exception as ex:
                 conn.send(
