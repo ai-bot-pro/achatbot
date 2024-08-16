@@ -9,13 +9,34 @@ pip install achatbot
 ```
 
 # run bots
-1. run `pip install achatbot[local_terminal_chat_bot]` to install dependencies;
+[!NOTE]
+PyAudio need install python3-pyaudio 
+ e.g. ubuntu `apt-get install python3-pyaudio`, macos `brew install portaudio`
+see: https://pypi.org/project/PyAudio/
+
+1. run `pip install "achatbot[local_terminal_chat_bot]"` to install dependencies to run local terminal chat bot;
 2. create achatbot data dir in `$HOME` dir `mkdir -p ~/.achatbot/{log,config,models,records,videos}`
-4. `cp .env.example .env`, and check `.env`, add key/value
-3. run local terminal chat bot with env; e.g. 
+3. `cp .env.example .env`, and check `.env`, add key/value
+4. select a model ckpt to download 
+    - asr model ckpt (default whipser ckpt model use base size)
 ```
-ACHATBOT_PKG=1 \
-    TQDM_DISABLE=True python -m src.cmd.local-terminal-chat.generate_audio2audio > ~/.achatbot/log/std_out.log
+# asr openai whisper ckpt
+wget https://openaipublic.azureedge.net/main/whisper/models/ed3a0b6b1c0edf879ad9b11b1af5a0e6ab5db9205f891f668f8b0e6c6326e34e/base.pt -O ./models/base.pt
+
+# asr hf openai whisper ckpt
+huggingface-cli download openai/whisper-base  --local-dir ./models/openai/whisper-base --local-dir-use-symlinks False
+
+# asr hf faster whisper
+huggingface-cli download Systran/faster-whisper-base  --local-dir ./models/Systran/faster-whisper-base --local-dir-use-symlinks False
+
+# asr SenseVoice ckpt
+!huggingface-cli download FunAudioLLM/SenseVoiceSmall  --local-dir ./models/FunAudioLLM/SenseVoiceSmall --local-dir-use-symlinks False
+
+```
+5. run local terminal chat bot with env; e.g. 
+```
+ACHATBOT_PKG=1 TQDM_DISABLE=True \
+    python -m achatbot.cmd.local-terminal-chat.generate_audio2audio > ~/.achatbot/log/std_out.log
 ```
 
 ## audio (voice)

@@ -14,14 +14,22 @@ load_dotenv(override=True)
 class LLMEnvInit():
 
     @staticmethod
+    def getEngine(tag, **kwargs) -> interface.IAsr | EngineClass:
+        if "llm_llamacpp" in tag:
+            from . import llamacpp
+        elif "llm_personalai_proxy" in tag:
+            from . import personalai
+
+        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
+        return engine
+
+    @staticmethod
     def initLLMEngine() -> interface.ILlm | EngineClass:
-        from . import llamacpp
-        from . import personalai
 
         # llm
         tag = os.getenv('LLM_TAG', "llm_llamacpp")
         kwargs = LLMEnvInit.map_config_func[tag]()
-        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
+        engine = LLMEnvInit.getEngine(tag, **kwargs)
         logging.info(f"initLLMEngine: {tag}, {engine}")
         return engine
 

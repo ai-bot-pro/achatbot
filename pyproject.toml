@@ -62,6 +62,7 @@ dependencies = [
     "numpy==1.26.4",
     "torch==2.2.2",
     "torchaudio==2.2.2",
+    "tqdm==4.66.5",
 ]
 
 [project.urls]
@@ -88,33 +89,250 @@ fastapi_daily_bot_server = [
 ]
 
 # PyAudio need install python3-pyaudio 
-# e.g. ubuntu `apt-get install python3-pyaudio`
+# e.g. ubuntu `apt-get install python3-pyaudio`, macos `brew install portaudio`
+# see: https://pypi.org/project/PyAudio/
 
+# achatbot[daily_room_audio_stream,speech_waker,speech_vad,speech_asr,core_llm,speech_tts,stream_player]
 local_terminal_chat_bot = [
-    "achatbot[pyaudio_stream,speech_waker,speech_vad,speech_asr,core_llm,speech_tts,stream_player]",
+    # pyaudio_stream
+    "PyAudio==0.2.14",
+    # speech_waker
+    "pvporcupine==3.0.2",
+    # speech_vad
+    "pyannote.audio==3.2.0",
+    "webrtcvad==2.0.10",
+    "torch==2.2.2",
+    # speech_asr
+    "openai-whisper==20231117",
+    "whisper-timestamped==1.14.2",
+    "faster-whisper==1.0.2",
+    "transformers>=4.40.2",
+    "groq==0.9.0",
+    "funasr==1.1.5",
+    # core_llm
+    "llama-cpp-python==0.2.82",
+    "geocoder==1.38.1",
+    # speech_tts
+    "TTS==0.22.0",
+    "edge-tts==6.1.12",
+    "gTTS==2.5.1",
+    "pyttsx3==2.90",
+    # tts_cosy_voice
+    "hyperpyyaml==1.2.2",
+    "onnxruntime==1.18.1; sys_platform == 'darwin' or sys_platform == 'windows'",
+    "onnxruntime-gpu==1.18.1; sys_platform == 'linux'",
+    "openai-whisper==20231117",
+    "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
+    "conformer==0.3.2",
+    "diffusers[torch]==0.30.0",
+    "lightning==2.4.0",
+    "wget==3.2",
+    # tts_chat
+    "vocos==0.1.0",
+    "pybase16384==0.3.7",
+    "vector_quantize_pytorch==1.16.1",
+    "pynini==2.1.5; sys_platform == 'linux'",
+    "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
+    "nemo_text_processing; sys_platform == 'linux'",
+    "transformers>=4.40.2",
+    "numpy<2.0.0",
 ]
 
 daily_webrtc_terminal_chat_bot = [
-    "achatbot[daily_room_audio_stream,speech_waker,speech_vad,speech_asr,core_llm,speech_tts,stream_player]",
-]
+    "daily-python==0.10.1",
+    # speech_waker
+    "pvporcupine==3.0.2",
+    # speech_vad
+    "pyannote.audio==3.2.0",
+    "webrtcvad==2.0.10",
+    "torch==2.2.2",
+    # speech_asr
+    "openai-whisper==20231117",
+    "whisper-timestamped==1.14.2",
+    "faster-whisper==1.0.2",
+    "transformers>=4.40.2",
+    "groq==0.9.0",
+    # core_llm
+    "llama-cpp-python==0.2.82",
+    "geocoder==1.38.1",
+    # speech_tts
+    "TTS==0.22.0",
+    "edge-tts==6.1.12",
+    "gTTS==2.5.1",
+    "pyttsx3==2.90",
+    # tts_cosy_voice
+    "hyperpyyaml==1.2.2",
+    "onnxruntime==1.18.1; sys_platform == 'darwin' or sys_platform == 'windows'",
+    "onnxruntime-gpu==1.18.1; sys_platform == 'linux'",
+    "openai-whisper==20231117",
+    "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
+    "conformer==0.3.2",
+    "diffusers[torch]==0.30.0",
+    "lightning==2.4.0",
+    "wget==3.2",
+    # tts_chat
+    "vocos==0.1.0",
+    "pybase16384==0.3.7",
+    "vector_quantize_pytorch==1.16.1",
+    "pynini==2.1.5; sys_platform == 'linux'",
+    "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
+    "nemo_text_processing; sys_platform == 'linux'",
+    "transformers>=4.40.2",
+    "numpy<2.0.0",
+] # achatbot[daily_room_audio_stream,speech_waker,speech_vad,speech_asr,core_llm,speech_tts,stream_player]
 
-remote_queue_chat_bot_fe = ["achatbot[speech_audio_stream,queue,stream_player]"]
+# achatbot[speech_audio_stream,queue,stream_player]
+remote_queue_chat_bot_fe = [
+    "PyAudio==0.2.14",
+    "daily-python==0.10.1",
+    "redis==5.0.0",
+]
+# achatbot[queue,speech_waker,speech_vad,speech_asr,core_llm,speech_tts]
 remote_queue_chat_bot_be_worker = [
-    "achatbot[queue,speech_waker,speech_vad,speech_asr,core_llm,speech_tts]",
+    "redis==5.0.0",
+    # speech_waker
+    "pvporcupine==3.0.2",
+    # speech_vad
+    "pyannote.audio==3.2.0",
+    "webrtcvad==2.0.10",
+    "torch==2.2.2",
+    # speech_asr
+    "openai-whisper==20231117",
+    "whisper-timestamped==1.14.2",
+    "faster-whisper==1.0.2",
+    "transformers>=4.40.2",
+    "groq==0.9.0",
+    "funasr==1.1.5",
+    # core_llm
+    "llama-cpp-python==0.2.82",
+    "geocoder==1.38.1",
+    # speech_tts
+    "TTS==0.22.0",
+    "edge-tts==6.1.12",
+    "gTTS==2.5.1",
+    "pyttsx3==2.90",
+    # tts_cosy_voice
+    "hyperpyyaml==1.2.2",
+    "onnxruntime==1.18.1; sys_platform == 'darwin' or sys_platform == 'windows'",
+    "onnxruntime-gpu==1.18.1; sys_platform == 'linux'",
+    "openai-whisper==20231117",
+    "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
+    "conformer==0.3.2",
+    "diffusers[torch]==0.30.0",
+    "lightning==2.4.0",
+    "wget==3.2",
+    # tts_chat
+    "vocos==0.1.0",
+    "pybase16384==0.3.7",
+    "vector_quantize_pytorch==1.16.1",
+    "pynini==2.1.5; sys_platform == 'linux'",
+    "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
+    "nemo_text_processing; sys_platform == 'linux'",
+    "transformers>=4.40.2",
+    "numpy<2.0.0",
 ]
 
-remote_rpc_chat_bot_fe = ["achatbot[speech_audio_stream,rpc,stream_player]"]
-
+# achatbot[speech_audio_stream,rpc,stream_player]
+remote_rpc_chat_bot_fe = [
+    #speech_audio_stream
+    "PyAudio==0.2.14",
+    "daily-python==0.10.1",
+    # rpc
+    "grpcio==1.65.1",
+]
+# achatbot[rpc,speech_waker,speech_vad,speech_asr,core_llm,speech_tts]
 remote_rpc_chat_bot_be_worker = [
-    "achatbot[rpc,speech_waker,speech_vad,speech_asr,core_llm,speech_tts]",
+    # grpc
+    "grpcio==1.65.1",
+    # speech_waker
+    "pvporcupine==3.0.2",
+    # speech_vad
+    "pyannote.audio==3.2.0",
+    "webrtcvad==2.0.10",
+    "torch==2.2.2",
+    # speech_asr
+    "openai-whisper==20231117",
+    "whisper-timestamped==1.14.2",
+    "faster-whisper==1.0.2",
+    "transformers>=4.40.2",
+    "groq==0.9.0",
+    "funasr==1.1.5",
+    # core_llm
+    "llama-cpp-python==0.2.82",
+    "geocoder==1.38.1",
+    # speech_tts
+    "TTS==0.22.0",
+    "edge-tts==6.1.12",
+    "gTTS==2.5.1",
+    "pyttsx3==2.90",
+    # tts_cosy_voice
+    "hyperpyyaml==1.2.2",
+    "onnxruntime==1.18.1; sys_platform == 'darwin' or sys_platform == 'windows'",
+    "onnxruntime-gpu==1.18.1; sys_platform == 'linux'",
+    "openai-whisper==20231117",
+    "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
+    "conformer==0.3.2",
+    "diffusers[torch]==0.30.0",
+    "lightning==2.4.0",
+    "wget==3.2",
+    # tts_chat
+    "vocos==0.1.0",
+    "pybase16384==0.3.7",
+    "vector_quantize_pytorch==1.16.1",
+    "pynini==2.1.5; sys_platform == 'linux'",
+    "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
+    "nemo_text_processing; sys_platform == 'linux'",
+    "transformers>=4.40.2",
+    "numpy<2.0.0",
 ]
 
-remote_grpc_tts_client = ["achatbot[grpc,stream_player]"]
-remote_grpc_tts_server = ["achatbot[grpc,speech_tts]"]
+# achatbot[grpc,stream_player]
+remote_grpc_tts_client = [
+    # grpc
+    "grpcio==1.65.1",
+]
+# achatbot[grpc,speech_tts]
+remote_grpc_tts_server = [
+    # grpc
+    "grpcio==1.65.1",
+    # speech_tts
+    "TTS==0.22.0",
+    "edge-tts==6.1.12",
+    "gTTS==2.5.1",
+    "pyttsx3==2.90",
+    # tts_cosy_voice
+    "hyperpyyaml==1.2.2",
+    "onnxruntime==1.18.1; sys_platform == 'darwin' or sys_platform == 'windows'",
+    "onnxruntime-gpu==1.18.1; sys_platform == 'linux'",
+    "openai-whisper==20231117",
+    "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
+    "conformer==0.3.2",
+    "diffusers[torch]==0.30.0",
+    "lightning==2.4.0",
+    "wget==3.2",
+    # tts_chat
+    "vocos==0.1.0",
+    "pybase16384==0.3.7",
+    "vector_quantize_pytorch==1.16.1",
+    "pynini==2.1.5; sys_platform == 'linux'",
+    "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
+    "nemo_text_processing; sys_platform == 'linux'",
+    "transformers>=4.40.2",
+    "numpy<2.0.0",
+]
 
 
 # processor
-asr_processor = ["achatbot[speech_asr]", "deepgram-sdk==3.4.0"]
+asr_processor = [
+    "deepgram-sdk==3.4.0",
+    # speech_asr
+    "openai-whisper==20231117",
+    "whisper-timestamped==1.14.2",
+    "faster-whisper==1.0.2",
+    "transformers>=4.40.2",
+    "funasr==1.1.5",
+    "groq==0.9.0",
+]
 llm_processor = ["openai==1.40.6"]
 img_processor = ["openai==1.40.6"]
 tts_processor = ["openai==1.40.6"]
@@ -132,14 +350,31 @@ speech_asr = [
     "transformers>=4.40.2",
     "groq==0.9.0",
 ]
-core_llm = ["llama_cpp_python==0.2.82", "geocoder==1.38.1"]
+core_llm = ["llama-cpp-python==0.2.82", "geocoder==1.38.1"]
 speech_tts = [
     "TTS==0.22.0",
     "edge-tts==6.1.12",
     "gTTS==2.5.1",
     "pyttsx3==2.90",
-    "achatbot[tts_cosy_voice]",
-    "achatbot[tts_chat]",
+    # tts_cosy_voice
+    "hyperpyyaml==1.2.2",
+    "onnxruntime==1.18.1; sys_platform == 'darwin' or sys_platform == 'windows'",
+    "onnxruntime-gpu==1.18.1; sys_platform == 'linux'",
+    "openai-whisper==20231117",
+    "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
+    "conformer==0.3.2",
+    "diffusers[torch]==0.30.0",
+    "lightning==2.4.0",
+    "wget==3.2",
+    # tts_chat
+    "vocos==0.1.0",
+    "pybase16384==0.3.7",
+    "vector_quantize_pytorch==1.16.1",
+    "pynini==2.1.5; sys_platform == 'linux'",
+    "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
+    "nemo_text_processing; sys_platform == 'linux'",
+    "transformers>=4.40.2",
+    "numpy<2.0.0",
 ]
 queue = ["redis==5.0.0"]
 rpc = ["grpcio==1.65.1"]
@@ -164,7 +399,12 @@ webrtc_silero_vad = ["webrtcvad==2.0.10", "torch==2.2.2"]
 
 # recorder module tag -> pkgs
 rms_recorder = []
-vad_recorder = ["achatbot[speech_vad]"]
+vad_recorder = [
+    # speech_vad
+    "pyannote.audio==3.2.0",
+    "webrtcvad==2.0.10",
+    "torch==2.2.2",
+]
 
 # asr module tag -> pkgs
 whisper_asr = ["openai-whisper==20231117"]
@@ -179,6 +419,9 @@ sense_voice_asr = ["funasr==1.1.5"]
 
 # llm module tag -> pkgs
 openai = ["openai==1.40.6"]
+# init  use cpu Pre-built Wheel to install, 
+# if want to use other lib(cuda), see: https://github.com/abetlen/llama-cpp-python#installation-configuration
+llama_cpp = ["llama-cpp-python==0.2.82"]
 llm_personalai_proxy = ["geocoder==1.38.1"]
 
 # tts module tag -> pkgs
@@ -214,6 +457,9 @@ silero_vad_analyzer = ["torch==2.2.2"]
 
 # player module tag -> pkgs
 stream_player = []
+
+# test
+test = ["sentence_transformers==3.0.0"]
 
 
 # if use library, need add achatbot dir in pypi_build/app dir, change import codes

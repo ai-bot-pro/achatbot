@@ -14,24 +14,30 @@ load_dotenv(override=True)
 class AudioStreamEnvInit():
 
     @staticmethod
+    def getEngine(tag, **kwargs) -> interface.IAudioStream | EngineClass:
+        if "pyaudio" in tag:
+            from . import pyaudio_stream
+        if "daily" in tag:
+            from . import daily_room_stream
+
+        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
+        return engine
+
+    @staticmethod
     def initAudioInStreamEngine() -> interface.IAudioStream | EngineClass:
-        from . import pyaudio_stream
-        from . import daily_room_stream
         # audio stream
         tag = os.getenv('AUDIO_IN_STREAM_TAG', "pyaudio_in_stream")
         kwargs = AudioStreamEnvInit.map_config_func[tag]()
-        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
+        engine = AudioStreamEnvInit.getEngine(tag, **kwargs)
         logging.info(f"initAudioInStreamEngine: {tag}, {engine}")
         return engine
 
     @staticmethod
     def initAudioOutStreamEngine() -> interface.IAudioStream | EngineClass:
-        from . import pyaudio_stream
-        from . import daily_room_stream
         # audio stream
         tag = os.getenv('AUDIO_OUT_STREAM_TAG', "pyaudio_out_stream")
         kwargs = AudioStreamEnvInit.map_config_func[tag]()
-        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
+        engine = AudioStreamEnvInit.getEngine(tag, **kwargs)
         logging.info(f"initAudioOutStreamEngine: {tag}, {engine}")
         return engine
 

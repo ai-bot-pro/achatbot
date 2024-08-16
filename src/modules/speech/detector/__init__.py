@@ -12,16 +12,25 @@ load_dotenv(override=True)
 class VADEnvInit():
 
     @staticmethod
-    def initVADEngine() -> interface.IDetector | EngineClass:
-        from . import pyannote
-        from . import webrtc_vad
-        from . import silero_vad
-        from . import webrtc_silero_vad
+    def getEngine(tag, **kwargs) -> interface.IDetector | EngineClass:
+        if "pyannote_" in tag:
+            from . import pyannote
+        elif "webrtc_" in tag:
+            from . import webrtc_vad
+        elif "webrtc_silero_" in tag:
+            from . import webrtc_silero_vad
+        elif "silero_" in tag:
+            from . import silero_vad
 
+        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
+        return engine
+
+    @staticmethod
+    def initVADEngine() -> interface.IDetector | EngineClass:
         # vad detector
         tag = os.getenv('VAD_DETECTOR_TAG', "webrtc_vad")
         kwargs = VADEnvInit.map_config_func[tag]()
-        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
+        engine = VADEnvInit.getEngine(tag, **kwargs)
         logging.info(f"initVADEngine: {tag}, {engine}")
         return engine
 

@@ -12,19 +12,31 @@ load_dotenv(override=True)
 class TTSEnvInit():
 
     @staticmethod
-    def initTTSEngine() -> interface.ITts | EngineClass:
-        from . import coqui_tts
-        from . import chat_tts
-        from . import pyttsx3_tts
-        from . import g_tts
-        from . import edge_tts
-        from . import cosy_voice_tts
-        # from . import openai_tts
+    def getEngine(tag, **kwargs) -> interface.ITts | EngineClass:
+        if "tts_coqui" in tag:
+            from . import coqui_tts
+        elif "tts_chat" in tag:
+            from . import chat_tts
+        elif "tts_pyttsx3" in tag:
+            from . import pyttsx3_tts
+        elif "tts_g" in tag:
+            from . import g_tts
+        elif "tts_edge" in tag:
+            from . import edge_tts
+        elif "tts_cosy_voice" in tag:
+            from . import cosy_voice_tts
+        # elif "tts_openai" in tag:
+            # from . import openai_tts
 
+        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
+        return engine
+
+    @staticmethod
+    def initTTSEngine() -> interface.ITts | EngineClass:
         # tts
         tag = os.getenv('TTS_TAG', "tts_edge")
         kwargs = TTSEnvInit.map_config_func[tag]()
-        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
+        engine = TTSEnvInit.getEngine(tag, **kwargs)
         logging.info(f"initTTSEngine: {tag}, {engine}")
         return engine
 
