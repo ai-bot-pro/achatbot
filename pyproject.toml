@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.5.4"
+version = "0.0.5.5"
 requires-python = ">= 3.10"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
@@ -457,6 +457,10 @@ silero_vad_analyzer = ["torch==2.2.2"]
 
 # player module tag -> pkgs
 stream_player = []
+
+# data process
+pytube = ["pytube==15.0.0"]
+deep_translator = ["deep_translator==1.11.4"]
 
 # test
 test = ["sentence_transformers==3.0.0"]

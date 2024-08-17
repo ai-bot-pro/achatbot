@@ -51,6 +51,6 @@ class VADAnalyzerEnvInit():
         # vad Analyzer
         tag = os.getenv('VAD_ANALYZER_TAG', "silero_vad_analyzer")
         kwargs = VADAnalyzerEnvInit.map_config_func[tag]()
-        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
+        engine = VADAnalyzerEnvInit.getEngine(tag, **kwargs)
         logging.info(f"initVADEngine: {tag}, {engine}")
         return engine
