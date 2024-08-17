@@ -9,7 +9,7 @@ from src.common.interface import IAudioStream, IRecorder
 from src.common.logger import Logger
 from src.common.factory import EngineFactory, EngineClass
 from src.common.session import Session
-from src.common.utils import audio_utils
+from src.common.utils import wav
 from src.common.types import SessionCtx, MODELS_DIR, RECORDS_DIR
 
 import src.modules.speech.recorder.rms_record
@@ -88,7 +88,7 @@ class TestRMSRecorder(unittest.TestCase):
         frames = asyncio.run(self.recorder.record_audio(self.session))
         self.assertGreater(len(frames), 0)
         data = b''.join(frames)
-        file_path = asyncio.run(audio_utils.save_audio_to_file(
+        file_path = asyncio.run(wav.save_audio_to_file(
             data, os.path.join(RECORDS_DIR, "test.wav")))
         print(file_path)
 
@@ -96,7 +96,7 @@ class TestRMSRecorder(unittest.TestCase):
         frames = asyncio.run(self.recorder.record_audio(self.session))
         self.assertGreater(len(frames), 0)
         data = b''.join(frames)
-        file_path = asyncio.run(audio_utils.save_audio_to_file(
+        file_path = asyncio.run(wav.save_audio_to_file(
             data, os.path.join(RECORDS_DIR, "test.wav")))
         print(file_path)
 
@@ -107,7 +107,7 @@ class TestRMSRecorder(unittest.TestCase):
         frames = asyncio.run(self.recorder2.record_audio(self.session))
         self.assertGreater(len(frames), 0)
         data = b''.join(frames)
-        file_path = asyncio.run(audio_utils.save_audio_to_file(
+        file_path = asyncio.run(wav.save_audio_to_file(
             data, os.path.join(RECORDS_DIR, "test2.wav")))
         print(file_path)
         self.recorder2.close()
@@ -131,6 +131,6 @@ class TestRMSRecorder(unittest.TestCase):
             frames = asyncio.run(self.recorder.record_audio(self.session))
             self.assertGreaterEqual(len(frames), 0)
             data = b''.join(frames)
-            file_path = asyncio.run(audio_utils.save_audio_to_file(
+            file_path = asyncio.run(wav.save_audio_to_file(
                 data, os.path.join(RECORDS_DIR, f"test{i}.wav")))
             print(file_path)

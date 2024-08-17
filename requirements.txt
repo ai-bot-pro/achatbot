@@ -7,7 +7,9 @@
 absl-py==2.1.0
     # via tensorboard
 accelerate==0.33.0
-    # via diffusers
+    # via
+    #   diffusers
+    #   transformers
 aenum==3.1.15
     # via deepgram-sdk
 aiofiles==24.1.0
@@ -1516,6 +1518,7 @@ torch==2.2.2
     #   torchaudio
     #   torchmetrics
     #   trainer
+    #   transformers
     #   tts
     #   vector-quantize-pytorch
     #   vocos
@@ -1527,7 +1530,6 @@ torch-pitch-shift==1.2.4
     # via torch-audiomentations
 torchaudio==2.2.2
     # via
-    #   achatbot (pyproject.toml)
     #   encodec
     #   pyannote-audio
     #   speechbrain
@@ -1561,7 +1563,7 @@ tqdm==4.66.5
     #   umap-learn
 trainer==0.0.36
     # via tts
-transformers==4.44.0
+transformers[torch]==4.44.0
     # via
     #   achatbot (pyproject.toml)
     #   sentence-transformers

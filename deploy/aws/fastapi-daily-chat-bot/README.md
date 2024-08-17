@@ -82,3 +82,4 @@ The URL of your API Gateway is shown in the outputs section of the `sam deploy` 
 - https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-config.html
 - https://github.com/aws/aws-lambda-builders
 - https://github.com/weedge/craftsman/tree/main/cloud/aws/cdk/serverless-openai-chatbot
+- https://segments.ai/blog/pytorch-on-lambda/ (PyTorch on AWS Lambda)

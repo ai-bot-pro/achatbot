@@ -9,7 +9,7 @@ import unittest
 
 from src.modules.speech.audio_stream import AudioStreamEnvInit
 from src.common.factory import EngineClass
-from src.common.utils.audio_utils import get_audio_segment
+from src.common.utils.helper import get_audio_segment
 from src.common.session import Session
 from src.common.types import TEST_DIR, SessionCtx
 from src.types.speech.audio_stream import AudioStreamInfo

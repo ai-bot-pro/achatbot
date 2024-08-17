@@ -6,7 +6,6 @@ import os
 
 from pydub import AudioSegment
 
-from src.common.utils.audio_utils import read_audio_file
 from src.common.interface import ITts
 from src.common.session import Session
 from src.common.types import EdgeTTSArgs, RECORDS_DIR, EDGE_TTS_SYNTHESIS_FILE

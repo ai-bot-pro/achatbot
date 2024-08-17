@@ -49,7 +49,8 @@ class VADAnalyzerEnvInit():
     @staticmethod
     def initVADAnalyzerEngine() -> interface.IVADAnalyzer | EngineClass:
         # vad Analyzer
-        tag = os.getenv('VAD_ANALYZER_TAG', "silero_vad_analyzer")
+        # tag = os.getenv('VAD_ANALYZER_TAG', "silero_vad_analyzer")
+        tag = os.getenv('VAD_ANALYZER_TAG', "daily_webrtc_vad_analyzer")
         kwargs = VADAnalyzerEnvInit.map_config_func[tag]()
         engine = VADAnalyzerEnvInit.getEngine(tag, **kwargs)
         logging.info(f"initVADEngine: {tag}, {engine}")

@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.5.5"
+version = "0.0.5.6"
 requires-python = ">= 3.10"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
@@ -55,13 +55,10 @@ dependencies = [
     "python-dotenv==1.0.1",
     "pydub==0.25.1",
     "pillow==10.4.0",
-    "websockets==12.0",
     "aiohttp==3.10.3",
     "scipy==1.14.0",
     "pyloudnorm==0.1.1",
     "numpy==1.26.4",
-    "torch==2.2.2",
-    "torchaudio==2.2.2",
     "tqdm==4.66.5",
 ]
 
@@ -81,8 +78,8 @@ fastapi_daily_bot_server = [
     "openai==1.40.6",
     "langchain-openai==0.1.21",
     "langchain-community==0.2.12",
+    "websockets==12.0",
     "deepgram-sdk==3.4.0",
-    #"mangum==0.17.0",
     "uvicorn==0.30.6",
     "tidb-vector==0.0.10",
     "pymysql==1.1.1",
@@ -106,7 +103,7 @@ local_terminal_chat_bot = [
     "openai-whisper==20231117",
     "whisper-timestamped==1.14.2",
     "faster-whisper==1.0.2",
-    "transformers>=4.40.2",
+    "transformers[torch]>=4.40.2",
     "groq==0.9.0",
     "funasr==1.1.5",
     # core_llm
@@ -134,8 +131,7 @@ local_terminal_chat_bot = [
     "pynini==2.1.5; sys_platform == 'linux'",
     "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
     "nemo_text_processing; sys_platform == 'linux'",
-    "transformers>=4.40.2",
-    "numpy<2.0.0",
+    "transformers[torch]>=4.40.2",
 ]
 
 daily_webrtc_terminal_chat_bot = [
@@ -150,7 +146,7 @@ daily_webrtc_terminal_chat_bot = [
     "openai-whisper==20231117",
     "whisper-timestamped==1.14.2",
     "faster-whisper==1.0.2",
-    "transformers>=4.40.2",
+    "transformers[torch]>=4.40.2",
     "groq==0.9.0",
     # core_llm
     "llama-cpp-python==0.2.82",
@@ -177,8 +173,8 @@ daily_webrtc_terminal_chat_bot = [
     "pynini==2.1.5; sys_platform == 'linux'",
     "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
     "nemo_text_processing; sys_platform == 'linux'",
-    "transformers>=4.40.2",
-    "numpy<2.0.0",
+    "transformers[torch]>=4.40.2",
+    "numpy==1.26.4",
 ] # achatbot[daily_room_audio_stream,speech_waker,speech_vad,speech_asr,core_llm,speech_tts,stream_player]
 
 # achatbot[speech_audio_stream,queue,stream_player]
@@ -200,7 +196,7 @@ remote_queue_chat_bot_be_worker = [
     "openai-whisper==20231117",
     "whisper-timestamped==1.14.2",
     "faster-whisper==1.0.2",
-    "transformers>=4.40.2",
+    "transformers[torch]>=4.40.2",
     "groq==0.9.0",
     "funasr==1.1.5",
     # core_llm
@@ -228,8 +224,8 @@ remote_queue_chat_bot_be_worker = [
     "pynini==2.1.5; sys_platform == 'linux'",
     "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
     "nemo_text_processing; sys_platform == 'linux'",
-    "transformers>=4.40.2",
-    "numpy<2.0.0",
+    "transformers[torch]>=4.40.2",
+    "numpy==1.26.4",
 ]
 
 # achatbot[speech_audio_stream,rpc,stream_player]
@@ -254,7 +250,7 @@ remote_rpc_chat_bot_be_worker = [
     "openai-whisper==20231117",
     "whisper-timestamped==1.14.2",
     "faster-whisper==1.0.2",
-    "transformers>=4.40.2",
+    "transformers[torch]>=4.40.2",
     "groq==0.9.0",
     "funasr==1.1.5",
     # core_llm
@@ -282,8 +278,8 @@ remote_rpc_chat_bot_be_worker = [
     "pynini==2.1.5; sys_platform == 'linux'",
     "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
     "nemo_text_processing; sys_platform == 'linux'",
-    "transformers>=4.40.2",
-    "numpy<2.0.0",
+    "transformers[torch]>=4.40.2",
+    "numpy==1.26.4",
 ]
 
 # achatbot[grpc,stream_player]
@@ -301,6 +297,7 @@ remote_grpc_tts_server = [
     "gTTS==2.5.1",
     "pyttsx3==2.90",
     # tts_cosy_voice
+    "torch==2.2.2",
     "hyperpyyaml==1.2.2",
     "onnxruntime==1.18.1; sys_platform == 'darwin' or sys_platform == 'windows'",
     "onnxruntime-gpu==1.18.1; sys_platform == 'linux'",
@@ -311,14 +308,15 @@ remote_grpc_tts_server = [
     "lightning==2.4.0",
     "wget==3.2",
     # tts_chat
+    "torch==2.2.2",
     "vocos==0.1.0",
     "pybase16384==0.3.7",
     "vector_quantize_pytorch==1.16.1",
     "pynini==2.1.5; sys_platform == 'linux'",
     "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
     "nemo_text_processing; sys_platform == 'linux'",
-    "transformers>=4.40.2",
-    "numpy<2.0.0",
+    "transformers[torch]>=4.40.2",
+    "numpy==1.26.4",
 ]
 
 
@@ -329,14 +327,17 @@ asr_processor = [
     "openai-whisper==20231117",
     "whisper-timestamped==1.14.2",
     "faster-whisper==1.0.2",
-    "transformers>=4.40.2",
+    "torch==2.2.2",
+    "transformers[torch]>=4.40.2",
     "funasr==1.1.5",
     "groq==0.9.0",
+    "numpy==1.26.4",
 ]
 llm_processor = ["openai==1.40.6"]
 img_processor = ["openai==1.40.6"]
 tts_processor = ["openai==1.40.6"]
 ai_frameworks_processor = ["langchain==0.2.13"]
+deepgram_asr_processor = ["deepgram-sdk==3.4.0"]
 
 
 # multi modules
@@ -347,8 +348,10 @@ speech_asr = [
     "openai-whisper==20231117",
     "whisper-timestamped==1.14.2",
     "faster-whisper==1.0.2",
-    "transformers>=4.40.2",
+    "torch==2.2.2",
+    "transformers[torch]>=4.40.2",
     "groq==0.9.0",
+    "numpy==1.26.4",
 ]
 core_llm = ["llama-cpp-python==0.2.82", "geocoder==1.38.1"]
 speech_tts = [
@@ -357,6 +360,7 @@ speech_tts = [
     "gTTS==2.5.1",
     "pyttsx3==2.90",
     # tts_cosy_voice
+    "torch==2.2.2",
     "hyperpyyaml==1.2.2",
     "onnxruntime==1.18.1; sys_platform == 'darwin' or sys_platform == 'windows'",
     "onnxruntime-gpu==1.18.1; sys_platform == 'linux'",
@@ -373,8 +377,9 @@ speech_tts = [
     "pynini==2.1.5; sys_platform == 'linux'",
     "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
     "nemo_text_processing; sys_platform == 'linux'",
-    "transformers>=4.40.2",
-    "numpy<2.0.0",
+    "transformers[torch]>=4.40.2",
+    "torch==2.2.2",
+    "numpy==1.26.4",
 ]
 queue = ["redis==5.0.0"]
 rpc = ["grpcio==1.65.1"]
@@ -410,12 +415,12 @@ vad_recorder = [
 whisper_asr = ["openai-whisper==20231117"]
 whisper_timestamped_asr = ["whisper-timestamped==1.14.2"]
 whisper_faster_asr = ["faster-whisper==1.0.2"]
-whisper_transformers_asr = ["transformers>=4.40.2"]
+whisper_transformers_asr = ["transformers[torch]>=4.40.2"]
 whisper_mlx_asr = [
     "mlx_whisper==0.2.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
 ]
 whisper_groq_asr = ["groq==0.9.0"]
-sense_voice_asr = ["funasr==1.1.5"]
+sense_voice_asr = ["torch==2.2.2", "funasr==1.1.5"]
 
 # llm module tag -> pkgs
 openai = ["openai==1.40.6"]
@@ -426,6 +431,7 @@ llm_personalai_proxy = ["geocoder==1.38.1"]
 
 # tts module tag -> pkgs
 tts_cosy_voice = [
+    "torch==2.2.2",
     "hyperpyyaml==1.2.2",
     "onnxruntime==1.18.1; sys_platform == 'darwin' or sys_platform == 'windows'",
     "onnxruntime-gpu==1.18.1; sys_platform == 'linux'",
@@ -435,16 +441,18 @@ tts_cosy_voice = [
     "diffusers[torch]==0.30.0",
     "lightning==2.4.0",
     "wget==3.2",
+    "numpy==1.26.4",
 ]
 tts_chat = [
+    "torch==2.2.2",
     "vocos==0.1.0",
     "pybase16384==0.3.7",
     "vector_quantize_pytorch==1.16.1",
     "pynini==2.1.5; sys_platform == 'linux'",
     "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
     "nemo_text_processing; sys_platform == 'linux'",
-    "transformers>=4.40.2",
-    "numpy<2.0.0",
+    "transformers[torch]>=4.40.2",
+    "numpy==1.26.4",
 ]
 tts_coqui = ["TTS==0.22.0"]
 tts_edge = ["edge-tts==6.1.12"]

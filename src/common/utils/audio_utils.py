@@ -1,56 +1,10 @@
-import json
-import os
-
 from scipy.signal import resample_poly
 from scipy.io.wavfile import read, write
 import pyloudnorm as pyln
 import numpy as np
 import torch
 
-from src.common.types import INT16_MAX_ABS_VALUE, RECORDS_DIR
-
-
-async def save_audio_to_file(
-        audio_data,
-        file_name,
-        audio_dir=RECORDS_DIR,
-        channles=1,
-        sample_width=2,
-        sample_rate=16000):
-    os.makedirs(audio_dir, exist_ok=True)
-
-    file_path = os.path.join(audio_dir, file_name)
-
-    import wave
-    with wave.open(file_path, 'wb') as wav_file:
-        wav_file.setnchannels(channles)  # Assuming mono audio
-        wav_file.setsampwidth(sample_width)
-        wav_file.setframerate(sample_rate)
-        wav_file.writeframes(audio_data)
-
-    return file_path
-
-
-async def load_json(path):
-    with open(path, 'r') as file:
-        return json.load(file)
-
-
-async def get_audio_segment(file_path, start=None, end=None):
-    from pydub import AudioSegment
-    with open(file_path, 'rb') as file:
-        audio = AudioSegment.from_file(file, format="wav")
-    if start is not None and end is not None:
-        # pydub works in milliseconds
-        return audio[start * 1000:end * 1000]
-    return audio
-
-
-async def read_audio_file(file_path):
-    import wave
-    with wave.open(file_path, 'rb') as wav_file:
-        frames = wav_file.readframes(wav_file.getnframes())
-    return frames
+from src.common.types import INT16_MAX_ABS_VALUE
 
 
 def bytes2NpArrayWith16(frames: bytes | bytearray):
@@ -133,26 +87,3 @@ def convert_sampling_rate_to_16k(input_file, output_file):
     write(output_file, 16000, resampled_data.astype(np.int16))
 
 
-def normalize_value(value, min_value, max_value):
-    normalized = (value - min_value) / (max_value - min_value)
-    normalized_clamped = max(0, min(1, normalized))
-    return normalized_clamped
-
-
-def calculate_audio_volume(audio: bytes, sample_rate: int) -> float:
-    audio_np = np.frombuffer(audio, dtype=np.int16)
-    audio_float = audio_np.astype(np.float64)
-
-    block_size = audio_np.size / sample_rate
-    meter = pyln.Meter(sample_rate, block_size=block_size)
-    loudness = meter.integrated_loudness(audio_float)
-
-    # Loudness goes from -20 to 80 (more or less), where -20 is quiet and 80 is
-    # loud.
-    loudness = normalize_value(loudness, -20, 80)
-
-    return loudness
-
-
-def exp_smoothing(value: float, prev_value: float, factor: float) -> float:
-    return prev_value + factor * (value - prev_value)

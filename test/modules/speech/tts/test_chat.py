@@ -4,7 +4,7 @@ import asyncio
 
 import unittest
 
-from src.common.utils.audio_utils import save_audio_to_file
+from src.common.utils.wav import save_audio_to_file
 from src.common.factory import EngineFactory, EngineClass
 from src.common.logger import Logger
 from src.common.session import Session

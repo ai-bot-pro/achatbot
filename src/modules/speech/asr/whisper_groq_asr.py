@@ -2,11 +2,12 @@ from pathlib import Path
 from typing import AsyncGenerator
 import logging
 
-from src.common.utils.audio_utils import save_audio_to_file
+from src.common.utils.wav import save_audio_to_file
 from src.common.session import Session
 from src.common.types import RECORDS_DIR
 from src.types.speech.asr.whisper import WhisperGroqASRArgs
 from src.modules.speech.asr.base import ASRBase
+
 
 class WhisperGroqAsr(ASRBase):
     TAG = "whisper_groq_asr"

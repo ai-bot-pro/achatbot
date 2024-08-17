@@ -8,7 +8,7 @@ from src.modules.speech.tts.cosy_voice_tts import CosyVoiceTTS
 from src.common.factory import EngineFactory, EngineClass
 from src.common.logger import Logger
 from src.common.session import Session
-from src.common.utils.audio_utils import save_audio_to_file
+from src.common.utils.wav import save_audio_to_file
 from src.common.types import SessionCtx, CosyVoiceTTSArgs, MODELS_DIR
 
 r"""

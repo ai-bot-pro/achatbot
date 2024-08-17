@@ -7,7 +7,6 @@ from pydub import AudioSegment
 
 from src.common.interface import ITts
 from src.common.session import Session
-from src.common.utils.audio_utils import read_audio_file
 from src.common.types import GTTS_SYNTHESIS_FILE, GTTSArgs, RECORDS_DIR
 from .base import BaseTTS
 

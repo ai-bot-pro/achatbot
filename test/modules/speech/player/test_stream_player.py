@@ -11,7 +11,7 @@ from src.modules.speech.player.stream_player import StreamPlayer
 from src.common.logger import Logger
 from src.common.factory import EngineClass
 from src.common.session import Session
-from src.common.utils import audio_utils
+from src.common.utils import helper
 from src.common.types import SessionCtx, TEST_DIR
 from src.types.speech.audio_stream import AudioStreamInfo
 
@@ -54,13 +54,13 @@ class TestStreamPlayer(unittest.TestCase):
 
     def test_play_audio(self):
         self.player.open()
-        annotations = asyncio.run(audio_utils.load_json(self.annotations_path))
+        annotations = asyncio.run(helper.load_json(self.annotations_path))
         for audio_file, data in annotations.items():
             audio_file_path = os.path.join(
                 TEST_DIR, f"audio_files/{audio_file}")
             for segment in data["segments"]:
                 self.player.start(self.session)
-                audio_segment = asyncio.run(audio_utils.get_audio_segment(
+                audio_segment = asyncio.run(helper.get_audio_segment(
                     audio_file_path,
                     segment["start"],
                     segment["end"]))

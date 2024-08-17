@@ -5,11 +5,9 @@ from src.common.types import (
     VAD_CHECK_PER_FRAMES,
     VAD_CHECK_ALL_FRAMES,
     WebRTCVADArgs,
-    RATE
 )
 from src.common.session import Session
 from .base import BaseVAD
-from src.common.utils.audio_utils import save_audio_to_file
 
 
 class WebrtcVAD(BaseVAD):

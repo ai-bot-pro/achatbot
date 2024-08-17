@@ -12,7 +12,7 @@ from apipeline.frames.data_frames import Frame, AudioRawFrame
 
 from src.processors.speech.audio_volume_time_processor import AudioVolumeTimeProcessor
 from src.processors.ai_processor import AIProcessor
-from src.common.utils.audio_utils import calculate_audio_volume, exp_smoothing
+from src.common.utils.helper import exp_smoothing, calculate_audio_volume
 from src.types.frames.data_frames import TranscriptionFrame
 
 

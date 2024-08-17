@@ -21,7 +21,6 @@ from src.modules.speech.asr import ASREnvInit
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.processors.speech.tts.elevenlabs_tts_processor import ElevenLabsTTSProcessor
 from src.common import interface
-from src.common.factory import EngineClass, EngineFactory
 from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
 from src.processors.ai_frameworks.langchain_rag_processor import LangchainRAGProcessor
 from src.processors.speech.tts.cartesia_tts_processor import CartesiaTTSProcessor
@@ -32,7 +31,6 @@ from src.processors.rtvi_processor import RTVIConfig
 from src.processors.speech.asr.asr_processor import AsrProcessor
 from src.common.types import DailyParams
 from src.transports.daily import DailyTransport
-from src.cmd.init import Env
 from src.cmd.bots.rag.helper import get_tidb_url
 from src.cmd.bots.base import DailyRoomBot, register_daily_room_bots
 
@@ -114,10 +112,8 @@ class DailyLangchainRAGBot(DailyRoomBot):
             if self._bot_config.asr \
                     and self._bot_config.asr.tag \
                     and self._bot_config.asr.args:
-                asr = EngineFactory.get_engine_by_tag(
-                    EngineClass,
-                    self._bot_config.asr.tag,
-                    **self._bot_config.asr.args)
+                asr = ASREnvInit.getEngine(
+                    self._bot_config.asr.tag, **self._bot_config.asr.args)
             else:
                 asr = ASREnvInit.initASREngine()
             asr_processor = AsrProcessor(

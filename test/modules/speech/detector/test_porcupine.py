@@ -5,7 +5,7 @@ import logging
 
 import unittest
 
-from src.common.utils.audio_utils import get_audio_segment
+from src.common.utils.helper import get_audio_segment
 from src.common.logger import Logger
 from src.common.factory import EngineFactory, EngineClass
 from src.common.session import Session
