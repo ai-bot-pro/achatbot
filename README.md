@@ -3,7 +3,7 @@
 
 # Install
 ## pypi
-```
+```bash
 python3 -m venv .venv_achatbot
 source .venv_achatbot/bin/activate
 pip install achatbot
@@ -12,9 +12,11 @@ pip install "achatbot[fastapi_daily_bot_server]"
 ```
 
 ## local
-```
+```bash
 git clone https://github.com/ai-bot-pro/chat-bot.git
 cd chat-bot
+python3 -m venv .venv_achatbot
+source .venv_achatbot/bin/activate
 bash scripts/pypi_achatbot.sh dev
 # optional-dependencies e.g.
 pip install "dist/achatbot-{$verion}-py3-none-any.whl[fastapi_daily_bot_server]"

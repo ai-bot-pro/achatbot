@@ -17,7 +17,6 @@ from src.common.interface import IBot
 from src.services.help.daily_rest import DailyRESTHelper, \
     DailyRoomObject, DailyRoomProperties, DailyRoomParams
 from src.cmd.bots.base import register_daily_room_bots
-from mangum import Mangum
 
 
 from dotenv import load_dotenv
@@ -461,7 +460,6 @@ async def get_room_bots(room_name: str):
 
     return JSONResponse(response.model_dump())
 
-handler = Mangum(app)
 
 if __name__ == "__main__":
     import uvicorn

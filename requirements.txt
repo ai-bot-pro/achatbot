@@ -61,6 +61,8 @@ babel==2.16.0
     # via gruut
 bangla==0.0.2
     # via tts
+beautifulsoup4==4.12.3
+    # via deep-translator
 blinker==1.8.2
     # via flask
 blis==0.7.11
@@ -142,6 +144,8 @@ decorator==5.1.1
     # via
     #   librosa
     #   ratelim
+deep-translator==1.11.4
+    # via achatbot (pyproject.toml)
 deepgram-sdk==3.4.0
     # via achatbot (pyproject.toml)
 deprecation==2.1.0
@@ -378,8 +382,6 @@ llvmlite==0.43.0
     #   pynndescent
 mako==1.3.5
     # via alembic
-mangum==0.17.0
-    # via achatbot (pyproject.toml)
 marisa-trie==1.2.0
     # via language-data
 markdown==3.6
@@ -1299,6 +1301,8 @@ pytorch-wpe==0.0.1
     # via funasr
 pyttsx3==2.90
     # via achatbot (pyproject.toml)
+pytube==15.0.0
+    # via achatbot (pyproject.toml)
 pytz==2024.1
     # via
     #   dateparser
@@ -1336,6 +1340,7 @@ regex==2024.7.24
 requests==2.32.3
     # via
     #   achatbot (pyproject.toml)
+    #   deep-translator
     #   diffusers
     #   funasr
     #   geocoder
@@ -1423,6 +1428,8 @@ soundfile==0.12.1
     #   pyannote-audio
     #   trainer
     #   tts
+soupsieve==2.6
+    # via beautifulsoup4
 soxr==0.4.0
     # via librosa
 spacy[ja]==3.7.5
@@ -1581,7 +1588,6 @@ typing-extensions==4.12.2
     #   lightning
     #   lightning-utilities
     #   llama-cpp-python
-    #   mangum
     #   openai
     #   pyannote-core
     #   pydantic

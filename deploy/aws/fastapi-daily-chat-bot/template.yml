@@ -7,13 +7,13 @@ Globals:
     Timeout: 30
 
 Resources:
-  Function:
+  FastapiDailyChatBotFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: "FastapiDailyChatBotLambda"
-      MemorySize: 128
-      CodeUri: app
-      Handler: src.cmd.http.server.fastapi_daily_bot_serve.handler
+      #MemorySize: 128
+      CodeUri: runtime/
+      Handler: app.handler
       Runtime: python3.11
       Events:
         Api:
@@ -29,3 +29,9 @@ Outputs:
     Description: URL of your API endpoint
     Value:
       Fn::Sub: 'https://${Api}.execute-api.${AWS::Region}.${AWS::URLSuffix}/'
+  FastapiDailyChatBotFunciton:
+    Description: "Fastapi Daily Chat Bot Lambda Function ARN"
+    Value: !GetAtt FastapiDailyChatBotFunction.Arn
+  FastapiDailyChatBotFuncitonIamRole:
+    Description: "Implicit IAM Role created for Fastapi Daily Chat Bot Lambda Function"
+    Value: !GetAtt FastapiDailyChatBotFunctionRole.Arn

@@ -53,12 +53,6 @@ $ curl http://127.0.0.1:3000
 
 The SAM CLI is also used to deploy the application.
 
-### Build
-
-```bash
-$ sam build
-```
-
 ### Deploy
 
 ```bash
@@ -85,5 +79,6 @@ The URL of your API Gateway is shown in the outputs section of the `sam deploy` 
 # Reference
 - https://serverlessland.com/learn
 - https://github.com/aws/aws-sam-cli
+- https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-config.html
 - https://github.com/aws/aws-lambda-builders
 - https://github.com/weedge/craftsman/tree/main/cloud/aws/cdk/serverless-openai-chatbot
