@@ -6,23 +6,28 @@ version = 0.1
 stack_name = "fastapi-daily-chat-bot"
 
 [default.build.parameters]
-cached = true
+# if dev debug, cached = false, prod set true
+cached = false
 parallel = true
 
+# sam validate to check the template.yml
 [default.validate.parameters]
 lint = true
 
+# sam package
+[default.package.parameters]
+resolve_s3 = false
+
+# sam deploy to deploy with template.yml or defined package.yml
 [default.deploy.parameters]
 capabilities = "CAPABILITY_IAM"
-#capabilities = "CAPABILITY_NAMED_IAM"
-confirm_changeset = true
-resolve_s3 = true
+# if want to deploy with changeset don't confirm, set false
+confirm_changeset = false
+# --parameter-overrides use s3 bucket,so resolve_s3 = false
+resolve_s3 = false
 s3_prefix = "fastapi-daily-chat-bot"
 region = "us-east-1"
 image_repositories = []
-
-[default.package.parameters]
-resolve_s3 = true
 
 [default.sync.parameters]
 watch = true

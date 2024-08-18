@@ -2,21 +2,51 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: AWS Sam Template
 
+# for sam deploy --parameter-overrides to set
+Parameters: 
+  BucketName: 
+    Type: String
+    Default: chat-bots-bucket
+    Description: Enter the name of the S3 bucket storing your PyTorch model artefacts and package codes(for Lambda Layer ARN).
+  LambdaLayerArn:
+    Type: String
+    Default: "arn:aws:lambda:us-east-1:139573341397:layer:fastapi-daily-chat-bot-p311:1"
+    Description: Enter the PyTorch Lambda Layer ARN. Defaults to a public one in the "us-east-1" region.
+
+## deploy local model, for torch load ckpt to inference
+## if use .gguf ckpt file, the same as torch .pt ckpt file
+#  ObjectKey: 
+#    Type: String
+#    Default: somekey
+#    Description: Enter the S3 object key path of your PyTorch model artefacts.
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
     Timeout: 30
 
 Resources:
   FastapiDailyChatBotFunction:
+    # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: "FastapiDailyChatBotLambda"
-      #MemorySize: 128
+      #MemorySize: 128 #min memory
+      MemorySize: 3008
       CodeUri: runtime/
       Handler: app.handler
       Runtime: python3.11
+      Environment:
+        Variables:
+          MODEL_BUCKET: !Ref BucketName
+      Policies:
+          - S3ReadPolicy:
+              BucketName: !Ref BucketName
+      Layers:
+        - !Ref LambdaLayerArn 
       Events:
         Api:
+          # see https://github.com/aws/serverless-application-model/blob/master/versions/2016-10-31.md#httpapi
           Type: HttpApi
           Properties:
             ApiId: !Ref Api

@@ -471,7 +471,7 @@ pytube = ["pytube==15.0.0"]
 deep_translator = ["deep_translator==1.11.4"]
 
 # test
-test = ["sentence_transformers==3.0.0"]
+test = ["sentence_transformers==3.0.0", "pytest==8.3.2", "pytest-mock==3.14.0"]
 
 
 # if use library, need add achatbot dir in pypi_build/app dir, change import codes
