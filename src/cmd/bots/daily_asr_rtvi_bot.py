@@ -37,7 +37,7 @@ class DailyAsrRTVIBot(DailyRoomBot):
     def bot_config(self):
         return self._bot_config.model_dump()
 
-    async def _run(self):
+    async def arun(self):
         vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
         transport = DailyTransport(
             self.args.room_url,

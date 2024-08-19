@@ -36,6 +36,8 @@ Resources:
       CodeUri: runtime/
       Handler: app.handler
       Runtime: python3.11
+      Architectures: ["x86_64"]
+      #Architectures: ["arm64"]
       Environment:
         Variables:
           MODEL_BUCKET: !Ref BucketName

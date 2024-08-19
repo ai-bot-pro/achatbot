@@ -19,12 +19,17 @@ python3 -m venv .venv_achatbot
 source .venv_achatbot/bin/activate
 bash scripts/pypi_achatbot.sh dev
 # optional-dependencies e.g.
-pip install "dist/achatbot-{$verion}-py3-none-any.whl[fastapi_daily_bot_server]"
+pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_daily_bot_server]"
 ```
 
 #  Run chat bots
 ## Run local chat bots
 > [!NOTE]
+> - run src code, replace achatbot to src, don't need set `ACHATBOT_PKG=1` e.g.:
+>   ```
+>   TQDM_DISABLE=True \
+>        python -m achatbot.cmd.local-terminal-chat.generate_audio2audio > log/std_out.log
+>    ```
 > - PyAudio need install python3-pyaudio 
 > e.g. ubuntu `apt-get install python3-pyaudio`, macos `brew install portaudio`
 > see: https://pypi.org/project/PyAudio/

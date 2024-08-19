@@ -192,7 +192,7 @@ Now we can create the Lambda Layer version. Execute the following AWS CLI comman
 aws lambda publish-layer-version \
     --layer-name "fastapi-daily-chat-bot-p311" \
     --description "Lambda layer of fastapi chat bot zipped to be extracted with unzip_requirements file" \
-    --content "S3Bucket=chat-bots-bucket,S3Key=lambda-layers/lambda-layers/fastapi-daily-chat-bot-lambda-layer.zip" \
+    --content "S3Bucket=chat-bots-bucket,S3Key=lambda-layers/fastapi-daily-chat-bot-lambda-layer.zip" \
     --compatible-runtimes "python3.11" 
 ```
 

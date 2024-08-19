@@ -2,20 +2,44 @@
 deploy to cloud ☁️
 - [Cloudflare](https://www.cloudflare.com/)
 
-## Deploy to Cloudflare
+---
+## Deploy to Cloudflare ☁️ (KISS)
+more frontend app
+- pages
+- workers
+### tools
+- wrangler
 
-## Deploy to AWS
-[fastapi-daily-chat-bot](https://github.com/ai-bot-pro/chat-bot/tree/feat/deploy/deploy/aws/fastapi-daily-chat-bot)
+## Deploy to AWS ☁
+- api Gateway + lambda
+  - [fastapi-daily-chat-bot](https://github.com/ai-bot-pro/chat-bot/tree/feat/deploy/deploy/aws/fastapi-daily-chat-bot)
+### tools
 - cdk
 - sam
 
-## Deploy to GCP
+## Deploy to GCP ☁
+### tools
+- gcloud
 
-## Deploy to Azure
+## Deploy to Azure ☁
 
-## Deploy to Alibaba Cloud
+## Deploy to Alibaba Cloud ☁
 
-## deploy Tools
-- TF
-- sls (serverless)
+## Deploy Tools (provider cloud tools)
+- terraform (Terraform)
+- sls (Serverless)
 
+---
+
+## Deploy to cerebrium (KISS)
+provider: aws
+- [fastapi-daily-chat-bot](https://github.com/ai-bot-pro/chat-bot/tree/feat/deploy/deploy/cerebrium/fastapi-daily-chat-bot)
+### tools
+- cerebrium
+
+---
+
+> Interesting souls have no place~
+
+# references
+- https://daily.dev/blog/top-9-container-registries-2024-how-to-choose

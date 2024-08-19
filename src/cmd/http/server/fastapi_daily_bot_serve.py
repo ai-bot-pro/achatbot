@@ -17,6 +17,7 @@ from src.common.interface import IBot
 from src.services.help.daily_rest import DailyRESTHelper, \
     DailyRoomObject, DailyRoomProperties, DailyRoomParams
 from src.cmd.bots.base import register_daily_room_bots
+from src.cmd.bots import do_register_bots
 
 
 from dotenv import load_dotenv
@@ -187,6 +188,25 @@ async def create_random_room():
     return JSONResponse(APIResponse(data=data).model_dump())
 
 
+@app.get("/register_bot/{bot_name}")
+def register_bot(bot_name: str = "DummyBot"):
+    """register bot"""
+    logging.info(f"before register bots: {register_daily_room_bots.dict()}")
+    is_register = do_register_bots(bot_name)
+    if not is_register:
+        logging.info(f"name:{bot_name} not existent bot")
+
+    logging.info(f"after register bots: {register_daily_room_bots.dict()}")
+    return JSONResponse(
+        APIResponse(
+            data={
+                "is_register": is_register,
+                "register_bots": register_daily_room_bots.keys_str(),
+            },
+        ).model_dump()
+    )
+
+
 # @app.post("/start_bot")
 def start_bot(info: BotInfo):
     """start run bot"""
@@ -297,7 +317,7 @@ curl -XPOST "http://0.0.0.0:4321/bot_join/chat-bot/DailyLangchainRAGBot" \
 
 
 @app.post("/bot_join/{room_name}/{chat_bot_name}")
-async def bot_join(room_name: str, chat_bot_name: str, info: BotInfo) -> JSONResponse:
+async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo) -> JSONResponse:
     """join room chat with bot"""
 
     logging.info(f"room_name: {room_name} chat_bot_name: {chat_bot_name} request bot info: {info}")

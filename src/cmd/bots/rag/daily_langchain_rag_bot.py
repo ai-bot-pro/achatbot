@@ -83,7 +83,7 @@ class DailyLangchainRAGBot(DailyRoomBot):
             self.message_store[session_id] = ChatMessageHistory()
         return self.message_store[session_id]
 
-    async def _run(self):
+    async def arun(self):
         vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
         transport = DailyTransport(
             self.args.room_url,

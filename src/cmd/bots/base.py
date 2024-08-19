@@ -29,12 +29,11 @@ class DailyRoomBot(IBot):
 
     def run(self):
         try:
-            asyncio.run(self._run())
+            asyncio.run(self.arun())
         except KeyboardInterrupt:
             logging.warning("Ctrl-C detected. Exiting!")
 
-    @abstractmethod
-    async def _run(self):
+    async def arun(self):
         pass
 
     async def on_first_participant_joined(self, transport, participant):

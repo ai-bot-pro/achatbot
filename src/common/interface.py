@@ -247,5 +247,9 @@ class IBot(ABC):
         raise NotImplemented("must be implemented in the child class")
 
     @abstractmethod
+    async def arun(self):
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
     def bot_config(self) -> dict:
         raise NotImplemented("must be implemented in the child class")
