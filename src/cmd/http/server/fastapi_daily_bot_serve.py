@@ -45,6 +45,10 @@ class APIResponse(BaseModel):
 
 # biz error code
 ERROR_CODE_NO_ROOM = 10000
+ERROR_CODE_BOT_UN_REGISTER = 10001
+ERROR_CODE_BOT_FAIL_TOKEN = 10002
+ERROR_CODE_BOT_MAX_LIMIT = 10003
+ERROR_CODE_BOT_UN_PROC = 10004
 
 # ------------------ daily room --------------------------
 
@@ -164,32 +168,47 @@ curl -XPOST "http://0.0.0.0:4321/create_room" \
 
 
 @app.post("/create_room")
-async def create_random_room():
+async def fastapi_create_random_room() -> JSONResponse:
+    try:
+        res = await create_random_room()
+    except Exception as e:
+        logging.error(f"Exception in create_random_room: {e}")
+        raise HTTPException(status_code=500, detail=f"{e}")
+    return JSONResponse(res)
+
+
+async def create_random_room() -> dict[str, Any]:
     """create random room and token return"""
     # Create a Daily rest helper
     daily_rest_helper = DailyRESTHelper(DAILY_API_KEY, DAILY_API_URL)
     # Create a new room
-    try:
-        params = DailyRoomParams(properties=DailyRoomProperties(
-            exp=time.time() + RANDOM_ROOM_EXPIRE_TIME,
-        ))
-        room: DailyRoomObject = daily_rest_helper.create_room(params=params)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"{e}")
+    params = DailyRoomParams(properties=DailyRoomProperties(
+        exp=time.time() + RANDOM_ROOM_EXPIRE_TIME,
+    ))
+    room: DailyRoomObject = daily_rest_helper.create_room(params=params)
 
     # Give the agent a token to join the session
     token = daily_rest_helper.get_token(room.url, RANDOM_ROOM_TOKEN_EXPIRE_TIME)
 
     if not room or not token:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to get token for room: {room.name}")
+        detail = f"Failed to get token for room: {room.name}"
+        return APIResponse(error_code=ERROR_CODE_BOT_FAIL_TOKEN, error_detail=detail).model_dump()
 
     data = {"room": room, "token": token}
-    return JSONResponse(APIResponse(data=data).model_dump())
+    return APIResponse(data=data).model_dump()
 
 
 @app.get("/register_bot/{bot_name}")
-def register_bot(bot_name: str = "DummyBot"):
+def fastapi_register_bot(bot_name: str = "DummyBot") -> JSONResponse:
+    try:
+        res = register_bot(bot_name)
+    except Exception as e:
+        logging.error(f"Exception in register_bot: {e}")
+        raise HTTPException(status_code=500, detail=f"{e}")
+    return JSONResponse(res)
+
+
+def register_bot(bot_name: str = "DummyBot") -> dict[str, Any]:
     """register bot"""
     logging.info(f"before register bots: {register_daily_room_bots.dict()}")
     is_register = do_register_bots(bot_name)
@@ -197,14 +216,12 @@ def register_bot(bot_name: str = "DummyBot"):
         logging.info(f"name:{bot_name} not existent bot")
 
     logging.info(f"after register bots: {register_daily_room_bots.dict()}")
-    return JSONResponse(
-        APIResponse(
-            data={
-                "is_register": is_register,
-                "register_bots": register_daily_room_bots.keys_str(),
-            },
-        ).model_dump()
-    )
+    return APIResponse(
+        data={
+            "is_register": is_register,
+            "register_bots": register_daily_room_bots.keys_str(),
+        },
+    ).model_dump()
 
 
 # @app.post("/start_bot")
@@ -233,35 +250,42 @@ curl -XPOST "http://0.0.0.0:4321/bot_join/DailyLangchainRAGBot" \
 
 
 @app.post("/bot_join/{chat_bot_name}")
-async def bot_join(chat_bot_name: str, info: BotInfo) -> JSONResponse:
+async def fastapi_bot_join(chat_bot_name: str, info: BotInfo) -> JSONResponse:
+    try:
+        res = await bot_join(chat_bot_name, info)
+    except Exception as e:
+        logging.error(f"Exception in bot_join: {e}")
+        raise HTTPException(status_code=500, detail=f"{e}")
+    return JSONResponse(res)
+
+
+async def bot_join(chat_bot_name: str, info: BotInfo) -> dict[str, Any]:
     """join random room chat with bot"""
 
     logging.info(f"chat_bot_name: {chat_bot_name} request bot info: {info}")
 
     logging.info(f"register bots: {register_daily_room_bots.items()}")
     if chat_bot_name not in register_daily_room_bots:
-        raise HTTPException(status_code=500, detail=f"bot {chat_bot_name} don't exist")
+        detail = f"bot {chat_bot_name} don't exist"
+        return APIResponse(error_code=ERROR_CODE_BOT_UN_REGISTER, error_detail=detail).model_dump()
 
     # Create a Daily rest helper
     daily_rest_helper = DailyRESTHelper(DAILY_API_KEY, DAILY_API_URL)
     room: DailyRoomObject | None = None
     # Create a new room
-    try:
-        params = DailyRoomParams(
-            properties=DailyRoomProperties(
-                exp=time.time() + RANDOM_ROOM_EXPIRE_TIME,
-            ),
-        )
-        room = daily_rest_helper.create_room(params=params)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"{e}")
+    params = DailyRoomParams(
+        properties=DailyRoomProperties(
+            exp=time.time() + RANDOM_ROOM_EXPIRE_TIME,
+        ),
+    )
+    room = daily_rest_helper.create_room(params=params)
 
     # Give the agent a token to join the session
     token = daily_rest_helper.get_token(room.url, RANDOM_ROOM_TOKEN_EXPIRE_TIME)
 
     if not room or not token:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to get token for room: {room.name}")
+        detail = f"Failed to get token for room: {room.name}"
+        return APIResponse(error_code=ERROR_CODE_BOT_FAIL_TOKEN, error_detail=detail).model_dump()
 
     logging.info(f"room: {room}")
     pid = 0
@@ -281,21 +305,22 @@ async def bot_join(chat_bot_name: str, info: BotInfo) -> JSONResponse:
         bot_procs[pid] = (bot_process, room)
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"bot {chat_bot_name} failed to start process: {e}")
+        detail = f"bot {chat_bot_name} failed to start process: {e}"
+        raise Exception(detail)
 
     # Grab a token for the user to join with
     user_token = daily_rest_helper.get_token(room.url, ROOM_TOKEN_EXPIRE_TIME)
 
-    return JSONResponse({
+    data = {
         "room_name": room.name,
         "room_url": room.url,
         "token": user_token,
         "config": bot_obj.bot_config(),
         "bot_id": pid,
         "status": "running",
-    })
+    }
+    return APIResponse(data=data).model_dump()
+
 
 """
 curl -XPOST "http://0.0.0.0:4321/bot_join/chat-bot/DummyBot" \
@@ -317,7 +342,17 @@ curl -XPOST "http://0.0.0.0:4321/bot_join/chat-bot/DailyLangchainRAGBot" \
 
 
 @app.post("/bot_join/{room_name}/{chat_bot_name}")
-async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo) -> JSONResponse:
+async def fastapi_bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo) -> JSONResponse:
+    try:
+        res = await bot_join_room(room_name, chat_bot_name, info)
+    except Exception as e:
+        logging.error(f"Exception in bot_join_room: {e}")
+        raise HTTPException(status_code=500, detail=f"{e}")
+
+    return JSONResponse(res)
+
+
+async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo) -> dict[str, Any]:
     """join room chat with bot"""
 
     logging.info(f"room_name: {room_name} chat_bot_name: {chat_bot_name} request bot info: {info}")
@@ -325,12 +360,13 @@ async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo) -> JS
     num_bots_in_room = get_room_bot_proces_num(room_name)
     logging.info(f"num_bots_in_room: {num_bots_in_room}")
     if num_bots_in_room >= MAX_BOTS_PER_ROOM:
-        raise HTTPException(
-            status_code=500, detail=f"Max bot limited reach for room: {room_name}")
+        detail = f"Max bot limited reach for room: {room_name}"
+        return APIResponse(error_code=ERROR_CODE_BOT_MAX_LIMIT, error_detail=detail).model_dump()
 
     logging.info(f"register bots: {register_daily_room_bots.items()}")
     if chat_bot_name not in register_daily_room_bots:
-        raise HTTPException(status_code=500, detail=f"bot {chat_bot_name} don't exist")
+        detail = f"bot {chat_bot_name} don't exist"
+        return APIResponse(error_code=ERROR_CODE_BOT_UN_REGISTER, error_detail=detail).model_dump()
 
     # Create a Daily rest helper
     daily_rest_helper = DailyRESTHelper(DAILY_API_KEY, DAILY_API_URL)
@@ -349,14 +385,14 @@ async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo) -> JS
             )
             room = daily_rest_helper.create_room(params=params)
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"{e}")
+            raise Exception(f"{e}")
 
     # Give the agent a token to join the session
     token = daily_rest_helper.get_token(room.url, ROOM_TOKEN_EXPIRE_TIME)
 
     if not room or not token:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to get token for room: {room.name}")
+        detail = f"Failed to get token for room: {room.name}"
+        return APIResponse(error_code=ERROR_CODE_BOT_FAIL_TOKEN, error_detail=detail).model_dump()
 
     logging.info(f"room: {room}")
     pid = 0
@@ -376,21 +412,21 @@ async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo) -> JS
         bot_procs[pid] = (bot_process, room)
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"bot {chat_bot_name} failed to start process: {e}")
+        detail = f"bot {chat_bot_name} failed to start process: {e}"
+        raise Exception(detail)
 
     # Grab a token for the user to join with
     user_token = daily_rest_helper.get_token(room.url, ROOM_TOKEN_EXPIRE_TIME)
 
-    return JSONResponse({
+    data = {
         "room_name": room.name,
         "room_url": room.url,
         "token": user_token,
         "config": bot_obj.bot_config(),
         "bot_id": pid,
         "status": "running",
-    })
+    }
+    return APIResponse(data=data).model_dump()
 
 
 """
@@ -399,17 +435,28 @@ curl -XGET "http://0.0.0.0:4321/status/53187" | jq .
 
 
 @ app.get("/status/{pid}")
-async def get_status(pid: int):
+async def fastapi_get_status(pid: int) -> JSONResponse:
+    try:
+        res = await get_status(pid)
+    except Exception as e:
+        logging.error(f"Exception in get_status: {e}")
+        raise HTTPException(status_code=500, detail=f"{e}")
+
+    return JSONResponse(res)
+
+
+async def get_status(pid: int) -> dict[str, Any]:
     # Look up the subprocess
     val = bot_procs.get(pid)
     if val is None:
-        raise HTTPException(status_code=404, detail="Bot not found")
+        detail = "Bot not found"
+        return APIResponse(error_code=ERROR_CODE_BOT_UN_PROC, error_detail=detail).model_dump()
     proc: multiprocessing.Process = val[0]
     room: DailyRoomObject = val[1]
     # If the subprocess doesn't exist, return an error
     if not proc:
-        raise HTTPException(
-            status_code=404, detail=f"Bot with process id: {pid} not found")
+        detail = f"Bot with process id: {pid} not found"
+        return APIResponse(error_code=ERROR_CODE_BOT_UN_PROC, error_detail=detail).model_dump()
 
     # Check the status of the subprocess
     if proc.is_alive():
@@ -417,11 +464,12 @@ async def get_status(pid: int):
     else:
         status = "finished"
 
-    return JSONResponse({
+    data = {
         "bot_id": pid,
         "status": status,
         "room_info": room.model_dump(),
-    })
+    }
+    return APIResponse(data=data).model_dump()
 
 
 """
@@ -430,10 +478,21 @@ curl -XGET "http://0.0.0.0:4321/room/num_bots/chat-bot" | jq .
 
 
 @app.get("/room/num_bots/{room_name}")
+async def fastapi_get_num_bots(room_name: str):
+    try:
+        res = await get_num_bots(room_name)
+    except Exception as e:
+        logging.error(f"Exception in get_num_bots: {e}")
+        raise HTTPException(status_code=500, detail=f"{e}")
+
+    return JSONResponse(res)
+
+
 async def get_num_bots(room_name: str):
-    return JSONResponse({
+    data = {
         "num_bots": get_room_bot_proces_num(room_name),
-    })
+    }
+    return APIResponse(data=data).model_dump()
 
 
 """
@@ -442,7 +501,17 @@ curl -XGET "http://0.0.0.0:4321/room/bots/chat-bot" | jq .
 
 
 @app.get("/room/bots/{room_name}")
-async def get_room_bots(room_name: str):
+async def fastapi_get_room_bots(room_name: str):
+    try:
+        res = await get_room_bots(room_name)
+    except Exception as e:
+        logging.error(f"Exception in get_room_bots: {e}")
+        raise HTTPException(status_code=500, detail=f"{e}")
+
+    return JSONResponse(res)
+
+
+async def get_room_bots(room_name: str) -> dict[str, Any]:
     procs = []
     _room = None
     for val in bot_procs.values():
@@ -461,24 +530,17 @@ async def get_room_bots(room_name: str):
         try:
             _room = daily_rest_helper.get_room_from_name(room_name)
         except Exception as ex:
-            return JSONResponse(
-                APIResponse(
-                    error_code=ERROR_CODE_NO_ROOM,
-                    error_detail=f"Failed to get room {room_name} from Daily REST API: {ex}",
-                    data=None,
-                ).model_dump()
-            )
+            return APIResponse(
+                error_code=ERROR_CODE_NO_ROOM,
+                error_detail=f"Failed to get room {room_name} from Daily REST API: {ex}",
+            ).model_dump()
 
-    response = APIResponse(
-        error_code=0,
-        error_detail="",
-        data={
-            "room_info": _room.model_dump(),
-            "bots": procs,
-        },
-    )
+    response = APIResponse(data={
+        "room_info": _room.model_dump(),
+        "bots": procs,
+    })
 
-    return JSONResponse(response.model_dump())
+    return response.model_dump()
 
 
 if __name__ == "__main__":

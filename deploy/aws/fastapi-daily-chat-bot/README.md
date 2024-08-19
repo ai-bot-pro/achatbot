@@ -1,6 +1,8 @@
 # Deploy FastAPI + Daily + Chat Bots on AWS: Lambda + API Gateway
 
 This sample deploys FastAPI Daily Chat Bots in a Lambda function that is fronted by an HTTP API in API Gateway.
+> [!NOTE]
+> daily python sdk install issue see this [issue](https://github.com/daily-co/daily-python/issues/25)
 
 ## Requirements
 - [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)

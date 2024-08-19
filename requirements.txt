@@ -293,6 +293,8 @@ importlib-metadata==8.2.0
     # via diffusers
 inflect==7.3.1
     # via tts
+iniconfig==2.0.0
+    # via pytest
 itsdangerous==2.2.0
     # via flask
 jaconv==0.4.0
@@ -524,6 +526,7 @@ packaging==24.1
     #   onnxruntime
     #   optuna
     #   pooch
+    #   pytest
     #   pytorch-lightning
     #   spacy
     #   speechbrain
@@ -549,6 +552,8 @@ pillow==10.4.0
     #   sentence-transformers
 platformdirs==4.2.2
     # via pooch
+pluggy==1.5.0
+    # via pytest
 pooch==1.8.2
     # via librosa
 preshed==3.0.9
@@ -1286,6 +1291,12 @@ pypinyin==0.52.0
     # via tts
 pysbd==0.3.4
     # via tts
+pytest==8.3.2
+    # via
+    #   achatbot (pyproject.toml)
+    #   pytest-mock
+pytest-mock==3.14.0
+    # via achatbot (pyproject.toml)
 python-crfsuite==0.9.10
     # via gruut
 python-dateutil==2.9.0.post0

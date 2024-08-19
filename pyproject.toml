@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.5.7"
+version = "0.0.5.9"
 requires-python = ">= 3.10"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
@@ -59,7 +59,6 @@ dependencies = [
     "scipy==1.14.0",
     "pyloudnorm==0.1.1",
     "numpy==1.26.4",
-    "tqdm==4.66.5",
 ]
 
 [project.urls]
@@ -91,6 +90,7 @@ fastapi_daily_bot_server = [
 
 # achatbot[daily_room_audio_stream,speech_waker,speech_vad,speech_asr,core_llm,speech_tts,stream_player]
 local_terminal_chat_bot = [
+    "tqdm>=4.66.0",
     # pyaudio_stream
     "PyAudio==0.2.14",
     # speech_waker

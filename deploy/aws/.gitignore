@@ -1,0 +1,4 @@
+*.zip
+packaged.yaml
+.aws-sam
+__pycache__

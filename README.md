@@ -28,7 +28,7 @@ pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_daily_bot_server]
 > - run src code, replace achatbot to src, don't need set `ACHATBOT_PKG=1` e.g.:
 >   ```
 >   TQDM_DISABLE=True \
->        python -m achatbot.cmd.local-terminal-chat.generate_audio2audio > log/std_out.log
+>        python -m src.cmd.local-terminal-chat.generate_audio2audio > log/std_out.log
 >    ```
 > - PyAudio need install python3-pyaudio 
 > e.g. ubuntu `apt-get install python3-pyaudio`, macos `brew install portaudio`

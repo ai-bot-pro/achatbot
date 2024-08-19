@@ -1,6 +1,7 @@
 # CICD
-deploy to cloud ☁️
-- [Cloudflare](https://www.cloudflare.com/)
+> Interesting souls have no place~
+
+deploy to cloud ☁️ serverless 
 
 ---
 ## Deploy to Cloudflare ☁️ (KISS)
@@ -39,7 +40,6 @@ provider: aws
 
 ---
 
-> Interesting souls have no place~
 
 # references
 - https://daily.dev/blog/top-9-container-registries-2024-how-to-choose
