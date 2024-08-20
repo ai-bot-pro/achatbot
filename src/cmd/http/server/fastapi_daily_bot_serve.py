@@ -17,7 +17,7 @@ from src.common.interface import IBot
 from src.services.help.daily_rest import DailyRESTHelper, \
     DailyRoomObject, DailyRoomProperties, DailyRoomParams
 from src.cmd.bots.base import register_daily_room_bots
-from src.cmd.bots import do_register_bots
+from src.cmd.bots import import_bots
 
 
 from dotenv import load_dotenv
@@ -216,11 +216,11 @@ def fastapi_register_bot(bot_name: str = "DummyBot") -> JSONResponse:
 
 
 def register_bot(bot_name: str = "DummyBot") -> dict[str, Any]:
-    """register bot"""
+    """register bot, !NOTE: just for single machine state :)"""
     logging.info(f"before register bots: {register_daily_room_bots.dict()}")
-    is_register = do_register_bots(bot_name)
+    is_register = import_bots(bot_name)
     if not is_register:
-        logging.info(f"name:{bot_name} not existent bot")
+        logging.info(f"name:{bot_name} not existent bot to import")
 
     logging.info(f"after register bots: {register_daily_room_bots.dict()}")
     return APIResponse(
@@ -272,6 +272,8 @@ async def bot_join(chat_bot_name: str, info: BotInfo | dict) -> dict[str, Any]:
     logging.info(f"chat_bot_name: {chat_bot_name} request bot info: {info}")
     if isinstance(info, dict):
         info = BotInfo(**info)
+
+    import_bots(chat_bot_name)
 
     logging.info(f"register bots: {register_daily_room_bots.items()}")
     if chat_bot_name not in register_daily_room_bots:
@@ -376,6 +378,7 @@ async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo | dict
         detail = f"Max bot limited reach for room: {room_name}"
         return APIResponse(error_code=ERROR_CODE_BOT_MAX_LIMIT, error_detail=detail).model_dump()
 
+    import_bots(chat_bot_name)
     logging.info(f"register bots: {register_daily_room_bots.items()}")
     if chat_bot_name not in register_daily_room_bots:
         detail = f"bot {chat_bot_name} don't exist"
@@ -389,7 +392,8 @@ async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo | dict
     try:
         room = daily_rest_helper.get_room_from_name(room_name)
     except Exception as ex:
-        logging.warning(f"Failed to get room {room_name} from Daily REST API: {ex}")
+        logging.info(
+            f"Failed to get room {room_name} from Daily REST API: {ex}, to new a room: {room_name}")
         # Create a new room
         try:
             params = DailyRoomParams(

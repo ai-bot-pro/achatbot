@@ -1,7 +1,7 @@
 from . import dummy_bot
 
 
-def do_register_bots(bot_name: str = "DummyBot"):
+def import_bots(bot_name: str = "DummyBot"):
     """ import package to register """
     if "Dummy" in bot_name:
         from . import dummy_bot

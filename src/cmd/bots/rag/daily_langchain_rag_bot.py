@@ -125,7 +125,7 @@ class DailyLangchainRAGBot(DailyRoomBot):
         tts_processor: FrameProcessor = None
         if self._bot_config.tts.tag == "elevenlabs_tts_processor":
             tts_processor = ElevenLabsTTSProcessor(**self._bot_config.tts.args)
-        else:
+        if self._bot_config.tts.tag == "cartesia_tts_processor":
             tts_processor = CartesiaTTSProcessor(
                 # voice_id=self._bot_config.tts.voice,
                 # cartesia_version="2024-06-10",
@@ -133,6 +133,9 @@ class DailyLangchainRAGBot(DailyRoomBot):
                 # language=self._bot_config.tts.language if self._bot_config.tts.language else "en",
                 **self._bot_config.tts.args
             )
+        else:
+            logging.error(f"unsupport tts processor: {self._bot_config.tts.tag}")
+            return
 
         # now just reuse rtvi bot config
         # !TODO: need config processor with bot config (redefine api params) @weedge
