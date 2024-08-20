@@ -52,8 +52,6 @@ ERROR_CODE_BOT_UN_PROC = 10004
 
 # ------------------ daily room --------------------------
 
-DAILY_API_URL = os.getenv("DAILY_API_URL", "https://api.daily.co/v1")
-DAILY_API_KEY = os.getenv("DAILY_API_KEY", "")
 ROOM_EXPIRE_TIME = 30 * 60  # 30 minutes
 ROOM_TOKEN_EXPIRE_TIME = 30 * 60  # 30 minutes
 RANDOM_ROOM_EXPIRE_TIME = 5 * 60  # 5 minutes
@@ -144,11 +142,18 @@ async def allowed_hosts_middleware(request: Request, call_next):
     return response
 
 
+def app_status():
+    logging.info(f"{os.environ}")
+    return APIResponse().model_dump()
+
+
 @app.get("/create_room/{name}")
 async def create_room(name):
     """create room then redirect to room url"""
     # Create a Daily rest helper
-    daily_rest_helper = DailyRESTHelper(DAILY_API_KEY, DAILY_API_URL)
+    daily_rest_helper = DailyRESTHelper(
+        os.getenv("DAILY_API_KEY", ""),
+        os.getenv("DAILY_API_URL", "https://api.daily.co/v1"))
     # Create a new room
     try:
         params = DailyRoomParams(name=name, properties=DailyRoomProperties(
@@ -180,7 +185,9 @@ async def fastapi_create_random_room() -> JSONResponse:
 async def create_random_room() -> dict[str, Any]:
     """create random room and token return"""
     # Create a Daily rest helper
-    daily_rest_helper = DailyRESTHelper(DAILY_API_KEY, DAILY_API_URL)
+    daily_rest_helper = DailyRESTHelper(
+        os.getenv("DAILY_API_KEY", ""),
+        os.getenv("DAILY_API_URL", "https://api.daily.co/v1"))
     # Create a new room
     params = DailyRoomParams(properties=DailyRoomProperties(
         exp=time.time() + RANDOM_ROOM_EXPIRE_TIME,
@@ -259,10 +266,12 @@ async def fastapi_bot_join(chat_bot_name: str, info: BotInfo) -> JSONResponse:
     return JSONResponse(res)
 
 
-async def bot_join(chat_bot_name: str, info: BotInfo) -> dict[str, Any]:
+async def bot_join(chat_bot_name: str, info: BotInfo | dict) -> dict[str, Any]:
     """join random room chat with bot"""
 
     logging.info(f"chat_bot_name: {chat_bot_name} request bot info: {info}")
+    if isinstance(info, dict):
+        info = BotInfo(**info)
 
     logging.info(f"register bots: {register_daily_room_bots.items()}")
     if chat_bot_name not in register_daily_room_bots:
@@ -270,7 +279,9 @@ async def bot_join(chat_bot_name: str, info: BotInfo) -> dict[str, Any]:
         return APIResponse(error_code=ERROR_CODE_BOT_UN_REGISTER, error_detail=detail).model_dump()
 
     # Create a Daily rest helper
-    daily_rest_helper = DailyRESTHelper(DAILY_API_KEY, DAILY_API_URL)
+    daily_rest_helper = DailyRESTHelper(
+        os.getenv("DAILY_API_KEY", ""),
+        os.getenv("DAILY_API_URL", "https://api.daily.co/v1"))
     room: DailyRoomObject | None = None
     # Create a new room
     params = DailyRoomParams(
@@ -352,10 +363,12 @@ async def fastapi_bot_join_room(room_name: str, chat_bot_name: str, info: BotInf
     return JSONResponse(res)
 
 
-async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo) -> dict[str, Any]:
+async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo | dict) -> dict[str, Any]:
     """join room chat with bot"""
 
     logging.info(f"room_name: {room_name} chat_bot_name: {chat_bot_name} request bot info: {info}")
+    if isinstance(info, dict):
+        info = BotInfo(**info)
 
     num_bots_in_room = get_room_bot_proces_num(room_name)
     logging.info(f"num_bots_in_room: {num_bots_in_room}")
@@ -369,7 +382,9 @@ async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo) -> di
         return APIResponse(error_code=ERROR_CODE_BOT_UN_REGISTER, error_detail=detail).model_dump()
 
     # Create a Daily rest helper
-    daily_rest_helper = DailyRESTHelper(DAILY_API_KEY, DAILY_API_URL)
+    daily_rest_helper = DailyRESTHelper(
+        os.getenv("DAILY_API_KEY", ""),
+        os.getenv("DAILY_API_URL", "https://api.daily.co/v1"))
     room: DailyRoomObject | None = None
     try:
         room = daily_rest_helper.get_room_from_name(room_name)
@@ -526,7 +541,10 @@ async def get_room_bots(room_name: str) -> dict[str, Any]:
             _room = room
 
     if _room is None:
-        daily_rest_helper = DailyRESTHelper(DAILY_API_KEY, DAILY_API_URL)
+        daily_rest_helper = DailyRESTHelper(
+            os.getenv("DAILY_API_KEY", ""),
+            os.getenv("DAILY_API_URL", "https://api.daily.co/v1"))
+        print(os.getenv("DAILY_API_KEY", ""))
         try:
             _room = daily_rest_helper.get_room_from_name(room_name)
         except Exception as ex:
