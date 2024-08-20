@@ -33,7 +33,7 @@ class VADAnalyzerEnvInit():
 
     map_config_func = {
         'silero_vad_analyzer': get_silero_vad_analyzer_args,
-        'webrtc_vad_analyzer': get_daily_webrtc_vad_analyzer_args,
+        'daily_webrtc_vad_analyzer': get_daily_webrtc_vad_analyzer_args,
     }
 
     @staticmethod

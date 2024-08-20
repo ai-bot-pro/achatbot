@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.5.12"
+version = "0.0.5.13"
 requires-python = ">= 3.10"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]

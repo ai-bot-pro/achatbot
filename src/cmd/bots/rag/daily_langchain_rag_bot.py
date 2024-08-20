@@ -143,11 +143,14 @@ class DailyLangchainRAGBot(DailyRoomBot):
             api_key=os.environ.get("OPENAI_API_KEY"),
         )
 
+        model_name = "jina-embeddings-v2-base-en"
+        if self._bot_config.llm.language == "zh":
+            model_name = "jina-embeddings-v2-base-zh"
         vectorstore = TiDBVectorStore(
             connection_string=get_tidb_url(),
             embedding_function=JinaEmbeddings(
                 jina_api_key=os.getenv('JINA_API_KEY'),
-                model_name="jina-embeddings-v2-base-en",
+                model_name=model_name,
             ),
             table_name="AndrejKarpathy",
             distance_strategy=os.getenv('TIDB_VSS_DISTANCE_STRATEGY', 'cosine'),

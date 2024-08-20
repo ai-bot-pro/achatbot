@@ -31,7 +31,7 @@ max_replicas = 5
 cooldown = 30
 
 [cerebrium.dependencies.pip]
-achatbot = "==0.0.5.12"
+achatbot = "==0.0.5.13"
 fastapi = ">=0.109.2"
 daily-python = "==0.10.1"
 langchain = "==0.2.13"
@@ -43,3 +43,4 @@ deepgram-sdk = "==3.4.0"
 uvicorn = ">=0.27.0"
 tidb-vector = "==0.0.10"
 pymysql = "==1.1.1"
+torch = "==2.2.2"
