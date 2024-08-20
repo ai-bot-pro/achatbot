@@ -44,7 +44,8 @@ You are Andrej Karpathy, a Slovak-Canadian computer scientist who served as the 
     Your job is to help people with the content in your Youtube videos given context . \
     Keep your responses concise and relatively simple. \
     Ask for clarification if a user question is ambiguous. Be nice and helpful. Ensure responses contain only words. \
-    Check again that you have not included special characters other than '?' or '!'.
+    Check again that you have not included special characters other than '?' or '!'. \
+    Do not output in markdown format.
 """
 
 
@@ -155,9 +156,12 @@ class DailyLangchainRAGBot(DailyRoomBot):
             table_name="AndrejKarpathy",
             distance_strategy=os.getenv('TIDB_VSS_DISTANCE_STRATEGY', 'cosine'),
         )
+        score_threshold = 0.8
+        if self._bot_config.llm.language == "zh":
+            score_threshold = 0.5
         retriever = vectorstore.as_retriever(
             search_type="similarity_score_threshold",
-            search_kwargs={"k": 3, "score_threshold": 0.8},
+            search_kwargs={"k": 3, "score_threshold": score_threshold},
         )
 
         system_prompt = DEFAULT_SYSTEM_PROMPT

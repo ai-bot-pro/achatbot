@@ -269,15 +269,15 @@ if __name__ == "__main__":
     Logger.init(level=logging.DEBUG, is_file=False)
 
     video_links = {
-        # "ThreeBlueOneBrown": [
-        #    # NN
-        #    "https://www.youtube.com/watch?v=aircAruvnKk",
-        #    "https://www.youtube.com/watch?v=IHZwWFHWa-w",
-        #    "https://www.youtube.com/watch?v=Ilg3gGewQ5U",
-        #    "https://www.youtube.com/watch?v=tIeHLnjs5U8",
-        #    "https://www.youtube.com/watch?v=wjZofJX0v4M",
-        #    "https://www.youtube.com/watch?v=eMlx5fFNoYc",
-        # ],
+        "ThreeBlueOneBrown": [
+            # NN
+            "https://www.youtube.com/watch?v=aircAruvnKk",
+            "https://www.youtube.com/watch?v=IHZwWFHWa-w",
+            "https://www.youtube.com/watch?v=Ilg3gGewQ5U",
+            "https://www.youtube.com/watch?v=tIeHLnjs5U8",
+            "https://www.youtube.com/watch?v=wjZofJX0v4M",
+            "https://www.youtube.com/watch?v=eMlx5fFNoYc",
+        ],
         "AndrejKarpathy": [
             "https://www.youtube.com/watch?v=zjkBMFhNj_g",
             # zero2hero
@@ -315,7 +315,7 @@ if __name__ == "__main__":
                     transcribed_text, target="zh-CN", text_file_name=title, path=dir_path)
                 chunk_texts = split_to_chunk_texts(translated_text, lang="zh")
                 save_embeddings_to_db(
-                    name, title=title + "zh-CN",
+                    name, title=title + " zh-CN",
                     texts=chunk_texts,
                     path=dir_path,
                     lang="zh",
