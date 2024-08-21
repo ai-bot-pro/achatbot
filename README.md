@@ -37,6 +37,7 @@ pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
 > - llm llama-cpp-python init use cpu Pre-built Wheel to install, 
 > if want to use other lib(cuda), see: https://github.com/abetlen/llama-cpp-python#installation-configuration
 >
+> - install `pydub`  need install `ffmpeg` see: https://www.ffmpeg.org/download.html
 
 1. run `pip install "achatbot[local_terminal_chat_bot]"` to install dependencies to run local terminal chat bot;
 2. create achatbot data dir in `$HOME` dir `mkdir -p ~/.achatbot/{log,config,models,records,videos}`;
@@ -199,7 +200,13 @@ ACHATBOT_PKG=1 TTS_TAG=tts_cosy_voice IS_RELOAD=1 python -m achatbot.cmd.grpc.sp
 
 
 # Service Deployment Architecture
+## UI
+- [ui/educator-client](https://github.com/ai-bot-pro/educator-client)
+deploy [ui/educator-client](https://github.com/ai-bot-pro/educator-client) to cloudflare pages, access https://58bf8cf2.educator-client.pages.dev/
 
+## Server
+- [fastapi-daily-chat-bot](https://github.com/ai-bot-pro/chat-bot/tree/main/deploy/cerebrium/fastapi-daily-chat-bot)
+deploy fastapi-daily-chat-bot to cerebrium
 
 # Multimodal Interaction
 ## audio (voice)
