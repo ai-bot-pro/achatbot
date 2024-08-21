@@ -167,12 +167,12 @@ async def create_room(name):
 
 
 """
-curl -XPOST "http://0.0.0.0:4321/create_room" \
+curl -XPOST "http://0.0.0.0:4321/create_random_room" \
     -H "Content-Type: application/json"
 """
 
 
-@app.post("/create_room")
+@app.post("/create_random_room")
 async def fastapi_create_random_room() -> JSONResponse:
     try:
         res = await create_random_room()

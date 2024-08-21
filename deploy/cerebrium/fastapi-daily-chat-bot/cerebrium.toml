@@ -30,7 +30,7 @@ max_replicas = 5
 cooldown = 30
 
 [cerebrium.dependencies.pip]
-"achatbot[fastapi_bot_server, daily_rtvi_bot, daily_langchain_rag_bot, speech_asr, speech_tts]" = "latest"
+"achatbot[fastapi_bot_server, daily_rtvi_bot, daily_langchain_rag_bot, speech_vad_analyzer, speech_asr, speech_tts]" = "latest"
 
 [cerebrium.dependencies.apt]
 ffmpeg = "latest"
