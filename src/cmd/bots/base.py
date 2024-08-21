@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from abc import abstractmethod
+import uuid
 
 from apipeline.frames.control_frames import EndFrame
 
@@ -22,7 +22,7 @@ class DailyRoomBot(IBot):
 
         self.task = None
         self._bot_config = self.args.bot_config
-        self.session = Session(**SessionCtx("").__dict__)
+        self.session = Session(**SessionCtx(uuid.uuid4()).__dict__)
 
     def bot_config(self):
         return self._bot_config

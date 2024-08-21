@@ -360,7 +360,7 @@ class EdgeTTSArgs:
     language: str = "en"
     gender: str = "Female"
     voice_name: str = "en-GB-SoniaNeural"
-    rate: str = "+0%"
+    rate: str = "+15%"
     volume: str = "+0%"
     pitch: str = "+0Hz"
 

@@ -8,12 +8,12 @@ except ModuleNotFoundError as e:
         "In order to use OpenAI, you need to `pip install openai`. Also, set `OPENAI_API_KEY` environment variable.")
     raise Exception(f"Missing module: {e}")
 from apipeline.frames.sys_frames import ErrorFrame
+from apipeline.frames.data_frames import Frame, AudioRawFrame
 
-from src.processors.speech.tts.base import TTSProcessor
-from src.types.frames.data_frames import Frame, AudioRawFrame
+from src.processors.speech.tts.base import TTSProcessorBase
 
 
-class OpenAITTSProcessor(TTSProcessor):
+class OpenAITTSProcessor(TTSProcessorBase):
     """This processor uses the OpenAI TTS API to generate audio from text.
     The returned audio is PCM encoded at 24kHz. When using the DailyTransport, set the sample rate in the DailyParams accordingly:
     ```
@@ -67,7 +67,7 @@ class OpenAITTSProcessor(TTSProcessor):
                 async for chunk in r.iter_bytes(8192):
                     if len(chunk) > 0:
                         await self.stop_ttfb_metrics()
-                        frame = AudioRawFrame(chunk, 24_000, 1)
+                        frame = AudioRawFrame(audio=chunk, sample_rate=24_000, num_channels=1)
                         yield frame
                 self._tts_done_event.set()
         except BadRequestError as e:

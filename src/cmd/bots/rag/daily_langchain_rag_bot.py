@@ -17,17 +17,17 @@ from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.processors.frame_processor import FrameProcessor
 
+from src.common.factory import EngineClass
+from src.modules.speech.tts import TTSEnvInit
 from src.modules.speech.asr import ASREnvInit
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
-from src.processors.speech.tts.elevenlabs_tts_processor import ElevenLabsTTSProcessor
+from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.common import interface
 from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
 from src.processors.ai_frameworks.langchain_rag_processor import LangchainRAGProcessor
-from src.processors.speech.tts.cartesia_tts_processor import CartesiaTTSProcessor
 from src.processors.speech.audio_volume_time_processor import AudioVolumeTimeProcessor
 from src.processors.speech.asr.base import TranscriptionTimingLogProcessor
-from src.processors.speech.asr.deepgram_asr_processor import DeepgramAsrProcessor
-from src.processors.rtvi_processor import RTVIConfig
+from src.processors.rtvi_processor import RTVIASRConfig, RTVIConfig, RTVILLMConfig, RTVITTSConfig
 from src.processors.speech.asr.asr_processor import AsrProcessor
 from src.common.types import DailyParams
 from src.transports.daily import DailyTransport
@@ -68,11 +68,19 @@ class DailyLangchainRAGBot(DailyRoomBot):
     """
 
     def __init__(self, **args) -> None:
+        r"""
+        reuse rtvi bot config
+        !TODONE: need config processor with bot config (redefine api params) @weedge
+        bot config: Dict[str, Dict[str,Any]]
+        e.g. {"llm":{"key":val,"tag":TAG,"args":{}}, "tts":{"key":val,"tag":TAG,"args":{}}}
+        """
         super().__init__(**args)
         self.message_store = {}
         try:
             logging.debug(f'config: {self.args.bot_config}')
             self._bot_config: RTVIConfig = RTVIConfig(**self.args.bot_config)
+            if self._bot_config.llm is None:
+                self._bot_config.llm = RTVILLMConfig()
         except Exception as e:
             raise Exception("Failed to parse bot configuration")
 
@@ -86,18 +94,14 @@ class DailyLangchainRAGBot(DailyRoomBot):
 
     async def arun(self):
         vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
-        transport = DailyTransport(
-            self.args.room_url,
-            self.args.token,
-            self.args.bot_name,
-            DailyParams(
-                audio_in_enabled=True,
-                audio_out_enabled=True,
-                vad_enabled=True,
-                vad_analyzer=vad_analyzer,
-                vad_audio_passthrough=True,
-                transcription_enabled=False,
-            ))
+        daily_params = DailyParams(
+            audio_in_enabled=True,
+            audio_out_enabled=True,
+            vad_enabled=True,
+            vad_analyzer=vad_analyzer,
+            vad_audio_passthrough=True,
+            transcription_enabled=False,
+        )
 
         # !NOTE: u can config env in .env file to init default
         # or api config
@@ -105,27 +109,34 @@ class DailyLangchainRAGBot(DailyRoomBot):
         if self._bot_config.asr \
                 and self._bot_config.asr.tag == "deepgram_asr_processor" \
                 and self._bot_config.asr.args:
+            from src.processors.speech.asr.deepgram_asr_processor import DeepgramAsrProcessor
             asr_processor = DeepgramAsrProcessor(
                 api_key=os.getenv("DEEPGRAM_API_KEY"),
                 **self._bot_config.asr.args)
         else:
-            asr: interface.IAsr = None
+            # use asr engine processor
+            asr: interface.IAsr | EngineClass | None = None
             if self._bot_config.asr \
                     and self._bot_config.asr.tag \
                     and self._bot_config.asr.args:
                 asr = ASREnvInit.getEngine(
                     self._bot_config.asr.tag, **self._bot_config.asr.args)
             else:
+                logging.info(f"use default asr engine processor")
                 asr = ASREnvInit.initASREngine()
+                self._bot_config.asr = RTVIASRConfig(tag=asr.SELECTED_TAG, args=asr.get_args_dict())
             asr_processor = AsrProcessor(
                 asr=asr,
                 session=self.session
             )
 
-        tts_processor: FrameProcessor = None
-        if self._bot_config.tts.tag == "elevenlabs_tts_processor":
+        tts_processor: FrameProcessor | None = None
+
+        if self._bot_config.tts and self._bot_config.tts.tag == "elevenlabs_tts_processor":
+            from src.processors.speech.tts.elevenlabs_tts_processor import ElevenLabsTTSProcessor
             tts_processor = ElevenLabsTTSProcessor(**self._bot_config.tts.args)
-        if self._bot_config.tts.tag == "cartesia_tts_processor":
+        elif self._bot_config.tts and self._bot_config.tts.tag == "cartesia_tts_processor":
+            from src.processors.speech.tts.cartesia_tts_processor import CartesiaTTSProcessor
             tts_processor = CartesiaTTSProcessor(
                 # voice_id=self._bot_config.tts.voice,
                 # cartesia_version="2024-06-10",
@@ -134,17 +145,38 @@ class DailyLangchainRAGBot(DailyRoomBot):
                 **self._bot_config.tts.args
             )
         else:
-            logging.error(f"unsupport tts processor: {self._bot_config.tts.tag}")
-            return
+            # use tts engine processor
+            tts: interface.ITts | EngineClass | None = None
+            if self._bot_config.tts \
+                    and self._bot_config.tts.tag \
+                    and self._bot_config.tts.args:
+                tts = TTSEnvInit.getEngine(
+                    self._bot_config.tts.tag, **self._bot_config.tts.args)
+            else:
+                # default tts engine processor
+                logging.info(f"use default tts engine processor")
+                tts = TTSEnvInit.initTTSEngine()
+                self._bot_config.tts = RTVITTSConfig(tag=tts.SELECTED_TAG, args=tts.get_args_dict())
 
-        # now just reuse rtvi bot config
-        # !TODO: need config processor with bot config (redefine api params) @weedge
-        # bot config: Dict[str, Dict[str,Any]]
-        # e.g. {"llm":{"key":val,"tag":TAG,"args":{}}, "tts":{"key":val,"tag":TAG,"args":{}}}
+            stream_info = tts.get_stream_info()
+            daily_params.audio_out_sample_rate = stream_info["rate"]
+            daily_params.audio_out_channels = stream_info["channels"]
+            tts_processor = TTSProcessor(tts=tts, session=self.session)
+
+        # default use openai llm processor
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if "groq" in self._bot_config.llm.base_url:
+            api_key = os.environ.get("GROQ_API_KEY")
+        elif "together" in self._bot_config.llm.base_url:
+            api_key = os.environ.get("TOGETHER_API_KEY")
         llm = ChatOpenAI(
             model=self._bot_config.llm.model,
-            base_url="https://api.groq.com/openai/v1",
-            api_key=os.environ.get("OPENAI_API_KEY"),
+            base_url=self._bot_config.llm.base_url,
+            api_key=api_key,
+            temperature=0.8,
+            top_p=0.7,
+            max_retries=3,
+            max_tokens=1024,
         )
 
         model_name = "jina-embeddings-v2-base-en"
@@ -170,10 +202,10 @@ class DailyLangchainRAGBot(DailyRoomBot):
         system_prompt = DEFAULT_SYSTEM_PROMPT
         if self._bot_config.llm.language == "zh":
             system_prompt += " Please communicate in Chinese"
-        if len(self._bot_config.llm.messages) > 0 and len(
-                self._bot_config.llm.messages[0]['content']) > 0:
+        if self._bot_config.llm.messages and len(self._bot_config.llm.messages) > 0 \
+                and len(self._bot_config.llm.messages[0]['content']) > 0:
             system_prompt = self._bot_config.llm.messages[0]['content']
-        logging.debug(f"use system prompt: {system_prompt}")
+        logging.info(f"use system prompt: {system_prompt}")
         answer_prompt = ChatPromptTemplate.from_messages([(
             "system", system_prompt + """ \
                 {context}"""), MessagesPlaceholder("chat_history"), ("human", "{input}"), ])
@@ -193,6 +225,13 @@ class DailyLangchainRAGBot(DailyRoomBot):
 
         llm_in_aggr = LLMUserResponseAggregator()
         llm_out_aggr = LLMAssistantResponseAggregator()
+
+        transport = DailyTransport(
+            self.args.room_url,
+            self.args.token,
+            self.args.bot_name,
+            daily_params,
+        )
 
         pipeline = Pipeline([
             transport.input_processor(),   # Transport user input

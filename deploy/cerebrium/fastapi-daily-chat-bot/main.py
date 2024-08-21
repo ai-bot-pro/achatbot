@@ -15,6 +15,8 @@ os.environ['VAD_ANALYZER_TAG'] = get_secret("VAD_ANALYZER_TAG")
 os.environ['ASR_TAG'] = get_secret("ASR_TAG")
 os.environ['ASR_LANG'] = get_secret("ASR_LANG")
 os.environ['ASR_MODEL_NAME_OR_PATH'] = get_secret("ASR_MODEL_NAME_OR_PATH")
+os.environ['TTS_TAG'] = get_secret("TTS_TAG")
+os.environ['TTS_LANG'] = get_secret("TTS_LANG")
 os.environ['TIDB_HOST'] = get_secret("TIDB_HOST")
 os.environ['TIDB_PORT'] = get_secret("TIDB_PORT")
 os.environ['TIDB_SSL_CA'] = get_secret("TIDB_SSL_CA")
@@ -29,8 +31,8 @@ os.environ['TIDB_VSS_DISTANCE_STRATEGY'] = get_secret("TIDB_VSS_DISTANCE_STRATEG
 # so use achatbot serve APIResponse dict[str, Any] to return
 # KISS, have a nice code :)
 # status = serve.app_status()
+# register_bot = serve.register_bot
 create_random_room = serve.create_random_room
-register_bot = serve.register_bot
 bot_join = serve.bot_join
 bot_join_room = serve.bot_join_room
 get_bot_proc_status = serve.get_status

@@ -8,7 +8,7 @@ python3 -m venv .venv_achatbot
 source .venv_achatbot/bin/activate
 pip install achatbot
 # optional-dependencies e.g.
-pip install "achatbot[fastapi_daily_bot_server]"
+pip install "achatbot[fastapi_bot_server]"
 ```
 
 ## local
@@ -19,7 +19,7 @@ python3 -m venv .venv_achatbot
 source .venv_achatbot/bin/activate
 bash scripts/pypi_achatbot.sh dev
 # optional-dependencies e.g.
-pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_daily_bot_server]"
+pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
 ```
 
 #  Run chat bots
@@ -198,6 +198,10 @@ ACHATBOT_PKG=1 TTS_TAG=tts_cosy_voice IS_RELOAD=1 python -m achatbot.cmd.grpc.sp
 ![project-structure](https://github.com/user-attachments/assets/5bf7cebb-e590-4718-a78a-6b0c0b36ea28)
 
 
+# Service Deployment Architecture
+
+
+# Multimodal Interaction
 ## audio (voice)
 - stream-stt (realtime-recorder)
 ![audio-text](https://github.com/user-attachments/assets/44bcec7d-f0a1-47db-bd95-21feee43a361)

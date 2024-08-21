@@ -8,16 +8,14 @@ import os
 import logging
 import asyncio
 import dataclasses
-from typing import Any, Awaitable, Callable, Dict, List, Literal, Optional, Type
+from typing import List, Literal, Optional
 
-from pydantic import BaseModel, PrivateAttr, ValidationError
+from pydantic import BaseModel, ValidationError
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
 from apipeline.frames.sys_frames import SystemFrame, MetricsFrame
 from apipeline.frames.control_frames import StartFrame
 
-from src.processors.llm.openai_llm_processor import OpenAILLMProcessor
-from src.processors.speech.tts.cartesia_tts_processor import CartesiaTTSProcessor
 from src.types.frames.sys_frames import BotInterruptionFrame
 from src.types.frames.control_frames import (
     LLMModelUpdateFrame,
@@ -48,23 +46,32 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 
-DEFAULT_MESSAGES = [
+DEFAULT_LLM_SYS_MESSAGES = [
     {
         "role": "system",
-        "content": os.getenv(
-            "LLM_CHAT_SYSTEM",
-            "你是一位很有帮助中文AI助理机器人。你的目标是用简洁的方式展示你的能力,请用中文简短回答，回答限制在1-5句话内。你的输出将转换为音频，所以不要在你的答案中包含特殊字符。以创造性和有帮助的方式回应用户说的话。"),
+        "content": os.getenv("LLM_CHAT_SYSTEM", ""),
     }]
 
-DEFAULT_MODEL = "llama-3.1-70b-versatile"
+GROQ_LLM_URL = "https://api.groq.com/openai/v1"
+GROQ_LLM_MODEL = "llama-3.1-70b-versatile"
 
-DEFAULT_VOICE = "3a63e2d1-1c1e-425d-8e79-5100bc910e90"
+# https://docs.together.ai/docs/chat-models
+TOGETHER_LLM_URL = "https://api.together.xyz/v1"
+TOGETHER_LLM_MODEL = "Qwen/Qwen2-72B-Instruct"
+
+DEFAULT_LLM_URL = os.getenv("LLM_OPENAI_BASE_URL", GROQ_LLM_URL)
+DEFAULT_LLM_MODEL = os.getenv("LLM_OPENAI_MODEL", GROQ_LLM_MODEL)
+
+DEFAULT_LLM_LANG = "zh"
 
 
 class RTVILLMConfig(BaseModel):
-    model: Optional[str] = None
+    base_url: Optional[str] = DEFAULT_LLM_URL
+    model: Optional[str] = DEFAULT_LLM_MODEL
+    language: Optional[str] = DEFAULT_LLM_LANG
     messages: Optional[List[dict]] = None
-    language: Optional[str] = None
+    tag: Optional[str] = "openai_llm_processor"
+    args: Optional[dict] = None
 
 
 class RTVITTSConfig(BaseModel):

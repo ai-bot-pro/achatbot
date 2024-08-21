@@ -21,6 +21,12 @@ class EngineClass(object):
                 and hasattr(self.args, '__class__'):
             self.args = self.args.__class__(**{**self.args.__dict__, **args})
 
+    def get_args_dict(self) -> dict:
+        if self.args is not None \
+                and hasattr(self.args, '__dict__'):
+            return self.args.__dict__
+        return {}
+
     @classmethod
     def get_instance(cls, **kwargs):
         dict_args = cls.get_args(**kwargs)

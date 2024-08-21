@@ -65,7 +65,7 @@ class ASRProcessorBase(AIProcessor):
     async def _append_audio(self, frame: AudioRawFrame):
         # Try to filter out empty background noise
         volume = self._get_smoothed_volume(frame)
-        if volume >= self._min_volume:
+        if volume >= self._min_volume and frame.audio and len(frame.audio) > 0:
             # If volume is high enough, write new data to wave file
             self._wave.writeframes(frame.audio)
             self._silence_num_frames = 0

@@ -143,3 +143,6 @@ class BaseTTS(EngineClass):
         res = res.strip('\n')
         logging.debug(f"text:{text} --filter--> res:{res} with match:{match}")
         return res
+
+    def set_voice(self, voice: str):
+        pass

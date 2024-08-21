@@ -71,7 +71,8 @@ class TestRAGLangchainProcessor(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         Logger.init(logging.INFO, is_file=False)
         self.message_store = {}
-        self.model = os.environ.get("LLM_MODEL", "llama-3.1-70b-versatile")
+        self.base_url = os.environ.get("LLM_OPENAI_BASE_URL", "https://api.groq.com/openai/v1")
+        self.model = os.environ.get("LLM_OPENAI_MODEL", "llama-3.1-70b-versatile")
         self.lang = os.environ.get("LLM_LANG", "zh")
 
     async def asyncTearDown(self):
@@ -85,10 +86,19 @@ class TestRAGLangchainProcessor(unittest.IsolatedAsyncioTestCase):
 
     async def test_rag(self):
 
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if "groq" in self.base_url:
+            api_key = os.environ.get("GROQ_API_KEY")
+        elif "together" in self.base_url:
+            api_key = os.environ.get("TOGETHER_API_KEY")
         llm = ChatOpenAI(
             model=self.model,
-            base_url="https://api.groq.com/openai/v1",
-            api_key=os.environ.get("OPENAI_API_KEY"),
+            base_url=self.base_url,
+            api_key=api_key,
+            temperature=0.8,
+            top_p=0.7,
+            max_retries=3,
+            max_tokens=1024,
         )
 
         embed_model_name = "jina-embeddings-v2-base-en"
@@ -115,7 +125,7 @@ class TestRAGLangchainProcessor(unittest.IsolatedAsyncioTestCase):
         system_prompt = DEFAULT_SYSTEM_PROMPT
         if self.lang == "zh":
             system_prompt += " You must reply, Please communicate in Chinese"
-        logging.debug(f"use system prompt: {system_prompt}")
+        logging.info(f"use system prompt: {system_prompt}")
         answer_prompt = ChatPromptTemplate.from_messages([(
             "system", system_prompt + """ \
                 {context}"""), MessagesPlaceholder("chat_history"), ("human", "{input}"), ])

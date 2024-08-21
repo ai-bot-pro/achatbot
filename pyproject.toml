@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.5.14"
+version = "0.0.5.17"
 requires-python = ">= 3.10"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
@@ -51,7 +51,7 @@ classifiers = [
 ]
 dependencies = [
     "requests==2.32.3",
-    "apipeline==0.1.7",
+    "apipeline==0.1.9",
     "python-dotenv==1.0.1",
     "pydub==0.25.1",
     "pillow==10.4.0",
@@ -70,18 +70,52 @@ Changelog = "https://github.com/ai-bot-pro/chat-bot/blob/main/CHANGELOG.md"
 
 
 [project.optional-dependencies]
+# default fastapi_daily_bot_server
+# achatbot[fastapi_bot_server,daily_rtvi_bot,daily_langchain_rag_bot]
 fastapi_daily_bot_server = [
     "fastapi==0.112.0",
-    "daily-python==0.10.1",
-    "langchain==0.2.13",
-    "openai==1.40.6",
-    "langchain-openai==0.1.21",
-    "langchain-community==0.2.12",
-    "websockets==12.0",
-    "deepgram-sdk==3.4.0",
     "uvicorn==0.30.6",
-    "tidb-vector==0.0.10",
-    "pymysql==1.1.1",
+    "daily-python==0.10.1",
+    "openai==1.40.6",              # like as openai api, groq, together llm
+    "groq==0.9.0",                 # whisper_groq_asr asr engine
+    "edge-tts==6.1.12",            # tts_edge tts engine
+    "langchain==0.2.13",
+    "langchain-openai==0.1.22",
+    "langchain-community==0.2.12", # langchain.community.embeddings use Jina embeddings
+    "tidb-vector==0.0.10",         # TIDB vss
+    "pymysql==1.1.1",              # mysql py client
+]
+
+# for simple dummy bot server to test
+fastapi_bot_server = ["fastapi==0.112.0", "uvicorn==0.30.6"]
+
+# when use asr tts processor 
+#   e.g.: 
+#   - achatbot[daily_rtvi_bot,deepgram_asr_processor,cartesia_tts_processor]
+# when use asr tts engine: achatbot[daily_rtvi_bot,speech_asr,speech_tts]
+# default daily_rtvi_bot
+daily_rtvi_bot = [
+    "daily-python==0.10.1",
+    "openai==1.40.6",       # like as openai api, groq, together llm
+    "groq==0.9.0",          # whisper_groq_asr asr engine
+    "edge-tts==6.1.12",     # tts_edge tts engine
+]
+
+# when use asr tts processor 
+#   e.g.: 
+#   - achatbot[daily_langchain_rag_bot,deepgram_asr_processor,cartesia_tts_processor]
+# when use asr tts engine: achatbot[daily_langchain_rag_bot,speech_asr,speech_tts]
+# default daily_langchain_rag_bot
+daily_langchain_rag_bot = [
+    "daily-python==0.10.1",
+    "openai==1.40.6",              # like as openai api, groq, together llm
+    "groq==0.9.0",                 # whisper_groq_asr asr engine
+    "edge-tts==6.1.12",            # tts_edge tts engine
+    "langchain==0.2.13",
+    "langchain-openai==0.1.22",
+    "langchain-community==0.2.12", # langchain.community.embeddings use Jina embeddings
+    "tidb-vector==0.0.10",         # TIDB vss
+    "pymysql==1.1.1",              # mysql py client
 ]
 
 # PyAudio need install python3-pyaudio 
@@ -335,12 +369,41 @@ asr_processor = [
 ]
 llm_processor = ["openai==1.40.6"]
 img_processor = ["openai==1.40.6"]
-tts_processor = ["openai==1.40.6"]
+tts_processor = [
+    "openai==1.40.6",
+    # speech_tts engine
+    "TTS==0.22.0",
+    "edge-tts==6.1.12",
+    "gTTS==2.5.1",
+    "pyttsx3==2.90",
+    # tts_cosy_voice
+    "torch==2.2.2",
+    "hyperpyyaml==1.2.2",
+    "onnxruntime==1.18.1; sys_platform == 'darwin' or sys_platform == 'windows'",
+    "onnxruntime-gpu==1.18.1; sys_platform == 'linux'",
+    "openai-whisper==20231117",
+    "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
+    "conformer==0.3.2",
+    "diffusers[torch]==0.30.0",
+    "lightning==2.4.0",
+    "wget==3.2",
+    # tts_chat
+    "vocos==0.1.0",
+    "pybase16384==0.3.7",
+    "vector_quantize_pytorch==1.16.1",
+    "pynini==2.1.5; sys_platform == 'linux'",
+    "WeTextProcessing==1.0.4.1; sys_platform == 'linux'",
+    "nemo_text_processing; sys_platform == 'linux'",
+    "transformers[torch]>=4.40.2",
+    "torch==2.2.2",
+    "numpy==1.26.4",
+]
 ai_frameworks_processor = ["langchain==0.2.13"]
 deepgram_asr_processor = ["deepgram-sdk==3.4.0"]
+cartesia_tts_processor = ["websockets==12.0"]
 
 
-# multi modules
+# multi modules engine
 speech_audio_stream = ["PyAudio==0.2.14", "daily-python==0.10.1"]
 speech_waker = ["pvporcupine==3.0.2"]
 speech_vad = ["pyannote.audio==3.2.0", "webrtcvad==2.0.10", "torch==2.2.2"]

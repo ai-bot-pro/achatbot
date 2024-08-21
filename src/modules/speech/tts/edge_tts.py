@@ -72,3 +72,6 @@ class EdgeTTS(BaseTTS, ITts):
     async def save_submakers(self, vit_file: str):
         with open(vit_file, "w", encoding="utf-8") as file:
             file.write(self.submaker.generate_subs())
+
+    def set_voice(self, voice: str):
+        self.args.voice_name = voice

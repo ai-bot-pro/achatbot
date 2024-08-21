@@ -190,6 +190,20 @@ class ITts(ABC):
 
     @abstractmethod
     def get_stream_info(self) -> dict:
+        """
+        e.g.
+        return {
+            "format": PYAUDIO_PAINT16, # int
+            "channels": 1, # int
+            "rate": 16000, # int
+            "sample_width": 2, # int
+            "np_dtype": np.int16, # for numpy data type
+        }
+        """
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def set_voice(self, voice: str):
         raise NotImplemented("must be implemented in the child class")
 
 

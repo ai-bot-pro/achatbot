@@ -5,10 +5,10 @@ import aiohttp
 from apipeline.frames.sys_frames import ErrorFrame
 from apipeline.frames.data_frames import Frame, AudioRawFrame
 
-from src.processors.speech.tts.base import TTSProcessor
+from src.processors.speech.tts.base import TTSProcessorBase
 
 
-class DeepgramTTSService(TTSProcessor):
+class DeepgramTTSProcessor(TTSProcessorBase):
 
     def __init__(
             self,
@@ -73,3 +73,5 @@ class DeepgramTTSService(TTSProcessor):
                     yield frame
         except Exception as e:
             logging.exception(f"{self} exception: {e}")
+        finally:
+            self._tts_done_event.set()

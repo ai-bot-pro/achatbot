@@ -68,14 +68,14 @@ class TTSEnvInit():
     @staticmethod
     def get_tts_edge_args() -> dict:
         kwargs = {}
-        kwargs["voice_name"] = os.getenv('VOICE_NAME', "zh-CN-XiaoxiaoNeural")
-        kwargs["language"] = os.getenv('LANGUAGE', "zh")
+        kwargs["voice_name"] = os.getenv('TTS_VOICE', "zh-CN-XiaoxiaoNeural")
+        kwargs["language"] = os.getenv('TTS_LANG', "zh")
         return kwargs
 
     @staticmethod
     def get_tts_g_args() -> dict:
         kwargs = {}
-        kwargs["language"] = os.getenv('LANGUAGE', "zh")
+        kwargs["language"] = os.getenv('TTS_LANG', "zh")
         kwargs["speed_increase"] = float(os.getenv('SPEED_INCREASE', "1.5"))
         return kwargs
 

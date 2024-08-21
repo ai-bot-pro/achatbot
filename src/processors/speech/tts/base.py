@@ -31,7 +31,7 @@ def match_endofsentence(text: str) -> bool:
     return ENDOFSENTENCE_PATTERN.search(text.rstrip()) is not None
 
 
-class TTSProcessor(AIProcessor):
+class TTSProcessorBase(AIProcessor):
     def __init__(
             self,
             *,

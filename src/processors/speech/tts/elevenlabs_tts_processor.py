@@ -6,10 +6,10 @@ import aiohttp
 from apipeline.frames.sys_frames import ErrorFrame
 from apipeline.frames.data_frames import Frame, AudioRawFrame
 
-from src.processors.speech.tts.base import TTSProcessor
+from src.processors.speech.tts.base import TTSProcessorBase
 
 
-class ElevenLabsTTSProcessor(TTSProcessor):
+class ElevenLabsTTSProcessor(TTSProcessorBase):
 
     def __init__(
             self,
@@ -71,10 +71,12 @@ class ElevenLabsTTSProcessor(TTSProcessor):
                 text = await r.text()
                 logging.error(f"{self} error getting audio (status: {r.status}, error: {text})")
                 yield ErrorFrame(f"Error getting audio (status: {r.status}, error: {text})")
+                self._tts_done_event.set()
                 return
 
             async for chunk in r.content:
                 if len(chunk) > 0:
                     await self.stop_ttfb_metrics()
-                    frame = AudioRawFrame(chunk, 16000, 1)
+                    frame = AudioRawFrame(audio=chunk, sample_rate=16000, num_channels=1)
                     yield frame
+            self._tts_done_event.set()
