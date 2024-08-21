@@ -1,16 +1,10 @@
-#
-# Copyright (c) 2024, Daily
-#
-# SPDX-License-Identifier: BSD 2-Clause License
-#
-
-
-from src.common.utils.audio_utils import calculate_audio_volume, exp_smoothing
+from src.common.utils.helper import exp_smoothing, calculate_audio_volume
 from src.common.types import VADAnalyzerArgs, VADState
 from src.common.interface import IVADAnalyzer
+from src.common.factory import EngineClass
 
 
-class BaseVADAnalyzer(IVADAnalyzer):
+class BaseVADAnalyzer(IVADAnalyzer, EngineClass):
 
     def __init__(self, **args):
         self._args = VADAnalyzerArgs(**args)

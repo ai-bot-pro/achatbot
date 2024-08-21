@@ -9,6 +9,7 @@ from apipeline.frames.data_frames import DataFrame, TextFrame, Frame
 from apipeline.frames.control_frames import EndFrame
 from apipeline.processors.frame_processor import FrameProcessor
 
+from src.modules.speech.asr import ASREnvInit
 from src.modules.speech.vad_analyzer.silero import SileroVADAnalyzer
 from src.processors.speech.asr.asr_processor import AsrProcessor
 from src.common.types import DailyParams
@@ -17,7 +18,6 @@ from src.transports.daily import DailyTransport
 from src.types.frames.data_frames import TranscriptionFrame
 from src.common.session import Session
 from src.common.types import SessionCtx
-from src.cmd.init import Env
 
 from dotenv import load_dotenv
 load_dotenv(override=True)
@@ -89,7 +89,7 @@ class TestASRProcessor(unittest.IsolatedAsyncioTestCase):
             daily_pramams,
         )
 
-        asr = Env.initASREngine()
+        asr = ASREnvInit.initASREngine()
         session = Session(**SessionCtx("test_client_id", 16000, 2).__dict__)
         asr_processor = AsrProcessor(asr=asr, session=session)
 

@@ -1,0 +1,13 @@
+achatbot
+fastapi==0.112.0
+#daily-python==0.10.1
+langchain==0.2.13
+openai==1.40.6
+langchain-openai==0.1.21
+langchain-community==0.2.12
+deepgram-sdk==3.4.0
+mangum==0.17.0
+uvicorn==0.30.6
+tidb-vector==0.0.10
+pymysql==1.1.1
+#torch==2.2.2

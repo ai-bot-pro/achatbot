@@ -5,6 +5,7 @@ import logging
 import os
 import time
 import subprocess
+from typing import List
 
 from deep_translator import GoogleTranslator
 from deepgram import DeepgramClient, PrerecordedOptions, FileSource
@@ -192,7 +193,7 @@ def translate_text(
     return res
 
 
-def split_to_chunk_texts(text: str):
+def split_to_chunk_texts(text: str, lang: str = 'en'):
     # !NOTE: maybe don't to check split to chunk doc task done
     # just simple split by len
     # see: https://chunkviz.up.railway.app/
@@ -210,7 +211,8 @@ def split_to_chunk_texts(text: str):
 
 def save_embeddings_to_db(
         table_name: str, title: str,
-        texts: list[str], path: str = VIDEOS_DIR):
+        texts: list[str], path: str = VIDEOS_DIR,
+        lang: str = 'en', link: str = ""):
     # just a simple done, need use task meta info to manage
     save_done_file_path = f'{path}/{title}_{table_name}_save_done.txt'
     if os.path.exists(save_done_file_path):
@@ -219,20 +221,34 @@ def save_embeddings_to_db(
 
     logging.info(f'saving embeddings to db table_name:{table_name} texts len:{len(texts)}')
     # https://jina.ai/embeddings/
+    # !TODO: use hf embeddings model to gen embeddings or other api model
+    model_name = "jina-embeddings-v2-base-en"
+    if lang == "zh":
+        model_name = "jina-embeddings-v2-base-zh"
     embeddings = JinaEmbeddings(
         jina_api_key=os.getenv('JINA_API_KEY'),
-        model_name="jina-embeddings-v2-base-en",
+        model_name=model_name,
     )
 
     # https://docs.pingcap.com/tidbcloud/vector-search-integrate-with-langchain
     # Connect to tidb table vector index and insert the chunked docs as contents
     # !NOTE limitations: https://docs.pingcap.com/tidb/stable/tidb-limitations
     url = get_tidb_url()
+    metadatas: List[dict] = []
+    for text in texts:
+        metadatas.append({
+            'text_len': len(text),
+            "lang": lang,
+            "embeddings_model": model_name,
+            "text_title": title,
+            "link": link,
+        })
     vector_store = TiDBVectorStore.from_texts(
         texts=texts,
         embedding=embeddings,
         table_name=table_name,
         connection_string=url,
+        metadatas=metadatas,
         # default, another option is "l2"
         distance_strategy=os.getenv('TIDB_VSS_DISTANCE_STRATEGY', 'cosine'),
     )
@@ -278,6 +294,7 @@ if __name__ == "__main__":
         ],
     }
 
+    # !TODO: async currency task run
     for name, links in video_links.items():
         for link in links:
             try:
@@ -285,13 +302,25 @@ if __name__ == "__main__":
                 title, download_file_path = download_videos(link, dir_path)
                 copy_video_to_filter(download_file_path)
                 transcribed_text = transcribe_file(download_file_path, title, dir_path)
-                chunk_texts = split_to_chunk_texts(transcribed_text)
-                save_embeddings_to_db(name, title=title, texts=chunk_texts, path=dir_path)
+                chunk_texts = split_to_chunk_texts(transcribed_text, lang="en")
+                save_embeddings_to_db(
+                    name, title=title,
+                    texts=chunk_texts,
+                    path=dir_path,
+                    lang="en",
+                    link=link,
+                )
 
                 translated_text = translate_text(
                     transcribed_text, target="zh-CN", text_file_name=title, path=dir_path)
-                chunk_texts = split_to_chunk_texts(translated_text)
-                save_embeddings_to_db(name, title=title + "zh-CN", texts=chunk_texts, path=dir_path)
+                chunk_texts = split_to_chunk_texts(translated_text, lang="zh")
+                save_embeddings_to_db(
+                    name, title=title + " zh-CN",
+                    texts=chunk_texts,
+                    path=dir_path,
+                    lang="zh",
+                    link=link,
+                )
             except Exception as e:
                 logging.exception(f"name:{name}, link:{link}, Exception: {e}")
                 continue

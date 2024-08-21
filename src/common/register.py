@@ -37,6 +37,12 @@ class Register:
     def keys(self):
         return self._dict.keys()
 
+    def keys_str(self):
+        return ",".join(self._dict.keys())
+
     def items(self):
         """Returns all registered items as a list of tuples (key, value)."""
         return list(self._dict.items())
+
+    def dict(self):
+        return self._dict

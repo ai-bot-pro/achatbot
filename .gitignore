@@ -173,3 +173,22 @@ log/*
 config/*
 
 .vscode/
+
+
+# deploy
+## cloudflare
+.wrangler
+## aws
+.aws-sam
+cdk.out
+*.zip
+# sam local env params set
+env.json
+# sam package generated
+packaged.yaml
+
+# pypi build
+pypi_build/
+
+# venv
+.venv_achatbot

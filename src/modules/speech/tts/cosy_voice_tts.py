@@ -3,16 +3,15 @@ import random
 import os
 from typing import AsyncGenerator
 
-import torchaudio
-import numpy as np
-import pyaudio
-
+from dotenv import load_dotenv
 
 from src.common.interface import ITts
 from src.common.session import Session
-from src.common.types import CosyVoiceTTSArgs, RATE, RECORDS_DIR
+from src.common.types import CosyVoiceTTSArgs, RATE
 from src.common.utils.audio_utils import postprocess_tts_wave_int16
 from .base import BaseTTS
+
+load_dotenv(override=True)
 
 
 class CosyVoiceTTS(BaseTTS, ITts):
@@ -27,8 +26,12 @@ class CosyVoiceTTS(BaseTTS, ITts):
 
     def __init__(self, **args) -> None:
         import sys
-        sys.path.insert(1, os.path.join(sys.path[0], 'deps/CosyVoice'))
-        sys.path.insert(2, os.path.join(sys.path[0], 'deps/CosyVoice/third_party/Matcha-TTS'))
+        if bool(os.getenv("ACHATBOT_PKG", "")):
+            sys.path.insert(1, '../../../CosyVoice')
+            sys.path.insert(2, '../../../CosyVoice/third_party/Matcha-TTS')
+        else:
+            sys.path.insert(1, os.path.join(sys.path[0], 'deps/CosyVoice'))
+            sys.path.insert(2, os.path.join(sys.path[0], 'deps/CosyVoice/third_party/Matcha-TTS'))
         from deps.CosyVoice.cosyvoice.cli.cosyvoice import CosyVoice
         from deps.CosyVoice.cosyvoice.utils.file_utils import load_wav
         self.args = CosyVoiceTTSArgs(**args)

@@ -66,8 +66,7 @@ class VADRecorder(AudioRecorder, IRecorder):
             if not triggered:
                 ring_buffer.append((frame, is_active_speech))
                 num_voiced = len([f for f, is_active_speech in ring_buffer if is_active_speech])
-                logging.debug(
-                    f"num_voiced:{num_voiced} threshold: {self.args.active_ratio} * {ring_buffer.maxlen}")
+                # logging.debug( f"num_voiced:{num_voiced} threshold: {self.args.active_ratio} * {ring_buffer.maxlen}")
                 if num_voiced > self.args.active_ratio * ring_buffer.maxlen:
                     triggered = True
                     for f, is_active_speech in ring_buffer:

@@ -1,0 +1,39 @@
+# https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-config.html
+
+version = 0.1
+
+[default.global.parameters]
+stack_name = "fastapi-daily-chat-bot"
+
+[default.build.parameters]
+# if dev debug, cached = false, prod set true
+cached = false
+parallel = true
+
+# sam validate to check the template.yml
+[default.validate.parameters]
+lint = true
+
+# sam package
+[default.package.parameters]
+resolve_s3 = false
+
+# sam deploy to deploy with template.yml or defined package.yml
+[default.deploy.parameters]
+capabilities = "CAPABILITY_IAM"
+# if want to deploy with changeset don't confirm, set false
+confirm_changeset = false
+# --parameter-overrides use s3 bucket,so resolve_s3 = false
+resolve_s3 = false
+s3_prefix = "fastapi-daily-chat-bot"
+region = "us-east-1"
+image_repositories = []
+
+[default.sync.parameters]
+watch = true
+
+[default.local_start_api.parameters]
+warm_containers = "EAGER"
+
+[default.local_start_lambda.parameters]
+warm_containers = "EAGER"

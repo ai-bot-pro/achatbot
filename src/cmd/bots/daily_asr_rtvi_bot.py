@@ -1,24 +1,19 @@
 import argparse
-import asyncio
 import json
 import logging
-import os
 
-from apipeline.frames.control_frames import EndFrame
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
 
+from src.modules.speech.asr import ASREnvInit
+from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.processors.llm.openai_llm_processor import OpenAILLMProcessor
 from src.processors.speech.tts.cartesia_tts_processor import CartesiaTTSProcessor
 from src.processors.rtvi_processor import RTVIConfig, RTVIProcessor, RTVISetup
 from src.processors.speech.asr.asr_processor import AsrProcessor
-from src.modules.speech.vad_analyzer.silero import SileroVADAnalyzer
 from src.common.types import DailyParams, DailyRoomBotArgs, DailyTranscriptionSettings
 from src.transports.daily import DailyTransport
-from src.common.session import Session
-from src.common.types import SessionCtx
-from src.cmd.init import Env
 from .base import DailyRoomBot, register_daily_room_bots
 
 from dotenv import load_dotenv
@@ -42,7 +37,8 @@ class DailyAsrRTVIBot(DailyRoomBot):
     def bot_config(self):
         return self._bot_config.model_dump()
 
-    async def _run(self):
+    async def arun(self):
+        vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
         transport = DailyTransport(
             self.args.room_url,
             self.args.token,
@@ -51,13 +47,12 @@ class DailyAsrRTVIBot(DailyRoomBot):
                 audio_in_enabled=True,
                 audio_out_enabled=True,
                 vad_enabled=True,
-                vad_analyzer=SileroVADAnalyzer(),
+                vad_analyzer=vad_analyzer,
                 vad_audio_passthrough=True,
                 transcription_enabled=False,
             ))
 
-        # !NOTE: u can config env in .env file
-        asr = Env.initASREngine()
+        asr = ASREnvInit.initASREngine()
         asr_processor = AsrProcessor(asr=asr, session=self.session)
 
         # !TODO: need config processor with bot config (redefine api params) @weedge

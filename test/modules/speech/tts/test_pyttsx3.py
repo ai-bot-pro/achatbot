@@ -1,16 +1,13 @@
 import os
 import logging
-import asyncio
 
 import unittest
-import pyaudio
 
-from src.common.utils.audio_utils import save_audio_to_file
-from src.common.factory import EngineFactory
+from src.common.factory import EngineFactory, EngineClass
 from src.common.logger import Logger
 from src.common.session import Session
-from src.common.types import SessionCtx, MODELS_DIR, RECORDS_DIR
-from src.modules.speech.tts.pyttsx3_tts import EngineClass, Pyttsx3TTS
+from src.common.types import SessionCtx
+from src.modules.speech.tts.pyttsx3_tts import Pyttsx3TTS
 
 r"""
 python -m unittest test.modules.speech.tts.test_pyttsx3.TestPyttsx3TTS.test_synthesize
@@ -36,6 +33,16 @@ class TestPyttsx3TTS(unittest.TestCase):
             EngineClass, self.tts_tag, **kwargs)
         self.session = Session(**SessionCtx("test_tts_client_id").__dict__)
 
+    def tearDown(self):
+        pass
+
+    def test_get_voices(self):
+        voices = self.tts.get_voices()
+        self.assertGreater(len(voices), 0)
+        print(voices)
+
+    def test_synthesize(self):
+        import pyaudio
         stream_info = self.tts.get_stream_info()
         self.pyaudio_instance = pyaudio.PyAudio()
         self.audio_stream = self.pyaudio_instance.open(
@@ -45,20 +52,6 @@ class TestPyttsx3TTS(unittest.TestCase):
             output_device_index=None,
             output=True)
 
-        pass
-
-    def tearDown(self):
-        self.audio_stream.stop_stream()
-        self.audio_stream.close()
-        self.pyaudio_instance.terminate()
-        pass
-
-    def test_get_voices(self):
-        voices = self.tts.get_voices()
-        self.assertGreater(len(voices), 0)
-        print(voices)
-
-    def test_synthesize(self):
         self.session.ctx.state["tts_text"] = self.tts_text
         print(self.session.ctx)
         iter = self.tts.synthesize_sync(self.session)
@@ -72,3 +65,7 @@ class TestPyttsx3TTS(unittest.TestCase):
             for i in range(0, len(chunk), sub_chunk_size):
                 sub_chunk = chunk[i:i + sub_chunk_size]
                 self.audio_stream.write(sub_chunk)
+
+        self.audio_stream.stop_stream()
+        self.audio_stream.close()
+        self.pyaudio_instance.terminate()

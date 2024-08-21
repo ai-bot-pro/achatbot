@@ -4,7 +4,6 @@ import asyncio
 from src.common.interface import IBuffering
 from src.common.factory import EngineClass
 from src.common.session import Session
-from src.common.utils.audio_utils import bytes2NpArrayWith16
 
 
 class NoneBuffering(IBuffering, EngineClass):

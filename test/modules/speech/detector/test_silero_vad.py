@@ -3,15 +3,15 @@ import asyncio
 import logging
 
 import unittest
-import pyaudio
 
-from src.common.utils.audio_utils import get_audio_segment, save_audio_to_file, convert_sampling_rate_to_16k
+from src.common.utils.helper import get_audio_segment
+from src.common.utils.wav import save_audio_to_file
 from src.common.logger import Logger
 from src.common.factory import EngineFactory, EngineClass
 from src.common.session import Session
 from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR, SileroVADArgs
 from src.common.interface import IDetector
-import src.modules.speech.detector
+import src.modules.speech.detector.silero_vad
 
 r"""
 CHECK_FRAMES_MODE=0 python -m unittest test.modules.speech.detector.test_silero_vad.TestSileroVADDetector.test_detect
@@ -71,6 +71,7 @@ class TestSileroVADDetector(unittest.TestCase):
             self.assertEqual(res, False)
 
     def test_record_detect(self):
+        import pyaudio
         rate, frame_len = self.detector.get_sample_info()
         paud = pyaudio.PyAudio()
         audio_stream = paud.open(rate=rate, channels=1,

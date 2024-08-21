@@ -3,19 +3,18 @@ import logging
 import asyncio
 
 import unittest
-import pyaudio
 
-from src.common.utils.audio_utils import save_audio_to_file
-from src.common.factory import EngineFactory
+from src.common.utils.wav import save_audio_to_file
+from src.common.factory import EngineFactory, EngineClass
 from src.common.logger import Logger
 from src.common.session import Session
 from src.common.types import SessionCtx, MODELS_DIR, RECORDS_DIR
-from src.modules.speech.tts.coqui_tts import EngineClass, CoquiTTS
+from src.modules.speech.tts.coqui_tts import CoquiTTS
 
 r"""
 REFERENCE_AUDIO_PATH= python -m unittest test.modules.speech.tts.test_coqui.TestCoquiTTS.test_synthesize
-python -m unittest test.modules.speech.tts.test_coqui.TestCoquiTTS.test_synthesize
-STREAM=1 python -m unittest test.modules.speech.tts.test_coqui.TestCoquiTTS.test_synthesize
+python -m unittest test.modules.speech.tts.test_coqui.TestCoquiTTS.test_synthesize_speak
+STREAM=1 python -m unittest test.modules.speech.tts.test_coqui.TestCoquiTTS.test_synthesize_speak
 """
 
 
@@ -73,6 +72,7 @@ class TestCoquiTTS(unittest.TestCase):
         print(path)
 
     def test_synthesize_speak(self):
+        import pyaudio
         stream_info = self.tts.get_stream_info()
         self.pyaudio_instance = pyaudio.PyAudio()
         self.audio_stream = self.pyaudio_instance.open(

@@ -11,7 +11,9 @@ from typing import (
     Mapping,
 )
 import os
+from pathlib import Path
 
+from dotenv import load_dotenv
 from pydantic.main import BaseModel
 from pydantic import ConfigDict
 
@@ -21,25 +23,33 @@ from .interface import (
 )
 from .factory import EngineClass
 
+load_dotenv(override=True)
+
 
 SRC_PATH = os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir)
 )
+DIR_PATH = os.path.join(SRC_PATH, os.pardir)
+if bool(os.getenv("ACHATBOT_PKG", "")):
+    home_dir = Path.home()
+    DIR_PATH = os.path.join(home_dir, ".achatbot")
+
 LOG_DIR = os.path.normpath(
-    os.path.join(SRC_PATH, os.pardir, "log")
+    os.path.join(DIR_PATH, "log")
 )
 CONFIG_DIR = os.path.normpath(
-    os.path.join(SRC_PATH, os.pardir, "config")
+    os.path.join(DIR_PATH, "config")
 )
 MODELS_DIR = os.path.normpath(
-    os.path.join(SRC_PATH, os.pardir, "models")
+    os.path.join(DIR_PATH, "models")
 )
 RECORDS_DIR = os.path.normpath(
-    os.path.join(SRC_PATH, os.pardir, "records")
+    os.path.join(DIR_PATH, "records")
 )
 VIDEOS_DIR = os.path.normpath(
-    os.path.join(SRC_PATH, os.pardir, "videos")
+    os.path.join(DIR_PATH, "videos")
 )
+
 TEST_DIR = os.path.normpath(
     os.path.join(SRC_PATH, os.pardir, "test")
 )
@@ -49,6 +59,9 @@ CHUNK = 1600  # 100ms 16k rate num_frames
 CHANNELS = 1
 RATE = 16000
 SAMPLE_WIDTH = 2
+
+# llm sys default prompt
+DEFAULT_SYSTEM_PROMPT = "你是一个中国人,一名中文助理，请用中文简短回答，回答限制在1-5句话内。要友好、乐于助人且简明扼要。保持对话简短而甜蜜。只用纯文本回答，不要包含链接或其他附加内容。不要回复计算机代码以及数学公式。"
 
 
 @dataclass
@@ -109,6 +122,35 @@ SILENCE_TIMEOUT_S = 10
 MIC_IDX = 1
 # 2^(16-1)
 INT16_MAX_ABS_VALUE = 32768.0
+
+# pyaudio format
+#   >>> print(int(pyaudio.paInt16))
+#   8
+PYAUDIO_PAINT16 = 8
+#   >>> print(int(pyaudio.paInt24))
+#   4
+PYAUDIO_PAINT24 = 4
+#   >>> print(int(pyaudio.paInt32))
+#   2
+PYAUDIO_PAINT32 = 2
+#   >>> print(int(pyaudio.paFloat32))
+#   1
+PYAUDIO_PAFLOAT32 = 1
+#   >>> print(int(pyaudio.paInt8))
+#   16
+PYAUDIO_PAINT8 = 16
+#   >>> print(int(pyaudio.paUInt8))
+#   32
+PYAUDIO_PAUINT8 = 32
+#   >>> print(int(pyaudio.paCustomFormat))
+#   65536
+PYAUDIO_PACUSTOMFORMAT = 65536
+
+# PortAudio Callback Return Codes
+
+PYAUDIO_PACONTINUE = 0  #: There is more audio data to come
+PYAUDIO_PACOMPLETE = 1  #: This was the last block of audio data
+PYAUDIO_PAABORT = 2   #: An error ocurred, stop playback/recording
 
 
 @dataclass
@@ -318,7 +360,7 @@ class EdgeTTSArgs:
     language: str = "en"
     gender: str = "Female"
     voice_name: str = "en-GB-SoniaNeural"
-    rate: str = "+0%"
+    rate: str = "+15%"
     volume: str = "+0%"
     pitch: str = "+0Hz"
 

@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 
-import pyaudio
-
 from src.common.types import (
     CHANNELS, CHUNK, SAMPLE_WIDTH, RATE,
+    PYAUDIO_PAINT16,
     AudioStreamArgs,
 )
 
@@ -22,7 +21,7 @@ from src.common.types import (
 #   32
 #   >>> print(int(pyaudio.paCustomFormat))
 #   65536
-FORMAT = pyaudio.paInt16
+FORMAT = PYAUDIO_PAINT16
 
 
 @dataclass

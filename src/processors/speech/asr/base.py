@@ -12,7 +12,7 @@ from apipeline.frames.data_frames import Frame, AudioRawFrame
 
 from src.processors.speech.audio_volume_time_processor import AudioVolumeTimeProcessor
 from src.processors.ai_processor import AIProcessor
-from src.common.utils.audio_utils import calculate_audio_volume, exp_smoothing
+from src.common.utils.helper import exp_smoothing, calculate_audio_volume
 from src.types.frames.data_frames import TranscriptionFrame
 
 
@@ -65,7 +65,7 @@ class ASRProcessorBase(AIProcessor):
     async def _append_audio(self, frame: AudioRawFrame):
         # Try to filter out empty background noise
         volume = self._get_smoothed_volume(frame)
-        if volume >= self._min_volume:
+        if volume >= self._min_volume and frame.audio and len(frame.audio) > 0:
             # If volume is high enough, write new data to wave file
             self._wave.writeframes(frame.audio)
             self._silence_num_frames = 0

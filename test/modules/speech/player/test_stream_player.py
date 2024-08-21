@@ -4,16 +4,16 @@ import asyncio
 
 import unittest
 
-from src.cmd.init import Env
+from src.modules.speech.audio_stream import AudioStreamEnvInit
+from src.modules.speech.player import PlayerEnvInit
 from src.common.interface import IAudioStream
 from src.modules.speech.player.stream_player import StreamPlayer
 from src.common.logger import Logger
-from src.common.factory import EngineFactory, EngineClass
+from src.common.factory import EngineClass
 from src.common.session import Session
-from src.common.utils import audio_utils
+from src.common.utils import helper
 from src.common.types import SessionCtx, TEST_DIR
-from src.types.speech.audio_stream.pyaudio import AudioStreamInfo
-import src.modules.speech
+from src.types.speech.audio_stream import AudioStreamInfo
 
 r"""
 
@@ -39,9 +39,9 @@ class TestStreamPlayer(unittest.TestCase):
         pass
 
     def setUp(self):
-        self.player: StreamPlayer = Env.initPlayerEngine()
+        self.player: StreamPlayer = PlayerEnvInit.initPlayerEngine()
         print(self.player.args.__dict__)
-        self.audio_out_stream: IAudioStream | EngineClass = Env.initAudioOutStreamEngine()
+        self.audio_out_stream: IAudioStream | EngineClass = AudioStreamEnvInit.initAudioOutStreamEngine()
         self.player.set_out_stream(self.audio_out_stream)
         self.annotations_path = os.path.join(
             TEST_DIR, "audio_files/annotations.json")
@@ -54,13 +54,13 @@ class TestStreamPlayer(unittest.TestCase):
 
     def test_play_audio(self):
         self.player.open()
-        annotations = asyncio.run(audio_utils.load_json(self.annotations_path))
+        annotations = asyncio.run(helper.load_json(self.annotations_path))
         for audio_file, data in annotations.items():
             audio_file_path = os.path.join(
                 TEST_DIR, f"audio_files/{audio_file}")
             for segment in data["segments"]:
                 self.player.start(self.session)
-                audio_segment = asyncio.run(audio_utils.get_audio_segment(
+                audio_segment = asyncio.run(helper.get_audio_segment(
                     audio_file_path,
                     segment["start"],
                     segment["end"]))

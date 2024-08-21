@@ -1,12 +1,59 @@
 import logging
 import json
 import re
+import os
 
 from src.common.interface import ILlm
 from .base import BaseLLM
 from src.common.session import Session
-from src.common.types import LLamcppLLMArgs
+from src.common.types import DEFAULT_SYSTEM_PROMPT, MODELS_DIR, LLamcppLLMArgs
 from src.modules.functions.function import FunctionManager
+
+
+class PromptInit():
+    @staticmethod
+    def create_phi3_prompt(history: list[str], system_prompt: str,
+                           init_message: str = None):
+        prompt = f'<|system|>\n{system_prompt}</s>\n'
+        if init_message:
+            prompt += f"<|assistant|>\n{init_message}</s>\n"
+
+        return prompt + "".join(history) + "<|assistant|>\n"
+
+    def create_qwen_prompt(history: list[str], system_prompt: str,
+                           init_message: str = None):
+        prompt = f'<|system|>\n{system_prompt}<|end|>\n'
+        if init_message:
+            prompt += f"<|assistant|>\n{init_message}<|end|>\n"
+
+        return prompt + "".join(history) + "<|assistant|>\n"
+
+    @staticmethod
+    def create_prompt(name: str, history: list[str],
+                      init_message: str = None):
+        system_prompt = os.getenv("LLM_CHAT_SYSTEM", DEFAULT_SYSTEM_PROMPT)
+        if "phi-3" == name:
+            return PromptInit.create_phi3_prompt(history, system_prompt, init_message)
+        if "qwen-2" == name:
+            return PromptInit.create_qwen_prompt(history, system_prompt, init_message)
+
+        return None
+
+    @staticmethod
+    def get_user_prompt(name: str, text: str):
+        if "phi-3" == name:
+            return (f"<|user|>\n{text}</s>\n")
+        if "qwen-2" == name:
+            return (f"<|start|>user\n{text}<|end|>\n")
+        return None
+
+    @staticmethod
+    def get_assistant_prompt(name: str, text: str):
+        if "phi-3" == name:
+            return (f"<|assistant|>\n{text}</s>\n")
+        if "qwen-2" == name:
+            return (f"<|assistant|>\n{text}<|end|>\n")
+        return None
 
 
 class LLamacppLLM(BaseLLM, ILlm):

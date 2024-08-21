@@ -5,11 +5,10 @@ import asyncio
 import logging
 
 import unittest
-import numpy as np
-import torch
 
 from src.common.logger import Logger
-from src.common.utils.audio_utils import save_audio_to_file, load_json, get_audio_segment, bytes2NpArrayWith16, bytes2TorchTensorWith16
+from src.common.utils.helper import load_json, get_audio_segment
+from src.common.utils.audio_utils import bytes2TorchTensorWith16
 from src.common.factory import EngineFactory
 from src.common.session import Session
 from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR

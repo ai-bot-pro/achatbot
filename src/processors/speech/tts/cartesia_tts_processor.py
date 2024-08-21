@@ -19,14 +19,14 @@ from apipeline.frames.data_frames import TextFrame, Frame, AudioRawFrame
 from apipeline.frames.sys_frames import StartInterruptionFrame, CancelFrame
 from apipeline.frames.control_frames import StartFrame, EndFrame
 
-from src.processors.speech.tts.base import TTSProcessor
+from src.processors.speech.tts.base import TTSProcessorBase
 from src.types.frames.control_frames import LLMFullResponseEndFrame
 
 # https://docs.cartesia.ai/getting-started/available-models
 # !NOTE: Timestamps are not supported for language 'zh'
 
 
-class CartesiaTTSProcessor(TTSProcessor):
+class CartesiaTTSProcessor(TTSProcessorBase):
     TAG = "cartesia_tts_processor"
 
     def __init__(

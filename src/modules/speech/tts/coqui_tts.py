@@ -1,20 +1,18 @@
 import logging
-from typing import AsyncGenerator, Iterator
+from typing import AsyncGenerator
 import time
 import os
 import random
 
 import torch
-import pyaudio
 import numpy as np
-import torchaudio
 
 from src.common.device_cuda import CUDAInfo
 from src.common.interface import ITts
 from src.common.session import Session
-from src.common.types import CoquiTTSArgs
+from src.common.types import PYAUDIO_PAFLOAT32, CoquiTTSArgs
 from src.common.utils.audio_utils import postprocess_tts_wave
-from .base import BaseTTS, EngineClass
+from .base import BaseTTS
 
 
 class CoquiTTS(BaseTTS, ITts):
@@ -71,7 +69,7 @@ class CoquiTTS(BaseTTS, ITts):
 
     def get_stream_info(self) -> dict:
         return {
-            "format": pyaudio.paFloat32,
+            "format": PYAUDIO_PAFLOAT32,
             "channels": 1,
             "rate": self.config.audio.output_sample_rate,
             "sample_width": 4,

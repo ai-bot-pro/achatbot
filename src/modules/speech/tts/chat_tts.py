@@ -1,15 +1,15 @@
 import logging
-from typing import AsyncGenerator, Iterator
+from typing import AsyncGenerator
 
-import pyaudio
 import torch
 import numpy as np
 
+from src.common.types import PYAUDIO_PAINT16
 from src.common.interface import ITts
 from src.common.session import Session
 from src.types.speech.tts.chat import ChatTTSArgs
 from src.common.utils import audio_utils
-from .base import BaseTTS, EngineClass, TTSVoice
+from .base import BaseTTS
 
 
 class ChatTTS(BaseTTS, ITts):
@@ -56,7 +56,7 @@ class ChatTTS(BaseTTS, ITts):
 
     def get_stream_info(self) -> dict:
         return {
-            "format": pyaudio.paInt16,
+            "format": PYAUDIO_PAINT16,
             "channels": 1,
             "rate": 24000,
             "sample_width": 2,

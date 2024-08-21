@@ -7,14 +7,14 @@ import queue
 
 import unittest
 
+from src.modules.speech.audio_stream import AudioStreamEnvInit
 from src.common.factory import EngineClass
-from src.common.utils.audio_utils import get_audio_segment
+from src.common.utils.helper import get_audio_segment
 from src.common.session import Session
 from src.common.types import TEST_DIR, SessionCtx
-from src.types.speech.audio_stream.pyaudio import AudioStreamInfo
+from src.types.speech.audio_stream import AudioStreamInfo
 from src.common.logger import Logger
 from src.common.interface import IAudioStream
-from src.cmd.init import Env
 
 """
 # !NOTE: daily room audio stream need create daily room, get room_url
@@ -66,7 +66,7 @@ class TestAudioInStream(unittest.TestCase):
 
     def setUp(self):
         self.is_callback = bool(os.getenv('IS_CALLBACK', ""))
-        self.audio_in_stream: IAudioStream | EngineClass = Env.initAudioInStreamEngine()
+        self.audio_in_stream: IAudioStream | EngineClass = AudioStreamEnvInit.initAudioInStreamEngine()
         self.stream_info: AudioStreamInfo = self.audio_in_stream.get_stream_info()
         self.session = Session(**SessionCtx(
             "test_client_id").__dict__)
@@ -128,7 +128,7 @@ class TestAudioOutStream(unittest.TestCase):
         pass
 
     def setUp(self):
-        self.audio_out_stream = Env.initAudioOutStreamEngine()
+        self.audio_out_stream = AudioStreamEnvInit.initAudioOutStreamEngine()
         self.session = Session(**SessionCtx("test_client_id").__dict__)
 
     def tearDown(self):

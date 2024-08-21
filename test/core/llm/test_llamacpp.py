@@ -3,13 +3,14 @@ import logging
 
 import unittest
 
+from src.common.interface import ILlm
 from src.common.factory import EngineFactory, EngineClass
 from src.core.llm.llamacpp import LLamacppLLM
 from src.common.logger import Logger
 from src.common.session import Session
 from src.common.types import SessionCtx, MODELS_DIR
 from src.cmd.init import PromptInit
-import src.core.llm
+from src.core.llm import LLMEnvInit
 
 from dotenv import load_dotenv
 load_dotenv(override=True)
@@ -140,6 +141,33 @@ class TestLLamacppLLM(unittest.TestCase):
         self.session.ctx.state["prompt"] = self.prompt
         logging.debug(self.session.ctx)
         iter = self.llm.chat_completion(self.session)
+        for item in iter:
+            print(item)
+            self.assertGreater(len(item), 0)
+
+    def test_generate_case(self):
+        os.environ["LLM_TAG"] = "llm_llamacpp"
+        engine: LLamacppLLM = LLMEnvInit.initLLMEngine()
+        engine.args.llm_chat_system = "你是一个中国人,请用中文回答。回答限制在1-5句话内。要友好、乐于助人且简明扼要。保持对话简短而甜蜜。只用纯文本回答，不要包含链接或其他附加内容。不要回复计算机代码以及数学公式。"
+        self.session.ctx.state["prompt"] = "你好"
+        iter = engine.generate(self.session)
+        for item in iter:
+            print(item)
+            self.assertGreater(len(item), 0)
+
+    def test_chat_case(self):
+        os.environ["LLM_TAG"] = "llm_llamacpp"
+        engine: LLamacppLLM = LLMEnvInit.initLLMEngine()
+        engine.args.llm_chat_system = "你是一个中国人,请用中文回答。回答限制在1-5句话内。要友好、乐于助人且简明扼要。保持对话简短而甜蜜。只用纯文本回答，不要包含链接或其他附加内容。不要回复计算机代码以及数学公式。"
+        self.session.ctx.state["prompt"] = "你好"
+        iter = engine.chat_completion(self.session)
+        for item in iter:
+            print(item)
+            self.assertGreater(len(item), 0)
+
+        engine.args.llm_chat_system = ""
+        self.session.ctx.state["prompt"] = "你好"
+        iter = engine.chat_completion(self.session)
         for item in iter:
             print(item)
             self.assertGreater(len(item), 0)

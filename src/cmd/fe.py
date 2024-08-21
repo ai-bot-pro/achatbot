@@ -10,7 +10,7 @@ import uuid
 
 from src.common import interface
 from src.common.session import Session
-from src.common.utils.audio_utils import save_audio_to_file
+from src.common.utils.wav import save_audio_to_file
 from src.common.types import SessionCtx, RECORDS_DIR
 from src.common.utils.time import get_current_formatted_time
 if os.getenv("INIT_TYPE", 'env') == 'yaml_config':

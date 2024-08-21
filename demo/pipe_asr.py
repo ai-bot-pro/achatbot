@@ -1,10 +1,10 @@
 import multiprocessing
+from multiprocessing.synchronize import Event
 import struct
 import threading
 import time
 import pyaudio
 import wave
-from collections import deque
 import numpy as np
 
 from asr_whisper_faster import faster_whisper_transcribe
@@ -81,7 +81,7 @@ def save_file(path, sample_width, data: list[bytes]):
         print(f"save to {path}")
 
 
-def loop_record(conn, e: multiprocessing.Event):
+def loop_record(conn, e: Event):
     while True:
         e.clear()
         record_audio(conn)
@@ -104,7 +104,7 @@ def loop_asr(conn, q: multiprocessing.Queue, download_root, model_size="base", t
             q.put_nowait(text)
 
 
-def loop_llm_generate(model_path, q: multiprocessing.Queue, e: multiprocessing.Event):
+def loop_llm_generate(model_path, q: multiprocessing.Queue, e: Event):
     print(f"loop_llm_generate {model_path} {q}")
     while True:
         if q:

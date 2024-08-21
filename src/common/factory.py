@@ -2,8 +2,6 @@ from abc import ABCMeta
 import logging
 import inspect
 
-logger = logging.getLogger(__name__)
-
 
 class EngineClass(object):
     # the same as ABC(Abstract Base Classe)
@@ -23,12 +21,21 @@ class EngineClass(object):
                 and hasattr(self.args, '__class__'):
             self.args = self.args.__class__(**{**self.args.__dict__, **args})
 
+    def get_args_dict(self) -> dict:
+        if self.args is not None \
+                and hasattr(self.args, '__dict__'):
+            return self.args.__dict__
+        return {}
+
     @classmethod
     def get_instance(cls, **kwargs):
         dict_args = cls.get_args(**kwargs)
         logging.info(f"class: {cls} args: {dict_args}")
         instance = cls(**dict_args)
         return instance
+
+    def __str__(self):
+        return f"TAG:{self.TAG} | {self.__class__.__name__}"
 
 
 class EngineFactory:
@@ -56,9 +63,9 @@ class EngineFactory:
             raise ValueError(f"error: can't find {tag} engine")
         else:
             if len(selected_engines) > 1:
-                logger.warning(f"have multi {tag}, just use first one")
+                logging.warning(f"have multi {tag}, just use first one")
             engine = selected_engines[0]
-            logger.info(f"use {tag} engine")
+            logging.info(f"use {tag} engine")
             engine.SELECTED_TAG = tag
             return engine.get_instance(**kwargs)
 

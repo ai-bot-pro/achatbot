@@ -1,14 +1,11 @@
 import logging
-from typing import Any, AsyncGenerator, Iterator
-import asyncio
+from typing import AsyncGenerator
 import random
 import io
 import os
 
-import pyaudio
 from pydub import AudioSegment
 
-from src.common.utils.audio_utils import read_audio_file
 from src.common.interface import ITts
 from src.common.session import Session
 from src.common.types import EdgeTTSArgs, RECORDS_DIR, EDGE_TTS_SYNTHESIS_FILE
@@ -75,3 +72,6 @@ class EdgeTTS(BaseTTS, ITts):
     async def save_submakers(self, vit_file: str):
         with open(vit_file, "w", encoding="utf-8") as file:
             file.write(self.submaker.generate_subs())
+
+    def set_voice(self, voice: str):
+        self.args.voice_name = voice

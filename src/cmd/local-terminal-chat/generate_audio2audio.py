@@ -179,7 +179,6 @@ INIT_TYPE=yaml_config TQDM_DISABLE=True \
     python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
 """
 import multiprocessing
-import multiprocessing.connection
 import logging
 
 from src.common.logger import Logger
@@ -189,7 +188,7 @@ from src.cmd.fe import TerminalChatClient
 
 
 # global logging
-Logger.init(logging.INFO, is_file=True, is_console=False)
+Logger.init(logging.DEBUG, is_file=True, is_console=False)
 
 
 def main():
