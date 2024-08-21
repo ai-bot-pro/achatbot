@@ -30,23 +30,4 @@ max_replicas = 5
 cooldown = 30
 
 [cerebrium.dependencies.pip]
-achatbot = "==0.0.5.17"
-fastapi = ">=0.109.2"
-daily-python = "==0.10.1"
-langchain = "==0.2.13"
-openai = "==1.40.6"
-langchain-openai = "==0.1.21"
-langchain-community = "==0.2.12"
-websockets = "==12.0"
-deepgram-sdk = "==3.4.0"
-uvicorn = ">=0.27.0"
-tidb-vector = "==0.0.10"
-pymysql = "==1.1.1"
-torch = "==2.2.2"
-# speech_asr
-groq = "==0.9.0"
-openai-whisper = "==20231117"
-whisper-timestamped = "==1.14.2"
-faster-whisper = "==1.0.2"
-#"transformers[torch]" = ">=4.40.2"
-funasr = "==1.1.5"
+"achatbot[fastapi_bot_server, daily_rtvi_bot, daily_langchain_rag_bot, speech_asr, speech_tts]" = "latest"

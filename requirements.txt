@@ -49,7 +49,7 @@ anyio==4.4.0
     #   httpx
     #   openai
     #   starlette
-apipeline==0.1.7
+apipeline==0.1.9
     # via achatbot (pyproject.toml)
 asteroid-filterbanks==0.4.0
     # via pyannote-audio
@@ -343,13 +343,13 @@ langchain==0.2.13
     #   langchain-community
 langchain-community==0.2.12
     # via achatbot (pyproject.toml)
-langchain-core==0.2.32
+langchain-core==0.2.33
     # via
     #   langchain
     #   langchain-community
     #   langchain-openai
     #   langchain-text-splitters
-langchain-openai==0.1.21
+langchain-openai==0.1.22
     # via achatbot (pyproject.toml)
 langchain-text-splitters==0.2.2
     # via langchain
