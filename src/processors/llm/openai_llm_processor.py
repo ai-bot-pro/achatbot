@@ -44,7 +44,7 @@ class BaseOpenAILLMProcessor(LLMProcessor):
 
     def __init__(self, *, model: str, api_key="", base_url="", **kwargs):
         super().__init__(**kwargs)
-        api_key = os.environ.get("OPENAI_API_KEY", api_key)
+        # api_key = os.environ.get("OPENAI_API_KEY", api_key)
         self._model: str = model
         self._client = AsyncOpenAI(
             api_key=api_key,

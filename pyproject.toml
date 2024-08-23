@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.5.20"
+version = "0.0.5.21"
 requires-python = ">= 3.10"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
@@ -72,6 +72,8 @@ Changelog = "https://github.com/ai-bot-pro/chat-bot/blob/main/CHANGELOG.md"
 [project.optional-dependencies]
 # default fastapi_daily_bot_server
 # achatbot[fastapi_bot_server,daily_rtvi_bot,daily_langchain_rag_bot]
+# use all asr tts e.g.:
+# achatbot[fastapi_bot_server,daily_rtvi_bot,daily_langchain_rag_bot,asr_processor,tts_processor]
 fastapi_daily_bot_server = [
     "fastapi==0.112.0",
     "uvicorn==0.30.6",
@@ -92,7 +94,7 @@ fastapi_bot_server = ["fastapi==0.112.0", "uvicorn==0.30.6"]
 # when use asr tts processor 
 #   e.g.: 
 #   - achatbot[daily_rtvi_bot,deepgram_asr_processor,cartesia_tts_processor]
-# when use vad asr tts engine: achatbot[daily_rtvi_bot,speech_vad_analyzer,speech_asr,speech_tts]
+# when use vad asr tts engine: achatbot[daily_rtvi_bot,speech_vad_analyzer,asr_processor,tts_processor]
 # default daily_rtvi_bot
 daily_rtvi_bot = [
     "daily-python==0.10.1",
@@ -104,7 +106,7 @@ daily_rtvi_bot = [
 # when use asr tts processor 
 #   e.g.: 
 #   - achatbot[daily_langchain_rag_bot,deepgram_asr_processor,cartesia_tts_processor]
-# when use vad asr tts engine: achatbot[daily_langchain_rag_bot,speech_vad_analyzer,speech_asr,speech_tts]
+# when use vad asr tts engine: achatbot[daily_langchain_rag_bot,speech_vad_analyzer,asr_processor,tts_processor]
 # default daily_langchain_rag_bot
 daily_langchain_rag_bot = [
     "daily-python==0.10.1",        # default daily vad analyzer
@@ -268,12 +270,12 @@ remote_rpc_chat_bot_fe = [
     "PyAudio==0.2.14",
     "daily-python==0.10.1",
     # rpc
-    "grpcio==1.65.1",
+    "grpcio>=1.65.1",
 ]
 # achatbot[rpc,speech_waker,speech_vad,speech_asr,core_llm,speech_tts]
 remote_rpc_chat_bot_be_worker = [
     # grpc
-    "grpcio==1.65.1",
+    "grpcio>=1.65.1",
     # speech_waker
     "pvporcupine==3.0.2",
     # speech_vad
@@ -319,12 +321,12 @@ remote_rpc_chat_bot_be_worker = [
 # achatbot[grpc,stream_player]
 remote_grpc_tts_client = [
     # grpc
-    "grpcio==1.65.1",
+    "grpcio>=1.65.1",
 ]
 # achatbot[grpc,speech_tts]
 remote_grpc_tts_server = [
     # grpc
-    "grpcio==1.65.1",
+    "grpcio>=1.65.1",
     # speech_tts
     "TTS==0.22.0",
     "edge-tts==6.1.12",
@@ -370,6 +372,7 @@ asr_processor = [
 llm_processor = ["openai==1.40.6"]
 img_processor = ["openai==1.40.6"]
 tts_processor = [
+    "websockets==12.0",
     "openai==1.40.6",
     # speech_tts engine
     "TTS==0.22.0",
@@ -455,10 +458,10 @@ speech_tts = [
     "numpy==1.26.4",
 ]
 queue = ["redis==5.0.0"]
-rpc = ["grpcio==1.65.1"]
-grpc_tools = ["grpcio-tools==1.65.1"]
+rpc = ["grpcio>=1.65.1"]
+grpc_tools = ["grpcio-tools>=1.65.1"]
 conf = ["omegaconf==2.3.0"]
-grpc = ["grpcio==1.65.1"]
+grpc = ["grpcio>=1.65.1"]
 redis = ["redis==5.0.0"]
 
 

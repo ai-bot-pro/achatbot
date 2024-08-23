@@ -11,7 +11,7 @@ from apipeline.processors.frame_processor import FrameProcessor
 
 from src.modules.speech.asr import ASREnvInit
 from src.modules.speech.vad_analyzer.silero import SileroVADAnalyzer
-from src.processors.speech.asr.asr_processor import AsrProcessor
+from src.processors.speech.asr.asr_processor import ASRProcessor
 from src.common.types import DailyParams
 from src.common.logger import Logger
 from src.transports.daily import DailyTransport
@@ -91,7 +91,7 @@ class TestASRProcessor(unittest.IsolatedAsyncioTestCase):
 
         asr = ASREnvInit.initASREngine()
         session = Session(**SessionCtx("test_client_id", 16000, 2).__dict__)
-        asr_processor = AsrProcessor(asr=asr, session=session)
+        asr_processor = ASRProcessor(asr=asr, session=session)
 
         tl_porcessor = TranscriptionLogger()
 

@@ -73,3 +73,10 @@ class OpenAITTSProcessor(TTSProcessorBase):
         except BadRequestError as e:
             logging.exception(f"{self} error generating TTS: {e}")
             self._tts_done_event.set()
+
+    def get_stream_info(self) -> dict:
+        return {
+            "sample_rate": 24_000,
+            "sample_width": 2,
+            "channels": 1,
+        }

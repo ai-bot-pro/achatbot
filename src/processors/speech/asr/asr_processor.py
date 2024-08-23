@@ -11,7 +11,7 @@ from src.processors.speech.asr.base import ASRProcessorBase
 from src.types.frames.data_frames import TranscriptionFrame
 
 
-class AsrProcessor(ASRProcessorBase):
+class ASRProcessor(ASRProcessorBase):
     def __init__(
             self,
             *,

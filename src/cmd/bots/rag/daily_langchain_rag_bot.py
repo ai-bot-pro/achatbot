@@ -15,20 +15,14 @@ from langchain_core.runnables.history import RunnableWithMessageHistory
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
-from apipeline.processors.frame_processor import FrameProcessor
 
-from src.common.factory import EngineClass
-from src.modules.speech.tts import TTSEnvInit
-from src.modules.speech.asr import ASREnvInit
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.processors.speech.tts.tts_processor import TTSProcessor
-from src.common import interface
 from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
 from src.processors.ai_frameworks.langchain_rag_processor import LangchainRAGProcessor
 from src.processors.speech.audio_volume_time_processor import AudioVolumeTimeProcessor
 from src.processors.speech.asr.base import TranscriptionTimingLogProcessor
-from src.processors.rtvi_processor import RTVIASRConfig, RTVIConfig, RTVILLMConfig, RTVITTSConfig
-from src.processors.speech.asr.asr_processor import AsrProcessor
+from src.processors.rtvi_processor import RTVIConfig, RTVILLMConfig
 from src.common.types import DailyParams
 from src.transports.daily import DailyTransport
 from src.cmd.bots.rag.helper import get_tidb_url
@@ -68,21 +62,8 @@ class DailyLangchainRAGBot(DailyRoomBot):
     """
 
     def __init__(self, **args) -> None:
-        r"""
-        reuse rtvi bot config
-        !TODONE: need config processor with bot config (redefine api params) @weedge
-        bot config: Dict[str, Dict[str,Any]]
-        e.g. {"llm":{"key":val,"tag":TAG,"args":{}}, "tts":{"key":val,"tag":TAG,"args":{}}}
-        """
         super().__init__(**args)
         self.message_store = {}
-        try:
-            logging.debug(f'config: {self.args.bot_config}')
-            self._bot_config: RTVIConfig = RTVIConfig(**self.args.bot_config)
-            if self._bot_config.llm is None:
-                self._bot_config.llm = RTVILLMConfig()
-        except Exception as e:
-            raise Exception("Failed to parse bot configuration")
 
     def bot_config(self):
         return self._bot_config.model_dump()
@@ -103,65 +84,12 @@ class DailyLangchainRAGBot(DailyRoomBot):
             transcription_enabled=False,
         )
 
-        # !NOTE: u can config env in .env file to init default
-        # or api config
-        asr_processor: FrameProcessor = None
-        if self._bot_config.asr \
-                and self._bot_config.asr.tag == "deepgram_asr_processor" \
-                and self._bot_config.asr.args:
-            from src.processors.speech.asr.deepgram_asr_processor import DeepgramAsrProcessor
-            asr_processor = DeepgramAsrProcessor(
-                api_key=os.getenv("DEEPGRAM_API_KEY"),
-                **self._bot_config.asr.args)
-        else:
-            # use asr engine processor
-            asr: interface.IAsr | EngineClass | None = None
-            if self._bot_config.asr \
-                    and self._bot_config.asr.tag \
-                    and self._bot_config.asr.args:
-                asr = ASREnvInit.getEngine(
-                    self._bot_config.asr.tag, **self._bot_config.asr.args)
-            else:
-                logging.info(f"use default asr engine processor")
-                asr = ASREnvInit.initASREngine()
-                self._bot_config.asr = RTVIASRConfig(tag=asr.SELECTED_TAG, args=asr.get_args_dict())
-            asr_processor = AsrProcessor(
-                asr=asr,
-                session=self.session
-            )
+        asr_processor = self.get_asr_processor()
 
-        tts_processor: FrameProcessor | None = None
-
-        if self._bot_config.tts and self._bot_config.tts.tag == "elevenlabs_tts_processor":
-            from src.processors.speech.tts.elevenlabs_tts_processor import ElevenLabsTTSProcessor
-            tts_processor = ElevenLabsTTSProcessor(**self._bot_config.tts.args)
-        elif self._bot_config.tts and self._bot_config.tts.tag == "cartesia_tts_processor":
-            from src.processors.speech.tts.cartesia_tts_processor import CartesiaTTSProcessor
-            tts_processor = CartesiaTTSProcessor(
-                # voice_id=self._bot_config.tts.voice,
-                # cartesia_version="2024-06-10",
-                # model_id="sonic-multilingual",
-                # language=self._bot_config.tts.language if self._bot_config.tts.language else "en",
-                **self._bot_config.tts.args
-            )
-        else:
-            # use tts engine processor
-            tts: interface.ITts | EngineClass | None = None
-            if self._bot_config.tts \
-                    and self._bot_config.tts.tag \
-                    and self._bot_config.tts.args:
-                tts = TTSEnvInit.getEngine(
-                    self._bot_config.tts.tag, **self._bot_config.tts.args)
-            else:
-                # default tts engine processor
-                logging.info(f"use default tts engine processor")
-                tts = TTSEnvInit.initTTSEngine()
-                self._bot_config.tts = RTVITTSConfig(tag=tts.SELECTED_TAG, args=tts.get_args_dict())
-
-            stream_info = tts.get_stream_info()
-            daily_params.audio_out_sample_rate = stream_info["rate"]
-            daily_params.audio_out_channels = stream_info["channels"]
-            tts_processor = TTSProcessor(tts=tts, session=self.session)
+        tts_processor: TTSProcessor = self.get_tts_processor()
+        stream_info = tts_processor.get_stream_info()
+        daily_params.audio_out_sample_rate = stream_info["sample_rate"]
+        daily_params.audio_out_channels = tts_processor.get_stream_info()["channels"]
 
         # default use openai llm processor
         api_key = os.environ.get("OPENAI_API_KEY")

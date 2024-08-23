@@ -1,14 +1,15 @@
+import os
 import argparse
 import json
 import logging
 
-from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
+from apipeline.pipeline.pipeline import Pipeline
 
+from src.processors.llm.base import LLMProcessor
+from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
-from src.processors.llm.openai_llm_processor import OpenAILLMProcessor
-from src.processors.speech.tts.cartesia_tts_processor import CartesiaTTSProcessor
 from src.processors.rtvi_processor import RTVIConfig, RTVIProcessor, RTVISetup
 from src.common.types import DailyParams, DailyRoomBotArgs, DailyTranscriptionSettings
 from src.transports.daily import DailyTransport
@@ -20,52 +21,41 @@ load_dotenv(override=True)
 
 @register_daily_room_bots.register
 class DailyRTVIBot(DailyRoomBot):
-    """
-    !NOTE: just for English(en) chat bot
+    r"""
+    use daily transcirption
     """
 
     def __init__(self, **args) -> None:
         super().__init__(**args)
-        try:
-            logging.debug(f'config: {self.args.bot_config}')
-            self._bot_config: RTVIConfig = RTVIConfig(**self.args.bot_config)
-        except Exception as e:
-            raise Exception("Failed to parse bot configuration")
 
     def bot_config(self):
         return self._bot_config.model_dump()
 
     async def arun(self):
         vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
+        daily_params = DailyParams(
+            audio_out_enabled=True,
+            transcription_enabled=True,
+            vad_enabled=True,
+            vad_analyzer=vad_analyzer,
+            transcription_settings=DailyTranscriptionSettings(
+                language="en",
+            ),
+        )
+
+        llm_processor: LLMProcessor = self.get_llm_processor()
+
+        tts_processor: TTSProcessor = self.get_tts_processor()
+        stream_info = tts_processor.get_stream_info()
+        daily_params.audio_out_sample_rate = stream_info["sample_rate"]
+        daily_params.audio_out_channels = tts_processor.get_stream_info()["channels"]
+
         transport = DailyTransport(
             self.args.room_url,
             self.args.token,
             self.args.bot_name,
-            DailyParams(
-                audio_out_enabled=True,
-                transcription_enabled=True,
-                vad_enabled=True,
-                vad_analyzer=vad_analyzer,
-                transcription_settings=DailyTranscriptionSettings(
-                    language="en",
-                ),
-            ))
-
-        # !TODO: need config processor with bot config (redefine api params) @weedge
-        # bot config: Dict[str, Dict[str,Any]]
-        # e.g. {"llm":{"key":val,"tag":TAG,"args":{}}, "tts":{"key":val,"tag":TAG,"args":{}}}
-        llm_processor = OpenAILLMProcessor(
-            model=self._bot_config.llm.model,
-            base_url="https://api.groq.com/openai/v1",
+            daily_params,
         )
-        # https://docs.cartesia.ai/getting-started/available-models
-        tts_processor = CartesiaTTSProcessor(
-            voice_id=self._bot_config.tts.voice,
-            cartesia_version="2024-06-10",
-            model_id="sonic-multilingual",
-            language="en",
-        )
-
         rtai = RTVIProcessor(
             transport=transport,
             setup=RTVISetup(config=self._bot_config),
