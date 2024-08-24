@@ -13,3 +13,6 @@
 [submodule "ui/educator-client"]
 	path = ui/educator-client
 	url = https://github.com/ai-bot-pro/educator-client.git
+[submodule "ui/web-client-ui"]
+	path = ui/web-client-ui
+	url = https://github.com/ai-bot-pro/web-client-ui.git

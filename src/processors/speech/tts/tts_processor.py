@@ -63,3 +63,11 @@ class TTSProcessor(TTSProcessorBase):
             logging.exception(f"{self} error generating TTS: {e}")
         finally:
             self._tts_done_event.set()
+
+    def get_stream_info(self) -> dict:
+        stream_info = self._tts.get_stream_info()
+        return {
+            "sample_rate": stream_info["rate"],
+            "sample_width": stream_info["sample_width"],
+            "channels": stream_info["channels"],
+        }

@@ -50,6 +50,13 @@ class TTSProcessorBase(AIProcessor):
         self._tts_done_event = asyncio.Event()
         self._sync_order_send = sync_order_send
 
+    def get_stream_info(self) -> dict:
+        return {
+            "sample_rate": 16000,
+            "sample_width": 2,
+            "channels": 1,
+        }
+
     @abstractmethod
     async def set_voice(self, voice: str):
         pass
