@@ -202,7 +202,9 @@ ACHATBOT_PKG=1 TTS_TAG=tts_cosy_voice IS_RELOAD=1 python -m achatbot.cmd.grpc.sp
 # Service Deployment Architecture
 ## UI
 - [ui/educator-client](https://github.com/ai-bot-pro/educator-client)
-deploy [ui/educator-client](https://github.com/ai-bot-pro/educator-client) to cloudflare pages, access https://58bf8cf2.educator-client.pages.dev/
+deploy [ui/educator-client](https://github.com/ai-bot-pro/educator-client) to cloudflare pages, access https://educator-client.pages.dev/
+- [ui/web-client-ui](https://github.com/ai-bot-pro/web-client-ui)
+deploy [ui/web-client-ui](https://github.com/ai-bot-pro/web-client-ui) to cloudflare pages, access https://chat-client.pages.dev/
 
 ## Server
 - [fastapi-daily-chat-bot](https://github.com/ai-bot-pro/chat-bot/tree/main/deploy/cerebrium/fastapi-daily-chat-bot)

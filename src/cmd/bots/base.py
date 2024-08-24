@@ -41,12 +41,13 @@ class DailyRoomBot(IBot):
 
         self._bot_config = self.args.bot_config
         try:
-            logging.debug(f'config: {self.args.bot_config}')
+            logging.debug(f'args.bot_config: {self.args.bot_config}')
             self._bot_config: RTVIConfig = RTVIConfig(**self.args.bot_config)
             if self._bot_config.llm is None:
                 self._bot_config.llm = RTVILLMConfig()
         except Exception as e:
             raise Exception(f"Failed to parse bot configuration: {e}")
+        logging.info(f'rtvi bot_config: {self._bot_config}')
 
     def bot_config(self):
         return self._bot_config
