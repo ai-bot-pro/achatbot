@@ -50,7 +50,7 @@ class DailyOutputTransportProcessor(AudioCameraOutputProcessor):
             metrics["processing"] = frame.processing
 
         message = DailyTransportMessageFrame(message={
-            "type": "pipecat-metrics",
+            "type": "chatbot-metrics",
             "metrics": metrics
         })
         await self._client.send_message(message)
