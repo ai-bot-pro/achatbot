@@ -1,4 +1,6 @@
-from . import dummy_bot
+from src.common.register import Register
+
+register_daily_room_bots = Register('daily-room-bots')
 
 
 def import_bots(bot_name: str = "DummyBot"):

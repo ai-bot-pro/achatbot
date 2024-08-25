@@ -16,11 +16,8 @@ from src.processors.llm.openai_llm_processor import OpenAILLMProcessor
 from src.processors.rtvi_processor import RTVIASRConfig, RTVIConfig, RTVILLMConfig, RTVITTSConfig
 from src.common.types import DailyRoomBotArgs
 from src.common.interface import IBot
-from src.common.register import Register
 from src.common.session import Session
 from src.common.types import SessionCtx
-
-register_daily_room_bots = Register('daily-room-bots')
 
 
 class DailyRoomBot(IBot):
