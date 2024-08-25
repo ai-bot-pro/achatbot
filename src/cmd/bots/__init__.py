@@ -3,16 +3,19 @@ from . import dummy_bot
 
 def import_bots(bot_name: str = "DummyBot"):
     """ import package to register """
-    if "Dummy" in bot_name:
+    if "DummyBot" in bot_name:
         from . import dummy_bot
         return True
-    if "DailyRTVI" in bot_name:
+    if "DailyRTVIBot" in bot_name:
         from . import daily_rtvi_bot
         return True
-    if "DailyAsrRTVI" in bot_name:
+    if "DailyAsrRTVIBot" in bot_name:
         from . import daily_asr_rtvi_bot
         return True
-    if "DailyLangchainRAG" in bot_name:
+    if "DailyBot" in bot_name:
+        from . import daily_bot
+        return True
+    if "DailyLangchainRAGBot" in bot_name:
         from .rag import daily_langchain_rag_bot
         return True
     if "Daily" in bot_name:
