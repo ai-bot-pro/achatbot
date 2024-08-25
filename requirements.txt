@@ -405,6 +405,8 @@ matplotlib==3.9.2
     #   tts
 mdurl==0.1.2
     # via markdown-it-py
+modelscope==1.17.1
+    # via achatbot (pyproject.toml)
 more-itertools==10.4.0
     # via
     #   inflect
@@ -1362,6 +1364,7 @@ requests==2.32.3
     #   langchain
     #   langchain-community
     #   langsmith
+    #   modelscope
     #   oss2
     #   pooch
     #   spacy
@@ -1541,6 +1544,7 @@ torch-pitch-shift==1.2.4
     # via torch-audiomentations
 torchaudio==2.2.2
     # via
+    #   achatbot (pyproject.toml)
     #   encodec
     #   pyannote-audio
     #   speechbrain
@@ -1559,6 +1563,7 @@ tqdm==4.66.5
     #   funasr
     #   huggingface-hub
     #   lightning
+    #   modelscope
     #   nltk
     #   openai
     #   openai-whisper
@@ -1622,7 +1627,9 @@ umap-learn==0.5.6
 unidecode==1.3.8
     # via tts
 urllib3==2.2.2
-    # via requests
+    # via
+    #   modelscope
+    #   requests
 uvicorn==0.30.6
     # via achatbot (pyproject.toml)
 vector-quantize-pytorch==1.16.1

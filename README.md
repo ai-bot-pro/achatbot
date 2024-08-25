@@ -1,6 +1,10 @@
 # chat-bot
 [![PyPI](https://img.shields.io/pypi/v/achatbot)](https://pypi.org/project/achatbot/)
 
+
+# Project Structure
+![project-structure](https://github.com/user-attachments/assets/5bf7cebb-e590-4718-a78a-6b0c0b36ea28)
+
 # Install
 ## pypi
 ```bash
@@ -194,9 +198,6 @@ ACHATBOT_PKG=1 TTS_TAG=tts_chat IS_RELOAD=1 python -m achatbot.cmd.grpc.speaker.
 ACHATBOT_PKG=1 TTS_TAG=tts_cosy_voice IS_RELOAD=1 python -m achatbot.cmd.grpc.speaker.client
 ```
 
-
-# Project Structure
-![project-structure](https://github.com/user-attachments/assets/5bf7cebb-e590-4718-a78a-6b0c0b36ea28)
 
 
 # Service Deployment Architecture
