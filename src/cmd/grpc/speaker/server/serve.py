@@ -9,7 +9,7 @@ from src.common.grpc.idl.tts_pb2_grpc import add_TTSServicer_to_server
 from src.common.grpc.interceptors.authentication_server import AuthenticationInterceptor
 from src.cmd.grpc.speaker.server.servicers.tts import TTS
 
-Logger.init(logging.DEBUG, app_name="chat-bot-tts-serve", is_file=True, is_console=True)
+Logger.init(logging.DEBUG, app_name="chat-bot-tts-serve", is_file=False, is_console=True)
 
 
 def serve() -> None:
