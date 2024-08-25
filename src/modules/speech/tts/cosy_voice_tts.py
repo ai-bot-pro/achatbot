@@ -1,6 +1,7 @@
 import logging
 import random
 import os
+import sys
 from typing import AsyncGenerator
 
 from dotenv import load_dotenv
@@ -25,10 +26,10 @@ class CosyVoiceTTS(BaseTTS, ITts):
         return {**CosyVoiceTTSArgs().__dict__, **kwargs}
 
     def __init__(self, **args) -> None:
-        import sys
         if bool(os.getenv("ACHATBOT_PKG", "")):
-            sys.path.insert(1, '../../../CosyVoice')
-            sys.path.insert(2, '../../../CosyVoice/third_party/Matcha-TTS')
+            cur_dir = os.path.dirname(__file__)
+            sys.path.insert(1, os.path.join(cur_dir, '../../../CosyVoice'))
+            sys.path.insert(2, os.path.join(cur_dir, '../../../CosyVoice/third_party/Matcha-TTS'))
         else:
             sys.path.insert(1, os.path.join(sys.path[0], 'deps/CosyVoice'))
             sys.path.insert(2, os.path.join(sys.path[0], 'deps/CosyVoice/third_party/Matcha-TTS'))

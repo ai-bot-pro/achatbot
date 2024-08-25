@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.5.22"
+version = "0.0.5.24"
 requires-python = ">= 3.10"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
@@ -160,6 +160,7 @@ local_terminal_chat_bot = [
     "diffusers[torch]==0.30.0",
     "lightning==2.4.0",
     "wget==3.2",
+    "modelscope==1.16.0",
     # tts_chat
     "vocos==0.1.0",
     "pybase16384==0.3.7",
@@ -202,6 +203,7 @@ daily_webrtc_terminal_chat_bot = [
     "diffusers[torch]==0.30.0",
     "lightning==2.4.0",
     "wget==3.2",
+    "modelscope==1.16.0",
     # tts_chat
     "vocos==0.1.0",
     "pybase16384==0.3.7",
@@ -253,6 +255,7 @@ remote_queue_chat_bot_be_worker = [
     "diffusers[torch]==0.30.0",
     "lightning==2.4.0",
     "wget==3.2",
+    "modelscope==1.16.0",
     # tts_chat
     "vocos==0.1.0",
     "pybase16384==0.3.7",
@@ -307,6 +310,7 @@ remote_rpc_chat_bot_be_worker = [
     "diffusers[torch]==0.30.0",
     "lightning==2.4.0",
     "wget==3.2",
+    "modelscope==1.16.0",
     # tts_chat
     "vocos==0.1.0",
     "pybase16384==0.3.7",
@@ -343,6 +347,7 @@ remote_grpc_tts_server = [
     "diffusers[torch]==0.30.0",
     "lightning==2.4.0",
     "wget==3.2",
+    "modelscope==1.16.0",
     # tts_chat
     "torch==2.2.2",
     "vocos==0.1.0",
@@ -390,6 +395,7 @@ tts_processor = [
     "diffusers[torch]==0.30.0",
     "lightning==2.4.0",
     "wget==3.2",
+    "modelscope==1.16.0",
     # tts_chat
     "vocos==0.1.0",
     "pybase16384==0.3.7",
@@ -446,6 +452,7 @@ speech_tts = [
     "diffusers[torch]==0.30.0",
     "lightning==2.4.0",
     "wget==3.2",
+    "modelscope==1.16.0",
     # tts_chat
     "vocos==0.1.0",
     "pybase16384==0.3.7",
@@ -519,6 +526,7 @@ tts_cosy_voice = [
     "lightning==2.4.0",
     "wget==3.2",
     "numpy==1.26.4",
+    "modelscope==1.16.0",
 ]
 tts_chat = [
     "torch==2.2.2",

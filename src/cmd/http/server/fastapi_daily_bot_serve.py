@@ -16,8 +16,7 @@ from src.common.logger import Logger
 from src.common.interface import IBot
 from src.services.help.daily_rest import DailyRESTHelper, \
     DailyRoomObject, DailyRoomProperties, DailyRoomParams
-from src.cmd.bots.base import register_daily_room_bots
-from src.cmd.bots import import_bots
+from src.cmd.bots import import_bots, register_daily_room_bots
 
 
 from dotenv import load_dotenv
