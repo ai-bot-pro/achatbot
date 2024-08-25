@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.5.21"
+version = "0.0.5.22"
 requires-python = ">= 3.10"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
@@ -73,7 +73,7 @@ Changelog = "https://github.com/ai-bot-pro/chat-bot/blob/main/CHANGELOG.md"
 # default fastapi_daily_bot_server
 # achatbot[fastapi_bot_server,daily_rtvi_bot,daily_langchain_rag_bot]
 # use all asr tts e.g.:
-# achatbot[fastapi_bot_server,daily_rtvi_bot,daily_langchain_rag_bot,asr_processor,tts_processor]
+# achatbot[fastapi_bot_server,daily_rtvi_bot,daily_langchain_rag_bot,speech_vad_analyzer,asr_processor,tts_processor]
 fastapi_daily_bot_server = [
     "fastapi==0.112.0",
     "uvicorn==0.30.6",
