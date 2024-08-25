@@ -9,10 +9,10 @@ from src.common.grpc.idl.tts_pb2 import (
     LoadModelRequest, LoadModelResponse,
     SynthesizeRequest, SynthesizeResponse,
 )
-from src.common.factory import EngineFactory, EngineClass
+from src.common.factory import EngineClass
 from src.common.session import Session
 from src.common.types import SessionCtx, ITts
-import src.modules.speech.tts
+from src.modules.speech.tts import TTSEnvInit
 
 
 def get_session_id(context: grpc.ServicerContext):
@@ -34,8 +34,7 @@ class TTS(TTSServicer):
         if self.tts is not None and request.is_reload == False:
             logging.debug(f"Already initialized {self.tts.TAG} args: {self.tts.args} -> {self.tts}")
             return LoadModelResponse()
-        self.tts: EngineClass | ITts = EngineFactory.get_engine_by_tag(
-            EngineClass, request.tts_tag, **kwargs)
+        self.tts: EngineClass | ITts = TTSEnvInit.getEngine(request.tts_tag, **kwargs)
         logging.debug(f"init {self.tts.TAG} args:{self.tts.args} -> {self.tts}")
         return LoadModelResponse()
 
