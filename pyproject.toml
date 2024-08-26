@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.5.24"
+version = "0.0.5.28"
 requires-python = ">= 3.10"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
@@ -45,6 +45,7 @@ classifiers = [
 
     # Specify the Python versions you support here.
     "Programming Language :: Python :: 3",
+    # when install TTS numpy==1.22.0;python_version<="3.10"
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -56,9 +57,9 @@ dependencies = [
     "pydub==0.25.1",        # need install ffmpeg
     "pillow==10.4.0",
     "aiohttp==3.10.3",
-    "scipy==1.14.0",
+    "scipy",
     "pyloudnorm==0.1.1",
-    "numpy==1.26.4",
+    "numpy>=1.22.0",
 ]
 
 [project.urls]
@@ -212,7 +213,6 @@ daily_webrtc_terminal_chat_bot = [
     "WeTextProcessing==1.0.2; sys_platform == 'linux'",
     "nemo_text_processing==1.0.2; sys_platform == 'linux'",
     "transformers[torch]>=4.40.2",
-    "numpy==1.26.4",
 ] # achatbot[daily_room_audio_stream,speech_waker,speech_vad,speech_asr,core_llm,speech_tts,stream_player]
 
 # achatbot[speech_audio_stream,queue,stream_player]
@@ -264,7 +264,6 @@ remote_queue_chat_bot_be_worker = [
     "WeTextProcessing==1.0.2; sys_platform == 'linux'",
     "nemo_text_processing==1.0.2; sys_platform == 'linux'",
     "transformers[torch]>=4.40.2",
-    "numpy==1.26.4",
 ]
 
 # achatbot[speech_audio_stream,rpc,stream_player]
@@ -319,7 +318,6 @@ remote_rpc_chat_bot_be_worker = [
     "WeTextProcessing==1.0.2; sys_platform == 'linux'",
     "nemo_text_processing==1.0.2; sys_platform == 'linux'",
     "transformers[torch]>=4.40.2",
-    "numpy==1.26.4",
 ]
 
 # achatbot[grpc,stream_player]
@@ -357,7 +355,6 @@ remote_grpc_tts_server = [
     "WeTextProcessing==1.0.2; sys_platform == 'linux'",
     "nemo_text_processing==1.0.2; sys_platform == 'linux'",
     "transformers[torch]>=4.40.2",
-    "numpy==1.26.4",
 ]
 
 
@@ -372,7 +369,6 @@ asr_processor = [
     "transformers[torch]>=4.40.2",
     "funasr==1.1.5",
     "groq==0.9.0",
-    "numpy==1.26.4",
 ]
 llm_processor = ["openai==1.40.6"]
 img_processor = ["openai==1.40.6"]
@@ -405,7 +401,6 @@ tts_processor = [
     "nemo_text_processing==1.0.2; sys_platform == 'linux'",
     "transformers[torch]>=4.40.2",
     "torch==2.2.2",
-    "numpy==1.26.4",
 ]
 ai_frameworks_processor = ["langchain==0.2.13"]
 deepgram_asr_processor = ["deepgram-sdk==3.4.0"]
@@ -433,7 +428,6 @@ speech_asr = [
     "torch==2.2.2",
     "transformers[torch]>=4.40.2",
     "groq==0.9.0",
-    "numpy==1.26.4",
 ]
 core_llm = ["llama-cpp-python==0.2.82", "geocoder==1.38.1"]
 speech_tts = [
@@ -462,7 +456,6 @@ speech_tts = [
     "nemo_text_processing==1.0.2; sys_platform == 'linux'",
     "transformers[torch]>=4.40.2",
     "torch==2.2.2",
-    "numpy==1.26.4",
 ]
 queue = ["redis==5.0.0"]
 rpc = ["grpcio>=1.65.1"]
@@ -525,7 +518,6 @@ tts_cosy_voice = [
     "diffusers[torch]==0.30.0",
     "lightning==2.4.0",
     "wget==3.2",
-    "numpy==1.26.4",
     "modelscope==1.16.0",
 ]
 tts_chat = [
@@ -537,7 +529,6 @@ tts_chat = [
     "WeTextProcessing==1.0.2; sys_platform == 'linux'",
     "nemo_text_processing==1.0.2; sys_platform == 'linux'",
     "transformers[torch]>=4.40.2",
-    "numpy==1.26.4",
 ]
 tts_coqui = ["TTS==0.22.0"]
 tts_edge = ["edge-tts==6.1.12"]

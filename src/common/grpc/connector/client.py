@@ -2,16 +2,12 @@ import traceback
 import logging
 import threading
 import queue
-import os
 
 import grpc
 
-from src.common.grpc.idl.connector_pb2 import (
-    ConnectStreamRequest, ConnectStreamResponse
-)
+from src.common.grpc.idl.connector_pb2 import ConnectStreamRequest
 from src.common.grpc.idl.connector_pb2_grpc import ConnectorStub
 from src.common.grpc.interceptors.authentication_client import add_authentication
-from src.common.logger import Logger
 
 
 class StreamClient():

@@ -5,10 +5,10 @@ import warnings
 
 from . import connector_pb2 as connector__pb2
 
-GRPC_GENERATED_VERSION = '1.65.0'
+GRPC_GENERATED_VERSION = '1.65.1'
 GRPC_VERSION = grpc.__version__
-EXPECTED_ERROR_RELEASE = '1.65.0'
-SCHEDULED_RELEASE_DATE = 'June 25, 2024'
+EXPECTED_ERROR_RELEASE = '1.65.1'
+SCHEDULED_RELEASE_DATE = 'August 6, 2024'
 _version_not_supported = False
 
 try:
@@ -42,7 +42,6 @@ class ConnectorStub(object):
         self.ConnectStream = channel.stream_stream(
             '/chat_bot.connector.Connector/ConnectStream',
             request_serializer=connector__pb2.ConnectStreamRequest.SerializeToString,
-
             response_deserializer=connector__pb2.ConnectStreamResponse.FromString,
             _registered_method=True)
 

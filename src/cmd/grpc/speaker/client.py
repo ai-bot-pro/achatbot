@@ -7,6 +7,9 @@ import uuid
 
 import grpc
 
+from src.common.factory import EngineClass
+from src.common.interface import IAudioStream
+from src.modules.speech.audio_stream import AudioStreamEnvInit
 from src.modules.speech.player import PlayerEnvInit
 from src.modules.speech.tts import TTSEnvInit
 from src.common.grpc.idl.tts_pb2 import (
@@ -19,7 +22,10 @@ from src.common.logger import Logger
 from src.common.types import SessionCtx
 from src.common.session import Session
 
-Logger.init(logging.DEBUG, app_name="chat-bot-tts-client", is_file=True, is_console=True)
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
+Logger.init(logging.DEBUG, app_name="chat-bot-tts-client", is_file=False, is_console=True)
 
 
 def load_model(channel):
@@ -44,7 +50,7 @@ def synthesize_us(channel):
 logging.basicConfig(level=logging.DEBUG)
 
 """
-TTS_TAG=tts_edge python -m src.cmd.grpc.speaker.client
+TTS_TAG=tts_edge IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 TTS_TAG=tts_g IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 TTS_TAG=tts_coqui IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 TTS_TAG=tts_chat IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
@@ -64,7 +70,10 @@ if __name__ == "__main__":
         load_model(channel)
         tts_audio_iter = synthesize_us(channel)
 
+        audio_out_stream: IAudioStream | EngineClass = AudioStreamEnvInit.initAudioOutStreamEngine()
         player = PlayerEnvInit.initPlayerEngine()
+        player.set_out_stream(audio_out_stream)
+        player.open()
         player.start(session)
         for tts_audio in tts_audio_iter:
             logging.debug(f"play tts_chunk len:{len(tts_audio)}")
