@@ -2,18 +2,14 @@ from concurrent import futures
 import threading
 import logging
 import queue
-import os
 
 import grpc
 
 from src.common.grpc.idl.connector_pb2_grpc import (
     ConnectorServicer, add_ConnectorServicer_to_server
 )
-from src.common.grpc.idl.connector_pb2 import (
-    ConnectStreamResponse
-)
+from src.common.grpc.idl.connector_pb2 import ConnectStreamResponse
 from src.common.grpc.interceptors.authentication_server import AuthenticationInterceptor
-from src.common.logger import Logger
 
 
 class Connector(ConnectorServicer):
@@ -63,7 +59,7 @@ class Connector(ConnectorServicer):
 class StreamServe():
     def __init__(self, in_q: queue.Queue, out_q: queue.Queue,
                  token="chat-bot-connenctor",
-                 port="50052", max_workers=1) -> None:
+                 port="50052", max_workers=10) -> None:
         self.token = token
         self.port = port
         self.max_workers = max_workers

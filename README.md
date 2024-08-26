@@ -1,17 +1,39 @@
-# chat-bot
+# achatbot
 [![PyPI](https://img.shields.io/pypi/v/achatbot)](https://pypi.org/project/achatbot/)
+<a href="https://app.commanddash.io/agent/github_ai-bot-pro_achatbot"><img src="https://img.shields.io/badge/AI-Code%20Agent-EB9FDA"></a>
 
+achatbot factory, create chat bots with llm, asr, tts, vad, etc.. 
 
 # Project Structure
 ![project-structure](https://github.com/user-attachments/assets/5bf7cebb-e590-4718-a78a-6b0c0b36ea28)
 
 # Feature
-- support transoport connector: pipe, http, grpc, queue
-- 
+- support transport connector: pipe, http, grpc, queue
+- chat bot processors: 
+  - aggreators(llm use, assistant message), 
+  - ai_frameworks(langchain rag), 
+  - realtime voice inference(RTVI),
+  - transport: daily(webrtc)
+  - ai processor: llm, tts, asr etc..
+- core module:
+  - llm
+- AI modules:
+  - functions:
+    - search:
+    - weather:
+  - speech:
+    - asr
+    - audio_stream
+    - detector
+    - player
+    - recorder
+    - tts
+    - vad_analyzer
+  - vision:
 
 # Install
 > [!NOTE]
-> `python --version` >= 3.11
+> `python --version` >= 3.10
 ## pypi
 ```bash
 python3 -m venv .venv_achatbot

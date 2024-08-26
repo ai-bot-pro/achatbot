@@ -25,17 +25,22 @@ RUN_OP=fe \
 """
 
 # global logging
-Logger.init(logging.INFO, is_file=True, is_console=False)
 
 
 def main():
     op = os.getenv("RUN_OP", "fe")
     conn = None
     if op == "fe":
+        Logger.init(logging.DEBUG, app_name="chat-bot-grpc-fe", is_file=True, is_console=False)
         conn = GrpcStreamClientConnector()
         client = TerminalChatClient()
         client.run(conn)
     else:
+        Logger.init(
+            logging.DEBUG,
+            app_name="chat-bot-grpc-be-worker",
+            is_file=True,
+            is_console=False)
         conn = GrpcStreamServeConnector()
         ChatWorker().run(conn)
     conn.close()
