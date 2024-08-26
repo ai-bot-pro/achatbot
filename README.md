@@ -22,29 +22,39 @@ achatbot factory, create chat bots with llm, asr, tts, vad, etc..
   - transport: daily(webrtc)
   - ai processor: llm, tts, asr etc..
 - core module:
-  - llm
+  - local llm: llama-cpp, (todo: mlx_lm, transformers etc..)
+  - api llm: personal-ai(like openai api, other ai provider)
 - AI modules:
   - functions:
-    - search:
-    - weather:
+    - search: search,search1,serper
+    - weather: openweathermap
   - speech:
-    - asr
-    - audio_stream
-    - detector
-    - player
-    - recorder
-    - tts
-    - vad_analyzer
-  - vision:
+    - asr: sense_voice_asr, whisper_asr, whisper_timestamped_asr, whisper_faster_asr, whisper_transformers_asr, whisper_mlx_asr, lightning_whisper_mlx_asr(todo), whisper_groq_asr
+    - audio_stream: daily_room_audio_stream(in/out), pyaudio_stream(in/out)
+    - detector: porcupine_wakeword,pyannote_vad,webrtc_vad,silero_vad,webrtc_silero_vad
+    - player: stream_player
+    - recorder: rms_recorder, wakeword_rms_recorder, vad_recorder, wakeword_vad_recorder
+    - tts: tts_chat,tts_coqui,tts_cosy_voice,tts_edge,tts_g
+    - vad_analyzer: daily_webrtc_vad_analyzer,silero_vad_analyzer
+  - vision(todo)
 - gen modules config(*.yaml, local/test/prod) from env with file: `.env`
+ u also use HfArgumentParser this module's args to local cmd parse args
 - deploy to cloud ☁️ serverless: 
+  - vercel (frontend ui pages)
   - Cloudflare(frontend ui pages), personal ai workers 
   - [fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/cerebrium/fastapi-daily-chat-bot) on cerebrium (provider aws)
+  - aws lambda + api Gateway
   - etc...
 
 # Install
 > [!NOTE]
 > `python --version` >= 3.10
+
+> [!TIP]
+> use [uv](https://github.com/astral-sh/uv) + pip to run, install the required dependencies fastly, e.g.:
+> `uv pip install achatbot`
+> `uv pip install "achatbot[fastapi_bot_server]"`
+
 ## pypi
 ```bash
 python3 -m venv .venv_achatbot
