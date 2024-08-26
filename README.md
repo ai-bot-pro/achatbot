@@ -8,6 +8,12 @@ achatbot factory, create chat bots with llm, asr, tts, vad, etc..
 ![project-structure](https://github.com/user-attachments/assets/5bf7cebb-e590-4718-a78a-6b0c0b36ea28)
 
 # Feature
+- cmd chat bots:
+  - local-terminal-chat(be/fe)
+  - remote-queue-chat(be/fe)
+  - grpc-terminal-chat(be/fe)
+  - grpc-speaker
+  - http fastapi_daily_bot_serve (with chat bots pipeline)
 - support transport connector: pipe, http, grpc, queue
 - chat bot processors: 
   - aggreators(llm use, assistant message), 
@@ -30,6 +36,11 @@ achatbot factory, create chat bots with llm, asr, tts, vad, etc..
     - tts
     - vad_analyzer
   - vision:
+- gen modules config(*.yaml, local/test/prod) from env with file: `.env`
+- deploy to cloud ☁️ serverless: 
+  - Cloudflare(frontend ui pages), personal ai workers 
+  - [fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/cerebrium/fastapi-daily-chat-bot) on cerebrium (provider aws)
+  - etc...
 
 # Install
 > [!NOTE]

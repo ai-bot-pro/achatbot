@@ -34,7 +34,7 @@ more frontend app
 
 ## Deploy to cerebrium (KISS)
 provider: aws
-- [fastapi-daily-chat-bot](https://github.com/ai-bot-pro/chat-bot/tree/feat/deploy/deploy/cerebrium/fastapi-daily-chat-bot)
+- [fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/cerebrium/fastapi-daily-chat-bot)
 ### tools
 - cerebrium
 
