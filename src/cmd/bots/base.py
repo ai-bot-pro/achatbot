@@ -13,7 +13,7 @@ from src.processors.speech.asr.asr_processor import ASRProcessor
 from src.processors.llm.base import LLMProcessor
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.processors.llm.openai_llm_processor import OpenAILLMProcessor
-from src.processors.rtvi_processor import RTVIASRConfig, RTVIConfig, RTVILLMConfig, RTVITTSConfig
+from src.processors.rtvi_asr_llm_tts_processor import RTVIASRConfig, RTVIConfig, RTVILLMConfig, RTVITTSConfig
 from src.common.types import DailyRoomBotArgs
 from src.common.interface import IBot
 from src.common.session import Session

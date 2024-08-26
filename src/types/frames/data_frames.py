@@ -129,3 +129,13 @@ class TTSSpeakFrame(DataFrame):
 @dataclass
 class DailyTransportMessageFrame(TransportMessageFrame):
     participant_id: str | None = None
+
+
+@dataclass
+class FunctionCallResultFrame(DataFrame):
+    """A frame containing the result of an LLM function (tool) call.
+    """
+    function_name: str
+    tool_call_id: str
+    arguments: str
+    result: Any

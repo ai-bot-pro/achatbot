@@ -10,7 +10,7 @@ from apipeline.pipeline.pipeline import Pipeline
 from src.processors.llm.base import LLMProcessor
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
-from src.processors.rtvi_processor import RTVIConfig, RTVIProcessor, RTVISetup
+from src.processors.rtvi_asr_llm_tts_processor import RTVIProcessor, RTVISetup
 from src.common.types import DailyParams, DailyRoomBotArgs, DailyTranscriptionSettings
 from src.transports.daily import DailyTransport
 from .base import DailyRoomBot, register_daily_room_bots

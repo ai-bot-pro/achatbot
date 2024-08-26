@@ -22,7 +22,6 @@ from src.processors.aggregators.llm_response import LLMAssistantResponseAggregat
 from src.processors.ai_frameworks.langchain_rag_processor import LangchainRAGProcessor
 from src.processors.speech.audio_volume_time_processor import AudioVolumeTimeProcessor
 from src.processors.speech.asr.base import TranscriptionTimingLogProcessor
-from src.processors.rtvi_processor import RTVIConfig, RTVILLMConfig
 from src.common.types import DailyParams
 from src.transports.daily import DailyTransport
 from src.cmd.bots.rag.helper import get_tidb_url

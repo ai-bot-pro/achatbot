@@ -12,3 +12,12 @@ class BotInterruptionFrame(SystemFrame):
 
     """
     pass
+
+
+@dataclass
+class FunctionCallInProgressFrame(SystemFrame):
+    """A frame signaling that a function call is in progress.
+    """
+    function_name: str
+    tool_call_id: str
+    arguments: str
