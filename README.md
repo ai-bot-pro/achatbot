@@ -49,8 +49,8 @@ achatbot factory, create chat bots with llm, asr, tts, vad, etc..
 # Install
 > [!NOTE]
 > `python --version` >= 3.10
-> 
-> [!TIPS]
+
+> [!TIP]
 > use [uv](https://github.com/astral-sh/uv) + pip to run, install the required dependencies fastly, e.g.:
 > `uv pip install achatbot`
 > `uv pip install "achatbot[fastapi_bot_server]"`
