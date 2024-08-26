@@ -14,7 +14,7 @@ achatbot factory, create chat bots with llm, asr, tts, vad, etc..
   - grpc-terminal-chat(be/fe)
   - grpc-speaker
   - http fastapi_daily_bot_serve (with chat bots pipeline)
-- support transport connector: pipe, http, grpc, queue
+- support transport connector: pipe(UNIX socket), grpc, queue (redis), (todo: websocket, TCP/IP socket)
 - chat bot processors: 
   - aggreators(llm use, assistant message), 
   - ai_frameworks(langchain rag), 
