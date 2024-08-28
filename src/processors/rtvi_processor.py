@@ -90,7 +90,7 @@ class RTVIAction(BaseModel):
 
 
 #
-# Client -> Pipecat messages.
+# Client -> achatbot messages.
 #
 
 
@@ -105,7 +105,17 @@ class RTVIServiceConfig(BaseModel):
 
 
 class RTVIConfig(BaseModel):
-    config: List[RTVIServiceConfig]
+    config_list: List[RTVIServiceConfig]
+    arguments_dict: Dict[str, Any] = PrivateAttr(default={})
+
+    def model_post_init(self, __context: Any) -> None:
+        self.arguments_dict = {}
+        for conf in self.config_list:
+            opt_dict = {}
+            for opt in self.conf.options:
+                opt_dict[opt.name] = opt.value
+            self.arguments_dict[conf.service] = opt_dict
+        return super().model_post_init(__context)
 
 
 class RTVIActionRunArgument(BaseModel):
@@ -126,7 +136,7 @@ class RTVIMessage(BaseModel):
     data: Optional[Dict[str, Any]] = None
 
 #
-# Pipecat -> Client responses and messages.
+# achatbot -> Client responses and messages.
 #
 
 
@@ -274,7 +284,7 @@ class RTVIProcessor(FrameProcessor):
 
     def __init__(self,
                  *,
-                 config: RTVIConfig = RTVIConfig(config=[]),
+                 config: RTVIConfig = RTVIConfig(config_list=[]),
                  params: RTVIProcessorParams = RTVIProcessorParams()):
         super().__init__()
         self._config = config
@@ -299,8 +309,16 @@ class RTVIProcessor(FrameProcessor):
         id = self._action_id(action.service, action.action)
         self._registered_actions[id] = action
 
+    def register_actions(self, actions: List[RTVIAction]):
+        for action in actions:
+            self.register_action(action)
+
     def register_service(self, service: RTVIService):
         self._registered_services[service.name] = service
+
+    def register_services(self, services: List[RTVIService]):
+        for service in services:
+            self.register_service(service)
 
     async def interrupt_bot(self):
         await self.push_frame(BotInterruptionFrame(), FrameDirection.UPSTREAM)
@@ -479,6 +497,7 @@ class RTVIProcessor(FrameProcessor):
                 break
 
     async def _handle_message(self, frame: TransportMessageFrame):
+        logging.debug(f"handle TransportMessageFrame: {frame}")
         try:
             message = RTVIMessage.model_validate(frame.message)
         except ValidationError as e:
@@ -486,6 +505,7 @@ class RTVIProcessor(FrameProcessor):
             logging.warning(f"Invalid incoming  message: {e}")
             return
 
+        logging.debug(f"handle message: {message}")
         try:
             match message.type:
                 case "client-ready":
@@ -536,7 +556,7 @@ class RTVIProcessor(FrameProcessor):
         await self._push_transport_message(message)
 
     def _update_config_option(self, service: str, config: RTVIServiceOptionConfig):
-        for service_config in self._config.config:
+        for service_config in self._config.config_list:
             if service_config.service == service:
                 for option_config in service_config.options:
                     if option_config.name == config.name:
@@ -554,7 +574,7 @@ class RTVIProcessor(FrameProcessor):
             self._update_config_option(service.name, option)
 
     async def _update_config(self, data: RTVIConfig):
-        for service_config in data.config:
+        for service_config in data.config_list:
             await self._update_service_config(service_config)
 
     async def _handle_update_config(self, request_id: str, data: RTVIConfig):
@@ -601,7 +621,7 @@ class RTVIProcessor(FrameProcessor):
             id=self._client_ready_id,
             data=RTVIBotReadyData(
                 version=RTVI_PROTOCOL_VERSION,
-                config=self._config.config))
+                config=self._config.config_list))
         await self._push_transport_message(message)
 
     async def _send_error_frame(self, frame: ErrorFrame):

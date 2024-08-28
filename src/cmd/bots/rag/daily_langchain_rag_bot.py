@@ -25,7 +25,8 @@ from src.processors.speech.asr.base import TranscriptionTimingLogProcessor
 from src.common.types import DailyParams
 from src.transports.daily import DailyTransport
 from src.cmd.bots.rag.helper import get_tidb_url
-from src.cmd.bots.base import DailyRoomBot, register_daily_room_bots
+from src.cmd.bots.base import DailyRoomBot
+from src.cmd.bots import register_daily_room_bots
 
 from dotenv import load_dotenv
 load_dotenv(override=True)
@@ -62,6 +63,7 @@ class DailyLangchainRAGBot(DailyRoomBot):
 
     def __init__(self, **args) -> None:
         super().__init__(**args)
+        self.init_bot_config()
         self.message_store = {}
 
     def bot_config(self):
@@ -195,5 +197,5 @@ class DailyLangchainRAGBot(DailyRoomBot):
     async def on_first_participant_joined(self, transport: DailyTransport, participant):
         self.session.set_client_id(participant['id'])
         self.langchain_processor.set_participant_id(participant['id'])
-        transport.capture_participant_transcription(participant["id"])
+        # transport.capture_participant_transcription(participant["id"])
         logging.info(f"First participant {participant['id']} joined")

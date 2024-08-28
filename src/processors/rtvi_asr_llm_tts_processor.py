@@ -40,59 +40,11 @@ from src.processors.aggregators.llm_response import (
 )
 from src.processors.aggregators.openai_llm_context import OpenAILLMContext
 from src.transports.base import BaseTransport
-
-from dotenv import load_dotenv
-load_dotenv(override=True)
-
-
-DEFAULT_LLM_SYS_MESSAGES = [
-    {
-        "role": "system",
-        "content": os.getenv("LLM_CHAT_SYSTEM", ""),
-    }]
-
-GROQ_LLM_URL = "https://api.groq.com/openai/v1"
-GROQ_LLM_MODEL = "llama-3.1-70b-versatile"
-
-# https://docs.together.ai/docs/chat-models
-TOGETHER_LLM_URL = "https://api.together.xyz/v1"
-TOGETHER_LLM_MODEL = "Qwen/Qwen2-72B-Instruct"
-
-DEFAULT_LLM_URL = os.getenv("LLM_OPENAI_BASE_URL", GROQ_LLM_URL)
-DEFAULT_LLM_MODEL = os.getenv("LLM_OPENAI_MODEL", GROQ_LLM_MODEL)
-
-DEFAULT_LLM_LANG = "zh"
-
-
-class RTVILLMConfig(BaseModel):
-    base_url: Optional[str] = DEFAULT_LLM_URL
-    model: Optional[str] = DEFAULT_LLM_MODEL
-    language: Optional[str] = DEFAULT_LLM_LANG
-    messages: Optional[List[dict]] = None
-    tag: Optional[str] = "openai_llm_processor"
-    args: Optional[dict] = None
-
-
-class RTVITTSConfig(BaseModel):
-    voice: Optional[str] = None
-    language: Optional[str] = None
-    tag: Optional[str] = None
-    args: Optional[dict] = None
-
-
-class RTVIASRConfig(BaseModel):
-    tag: Optional[str] = None
-    args: Optional[dict] = None
-
-
-class RTVIConfig(BaseModel):
-    asr: Optional[RTVIASRConfig] = None
-    llm: Optional[RTVILLMConfig] = None
-    tts: Optional[RTVITTSConfig] = None
+from src.types.ai_conf import AIConfig
 
 
 class RTVISetup(BaseModel):
-    config: Optional[RTVIConfig] = None
+    config: Optional[AIConfig] = None
 
 
 class RTVILLMMessageData(BaseModel):
@@ -106,7 +58,7 @@ class RTVITTSMessageData(BaseModel):
 
 class RTVIMessageData(BaseModel):
     setup: Optional[RTVISetup] = None
-    config: Optional[RTVIConfig] = None
+    config: Optional[AIConfig] = None
     llm: Optional[RTVILLMMessageData] = None
     tts: Optional[RTVITTSMessageData] = None
 
@@ -407,8 +359,6 @@ class RTVIProcessor(FrameProcessor):
         logging.info(f"handle message: {message}")
 
         # https://github.com/rtvi-ai#docs-events-and-data-structures-and-extensions
-        # js sdk:
-        # https://github.com/rtvi-ai/rtvi-client-web/blob/main/rtvi-client-js/src/messages.ts
         try:
             success = True
             error = None
@@ -481,7 +431,7 @@ class RTVIProcessor(FrameProcessor):
 
         await self._maybe_send_bot_ready()
 
-    async def _handle_config_update(self, config: RTVIConfig):
+    async def _handle_config_update(self, config: AIConfig):
         # Change voice before LLM updates, so we can hear the new vocie.
         if config.tts and config.tts.voice:
             frame = TTSVoiceUpdateFrame(config.tts.voice)

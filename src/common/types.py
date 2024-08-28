@@ -506,5 +506,7 @@ class DailyParams(AudioCameraParams):
 class DailyRoomBotArgs:
     room_url: str = ""
     token: str = ""
-    bot_config: dict = None
+    bot_config: dict | None = None
     bot_name: str | None = None
+    bot_config_list: list | None = None
+    services: dict | None = None

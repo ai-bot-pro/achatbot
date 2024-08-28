@@ -12,7 +12,8 @@ from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.processors.rtvi_asr_llm_tts_processor import RTVIProcessor, RTVISetup
 from src.common.types import DailyParams, DailyRoomBotArgs
 from src.transports.daily import DailyTransport
-from .base import DailyRoomBot, register_daily_room_bots
+from src.cmd.bots.base import DailyRoomBot
+from src.cmd.bots import register_daily_room_bots
 
 from dotenv import load_dotenv
 load_dotenv(override=True)
@@ -26,6 +27,7 @@ class DailyAsrRTVIBot(DailyRoomBot):
 
     def __init__(self, **args) -> None:
         super().__init__(**args)
+        self.init_bot_config()
 
     def bot_config(self):
         return self._bot_config.model_dump()
