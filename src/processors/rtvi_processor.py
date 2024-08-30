@@ -445,9 +445,6 @@ class RTVIProcessor(FrameProcessor):
         await self.push_frame(frame)
 
     async def _handle_transcriptions(self, frame: Frame):
-        # TODO(aleix): Once we add support for using custom pipelines, the STTs will
-        # be in the pipeline after this processor.
-
         message = None
         if isinstance(frame, TranscriptionFrame):
             message = RTVITranscriptionMessage(
@@ -578,7 +575,7 @@ class RTVIProcessor(FrameProcessor):
             await self._update_service_config(service_config)
 
     async def _handle_update_config(self, request_id: str, data: RTVIConfig):
-        # NOTE(aleix): The bot might be talking while we receive a new
+        # NOTE: The bot might be talking while we receive a new
         # config. Let's interrupt it for now and update the config. Another
         # solution is to wait until the bot stops speaking and then apply the
         # config, but this definitely is more complicated to achieve.

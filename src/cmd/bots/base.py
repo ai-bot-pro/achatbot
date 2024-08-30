@@ -5,6 +5,8 @@ import uuid
 
 from apipeline.frames.control_frames import EndFrame
 
+from src.processors.speech.asr.base import ASRProcessorBase
+from src.processors.speech.tts.base import TTSProcessorBase
 from src.common import interface
 from src.common.factory import EngineClass
 from src.modules.speech.asr import ASREnvInit
@@ -76,8 +78,8 @@ class DailyRoomBot(IBot):
         if state == "left" and self.task is not None:
             await self.task.queue_frame(EndFrame())
 
-    def get_asr_processor(self) -> ASRProcessor:
-        asr_processor: ASRProcessor = None
+    def get_asr_processor(self) -> ASRProcessorBase:
+        asr_processor: ASRProcessorBase | None = None
         if self._bot_config.asr \
                 and self._bot_config.asr.tag == "deepgram_asr_processor" \
                 and self._bot_config.asr.args:
@@ -117,8 +119,8 @@ class DailyRoomBot(IBot):
         )
         return llm_processor
 
-    def get_tts_processor(self) -> TTSProcessor:
-        tts_processor: TTSProcessor | None = None
+    def get_tts_processor(self) -> TTSProcessorBase:
+        tts_processor: TTSProcessorBase | None = None
         if self._bot_config.tts and self._bot_config.tts.tag == "elevenlabs_tts_processor":
             from src.processors.speech.tts.elevenlabs_tts_processor import ElevenLabsTTSProcessor
             tts_processor = ElevenLabsTTSProcessor(**self._bot_config.tts.args)
