@@ -26,6 +26,11 @@ DEFAULT_LLM_MODEL = os.getenv("LLM_OPENAI_MODEL", GROQ_LLM_MODEL)
 DEFAULT_LLM_LANG = "zh"
 
 
+class VADConfig(BaseModel):
+    tag: Optional[str] = None
+    args: Optional[dict] = None
+
+
 class ASRConfig(BaseModel):
     tag: Optional[str] = None
     args: Optional[dict] = None
@@ -48,6 +53,7 @@ class TTSConfig(BaseModel):
 
 
 class AIConfig(BaseModel):
+    vad: Optional[VADConfig] = None
     asr: Optional[ASRConfig] = None
     llm: Optional[LLMConfig] = None
     tts: Optional[TTSConfig] = None

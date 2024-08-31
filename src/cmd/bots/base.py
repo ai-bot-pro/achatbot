@@ -9,6 +9,7 @@ from src.processors.speech.asr.base import ASRProcessorBase
 from src.processors.speech.tts.base import TTSProcessorBase
 from src.common import interface
 from src.common.factory import EngineClass
+from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.modules.speech.asr import ASREnvInit
 from src.modules.speech.tts import TTSEnvInit
 from src.processors.speech.asr.asr_processor import ASRProcessor
@@ -77,6 +78,17 @@ class DailyRoomBot(IBot):
         logging.info("Call state %s " % state)
         if state == "left" and self.task is not None:
             await self.task.queue_frame(EndFrame())
+
+    def get_vad_analyzer(self) -> interface.IVADAnalyzer | EngineClass:
+        vad_analyzer: interface.IVADAnalyzer | EngineClass = None
+        if self._bot_config.vad \
+                and len(self._bot_config.vad.tag) > 0  \
+                and self._bot_config.vad.args:
+            vad_analyzer = VADAnalyzerEnvInit.getEngine(
+                self._bot_config.vad.tag, **self._bot_config.vad.args)
+        else:
+            vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
+        return vad_analyzer
 
     def get_asr_processor(self) -> ASRProcessorBase:
         asr_processor: ASRProcessorBase | None = None

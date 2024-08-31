@@ -20,9 +20,13 @@ def import_bots(bot_name: str = "DummyBot"):
     if "DailyLangchainRAGBot" in bot_name:
         from .rag import daily_langchain_rag_bot
         return True
+    if "DailyRTVIGeneralBot" in bot_name:
+        from .rtvi import daily_rtvi_general_bot
+        return True
     if "Daily" in bot_name:
         from .rtvi import daily_rtvi_bot
         from .rtvi import daily_asr_rtvi_bot
+        from .rtvi import daily_rtvi_general_bot
         from .rag import daily_langchain_rag_bot
         return True
 

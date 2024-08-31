@@ -76,17 +76,8 @@ class RTVIActionArgument(BaseModel):
 class RTVIAction(BaseModel):
     service: str
     action: str
-    arguments: List[RTVIActionArgument] = []
-    result: Literal["bool", "number", "string", "array", "object"]
     handler: Callable[["RTVIProcessor", str, Dict[str, Any]],
                       Awaitable[ActionResult]] = Field(exclude=True)
-    _arguments_dict: Dict[str, RTVIActionArgument] = PrivateAttr(default={})
-
-    def model_post_init(self, __context: Any) -> None:
-        self._arguments_dict = {}
-        for arg in self.arguments:
-            self._arguments_dict[arg.name] = arg
-        return super().model_post_init(__context)
 
 
 #
@@ -106,15 +97,15 @@ class RTVIServiceConfig(BaseModel):
 
 class RTVIConfig(BaseModel):
     config_list: List[RTVIServiceConfig]
-    arguments_dict: Dict[str, Any] = PrivateAttr(default={})
+    _arguments_dict: Dict[str, Any] = PrivateAttr(default={})
 
     def model_post_init(self, __context: Any) -> None:
-        self.arguments_dict = {}
+        self._arguments_dict = {}
         for conf in self.config_list:
             opt_dict = {}
-            for opt in self.conf.options:
+            for opt in conf.options:
                 opt_dict[opt.name] = opt.value
-            self.arguments_dict[conf.service] = opt_dict
+            self._arguments_dict[conf.service] = opt_dict
         return super().model_post_init(__context)
 
 
@@ -606,6 +597,7 @@ class RTVIProcessor(FrameProcessor):
         await self._push_transport_message(message)
 
     async def _maybe_send_bot_ready(self):
+        print(self._pipeline_started, self._client_ready, "______")
         if self._pipeline_started and self._client_ready:
             await self._send_bot_ready()
             await self._update_config(self._config)

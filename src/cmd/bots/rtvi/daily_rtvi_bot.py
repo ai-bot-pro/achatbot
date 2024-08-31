@@ -47,7 +47,7 @@ class DailyRTVIBot(DailyRoomBot):
         tts_processor: TTSProcessor = self.get_tts_processor()
         stream_info = tts_processor.get_stream_info()
         daily_params.audio_out_sample_rate = stream_info["sample_rate"]
-        daily_params.audio_out_channels = tts_processor.get_stream_info()["channels"]
+        daily_params.audio_out_channels = stream_info["channels"]
 
         transport = DailyTransport(
             self.args.room_url,
