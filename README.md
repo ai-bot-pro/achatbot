@@ -22,7 +22,7 @@ achatbot factory, create chat bots with llm, asr, tts, vad, etc..
   - transport: daily(webrtc)
   - ai processor: llm, tts, asr etc..
 - core module:
-  - local llm: llama-cpp, (todo: mlx_lm, transformers etc..)
+  - local llm: llama-cpp, (todo: baby-llm [llama2](https://github.com/ai-bot-pro/baby-llm/tree/main/llama2), [~~gundam~~](https://github.com/ai-bot-pro/baby-llm/tree/main/gundam)), mlx_lm, transformers etc..)
   - api llm: personal-ai(like openai api, other ai provider)
 - AI modules:
   - functions:
