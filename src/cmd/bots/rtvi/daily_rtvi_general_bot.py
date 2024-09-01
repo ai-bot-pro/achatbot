@@ -17,22 +17,6 @@ from src.types.frames.data_frames import LLMMessagesFrame, TextFrame
 from src.cmd.bots.base import DailyRoomBot
 from src.cmd.bots import register_daily_room_bots
 
-from dotenv import load_dotenv
-
-load_dotenv(override=True)
-
-
-class ASRServiceEventHandler:
-    pass
-
-
-class LLMServiceEventHandler:
-    pass
-
-
-class TTSServiceEventHandler:
-    pass
-
 
 @register_daily_room_bots.register
 class DailyRTVIGeneralBot(DailyRoomBot):

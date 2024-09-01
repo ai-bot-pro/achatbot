@@ -22,6 +22,9 @@ from src.common.interface import IBot
 from src.common.session import Session
 from src.common.types import SessionCtx
 
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
 
 class DailyRoomBot(IBot):
     r"""

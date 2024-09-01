@@ -1,4 +1,3 @@
-import os
 import argparse
 import json
 import logging
@@ -15,9 +14,6 @@ from src.common.types import DailyParams, DailyRoomBotArgs, DailyTranscriptionSe
 from src.transports.daily import DailyTransport
 from src.cmd.bots.base import DailyRoomBot
 from src.cmd.bots import register_daily_room_bots
-
-from dotenv import load_dotenv
-load_dotenv(override=True)
 
 
 @register_daily_room_bots.register
