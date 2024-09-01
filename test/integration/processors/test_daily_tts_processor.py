@@ -75,7 +75,7 @@ class TestTTSProcessor(unittest.IsolatedAsyncioTestCase):
                 tts_processor,
                 transport.output_processor()
             ]),
-            params=PipelineParams(all_interruptions=True)
+            params=PipelineParams(allow_interruptions=True)
         )
 
         # Register an event handler so we can play the audio

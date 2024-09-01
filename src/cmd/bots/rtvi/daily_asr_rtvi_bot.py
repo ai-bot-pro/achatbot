@@ -9,13 +9,11 @@ from apipeline.pipeline.runner import PipelineRunner
 from src.processors.llm.base import LLMProcessor
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
-from src.processors.rtvi_processor import RTVIConfig, RTVIProcessor, RTVISetup
+from src.processors.rtvi_asr_llm_tts_processor import RTVIProcessor, RTVISetup
 from src.common.types import DailyParams, DailyRoomBotArgs
 from src.transports.daily import DailyTransport
-from .base import DailyRoomBot, register_daily_room_bots
-
-from dotenv import load_dotenv
-load_dotenv(override=True)
+from src.cmd.bots.base import DailyRoomBot
+from src.cmd.bots import register_daily_room_bots
 
 
 @register_daily_room_bots.register
@@ -26,6 +24,7 @@ class DailyAsrRTVIBot(DailyRoomBot):
 
     def __init__(self, **args) -> None:
         super().__init__(**args)
+        self.init_bot_config()
 
     def bot_config(self):
         return self._bot_config.model_dump()

@@ -1,4 +1,3 @@
-import os
 import argparse
 import json
 import logging
@@ -10,13 +9,11 @@ from apipeline.pipeline.pipeline import Pipeline
 from src.processors.llm.base import LLMProcessor
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
-from src.processors.rtvi_processor import RTVIConfig, RTVIProcessor, RTVISetup
+from src.processors.rtvi_asr_llm_tts_processor import RTVIProcessor, RTVISetup
 from src.common.types import DailyParams, DailyRoomBotArgs, DailyTranscriptionSettings
 from src.transports.daily import DailyTransport
-from .base import DailyRoomBot, register_daily_room_bots
-
-from dotenv import load_dotenv
-load_dotenv(override=True)
+from src.cmd.bots.base import DailyRoomBot
+from src.cmd.bots import register_daily_room_bots
 
 
 @register_daily_room_bots.register
@@ -27,9 +24,7 @@ class DailyRTVIBot(DailyRoomBot):
 
     def __init__(self, **args) -> None:
         super().__init__(**args)
-
-    def bot_config(self):
-        return self._bot_config.model_dump()
+        self.init_bot_config()
 
     async def arun(self):
         vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
@@ -48,7 +43,7 @@ class DailyRTVIBot(DailyRoomBot):
         tts_processor: TTSProcessor = self.get_tts_processor()
         stream_info = tts_processor.get_stream_info()
         daily_params.audio_out_sample_rate = stream_info["sample_rate"]
-        daily_params.audio_out_channels = tts_processor.get_stream_info()["channels"]
+        daily_params.audio_out_channels = stream_info["channels"]
 
         transport = DailyTransport(
             self.args.room_url,

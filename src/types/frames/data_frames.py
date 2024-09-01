@@ -93,6 +93,7 @@ class LLMMessagesFrame(DataFrame):
 @dataclass
 class TransportMessageFrame(DataFrame):
     message: Any
+    urgent: bool = False
 
     def __str__(self):
         return f"{self.name}(message: {self.message})"
@@ -118,6 +119,15 @@ class LLMMessagesUpdateFrame(DataFrame):
 
 
 @dataclass
+class LLMSetToolsFrame(DataFrame):
+    """A frame containing a list of tools for an LLM to use for function calling.
+    The specific format depends on the LLM being used, but it should typically
+    contain JSON Schema objects.
+    """
+    tools: List[dict]
+
+
+@dataclass
 class TTSSpeakFrame(DataFrame):
     """A frame that contains a text that should be spoken by the TTS in the
     pipeline (if any).
@@ -129,3 +139,13 @@ class TTSSpeakFrame(DataFrame):
 @dataclass
 class DailyTransportMessageFrame(TransportMessageFrame):
     participant_id: str | None = None
+
+
+@dataclass
+class FunctionCallResultFrame(DataFrame):
+    """A frame containing the result of an LLM function (tool) call.
+    """
+    function_name: str
+    tool_call_id: str
+    arguments: str
+    result: Any

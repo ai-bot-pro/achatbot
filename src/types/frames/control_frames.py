@@ -2,6 +2,8 @@ from dataclasses import dataclass
 
 from apipeline.frames.control_frames import ControlFrame
 
+from src.common.types import VADAnalyzerArgs
+
 #
 # Control frames
 #
@@ -93,6 +95,7 @@ class BotStoppedSpeakingFrame(ControlFrame):
     """
     pass
 
+
 @dataclass
 class BotSpeakingFrame(ControlFrame):
     """Emitted by transport outputs while the bot is still speaking. This can be
@@ -116,3 +119,11 @@ class TTSVoiceUpdateFrame(ControlFrame):
     """A control frame containing a request to update to a new TTS voice.
     """
     voice: str
+
+
+@dataclass
+class VADParamsUpdateFrame(ControlFrame):
+    """A control frame containing a request to update VAD params. Intended
+    to be pushed upstream from RTVI processor.
+    """
+    params: VADAnalyzerArgs

@@ -5,27 +5,34 @@ import uuid
 
 from apipeline.frames.control_frames import EndFrame
 
+from src.processors.speech.asr.base import ASRProcessorBase
+from src.processors.speech.tts.base import TTSProcessorBase
 from src.common import interface
 from src.common.factory import EngineClass
+from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.modules.speech.asr import ASREnvInit
 from src.modules.speech.tts import TTSEnvInit
 from src.processors.speech.asr.asr_processor import ASRProcessor
 from src.processors.llm.base import LLMProcessor
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.processors.llm.openai_llm_processor import OpenAILLMProcessor
-from src.processors.rtvi_processor import RTVIASRConfig, RTVIConfig, RTVILLMConfig, RTVITTSConfig
+from src.types.ai_conf import ASRConfig, LLMConfig, TTSConfig, AIConfig
 from src.common.types import DailyRoomBotArgs
 from src.common.interface import IBot
 from src.common.session import Session
 from src.common.types import SessionCtx
 
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
 
 class DailyRoomBot(IBot):
     r"""
-    use rtvi bot config
+    use ai bot config
     !TODONE: need config processor with bot config (redefine api params) @weedge
     bot config: Dict[str, Dict[str,Any]]
     e.g. {"llm":{"key":val,"tag":TAG,"args":{}}, "tts":{"key":val,"tag":TAG,"args":{}}}
+    !TIPS: RTVI config options can transfer to ai bot config
     """
 
     def __init__(self, **args) -> None:
@@ -36,15 +43,18 @@ class DailyRoomBot(IBot):
         self.task = None
         self.session = Session(**SessionCtx(uuid.uuid4()).__dict__)
 
+        self._bot_config_list = self.args.bot_config_list
         self._bot_config = self.args.bot_config
+
+    def init_bot_config(self):
         try:
             logging.debug(f'args.bot_config: {self.args.bot_config}')
-            self._bot_config: RTVIConfig = RTVIConfig(**self.args.bot_config)
+            self._bot_config: AIConfig = AIConfig(**self.args.bot_config)
             if self._bot_config.llm is None:
-                self._bot_config.llm = RTVILLMConfig()
+                self._bot_config.llm = LLMConfig()
         except Exception as e:
             raise Exception(f"Failed to parse bot configuration: {e}")
-        logging.info(f'rtvi bot_config: {self._bot_config}')
+        logging.info(f'ai bot_config: {self._bot_config}')
 
     def bot_config(self):
         return self._bot_config
@@ -72,8 +82,19 @@ class DailyRoomBot(IBot):
         if state == "left" and self.task is not None:
             await self.task.queue_frame(EndFrame())
 
-    def get_asr_processor(self) -> ASRProcessor:
-        asr_processor: ASRProcessor = None
+    def get_vad_analyzer(self) -> interface.IVADAnalyzer | EngineClass:
+        vad_analyzer: interface.IVADAnalyzer | EngineClass = None
+        if self._bot_config.vad \
+                and len(self._bot_config.vad.tag) > 0  \
+                and self._bot_config.vad.args:
+            vad_analyzer = VADAnalyzerEnvInit.getEngine(
+                self._bot_config.vad.tag, **self._bot_config.vad.args)
+        else:
+            vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
+        return vad_analyzer
+
+    def get_asr_processor(self) -> ASRProcessorBase:
+        asr_processor: ASRProcessorBase | None = None
         if self._bot_config.asr \
                 and self._bot_config.asr.tag == "deepgram_asr_processor" \
                 and self._bot_config.asr.args:
@@ -92,7 +113,7 @@ class DailyRoomBot(IBot):
             else:
                 logging.info(f"use default asr engine processor")
                 asr = ASREnvInit.initASREngine()
-                self._bot_config.asr = RTVIASRConfig(tag=asr.SELECTED_TAG, args=asr.get_args_dict())
+                self._bot_config.asr = ASRConfig(tag=asr.SELECTED_TAG, args=asr.get_args_dict())
             asr_processor = ASRProcessor(
                 asr=asr,
                 session=self.session
@@ -113,8 +134,8 @@ class DailyRoomBot(IBot):
         )
         return llm_processor
 
-    def get_tts_processor(self) -> TTSProcessor:
-        tts_processor: TTSProcessor | None = None
+    def get_tts_processor(self) -> TTSProcessorBase:
+        tts_processor: TTSProcessorBase | None = None
         if self._bot_config.tts and self._bot_config.tts.tag == "elevenlabs_tts_processor":
             from src.processors.speech.tts.elevenlabs_tts_processor import ElevenLabsTTSProcessor
             tts_processor = ElevenLabsTTSProcessor(**self._bot_config.tts.args)
@@ -139,7 +160,7 @@ class DailyRoomBot(IBot):
                 # default tts engine processor
                 logging.info(f"use default tts engine processor")
                 tts = TTSEnvInit.initTTSEngine()
-                self._bot_config.tts = RTVITTSConfig(tag=tts.SELECTED_TAG, args=tts.get_args_dict())
+                self._bot_config.tts = TTSConfig(tag=tts.SELECTED_TAG, args=tts.get_args_dict())
 
             tts_processor = TTSProcessor(tts=tts, session=self.session)
 

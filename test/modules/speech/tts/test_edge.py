@@ -43,6 +43,10 @@ class TestEdgeTTS(unittest.TestCase):
         self.assertGreater(len(voices), 0)
         print(voices, len(voices))
 
+        voices = asyncio.run(self.tts.get_voices(Language="en"))
+        self.assertGreater(len(voices), 0)
+        print(voices, len(voices))
+
         voices = asyncio.run(self.tts.get_voices(
             ShortName=self.tts.args.voice_name))
         self.assertGreater(len(voices), 0)

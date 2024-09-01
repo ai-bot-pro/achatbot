@@ -46,6 +46,20 @@ achatbot factory, create chat bots with llm, asr, tts, vad, etc..
   - aws lambda + api Gateway
   - etc...
 
+# Service Deployment Architecture
+## UI
+- [chat-bot-rtvi-web-sandbox](https://github.com/ai-bot-pro/chat-bot-rtvi-client/tree/main/chat-bot-rtvi-web-sandbox)
+use this web sandbox to test config, actions with [DailyRTVIGeneralBot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/rtvi/daily_rtvi_general_bot.py)
+- [ui/educator-client](https://github.com/ai-bot-pro/educator-client)
+deploy it to cloudflare pages, access https://educator-client.pages.dev/
+- [ui/web-client-ui](https://github.com/ai-bot-pro/web-client-ui)
+deploy it to cloudflare pages, access https://chat-client-weedge.pages.dev/
+
+
+## Server
+- [fastapi-daily-chat-bot](https://github.com/ai-bot-pro/chat-bot/tree/main/deploy/cerebrium/fastapi-daily-chat-bot)
+deploy fastapi-daily-chat-bot to cerebrium
+
 # Install
 > [!NOTE]
 > `python --version` >= 3.10
@@ -266,16 +280,6 @@ ACHATBOT_PKG=1 TTS_TAG=tts_chat IS_RELOAD=1 python -m achatbot.cmd.grpc.speaker.
 ACHATBOT_PKG=1 TTS_TAG=tts_cosy_voice IS_RELOAD=1 python -m achatbot.cmd.grpc.speaker.client
 ```
 
-# Service Deployment Architecture
-## UI
-- [ui/educator-client](https://github.com/ai-bot-pro/educator-client)
-deploy [ui/educator-client](https://github.com/ai-bot-pro/educator-client) to cloudflare pages, access https://educator-client.pages.dev/
-- [ui/web-client-ui](https://github.com/ai-bot-pro/web-client-ui)
-deploy [ui/web-client-ui](https://github.com/ai-bot-pro/web-client-ui) to cloudflare pages, access https://chat-client-weedge.pages.dev/
-
-## Server
-- [fastapi-daily-chat-bot](https://github.com/ai-bot-pro/chat-bot/tree/main/deploy/cerebrium/fastapi-daily-chat-bot)
-deploy fastapi-daily-chat-bot to cerebrium
 
 # Multimodal Interaction
 ## audio (voice)

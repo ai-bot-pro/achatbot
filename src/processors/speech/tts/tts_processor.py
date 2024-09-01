@@ -39,6 +39,9 @@ class TTSProcessor(TTSProcessorBase):
     def can_generate_metrics(self) -> bool:
         return True
 
+    def set_tts(self, tts: ITts):
+        self._tts = tts
+
     async def set_voice(self, voice: str):
         logging.info(f"Switching TTS voice to: [{voice}]")
         self._tts.set_voice(voice)

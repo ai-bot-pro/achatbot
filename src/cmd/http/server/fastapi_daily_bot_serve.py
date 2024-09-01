@@ -30,10 +30,12 @@ Logger.init(logging.INFO, is_file=False, is_console=True)
 class BotInfo(BaseModel):
     is_agent: bool = False
     chat_bot_name: str = ""
-    config: dict = {}
+    config: dict = {}  # @deprecated use config_list options to conf
     room_name: str = "chat-room"
     room_url: str = ""
     token: str = ""
+    config_list: list = []
+    services: dict = {}
 
 
 class APIResponse(BaseModel):
@@ -307,6 +309,8 @@ async def bot_join(chat_bot_name: str, info: BotInfo | dict) -> dict[str, Any]:
             room_url=room.url,
             token=token,
             bot_name=chat_bot_name,
+            bot_config_list=info.config_list,
+            services=info.services,
         ).__dict__
         bot_obj: IBot = register_daily_room_bots[chat_bot_name](**kwargs)
         bot_process: multiprocessing.Process = multiprocessing.Process(
@@ -420,6 +424,8 @@ async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo | dict
             room_url=room.url,
             token=token,
             bot_name=chat_bot_name,
+            bot_config_list=info.config_list,
+            services=info.services,
         ).__dict__
         bot_obj: IBot = register_daily_room_bots[chat_bot_name](**kwargs)
         bot_process: multiprocessing.Process = multiprocessing.Process(
