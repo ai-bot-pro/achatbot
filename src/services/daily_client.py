@@ -118,6 +118,7 @@ class DailyTransportClient(EventHandler):
             participant_id = frame.participant_id
 
         future = self._loop.create_future()
+        logging.info(f"daily send message:{frame.message}, participant_id:{participant_id}")
         self._client.send_app_message(
             frame.message,
             participant_id,

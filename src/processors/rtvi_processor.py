@@ -493,7 +493,7 @@ class RTVIProcessor(FrameProcessor):
             logging.warning(f"Invalid incoming  message: {e}")
             return
 
-        logging.debug(f"handle message: {message}")
+        logging.info(f"rtvi server handle message: {message}")
         try:
             match message.type:
                 case "client-ready":
@@ -521,8 +521,8 @@ class RTVIProcessor(FrameProcessor):
             await self._send_error_response(message.id, f"Invalid incoming message: {e}")
             logging.warning(f"Invalid incoming  message: {e}")
         except Exception as e:
-            await self._send_error_response(message.id, f"Exception processing message: {e}")
-            logging.warning(f"Exception processing message: {e}")
+            await self._send_error_response(message.id,f"Exception processing message: {e}")
+            logging.warning(f"Exception processing message: {e}",exc_info=True)
 
     async def _handle_client_ready(self, request_id: str):
         self._client_ready = True
@@ -557,8 +557,11 @@ class RTVIProcessor(FrameProcessor):
     async def _update_service_config(self, config: RTVIServiceConfig):
         service = self._registered_services[config.service]
         for option in config.options:
-            handler = service._options_dict[option.name].handler
-            await handler(self, service.name, option)
+            if option.name in service._options_dict:
+                handler = service._options_dict[option.name].handler
+                await handler(self, service.name, option)
+            else:
+                logging.info(f"{option.name} not handler in {service._options_dict}")
             self._update_config_option(service.name, option)
 
     async def _update_config(self, data: RTVIConfig):
@@ -597,7 +600,6 @@ class RTVIProcessor(FrameProcessor):
         await self._push_transport_message(message)
 
     async def _maybe_send_bot_ready(self):
-        print(self._pipeline_started, self._client_ready, "______")
         if self._pipeline_started and self._client_ready:
             await self._send_bot_ready()
             await self._update_config(self._config)

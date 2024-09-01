@@ -61,7 +61,6 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         RTVI config options list can transfer to ai bot config
         """
         logging.debug(f'args.bot_config_list: {self.args.bot_config_list}')
-        print(self.args.bot_config_list)
         try:
             self.rtvi_config = RTVIConfig(config_list=self.args.bot_config_list)
             self._bot_config: AIConfig = AIConfig(**self.rtvi_config._arguments_dict)
@@ -69,7 +68,7 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                 self._bot_config.llm = LLMConfig()
         except Exception as e:
             raise Exception(f"Failed to parse bot configuration: {e}")
-        logging.info(f'ai bot_config: {self._bot_config}')
+        logging.info(f'ai bot_config: {self._bot_config}, rtvi_config:{self.rtvi_config}')
 
     async def asr_service_option_change_cb_handler(
             self,
@@ -104,7 +103,7 @@ class DailyRTVIGeneralBot(DailyRoomBot):
             service_name: str,
             arguments: Dict[str, Any]) -> ActionResult:
         logging.info(f"service_name: {service_name} arguments: {arguments}")
-        res: ActionResult | None = None
+        res: ActionResult = {}
 
         return res
 
@@ -114,7 +113,7 @@ class DailyRTVIGeneralBot(DailyRoomBot):
             service_name: str,
             arguments: Dict[str, Any]) -> ActionResult:
         logging.info(f"service_name: {service_name} arguments: {arguments}")
-        res: ActionResult | None = None
+        res: ActionResult = {}
 
         return res
 
@@ -124,7 +123,7 @@ class DailyRTVIGeneralBot(DailyRoomBot):
             service_name: str,
             arguments: Dict[str, Any]) -> ActionResult:
         logging.info(f"service_name: {service_name} arguments: {arguments}")
-        res: ActionResult | None = None
+        res: ActionResult = {}
 
         return res
 
@@ -134,7 +133,27 @@ class DailyRTVIGeneralBot(DailyRoomBot):
             service_name: str,
             arguments: Dict[str, Any]) -> ActionResult:
         logging.info(f"service_name: {service_name} arguments: {arguments}")
-        res: ActionResult | None = None
+        res: ActionResult = {}
+
+        return res
+
+    async def tts_say_action_cb_handler(
+            self,
+            processor: RTVIProcessor,
+            service_name: str,
+            arguments: Dict[str, Any]) -> ActionResult:
+        logging.info(f"service_name: {service_name} arguments: {arguments}")
+        res: ActionResult = {}
+
+        return res
+
+    async def tts_interrupt_action_cb_handler(
+            self,
+            processor: RTVIProcessor,
+            service_name: str,
+            arguments: Dict[str, Any]) -> ActionResult:
+        logging.info(f"service_name: {service_name} arguments: {arguments}")
+        res: ActionResult = {}
 
         return res
 
@@ -151,6 +170,10 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                         name="tag", type="string",
                         handler=self.asr_service_option_change_cb_handler
                     ),
+                    RTVIServiceOption(
+                        name="args", type="string",
+                        handler=self.asr_service_option_change_cb_handler
+                    ),
                 ]
             ),
             RTVIService(
@@ -165,7 +188,15 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                         handler=self.llm_service_option_change_cb_handler
                     ),
                     RTVIServiceOption(
-                        name="initial_messages", type="string",
+                        name="messages", type="string",
+                        handler=self.llm_service_option_change_cb_handler
+                    ),
+                    RTVIServiceOption(
+                        name="base_url", type="string",
+                        handler=self.llm_service_option_change_cb_handler
+                    ),
+                    RTVIServiceOption(
+                        name="args", type="string",
                         handler=self.llm_service_option_change_cb_handler
                     ),
                 ]
@@ -178,7 +209,7 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                         handler=self.tts_service_option_change_cb_handler
                     ),
                     RTVIServiceOption(
-                        name="voice", type="string",
+                        name="args", type="string",
                         handler=self.tts_service_option_change_cb_handler
                     ),
                 ]
@@ -204,7 +235,17 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                 service="llm",
                 action="run",
                 handler=self.llm_run_action_cb_handler,
-            )
+            ),
+            RTVIAction(
+                service="tts",
+                action="say",
+                handler=self.tts_say_action_cb_handler,
+            ),
+            RTVIAction(
+                service="tts",
+                action="interrupt",
+                handler=self.tts_interrupt_action_cb_handler,
+            ),
         ])
 
         processors: List[FrameProcessor] = []
@@ -241,7 +282,6 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         processors.append(self.transport.output_processor())
         if self._bot_config.llm:
             processors.append(LLMAssistantResponseAggregator())
-        print(processors)
         self.task = PipelineTask(
             Pipeline(processors),
             params=PipelineParams(
