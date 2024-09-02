@@ -32,9 +32,11 @@ class TTSEnvInit():
         return engine
 
     @staticmethod
-    def initTTSEngine() -> interface.ITts | EngineClass:
+    def initTTSEngine(select_tag=None) -> interface.ITts | EngineClass:
         # tts
         tag = os.getenv('TTS_TAG', "tts_edge")
+        if select_tag:
+            tag = select_tag
         kwargs = TTSEnvInit.map_config_func[tag]()
         engine = TTSEnvInit.getEngine(tag, **kwargs)
         logging.info(f"initTTSEngine: {tag}, {engine}")

@@ -64,6 +64,8 @@ class DailyRoomBot(IBot):
             asyncio.run(self.arun())
         except KeyboardInterrupt:
             logging.warning("Ctrl-C detected. Exiting!")
+        except Exception as e:
+            logging.error(f"run error: {e}", exc_info=True)
 
     async def arun(self):
         pass
@@ -84,7 +86,7 @@ class DailyRoomBot(IBot):
 
     def get_vad_analyzer(self) -> interface.IVADAnalyzer | EngineClass:
         vad_analyzer: interface.IVADAnalyzer | EngineClass = None
-        if self._bot_config.vad \
+        if self._bot_config.vad and self._bot_config.vad.tag \
                 and len(self._bot_config.vad.tag) > 0  \
                 and self._bot_config.vad.args:
             vad_analyzer = VADAnalyzerEnvInit.getEngine(
@@ -95,7 +97,7 @@ class DailyRoomBot(IBot):
 
     def get_asr_processor(self) -> ASRProcessorBase:
         asr_processor: ASRProcessorBase | None = None
-        if self._bot_config.asr \
+        if self._bot_config.asr and self._bot_config.asr.tag \
                 and self._bot_config.asr.tag == "deepgram_asr_processor" \
                 and self._bot_config.asr.args:
             from src.processors.speech.asr.deepgram_asr_processor import DeepgramAsrProcessor
@@ -105,7 +107,7 @@ class DailyRoomBot(IBot):
         else:
             # use asr engine processor
             asr: interface.IAsr | EngineClass | None = None
-            if self._bot_config.asr \
+            if self._bot_config.asr and self._bot_config.asr.tag \
                     and self._bot_config.asr.tag \
                     and self._bot_config.asr.args:
                 asr = ASREnvInit.getEngine(
@@ -136,32 +138,24 @@ class DailyRoomBot(IBot):
 
     def get_tts_processor(self) -> TTSProcessorBase:
         tts_processor: TTSProcessorBase | None = None
-        if self._bot_config.tts and self._bot_config.tts.tag == "elevenlabs_tts_processor":
-            from src.processors.speech.tts.elevenlabs_tts_processor import ElevenLabsTTSProcessor
-            tts_processor = ElevenLabsTTSProcessor(**self._bot_config.tts.args)
-        elif self._bot_config.tts and self._bot_config.tts.tag == "cartesia_tts_processor":
-            from src.processors.speech.tts.cartesia_tts_processor import CartesiaTTSProcessor
-            tts_processor = CartesiaTTSProcessor(
-                # voice_id=self._bot_config.tts.voice,
-                # cartesia_version="2024-06-10",
-                # model_id="sonic-multilingual",
-                # language=self._bot_config.tts.language if self._bot_config.tts.language else "en",
-                **self._bot_config.tts.args
-            )
-        else:
-            # use tts engine processor
-            tts: interface.ITts | EngineClass | None = None
-            if self._bot_config.tts \
-                    and self._bot_config.tts.tag \
-                    and self._bot_config.tts.args:
+        if self._bot_config.tts and self._bot_config.tts.tag and self._bot_config.tts.args:
+            if self._bot_config.tts.tag == "elevenlabs_tts_processor":
+                from src.processors.speech.tts.elevenlabs_tts_processor import ElevenLabsTTSProcessor
+                tts_processor = ElevenLabsTTSProcessor(**self._bot_config.tts.args)
+            elif self._bot_config.tts.tag == "cartesia_tts_processor":
+                from src.processors.speech.tts.cartesia_tts_processor import CartesiaTTSProcessor
+                tts_processor = CartesiaTTSProcessor(**self._bot_config.tts.args)
+            else:
+                # use tts engine processor
                 tts = TTSEnvInit.getEngine(
                     self._bot_config.tts.tag, **self._bot_config.tts.args)
-            else:
-                # default tts engine processor
-                logging.info(f"use default tts engine processor")
-                tts = TTSEnvInit.initTTSEngine()
                 self._bot_config.tts = TTSConfig(tag=tts.SELECTED_TAG, args=tts.get_args_dict())
-
+                tts_processor = TTSProcessor(tts=tts, session=self.session)
+        else:
+            # default tts engine processor
+            logging.info(f"use default tts engine processor")
+            tts = TTSEnvInit.initTTSEngine(self._bot_config.tts.tag)
+            self._bot_config.tts = TTSConfig(tag=tts.SELECTED_TAG, args=tts.get_args_dict())
             tts_processor = TTSProcessor(tts=tts, session=self.session)
 
         return tts_processor

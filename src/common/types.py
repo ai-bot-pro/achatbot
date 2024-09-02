@@ -475,7 +475,7 @@ class AudioVADParams(AudioParams):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     vad_enabled: bool = False
     vad_audio_passthrough: bool = False
-    vad_analyzer: IVADAnalyzer | None = None
+    vad_analyzer: IVADAnalyzer | EngineClass | None = None
 
 
 class CameraParams(BaseModel):

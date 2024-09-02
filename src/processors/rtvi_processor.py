@@ -46,7 +46,7 @@ ActionResult = Union[bool, int, float, str, list, dict]
 
 class RTVIServiceOption(BaseModel):
     name: str
-    type: Literal["bool", "number", "string", "array", "object"]
+    type: Literal["bool", "number", "string", "array", "object", "dict"]
     handler: Callable[["RTVIProcessor", str, "RTVIServiceOptionConfig"],
                       Awaitable[None]] = Field(exclude=True)
 
@@ -70,7 +70,7 @@ class RTVIActionArgumentData(BaseModel):
 
 class RTVIActionArgument(BaseModel):
     name: str
-    type: Literal["bool", "number", "string", "array", "object"]
+    type: Literal["bool", "number", "string", "array", "object", "dict"]
 
 
 class RTVIAction(BaseModel):
@@ -521,8 +521,8 @@ class RTVIProcessor(FrameProcessor):
             await self._send_error_response(message.id, f"Invalid incoming message: {e}")
             logging.warning(f"Invalid incoming  message: {e}")
         except Exception as e:
-            await self._send_error_response(message.id,f"Exception processing message: {e}")
-            logging.warning(f"Exception processing message: {e}",exc_info=True)
+            await self._send_error_response(message.id, f"Exception processing message: {e}")
+            logging.warning(f"Exception processing message: {e}", exc_info=True)
 
     async def _handle_client_ready(self, request_id: str):
         self._client_ready = True
@@ -555,6 +555,8 @@ class RTVIProcessor(FrameProcessor):
                 service_config.options.append(config)
 
     async def _update_service_config(self, config: RTVIServiceConfig):
+        if config.service not in self._registered_services:
+            return
         service = self._registered_services[config.service]
         for option in config.options:
             if option.name in service._options_dict:

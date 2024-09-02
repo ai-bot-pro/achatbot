@@ -58,6 +58,22 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         if self._bot_config.llm.messages:
             self.llm_context.set_messages(self._bot_config.llm.messages)
 
+    async def vad_service_option_change_cb_handler(
+            self,
+            processor: RTVIProcessor,
+            service_name: str,
+            option: RTVIServiceOptionConfig):
+        logging.info(f"service_name: {service_name} option: {option}")
+        try:
+            match option.name:
+                case "tag":
+                    pass
+                case "args":
+                    if isinstance(option.value, dict):
+                        self.daily_params.vad_analyzer.set_args(**option.value)
+        except Exception as e:
+            logging.warning(f"Exception handle option cb: {e}")
+
     async def asr_service_option_change_cb_handler(
             self,
             processor: RTVIProcessor,
@@ -69,7 +85,8 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                 case "tag":
                     pass
                 case "args":
-                    pass
+                    if isinstance(option.value, dict):
+                        await self.asr_processor.set_asr_args(**option.value)
         except Exception as e:
             logging.warning(f"Exception handle option cb: {e}")
 
@@ -84,13 +101,10 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                 case "tag":
                     pass
                 case "args":
-                    pass
+                    if isinstance(option.value, dict):
+                        await self.llm_processor.set_llm_args(**option.value)
                 case "model":
-                    pass
-                case "messages":
-                    pass
-                case "base_url":
-                    pass
+                    await self.llm_processor.set_model(option.value)
         except Exception as e:
             logging.warning(f"Exception handle option cb: {e}")
 
@@ -105,9 +119,10 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                 case "tag":
                     pass
                 case "args":
-                    pass
+                    if isinstance(option.value, dict):
+                        await self.tts_processor.set_tts_args(**option.value)
                 case "voice":
-                    self.tts_processor.set_voice(option.value)
+                    await self.tts_processor.set_voice(option.value)
         except Exception as e:
             logging.warning(f"Exception handle option cb: {e}")
 
@@ -191,6 +206,19 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         rtvi = RTVIProcessor(config=self.rtvi_config)
         rtvi.register_services([
             RTVIService(
+                name="vad",
+                options=[
+                    RTVIServiceOption(
+                        name="tag", type="string",
+                        handler=self.vad_service_option_change_cb_handler
+                    ),
+                    RTVIServiceOption(
+                        name="args", type="dict",
+                        handler=self.vad_service_option_change_cb_handler
+                    ),
+                ]
+            ),
+            RTVIService(
                 name="asr",
                 options=[
                     RTVIServiceOption(
@@ -198,7 +226,7 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                         handler=self.asr_service_option_change_cb_handler
                     ),
                     RTVIServiceOption(
-                        name="args", type="string",
+                        name="args", type="dict",
                         handler=self.asr_service_option_change_cb_handler
                     ),
                 ]
@@ -215,15 +243,7 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                         handler=self.llm_service_option_change_cb_handler
                     ),
                     RTVIServiceOption(
-                        name="messages", type="string",
-                        handler=self.llm_service_option_change_cb_handler
-                    ),
-                    RTVIServiceOption(
-                        name="base_url", type="string",
-                        handler=self.llm_service_option_change_cb_handler
-                    ),
-                    RTVIServiceOption(
-                        name="args", type="string",
+                        name="args", type="dict",
                         handler=self.llm_service_option_change_cb_handler
                     ),
                 ]
@@ -236,7 +256,11 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                         handler=self.tts_service_option_change_cb_handler
                     ),
                     RTVIServiceOption(
-                        name="args", type="string",
+                        name="voice", type="string",
+                        handler=self.tts_service_option_change_cb_handler
+                    ),
+                    RTVIServiceOption(
+                        name="args", type="dict",
                         handler=self.tts_service_option_change_cb_handler
                     ),
                 ]
