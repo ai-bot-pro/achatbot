@@ -40,6 +40,10 @@ class ASRProcessorBase(AIProcessor):
         self._prev_volume = 0
 
     @abstractmethod
+    async def set_asr_args(self, **args):
+        pass
+
+    @abstractmethod
     async def run_asr(self, audio: bytes) -> AsyncGenerator[Frame, None]:
         """Returns transcript as a string"""
         pass

@@ -58,6 +58,9 @@ class BaseOpenAILLMProcessor(LLMProcessor):
             )
         )
 
+    async def set_model(self, model: str):
+        self._model: str = model
+
     def can_generate_metrics(self) -> bool:
         return True
 

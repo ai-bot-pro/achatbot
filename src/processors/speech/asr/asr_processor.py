@@ -4,6 +4,7 @@ from typing import AsyncGenerator
 from apipeline.frames.data_frames import Frame
 from apipeline.frames.sys_frames import ErrorFrame
 
+from src.common.factory import EngineClass
 from src.common.session import Session
 from src.common.utils.time import time_now_iso8601
 from src.common.interface import IAsr
@@ -20,7 +21,7 @@ class ASRProcessor(ASRProcessorBase):
             max_buffer_secs: float = 1.5,
             sample_rate: int = 16000,
             num_channels: int = 1,
-            asr: IAsr | None = None,
+            asr: IAsr | EngineClass | None = None,
             session: Session | None = None,
             **kwargs):
         super().__init__(
@@ -35,6 +36,9 @@ class ASRProcessor(ASRProcessorBase):
 
     def set_asr(self, asr: IAsr):
         self._asr = asr
+
+    async def set_asr_args(self, **args):
+        self._asr.set_args(**args)
 
     async def run_asr(self, audio: bytes) -> AsyncGenerator[Frame, None]:
         if self._asr is None:

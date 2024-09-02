@@ -39,11 +39,19 @@ class TestEdgeTTS(unittest.TestCase):
         pass
 
     def test_get_voices(self):
-        voices = asyncio.run(self.tts.get_voices(Language="zh"))
+        voices = asyncio.run(self.tts.get_voices(Language="zh", Gender="Female"))
         self.assertGreater(len(voices), 0)
         print(voices, len(voices))
 
-        voices = asyncio.run(self.tts.get_voices(Language="en"))
+        voices = asyncio.run(self.tts.get_voices(Language="zh", Gender="Male"))
+        self.assertGreater(len(voices), 0)
+        print(voices, len(voices))
+
+        voices = asyncio.run(self.tts.get_voices(Language="en", Gender="Female"))
+        self.assertGreater(len(voices), 0)
+        print(voices, len(voices))
+
+        voices = asyncio.run(self.tts.get_voices(Language="en", Gender="Male"))
         self.assertGreater(len(voices), 0)
         print(voices, len(voices))
 

@@ -4,6 +4,7 @@ import uuid
 
 from apipeline.frames.data_frames import Frame, AudioRawFrame
 
+from src.common.factory import EngineClass
 from src.common.types import SessionCtx
 from src.common.session import Session
 from src.common.interface import ITts
@@ -25,13 +26,13 @@ class TTSProcessor(TTSProcessorBase):
     def __init__(
             self,
             *,
-            tts: ITts | None = None,
+            tts: ITts | EngineClass | None = None,
             session: Session | None = None,
             **kwargs):
         super().__init__(**kwargs)
         if tts is None:
             tts = TTSEnvInit.initTTSEngine()
-        self._tts: ITts = tts
+        self._tts: ITts | EngineClass = tts
         if session is None:
             session = Session(**SessionCtx(uuid.uuid4()).__dict__)
         self._session: Session = session
@@ -41,6 +42,9 @@ class TTSProcessor(TTSProcessorBase):
 
     def set_tts(self, tts: ITts):
         self._tts = tts
+
+    async def set_tts_args(self, **args):
+        self._tts.set_args(**args)
 
     async def set_voice(self, voice: str):
         logging.info(f"Switching TTS voice to: [{voice}]")

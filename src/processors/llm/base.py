@@ -1,3 +1,4 @@
+from abc import abstractmethod
 import logging
 
 from apipeline.processors.frame_processor import FrameDirection
@@ -14,6 +15,14 @@ class LLMProcessor(AIProcessor):
         super().__init__(**kwargs)
         self._callbacks = {}
         self._start_callbacks = {}
+
+    @abstractmethod
+    async def set_model(self, model: str):
+        pass
+
+    @abstractmethod
+    async def set_llm_args(self, **args):
+        pass
 
     # !TODO: use callback function type @weedge
     def register_function(self, function_name: str | None, callback, start_callback=None):

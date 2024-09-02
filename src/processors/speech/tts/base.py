@@ -61,7 +61,10 @@ class TTSProcessorBase(AIProcessor):
     async def set_voice(self, voice: str):
         pass
 
-    # Converts the text to audio.
+    @abstractmethod
+    async def set_tts_args(self, **args):
+        pass
+
     @abstractmethod
     async def run_tts(self, text: str) -> AsyncGenerator[Frame, None]:
         pass
