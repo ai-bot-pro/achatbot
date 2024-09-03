@@ -108,7 +108,6 @@ class DailyRoomBot(IBot):
             # use asr engine processor
             asr: interface.IAsr | EngineClass | None = None
             if self._bot_config.asr and self._bot_config.asr.tag \
-                    and self._bot_config.asr.tag \
                     and self._bot_config.asr.args:
                 asr = ASREnvInit.getEngine(
                     self._bot_config.asr.tag, **self._bot_config.asr.args)

@@ -31,6 +31,7 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         super().__init__(**args)
         self.rtvi_config: RTVIConfig | None = None
         self._bot_config: AIConfig | None = None
+        self._pipeline_params: PipelineParams = PipelineParams()
         self.llm_context = OpenAILLMContext()
         self.init_bot_config()
         self.daily_params = DailyParams(
@@ -50,11 +51,15 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         try:
             self.rtvi_config = RTVIConfig(config_list=self.args.bot_config_list)
             self._bot_config = AIConfig(**self.rtvi_config._arguments_dict)
+            if "pipeline" in self.rtvi_config._arguments_dict:
+                self._pipeline_params = PipelineParams(
+                    **self.rtvi_config._arguments_dict["pipeline"])
             if self._bot_config.llm is None:
                 self._bot_config.llm = LLMConfig()
         except Exception as e:
             raise Exception(f"Failed to parse bot configuration: {e}")
-        logging.info(f'ai bot_config: {self._bot_config}, rtvi_config:{self.rtvi_config}')
+        logging.info(
+            f'pipeline_params: {self._pipeline_params}, ai bot_config: {self._bot_config}, rtvi_config:{self.rtvi_config}')
         if self._bot_config.llm.messages:
             self.llm_context.set_messages(self._bot_config.llm.messages)
 
@@ -124,11 +129,12 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                 case "args":
                     if isinstance(option.value, dict):
                         await self.tts_processor.set_tts_args(**option.value)
-                        if "voice_name" in option.value:
+                        if "voice_name" in option.value and processor.curr_rtvi_meesage.type == "update-config":
                             await self.task.queue_frames([LLMMessagesFrame(self.llm_context.messages)])
                 case "voice":
                     await self.tts_processor.set_voice(option.value)
-                    await self.task.queue_frames([LLMMessagesFrame(self.llm_context.messages)])
+                    if processor.curr_rtvi_meesage.type == "update-config":
+                        await self.task.queue_frames([LLMMessagesFrame(self.llm_context.messages)])
 
         except Exception as e:
             logging.warning(f"Exception handle option cb: {e}")
@@ -349,13 +355,7 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         processors.append(self.transport.output_processor())
         if self._bot_config.llm:
             processors.append(llm_assistant_ctx_aggr)
-        self.task = PipelineTask(
-            Pipeline(processors),
-            params=PipelineParams(
-                allow_interruptions=True,
-                enable_metrics=True,
-                send_initial_empty_metrics=False,
-            ))
+        self.task = PipelineTask(Pipeline(processors), params=self._pipeline_params)
 
         self.transport.add_event_handler(
             "on_first_participant_joined",
@@ -377,5 +377,8 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         if self._bot_config.tts \
                 and self._bot_config.llm \
                 and len(self._bot_config.llm.messages) > 0:
-            await self.task.queue_frames([LLMMessagesFrame(self._bot_config.llm.messages)])
+            messages = self._bot_config.llm.messages
+            messages[0]["content"] = self._bot_config.llm.messages[0]["content"] + \
+                " Please introduce yourself first."
+            await self.task.queue_frames([LLMMessagesFrame(messages)])
         logging.info("First participant joined")
