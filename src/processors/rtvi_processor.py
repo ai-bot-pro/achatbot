@@ -46,7 +46,7 @@ ActionResult = Union[bool, int, float, str, list, dict]
 
 class RTVIServiceOption(BaseModel):
     name: str
-    type: Literal["bool", "number", "string", "array", "object", "dict"]
+    type: Literal["bool", "number", "string", "array", "object", "dict", "list"]
     handler: Callable[["RTVIProcessor", str, "RTVIServiceOptionConfig"],
                       Awaitable[None]] = Field(exclude=True)
 
@@ -70,7 +70,7 @@ class RTVIActionArgumentData(BaseModel):
 
 class RTVIActionArgument(BaseModel):
     name: str
-    type: Literal["bool", "number", "string", "array", "object", "dict"]
+    type: Literal["bool", "number", "string", "array", "object", "dict", "list"]
 
 
 class RTVIAction(BaseModel):

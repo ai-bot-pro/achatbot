@@ -105,6 +105,9 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                         await self.llm_processor.set_llm_args(**option.value)
                 case "model":
                     await self.llm_processor.set_model(option.value)
+                case "messages":
+                    if isinstance(option.value, list):
+                        self.llm_context.set_messages(option.value)
         except Exception as e:
             logging.warning(f"Exception handle option cb: {e}")
 
@@ -121,8 +124,12 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                 case "args":
                     if isinstance(option.value, dict):
                         await self.tts_processor.set_tts_args(**option.value)
+                        if "voice_name" in option.value:
+                            await self.task.queue_frames([LLMMessagesFrame(self.llm_context.messages)])
                 case "voice":
                     await self.tts_processor.set_voice(option.value)
+                    await self.task.queue_frames([LLMMessagesFrame(self.llm_context.messages)])
+
         except Exception as e:
             logging.warning(f"Exception handle option cb: {e}")
 
@@ -240,6 +247,10 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                     ),
                     RTVIServiceOption(
                         name="model", type="string",
+                        handler=self.llm_service_option_change_cb_handler
+                    ),
+                    RTVIServiceOption(
+                        name="messages", type="list",
                         handler=self.llm_service_option_change_cb_handler
                     ),
                     RTVIServiceOption(
