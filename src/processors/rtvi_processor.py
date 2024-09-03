@@ -296,6 +296,12 @@ class RTVIProcessor(FrameProcessor):
         self._message_task = self.get_event_loop().create_task(self._message_task_handler())
         self._message_queue = asyncio.Queue()
 
+        self._curr_rtvi_message: RTVIMessage = None
+
+    @property
+    def curr_rtvi_meesage(self):
+        return self._curr_rtvi_message
+
     def register_action(self, action: RTVIAction):
         id = self._action_id(action.service, action.action)
         self._registered_actions[id] = action
@@ -494,6 +500,7 @@ class RTVIProcessor(FrameProcessor):
             return
 
         logging.info(f"rtvi server handle message: {message}")
+        self._curr_rtvi_message = message
         try:
             match message.type:
                 case "client-ready":
