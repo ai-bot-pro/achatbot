@@ -11,13 +11,59 @@ from apipeline.frames.control_frames import EndFrame
 from apipeline.frames.data_frames import Frame, AudioRawFrame
 
 from src.processors.speech.audio_volume_time_processor import AudioVolumeTimeProcessor
-from src.processors.ai_processor import AIProcessor
+from src.processors.ai_processor import AsyncAIProcessor
 from src.common.utils.helper import exp_smoothing, calculate_audio_volume
 from src.types.frames.data_frames import TranscriptionFrame
+from src.types.speech.language import Language
+from src.types.frames.control_frames import ASRArgsUpdateFrame, ASRLanguageUpdateFrame, ASRModelUpdateFrame
 
 
-class ASRProcessorBase(AIProcessor):
+class ASRProcessorBase(AsyncAIProcessor):
     """ASRProcessorBase is a base class for speech-to-text processors."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @abstractmethod
+    async def set_model(self, model: str):
+        pass
+
+    @abstractmethod
+    async def set_language(self, language: Language):
+        pass
+
+    @abstractmethod
+    async def set_asr_args(self, **args):
+        pass
+
+    @abstractmethod
+    async def run_asr(self, audio: bytes) -> AsyncGenerator[Frame, None]:
+        """Returns transcript as a string"""
+        pass
+
+    async def process_audio_frame(self, frame: AudioRawFrame):
+        await self.process_generator(self.run_asr(frame.audio))
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection):
+        """Processes a frame of audio data, either buffering or transcribing it."""
+        await super().process_frame(frame, direction)
+
+        if isinstance(frame, AudioRawFrame):
+            # In this service we accumulate audio internally and at the end we
+            # push a TextFrame. We don't really want to push audio frames down.
+            await self.process_audio_frame(frame)
+        elif isinstance(frame, ASRModelUpdateFrame):
+            await self.set_model(frame.model)
+        elif isinstance(frame, ASRLanguageUpdateFrame):
+            await self.set_language(frame.language)
+        elif isinstance(frame, ASRArgsUpdateFrame):
+            await self.set_asr_args(frame.args)
+        else:
+            await self.push_frame(frame, direction)
+
+
+class SegmentedASRProcessor(ASRProcessorBase):
+    """SegmentedASRProcessor is a segement audio asr class for speech-to-text processors."""
 
     def __init__(self,
                  *,
@@ -39,15 +85,6 @@ class ASRProcessorBase(AIProcessor):
         self._smoothing_factor = 0.2
         self._prev_volume = 0
 
-    @abstractmethod
-    async def set_asr_args(self, **args):
-        pass
-
-    @abstractmethod
-    async def run_asr(self, audio: bytes) -> AsyncGenerator[Frame, None]:
-        """Returns transcript as a string"""
-        pass
-
     def _new_wave(self):
         content = io.BytesIO()
         ww = wave.open(content, "wb")
@@ -66,7 +103,7 @@ class ASRProcessorBase(AIProcessor):
         volume = calculate_audio_volume(frame.audio, frame.sample_rate)
         return exp_smoothing(volume, self._prev_volume, self._smoothing_factor)
 
-    async def _append_audio(self, frame: AudioRawFrame):
+    async def process_audio_frame(self, frame: AudioRawFrame):
         # Try to filter out empty background noise
         volume = self._get_smoothed_volume(frame)
         if volume >= self._min_volume and frame.audio and len(frame.audio) > 0:
@@ -90,17 +127,6 @@ class ASRProcessorBase(AIProcessor):
             await self.process_generator(self.run_asr(self._content.read()))
             await self.stop_processing_metrics()
             (self._content, self._wave) = self._new_wave()
-
-    async def process_frame(self, frame: Frame, direction: FrameDirection):
-        """Processes a frame of audio data, either buffering or transcribing it."""
-        await super().process_frame(frame, direction)
-
-        if isinstance(frame, AudioRawFrame):
-            # In this processor we accumulate audio internally and at the end we
-            # push a TextFrame. We don't really want to push audio frames down.
-            await self._append_audio(frame)
-        else:
-            await self.push_frame(frame, direction)
 
 
 class TranscriptionTimingLogProcessor(FrameProcessor):

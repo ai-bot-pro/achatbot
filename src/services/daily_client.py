@@ -186,7 +186,7 @@ class DailyTransportClient(EventHandler):
                     self._client.start_transcription(
                         self._params.transcription_settings.model_dump())
 
-                await self._callbacks.on_joined(data["participants"]["local"])
+                await self._callbacks.on_joined(data)
             else:
                 error_msg = f"Error joining {self._room_url}: {error}"
                 logging.error(error_msg)

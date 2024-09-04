@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from apipeline.frames.control_frames import ControlFrame
 
 from src.common.types import VADAnalyzerArgs
+from src.types.speech.language import Language
 
 #
 # Control frames
@@ -127,3 +128,40 @@ class VADParamsUpdateFrame(ControlFrame):
     to be pushed upstream from RTVI processor.
     """
     params: VADAnalyzerArgs
+
+
+@dataclass
+class ASRModelUpdateFrame(ControlFrame):
+    """A control frame containing a request to update the ASR model and optional
+    language.
+    """
+    model: str
+
+
+@dataclass
+class ASRLanguageUpdateFrame(ControlFrame):
+    """A control frame containing a request to update to ASR language.
+    """
+    language: Language
+
+
+@dataclass
+class ASRArgsUpdateFrame(ControlFrame):
+    """A control frame containing a request to update to ASR args.
+    """
+    args: dict
+
+
+@dataclass
+class TTSLanguageUpdateFrame(ControlFrame):
+    """A control frame containing a request to update to a new TTS language and
+    optional voice.
+    """
+    language: Language
+
+
+@dataclass
+class TTSArgsUpdateFrame(ControlFrame):
+    """A control frame containing a request to update to TTS args.
+    """
+    args: dict

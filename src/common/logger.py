@@ -55,8 +55,9 @@ class Logger():
             log_dir=LOG_DIR,
             is_file=True,
             is_console=True,
-            is_root_logger=True):
-        if Logger.inited:
+            is_root_logger=True,
+            is_re_init=False):
+        if Logger.inited and is_re_init is False:
             return
         os.makedirs(log_dir, exist_ok=True)
         if is_root_logger:

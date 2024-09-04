@@ -17,6 +17,7 @@ from src.common.types import DailyParams
 from src.transports.base import BaseTransport
 from src.processors.daily_input_transport_processor import DailyInputTransportProcessor
 from src.processors.daily_output_transport_processor import DailyOutputTransportProcessor
+from src.types.speech.language import Language
 
 
 class DailyTransport(BaseTransport):
@@ -51,6 +52,7 @@ class DailyTransport(BaseTransport):
             on_first_participant_joined=self._on_first_participant_joined,
             on_participant_joined=self._on_participant_joined,
             on_participant_left=self._on_participant_left,
+            on_participant_updated=self._on_participant_updated,
         )
         self._client = DailyTransportClient(
             room_url, token, bot_name, params, callbacks, self._loop)
@@ -76,10 +78,11 @@ class DailyTransport(BaseTransport):
         self._register_event_handler("on_first_participant_joined")
         self._register_event_handler("on_participant_joined")
         self._register_event_handler("on_participant_left")
-
+        self._register_event_handler("on_participant_updated")
     #
     # BaseTransport
     #
+
     def input_processor(self) -> FrameProcessor:
         if not self._input:
             self._input = DailyInputTransportProcessor(
@@ -150,8 +153,8 @@ class DailyTransport(BaseTransport):
             self._input.capture_participant_video(
                 participant_id, framerate, video_source, color_format)
 
-    async def _on_joined(self, participant):
-        await self._call_event_handler("on_joined", participant)
+    async def _on_joined(self, data):
+        await self._call_event_handler("on_joined", data)
 
     async def _on_left(self):
         await self._call_event_handler("on_left")
@@ -226,6 +229,9 @@ class DailyTransport(BaseTransport):
     async def _on_participant_left(self, participant, reason):
         await self._call_event_handler("on_participant_left", participant, reason)
 
+    async def _on_participant_updated(self, participant):
+        await self._call_event_handler("on_participant_updated", participant)
+
     async def _on_first_participant_joined(self, participant):
         await self._call_event_handler("on_first_participant_joined", participant)
 
@@ -234,11 +240,16 @@ class DailyTransport(BaseTransport):
         text = message["text"]
         timestamp = message["timestamp"]
         is_final = message["rawResponse"]["is_final"]
+        try:
+            language = message["rawResponse"]["channel"]["alternatives"][0]["languages"][0]
+            language = Language(language)
+        except KeyError:
+            language = None
         if is_final:
-            frame = TranscriptionFrame(text, participant_id, timestamp)
+            frame = TranscriptionFrame(text, participant_id, timestamp, language)
             logging.debug(f"Transcription (from: {participant_id}): [{text}]")
         else:
-            frame = InterimTranscriptionFrame(text, participant_id, timestamp)
+            frame = InterimTranscriptionFrame(text, participant_id, timestamp, language)
 
         if self._input:
             await self._input.push_transcription_frame(frame)

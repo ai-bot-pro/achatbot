@@ -4,7 +4,6 @@
 # SPDX-License-Identifier: BSD 2-Clause License
 #
 
-from abc import abstractmethod
 from typing import AsyncGenerator
 
 from apipeline.processors.async_frame_processor import AsyncFrameProcessor
@@ -38,10 +37,11 @@ class AIProcessor(FrameProcessor):
 
     async def process_generator(self, generator: AsyncGenerator[Frame, None]):
         async for f in generator:
-            if isinstance(f, ErrorFrame):
-                await self.push_error(f)
-            else:
-                await self.push_frame(f)
+            if f:
+                if isinstance(f, ErrorFrame):
+                    await self.push_error(f)
+                else:
+                    await self.push_frame(f)
 
 
 class AsyncAIProcessor(AsyncFrameProcessor):
@@ -66,3 +66,11 @@ class AsyncAIProcessor(AsyncFrameProcessor):
             await self.cancel(frame)
         elif isinstance(frame, EndFrame):
             await self.stop(frame)
+
+    async def process_generator(self, generator: AsyncGenerator[Frame, None]):
+        async for f in generator:
+            if f:
+                if isinstance(f, ErrorFrame):
+                    await self.push_error(f)
+                else:
+                    await self.push_frame(f)

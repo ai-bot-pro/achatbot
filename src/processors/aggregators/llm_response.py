@@ -72,7 +72,7 @@ class LLMResponseAggregator(FrameProcessor):
 
     # Use cases implemented:
     #
-    # S: Start, E: End, T: Transcription, I: Interim, X: Text
+    # S: Start, E: End, T: Transcription(ASR gen) / Text(LLM gen), I: Interim, X: Text (aggregated)
     #
     #        S E -> None
     #      S T E -> X
