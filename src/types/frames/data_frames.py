@@ -62,9 +62,10 @@ class TranscriptionFrame(TextFrame):
     """
     user_id: str
     timestamp: str
+    language: str | None = None
 
     def __str__(self):
-        return f"{self.name}(user: {self.user_id}, text: {self.text}, timestamp: {self.timestamp})"
+        return f"{self.name}(user: {self.user_id}, text: {self.text}, timestamp: {self.timestamp}, language: {self.language})"
 
 
 @dataclass
@@ -73,9 +74,10 @@ class InterimTranscriptionFrame(TextFrame):
     the transport's receive queue when a participant speaks."""
     user_id: str
     timestamp: str
+    language: str
 
     def __str__(self):
-        return f"{self.name}(user: {self.user_id}, text: {self.text}, timestamp: {self.timestamp})"
+        return f"{self.name}(user: {self.user_id}, text: {self.text}, timestamp: {self.timestamp}, language: {self.language})"
 
 
 @dataclass

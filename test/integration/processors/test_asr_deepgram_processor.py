@@ -9,9 +9,8 @@ from apipeline.frames.data_frames import DataFrame, TextFrame, Frame
 from apipeline.frames.control_frames import EndFrame
 from apipeline.processors.frame_processor import FrameProcessor
 
-from src.modules.speech.asr import ASREnvInit
 from src.modules.speech.vad_analyzer.silero import SileroVADAnalyzer
-from src.processors.speech.asr.asr_processor import ASRProcessor
+from src.processors.speech.asr.deepgram_asr_processor import DeepgramAsrProcessor
 from src.common.types import DailyParams
 from src.common.logger import Logger
 from src.transports.daily import DailyTransport
@@ -23,31 +22,9 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 """
-ASR_TAG="whisper_asr" \
-    python -m unittest test.integration.processors.test_asr_processor.TestASRProcessor
-ASR_TAG="whisper_timestamped_asr" \
-    python -m unittest test.integration.processors.test_asr_processor.TestASRProcessor
-ASR_TAG="whisper_faster_asr" \
-    python -m unittest test.integration.processors.test_asr_processor.TestASRProcessor
-ASR_TAG="whisper_transformers_asr" \
-    ASR_MODEL_NAME_OR_PATH=./models/openai/whisper-base \
-    python -m unittest test.integration.processors.test_asr_processor.TestASRProcessor
-ASR_TAG="whisper_mlx_asr" \
-    python -m unittest test.integration.processors.test_asr_processor.TestASRProcessor
-ASR_TAG="sense_voice_asr" \
-    ASR_LANG=zn \
-    ASR_MODEL_NAME_OR_PATH=./models/FunAudioLLM/SenseVoiceSmall \
-    python -m unittest test.integration.processors.test_asr_processor.TestASRProcessor
-ASR_TAG="whisper_groq_asr" \
-    ASR_LANG=zh \
-    ASR_MODEL_NAME_OR_PATH=whisper-large-v3 \
-    python -m unittest test.integration.processors.test_asr_processor.TestASRProcessor
-
-ASR_TAG="whisper_groq_asr" \
-    ASR_LANG=zh \
-    ASR_MODEL_NAME_OR_PATH=whisper-large-v3 \
-    DAILY_VAD_ENABLED=1 \
-    python -m unittest test.integration.processors.test_asr_processor.TestASRProcessor
+python -m unittest test.integration.processors.test_asr_deepgram_processor.TestASRDeepgramProcessor
+DEEPGRAM_LANGUAGE=zh \
+    python -m unittest test.integration.processors.test_asr_deepgram_processor.TestASRDeepgramProcessor
 """
 
 
@@ -60,7 +37,7 @@ class TranscriptionLogger(FrameProcessor):
             print(f"get Transcription Frame: {frame}, text len:{len(frame.text)}")
 
 
-class TestASRProcessor(unittest.IsolatedAsyncioTestCase):
+class TestASRDeepgramProcessor(unittest.IsolatedAsyncioTestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -89,9 +66,10 @@ class TestASRProcessor(unittest.IsolatedAsyncioTestCase):
             daily_pramams,
         )
 
-        asr = ASREnvInit.initASREngine()
-        session = Session(**SessionCtx("test_client_id", 16000, 2).__dict__)
-        asr_processor = ASRProcessor(asr=asr, session=session)
+        asr_processor = DeepgramAsrProcessor(
+            api_key=os.getenv("DEEPGRAM_API_KEY"),
+            language=os.getenv("DEEPGRAM_LANGUAGE", "en"),
+        )
 
         tl_porcessor = TranscriptionLogger()
 

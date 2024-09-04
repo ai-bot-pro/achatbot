@@ -362,6 +362,7 @@ class RTVIProcessor(FrameProcessor):
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
 
+        # print("rtvi process frame", frame)
         # Specific system frames
         if isinstance(frame, CancelFrame):
             await self._cancel(frame)
@@ -570,7 +571,7 @@ class RTVIProcessor(FrameProcessor):
                 handler = service._options_dict[option.name].handler
                 await handler(self, service.name, option)
             else:
-                logging.info(f"{option.name} not handler in {service._options_dict}")
+                logging.info(f"{option.name} not handler")
             self._update_config_option(service.name, option)
 
     async def _update_config(self, data: RTVIConfig):

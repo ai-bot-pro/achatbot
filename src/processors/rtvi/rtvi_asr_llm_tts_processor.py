@@ -15,6 +15,7 @@ from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
 from apipeline.frames.sys_frames import SystemFrame, MetricsFrame
 from apipeline.frames.control_frames import StartFrame
 
+from src.processors.rtvi.tts_text_processor import RTVITTSTextProcessor
 from src.types.frames.sys_frames import BotInterruptionFrame
 from src.types.frames.control_frames import (
     LLMModelUpdateFrame,
@@ -102,16 +103,6 @@ class RTVILLMContextMessage(BaseModel):
     data: RTVILLMContextMessageData
 
 
-class RTVITTSTextMessageData(BaseModel):
-    text: str
-
-
-class RTVITTSTextMessage(BaseModel):
-    label: Literal["rtvi"] = "rtvi"
-    type: Literal["tts-text"] = "tts-text"
-    data: RTVITTSTextMessageData
-
-
 class RTVIBotReady(BaseModel):
     label: Literal["rtvi"] = "rtvi"
     type: Literal["bot-ready"] = "bot-ready"
@@ -144,21 +135,6 @@ class RTVIJSONCompletion(BaseModel):
     label: Literal["rtvi"] = "rtvi"
     type: Literal["json-completion"] = "json-completion"
     data: str
-
-
-class RTVITTSTextProcessor(FrameProcessor):
-
-    def __init__(self):
-        super().__init__()
-
-    async def process_frame(self, frame: Frame, direction: FrameDirection):
-        await super().process_frame(frame, direction)
-
-        await self.push_frame(frame, direction)
-
-        if isinstance(frame, TextFrame):
-            message = RTVITTSTextMessage(data=RTVITTSTextMessageData(text=frame.text))
-            await self.push_frame(TransportMessageFrame(message=message.model_dump(exclude_none=True)))
 
 
 class FunctionCallProcessor(FrameProcessor):

@@ -8,11 +8,12 @@ from src.common.factory import EngineClass
 from src.common.session import Session
 from src.common.utils.time import time_now_iso8601
 from src.common.interface import IAsr
-from src.processors.speech.asr.base import ASRProcessorBase
+from src.processors.speech.asr.base import SegmentedASRProcessor
 from src.types.frames.data_frames import TranscriptionFrame
+from src.types.speech.language import Language
 
 
-class ASRProcessor(ASRProcessorBase):
+class ASRProcessor(SegmentedASRProcessor):
     def __init__(
             self,
             *,
@@ -46,13 +47,22 @@ class ASRProcessor(ASRProcessorBase):
             yield ErrorFrame("ASR engine not available")
             return
 
+        await self.start_processing_metrics()
         await self.start_ttfb_metrics()
+
         self._asr.set_audio_data(audio)
         text: str = ""
         async for segment in self._asr.transcribe_stream(self._session):
             text += f"{segment}"
 
+        await self.stop_ttfb_metrics()
+        await self.stop_processing_metrics()
+
+        language = None
+        args = self._asr.get_args_dict()
+        if "language" in args:
+            language = Language(args["language"])
+
         if text:
-            await self.stop_ttfb_metrics()
-            logging.info(f"Transcription: [{text}]")
-            yield TranscriptionFrame(text, "", time_now_iso8601())
+            logging.info(f"{self._asr.SELECTED_TAG} Transcription: [{text}]")
+            yield TranscriptionFrame(text, "", time_now_iso8601(), language)
