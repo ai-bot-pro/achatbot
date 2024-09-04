@@ -79,7 +79,7 @@ class BaseOpenAILLMProcessor(LLMProcessor):
 
     async def _stream_chat_completions(
             self, context: OpenAILLMContext) -> AsyncStream[ChatCompletionChunk]:
-        logging.debug(f"Generating chat: {context.get_messages_json()}")
+        logging.info(f"Generating chat: {context.get_messages_json()}")
 
         messages: List[ChatCompletionMessageParam] = context.get_messages()
 
