@@ -6,10 +6,18 @@ from apipeline.pipeline.runner import PipelineRunner
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.processors.frame_processor import FrameProcessor
 
+from src.processors.rtvi.tts_text_processor import RTVITTSTextProcessor
 from src.processors.aggregators.openai_llm_context import OpenAILLMContext
 from src.processors.aggregators.llm_response import OpenAIAssistantContextAggregator, OpenAIUserContextAggregator
-from src.processors.rtvi_processor import ActionResult, RTVIAction, RTVIConfig, RTVIService, RTVIServiceOption, RTVIServiceOptionConfig
-from src.processors.rtvi_processor import RTVIProcessor
+from src.processors.rtvi.rtvi_processor import (
+    ActionResult,
+    RTVIAction,
+    RTVIConfig,
+    RTVIService,
+    RTVIServiceOption,
+    RTVIServiceOptionConfig,
+    RTVIProcessor,
+)
 from src.common.types import DailyParams, DailyTranscriptionSettings
 from src.transports.daily import DailyTransport
 from src.types.ai_conf import AIConfig, LLMConfig
@@ -35,6 +43,7 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         self.llm_context = OpenAILLMContext()
         self.init_bot_config()
         self.daily_params = DailyParams(
+            audio_in_enabled=True,
             audio_out_enabled=True,
             transcription_enabled=True,
             vad_enabled=True,
@@ -330,6 +339,7 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                         self.daily_params.vad_audio_passthrough = True
                         self.asr_processor = self.get_asr_processor()
                         processors.append(self.asr_processor)
+                        processors.append(rtvi)
                     case "llm":
                         if self._bot_config.llm:
                             processors.append(llm_user_ctx_aggr)
@@ -338,11 +348,13 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                     case "tts":
                         self.tts_processor = self.get_tts_processor()
                         processors.append(self.tts_processor)
+                        tts_text = RTVITTSTextProcessor()
+                        processors.append(tts_text)
                         stream_info = self.tts_processor.get_stream_info()
                         self.daily_params.audio_out_sample_rate = stream_info["sample_rate"]
                         self.daily_params.audio_out_channels = stream_info["channels"]
         except Exception as e:
-            logging.error(f"init pipeline error: {e}")
+            logging.error(f"init pipeline error: {e}", exc_info=True)
             return
 
         self.transport = DailyTransport(
@@ -351,8 +363,12 @@ class DailyRTVIGeneralBot(DailyRoomBot):
             self.args.bot_name,
             self.daily_params,
         )
-        processors = [self.transport.input_processor(), rtvi] + processors
+        if self._bot_config.asr:
+            processors = [self.transport.input_processor()] + processors
+        else:
+            processors = [self.transport.input_processor(), rtvi] + processors
         processors.append(self.transport.output_processor())
+        # print(processors)
         if self._bot_config.llm:
             processors.append(llm_assistant_ctx_aggr)
         self.task = PipelineTask(Pipeline(processors), params=self._pipeline_params)

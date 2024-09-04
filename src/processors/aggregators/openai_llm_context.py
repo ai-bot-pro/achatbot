@@ -46,6 +46,9 @@ class OpenAILLMContext:
         self._tool_choice: ChatCompletionToolChoiceOptionParam | NotGiven = tool_choice
         self._tools: List[ChatCompletionToolParam] | NotGiven = tools
 
+    def __str__(self):
+        return f"messages:{self._messages}, tools:{self._tools}, tool_choice:{self._tool_choice}"
+
     @staticmethod
     def from_messages(messages: List[dict]) -> "OpenAILLMContext":
         context = OpenAILLMContext()
@@ -161,3 +164,6 @@ class OpenAILLMContextFrame(Frame):
 
     """
     context: OpenAILLMContext
+
+    def __str__(self):
+        return f"{self.name}(context: {self.context})"

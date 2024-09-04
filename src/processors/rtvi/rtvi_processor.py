@@ -375,8 +375,8 @@ class RTVIProcessor(FrameProcessor):
             await self.push_frame(frame, direction)
         # Control frames
         elif isinstance(frame, StartFrame):
-            await self._start(frame)
             await self.push_frame(frame, direction)
+            await self._start(frame)
         elif isinstance(frame, EndFrame):
             # Push EndFrame before stop(), because stop() waits on the task to
             # finish and the task finishes when EndFrame is processed.

@@ -24,8 +24,10 @@ class FrameLogger(FrameProcessor):
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         if self._ignored_frame_types and not isinstance(frame, self._ignored_frame_types):
-            dir = "<" if direction is FrameDirection.UPSTREAM else ">"
-            msg = f"{dir} {self._prefix}: {frame}"
+            from_to = f"{self._prev} ---> {self}"
+            if direction == FrameDirection.UPSTREAM:
+                from_to = f"{self} <--- {self._next} "
+            msg = f"{from_to} {self._prefix}: {frame}"
             if self._color:
                 msg = f"<{self._color}>{msg}</>"
             logging.info(msg)
