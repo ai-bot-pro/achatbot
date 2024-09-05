@@ -8,7 +8,7 @@ from apipeline.processors.frame_processor import FrameDirection
 from apipeline.pipeline.pipeline import FrameDirection
 from apipeline.frames.control_frames import EndFrame
 
-from src.processors.ai_processor import AIProcessor
+from src.processors.ai_processor import AIProcessor, AsyncAIProcessor
 from src.types.frames.control_frames import LLMFullResponseEndFrame, TTSStartedFrame, TTSStoppedFrame, TTSVoiceUpdateFrame
 from src.types.frames.data_frames import Frame, TTSSpeakFrame, TextFrame
 from apipeline.frames.sys_frames import StartInterruptionFrame
@@ -94,6 +94,12 @@ class TTSProcessorBase(AIProcessor):
         if not text:
             return
 
+        # show text sentence before tts speak
+        if self._push_text_frames:
+            # We send the original text after the audio. This way, if we are
+            # interrupted, the text is not added to the assistant context.
+            await self.push_frame(TextFrame(text))
+
         await self.push_frame(TTSStartedFrame())
         await self.start_processing_metrics()
 
@@ -107,11 +113,6 @@ class TTSProcessorBase(AIProcessor):
 
         await self.stop_processing_metrics()
         await self.push_frame(TTSStoppedFrame())
-
-        if self._push_text_frames:
-            # We send the original text after the audio. This way, if we are
-            # interrupted, the text is not added to the assistant context.
-            await self.push_frame(TextFrame(text))
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)

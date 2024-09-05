@@ -15,7 +15,7 @@ class RTVITTSTextMessageData(BaseModel):
 
 
 class RTVITTSTextMessage(BaseModel):
-    label: Literal["rtvi"] = "rtvi"
+    label: Literal["rtvi"] = "rtvi-ai"
     type: Literal["tts-text"] = "tts-text"
     data: RTVITTSTextMessageData
 
