@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 r"""
-DAILY_ROOM_URL=https://weedge.daily.co/chat-bot \
+DAILY_ROOM_URL=https://weedge.daily.co/chat-room \
     python -m unittest test.integration.processors.test_daily_tts_processor.TestTTSProcessor
 """
 
@@ -35,7 +35,7 @@ class TestTTSProcessor(unittest.IsolatedAsyncioTestCase):
     @classmethod
     def setUpClass(cls):
         Logger.init(logging.INFO, is_file=False)
-        cls.room_url = os.getenv("DAILY_ROOM_URL", "https://weedge.daily.co/chat-bot")
+        cls.room_url = os.getenv("DAILY_ROOM_URL", "https://weedge.daily.co/chat-room")
 
     @classmethod
     def tearDownClass(cls):
@@ -68,7 +68,10 @@ class TestTTSProcessor(unittest.IsolatedAsyncioTestCase):
         # await tts_processor.set_voice("zh-CN-liaoning-XiaobeiNeural")
         # await tts_processor.set_voice("zh-CN-shaanxi-XiaoniNeural")
         # await tts_processor.set_voice("zh-TW-HsiaoYuNeural")
-        await tts_processor.set_voice("zh-HK-WanLungNeural")
+        # await tts_processor.set_voice("zh-HK-WanLungNeural")
+        # await tts_processor.set_voice("zh-HK-HiuMaanNeural")
+        # await tts_processor.set_voice("zh-CN-XiaoyiNeural")
+        await tts_processor.set_voice("zh-CN-XiaoxiaoNeural")
 
         task = PipelineTask(
             Pipeline([
@@ -88,8 +91,8 @@ class TestTTSProcessor(unittest.IsolatedAsyncioTestCase):
             await task.queue_frames([
                 TextFrame(f"你好，Hello there. {participant_name}"),
                 TextFrame(f"你是一个中国人。"),
-                TextFrame(f"一名中文助理，请用中文简短回答，回答限制在5句话内。"),
-                TextFrame(f"我是Andrej Karpathy，我在YouTube上发布关于机器学习和深度学习的视频。如果你有任何关于这些视频的疑问或需要帮助，请告诉我！"),
+                # TextFrame(f"一名中文助理，请用中文简短回答，回答限制在5句话内。"),
+                # TextFrame(f"我是Andrej Karpathy，我在YouTube上发布关于机器学习和深度学习的视频。如果你有任何关于这些视频的疑问或需要帮助，请告诉我！"),
                 EndFrame(),
             ])
 

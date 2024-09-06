@@ -13,6 +13,7 @@ DEFAULT_LLM_SYS_MESSAGES = [
         "content": os.getenv("LLM_CHAT_SYSTEM", ""),
     }]
 
+# https://console.groq.com/docs/models
 GROQ_LLM_URL = "https://api.groq.com/openai/v1"
 GROQ_LLM_MODEL = "llama-3.1-70b-versatile"
 

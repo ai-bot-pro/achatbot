@@ -125,8 +125,10 @@ class DailyRoomBot(IBot):
         # default use openai llm processor
         api_key = os.environ.get("OPENAI_API_KEY")
         if "groq" in self._bot_config.llm.base_url:
+            # https://console.groq.com/docs/models
             api_key = os.environ.get("GROQ_API_KEY")
         elif "together" in self._bot_config.llm.base_url:
+            # https://docs.together.ai/docs/chat-models
             api_key = os.environ.get("TOGETHER_API_KEY")
         llm_processor = OpenAILLMProcessor(
             model=self._bot_config.llm.model,
