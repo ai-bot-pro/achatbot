@@ -233,6 +233,7 @@ class SileroVADArgs:
     model: str = "silero_vad"
     source: str = "github"  # github | local
     force_reload: bool = False
+    trust_repo: bool = True
     verbose: bool = True
     onnx: bool = False
     silero_sensitivity: float = INIT_SILERO_SENSITIVITY

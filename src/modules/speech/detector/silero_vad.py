@@ -35,6 +35,7 @@ class SileroVAD(BaseVAD):
             force_reload=self.args.force_reload,
             onnx=self.args.onnx,
             verbose=self.args.verbose,
+            trust_repo=self.args.trust_repo,
         )
         model_million_params = sum(p.numel() for p in self.model.parameters()) / 1e6
         logging.debug(f"{self.TAG} have {model_million_params}M parameters")

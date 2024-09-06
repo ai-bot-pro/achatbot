@@ -17,6 +17,10 @@ r"""
 CHECK_FRAMES_MODE=0 python -m unittest test.modules.speech.detector.test_silero_vad.TestSileroVADDetector.test_detect
 CHECK_FRAMES_MODE=1 python -m unittest test.modules.speech.detector.test_silero_vad.TestSileroVADDetector.test_detect
 CHECK_FRAMES_MODE=2 python -m unittest test.modules.speech.detector.test_silero_vad.TestSileroVADDetector.test_detect
+
+SILERO_REPO_OR_DIR=/Users/wuyong/.cache/torch/hub/snakers4_silero-vad_master \
+    SILERO_MODEL_SOURCE=local \
+    python -m unittest test.modules.speech.detector.test_silero_vad.TestSileroVADDetector.test_detect
 """
 
 
@@ -26,9 +30,11 @@ class TestSileroVADDetector(unittest.TestCase):
         cls.tag = os.getenv('DETECTOR_TAG', "silero_vad")
         audio_file = os.path.join(TEST_DIR, f"audio_files", f"vad_test.wav")
         cls.audio_file = os.getenv('AUDIO_FILE', audio_file)
-        cls.repo_or_dir = os.getenv('REPO_OR_DIR', "snakers4/silero-vad")
-        cls.model = os.getenv('MODEL', "silero_vad")
+        cls.repo_or_dir = os.getenv('SILERO_REPO_OR_DIR', "snakers4/silero-vad")
+        cls.model = os.getenv('SILERO_MODEL', "silero_vad")
         cls.check_frames_mode = int(os.getenv('CHECK_FRAMES_MODE', "1"))
+        cls.source = os.getenv('SILERO_MODEL_SOURCE', "github")
+        cls.trust_repo = bool(os.getenv('SILERO_TRUST_REPO', "1"))
 
         Logger.init(logging.DEBUG, is_file=False)
 
@@ -40,6 +46,8 @@ class TestSileroVADDetector(unittest.TestCase):
         kwargs = SileroVADArgs(
             repo_or_dir=self.repo_or_dir,
             model=self.model,
+            source=self.source,
+            trust_repo=self.trust_repo,
             check_frames_mode=self.check_frames_mode,
         ).__dict__
         print(kwargs)

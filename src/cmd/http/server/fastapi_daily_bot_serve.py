@@ -267,7 +267,11 @@ async def fastapi_bot_join(chat_bot_name: str, info: BotInfo) -> JSONResponse:
     return JSONResponse(res)
 
 
-async def bot_join(chat_bot_name: str, info: BotInfo | dict) -> dict[str, Any]:
+async def bot_join(chat_bot_name: str,
+                   info: BotInfo | dict,
+                   services: dict = None,
+                   config_list: list = None,
+                   config: dict = None) -> dict[str, Any]:
     """join random room chat with bot"""
 
     logging.info(f"chat_bot_name: {chat_bot_name} request bot info: {info}")
@@ -368,7 +372,10 @@ async def fastapi_bot_join_room(room_name: str, chat_bot_name: str, info: BotInf
     return JSONResponse(res)
 
 
-async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo | dict) -> dict[str, Any]:
+async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo | dict,
+                        services: dict = None,
+                        config_list: list = None,
+                        config: dict = None) -> dict[str, Any]:
     """join room chat with bot"""
 
     logging.info(f"room_name: {room_name} chat_bot_name: {chat_bot_name} request bot info: {info}")

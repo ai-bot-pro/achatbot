@@ -52,11 +52,14 @@ class VADEnvInit():
             sample_rate=int(os.getenv('SAMPLE_RATE', "16000")),
             force_reload=bool(os.getenv('FORCE_RELOAD', "")),
             is_pad_tensor=bool(os.getenv('IS_PAD_TENSOR', "1")),
-            onnx=bool(os.getenv('ONNX', "")),
-            repo_or_dir=os.getenv('REPO_OR_DIR', "snakers4/silero-vad"),
+            onnx=bool(os.getenv('SILERO_ONNX', "")),
+            repo_or_dir=os.getenv('SILERO_REPO_OR_DIR', "snakers4/silero-vad"),
             model=os.getenv('SILERO_MODEL', "silero_vad"),
             check_frames_mode=int(os.getenv('CHECK_FRAMES_MODE', "1")),
+            source=os.getenv('SILERO_MODEL_SOURCE', "github"),
+            trust_repo=bool(os.getenv('SILERO_TRUST_REPO', "1")),
         ).__dict__
+
         return kwargs
 
     @staticmethod

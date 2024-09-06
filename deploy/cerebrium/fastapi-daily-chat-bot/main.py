@@ -15,6 +15,9 @@ os.environ['ELEVENLABS_API_KEY'] = get_secret("ELEVENLABS_API_KEY")
 os.environ['JINA_API_KEY'] = get_secret("JINA_API_KEY")
 
 os.environ['VAD_ANALYZER_TAG'] = get_secret("VAD_ANALYZER_TAG")
+os.environ['SILERO_MODEL_SOURCE'] = get_secret("SILERO_MODEL_SOURCE")
+os.environ['SILERO_REPO_OR_DIR'] = get_secret("SILERO_REPO_OR_DIR")
+os.environ['SILERO_MODEL'] = get_secret("SILERO_MODEL")
 
 os.environ['ASR_TAG'] = get_secret("ASR_TAG")
 os.environ['ASR_LANG'] = get_secret("ASR_LANG")
@@ -41,8 +44,8 @@ os.environ['TIDB_VSS_DISTANCE_STRATEGY'] = get_secret("TIDB_VSS_DISTANCE_STRATEG
 # cerebrum wrap fastapi, use HTTP POST method api
 # so use achatbot serve APIResponse dict[str, Any] to return
 # KISS, have a nice code :)
-# status = serve.app_status()
 # register_bot = serve.register_bot
+app_status = serve.app_status
 create_random_room = serve.create_random_room
 bot_join = serve.bot_join
 bot_join_room = serve.bot_join_room
