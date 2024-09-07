@@ -14,29 +14,30 @@ achatbot factory, create chat bots with llm, asr, tts, vad, etc..
   - grpc-terminal-chat(be/fe)
   - grpc-speaker
   - http fastapi_daily_bot_serve (with chat bots pipeline)
-- support transport connector: pipe(UNIX socket), grpc, queue (redis), (todo: websocket, TCP/IP socket)
+- support transport connector: pipe(UNIX socket), grpc, queue (redis), (!TODO: websocket, TCP/IP socket)
 - chat bot processors: 
   - aggreators(llm use, assistant message), 
-  - ai_frameworks(langchain rag), 
+  - ai_frameworks(langchain rag), (!TODO: llamaindex rag)
   - realtime voice inference(RTVI),
-  - transport: daily(webrtc)
+  - transport: 
+    - webRTC: **daily**, (!TODO: **livekit**, **cloudflare-calls**, etc..)
   - ai processor: llm, tts, asr etc..
 - core module:
-  - local llm: llama-cpp, (todo: baby-llm [llama2](https://github.com/ai-bot-pro/baby-llm/tree/main/llama2), [~~gundam~~](https://github.com/ai-bot-pro/baby-llm/tree/main/gundam)), mlx_lm, transformers etc..)
+  - local llm: llama-cpp, (!TODO: baby-llm [llama2](https://github.com/ai-bot-pro/baby-llm/tree/main/llama2), [~~gundam~~](https://github.com/ai-bot-pro/baby-llm/tree/main/gundam)), mlx_lm, transformers etc..)
   - api llm: personal-ai(like openai api, other ai provider)
 - AI modules:
   - functions:
     - search: search,search1,serper
     - weather: openweathermap
   - speech:
-    - asr: sense_voice_asr, whisper_asr, whisper_timestamped_asr, whisper_faster_asr, whisper_transformers_asr, whisper_mlx_asr, lightning_whisper_mlx_asr(todo), whisper_groq_asr
+    - asr: sense_voice_asr, whisper_asr, whisper_timestamped_asr, whisper_faster_asr, whisper_transformers_asr, whisper_mlx_asr, lightning_whisper_mlx_asr(!TODO), whisper_groq_asr
     - audio_stream: daily_room_audio_stream(in/out), pyaudio_stream(in/out)
     - detector: porcupine_wakeword,pyannote_vad,webrtc_vad,silero_vad,webrtc_silero_vad
     - player: stream_player
     - recorder: rms_recorder, wakeword_rms_recorder, vad_recorder, wakeword_vad_recorder
     - tts: tts_chat,tts_coqui,tts_cosy_voice,tts_edge,tts_g
     - vad_analyzer: daily_webrtc_vad_analyzer,silero_vad_analyzer
-  - vision(todo)
+  - vision(!TODO)
 - gen modules config(*.yaml, local/test/prod) from env with file: `.env`
  u also use HfArgumentParser this module's args to local cmd parse args
 - deploy to cloud ☁️ serverless: 
