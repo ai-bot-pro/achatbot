@@ -43,7 +43,7 @@ provider: aws
 - [fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/leptonai/fastapi-daily-chat-bot)
 
 ### tools
-- lep
+- lep photon `pip install leptonai`
 ---
 
 

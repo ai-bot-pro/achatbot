@@ -13,7 +13,7 @@ shell_commands = []
 
 # need daily-python with daily-core daily-webRTC
 #docker_base_image_url = "prod.registry/daily:latest"
-docker_base_image_url = "registry.cerebrium.ai/daily:latest"
+#docker_base_image_url = "registry.cerebrium.ai/daily:latest"
 
 [cerebrium.hardware]
 #gpu_count = 1
