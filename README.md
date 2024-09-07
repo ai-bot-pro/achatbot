@@ -20,7 +20,7 @@ achatbot factory, create chat bots with llm, asr, tts, vad, etc..
   - ai_frameworks(langchain rag), (!TODO: llamaindex rag)
   - realtime voice inference(RTVI),
   - transport: 
-    - webRTC: **daily**, (!TODO: **livekit**, **cloudflare-calls**, etc..)
+    - webRTC/webSocket: **daily**, (!TODO: **livekit**, **cloudflare-calls**, etc..)
   - ai processor: llm, tts, asr etc..
 - core module:
   - local llm: llama-cpp, (!TODO: baby-llm [llama2](https://github.com/ai-bot-pro/baby-llm/tree/main/llama2), [~~gundam~~](https://github.com/ai-bot-pro/baby-llm/tree/main/gundam)), mlx_lm, transformers etc..)
