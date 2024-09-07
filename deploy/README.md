@@ -38,6 +38,12 @@ provider: aws
 ### tools
 - cerebrium
 
+## Deploy to leptonai (KISS)
+
+- [fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/leptonai/fastapi-daily-chat-bot)
+
+### tools
+- lep
 ---
 
 
