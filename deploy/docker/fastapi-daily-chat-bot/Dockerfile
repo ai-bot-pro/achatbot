@@ -10,7 +10,7 @@ LABEL achatbot.image.authors="weege007@gmail.com"
 # docker build arg after each FROM
 ARG A_WORKER_PARAM="--port 9997 --nthreads 1"
 ARG A_INFERENCE_PARAM="--prompt 'Hello' --steps 1 --nthreads 1 --workers 127.0.0.1:9997"
-ARG A_GIT_REPO_URL=https://github.com/b4rtaz/distributed-llama.git
+ARG A_GIT_REPO_URL=https://github.com/ai-bot-pro/achatbot.git
 # container env
 ENV E_WORKER_PARAM ${A_WORKER_PARAM}
 ENV E_INFERENCE_PARAM ${A_INFERENCE_PARAM}
