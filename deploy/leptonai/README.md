@@ -7,10 +7,12 @@
 use shell script to deploy, simply run, like run on local machine. :) yes!
 
 ```
+cd fastapi-daily-chat-bot
+
 pip install leptonai
 
 # create
-cd fastapi-daily-chat-bot && lep photon create -n fastapi-daily-chat-bot -m photon.py
+lep photon create -n fastapi-daily-chat-bot -m photon.py
 
 # local run
 lep photon runlocal -n fastapi-daily-chat-bot
