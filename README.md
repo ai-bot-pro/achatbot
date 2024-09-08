@@ -48,7 +48,8 @@ achatbot factory, create chat bots with llm, asr, tts, vad, etc..
   - etc...
 
 # Service Deployment Architecture
-## UI
+
+## UI (easy to deploy with github like pages)
 - [vite-react-rtvi-web-voice](https://github.com/ai-bot-pro/vite-react-rtvi-web-voice) rtvi web voice chat bots, diff cctv roles etc, u can diy your own role by change the system prompt with [DailyRTVIGeneralBot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/rtvi/daily_rtvi_general_bot.py)
 - [chat-bot-rtvi-web-sandbox](https://github.com/ai-bot-pro/chat-bot-rtvi-client/tree/main/chat-bot-rtvi-web-sandbox)
 use this web sandbox to test config, actions with [DailyRTVIGeneralBot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/rtvi/daily_rtvi_general_bot.py)
@@ -58,9 +59,12 @@ deploy it to cloudflare pages, access https://educator-client.pages.dev/
 deploy it to cloudflare pages, access https://chat-client-weedge.pages.dev/
 
 
-## Server
-- [fastapi-daily-chat-bot](https://github.com/ai-bot-pro/chat-bot/tree/main/deploy/cerebrium/fastapi-daily-chat-bot)
-deploy fastapi-daily-chat-bot to cerebrium
+## Server Deploy (CD)
+- [x] [deploy/leptonai](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/leptonai) 👍🏻
+- [x] [deploy/cerebrium/fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/cerebrium/fastapi-daily-chat-bot) :)
+- [x] [deploy/aws/fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/aws/fastapi-daily-chat-bot) :(
+- [ ] [deploy/docker/fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/docker/fastapi-daily-chat-bot) 🏃🏻
+
 
 # Install
 > [!NOTE]
