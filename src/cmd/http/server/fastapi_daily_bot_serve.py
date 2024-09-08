@@ -148,6 +148,11 @@ def app_status():
     return APIResponse().model_dump()
 
 
+@app.get("/metrics")
+async def metrics():
+    return JSONResponse(APIResponse().model_dump())
+
+
 @app.get("/create_room/{name}")
 async def create_room(name):
     """create room then redirect to room url"""

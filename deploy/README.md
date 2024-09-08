@@ -1,4 +1,7 @@
 # CICD
+
+> Interesting souls have no place~
+> Interesting souls have no place~
 > Interesting souls have no place~
 
 deploy to cloud ☁️ serverless 
@@ -38,6 +41,12 @@ provider: aws
 ### tools
 - cerebrium
 
+## Deploy to leptonai (KISS)
+provider: cloudflare(from ip address)
+- [fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/leptonai/fastapi-daily-chat-bot)
+
+### tools
+- lep photon `pip install leptonai`
 ---
 
 
