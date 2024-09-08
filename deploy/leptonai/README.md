@@ -6,8 +6,11 @@
 
 use shell script to deploy, simply run, like run on local machine. :) yes!
 
-> !NOTE: if you just change the achatbot code, don't need to do this, just re-run deploy. so nice~, but need smooth update to switch to new deployment.
-> !NOTE: if rerun deployment, need to add secret again. (secret hope is golab~)
+> [!NOTE]
+> if you just change the achatbot code, don't need to do this, just re-run deploy. so nice~, but need smooth update to switch to new deployment.
+
+> [!NOTE]
+> if rerun deployment, need to add secret again. (secret hope is golab~)
 > rerun deployment, e.g.:
 > `lep photon run --rerun -n fastapi-daily-chat-bot -dn fastapi-daily-chat-bot --secret DAILY_API_KEY --secret DEEPGRAM_API_KEY --secret OPENAI_API_KEY --secret GROQ_API_KEY --secret TOGETHER_API_KEY`
 
