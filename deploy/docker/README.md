@@ -26,4 +26,4 @@ make docker_cpu_debian_fastapi_daily_bot_containers_compose_run
 
 ### GPU
 
-> [!TODO}
+> [!TODO]
