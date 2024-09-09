@@ -1,0 +1,26 @@
+ARG A_ACHATBOT_IMG_TAG=base
+
+FROM achatbot:${A_ACHATBOT_IMG_TAG} AS build
+
+# Custom cache invalidation
+#ARG CACHEBUST=1
+
+# docker build arg after each FROM
+# defualt install all vad,asr,llm,tts dependency
+# vad,api asr,api llm,api tts dependency
+# achatbot[fastapi_bot_server, daily_rtvi_bot, daily_langchain_rag_bot, speech_vad_analyzer, deepgram_asr_processor, openai, tts_edge]
+ARG A_ACHATBOT_DEPENDENCY="achatbot[fastapi_bot_server, daily_rtvi_bot, daily_langchain_rag_bot, speech_vad_analyzer, asr_processor, llm_processor, tts_processor]"
+RUN pip install -U "${A_ACHATBOT_DEPENDENCY}"
+
+FROM build AS run
+ARG A_WORKER_HOST="0.0.0.0"
+ARG A_WORKER_PORT="8000"
+# container env
+ENV E_WORKER_HOST=${A_WORKER_HOST}
+ENV E_WORKER_PORT=${A_WORKER_PORT}
+RUN mkdir -p ~/.achatbot/log ~/.achatbot/models
+
+EXPOSE ${E_WORKER_PORT}
+CMD python -m achatbot.cmd.http.server.fastapi_daily_bot_serve --port ${E_WORKER_PORT} --host ${E_WORKER_HOST}
+
+

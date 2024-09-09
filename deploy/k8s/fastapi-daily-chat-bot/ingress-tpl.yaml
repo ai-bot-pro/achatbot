@@ -1,0 +1,16 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  name: fastapi-daily-chat-bot-ingress
+  namespace: achatbot
+spec:
+  rules:
+    - host: <NODE_BALANCER_URL>
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: fastapi-daily-chat-bot-service
+              servicePort: 80

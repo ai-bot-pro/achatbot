@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.6.7"
+version = "0.0.6.8"
 requires-python = ">= 3.10"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
@@ -153,8 +153,7 @@ local_terminal_chat_bot = [
     "pyttsx3==2.90",
     # tts_cosy_voice
     "hyperpyyaml==1.2.2",
-    "onnxruntime==1.18.1; sys_platform == 'darwin' or sys_platform == 'windows'",
-    "onnxruntime-gpu==1.18.1; sys_platform == 'linux'",
+    "onnxruntime==1.18.1",
     "openai-whisper==20231117",
     "WeTextProcessing==1.0.2; sys_platform == 'linux'",
     "conformer==0.3.2",
@@ -196,8 +195,7 @@ daily_webrtc_terminal_chat_bot = [
     "pyttsx3==2.90",
     # tts_cosy_voice
     "hyperpyyaml==1.2.2",
-    "onnxruntime==1.18.1; sys_platform == 'darwin' or sys_platform == 'windows'",
-    "onnxruntime-gpu==1.18.1; sys_platform == 'linux'",
+    "onnxruntime==1.18.1",
     "openai-whisper==20231117",
     "WeTextProcessing==1.0.2; sys_platform == 'linux'",
     "conformer==0.3.2",
@@ -247,8 +245,7 @@ remote_queue_chat_bot_be_worker = [
     "pyttsx3==2.90",
     # tts_cosy_voice
     "hyperpyyaml==1.2.2",
-    "onnxruntime==1.18.1; sys_platform == 'darwin' or sys_platform == 'windows'",
-    "onnxruntime-gpu==1.18.1; sys_platform == 'linux'",
+    "onnxruntime==1.18.1",
     "openai-whisper==20231117",
     "WeTextProcessing==1.0.2; sys_platform == 'linux'",
     "conformer==0.3.2",
@@ -301,8 +298,7 @@ remote_rpc_chat_bot_be_worker = [
     "pyttsx3==2.90",
     # tts_cosy_voice
     "hyperpyyaml==1.2.2",
-    "onnxruntime==1.18.1; sys_platform == 'darwin' or sys_platform == 'windows'",
-    "onnxruntime-gpu==1.18.1; sys_platform == 'linux'",
+    "onnxruntime==1.18.1",
     "openai-whisper==20231117",
     "WeTextProcessing==1.0.2; sys_platform == 'linux'",
     "conformer==0.3.2",
@@ -337,8 +333,7 @@ remote_grpc_tts_server = [
     # tts_cosy_voice
     "torch==2.2.2",
     "hyperpyyaml==1.2.2",
-    "onnxruntime==1.18.1; sys_platform == 'darwin' or sys_platform == 'windows'",
-    "onnxruntime-gpu==1.18.1; sys_platform == 'linux'",
+    "onnxruntime==1.18.1",
     "openai-whisper==20231117",
     "WeTextProcessing==1.0.2; sys_platform == 'linux'",
     "conformer==0.3.2",
@@ -383,8 +378,7 @@ tts_processor = [
     # tts_cosy_voice
     "torch==2.2.2",
     "hyperpyyaml==1.2.2",
-    "onnxruntime==1.18.1; sys_platform == 'darwin' or sys_platform == 'windows'",
-    "onnxruntime-gpu==1.18.1; sys_platform == 'linux'",
+    "onnxruntime==1.18.1",
     "openai-whisper==20231117",
     "WeTextProcessing==1.0.2; sys_platform == 'linux'",
     "conformer==0.3.2",
@@ -403,7 +397,7 @@ tts_processor = [
     "torch==2.2.2",
 ]
 ai_frameworks_processor = ["langchain==0.2.13"]
-deepgram_asr_processor = ["deepgram-sdk~=3.4.0"]
+deepgram_asr_processor = ["deepgram-sdk~=3.5.0"]
 cartesia_tts_processor = ["websockets==12.0"]
 
 
@@ -438,8 +432,7 @@ speech_tts = [
     # tts_cosy_voice
     "torch==2.2.2",
     "hyperpyyaml==1.2.2",
-    "onnxruntime==1.18.1; sys_platform == 'darwin' or sys_platform == 'windows'",
-    "onnxruntime-gpu==1.18.1; sys_platform == 'linux'",
+    "onnxruntime==1.18.1",
     "openai-whisper==20231117",
     "WeTextProcessing==1.0.2; sys_platform == 'linux'",
     "conformer==0.3.2",
@@ -510,8 +503,7 @@ llm_personalai_proxy = ["geocoder==1.38.1"]
 tts_cosy_voice = [
     "torch==2.2.2",
     "hyperpyyaml==1.2.2",
-    "onnxruntime==1.18.1; sys_platform == 'darwin' or sys_platform == 'windows'",
-    "onnxruntime-gpu==1.18.1; sys_platform == 'linux'",
+    "onnxruntime==1.18.1",
     "openai-whisper==20231117",
     "WeTextProcessing==1.0.2; sys_platform == 'linux'",
     "conformer==0.3.2",

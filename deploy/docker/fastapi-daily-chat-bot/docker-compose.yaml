@@ -1,0 +1,10 @@
+# https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+name: "achatbot-fastapi-daily-chat-bot"
+services:
+  app:
+    image: achatbot:fastapi_daily_bot_run
+    container_name: achatbot-fastapi-daily-chat-bot
+    #depends_on:
+    ports:
+      - "8000:8000"
+    env_file: ../.env
