@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fastapi-daily-chat-bot-configmap
+  namespace: achatbot
+data:
+  VAD_ANALYZER_TAG: "silero_vad_analyzer"
+  #ASR_TAG: "sense_voice_asr"
+  #TTS_TAG: "tts_cosy_voice"
+  TIDB_HOST: "gateway01.us-east-1.prod.aws.tidbcloud.com"
+  TIDB_PORT: "4000"
+  TIDB_SSL_CA: "/etc/ssl/certs/ca-certificates.crt"
+  TIDB_USERNAME: "SxNCKEBTjqzezJo.root"
+  TIDB_DATABASE: "transcripts"
+  TIDB_VSS_DISTANCE_STRATEGY: "cosine"
+  REDIS_HOST: "redis-14241.c256.us-east-1-2.ec2.redns.redis-cloud.com"
+  REDIS_PORT: "14241"
+  
+

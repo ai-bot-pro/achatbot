@@ -1,0 +1,25 @@
+# https://vsupalov.com/docker-arg-env-variable-guide/
+# docker build arg to all FROM
+
+# https://hub.docker.com/_/python/tags
+# use slim to reduce img size with ubuntu
+ARG A_PYTHON_IMG_TAG=3.11-slim
+
+FROM python:${A_PYTHON_IMG_TAG}
+
+# docker img meta
+LABEL achatbot.image.authors="weedge"
+LABEL achatbot.image.email="weege007@gmail.com"
+LABEL achatbot.github="https://github.com/ai-bot-pro/achatbot.git"
+
+
+# docker build arg after each FROM
+ARG A_ACHATBOT_DEPENDENCY="achatbot"
+# Custom cache invalidation
+ARG CACHEBUST=1
+
+# build prepare layer, use arg/env
+RUN apt-get update && apt-get install -y ffmpeg net-tools \
+    && pip install --upgrade pip \
+    && pip install torch==2.2.2 torchvision==0.17.2 torchaudio==2.2.2 --index-url https://download.pytorch.org/whl/cpu \
+    && pip install -U ${A_ACHATBOT_DEPENDENCY}

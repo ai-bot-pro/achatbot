@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment # mentions this is a Deployment
+metadata:
+  name: fastapi-daily-chat-bot-deployment # name of Deployment
+  namespace: achatbot
+spec:
+  replicas: 2 # creates 2 replicated Pods
+  selector:
+    matchLabels:
+      app: fastapi-daily-chat-bot # defines how the Deployment finds which Pods to manage
+  template:
+    metadata:
+      labels:
+        app: fastapi-daily-chat-bot # specifies that the Pods are to be named as fastapi-daily-chat-bot
+    spec: # specification for each Pod .This block indicates that the Pods run one container 'fastapi-daily-chat-bot-container', which runs the weedge/achatbot:fastapi-daily-chat-bot dockerhub image .
+      containers:
+        - name: fastapi-daily-chat-bot-container # name of the container running inside the Pod
+          image: weedge/achatbot:fastapi-daily-chat-bot # image to deployed in the container
+          #imagePullPolicy: Always # pull image from the repository (dockerhub) always
+          imagePullPolicy: Never
+          #imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "250m"
+          ports:
+            - containerPort: 8000 # run on port 8000
+          livenessProbe: # To check the health of the Pod
+            httpGet:
+              path: /health
+              port: 8000
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            timeoutSeconds: 5
+          readinessProbe: # To check if the Pod is ready to serve traffic or not
+            httpGet:
+              path: /readiness
+              port: 8000
+              scheme: HTTP
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+          env: # list of env variables passed to the app
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: fastapi-daily-chat-bot-configmap
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: fastapi-daily-chat-bot-configmap
+                  key: REDIS_PORT
+
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fastapi-daily-chat-bot-secret
+                  key: REDIS_PASSWORD 
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: fastapi-daily-chat-bot-secret
+                  key: OPENAI_API_KEY
+            - name: GROQ_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: fastapi-daily-chat-bot-secret
+                  key: GROQ_API_KEY
+            - name: TOGETHER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: fastapi-daily-chat-bot-secret
+                  key: TOGETHER_API_KEY
+            - name: DAILY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: fastapi-daily-chat-bot-secret
+                  key: DAILY_API_KEY
+            - name: CARTESIA_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: fastapi-daily-chat-bot-secret
+                  key: CARTESIA_API_KEY
+            - name: DEEPGRAM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: fastapi-daily-chat-bot-secret
+                  key: DEEPGRAM_API_KEY
+            - name: ELEVENLABS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: fastapi-daily-chat-bot-secret
+                  key: ELEVENLABS_API_KEY
+            - name: JINA_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: fastapi-daily-chat-bot-secret
+                  key: JINA_API_KEY
+                
+---
+kind: Service # mentions this is a service
+apiVersion: v1
+metadata:
+  name: fastapi-daily-chat-bot-service # name of service
+  namespace: achatbot
+spec:
+  type: NodePort # service type to be NodePort
+  ports:
+    - name: http
+      port: 80 # serve on port 80
+      targetPort: 8000 # reach to port 8000 of all the Pods in the selector block
+      nodePort: 30000 # use port 30000 as nodePort
+
+  selector:
+    app: fastapi-daily-chat-bot # The set of Pods with name'fastapi-daily-chat-bot' is targeted by this Service

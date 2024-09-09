@@ -148,6 +148,17 @@ def app_status():
     return APIResponse().model_dump()
 
 
+@app.get("/health")
+async def health():
+    return JSONResponse(APIResponse().model_dump())
+
+
+@app.get("/readiness")
+async def readiness():
+    # todo
+    return JSONResponse(APIResponse().model_dump())
+
+
 @app.get("/metrics")
 async def metrics():
     return JSONResponse(APIResponse().model_dump())
