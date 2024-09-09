@@ -62,8 +62,8 @@ deploy it to cloudflare pages, access https://chat-client-weedge.pages.dev/
 ## Server Deploy (CD)
 - [x] [deploy/leptonai](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/leptonai) 👍🏻
 - [x] [deploy/cerebrium/fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/cerebrium/fastapi-daily-chat-bot) :)
-- [x] [deploy/aws/fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/aws/fastapi-daily-chat-bot) :(
-- [ ] [deploy/docker/fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/docker/fastapi-daily-chat-bot) 🏃🏻
+- [x] [deploy/aws/fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/aws/fastapi-daily-chat-bot) :|
+- [x] [deploy/docker/fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/docker) 🏃
 
 
 # Install

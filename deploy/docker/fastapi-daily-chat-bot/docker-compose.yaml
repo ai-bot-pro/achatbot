@@ -1,28 +1,10 @@
 # https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
-version: "1.0"
 name: "achatbot-fastapi-daily-chat-bot"
 services:
   app:
     image: achatbot:fastapi_daily_bot_run
+    container_name: achatbot-fastapi-daily-chat-bot
     #depends_on:
     ports:
       - "8000:8000"
-    environment:
-      DAILY_API_KEY: ${DAILY_API_KEY}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      GROQ_API_KEY: ${GROQ_API_KEY}
-      TOGETHER_API_KEY: ${TOGETHER_API_KEY}
-      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY}
-      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY}
-      JINA_API_KEY: ${JINA_API_KEY}
-      TIDB_HOST: ${TIDB_HOST}
-      TIDB_PORT: ${TIDB_PORT}
-      TIDB_SSL_CA: ${TIDB_SSL_CA}
-      TIDB_USERNAME: ${TIDB_USERNAME}
-      TIDB_PASSWORD: ${TIDB_PASSWORD}
-      TIDB_DATABASE: ${TIDB_DATABASE}
-      TIDB_VSS_DISTANCE_STRATEGY: ${TIDB_VSS_DISTANCE_STRATEGY}
-      REDIS_HOST: ${REDIS_HOST}
-      REDIS_PORT: ${REDIS_PORT}
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-    container_name: achatbot-fastapi-daily-chat-bot
+    env_file: ../.env

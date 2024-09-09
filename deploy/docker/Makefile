@@ -39,11 +39,21 @@ docker_cpu_debian_fastapi_daily_bot_run_api_models_img:
 docker_cpu_debian_fastapi_daily_bot_container_run:
 	DOCKER_HOST=unix://$(HOME)/.docker/run/docker.sock docker run \
 		-it \
-		--name achatbot_fastapi_daily_bot \
 		-p 8000:8000 \
+		--name achatbot_fastapi_daily_bot \
 		--env-file .env \
 		achatbot:fastapi_daily_bot_run
 
 docker_cpu_debian_fastapi_daily_bot_containers_compose_run:
-	docker-compose \
+	DOCKER_HOST=unix://$(HOME)/.docker/run/docker.sock docker compose \
 		-f fastapi-daily-chat-bot/docker-compose.yaml up
+
+#-------tag -------
+docker_cpu_debian_fastapi_daily_bot_tag:
+	DOCKER_HOST=unix://$HOME/.docker/run/docker.sock docker tag \
+		achatbot:fastapi_daily_bot_run weedge/achatbot:fastapi_daily_bot_run
+
+#----- publish -----
+docker_cpu_debian_fastapi_daily_bot_tag_push:
+	DOCKER_HOST=unix://$HOME/.docker/run/docker.sock docker push \
+		weedge/achatbot:fastapi_daily_bot_run
