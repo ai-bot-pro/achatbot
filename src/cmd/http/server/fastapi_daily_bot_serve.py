@@ -58,6 +58,7 @@ ROOM_TOKEN_EXPIRE_TIME = 30 * 60  # 30 minutes
 RANDOM_ROOM_EXPIRE_TIME = 5 * 60  # 5 minutes
 RANDOM_ROOM_TOKEN_EXPIRE_TIME = 5 * 60  # 5 minutes
 
+DAILYLANGCHAINRAGBOT_EXPIRE_TIME = 25 * 60  # 10 minutes
 # --------------------- Bot ----------------------------
 
 
@@ -190,16 +191,18 @@ curl -XPOST "http://0.0.0.0:4321/create_random_room" \
 
 
 @app.post("/create_random_room")
-async def fastapi_create_random_room() -> JSONResponse:
+async def fastapi_create_random_room(exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME) -> JSONResponse:
     try:
-        res = await create_random_room()
+        res = await create_random_room(exp_time_s)
     except Exception as e:
         logging.error(f"Exception in create_random_room: {e}")
         raise HTTPException(status_code=500, detail=f"{e}")
     return JSONResponse(res)
 
 
-async def create_random_room() -> dict[str, Any]:
+async def create_random_room(exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME) -> dict[str, Any]:
+    if exp_time_s > 30 * 60:
+        raise HTTPException(status_code=400, detail="exp_time_s must be less than 1800")
     """create random room and token return"""
     # Create a Daily rest helper
     daily_rest_helper = DailyRESTHelper(
@@ -207,7 +210,7 @@ async def create_random_room() -> dict[str, Any]:
         os.getenv("DAILY_API_URL", "https://api.daily.co/v1"))
     # Create a new room
     params = DailyRoomParams(properties=DailyRoomProperties(
-        exp=time.time() + RANDOM_ROOM_EXPIRE_TIME,
+        exp=time.time() + exp_time_s,
     ))
     room: DailyRoomObject = daily_rest_helper.create_room(params=params)
 
@@ -307,9 +310,12 @@ async def bot_join(chat_bot_name: str,
         os.getenv("DAILY_API_URL", "https://api.daily.co/v1"))
     room: DailyRoomObject | None = None
     # Create a new room
+    exp = time.time() + RANDOM_ROOM_EXPIRE_TIME,
+    if chat_bot_name == "DailyLangchainRAGBot":
+        exp += DAILYLANGCHAINRAGBOT_EXPIRE_TIME,
     params = DailyRoomParams(
         properties=DailyRoomProperties(
-            exp=time.time() + RANDOM_ROOM_EXPIRE_TIME,
+            exp=exp,
         ),
     )
     room = daily_rest_helper.create_room(params=params)
