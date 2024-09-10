@@ -20,7 +20,7 @@ shell_commands = []
 #compute = "AMPERE_A10"
 
 cpu = 2
-memory = 8.0
+memory = 64.0
 compute = "CPU"
 gpu_count = 0
 provider = "aws"
