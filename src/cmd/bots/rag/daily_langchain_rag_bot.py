@@ -75,7 +75,7 @@ class DailyLangchainRAGBot(DailyRoomBot):
         return self.message_store[session_id]
 
     async def arun(self):
-        vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
+        vad_analyzer = self.get_vad_analyzer()
         daily_params = DailyParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
