@@ -155,7 +155,10 @@ class DailyRoomBot(IBot):
         else:
             # default tts engine processor
             logging.info(f"use default tts engine processor")
-            tts = TTSEnvInit.initTTSEngine(self._bot_config.tts.tag)
+            tag = None
+            if self._bot_config.tts and self._bot_config.tts.tag:
+                tag = self._bot_config.tts.tag
+            tts = TTSEnvInit.initTTSEngine(tag)
             self._bot_config.tts = TTSConfig(tag=tts.SELECTED_TAG, args=tts.get_args_dict())
             tts_processor = TTSProcessor(tts=tts, session=self.session)
 
