@@ -281,7 +281,7 @@ async def fastapi_bot_join(chat_bot_name: str, info: BotInfo) -> JSONResponse:
     try:
         res = await bot_join(chat_bot_name, info)
     except Exception as e:
-        logging.error(f"Exception in bot_join: {e}")
+        logging.error(f"Exception in bot_join: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"{e}")
     return JSONResponse(res)
 
@@ -310,9 +310,9 @@ async def bot_join(chat_bot_name: str,
         os.getenv("DAILY_API_URL", "https://api.daily.co/v1"))
     room: DailyRoomObject | None = None
     # Create a new room
-    exp = time.time() + RANDOM_ROOM_EXPIRE_TIME,
+    exp = time.time() + RANDOM_ROOM_EXPIRE_TIME
     if chat_bot_name == "DailyLangchainRAGBot":
-        exp += DAILYLANGCHAINRAGBOT_EXPIRE_TIME,
+        exp += DAILYLANGCHAINRAGBOT_EXPIRE_TIME
     params = DailyRoomParams(
         properties=DailyRoomProperties(
             exp=exp,
