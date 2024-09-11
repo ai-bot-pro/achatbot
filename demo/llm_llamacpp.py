@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from llama_cpp.llama_chat_format import MiniCPMv26ChatHandler
 import json
 import subprocess
 import platform
@@ -245,6 +246,33 @@ def chat_completion_func_call(
     text_to_speech(out_str)
 
 
+def chat_vision_img(model_path, clip_model_path):
+    chat_handler = MiniCPMv26ChatHandler(clip_model_path=clip_model_path)
+    llm = Llama(
+        model_path=model_path,
+        chat_handler=chat_handler,
+        n_ctx=2048,  # n_ctx should be increased to accommodate the image embedding
+        chat_format="minicpm-v-2.6",
+    )
+    res = llm.create_chat_completion(
+        messages=[
+            {"role": "system", "content": ""},
+            {
+                "role": "user", "content": [
+                    {"type": "text", "text": "请描述下图片"},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": "https://raw.githubusercontent.com/OpenBMB/MiniCPM-V/main/assets/airplane.jpeg"
+                        }
+                    }
+                ]
+            }
+        ]
+    )
+    print(res)
+
+
 r"""
 python demo/llm_llamacpp.py -t chat-func
 python demo/llm_llamacpp.py -t chat-func  -q "今天天气怎么样"
@@ -255,6 +283,8 @@ TOKENIZERS_PARALLELISM=true python demo/llm_llamacpp.py -t chat-func  -mn functi
 TOKENIZERS_PARALLELISM=true python demo/llm_llamacpp.py -t chat-func  -mn functionary -st 1 -m ./models/meetkai/functionary-small-v2.4-GGUF/functionary-small-v2.4.Q4_0.gguf
 TOKENIZERS_PARALLELISM=true python demo/llm_llamacpp.py -t chat-func -q "今天天气怎么样" -mn functionary -st 1 -m ./models/meetkai/functionary-small-v2.4-GGUF/functionary-small-v2.4.Q4_0.gguf
 TOKENIZERS_PARALLELISM=true python demo/llm_llamacpp.py -t chat-func -q "查下今天的美股股票价格" -mn functionary -st 1 -m ./models/meetkai/functionary-small-v2.4-GGUF/functionary-small-v2.4.Q4_0.gguf
+
+python demo/llm_llamacpp.py -t chat-vision-img -st 1 -m ./models/openbmb/MiniCPM-V-2_6-gguf/ggml-model-Q4_0.gguf -cm ./models/openbmb/MiniCPM-V-2_6-gguf/mmproj-model-f16.gguf
 """
 if __name__ == '__main__':
     import argparse
@@ -266,11 +296,19 @@ if __name__ == '__main__':
     parser.add_argument('--model_path', "-m", type=str,
                         default="./models/qwen2-1_5b-instruct-q8_0.gguf", help='model path')
     parser.add_argument(
+        '--clip_model_path',
+        "-cm",
+        type=str,
+        default="./models/openbmb/MiniCPM-V-2_6-gguf/mmproj-model-f16.gguf",
+        help='clip model path')
+
+    parser.add_argument(
         '--system',
         "-s",
         type=str,
         default="你是一个中国人,智能助手,请用中文回答。回答限制在1-5句话内。要友好、乐于助人且简明扼要。默认使用公制单位。保持对话简短而甜蜜。只用纯文本回答，不要包含链接或其他附加内容。不要回复计算机代码，例如不要返回用户的经度。",
         help='system prompt')
+
     parser.add_argument('--query', "-q", type=str,
                         default="你好", help='query prompt')
     parser.add_argument('--stream', "-st", type=bool,
@@ -279,10 +317,13 @@ if __name__ == '__main__':
     system_prompt = args.system
     model_path = args.model_path
     model_name = args.model_name
+    clip_model_path = args.clip_model_path
     prompt = args.query
     if args.type == "chat":
         chat_completion(model_path, system_prompt, prompt, args.stream)
     elif args.type == "chat-func":
         chat_completion_func_call(model_name, model_path, system_prompt, prompt, args.stream)
+    elif args.type == "chat-vision-img":
+        chat_vision_img(model_path, clip_model_path)
     else:
         generate(model_path, prompt, args.stream)

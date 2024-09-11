@@ -63,6 +63,29 @@ class LLamacppLLM(BaseLLM, ILlm):
     def get_args(cls, **kwargs) -> dict:
         return {**LLamcppLLMArgs().__dict__, **kwargs}
 
+    def get_chat_handler(self):
+        match self.args.chat_format:
+            case "minicpm-v-2.6":
+                from llama_cpp.llama_chat_format import MiniCPMv26ChatHandler
+                return MiniCPMv26ChatHandler(clip_model_path=self.args.clip_model_path)
+            case "llava-1-5":
+                from llama_cpp.llama_chat_format import Llava15ChatHandler
+                return Llava15ChatHandler(clip_model_path=self.args.clip_model_path)
+            case "llava-1-6":
+                from llama_cpp.llama_chat_format import Llava16ChatHandler
+                return Llava16ChatHandler(clip_model_path=self.args.clip_model_path)
+            case "moondream2":
+                from llama_cpp.llama_chat_format import MoondreamChatHandler
+                return MoondreamChatHandler(clip_model_path=self.args.clip_model_path)
+            case "nanollava":
+                from llama_cpp.llama_chat_format import NanoLlavaChatHandler
+                return NanoLlavaChatHandler(clip_model_path=self.args.clip_model_path)
+            case "llama-3-vision-alpha":
+                from llama_cpp.llama_chat_format import Llama3VisionAlphaChatHandler
+                return Llama3VisionAlphaChatHandler(clip_model_path=self.args.clip_model_path)
+            case _:
+                return None
+
     def __init__(self, **args) -> None:
         self.args = LLamcppLLMArgs(**args)
         from llama_cpp import Llama
@@ -78,6 +101,7 @@ class LLamacppLLM(BaseLLM, ILlm):
                 n_gpu_layers=self.args.n_gpu_layers,
                 flash_attn=self.args.flash_attn,
                 chat_format=self.args.chat_format,
+                chat_handler=self.get_chat_handler(),
                 tokenizer=LlamaHFTokenizer.from_pretrained(self.args.tokenizer_path),
             )
         else:
@@ -90,6 +114,7 @@ class LLamacppLLM(BaseLLM, ILlm):
                 n_gpu_layers=self.args.n_gpu_layers,
                 flash_attn=self.args.flash_attn,
                 chat_format=self.args.chat_format,
+                chat_handler=self.get_chat_handler(),
             )
 
     def encode(self, text: str | bytes):
@@ -131,7 +156,8 @@ class LLamacppLLM(BaseLLM, ILlm):
             yield from self.generate(session)
             return
         query = session.ctx.state["prompt"]
-        session.chat_history.append({"role": "user", "content": query})
+        self.args.save_chat_history and session.chat_history.append(
+            {"role": "user", "content": query})
         res = ""
         if self.args.model_type == "chat":
             for item in self._chat_completion(session):
@@ -141,7 +167,8 @@ class LLamacppLLM(BaseLLM, ILlm):
             for item in self._chat_completion_functions(session):
                 res += item
                 yield item
-        session.chat_history.append({"role": "assistant", "content": res})
+        self.args.save_chat_history and session.chat_history.append(
+            {"role": "assistant", "content": res})
         logging.debug(f"chat_history:{session.chat_history}")
 
     def _chat_completion(self, session: Session):
@@ -256,7 +283,7 @@ class LLamacppLLM(BaseLLM, ILlm):
                         yield res
 
             if is_tool_call is True:
-                session.chat_history.append({
+                self.args.save_chat_history and session.chat_history.append({
                     "role": "assistant",
                     "content": None,
                     "tool_calls": tool_calls,
@@ -269,7 +296,7 @@ class LLamacppLLM(BaseLLM, ILlm):
                     func_res = FunctionManager.execute(function_name, session, **args)
                     logging.debug(f"tool calling: {function_name} {args} -> {func_res}")
                     # https://github.com/abetlen/llama-cpp-python/issues/1405
-                    session.chat_history.append({
+                    self.args.save_chat_history and session.chat_history.append({
                         # "role": "tool",
                         "role": "function",
                         "tool_call_id": tool["id"],

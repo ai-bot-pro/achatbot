@@ -268,6 +268,7 @@ class PorcupineDetectorArgs:
 
 @dataclass
 class LLamcppLLMArgs:
+    save_chat_history: bool = True
     model_name: str = ""
     model_type: str = "generate"  # generate < chat | chat-func
     model_path: str = ""
@@ -275,8 +276,10 @@ class LLamcppLLMArgs:
     n_batch: int = 8
     n_gpu_layers: int = 0
     n_ctx: int = 2048
-    chat_format: Optional[str] = None  # chatml | chatml-function-calling | functionary-v2 ..
+    # chatml | chatml-function-calling | functionary-v2 | minicpm-v-2.6 ..
+    chat_format: Optional[str] = None
     tokenizer_path: Optional[str] = None
+    clip_model_path: Optional[str] = None
     verbose: bool = True
     flash_attn: bool = False
     # llm
