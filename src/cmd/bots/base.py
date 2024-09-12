@@ -6,11 +6,13 @@ import uuid
 from apipeline.frames.control_frames import EndFrame
 
 from src.processors.speech.asr.base import ASRProcessorBase
+from src.processors.vision.llamacpp_v_processor import LLamaCPPVisionProcessor
 from src.processors.speech.tts.base import TTSProcessorBase
 from src.common import interface
 from src.common.factory import EngineClass
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.modules.speech.asr import ASREnvInit
+from src.core.llm import LLMEnvInit
 from src.modules.speech.tts import TTSEnvInit
 from src.processors.speech.asr.asr_processor import ASRProcessor
 from src.processors.llm.base import LLMProcessor
@@ -122,19 +124,27 @@ class DailyRoomBot(IBot):
         return asr_processor
 
     def get_llm_processor(self) -> LLMProcessor:
-        # default use openai llm processor
-        api_key = os.environ.get("OPENAI_API_KEY")
-        if "groq" in self._bot_config.llm.base_url:
-            # https://console.groq.com/docs/models
-            api_key = os.environ.get("GROQ_API_KEY")
-        elif "together" in self._bot_config.llm.base_url:
-            # https://docs.together.ai/docs/chat-models
-            api_key = os.environ.get("TOGETHER_API_KEY")
-        llm_processor = OpenAILLMProcessor(
-            model=self._bot_config.llm.model,
-            base_url=self._bot_config.llm.base_url,
-            api_key=api_key,
-        )
+        if self._bot_config.llm and self._bot_config.llm.tag \
+                and self._bot_config.llm.tag == "engine_llm_processor":
+            # engine llm processor:
+            # (llm_llamacpp, llm_personalai_proxy, llm_transformers etc..)
+            session = Session(**SessionCtx(uuid.uuid4()).__dict__)
+            llm = LLMEnvInit.initLLMEngine()
+            llm_processor = LLamaCPPVisionProcessor(llm, session)
+        else:
+            # default use openai llm processor
+            api_key = os.environ.get("OPENAI_API_KEY")
+            if "groq" in self._bot_config.llm.base_url:
+                # https://console.groq.com/docs/models
+                api_key = os.environ.get("GROQ_API_KEY")
+            elif "together" in self._bot_config.llm.base_url:
+                # https://docs.together.ai/docs/chat-models
+                api_key = os.environ.get("TOGETHER_API_KEY")
+            llm_processor = OpenAILLMProcessor(
+                model=self._bot_config.llm.model,
+                base_url=self._bot_config.llm.base_url,
+                api_key=api_key,
+            )
         return llm_processor
 
     def get_tts_processor(self) -> TTSProcessorBase:
