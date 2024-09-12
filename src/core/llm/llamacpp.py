@@ -1,16 +1,21 @@
+from io import BytesIO
 import logging
 import json
 import re
 import os
 
+
 from src.common.interface import ILlm
-from .base import BaseLLM
 from src.common.session import Session
-from src.common.types import DEFAULT_SYSTEM_PROMPT, MODELS_DIR, LLamcppLLMArgs
+from src.common.types import DEFAULT_SYSTEM_PROMPT, LLamcppLLMArgs
 from src.modules.functions.function import FunctionManager
+from .base import BaseLLM
 
 
 class PromptInit():
+    """
+    Note: for generate model
+    """
     @staticmethod
     def create_phi3_prompt(history: list[str], system_prompt: str,
                            init_message: str = None):
@@ -172,6 +177,7 @@ class LLamacppLLM(BaseLLM, ILlm):
         logging.debug(f"chat_history:{session.chat_history}")
 
     def _chat_completion(self, session: Session):
+        logging.debug(f"chat_history:{session.chat_history}")
         output = self.model.create_chat_completion(
             messages=[
                 {

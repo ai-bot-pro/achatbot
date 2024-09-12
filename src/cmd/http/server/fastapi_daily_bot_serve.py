@@ -297,7 +297,9 @@ async def bot_join(chat_bot_name: str,
     if isinstance(info, dict):
         info = BotInfo(**info)
 
-    import_bots(chat_bot_name)
+    if import_bots(chat_bot_name) is False:
+        detail = f"un import bot: {chat_bot_name}"
+        return APIResponse(error_code=ERROR_CODE_BOT_UN_REGISTER, error_detail=detail).model_dump()
 
     logging.info(f"register bots: {register_daily_room_bots.items()}")
     if chat_bot_name not in register_daily_room_bots:
@@ -410,7 +412,10 @@ async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo | dict
         detail = f"Max bot limited reach for room: {room_name}"
         return APIResponse(error_code=ERROR_CODE_BOT_MAX_LIMIT, error_detail=detail).model_dump()
 
-    import_bots(chat_bot_name)
+    if import_bots(chat_bot_name) is False:
+        detail = f"un import bot: {chat_bot_name}"
+        return APIResponse(error_code=ERROR_CODE_BOT_UN_REGISTER, error_detail=detail).model_dump()
+
     logging.info(f"register bots: {register_daily_room_bots.items()}")
     if chat_bot_name not in register_daily_room_bots:
         detail = f"bot {chat_bot_name} don't exist"

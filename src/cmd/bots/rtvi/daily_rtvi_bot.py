@@ -27,7 +27,7 @@ class DailyRTVIBot(DailyRoomBot):
         self.init_bot_config()
 
     async def arun(self):
-        vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
+        vad_analyzer = self.get_vad_analyzer()
         daily_params = DailyParams(
             audio_out_enabled=True,
             transcription_enabled=True,

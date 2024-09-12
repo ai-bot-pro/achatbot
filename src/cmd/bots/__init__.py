@@ -23,11 +23,11 @@ def import_bots(bot_name: str = "DummyBot"):
     if "DailyRTVIGeneralBot" in bot_name:
         from .rtvi import daily_rtvi_general_bot
         return True
-    if "Daily" in bot_name:
-        from .rtvi import daily_rtvi_bot
-        from .rtvi import daily_asr_rtvi_bot
-        from .rtvi import daily_rtvi_general_bot
-        from .rag import daily_langchain_rag_bot
+    if "DailyEchoVisionBot" in bot_name:
+        from .vision import daily_echo_vision_bot
+        return True
+    if "DailyDescribeVisionBot" in bot_name:
+        from .vision import daily_describe_vision_bot
         return True
 
     return False

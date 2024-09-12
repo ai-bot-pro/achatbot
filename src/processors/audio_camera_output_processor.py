@@ -149,11 +149,16 @@ class AudioCameraOutputProcessor(OutputProcessor):
         desired_size = (self._params.camera_out_width, self._params.camera_out_height)
 
         if frame.size != desired_size:
-            image = Image.frombytes(frame.format, frame.size, frame.image)
+            image = Image.frombytes(frame.mode, frame.size, frame.image)
             resized_image = image.resize(desired_size)
             logging.warning(
                 f"{frame} does not have the expected size {desired_size}, resizing")
-            frame = ImageRawFrame(resized_image.tobytes(), resized_image.size, resized_image.format)
+            frame = ImageRawFrame(
+                image=resized_image.tobytes(),
+                size=resized_image.size,
+                format=resized_image.format,
+                mode=resized_image.mode,
+            )
 
         await self.write_frame_to_camera(frame)
 
