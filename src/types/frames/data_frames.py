@@ -14,7 +14,7 @@ class URLImageRawFrame(ImageRawFrame):
     url: str | None
 
     def __str__(self):
-        return f"{self.name}(url: {self.url}, size: {self.size}, format: {self.format})"
+        return f"{self.name}(url: {self.url}, size: {self.size}, format: {self.format}), mode:{self.mode}"
 
 
 @dataclass
@@ -26,7 +26,7 @@ class VisionImageRawFrame(ImageRawFrame):
     text: str | None
 
     def __str__(self):
-        return f"{self.name}(text: {self.text}, size: {self.size}, format: {self.format})"
+        return f"{self.name}(text: {self.text}, size: {self.size}, format: {self.format}, bytes_len:{len(self.image)}, mode:{self.mode}"
 
 
 @dataclass
@@ -38,7 +38,7 @@ class UserImageRawFrame(ImageRawFrame):
     user_id: str
 
     def __str__(self):
-        return f"{self.name}(user: {self.user_id}, size: {self.size}, format: {self.format})"
+        return f"{self.name}(user: {self.user_id}, size: {self.size}, format: {self.format}), mode:{self.mode}"
 
 
 @dataclass

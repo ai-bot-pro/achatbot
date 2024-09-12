@@ -70,17 +70,17 @@ class OpenAILLMContext:
         context = OpenAILLMContext()
         buffer = io.BytesIO()
         Image.frombytes(
-            frame.format,
+            frame.mode,
             frame.size,
             frame.image
         ).save(
             buffer,
-            format="JPEG")
+            format=frame.format)
         context.add_message({
             "content": frame.text,
             "role": "user",
             "data": buffer,
-            "mime_type": "image/jpeg"
+            "mime_type": f"image/{frame.format.lower()}"
         })
         return context
 

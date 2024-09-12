@@ -8,8 +8,8 @@ from src.types.frames.data_frames import VisionImageRawFrame, Frame
 from src.processors.ai_processor import AIProcessor
 
 
-class VisionProcessor(AIProcessor):
-    """VisionProcessor is a base class for vision processors."""
+class VisionProcessorBase(AIProcessor):
+    """VisionProcessorBase is a base class for vision processors."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

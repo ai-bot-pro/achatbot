@@ -55,6 +55,7 @@ class LLMEnvInit():
         kwargs["llm_tool_choice"] = os.getenv('LLM_TOOL_CHOICE', None)
         kwargs["chat_format"] = os.getenv('LLM_CHAT_FORMAT', None)
         kwargs["tokenizer_path"] = os.getenv('LLM_TOKENIZER_PATH', None)
+        kwargs["clip_model_path"] = os.getenv('LLM_CLIP_MODEL_PATH', None)
         return kwargs
 
     @staticmethod
