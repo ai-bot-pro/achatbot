@@ -8,10 +8,16 @@ class TransformersLLMArgs:
         metadata={
             "help": "The pretrained language model to use. Default is 'HuggingFaceTB/SmolLM-360M-Instruct'."},
     )
-    lm_device_map: str | dict = field(
-        default="auto",
+    lm_device_map: str | dict | None = field(
+        default=None,
         metadata={
-            "help": "The device map on which the model will run. use 'cuda' for GPU acceleration. default auto"
+            "help": "The device map for multi cpu/gpu. use 'cuda' for GPU acceleration, 'mps','cpu','auto', dict, None. default None"
+        },
+    )
+    lm_device: str = field(
+        default="cuda",
+        metadata={
+            "help": "The device for single cpu/mps/gpu. use 'cuda' for GPU acceleration, 'mps'(apple), 'cpu'. default cuda"
         },
     )
     lm_torch_dtype: str = field(
@@ -27,16 +33,22 @@ class TransformersLLMArgs:
             "help": "The attention implementation to use. One of 'sdpa', 'flash_attention_2', default no attention implementation."
         },
     )
-    max_new_tokens: int = field(
-        default=512,
-        metadata={
-            "help": "Maximum number of new tokens to generate in a single completion. Default is 512."
-        },
-    )
     user_role: str = field(
         default="user",
         metadata={
             "help": "Role assigned to the user in the chat context. Default is 'user'."
+        },
+    )
+    warnup_prompt: str = field(
+        default="Repeat the word 'weedge niu bi'.",
+        metadata={
+            "help": "warnup llm generate prompt. Default is 'weedge niu bi'."
+        },
+    )
+    warnup_steps: int = field(
+        default=2,
+        metadata={
+            "help": "The number of steps to run the warmup prompt. Default is 2."
         },
     )
     init_chat_role: str = field(

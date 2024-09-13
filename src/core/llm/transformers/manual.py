@@ -1,6 +1,7 @@
 import logging
 from threading import Thread
 
+import torch
 
 from common.session import Session
 from src.common.interface import ILlm
@@ -12,25 +13,79 @@ from src.types.speech.language import TO_LLM_LANGUAGE
 class TransformersManualLLM(BaseLLM, ILlm):
     TAG = "llm_transformers_manual"
 
-    @classmethod
-    def get_args(cls, **kwargs) -> dict:
-        return {**TransformersLLMArgs().__dict__, **kwargs}
-
     def __init__(self, **args) -> None:
         from transformers import AutoModel, AutoTokenizer, TextIteratorStreamer
 
-        self._args = TransformersLLMArgs(**args)
-        self._model = AutoModel.from_pretrained(
-            self._args.lm_model_name_or_path,
-            torch_dtype=self._args.lm_torch_dtype,
-            device_map=self._args.lm_device,
-            attn_implementation=self._args.lm_attn_impl,
-            trust_remote_code=True,
-        )
+        if self.args.lm_torch_dtype != "auto":
+            self.torch_dtype = getattr(torch, self.args.lm_torch_dtype)
+        else:
+            self.torch_dtype = "auto"
+
+        self.args = TransformersLLMArgs(**args)
+        if self.args.lm_device_map:
+            self._model = AutoModel.from_pretrained(
+                self.args.lm_model_name_or_path,
+                torch_dtype=self.args.lm_torch_dtype,
+                #!NOTE: https://github.com/huggingface/transformers/issues/20896
+                # device_map for multi cpu/gpu with accelerate
+                device_map=self.args.lm_device_map,
+                attn_implementation=self.args.lm_attn_impl,
+                trust_remote_code=True,
+            )
+        else:
+            self._model = AutoModel.from_pretrained(
+                self.args.lm_model_name_or_path,
+                torch_dtype=self.args.lm_torch_dtype,
+                attn_implementation=self.args.lm_attn_impl,
+                trust_remote_code=True,
+            ).eval().to(self.args.lm_device)
+
         self._tokenizer = AutoTokenizer.from_pretrained(
-            self._args.lm_model_name_or_path, trust_remote_code=True)
+            self.args.lm_model_name_or_path, trust_remote_code=True)
         self._streamer = TextIteratorStreamer(
             self._tokenizer, skip_prompt=True, skip_special_tokens=True)
+
+        self.warmup()
+
+    def warmup(self):
+        logging.info(f"Warming up {self.__class__.__name__}")
+
+        dummy_input_text = self.args.warnup_prompt
+        dummy_msgs = [{"role": self.args.user_role, "content": dummy_input_text}]
+        text = self._tokenizer.apply_chat_template(
+            dummy_msgs,
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+        model_inputs = self._tokenizer(
+            [text], return_tensors="pt").to(self._model.device)
+
+        warmup_gen_kwargs = dict(
+            model_inputs,
+            streamer=self._streamer,
+            min_new_tokens=self.args.lm_gen_min_new_tokens,
+            max_new_tokens=self.args.lm_gen_max_new_tokens,
+        )
+
+        if self.args.lm_device_map is None and self.args.lm_device == "cuda":
+            start_event = torch.cuda.Event(enable_timing=True)
+            end_event = torch.cuda.Event(enable_timing=True)
+            torch.cuda.synchronize()
+            start_event.record()
+
+        n_steps = self.args.warnup_steps
+        for _ in range(n_steps):
+            thread = Thread(target=self._mode.generate, kwargs=warmup_gen_kwargs)
+            thread.start()
+            for _ in self.streamer:
+                pass
+
+        if self.args.lm_device_map is None and self.args.lm_device == "cuda":
+            end_event.record()
+            torch.cuda.synchronize()
+            logging.info(
+                f"{self.__class__.__name__}:  warmed up! time: {start_event.elapsed_time(end_event) * 1e-3:.3f} s"
+            )
 
     def generate(self, session: Session):
         r"""
@@ -58,7 +113,7 @@ class TransformersManualLLM(BaseLLM, ILlm):
             if isinstance(prompt, str):
                 prompt = f"Please reply to my message in {TO_LLM_LANGUAGE[language_code]}. " + prompt
 
-        msgs = [{'role': 'user', 'content': prompt}]
+        msgs = [{'role': self.args.user_role, 'content': prompt}]
         text = self._tokenizer.apply_chat_template(
             msgs,
             tokenize=False,
@@ -70,7 +125,8 @@ class TransformersManualLLM(BaseLLM, ILlm):
         generation_kwargs = dict(
             model_inputs,
             streamer=self._streamer,
-            max_new_tokens=self._args.max_new_tokens)
+            min_new_tokens=self.args.lm_gen_min_new_tokens,
+            max_new_tokens=self.args.lm_gen_max_new_tokens)
         thread = Thread(target=self._model.generate, kwargs=generation_kwargs)
         thread.start()
 
@@ -96,14 +152,15 @@ class TransformersManualLLM(BaseLLM, ILlm):
             if isinstance(prompt, str):
                 prompt = f"Please reply to my message in {TO_LLM_LANGUAGE[language_code]}. " + prompt
 
-        msgs = [{'role': 'user', 'content': prompt}]
+        msgs = [{'role': self.args.user_role, 'content': prompt}]
         # !NOTE: maybe some old version model don't support
         chat_kwargs = dict(
             image=None,
             msgs=msgs,
             tokenizer=self._tokenizer,
             streamer=self._streamer,
-            max_new_tokens=self._args.max_new_tokens)
+            min_new_tokens=self.args.min_new_tokens,
+            max_new_tokens=self.args.max_new_tokens)
         thread = Thread(target=self._model.chat, kwargs=chat_kwargs)
         thread.start()
 
