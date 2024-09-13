@@ -23,7 +23,7 @@ class Language(StrEnum):
     CA = "ca"            # Catalan
     ZH = "zh"            # Chinese simplified
     ZH_TW = "zh-TW"      # Chinese traditional
-    ZN = "zn"            # Chinese + English
+    ZN = "zn"            # Chinese and English
     CS = "cs"            # Czech
     DA = "da"            # Danish
     NL = "nl"            # Dutch
@@ -63,3 +63,51 @@ class Language(StrEnum):
     TR = "tr"            # Turkish
     UK = "uk"            # Ukrainian
     VI = "vi"            # Vietnamese
+
+
+TO_LLM_LANGUAGE = {
+    "bg": "Bulgarian",
+    "ca": "Catalan",
+    "zh": "Chinese simplified",
+    "zh-TW": "Chinese traditional",
+    "zn": "Chinese and English",
+    "cs": "Czech",
+    "da": "Danish",
+    "nl": "Dutch",
+    "en": "English",
+    "en-US": "English (USA)",
+    "en-AU": "English (Australia)",
+    "en-GB": "English (Great Britain)",
+    "en-NZ": "English (New Zealand)",
+    "en-IN": "English (India)",
+    "et": "Estonian",
+    "fi": "Finnish",
+    "nl-BE": "Flemmish",
+    "fr": "French",
+    "fr-CA": "French (Canada)",
+    "de": "German",
+    "de-CH": "German (Switzerland)",
+    "el": "Greek",
+    "hi": "Hindi",
+    "hu": "Hungarian",
+    "id": "Indonesian",
+    "it": "Italian",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "lv": "Latvian",
+    "lt": "Lithuanian",
+    "ms": "Malay",
+    "no": "Norwegian",
+    "pl": "Polish",
+    "pt": "Portuguese",
+    "pt-BR": "Portuguese (Brazil)",
+    "ro": "Romanian",
+    "ru": "Russian",
+    "sk": "Slovak",
+    "es": "Spanish",
+    "sv": "Swedish",
+    "th": "Thai",
+    "tr": "Turkish",
+    "uk": "Ukrainian",
+    "vi": "Vietnamese",
+}

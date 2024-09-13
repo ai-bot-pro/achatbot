@@ -32,6 +32,7 @@ more frontend app
 ## Deploy Tools (provider cloud tools)
 - terraform (Terraform)
 - sls (Serverless)
+- use [skypilot](https://skypilot.readthedocs.io/en/latest/docs/index.html) to deploy model
 
 ---
 
