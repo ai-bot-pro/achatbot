@@ -23,7 +23,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 
-Logger.init(logging.INFO, is_file=False, is_console=True)
+Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
 
 
 # --------------------- API -----------------

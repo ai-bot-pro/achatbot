@@ -50,7 +50,7 @@ class Logger():
 
     @staticmethod
     def init(
-            level=logging.INFO,
+            level: int | str = logging.INFO,
             app_name="chat-bot",
             log_dir=LOG_DIR,
             is_file=True,

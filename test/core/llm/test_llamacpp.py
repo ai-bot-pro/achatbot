@@ -106,7 +106,7 @@ class TestLLamacppLLM(unittest.TestCase):
             MODELS_DIR, "qwen2-1_5b-instruct-q8_0.gguf"))
         cls.tokenizer_path = os.getenv('TOKENIZER_PATH', None)
         cls.clip_model_path = os.getenv('CLIP_MODEL_PATH', None)
-        Logger.init(logging.DEBUG, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
     def tearDownClass(cls):

@@ -33,7 +33,7 @@ class TestPorcupineWakeWordDetector(unittest.TestCase):
         cls.model_path = os.getenv('MODEL_PATH', model_path)
         cls.keyword_paths = os.getenv('KEYWORD_PATHS', keyword_paths)
 
-        Logger.init(logging.INFO, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
 
     @classmethod
     def tearDownClass(cls):

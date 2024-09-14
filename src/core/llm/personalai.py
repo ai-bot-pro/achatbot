@@ -13,6 +13,13 @@ from src.common.types import PersonalAIProxyArgs
 
 
 class PersonalAIProxy(BaseLLM, ILlm):
+    """
+    personalai proxy llm service:
+    TODO:
+        vllm, triton etc.. inference services,
+        support to load owner llm ckpt to inference
+        now just use cloud api llm model inference services
+    """
     TAG = "llm_personalai_proxy"
 
     @classmethod

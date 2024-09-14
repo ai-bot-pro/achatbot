@@ -64,7 +64,7 @@ class TestASRProcessor(unittest.IsolatedAsyncioTestCase):
 
     @classmethod
     def setUpClass(cls):
-        Logger.init(logging.INFO, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
         cls.room_url = os.getenv("DAILY_ROOM_URL", "https://weedge.daily.co/chat-room")
         cls.room_token = os.getenv("DAILY_ROOM_TOKEN", None)
         cls.vad_enabled = bool(os.getenv("DAILY_VAD_ENABLED", ""))

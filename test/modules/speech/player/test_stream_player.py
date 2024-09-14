@@ -32,7 +32,7 @@ class TestStreamPlayer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tag = os.getenv('PLAYER_TAG', "stream_player")
-        Logger.init(logging.DEBUG, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
     def tearDownClass(cls):

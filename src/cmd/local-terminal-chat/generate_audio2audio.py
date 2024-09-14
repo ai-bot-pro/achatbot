@@ -175,11 +175,37 @@ TQDM_DISABLE=True \
     TTS_TAG=tts_edge \
     python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
 
+TQDM_DISABLE=True TOKENIZERS_PARALLELISM=false \
+    AUDIO_IN_STREAM_TAG=pyaudio_in_stream \
+    AUDIO_OUT_STREAM_TAG=pyaudio_out_stream \
+    VAD_DETECTOR_TAG=webrtc_silero_vad \
+    RECORDER_TAG=vad_recorder \
+    ASR_TAG=sense_voice_asr \
+    ASR_LANG=zn \
+    ASR_MODEL_NAME_OR_PATH=./models/FunAudioLLM/SenseVoiceSmall \
+    LLM_TAG=llm_transformers_manual \
+    LLM_MODEL_NAME_OR_PATH=./models/Qwen/Qwen2-0.5B-Instruct \
+    TTS_TAG=tts_edge \
+    python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
+
+TQDM_DISABLE=True TOKENIZERS_PARALLELISM=false \
+    AUDIO_IN_STREAM_TAG=pyaudio_in_stream \
+    AUDIO_OUT_STREAM_TAG=pyaudio_out_stream \
+    VAD_DETECTOR_TAG=webrtc_silero_vad \
+    RECORDER_TAG=vad_recorder \
+    ASR_TAG=sense_voice_asr \
+    ASR_LANG=zn \
+    ASR_MODEL_NAME_OR_PATH=./models/FunAudioLLM/SenseVoiceSmall \
+    LLM_TAG=llm_transformers_pipeline \
+    LLM_MODEL_NAME_OR_PATH=./models/Qwen/Qwen2-0.5B-Instruct \
+    TTS_TAG=tts_edge \
+    python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
+
 INIT_TYPE=yaml_config TQDM_DISABLE=True \
     python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
 """
 import multiprocessing
-import logging
+import os
 
 from src.common.logger import Logger
 from src.common.connector.multiprocessing_pipe import MultiprocessingPipeConnector
@@ -188,7 +214,7 @@ from src.cmd.fe import TerminalChatClient
 
 
 # global logging
-Logger.init(logging.DEBUG, is_file=True, is_console=False)
+Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=True, is_console=False)
 
 
 def main():

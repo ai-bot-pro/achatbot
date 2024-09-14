@@ -29,7 +29,7 @@ class TestWebRTCVADDetector(unittest.TestCase):
         cls.audio_file = os.getenv('AUDIO_FILE', audio_file)
         cls.check_frames_mode = int(os.getenv('CHECK_FRAMES_MODE', "1"))
 
-        Logger.init(logging.DEBUG, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
     def tearDownClass(cls):

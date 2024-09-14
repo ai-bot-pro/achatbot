@@ -36,7 +36,7 @@ class TestSileroVADDetector(unittest.TestCase):
         cls.source = os.getenv('SILERO_MODEL_SOURCE', "github")
         cls.trust_repo = bool(os.getenv('SILERO_TRUST_REPO', "1"))
 
-        Logger.init(logging.DEBUG, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
     def tearDownClass(cls):

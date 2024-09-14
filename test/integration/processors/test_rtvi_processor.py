@@ -61,7 +61,7 @@ class TestRTVIProcessor(unittest.IsolatedAsyncioTestCase):
 
     @classmethod
     def setUpClass(cls):
-        Logger.init(logging.INFO, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
 
     @classmethod
     def tearDownClass(cls):
@@ -122,7 +122,7 @@ class TestRTVIProcessor(unittest.IsolatedAsyncioTestCase):
             UserStartedSpeakingFrame(),
             TranscriptionFrame("你好", "", time_now_iso8601(), "zh"),
             UserStoppedSpeakingFrame(),
-            #StopTaskFrame(),
+            # StopTaskFrame(),
         ])
         await runner.run(self.task)
 
