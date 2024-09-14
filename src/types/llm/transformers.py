@@ -2,7 +2,10 @@ from dataclasses import dataclass, field
 
 
 @dataclass
-class TransformersLLMArgs:
+class TransformersLMArgs:
+    r"""
+    HF transformers language model args (tiny,small,large,huge)
+    """
     lm_model_name_or_path: str = field(
         default="HuggingFaceTB/SmolLM-360M-Instruct",
         metadata={
@@ -27,8 +30,8 @@ class TransformersLLMArgs:
         },
     )
     # https://huggingface.co/docs/transformers/perf_infer_gpu_one
-    lm_attn_impl: str = field(
-        default="",
+    lm_attn_impl: str | None = field(
+        default=None,
         metadata={
             "help": "The attention implementation to use. One of 'sdpa', 'flash_attention_2', default no attention implementation."
         },
@@ -86,9 +89,15 @@ class TransformersLLMArgs:
             "help": "Whether to use sampling; set this to False for deterministic outputs. Default is False."
         },
     )
-    chat_size: int = field(
-        default=2,
+    chat_history_size: int | None = field(
+        default=None,
         metadata={
             "help": "Number of interactions assitant-user to keep for the chat. None for no limitations."
+        },
+    )
+    lm_stream: bool = field(
+        default=True,
+        metadata={
+            "help": "Whether to use streaming; set this to True for streaming output. Default is True."
         },
     )
