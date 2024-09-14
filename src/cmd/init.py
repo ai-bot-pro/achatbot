@@ -188,7 +188,7 @@ if __name__ == "__main__":
     # os.environ['CONF_ENV'] = 'local'
     # os.environ['RECORDER_TAG'] = 'wakeword_rms_recorder'
 
-    Logger.init(logging.INFO, is_file=False)
+    Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
 
     import argparse
     parser = argparse.ArgumentParser()

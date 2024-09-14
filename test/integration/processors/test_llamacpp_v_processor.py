@@ -38,7 +38,7 @@ class TestLLamaCPPVisionProcessor(unittest.IsolatedAsyncioTestCase):
 
     @classmethod
     def setUpClass(cls):
-        Logger.init(logging.INFO, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
 
         img_file = os.path.join(TEST_DIR, f"img_files", f"03-Confusing-Pictures.jpg")
         img_file = os.getenv('IMG_FILE', img_file)

@@ -16,7 +16,7 @@ python -m unittest test.common.connector.test_grpc_stream
 class TestGrpcStreamConnector(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        Logger.init(logging.DEBUG, is_file=False, is_console=True)
+        Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False, is_console=True)
 
     @classmethod
     def tearDownClass(cls):

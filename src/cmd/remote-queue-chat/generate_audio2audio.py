@@ -41,7 +41,7 @@ RUN_OP=be \
 
 
 # global logging
-Logger.init(logging.INFO, is_file=True, is_console=False)
+Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=True, is_console=False)
 
 
 def main():

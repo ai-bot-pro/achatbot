@@ -15,7 +15,7 @@ python -m unittest test.cmd.test_init.TestEnv.test_save_to_yamls
 class TestEnv(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        Logger.init(logging.DEBUG, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
         pass
 
     @classmethod

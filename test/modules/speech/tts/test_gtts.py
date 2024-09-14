@@ -22,7 +22,7 @@ class TestGTTS(unittest.TestCase):
         cls.tts_text = os.getenv(
             'TTS_TEXT',
             "你好，我是机器人, hello, test.modules.speech.tts.test_gtts.TestGTTS.test_synthesize")
-        Logger.init(logging.DEBUG, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
     def tearDownClass(cls):

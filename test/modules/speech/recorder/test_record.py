@@ -63,7 +63,7 @@ class TestRMSRecorder(unittest.TestCase):
         cls.model_path = os.getenv('MODEL_PATH', model_path)
         cls.keyword_paths = os.getenv('KEYWORD_PATHS', keyword_paths)
 
-        Logger.init(logging.DEBUG, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
     def tearDownClass(cls):

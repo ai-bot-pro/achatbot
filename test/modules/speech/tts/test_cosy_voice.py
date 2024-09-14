@@ -26,7 +26,7 @@ class TestCosyVoiceTTS(unittest.TestCase):
             "你好，我是机器人, hello, test.modules.speech.tts.test_gtts.TestGTTS.test_synthesize")
         model_dir = os.path.join(MODELS_DIR, "CosyVoice-300M-SFT")
         cls.model_dir = os.getenv('MODELS_DIR', model_dir)
-        Logger.init(logging.DEBUG, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
     def tearDownClass(cls):

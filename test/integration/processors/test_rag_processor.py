@@ -69,7 +69,7 @@ class MockProcessor(FrameProcessor):
 
 class TestRAGLangchainProcessor(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
-        Logger.init(logging.INFO, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
         self.message_store = {}
         self.base_url = os.environ.get("LLM_OPENAI_BASE_URL", "https://api.groq.com/openai/v1")
         self.model = os.environ.get("LLM_OPENAI_MODEL", "llama-3.1-70b-versatile")

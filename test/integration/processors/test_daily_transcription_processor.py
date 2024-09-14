@@ -33,7 +33,7 @@ DAILY_TRANSCRIPTION_LANG=zh \
 class TestDailyTranscriptionProcessor(unittest.IsolatedAsyncioTestCase):
     @classmethod
     def setUpClass(cls):
-        Logger.init(logging.INFO, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
         cls.room_url = os.getenv("DAILY_ROOM_URL", "https://weedge.daily.co/chat-bot")
         cls.room_token = os.getenv("DAILY_ROOM_TOKEN", None)
         cls.language = os.getenv("DAILY_TRANSCRIPTION_LANG", 'en')

@@ -34,7 +34,7 @@ class TestPyannoteDetector(unittest.TestCase):
         cls.tag = os.getenv('DETECTOR_TAG', "pyannote_vad")
         cls.audio_file = os.getenv('AUDIO_FILE', audio_file)
 
-        Logger.init(logging.DEBUG)
+        Logger.init(os.getenv("LOG_LEVEL", "debug").upper())
 
     @classmethod
     def tearDownClass(cls):

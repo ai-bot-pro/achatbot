@@ -58,7 +58,7 @@ class TestAudioInStream(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        Logger.init(logging.DEBUG, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
     def tearDownClass(cls):
@@ -121,7 +121,7 @@ class TestAudioOutStream(unittest.TestCase):
     def setUpClass(cls):
         audio_file = os.path.join(TEST_DIR, f"audio_files", f"vad_test.wav")
         cls.audio_file = os.getenv('AUDIO_FILE', audio_file)
-        Logger.init(logging.DEBUG, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
     def tearDownClass(cls):
@@ -208,7 +208,7 @@ AUDIO_IN_STREAM_TAG=daily_room_audio_in_stream \
 class TestAudioInOutStream(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        Logger.init(logging.DEBUG, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
     def tearDownClass(cls):

@@ -27,7 +27,7 @@ REDIS_PASSWORD=*** TTS_TAG=tts_g python -m unittest test.integration.test_tts_pl
 class TestTTSPlay(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        Logger.init(logging.INFO, is_file=False, is_console=True)
+        Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
 
     @classmethod
     def tearDownClass(cls):

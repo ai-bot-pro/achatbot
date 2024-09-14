@@ -31,7 +31,11 @@ def main():
     op = os.getenv("RUN_OP", "fe")
     conn = None
     if op == "fe":
-        Logger.init(logging.DEBUG, app_name="chat-bot-grpc-fe", is_file=True, is_console=False)
+        Logger.init(
+            os.getenv("LOG_LEVEL", "debug").upper(),
+            app_name="chat-bot-grpc-fe",
+            is_file=True,
+            is_console=False)
         conn = GrpcStreamClientConnector()
         client = TerminalChatClient()
         client.run(conn)

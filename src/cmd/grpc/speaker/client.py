@@ -25,7 +25,11 @@ from src.common.session import Session
 from dotenv import load_dotenv
 load_dotenv(override=True)
 
-Logger.init(logging.DEBUG, app_name="chat-bot-tts-client", is_file=False, is_console=True)
+Logger.init(
+    os.getenv("LOG_LEVEL", "debug").upper(),
+    app_name="chat-bot-tts-client",
+    is_file=False,
+    is_console=True)
 
 
 def load_model(channel):

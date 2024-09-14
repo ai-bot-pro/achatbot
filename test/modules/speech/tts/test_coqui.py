@@ -31,7 +31,7 @@ class TestCoquiTTS(unittest.TestCase):
             MODELS_DIR, "coqui/XTTS-v2"))
         cls.reference_audio_path = os.getenv('REFERENCE_AUDIO_PATH', os.path.join(
             RECORDS_DIR, "tmp.wav"))
-        Logger.init(logging.DEBUG, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
     def tearDownClass(cls):

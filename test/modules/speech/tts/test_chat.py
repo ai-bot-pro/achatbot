@@ -28,7 +28,7 @@ class TestChatTTS(unittest.TestCase):
         cls.source = os.getenv('SOURCE', "custom")
         cls.local_path = os.getenv('LOCAL_PATH', os.path.join(
             MODELS_DIR, "2Noise/ChatTTS"))
-        Logger.init(logging.INFO, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
 
     @classmethod
     def tearDownClass(cls):

@@ -13,7 +13,7 @@ python -m unittest test.common.connector.test_mp_pipe
 class TestMultiprocessingPipeConnector(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        Logger.init(logging.DEBUG, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
     def tearDownClass(cls):

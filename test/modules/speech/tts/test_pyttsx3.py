@@ -20,7 +20,7 @@ class TestPyttsx3TTS(unittest.TestCase):
         cls.tts_tag = os.getenv('LLM_TAG', "tts_pyttsx3")
         cls.tts_text = os.getenv('TTS_TEXT', "你好，我是机器人")
         cls.voice_name = os.getenv('VOICE_NAME', "Tingting")
-        Logger.init(logging.DEBUG, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
     def tearDownClass(cls):

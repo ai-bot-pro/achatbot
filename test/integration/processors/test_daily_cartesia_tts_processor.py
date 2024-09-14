@@ -33,7 +33,7 @@ ROOM_TOKEN_EXPIRE_TIME = 30 * 60  # 30 minutes
 class TestCartesiaTTSProcessor(unittest.IsolatedAsyncioTestCase):
     @classmethod
     def setUpClass(cls):
-        Logger.init(logging.INFO, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
         cls.api_key = os.getenv("CARTESIA_API_KEY", "")
         # https://play.cartesia.ai/
         cls.voice_id = os.getenv("CARTESIA_VOICE_ID", "eda5bbff-1ff1-4886-8ef1-4e69a77640a0")

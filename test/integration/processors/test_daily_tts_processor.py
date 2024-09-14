@@ -34,7 +34,7 @@ ROOM_TOKEN_EXPIRE_TIME = 30 * 60  # 30 minutes
 class TestTTSProcessor(unittest.IsolatedAsyncioTestCase):
     @classmethod
     def setUpClass(cls):
-        Logger.init(logging.INFO, is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
         cls.room_url = os.getenv("DAILY_ROOM_URL", "https://weedge.daily.co/chat-room")
 
     @classmethod
