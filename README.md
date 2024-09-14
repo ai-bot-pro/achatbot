@@ -14,16 +14,20 @@ achatbot factory, create chat bots with llm, asr, tts, vad, etc..
   - grpc-terminal-chat(be/fe)
   - grpc-speaker
   - http fastapi_daily_bot_serve (with chat bots pipeline)
-- support transport connector: pipe(UNIX socket), grpc, queue (redis), (!TODO: websocket, TCP/IP socket)
+- support transport connector: pipe(UNIX socket), grpc, queue (redis)
+  - [ ] (!TODO: websocket, TCP/IP socket)
 - chat bot processors: 
   - aggreators(llm use, assistant message), 
-  - ai_frameworks(langchain rag), (!TODO: llamaindex rag)
+  - ai_frameworks(langchain rag)
+    - [ ] (!TODO: llamaindex rag)
   - realtime voice inference(RTVI),
   - transport: 
-    - webRTC/webSocket: **daily**, (!TODO: **livekit**, **cloudflare-calls**, etc..)
+    - webRTC/webSocket: **daily**
+      - [ ] (!TODO: **livekit**, **cloudflare-calls**, etc..)
   - ai processor: llm, tts, asr etc..
 - core module:
-  - local llm: llama-cpp, (!TODO: baby-llm [llama2](https://github.com/ai-bot-pro/baby-llm/tree/main/llama2), [~~gundam~~](https://github.com/ai-bot-pro/baby-llm/tree/main/gundam)), mlx_lm, transformers etc..)
+  - local llm: llama-cpp, transformers(manual, pipeline)
+    - [ ] (!TODO: baby-llm [llama2](https://github.com/ai-bot-pro/baby-llm/tree/main/llama2), [~~gundam~~](https://github.com/ai-bot-pro/baby-llm/tree/main/gundam)), mlx_lm etc..)
   - api llm: personal-ai(like openai api, other ai provider)
 - AI modules:
   - functions:
@@ -37,14 +41,17 @@ achatbot factory, create chat bots with llm, asr, tts, vad, etc..
     - recorder: rms_recorder, wakeword_rms_recorder, vad_recorder, wakeword_vad_recorder
     - tts: tts_chat,tts_coqui,tts_cosy_voice,tts_edge,tts_g
     - vad_analyzer: daily_webrtc_vad_analyzer,silero_vad_analyzer
-  - vision(!TODO)
+  - vision
+    - [ ] OCR (!TODO)
 - gen modules config(*.yaml, local/test/prod) from env with file: `.env`
  u also use HfArgumentParser this module's args to local cmd parse args
 - deploy to cloud ☁️ serverless: 
   - vercel (frontend ui pages)
   - Cloudflare(frontend ui pages), personal ai workers 
   - [fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/cerebrium/fastapi-daily-chat-bot) on cerebrium (provider aws)
+  - [fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/leptonai/fastapi-daily-chat-bot) on leptonai
   - aws lambda + api Gateway
+  - docker -> k8s/k3s
   - etc...
 
 # Service Deployment Architecture
