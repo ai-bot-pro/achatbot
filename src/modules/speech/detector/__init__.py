@@ -15,11 +15,11 @@ class VADEnvInit():
     def getEngine(tag, **kwargs) -> interface.IDetector | EngineClass:
         if "pyannote_" in tag:
             from . import pyannote
-        elif "webrtc_" in tag:
+        elif "webrtc_vad" in tag:
             from . import webrtc_vad
-        elif "webrtc_silero_" in tag:
+        elif "webrtc_silero_vad" in tag:
             from . import webrtc_silero_vad
-        elif "silero_" in tag:
+        elif "silero_vad" in tag:
             from . import silero_vad
 
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)

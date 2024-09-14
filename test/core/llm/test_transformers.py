@@ -16,12 +16,18 @@ load_dotenv(override=True)
 r"""
 LLM_TAG=llm_transformers_manual \
     python -m unittest test.core.llm.test_transformers.TestTransformers.test_chat_completion
-
 LLM_TAG=llm_transformers_manual \
     python -m unittest test.core.llm.test_transformers.TestTransformers.test_chat_completion_zh
+LLM_TAG=llm_transformers_manual \
+    python -m unittest test.core.llm.test_transformers.TestTransformers.test_chat_completion_prompts
 
 LLM_TAG=llm_transformers_pipeline \
     python -m unittest test.core.llm.test_transformers.TestTransformers.test_chat_completion
+LLM_TAG=llm_transformers_pipeline \
+    python -m unittest test.core.llm.test_transformers.TestTransformers.test_chat_completion_zh
+LLM_TAG=llm_transformers_pipeline \
+    python -m unittest test.core.llm.test_transformers.TestTransformers.test_chat_completion_prompts
+
 """
 
 
@@ -86,3 +92,29 @@ class TestTransformers(unittest.TestCase):
         logging.debug(f"chat_completion TTFT time: {times[0]} s")
         logging.debug(f"generated text: {generated_text}")
         self.assertGreater(len(generated_text), 0)
+
+    def test_chat_completion_prompts(self):
+        prompt_cases = [
+            self.prompt,
+            (self.prompt, 'en'),
+            (self.prompt, 'zh'),
+        ]
+        for prompt in prompt_cases:
+            print("\n--------test prompt: ", prompt, "--------\n")
+            with self.subTest(prompt=prompt):
+                self.session.ctx.state["prompt"] = prompt
+                logging.debug(self.session.ctx)
+                logging.debug(self.engine.args)
+                iter = self.engine.chat_completion(self.session)
+
+                generated_text = ""
+                times = []
+                start_time = perf_counter()
+                for item in iter:
+                    # print(item)
+                    generated_text += item
+                    times.append(perf_counter() - start_time)
+                    start_time = perf_counter()
+                logging.debug(f"chat_completion TTFT time: {times[0]} s")
+                logging.debug(f"generated text: {generated_text}")
+                self.assertGreater(len(generated_text), 0)
