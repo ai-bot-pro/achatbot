@@ -98,7 +98,15 @@ class TransformersBaseLLM(BaseLLM, ILlm):
                 res += text
             yield res
         else:
-            yield from self.generate(session)
+            res = ""
+            for text in self.generate(session):
+                res += text
+                pos = self._have_special_char(res)
+                if pos > -1:
+                    yield res[:pos + 1]
+                    res = res[pos + 1:]
+            if len(res) > 0:
+                yield res
 
     def count_tokens(self, text: str | bytes) -> int:
         return len(self._tokenizer.encode(text)) if self._tokenizer else 0

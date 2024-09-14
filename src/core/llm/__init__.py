@@ -88,12 +88,14 @@ class LLMEnvInit():
             lm_attn_impl=os.getenv('LLM_ATTN_IMPL', None),
             lm_device=os.getenv('LLM_DEVICE', "cpu"),
             lm_torch_dtype=os.getenv('LLM_TORCH_DTYPE', 'auto'),
-            lm_gen_max_new_tokens=int(os.getenv('LLM_GEN_MAX_NEW_TOKENS', '128')),
+            lm_gen_max_new_tokens=int(os.getenv('LLM_GEN_MAX_NEW_TOKENS', '1024')),
             lm_gen_min_new_tokens=int(os.getenv('LLM_GEN_MIN_NEW_TOKENS', '0')),
             lm_gen_do_sample=bool(os.getenv('LLM_GEN_DO_SAMPLE', '')),
             lm_gen_temperature=float(os.getenv('LLM_GEN_TEMPERATURE', '0.0')),
             lm_stream=bool(os.getenv('LLM_STREAM', '1')),
             init_chat_prompt=os.getenv('LLM_INIT_CHAT_PROMPT', ''),
+            chat_history_size=int(os.getenv('LLM_CHAT_HISTORY_SIZE', '10')),  # cache 10 round
+            model_type=os.getenv('LLM_MODEL_TYPE', "chat_completion")
         ).__dict__
         return kwargs
 

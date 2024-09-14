@@ -66,9 +66,9 @@ class TransformersLMArgs:
             "help": "The initial chat prompt to establish context for the language model. Default is 'You are a helpful AI assistant.'"},
     )
     lm_gen_max_new_tokens: int = field(
-        default=128,
+        default=1024,
         metadata={
-            "help": "Maximum number of new tokens to generate in a single completion. Default is 128."
+            "help": "Maximum number of new tokens to generate in a single completion. Default is 1024."
         },
     )
     lm_gen_min_new_tokens: int = field(
@@ -92,12 +92,18 @@ class TransformersLMArgs:
     chat_history_size: int | None = field(
         default=None,
         metadata={
-            "help": "Number of interactions assitant-user to keep for the chat. None for no limitations."
+            "help": "Number of interactions assitant-user to keep for the chat. None for no limitations, <= 0 for no history"
         },
     )
     lm_stream: bool = field(
         default=True,
         metadata={
             "help": "Whether to use streaming; set this to True for streaming output. Default is True."
+        },
+    )
+    model_type: str = field(
+        default="chat_completion",
+        metadata={
+            "help": "Model type, generate, chat_completion(chat/instruct). Default is chat_completion"
         },
     )

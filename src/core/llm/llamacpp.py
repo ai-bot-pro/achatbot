@@ -312,10 +312,3 @@ class LLamacppLLM(BaseLLM, ILlm):
 
             if finish_reason == "stop":
                 break
-
-    def _have_special_char(self, content: str) -> int:
-        pattern = r"""[.。,，;；!！?？、]"""
-        matches = re.findall(pattern, content)
-        if len(matches) == 0:
-            return -1
-        return content.index(matches[len(matches) - 1])
