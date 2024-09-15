@@ -155,6 +155,7 @@ cython_debug/
 models/*
 records/*
 videos/*
+images/*
 asset/*
 main-dev.py
 tmp.*

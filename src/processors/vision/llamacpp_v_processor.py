@@ -45,9 +45,10 @@ class LLamaCPPVisionProcessor(VisionProcessorBase):
         logging.debug(f"Analyzing image: {frame}")
 
         image = Image.frombytes(frame.mode, frame.size, frame.image)
-        buffered = BytesIO()
-        image.save(buffered, format=frame.format)
-        img_base64_str = image_bytes_to_base64_data_uri(buffered.getvalue(), frame.format.lower())
+        with BytesIO() as buffered:
+            image.save(buffered, format=frame.format)
+            img_base64_str = image_bytes_to_base64_data_uri(
+                buffered.getvalue(), frame.format.lower())
 
         self._session.ctx.state["prompt"] = [
             {"type": "text", "text": frame.text},
