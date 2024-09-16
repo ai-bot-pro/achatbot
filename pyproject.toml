@@ -502,6 +502,7 @@ llm_personalai_proxy = ["geocoder==1.38.1"]
 llm_transformers_manual_vision_qwen = [
     "transformers@git+https://github.com/huggingface/transformers",
     "qwen-vl-utils",
+    "av",
     "torch==2.2.2",
     "torchaudio==2.2.2",
     "torchvision==0.17.2",
