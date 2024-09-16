@@ -1,19 +1,16 @@
 import os
 import logging
 import uuid
-from io import BytesIO
 
 import unittest
 from PIL import Image
 
-from apipeline.pipeline.pipeline import Pipeline, FrameDirection
+from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineTask, PipelineParams
 from apipeline.pipeline.runner import PipelineRunner
-from apipeline.frames.data_frames import Frame, TextFrame
 from apipeline.frames.sys_frames import StopTaskFrame
-from apipeline.processors.frame_processor import FrameProcessor
 
-from src.processors.vision.llamacpp_v_processor import LLamaCPPVisionProcessor
+from src.processors.vision.vision_processor import VisionProcessor
 from src.common.session import Session
 from src.common.types import SessionCtx, MODELS_DIR, TEST_DIR
 from src.core.llm import LLMEnvInit
@@ -30,17 +27,22 @@ LLM_MODEL_TYPE=chat LLM_MODEL_NAME="minicpm-v-2.6" \
     LLM_MODEL_PATH="./models/openbmb/MiniCPM-V-2_6-gguf/ggml-model-Q4_0.gguf" \
     LLM_CLIP_MODEL_PATH="./models/openbmb/MiniCPM-V-2_6-gguf/mmproj-model-f16.gguf" \
     LLM_CHAT_FORMAT=minicpm-v-2.6 \
-    python -m unittest test.integration.processors.test_llamacpp_v_processor.TestLLamaCPPVisionProcessor
+    python -m unittest test.integration.processors.test_vision_processor.TestVisionProcessor
+
+LLM_TAG=llm_transformers_manual_vision_qwen \
+    LLM_MODEL_NAME_OR_PATH="./models/Qwen/Qwen2-VL-2B-Instruct" \
+    LLM_CHAT_HISTORY_SIZE=0 \
+    python -m unittest test.integration.processors.test_vision_processor.TestVisionProcessor
 """
 
 
-class TestLLamaCPPVisionProcessor(unittest.IsolatedAsyncioTestCase):
+class TestVisionProcessor(unittest.IsolatedAsyncioTestCase):
 
     @classmethod
     def setUpClass(cls):
         Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
 
-        img_file = os.path.join(TEST_DIR, f"img_files", f"03-Confusing-Pictures.jpg")
+        img_file = os.path.join(TEST_DIR, "img_files", "03-Confusing-Pictures.jpg")
         img_file = os.getenv('IMG_FILE', img_file)
         cls.img = Image.open(img_file)
 
@@ -51,7 +53,7 @@ class TestLLamaCPPVisionProcessor(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         session = Session(**SessionCtx(uuid.uuid4()).__dict__)
         llm = LLMEnvInit.initLLMEngine()
-        llm_processor = LLamaCPPVisionProcessor(llm, session)
+        llm_processor = VisionProcessor(llm, session)
         pipeline = Pipeline([
             FrameLogger(),
             llm_processor,
