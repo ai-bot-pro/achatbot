@@ -80,8 +80,8 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
         )
         image_inputs, video_inputs = process_vision_info(dummy_msgs)
         model_inputs = self._tokenizer(
-            text=[text],
             images=image_inputs,
+            text=[text],
             videos=video_inputs,
             padding=True,
             return_tensors="pt",
@@ -112,9 +112,10 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
             add_generation_prompt=True,
         )
         image_inputs, video_inputs = process_vision_info(message)
+        # https://github.com/huggingface/transformers/blob/8bd2b1e8c23234cd607ca8d63f53c1edfea27462/src/transformers/models/qwen2_vl/processing_qwen2_vl.py#L53
         model_inputs = self._tokenizer(
-            [text],
             images=image_inputs,
+            text=[text],
             videos=video_inputs,
             padding=True,
             return_tensors="pt").to(self._model.device)

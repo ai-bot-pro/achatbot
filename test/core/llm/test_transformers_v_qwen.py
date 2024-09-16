@@ -64,16 +64,20 @@ class TestTransformersVQwen(unittest.TestCase):
               "text": "Describe this video. Please reply to my message in chinese",
               },
              ],
-            [{"type": "video",
-                "video": self.video_file,
-                "max_pixels": 360 * 420,
-                "fps": 1.0,
-              },
-             {"type": "text",
-             "text": "Describe this video. Please reply to my message in chinese",
-              },
-             ],
         ]
+        if os.path.isfile(self.video_file):
+            prompt_cases.append([
+                {
+                    "type": "video",
+                    "video": self.video_file,
+                    "max_pixels": 360 * 420,
+                    "fps": 1.0,
+                },
+                {
+                    "type": "text",
+                    "text": "Describe this video. Please reply to my message in chinese",
+                },
+            ])
 
         for prompt in prompt_cases:
             print("\n--------test prompt: ", prompt, "--------\n")
