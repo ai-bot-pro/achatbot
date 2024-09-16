@@ -8,23 +8,23 @@ from dotenv import load_dotenv
 from src.core.llm.transformers.base import TransformersBaseLLM
 from src.common.logger import Logger
 from src.common.session import Session
-from src.common.types import SessionCtx
+from src.common.types import MODELS_DIR, SessionCtx
 from src.core.llm import LLMEnvInit
 
 load_dotenv(override=True)
 
 r"""
-LLM_TAG=llm_transformers_manual_vision_qwen \
-    python -m unittest test.core.llm.test_transformers.TestTransformers.test_chat_completion_prompts
+LLM_MODEL_NAME_OR_PATH=./models/Qwen/Qwen2-VL-2B-Instruct \
+    python -m unittest test.core.llm.test_transformers_v_qwen.TestTransformersVQwen.test_chat_completion_prompts
 """
 
 
-class TestTransformers(unittest.TestCase):
+class TestTransformersVQwen(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.llm_tag = os.getenv('LLM_TAG', "llm_transformers_manual_vision_qwen")
         cls.prompt = os.getenv('LLM_PROMPT', "what's your name?")
-        cls.video_file = os.getenv('VIDEO_FILE', os.join(os.getcwd(), "videos/cv/test.mp4"))
+        cls.video_file = os.getenv('VIDEO_FILE', os.path.join(os.getcwd(), "videos/cv/test.mp4"))
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod

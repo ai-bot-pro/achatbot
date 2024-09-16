@@ -103,14 +103,15 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
             if isinstance(prompt, str):
                 prompt = f"Please reply to my message in {TO_LLM_LANGUAGE[language_code]}. " + prompt
 
-        self._chat_history.append({'role': self.args.user_role, 'content': prompt})
+        message = {'role': self.args.user_role, 'content': prompt}
+        self._chat_history.append(message)
         chat_history = self._chat_history.to_list()
         text = self._tokenizer.apply_chat_template(
             chat_history,
             tokenize=False,
             add_generation_prompt=True,
         )
-        image_inputs, video_inputs = process_vision_info(chat_history)
+        image_inputs, video_inputs = process_vision_info(message)
         model_inputs = self._tokenizer(
             [text],
             images=image_inputs,
