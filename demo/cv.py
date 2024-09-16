@@ -188,7 +188,15 @@ def capture_videos():
     cv2.destroyAllWindows()
 
 
+def list_file(file_suffix: str = ".mp4", data_dir='./videos/cv'):
+    import glob
+    filenames = sorted(glob.glob(os.path.join(data_dir, f"*{file_suffix}")))
+    print(filenames)
+    return filenames
+
+
 if __name__ == "__main__":
     # capture_img()
     # capture_video()
     capture_videos()
+    # list_file()

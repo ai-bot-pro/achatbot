@@ -12,6 +12,7 @@ class TransformersPipelineLLM(TransformersBaseLLM, ILlm):
 
     def init(self):
         from transformers import pipeline
+        # https://huggingface.co/docs/transformers/main_classes/pipelines
         self._pipeline = pipeline(
             "text-generation",
             model=self._model,
