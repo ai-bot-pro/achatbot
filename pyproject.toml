@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.6.11"
+version = "0.0.6.12"
 requires-python = ">= 3.10"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
@@ -498,6 +498,18 @@ openai = ["openai==1.40.6"]
 # if want to use other lib(cuda), see: https://github.com/abetlen/llama-cpp-python#installation-configuration
 llama_cpp = ["llama-cpp-python==0.2.82"]
 llm_personalai_proxy = ["geocoder==1.38.1"]
+# transof
+llm_transformers_manual_vision_qwen = [
+    "transformers@git+https://github.com/huggingface/transformers",
+    "qwen-vl-utils",
+    "av",
+    "torch==2.2.2",
+    "torchaudio==2.2.2",
+    "torchvision==0.17.2",
+]
+
+# for transformers awq model
+autoawq = ["autoawq"]
 
 # tts module tag -> pkgs
 tts_cosy_voice = [

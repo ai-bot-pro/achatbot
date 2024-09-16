@@ -77,13 +77,22 @@ class TransformersBaseLLM(BaseLLM, ILlm):
         !NOTE: session.ctx.state must have 'prompt' field with following format:
         - 'prompt': str
         - 'prompt': [PIL.Image, str]
-        - 'prompt': [
+        - vision image 'prompt' e.g.: [
                 {
                     "type": "image",
                     "image": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
                 },
                 {"type": "text", "text": "desicribe this image"},
            ]
+        - vision video 'prompt' e.g.: [
+                {
+                    "type": "video",
+                    "video": "video_file.mp4",
+                    "max_pixels": 360 * 420,
+                    "fps": 1.0,
+                },
+                {"type": "text", "text": "Describe this video. Please reply to my message in chinese"},
+            ]
         or
         - 'prompt': tuple (str, language_code)
 

@@ -17,7 +17,7 @@ from src.common.interface import ILlm
 from src.types.frames.data_frames import VisionImageRawFrame
 
 
-class LLamaCPPVisionProcessor(VisionProcessorBase):
+class VisionProcessor(VisionProcessorBase):
 
     def __init__(
         self,
@@ -45,14 +45,21 @@ class LLamaCPPVisionProcessor(VisionProcessorBase):
         logging.debug(f"Analyzing image: {frame}")
 
         image = Image.frombytes(frame.mode, frame.size, frame.image)
-        buffered = BytesIO()
-        image.save(buffered, format=frame.format)
-        img_base64_str = image_bytes_to_base64_data_uri(buffered.getvalue(), frame.format.lower())
+        with BytesIO() as buffered:
+            image.save(buffered, format=frame.format)
+            img_base64_str = image_bytes_to_base64_data_uri(
+                buffered.getvalue(), frame.format.lower())
 
         self._session.ctx.state["prompt"] = [
             {"type": "text", "text": frame.text},
-            {"type": "image_url", "image_url": {"url": img_base64_str}},
         ]
+        if "llm_transformers" in self._llm.SELECTED_TAG and \
+                "vision" in self._llm.SELECTED_TAG:  # transformers vision
+            self._session.ctx.state["prompt"].append(
+                {"type": "image", "image": img_base64_str})
+        else:  # llamacpp vision
+            self._session.ctx.state["prompt"].append(
+                {"type": "image_url", "image_url": {"url": img_base64_str}})
 
         iter = self._llm.chat_completion(self._session)
         for item in iter:

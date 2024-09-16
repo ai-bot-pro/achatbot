@@ -6,7 +6,7 @@ import uuid
 from apipeline.frames.control_frames import EndFrame
 
 from src.processors.speech.asr.base import ASRProcessorBase
-from src.processors.vision.llamacpp_v_processor import LLamaCPPVisionProcessor
+from processors.vision.vision_processor import VisionProcessor
 from src.processors.speech.tts.base import TTSProcessorBase
 from src.common import interface
 from src.common.factory import EngineClass
@@ -130,7 +130,7 @@ class DailyRoomBot(IBot):
             # (llm_llamacpp, llm_personalai_proxy, llm_transformers etc..)
             session = Session(**SessionCtx(uuid.uuid4()).__dict__)
             llm = LLMEnvInit.initLLMEngine()
-            llm_processor = LLamaCPPVisionProcessor(llm, session)
+            llm_processor = VisionProcessor(llm, session)
         else:
             # default use openai llm processor
             api_key = os.environ.get("OPENAI_API_KEY")

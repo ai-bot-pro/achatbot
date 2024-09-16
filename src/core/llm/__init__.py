@@ -20,6 +20,8 @@ class LLMEnvInit():
             from . import llamacpp
         elif "llm_personalai_proxy" in tag:
             from . import personalai
+        elif "llm_transformers_manual_vision_qwen" in tag:
+            from .transformers import manual_vision_qwen
         elif "llm_transformers_manual" in tag:
             from .transformers import manual
         elif "llm_transformers_pipeline" in tag:
@@ -113,4 +115,5 @@ class LLMEnvInit():
         'llm_personalai_proxy': get_llm_personal_ai_proxy_args,
         'llm_transformers_manual': get_llm_transformers_args,
         'llm_transformers_pipeline': get_llm_transformers_args,
+        'llm_transformers_manual_vision_qwen': get_llm_transformers_args,
     }

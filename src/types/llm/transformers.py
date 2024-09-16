@@ -18,7 +18,7 @@ class TransformersLMArgs:
         },
     )
     lm_device: str = field(
-        default="cuda",
+        default="cpu",
         metadata={
             "help": "The device for single cpu/mps/gpu. use 'cuda' for GPU acceleration, 'mps'(apple), 'cpu'. default cuda"
         },
