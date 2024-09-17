@@ -16,7 +16,7 @@ from src.common.logger import Logger
 from src.common.interface import IBot
 from src.services.help.daily_rest import DailyRESTHelper, \
     DailyRoomObject, DailyRoomProperties, DailyRoomParams
-from src.cmd.bots import import_bots, register_daily_room_bots
+from src.cmd.bots import BotInfo, import_bots, register_daily_room_bots
 
 
 from dotenv import load_dotenv
@@ -27,16 +27,6 @@ Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=Tr
 
 
 # --------------------- API -----------------
-class BotInfo(BaseModel):
-    is_agent: bool = False
-    chat_bot_name: str = ""
-    config: dict = {}  # @deprecated use config_list options to conf
-    room_name: str = "chat-room"
-    room_url: str = ""
-    token: str = ""
-    config_list: list = []
-    services: dict = {}
-
 
 class APIResponse(BaseModel):
     error_code: int = 0
@@ -390,7 +380,7 @@ async def fastapi_bot_join_room(room_name: str, chat_bot_name: str, info: BotInf
     try:
         res = await bot_join_room(room_name, chat_bot_name, info)
     except Exception as e:
-        logging.error(f"Exception in bot_join_room: {e}")
+        logging.error(f"Exception in bot_join_room: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"{e}")
 
     return JSONResponse(res)

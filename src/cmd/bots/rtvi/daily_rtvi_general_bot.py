@@ -392,6 +392,7 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         # joined use tts say "hello" to introduce with llm generate
         if self._bot_config.tts \
                 and self._bot_config.llm \
+                and self._bot_config.llm.messages \
                 and len(self._bot_config.llm.messages) > 0:
             messages = self._bot_config.llm.messages
             messages[0]["content"] = self._bot_config.llm.messages[0]["content"] + \

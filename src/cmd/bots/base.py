@@ -6,7 +6,7 @@ import uuid
 from apipeline.frames.control_frames import EndFrame
 
 from src.processors.speech.asr.base import ASRProcessorBase
-from processors.vision.vision_processor import VisionProcessor
+from src.processors.vision.vision_processor import VisionProcessor
 from src.processors.speech.tts.base import TTSProcessorBase
 from src.common import interface
 from src.common.factory import EngineClass

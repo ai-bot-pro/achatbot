@@ -1,3 +1,4 @@
+import argparse
 from apipeline.pipeline.pipeline import Pipeline, FrameProcessor
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.pipeline.task import PipelineTask, FrameDirection, PipelineParams
@@ -6,7 +7,7 @@ from apipeline.frames.data_frames import Frame, TextFrame
 from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
 from src.processors.aggregators.vision_image_frame import VisionImageFrameAggregator
 from src.processors.speech.tts.tts_processor import TTSProcessor
-from src.common.types import DailyParams
+from src.common.types import DailyParams, DailyRoomBotArgs
 from src.cmd.bots.base import DailyRoomBot
 from src.transports.daily import DailyTransport
 from src.types.frames.control_frames import UserImageRequestFrame

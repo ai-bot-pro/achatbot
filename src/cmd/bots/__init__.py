@@ -1,6 +1,18 @@
+from pydantic import BaseModel
 from src.common.register import Register
 
 register_daily_room_bots = Register('daily-room-bots')
+
+
+class BotInfo(BaseModel):
+    is_agent: bool = False
+    chat_bot_name: str = ""
+    config: dict = {}  # @deprecated use config_list options to conf
+    room_name: str = "chat-room"
+    room_url: str = ""
+    token: str = ""
+    config_list: list = []
+    services: dict = {}
 
 
 def import_bots(bot_name: str = "DummyBot"):
