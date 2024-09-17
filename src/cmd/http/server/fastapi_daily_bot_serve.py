@@ -1,4 +1,3 @@
-import time
 import atexit
 import logging
 import multiprocessing
@@ -14,8 +13,7 @@ from pydantic import BaseModel
 from src.common.types import DailyRoomBotArgs
 from src.common.logger import Logger
 from src.common.interface import IBot
-from src.services.help.daily_rest import DailyRESTHelper, \
-    DailyRoomObject, DailyRoomProperties, DailyRoomParams
+from src.services.help.daily_room import DailyRoom, DailyRoomObject
 from src.cmd.bots import BotInfo, import_bots, register_daily_room_bots
 
 
@@ -41,14 +39,6 @@ ERROR_CODE_BOT_FAIL_TOKEN = 10002
 ERROR_CODE_BOT_MAX_LIMIT = 10003
 ERROR_CODE_BOT_UN_PROC = 10004
 
-# ------------------ daily room --------------------------
-
-ROOM_EXPIRE_TIME = 30 * 60  # 30 minutes
-ROOM_TOKEN_EXPIRE_TIME = 30 * 60  # 30 minutes
-RANDOM_ROOM_EXPIRE_TIME = 5 * 60  # 5 minutes
-RANDOM_ROOM_TOKEN_EXPIRE_TIME = 5 * 60  # 5 minutes
-
-DAILYLANGCHAINRAGBOT_EXPIRE_TIME = 25 * 60  # 10 minutes
 # --------------------- Bot ----------------------------
 
 
@@ -158,16 +148,10 @@ async def metrics():
 @app.get("/create_room/{name}")
 async def create_room(name):
     """create room then redirect to room url"""
-    # Create a Daily rest helper
-    daily_rest_helper = DailyRESTHelper(
-        os.getenv("DAILY_API_KEY", ""),
-        os.getenv("DAILY_API_URL", "https://api.daily.co/v1"))
-    # Create a new room
     try:
-        params = DailyRoomParams(name=name, properties=DailyRoomProperties(
-            exp=time.time() + ROOM_EXPIRE_TIME,
-        ))
-        room: DailyRoomObject = daily_rest_helper.create_room(params=params)
+        daily_room_obj = DailyRoom()
+        room: DailyRoomObject = daily_room_obj.create_room(
+            name, exp_time_s=DailyRoom.ROOM_EXPIRE_TIME)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"{e}")
 
@@ -181,7 +165,8 @@ curl -XPOST "http://0.0.0.0:4321/create_random_room" \
 
 
 @app.post("/create_random_room")
-async def fastapi_create_random_room(exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME) -> JSONResponse:
+async def fastapi_create_random_room(
+        exp_time_s: int = DailyRoom.RANDOM_ROOM_EXPIRE_TIME) -> JSONResponse:
     try:
         res = await create_random_room(exp_time_s)
     except Exception as e:
@@ -190,28 +175,21 @@ async def fastapi_create_random_room(exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME) 
     return JSONResponse(res)
 
 
-async def create_random_room(exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME) -> dict[str, Any]:
+async def create_random_room(exp_time_s: int = DailyRoom.RANDOM_ROOM_EXPIRE_TIME) -> dict[str, Any]:
+    """create random room and token return"""
     if exp_time_s > 30 * 60:
         raise HTTPException(status_code=400, detail="exp_time_s must be less than 1800")
-    """create random room and token return"""
-    # Create a Daily rest helper
-    daily_rest_helper = DailyRESTHelper(
-        os.getenv("DAILY_API_KEY", ""),
-        os.getenv("DAILY_API_URL", "https://api.daily.co/v1"))
-    # Create a new room
-    params = DailyRoomParams(properties=DailyRoomProperties(
-        exp=time.time() + exp_time_s,
-    ))
-    room: DailyRoomObject = daily_rest_helper.create_room(params=params)
+    daily_room_obj = DailyRoom()
+    room: DailyRoomObject = daily_room_obj.create_random_room(exp_time_s=exp_time_s)
 
     # Give the agent a token to join the session
-    token = daily_rest_helper.get_token(room.url, RANDOM_ROOM_TOKEN_EXPIRE_TIME)
+    bot_token = daily_room_obj.get_token(room.url, exp_time_s=exp_time_s)
 
-    if not room or not token:
+    if not room or not bot_token:
         detail = f"Failed to get token for room: {room.name}"
         return APIResponse(error_code=ERROR_CODE_BOT_FAIL_TOKEN, error_detail=detail).model_dump()
 
-    data = {"room": room, "token": token}
+    data = {"room": room, "token": bot_token}
     return APIResponse(data=data).model_dump()
 
 
@@ -296,26 +274,15 @@ async def bot_join(chat_bot_name: str,
         detail = f"bot {chat_bot_name} don't exist"
         return APIResponse(error_code=ERROR_CODE_BOT_UN_REGISTER, error_detail=detail).model_dump()
 
-    # Create a Daily rest helper
-    daily_rest_helper = DailyRESTHelper(
-        os.getenv("DAILY_API_KEY", ""),
-        os.getenv("DAILY_API_URL", "https://api.daily.co/v1"))
-    room: DailyRoomObject | None = None
-    # Create a new room
-    exp = time.time() + RANDOM_ROOM_EXPIRE_TIME
+    exp = DailyRoom.RANDOM_ROOM_EXPIRE_TIME
     if chat_bot_name == "DailyLangchainRAGBot":
-        exp += DAILYLANGCHAINRAGBOT_EXPIRE_TIME
-    params = DailyRoomParams(
-        properties=DailyRoomProperties(
-            exp=exp,
-        ),
-    )
-    room = daily_rest_helper.create_room(params=params)
+        exp += DailyRoom.DAILYLANGCHAINRAGBOT_EXPIRE_TIME
 
+    daily_room_obj = DailyRoom()
+    room = daily_room_obj.create_random_room(exp)
     # Give the agent a token to join the session
-    token = daily_rest_helper.get_token(room.url, RANDOM_ROOM_TOKEN_EXPIRE_TIME)
-
-    if not room or not token:
+    bot_token = daily_room_obj.get_token(room.url, exp)
+    if not room or not bot_token:
         detail = f"Failed to get token for room: {room.name}"
         return APIResponse(error_code=ERROR_CODE_BOT_FAIL_TOKEN, error_detail=detail).model_dump()
 
@@ -325,7 +292,7 @@ async def bot_join(chat_bot_name: str,
         kwargs = DailyRoomBotArgs(
             bot_config=info.config,
             room_url=room.url,
-            token=token,
+            token=bot_token,
             bot_name=chat_bot_name,
             bot_config_list=info.config_list,
             services=info.services,
@@ -343,7 +310,7 @@ async def bot_join(chat_bot_name: str,
         raise Exception(detail)
 
     # Grab a token for the user to join with
-    user_token = daily_rest_helper.get_token(room.url, ROOM_TOKEN_EXPIRE_TIME)
+    user_token = daily_room_obj.get_token(room.url, exp)
 
     data = {
         "room_name": room.name,
@@ -411,32 +378,11 @@ async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo | dict
         detail = f"bot {chat_bot_name} don't exist"
         return APIResponse(error_code=ERROR_CODE_BOT_UN_REGISTER, error_detail=detail).model_dump()
 
-    # Create a Daily rest helper
-    daily_rest_helper = DailyRESTHelper(
-        os.getenv("DAILY_API_KEY", ""),
-        os.getenv("DAILY_API_URL", "https://api.daily.co/v1"))
-    room: DailyRoomObject | None = None
-    try:
-        room = daily_rest_helper.get_room_from_name(room_name)
-    except Exception as ex:
-        logging.info(
-            f"Failed to get room {room_name} from Daily REST API: {ex}, to new a room: {room_name}")
-        # Create a new room
-        try:
-            params = DailyRoomParams(
-                name=room_name,
-                properties=DailyRoomProperties(
-                    exp=time.time() + ROOM_EXPIRE_TIME,
-                ),
-            )
-            room = daily_rest_helper.create_room(params=params)
-        except Exception as e:
-            raise Exception(f"{e}")
-
+    daily_room_obj = DailyRoom()
+    room = daily_room_obj.create_room(room_name)
     # Give the agent a token to join the session
-    token = daily_rest_helper.get_token(room.url, ROOM_TOKEN_EXPIRE_TIME)
-
-    if not room or not token:
+    bot_token = daily_room_obj.get_token(room.url, DailyRoom.ROOM_EXPIRE_TIME)
+    if not room or not bot_token:
         detail = f"Failed to get token for room: {room.name}"
         return APIResponse(error_code=ERROR_CODE_BOT_FAIL_TOKEN, error_detail=detail).model_dump()
 
@@ -446,7 +392,7 @@ async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo | dict
         kwargs = DailyRoomBotArgs(
             bot_config=info.config,
             room_url=room.url,
-            token=token,
+            token=bot_token,
             bot_name=chat_bot_name,
             bot_config_list=info.config_list,
             services=info.services,
@@ -464,7 +410,7 @@ async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo | dict
         raise Exception(detail)
 
     # Grab a token for the user to join with
-    user_token = daily_rest_helper.get_token(room.url, ROOM_TOKEN_EXPIRE_TIME)
+    user_token = daily_room_obj.get_token(room.url, DailyRoom.ROOM_EXPIRE_TIME)
 
     data = {
         "room_name": room.name,
@@ -574,12 +520,9 @@ async def get_room_bots(room_name: str) -> dict[str, Any]:
             _room = room
 
     if _room is None:
-        daily_rest_helper = DailyRESTHelper(
-            os.getenv("DAILY_API_KEY", ""),
-            os.getenv("DAILY_API_URL", "https://api.daily.co/v1"))
-        print(os.getenv("DAILY_API_KEY", ""))
         try:
-            _room = daily_rest_helper.get_room_from_name(room_name)
+            daily_room_obj = DailyRoom()
+            _room = daily_room_obj.get_room(room_name)
         except Exception as ex:
             return APIResponse(
                 error_code=ERROR_CODE_NO_ROOM,

@@ -125,11 +125,12 @@ class DailyRoomBot(IBot):
 
     def get_llm_processor(self) -> LLMProcessor:
         if self._bot_config.llm and self._bot_config.llm.tag \
-                and self._bot_config.llm.tag == "engine_llm_processor":
+                and self._bot_config.llm.tag != "openai_llm_processor":
             # engine llm processor:
             # (llm_llamacpp, llm_personalai_proxy, llm_transformers etc..)
             session = Session(**SessionCtx(uuid.uuid4()).__dict__)
-            llm = LLMEnvInit.initLLMEngine()
+            llm = LLMEnvInit.initLLMEngine(
+                self._bot_config.llm.tag, self._bot_config.llm.args)
             llm_processor = VisionProcessor(llm, session)
         else:
             # default use openai llm processor

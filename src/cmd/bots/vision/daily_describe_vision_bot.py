@@ -1,4 +1,3 @@
-import argparse
 from apipeline.pipeline.pipeline import Pipeline, FrameProcessor
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.pipeline.task import PipelineTask, FrameDirection, PipelineParams
@@ -7,17 +6,23 @@ from apipeline.frames.data_frames import Frame, TextFrame
 from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
 from src.processors.aggregators.vision_image_frame import VisionImageFrameAggregator
 from src.processors.speech.tts.tts_processor import TTSProcessor
-from src.common.types import DailyParams, DailyRoomBotArgs
+from src.common.types import DailyParams
 from src.cmd.bots.base import DailyRoomBot
 from src.transports.daily import DailyTransport
 from src.types.frames.control_frames import UserImageRequestFrame
+from types.frames.data_frames import UserImageRawFrame
 from .. import register_daily_room_bots
 
 
 class UserImageRequester(FrameProcessor):
-    def __init__(self, participant_id: str | None = None):
+    def __init__(
+            self,
+            participant_id: str | None = None,
+            init_user_prompt: str | list = "let me take a look",
+    ):
         super().__init__()
         self._participant_id = participant_id
+        self._init_user_prompt = init_user_prompt
 
     def set_participant_id(self, participant_id: str):
         self._participant_id = participant_id
@@ -32,6 +37,10 @@ class UserImageRequester(FrameProcessor):
 
 @register_daily_room_bots.register
 class DailyDescribeVisionBot(DailyRoomBot):
+    def __init__(self, **args) -> None:
+        super().__init__(**args)
+        self.init_bot_config()
+
     async def arun(self):
         vad_analyzer = self.get_vad_analyzer()
         daily_params = DailyParams(
@@ -66,7 +75,7 @@ class DailyDescribeVisionBot(DailyRoomBot):
         llm_out_aggr = LLMAssistantResponseAggregator()
 
         @transport.event_handler("on_first_participant_joined")
-        async def on_first_participant_joined(transport, participant):
+        async def on_first_participant_joined(transport: DailyTransport, participant):
             transport.capture_participant_video(participant["id"])
             transport.capture_participant_transcription(participant["id"])
             image_requester.set_participant_id(participant["id"])

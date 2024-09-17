@@ -17,9 +17,11 @@ Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=Tr
 
 if __name__ == "__main__":
     """
+    python -m src.cmd.bots.main -f config/bots/daily_rtvi_general_bot.json
+    python -m src.cmd.bots.main -f config/bots/daily_describe_vision_bot.json
     """
     parser = argparse.ArgumentParser(description="RTVI Bot Example")
-    parser.add_argument("-u", type=str, default="https://weedge.daily.co/chat-bot", help="Room URL")
+    parser.add_argument("-u", type=str, default="", help="Room URL")
     parser.add_argument("-t", type=str, default="", help="Token")
     parser.add_argument(
         "-f", type=str,
@@ -51,6 +53,7 @@ if __name__ == "__main__":
             room_url=room_url,
             token=token,
             bot_name=bot_info.chat_bot_name,
+            bot_config=bot_info.config,
             bot_config_list=bot_info.config_list,
             services=bot_info.services,
         ).__dict__
