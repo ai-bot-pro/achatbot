@@ -1,3 +1,5 @@
+import logging
+
 from apipeline.pipeline.pipeline import Pipeline, FrameProcessor
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.pipeline.task import PipelineTask, FrameDirection, PipelineParams
@@ -10,7 +12,7 @@ from src.common.types import DailyParams
 from src.cmd.bots.base import DailyRoomBot
 from src.transports.daily import DailyTransport
 from src.types.frames.control_frames import UserImageRequestFrame
-from types.frames.data_frames import UserImageRawFrame
+from src.types.frames.data_frames import UserImageRawFrame
 from .. import register_daily_room_bots
 
 
@@ -32,6 +34,8 @@ class UserImageRequester(FrameProcessor):
 
         if self._participant_id and isinstance(frame, TextFrame):
             await self.push_frame(UserImageRequestFrame(self._participant_id), FrameDirection.UPSTREAM)
+        if isinstance(frame, UserImageRawFrame):
+            logging.info(f"UserImageRawFrame:{frame}")
         await self.push_frame(frame, direction)
 
 
@@ -77,7 +81,6 @@ class DailyDescribeVisionBot(DailyRoomBot):
         @transport.event_handler("on_first_participant_joined")
         async def on_first_participant_joined(transport: DailyTransport, participant):
             transport.capture_participant_video(participant["id"])
-            transport.capture_participant_transcription(participant["id"])
             image_requester.set_participant_id(participant["id"])
 
         pipeline = Pipeline([
