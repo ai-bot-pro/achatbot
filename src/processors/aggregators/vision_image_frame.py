@@ -1,7 +1,9 @@
+import logging
+
 from apipeline.frames.data_frames import Frame, ImageRawFrame, TextFrame
 from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
 
-from src.types.frames.data_frames import VisionImageRawFrame
+from src.types.frames.data_frames import LLMMessagesFrame, VisionImageRawFrame
 
 
 class VisionImageFrameAggregator(FrameProcessor):
@@ -17,6 +19,7 @@ class VisionImageFrameAggregator(FrameProcessor):
     >>> asyncio.run(print_frames(aggregator, ImageFrame(image=bytes([]), size=(0, 0))))
     VisionImageFrame, text: What do you see?, image size: 0x0, buffer size: 0 B
 
+    !NOTE: no llm chat history messages, just process raw TextFrame and ImageRawFrame
     """
 
     def __init__(self):

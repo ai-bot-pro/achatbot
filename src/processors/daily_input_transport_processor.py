@@ -133,7 +133,7 @@ class DailyInputTransportProcessor(AudioVADInputProcessor):
             frame = UserImageRawFrame(
                 image=buffer,
                 size=size,
-                format=None,  # from frame bytes, no save format, e.g.: JPEG,PNG
+                format="JPEG",  # from frame bytes, no save format, need add a save format e.g.: JPEG,PNG,
                 mode=color_format,  # default: RGB
                 user_id=participant_id,
             )

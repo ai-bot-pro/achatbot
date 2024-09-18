@@ -5,6 +5,7 @@ from apipeline.pipeline.runner import PipelineRunner
 from apipeline.pipeline.task import PipelineTask, FrameDirection, PipelineParams
 from apipeline.frames.data_frames import Frame, TextFrame
 
+from src.processors.aggregators.user_response import UserResponseAggregator
 from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
 from src.processors.aggregators.vision_image_frame import VisionImageFrameAggregator
 from src.processors.speech.tts.tts_processor import TTSProcessor
@@ -12,7 +13,7 @@ from src.common.types import DailyParams
 from src.cmd.bots.base import DailyRoomBot
 from src.transports.daily import DailyTransport
 from src.types.frames.control_frames import UserImageRequestFrame
-from src.types.frames.data_frames import UserImageRawFrame
+from src.types.frames.data_frames import LLMMessagesFrame, UserImageRawFrame
 from .. import register_daily_room_bots
 
 
@@ -20,7 +21,7 @@ class UserImageRequester(FrameProcessor):
     def __init__(
             self,
             participant_id: str | None = None,
-            init_user_prompt: str | list = "let me take a look",
+            init_user_prompt: str | list = "show me the money :)",
     ):
         super().__init__()
         self._participant_id = participant_id
@@ -34,8 +35,8 @@ class UserImageRequester(FrameProcessor):
 
         if self._participant_id and isinstance(frame, TextFrame):
             await self.push_frame(UserImageRequestFrame(self._participant_id), FrameDirection.UPSTREAM)
-        if isinstance(frame, UserImageRawFrame):
-            logging.info(f"UserImageRawFrame:{frame}")
+        elif isinstance(frame, UserImageRawFrame):
+            logging.debug(f"UserImageRawFrame:{frame}")
         await self.push_frame(frame, direction)
 
 
@@ -72,11 +73,12 @@ class DailyDescribeVisionBot(DailyRoomBot):
             daily_params,
         )
 
-        llm_in_aggr = LLMUserResponseAggregator()
+        # llm_in_aggr = LLMUserResponseAggregator()
+        in_aggr = UserResponseAggregator()
         image_requester = UserImageRequester()
         vision_aggregator = VisionImageFrameAggregator()
         llm_processor = self.get_llm_processor()
-        llm_out_aggr = LLMAssistantResponseAggregator()
+        # llm_out_aggr = LLMAssistantResponseAggregator()
 
         @transport.event_handler("on_first_participant_joined")
         async def on_first_participant_joined(transport: DailyTransport, participant):
@@ -86,13 +88,14 @@ class DailyDescribeVisionBot(DailyRoomBot):
         pipeline = Pipeline([
             transport.input_processor(),
             asr_processor,
-            llm_in_aggr,
+            # llm_in_aggr,
+            in_aggr,
             image_requester,
             vision_aggregator,
             llm_processor,
             tts_processor,
             transport.output_processor(),
-            llm_out_aggr,
+            # llm_out_aggr,
         ])
         task = PipelineTask(pipeline, params=PipelineParams())
         await PipelineRunner().run(task)

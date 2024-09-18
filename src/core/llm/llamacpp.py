@@ -62,7 +62,7 @@ class PromptInit():
 
 
 class LLamacppLLM(BaseLLM, ILlm):
-    TAG = "llm_llamacpp"
+    TAG = ["llm_llamacpp", "llm_llamacpp_vision"]
 
     @classmethod
     def get_args(cls, **kwargs) -> dict:
