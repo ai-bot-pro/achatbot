@@ -6,14 +6,13 @@ from apipeline.pipeline.task import PipelineTask, FrameDirection, PipelineParams
 from apipeline.frames.data_frames import Frame, TextFrame
 
 from src.processors.aggregators.user_response import UserResponseAggregator
-from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
 from src.processors.aggregators.vision_image_frame import VisionImageFrameAggregator
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.common.types import DailyParams
 from src.cmd.bots.base import DailyRoomBot
 from src.transports.daily import DailyTransport
 from src.types.frames.control_frames import UserImageRequestFrame
-from src.types.frames.data_frames import LLMMessagesFrame, UserImageRawFrame
+from src.types.frames.data_frames import UserImageRawFrame
 from .. import register_daily_room_bots
 
 
