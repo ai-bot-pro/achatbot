@@ -84,14 +84,14 @@ class DeepgramAsrProcessor(ASRProcessorBase):
 
     async def _connect(self):
         if await self._connection.start(self._live_options):
-            logging.debug(f"{self}: Connected to Deepgram")
+            logging.info(f"{self}: Connected to Deepgram")
         else:
             logging.error(f"{self}: Unable to connect to Deepgram")
 
     async def _disconnect(self):
         if self._connection.is_connected:
             await self._connection.finish()
-            logging.debug(f"{self}: Disconnected from Deepgram")
+            logging.info(f"{self}: Disconnected from Deepgram")
 
     async def _on_message(self, *args, **kwargs):
         result: LiveResultResponse = kwargs["result"]

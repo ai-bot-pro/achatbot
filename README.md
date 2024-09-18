@@ -94,7 +94,7 @@ pip install "achatbot[fastapi_bot_server]"
 
 ## local
 ```bash
-git clone https://github.com/ai-bot-pro/chat-bot.git
+git clone --recursive https://github.com/ai-bot-pro/chat-bot.git
 cd chat-bot
 python3 -m venv .venv_achatbot
 source .venv_achatbot/bin/activate
