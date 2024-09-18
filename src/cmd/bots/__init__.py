@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+
 from src.common.register import Register
 
 register_daily_room_bots = Register('daily-room-bots')
@@ -40,6 +41,9 @@ def import_bots(bot_name: str = "DummyBot"):
         return True
     if "DailyDescribeVisionBot" in bot_name:
         from .vision import daily_describe_vision_bot
+        return True
+    if "DailyMockVisionBot" in bot_name:
+        from .vision import daily_mock_vision_bot
         return True
 
     return False

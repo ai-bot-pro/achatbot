@@ -104,13 +104,25 @@ pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
 ```
 
 #  Run chat bots
+## Run chat bots with colab notebook
+
+| chat bot name                                      | task worker                     | colab                                                        | Device |
+| -------------------------------------------------- | ------------------------------- | ------------------------------------------------------------ | ------ |
+| sense_voice(asr) -> qwen (llm) -> cosy_voice (tts) | remote_queue_chat_bot_be_worker | <a href="https://colab.research.google.com/github/weedge/doraemon-nb/blob/main/chat_bot_gpu_worker.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | T4     |
+|                                                    |                                 |                                                              |        |
+|                                                    |                                 |                                                              |        |
+
+
+
 ## Run local chat bots
+
 > [!NOTE]
+>
 > - run src code, replace achatbot to src, don't need set `ACHATBOT_PKG=1` e.g.:
 >   ```
 >   TQDM_DISABLE=True \
 >        python -m src.cmd.local-terminal-chat.generate_audio2audio > log/std_out.log
->    ```
+>   ```
 > - PyAudio need install python3-pyaudio 
 > e.g. ubuntu `apt-get install python3-pyaudio`, macos `brew install portaudio`
 > see: https://pypi.org/project/PyAudio/
@@ -133,13 +145,13 @@ pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
     ```
     # asr openai whisper ckpt
     wget https://openaipublic.azureedge.net/main/whisper/models/ed3a0b6b1c0edf879ad9b11b1af5a0e6ab5db9205f891f668f8b0e6c6326e34e/base.pt -O ~/.achatbot/models/base.pt
-
+    
     # asr hf openai whisper ckpt for transformers pipeline to load
     huggingface-cli download openai/whisper-base  --local-dir ~/.achatbot/models/openai/whisper-base --local-dir-use-symlinks False
-
+    
     # asr hf faster whisper (CTranslate2)
     huggingface-cli download Systran/faster-whisper-base  --local-dir ~/.achatbot/models/Systran/faster-whisper-base --local-dir-use-symlinks False
-
+    
     # asr SenseVoice ckpt
     huggingface-cli download FunAudioLLM/SenseVoiceSmall  --local-dir ~/.achatbot/models/FunAudioLLM/SenseVoiceSmall --local-dir-use-symlinks False
     ```
@@ -147,13 +159,13 @@ pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
     ```
     # llm llamacpp Qwen2-Instruct
     huggingface-cli download Qwen/Qwen2-1.5B-Instruct-GGUF qwen2-1_5b-instruct-q8_0.gguf  --local-dir ~/.achatbot/models --local-dir-use-symlinks False
-
+    
     # llm llamacpp Qwen1.5-chat
     huggingface-cli download Qwen/Qwen1.5-7B-Chat-GGUF qwen1_5-7b-chat-q8_0.gguf  --local-dir ~/.achatbot/models --local-dir-use-symlinks False
-
+    
     # llm llamacpp phi-3-mini-4k-instruct
     huggingface-cli download microsoft/Phi-3-mini-4k-instruct-gguf Phi-3-mini-4k-instruct-q4.gguf --local-dir ~/.achatbot/models --local-dir-use-symlinks False
-
+    
     ```
     - tts model ckpt (default whipser ckpt model use base size)
     ```
@@ -275,9 +287,10 @@ ACHATBOT_PKG=1 RUN_OP=fe \
         TTS_TAG=tts_cosy_voice \
         python -m achatbot.cmd.remote-queue-chat.generate_audio2audio > ~/.achatbot/log/fe_std_out.log
    ```
-remote_queue_chat_bot_be_worker in colab examples :
-<a href="https://colab.research.google.com/github/weedge/doraemon-nb/blob/main/chat_bot_gpu_worker.ipynb" target="_parent">
-<img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
+   remote_queue_chat_bot_be_worker in colab examples :
+   <a href="https://colab.research.google.com/github/weedge/doraemon-nb/blob/main/chat_bot_gpu_worker.ipynb" target="_parent">
+   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
+   
    - sense_voice(asr) -> qwen (llm) -> cosy_voice (tts): 
 
 ## Run remote grpc tts speaker bot
