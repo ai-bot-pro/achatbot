@@ -12,7 +12,6 @@ from src.common.types import DailyParams
 from src.cmd.bots.base import DailyRoomBot
 from src.transports.daily import DailyTransport
 from src.types.frames.control_frames import UserImageRequestFrame
-from src.types.frames.data_frames import UserImageRawFrame
 from .. import register_daily_room_bots
 
 
@@ -34,8 +33,6 @@ class UserImageRequester(FrameProcessor):
 
         if self._participant_id and isinstance(frame, TextFrame):
             await self.push_frame(UserImageRequestFrame(self._participant_id), FrameDirection.UPSTREAM)
-        elif isinstance(frame, UserImageRawFrame):
-            logging.debug(f"UserImageRawFrame:{frame}")
         await self.push_frame(frame, direction)
 
 
