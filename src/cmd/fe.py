@@ -40,25 +40,36 @@ class TerminalChatClient:
         self.is_save_play_chunks = is_save_play_chunks
         self.is_save_record = is_save_record
 
+        self.stop_event = threading.Event()
+
     def run(self, conn: interface.IConnector):
-        if self.is_save_play_chunks:
-            self.player.set_args(on_play_chunk=self.on_play_chunk,
-                                 on_play_end=self.on_play_end)
-        self.player.open()
-        self.player.start(self.session)
-        play_t = threading.Thread(target=self.loop_recv,
-                                  args=(conn,))
-        play_t.start()
+        try:
+            if self.is_save_play_chunks:
+                self.player.set_args(on_play_chunk=self.on_play_chunk,
+                                     on_play_end=self.on_play_end)
+            self.player.open()
+            self.player.start(self.session)
+            play_t = threading.Thread(target=self.loop_recv,
+                                      args=(conn,))
+            play_t.start()
 
-        self.recorder.open()
-        record_t = threading.Thread(target=self.loop_record,
-                                    args=(conn,))
-        record_t.start()
+            self.recorder.open()
+            record_t = threading.Thread(target=self.loop_record,
+                                        args=(conn,))
+            record_t.start()
 
-        record_t.join()
-        play_t.join()
-        self.player.close()
-        self.recorder.close()
+            self.stop_event.wait()
+        except KeyboardInterrupt:
+            logging.info("FE Ctrl-C detected. Exiting!")
+            self.stop_event.set()
+            self.start_record_event.set()
+            self.player.close()
+            if play_t.is_alive():
+                play_t.join()
+            self.recorder.close()
+            if record_t.is_alive():
+                record_t.join()
+            logging.info("FE Ctrl-C detected. Exited!")
 
     def on_wakeword_detected(self, session: Session, data):
         if "bot_name" in session.ctx.state:
@@ -90,7 +101,7 @@ class TerminalChatClient:
             f"loop_record starting with session ctx: {self.session.ctx}")
         print(
             f"start loop_record with {self.recorder.TAG} ...", flush=True, file=sys.stderr)
-        while True:
+        while not self.stop_event.is_set():
             try:
                 print(f"-- chat round {self.session.chat_round} --",
                       flush=True, file=sys.stdout)
@@ -124,13 +135,15 @@ class TerminalChatClient:
                     f"loop_record Exception {ex} sid:{self.session.ctx.client_id} Trace {ex_trace}")
                 time.sleep(1)
 
+        logging.info("loop_record finished")
+
     def loop_recv(self, conn: interface.IConnector):
         print(
             f"start loop_recv with {self.player.TAG} ...", flush=True, file=sys.stderr)
         llm_gen_segments = 0
-        while True:
+        while not self.stop_event.is_set():
             try:
-                res = conn.recv('fe')
+                res = conn.recv('fe', 0.1)
                 if res is None:
                     continue
 
@@ -188,6 +201,7 @@ class TerminalChatClient:
                 logging.warning(f"loop_recv Exception {ex}, trace: {ex_trace}")
                 self.start_record_event.set()
                 llm_gen_segments = 0
+        logging.info("loop_recv finished")
 
     @staticmethod
     def clear_console():

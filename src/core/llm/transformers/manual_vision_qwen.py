@@ -106,6 +106,7 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
         message = {'role': self.args.user_role, 'content': prompt}
         self._chat_history.append(message)
         chat_history = self._chat_history.to_list()
+        logging.debug(f"chat_history:{chat_history}")
         text = self._tokenizer.apply_chat_template(
             chat_history,
             tokenize=False,

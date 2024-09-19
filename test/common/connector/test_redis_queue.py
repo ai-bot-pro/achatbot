@@ -9,6 +9,11 @@ from src.common.session import Session
 from src.common.types import LOG_DIR, SessionCtx
 from src.common.connector.redis_queue import RedisQueueConnector
 
+
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
+
 r"""
 REDIS_PASSWORD=*** python -m unittest test.common.connector.test_redis_queue
 """

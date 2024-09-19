@@ -58,6 +58,9 @@ class VADRecorder(AudioRecorder, IRecorder):
             self.set_args(num_frames=self.stream_info.in_frames_per_buffer)
 
         for frame in self.frame_genrator():
+            if frame is None:
+                yield None
+                continue
             if len(frame) == 0:
                 await asyncio.sleep(self.args.no_stream_sleep_time_s)
                 continue

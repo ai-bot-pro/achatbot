@@ -1,4 +1,3 @@
-import time
 import atexit
 import logging
 import multiprocessing
@@ -11,12 +10,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
-from src.common.types import DailyRoomBotArgs
 from src.common.logger import Logger
-from src.common.interface import IBot
-from src.services.help.daily_rest import DailyRESTHelper, \
-    DailyRoomObject, DailyRoomProperties, DailyRoomParams
+from src.services.help.daily_room import DailyRoom, DailyRoomObject
 from src.cmd.bots import import_bots, register_daily_room_bots
+from src.cmd.bots.run import BotTaskManager, BotTaskRunnerFE, RunBotInfo
 
 
 from dotenv import load_dotenv
@@ -27,16 +24,6 @@ Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=Tr
 
 
 # --------------------- API -----------------
-class BotInfo(BaseModel):
-    is_agent: bool = False
-    chat_bot_name: str = ""
-    config: dict = {}  # @deprecated use config_list options to conf
-    room_name: str = "chat-room"
-    room_url: str = ""
-    token: str = ""
-    config_list: list = []
-    services: dict = {}
-
 
 class APIResponse(BaseModel):
     error_code: int = 0
@@ -51,14 +38,6 @@ ERROR_CODE_BOT_FAIL_TOKEN = 10002
 ERROR_CODE_BOT_MAX_LIMIT = 10003
 ERROR_CODE_BOT_UN_PROC = 10004
 
-# ------------------ daily room --------------------------
-
-ROOM_EXPIRE_TIME = 30 * 60  # 30 minutes
-ROOM_TOKEN_EXPIRE_TIME = 30 * 60  # 30 minutes
-RANDOM_ROOM_EXPIRE_TIME = 5 * 60  # 5 minutes
-RANDOM_ROOM_TOKEN_EXPIRE_TIME = 5 * 60  # 5 minutes
-
-DAILYLANGCHAINRAGBOT_EXPIRE_TIME = 25 * 60  # 10 minutes
 # --------------------- Bot ----------------------------
 
 
@@ -66,32 +45,8 @@ MAX_BOTS_PER_ROOM = 10
 
 
 # Bot sub-process dict for status reporting and concurrency control
-bot_procs = {}
-
-
-def get_room_bot_proces_num(room_name):
-    num = 0
-    for val in bot_procs.values():
-        proc: multiprocessing.Process = val[0]
-        room: DailyRoomObject = val[1]
-        if room.name == room_name and proc.is_alive():
-            num += 1
-    return num
-
-
-def cleanup():
-    # Clean up function, just to be extra safe
-    for pid, (proc, room) in bot_procs.items():
-        if proc.is_alive():
-            proc.join()
-            proc.terminate()
-            proc.close()
-            logging.info(f"pid:{pid} room:{room.name} proc: {proc} close")
-        else:
-            logging.warning(f"pid:{pid} room:{room.name} proc: {proc} already closed")
-
-
-atexit.register(cleanup)
+bot_task_mgr = BotTaskManager()
+atexit.register(bot_task_mgr.cleanup)
 
 # ------------ Fast API Config ------------ #
 
@@ -168,16 +123,10 @@ async def metrics():
 @app.get("/create_room/{name}")
 async def create_room(name):
     """create room then redirect to room url"""
-    # Create a Daily rest helper
-    daily_rest_helper = DailyRESTHelper(
-        os.getenv("DAILY_API_KEY", ""),
-        os.getenv("DAILY_API_URL", "https://api.daily.co/v1"))
-    # Create a new room
     try:
-        params = DailyRoomParams(name=name, properties=DailyRoomProperties(
-            exp=time.time() + ROOM_EXPIRE_TIME,
-        ))
-        room: DailyRoomObject = daily_rest_helper.create_room(params=params)
+        daily_room_obj = DailyRoom()
+        room: DailyRoomObject = daily_room_obj.create_room(
+            name, exp_time_s=DailyRoom.ROOM_EXPIRE_TIME)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"{e}")
 
@@ -191,7 +140,8 @@ curl -XPOST "http://0.0.0.0:4321/create_random_room" \
 
 
 @app.post("/create_random_room")
-async def fastapi_create_random_room(exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME) -> JSONResponse:
+async def fastapi_create_random_room(
+        exp_time_s: int = DailyRoom.RANDOM_ROOM_EXPIRE_TIME) -> JSONResponse:
     try:
         res = await create_random_room(exp_time_s)
     except Exception as e:
@@ -200,28 +150,21 @@ async def fastapi_create_random_room(exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME) 
     return JSONResponse(res)
 
 
-async def create_random_room(exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME) -> dict[str, Any]:
+async def create_random_room(exp_time_s: int = DailyRoom.RANDOM_ROOM_EXPIRE_TIME) -> dict[str, Any]:
+    """create random room and token return"""
     if exp_time_s > 30 * 60:
         raise HTTPException(status_code=400, detail="exp_time_s must be less than 1800")
-    """create random room and token return"""
-    # Create a Daily rest helper
-    daily_rest_helper = DailyRESTHelper(
-        os.getenv("DAILY_API_KEY", ""),
-        os.getenv("DAILY_API_URL", "https://api.daily.co/v1"))
-    # Create a new room
-    params = DailyRoomParams(properties=DailyRoomProperties(
-        exp=time.time() + exp_time_s,
-    ))
-    room: DailyRoomObject = daily_rest_helper.create_room(params=params)
+    daily_room_obj = DailyRoom()
+    room: DailyRoomObject = daily_room_obj.create_random_room(exp_time_s=exp_time_s)
 
     # Give the agent a token to join the session
-    token = daily_rest_helper.get_token(room.url, RANDOM_ROOM_TOKEN_EXPIRE_TIME)
+    bot_token = daily_room_obj.get_token(room.url, exp_time_s=exp_time_s)
 
-    if not room or not token:
+    if not room or not bot_token:
         detail = f"Failed to get token for room: {room.name}"
         return APIResponse(error_code=ERROR_CODE_BOT_FAIL_TOKEN, error_detail=detail).model_dump()
 
-    data = {"room": room, "token": token}
+    data = {"room": room, "token": bot_token}
     return APIResponse(data=data).model_dump()
 
 
@@ -252,7 +195,7 @@ def register_bot(bot_name: str = "DummyBot") -> dict[str, Any]:
 
 
 # @app.post("/start_bot")
-def start_bot(info: BotInfo):
+def start_bot(info: RunBotInfo):
     """start run bot"""
     logging.info(f"start bot info:{info}")
 
@@ -277,7 +220,7 @@ curl -XPOST "http://0.0.0.0:4321/bot_join/DailyLangchainRAGBot" \
 
 
 @app.post("/bot_join/{chat_bot_name}")
-async def fastapi_bot_join(chat_bot_name: str, info: BotInfo) -> JSONResponse:
+async def fastapi_bot_join(chat_bot_name: str, info: RunBotInfo) -> JSONResponse:
     try:
         res = await bot_join(chat_bot_name, info)
     except Exception as e:
@@ -287,7 +230,7 @@ async def fastapi_bot_join(chat_bot_name: str, info: BotInfo) -> JSONResponse:
 
 
 async def bot_join(chat_bot_name: str,
-                   info: BotInfo | dict,
+                   info: RunBotInfo | dict,
                    services: dict = None,
                    config_list: list = None,
                    config: dict = None) -> dict[str, Any]:
@@ -295,7 +238,7 @@ async def bot_join(chat_bot_name: str,
 
     logging.info(f"chat_bot_name: {chat_bot_name} request bot info: {info}")
     if isinstance(info, dict):
-        info = BotInfo(**info)
+        info = RunBotInfo(**info)
 
     if import_bots(chat_bot_name) is False:
         detail = f"un import bot: {chat_bot_name}"
@@ -306,61 +249,39 @@ async def bot_join(chat_bot_name: str,
         detail = f"bot {chat_bot_name} don't exist"
         return APIResponse(error_code=ERROR_CODE_BOT_UN_REGISTER, error_detail=detail).model_dump()
 
-    # Create a Daily rest helper
-    daily_rest_helper = DailyRESTHelper(
-        os.getenv("DAILY_API_KEY", ""),
-        os.getenv("DAILY_API_URL", "https://api.daily.co/v1"))
-    room: DailyRoomObject | None = None
-    # Create a new room
-    exp = time.time() + RANDOM_ROOM_EXPIRE_TIME
+    exp = DailyRoom.RANDOM_ROOM_EXPIRE_TIME
     if chat_bot_name == "DailyLangchainRAGBot":
-        exp += DAILYLANGCHAINRAGBOT_EXPIRE_TIME
-    params = DailyRoomParams(
-        properties=DailyRoomProperties(
-            exp=exp,
-        ),
-    )
-    room = daily_rest_helper.create_room(params=params)
+        exp += DailyRoom.DAILYLANGCHAINRAGBOT_EXPIRE_TIME
 
+    daily_room_obj = DailyRoom()
+    room = daily_room_obj.create_random_room(exp)
     # Give the agent a token to join the session
-    token = daily_rest_helper.get_token(room.url, RANDOM_ROOM_TOKEN_EXPIRE_TIME)
-
-    if not room or not token:
+    bot_token = daily_room_obj.get_token(room.url, exp)
+    if not room or not bot_token:
         detail = f"Failed to get token for room: {room.name}"
         return APIResponse(error_code=ERROR_CODE_BOT_FAIL_TOKEN, error_detail=detail).model_dump()
 
     logging.info(f"room: {room}")
-    pid = 0
     try:
-        kwargs = DailyRoomBotArgs(
-            bot_config=info.config,
-            room_url=room.url,
-            token=token,
-            bot_name=chat_bot_name,
-            bot_config_list=info.config_list,
-            services=info.services,
-        ).__dict__
-        bot_obj: IBot = register_daily_room_bots[chat_bot_name](**kwargs)
-        bot_process: multiprocessing.Process = multiprocessing.Process(
-            target=bot_obj.run,
-            name=chat_bot_name)
-        bot_process.start()
-        pid = bot_process.pid
-        bot_procs[pid] = (bot_process, room)
-
+        info.chat_bot_name = chat_bot_name
+        info.room_name = room.name
+        info.room_url = room.url
+        info.token = bot_token
+        task_runner = BotTaskRunnerFE(bot_task_mgr, **vars(info))
+        task_runner.run()
     except Exception as e:
         detail = f"bot {chat_bot_name} failed to start process: {e}"
         raise Exception(detail)
 
     # Grab a token for the user to join with
-    user_token = daily_rest_helper.get_token(room.url, ROOM_TOKEN_EXPIRE_TIME)
+    user_token = daily_room_obj.get_token(room.url, exp)
 
     data = {
         "room_name": room.name,
         "room_url": room.url,
         "token": user_token,
-        "config": bot_obj.bot_config(),
-        "bot_id": pid,
+        "config": task_runner.bot_config,
+        "bot_id": task_runner.pid,
         "status": "running",
     }
     return APIResponse(data=data).model_dump()
@@ -386,17 +307,20 @@ curl -XPOST "http://0.0.0.0:4321/bot_join/chat-bot/DailyLangchainRAGBot" \
 
 
 @app.post("/bot_join/{room_name}/{chat_bot_name}")
-async def fastapi_bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo) -> JSONResponse:
+async def fastapi_bot_join_room(
+        room_name: str,
+        chat_bot_name: str,
+        info: RunBotInfo) -> JSONResponse:
     try:
         res = await bot_join_room(room_name, chat_bot_name, info)
     except Exception as e:
-        logging.error(f"Exception in bot_join_room: {e}")
+        logging.error(f"Exception in bot_join_room: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"{e}")
 
     return JSONResponse(res)
 
 
-async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo | dict,
+async def bot_join_room(room_name: str, chat_bot_name: str, info: RunBotInfo | dict,
                         services: dict = None,
                         config_list: list = None,
                         config: dict = None) -> dict[str, Any]:
@@ -404,9 +328,9 @@ async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo | dict
 
     logging.info(f"room_name: {room_name} chat_bot_name: {chat_bot_name} request bot info: {info}")
     if isinstance(info, dict):
-        info = BotInfo(**info)
+        info = RunBotInfo(**info)
 
-    num_bots_in_room = get_room_bot_proces_num(room_name)
+    num_bots_in_room = bot_task_mgr.get_bot_proces_num(room_name)
     logging.info(f"num_bots_in_room: {num_bots_in_room}")
     if num_bots_in_room >= MAX_BOTS_PER_ROOM:
         detail = f"Max bot limited reach for room: {room_name}"
@@ -421,67 +345,35 @@ async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo | dict
         detail = f"bot {chat_bot_name} don't exist"
         return APIResponse(error_code=ERROR_CODE_BOT_UN_REGISTER, error_detail=detail).model_dump()
 
-    # Create a Daily rest helper
-    daily_rest_helper = DailyRESTHelper(
-        os.getenv("DAILY_API_KEY", ""),
-        os.getenv("DAILY_API_URL", "https://api.daily.co/v1"))
-    room: DailyRoomObject | None = None
-    try:
-        room = daily_rest_helper.get_room_from_name(room_name)
-    except Exception as ex:
-        logging.info(
-            f"Failed to get room {room_name} from Daily REST API: {ex}, to new a room: {room_name}")
-        # Create a new room
-        try:
-            params = DailyRoomParams(
-                name=room_name,
-                properties=DailyRoomProperties(
-                    exp=time.time() + ROOM_EXPIRE_TIME,
-                ),
-            )
-            room = daily_rest_helper.create_room(params=params)
-        except Exception as e:
-            raise Exception(f"{e}")
-
+    daily_room_obj = DailyRoom()
+    room = daily_room_obj.create_room(room_name)
     # Give the agent a token to join the session
-    token = daily_rest_helper.get_token(room.url, ROOM_TOKEN_EXPIRE_TIME)
-
-    if not room or not token:
+    bot_token = daily_room_obj.get_token(room.url, DailyRoom.ROOM_EXPIRE_TIME)
+    if not room or not bot_token:
         detail = f"Failed to get token for room: {room.name}"
         return APIResponse(error_code=ERROR_CODE_BOT_FAIL_TOKEN, error_detail=detail).model_dump()
 
     logging.info(f"room: {room}")
-    pid = 0
     try:
-        kwargs = DailyRoomBotArgs(
-            bot_config=info.config,
-            room_url=room.url,
-            token=token,
-            bot_name=chat_bot_name,
-            bot_config_list=info.config_list,
-            services=info.services,
-        ).__dict__
-        bot_obj: IBot = register_daily_room_bots[chat_bot_name](**kwargs)
-        bot_process: multiprocessing.Process = multiprocessing.Process(
-            target=bot_obj.run,
-            name=chat_bot_name)
-        bot_process.start()
-        pid = bot_process.pid
-        bot_procs[pid] = (bot_process, room)
-
+        info.chat_bot_name = chat_bot_name
+        info.room_name = room.name
+        info.room_url = room.url
+        info.token = bot_token
+        task_runner = BotTaskRunnerFE(bot_task_mgr, **vars(info))
+        task_runner.run()
     except Exception as e:
         detail = f"bot {chat_bot_name} failed to start process: {e}"
         raise Exception(detail)
 
     # Grab a token for the user to join with
-    user_token = daily_rest_helper.get_token(room.url, ROOM_TOKEN_EXPIRE_TIME)
+    user_token = daily_room_obj.get_token(room.url, DailyRoom.ROOM_EXPIRE_TIME)
 
     data = {
         "room_name": room.name,
         "room_url": room.url,
         "token": user_token,
-        "config": bot_obj.bot_config(),
-        "bot_id": pid,
+        "config": task_runner.bot_config,
+        "bot_id": task_runner.pid,
         "status": "running",
     }
     return APIResponse(data=data).model_dump()
@@ -505,7 +397,7 @@ async def fastapi_get_status(pid: int) -> JSONResponse:
 
 async def get_status(pid: int) -> dict[str, Any]:
     # Look up the subprocess
-    val = bot_procs.get(pid)
+    val = bot_task_mgr.get_bot_processor(pid)
     if val is None:
         detail = "Bot not found"
         return APIResponse(error_code=ERROR_CODE_BOT_UN_PROC, error_detail=detail).model_dump()
@@ -548,7 +440,7 @@ async def fastapi_get_num_bots(room_name: str):
 
 async def get_num_bots(room_name: str):
     data = {
-        "num_bots": get_room_bot_proces_num(room_name),
+        "num_bots": bot_task_mgr.get_bot_proces_num(room_name),
     }
     return APIResponse(data=data).model_dump()
 
@@ -572,7 +464,7 @@ async def fastapi_get_room_bots(room_name: str):
 async def get_room_bots(room_name: str) -> dict[str, Any]:
     procs = []
     _room = None
-    for val in bot_procs.values():
+    for val in bot_task_mgr.bot_procs.values():
         proc: multiprocessing.Process = val[0]
         room: DailyRoomObject = val[1]
         if room.name == room_name:
@@ -584,12 +476,9 @@ async def get_room_bots(room_name: str) -> dict[str, Any]:
             _room = room
 
     if _room is None:
-        daily_rest_helper = DailyRESTHelper(
-            os.getenv("DAILY_API_KEY", ""),
-            os.getenv("DAILY_API_URL", "https://api.daily.co/v1"))
-        print(os.getenv("DAILY_API_KEY", ""))
         try:
-            _room = daily_rest_helper.get_room_from_name(room_name)
+            daily_room_obj = DailyRoom()
+            _room = daily_room_obj.get_room(room_name)
         except Exception as ex:
             return APIResponse(
                 error_code=ERROR_CODE_NO_ROOM,

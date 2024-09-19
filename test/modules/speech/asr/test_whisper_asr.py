@@ -15,6 +15,7 @@ ASR_TAG=whisper_mlx_asr python -m unittest test.modules.speech.asr.test_whisper_
 ASR_TAG=whisper_mlx_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
 
 ASR_LANG=zn MODEL_NAME_OR_PATH=./models/FunAudioLLM/SenseVoiceSmall ASR_VERBOSE=True ASR_TAG=sense_voice_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
+ASR_LANG=zn MODEL_NAME_OR_PATH=./models/FunAudioLLM/SenseVoiceSmall ASR_VERBOSE=True ASR_TAG=sense_voice_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
 
 ASR_LANG=zh MODEL_NAME_OR_PATH=whisper-large-v3 ASR_TAG=whisper_groq_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
 """

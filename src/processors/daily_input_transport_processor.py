@@ -115,7 +115,7 @@ class DailyInputTransportProcessor(AudioVADInputProcessor):
 
             self._video_renderers[participant_id]["render_next_frame"] = True
 
-    async def _on_participant_video_frame(self, participant_id: str, buffer, size, format):
+    async def _on_participant_video_frame(self, participant_id: str, buffer, size, color_format):
         render_frame = False
 
         curr_time = time.time()
@@ -131,10 +131,12 @@ class DailyInputTransportProcessor(AudioVADInputProcessor):
 
         if render_frame:
             frame = UserImageRawFrame(
-                user_id=participant_id,
                 image=buffer,
                 size=size,
-                format=format)
+                format="JPEG",  # from frame bytes, no save format, need add a save format e.g.: JPEG,PNG,
+                mode=color_format,  # default: RGB
+                user_id=participant_id,
+            )
             await self.queue_frame(frame)
 
         self._video_renderers[participant_id]["timestamp"] = curr_time

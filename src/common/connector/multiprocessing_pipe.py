@@ -20,10 +20,17 @@ class MultiprocessingPipeConnector(IConnector):
         if at == "be":
             return self.be_conn.send(data)
 
-    def recv(self, at: str):
+    def recv(self, at: str, timeout: float | None = None):
         if at not in ["be", "fe"]:
             raise Exception(f"recv at {at} must use 'be' or 'fe'")
         if at == "fe":
-            return self.fe_conn.recv()
+            if timeout is None:
+                return self.fe_conn.recv()
+            if timeout and self.fe_conn.poll(timeout):
+                return self.fe_conn.recv()
         if at == "be":
-            return self.be_conn.recv()
+            if timeout is None:
+                return self.be_conn.recv()
+            if timeout and self.be_conn.poll(timeout):
+                return self.be_conn.recv()
+        return None

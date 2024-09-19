@@ -6,7 +6,7 @@ import uuid
 from apipeline.frames.control_frames import EndFrame
 
 from src.processors.speech.asr.base import ASRProcessorBase
-from processors.vision.vision_processor import VisionProcessor
+from src.processors.vision.vision_processor import VisionProcessor
 from src.processors.speech.tts.base import TTSProcessorBase
 from src.common import interface
 from src.common.factory import EngineClass
@@ -125,11 +125,14 @@ class DailyRoomBot(IBot):
 
     def get_llm_processor(self) -> LLMProcessor:
         if self._bot_config.llm and self._bot_config.llm.tag \
-                and self._bot_config.llm.tag == "engine_llm_processor":
-            # engine llm processor:
+                and self._bot_config.llm.tag != "openai_llm_processor" \
+                and "vision" in self._bot_config.llm.tag:
+            # engine llm processor(just support vision model, other TODO):
             # (llm_llamacpp, llm_personalai_proxy, llm_transformers etc..)
+            logging.debug(f"init engine llm processor tag: {self._bot_config.llm.tag}")
             session = Session(**SessionCtx(uuid.uuid4()).__dict__)
-            llm = LLMEnvInit.initLLMEngine()
+            llm = LLMEnvInit.initLLMEngine(
+                self._bot_config.llm.tag, self._bot_config.llm.args)
             llm_processor = VisionProcessor(llm, session)
         else:
             # default use openai llm processor

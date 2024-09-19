@@ -18,6 +18,9 @@ from src.types.frames.data_frames import VisionImageRawFrame
 
 
 class VisionProcessor(VisionProcessorBase):
+    """
+    use vision lm to process image frames
+    """
 
     def __init__(
         self,
@@ -42,7 +45,7 @@ class VisionProcessor(VisionProcessorBase):
             yield ErrorFrame("llm not available")
             return
 
-        logging.debug(f"Analyzing image: {frame}")
+        logging.info(f"Analyzing image: {frame}")
 
         image = Image.frombytes(frame.mode, frame.size, frame.image)
         with BytesIO() as buffered:

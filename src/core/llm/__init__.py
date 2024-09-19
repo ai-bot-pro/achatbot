@@ -31,10 +31,13 @@ class LLMEnvInit():
         return engine
 
     @staticmethod
-    def initLLMEngine(tag: str | None = None) -> interface.ILlm | EngineClass:
+    def initLLMEngine(
+            tag: str | None = None,
+            kwargs: dict | None = None) -> interface.ILlm | EngineClass:
         # llm
         tag = tag if tag else os.getenv('LLM_TAG', "llm_llamacpp")
-        kwargs = LLMEnvInit.map_config_func[tag]()
+        if kwargs is None:
+            kwargs = LLMEnvInit.map_config_func[tag]()
         engine = LLMEnvInit.getEngine(tag, **kwargs)
         logging.info(f"initLLMEngine: {tag}, {engine}")
         return engine

@@ -205,6 +205,7 @@ INIT_TYPE=yaml_config TQDM_DISABLE=True \
     python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
 """
 import multiprocessing
+import logging
 import os
 
 from src.common.logger import Logger
@@ -223,15 +224,19 @@ def main():
     # BE
     be_init_event = multiprocessing.Event()
     c = multiprocessing.Process(
-        target=ChatWorker().run, args=(mp_conn, be_init_event))
+        target=ChatWorker().run, args=(mp_conn, be_init_event), daemon=True)
     c.start()
     be_init_event.wait()
 
     # FE
     TerminalChatClient().run(mp_conn)
 
-    c.join()
-    c.close()
+    if c.is_alive():
+        logging.info(f"process {c.pid} Exiting")
+        c.join()
+        c.terminate()
+        c.close()
+        logging.info(f"process Exited!")
 
     mp_conn.close()
 
