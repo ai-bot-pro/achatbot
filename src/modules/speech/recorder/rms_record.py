@@ -57,7 +57,7 @@ class RMSRecorder(AudioRecorder, IRecorder):
         start_time = time.time()
         if self.args.is_stream_callback is False:
             self.set_args(num_frames=self.stream_info.in_frames_per_buffer)
-        while True:
+        while self.audio.is_stream_active():
             data = self.get_record_buf()
             if len(data) == 0:
                 await asyncio.sleep(self.args.no_stream_sleep_time_s)

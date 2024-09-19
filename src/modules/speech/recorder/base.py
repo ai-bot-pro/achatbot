@@ -1,4 +1,5 @@
-from queue import Queue
+import logging
+from queue import Queue, Empty
 from typing import Generator, AsyncGenerator
 
 from src.common.factory import EngineClass
@@ -23,11 +24,18 @@ class AudioRecorder(EngineClass):
     def get_record_buf(self) -> bytes:
         if self.args.is_stream_callback is False:
             return self.audio.read_stream(self.args.num_frames)
-        return self.buffer_queue.get()
+        # !NOTE: no block for audio check is_stream_active
+        return self.buffer_queue.get(timeout=0.1)
 
     def frame_genrator(self) -> Generator[bytes, None, None]:
-        while True:
-            yield self.get_record_buf()
+        while self.audio.is_stream_active():
+            try:
+                frames = self.get_record_buf()
+                yield frames
+            except Empty:
+                continue
+        logging.info("frame_genrator end")
+        # yield None
 
     def open(self):
         self.audio.open_stream()

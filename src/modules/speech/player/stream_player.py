@@ -62,6 +62,10 @@ class StreamPlayer(AudioPlayer, IPlayer):
     def open(self):
         self.audio.open_stream()
 
+    def close(self):
+        self.audio.close()
+        self.playback_active = False
+
     def start(self, session: Session):
         self.first_chunk_played = False
         self.playback_active = True
@@ -77,6 +81,8 @@ class StreamPlayer(AudioPlayer, IPlayer):
         while (self.playback_active
                or not self.buffer_manager.empty()):
             try:
+                if self.audio.is_stream_active() is False:
+                    break
                 chunk = self.buffer_manager.get_from_buffer(timeout=1.0)
                 chunk and self._play_chunk(session, chunk)
 
@@ -91,6 +97,7 @@ class StreamPlayer(AudioPlayer, IPlayer):
 
         self.args.on_play_end and self.args.on_play_end(session)
         self.playback_active = False
+        logging.info("stream player end")
 
     def _play_chunk(self, session: Session, chunk):
         # handle mpeg

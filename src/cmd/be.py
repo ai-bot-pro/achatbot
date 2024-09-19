@@ -21,41 +21,48 @@ HISTORY_LIMIT = 10240
 
 
 class Audio2AudioChatWorker:
-
     def run(self, conn: interface.IConnector, e: Event = None):
-        # self.vad_detector: interface.IDetector | EngineClass = init.initVADEngine()
-        self.asr: interface.IAsr | EngineClass = init.initASREngine()
-        self.llm: interface.ILlm | EngineClass = init.initLLMEngine()
-        self.tts: interface.ITts | EngineClass = init.initTTSEngine()
-        self.model_name = self.llm.model_name()
+        try:
+            # self.vad_detector: interface.IDetector | EngineClass = init.initVADEngine()
+            self.asr: interface.IAsr | EngineClass = init.initASREngine()
+            self.llm: interface.ILlm | EngineClass = init.initLLMEngine()
+            self.tts: interface.ITts | EngineClass = init.initTTSEngine()
+            self.model_name = self.llm.model_name()
 
-        th_q = queue.Queue()
+            self.text_buffer = queue.Queue()
+            self.stop_event = threading.Event()
 
-        asr_llm_gen_t = threading.Thread(
-            target=self.loop_asr_llm_generate, args=(conn, th_q))
-        asr_llm_gen_t.start()
-        tts_synthesize_t = threading.Thread(
-            target=self.loop_tts_synthesize, args=(conn, th_q))
-        tts_synthesize_t.start()
+            asr_llm_gen_t = threading.Thread(
+                target=self.loop_asr_llm_generate, args=(conn,))
+            asr_llm_gen_t.start()
+            tts_synthesize_t = threading.Thread(
+                target=self.loop_tts_synthesize, args=(conn,))
+            tts_synthesize_t.start()
 
-        logging.info(f"init BE is ok")
-        e and e.set()
+            logging.info(f"init BE is ok")
+            e and e.set()
 
-        asr_llm_gen_t.join()
-        tts_synthesize_t.join()
+            self.stop_event.wait()
+        except KeyboardInterrupt:
+            logging.info("BE Ctrl-C detected. Exiting!")
+            self.stop_event.set()
+            if asr_llm_gen_t.is_alive():
+                asr_llm_gen_t.join()
+            if tts_synthesize_t.is_alive():
+                tts_synthesize_t.join()
+            logging.info("BE Ctrl-C detected. Exited!")
 
     def loop_asr_llm_generate(
             self,
-            conn: interface.IConnector,
-            text_buffer: queue.Queue):
+            conn: interface.IConnector):
         logging.info(f"loop_asr starting with asr: {self.asr}")
         print(
             f"start loop_asr_llm_generate with {self.asr.TAG} {self.llm.TAG} {self.model_name} ...",
             flush=True,
             file=sys.stderr)
-        while True:
+        while not self.stop_event.is_set():
             try:
-                res = conn.recv('be')
+                res = conn.recv('be', 0.1)
                 if res is None:
                     continue
                 msg, frames, session = res
@@ -76,9 +83,9 @@ class Audio2AudioChatWorker:
 
                 if hasattr(self.llm.args, 'model_type') \
                         and "chat" in self.llm.args.model_type:
-                    self.llm_chat(text, session, conn, text_buffer)
+                    self.llm_chat(text, session, conn)
                 else:
-                    self.llm_generate(text, session, conn, text_buffer)
+                    self.llm_generate(text, session, conn)
 
             except Exception as ex:
                 ex_trace = traceback.format_exc()
@@ -86,16 +93,17 @@ class Audio2AudioChatWorker:
                 conn.send(
                     ("BE_EXCEPTION", f"asr_llm_generate's exception: {ex}", None), 'be')
 
+        logging.info("loop_asr_llm_generate finished")
+
     def loop_tts_synthesize(
             self,
-            conn: interface.IConnector,
-            text_buffer: queue.Queue):
+            conn: interface.IConnector):
         print(
             f"start loop_tts_synthesize with {self.tts.TAG} ...", flush=True, file=sys.stderr)
         q_get_timeout = 0.1
-        while True:
+        while not self.stop_event.is_set():
             try:
-                msg, text, session = text_buffer.get(timeout=q_get_timeout)
+                msg, text, session = self.text_buffer.get(timeout=q_get_timeout)
                 if msg is None or msg.lower() == "stop":
                     break
                 if msg == "LLM_GENERATE_DONE":
@@ -125,8 +133,7 @@ class Audio2AudioChatWorker:
 
     def llm_generate(self, text: str,
                      session: Session,
-                     conn: interface.IConnector,
-                     text_buffer: queue.Queue):
+                     conn: interface.IConnector):
         logging.info(f"recv session.chat_history: {session.chat_history}")
 
         user_prompt = init.get_user_prompt(self.model_name, text)
@@ -147,7 +154,7 @@ class Audio2AudioChatWorker:
         for text in text_iter:
             assistant_text += text
             conn.send(("LLM_GENERATE_TEXT", text, session), 'be')
-            text_buffer.put_nowait(("LLM_GENERATE_TEXT", text, session))
+            self.text_buffer.put_nowait(("LLM_GENERATE_TEXT", text, session))
 
         logging.info(f"llm generate assistant_text: {assistant_text}")
         assistant_prompt = init.get_assistant_prompt(
@@ -159,12 +166,11 @@ class Audio2AudioChatWorker:
         print(f"{bot_name}: {out}", flush=True, file=sys.stdout)
 
         conn.send(("LLM_GENERATE_DONE", "", session), 'be')
-        text_buffer.put_nowait(("LLM_GENERATE_DONE", "", session))
+        self.text_buffer.put_nowait(("LLM_GENERATE_DONE", "", session))
         logging.info(f"send session.chat_history: {session.chat_history}")
 
     def llm_chat(self, text, session: Session,
-                 conn: interface.IConnector,
-                 text_buffer: queue.Queue):
+                 conn: interface.IConnector):
         session.ctx.state["prompt"] = text
         logging.info(f"llm chat prompt: {session.ctx.state['prompt']}")
         print(f"me: {session.ctx.state['prompt']}",
@@ -175,10 +181,10 @@ class Audio2AudioChatWorker:
         for text in text_iter:
             assistant_text += text
             conn.send(("LLM_GENERATE_TEXT", text, session), 'be')
-            text_buffer.put_nowait(("LLM_GENERATE_TEXT", text, session))
+            self.text_buffer.put_nowait(("LLM_GENERATE_TEXT", text, session))
         logging.info(f"llm chat assistant_text: {assistant_text}")
         bot_name = session.ctx.state["bot_name"] if "bot_name" in session.ctx.state else "bot"
         print(f"{bot_name}: {assistant_text}", flush=True, file=sys.stdout)
 
         conn.send(("LLM_GENERATE_DONE", "", session), 'be')
-        text_buffer.put_nowait(("LLM_GENERATE_DONE", "", session))
+        self.text_buffer.put_nowait(("LLM_GENERATE_DONE", "", session))
