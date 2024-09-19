@@ -14,6 +14,7 @@ class BotInfo(BaseModel):
     token: str = ""
     config_list: list = []
     services: dict = {}
+    bot_type: str = "daily"  # default: daily webrtc
 
 
 def import_bots(bot_name: str = "DummyBot"):

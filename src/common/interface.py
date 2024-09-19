@@ -247,7 +247,10 @@ class IConnector(ABC):
         raise NotImplemented("must be implemented in the child class")
 
     @abstractmethod
-    def recv(self, at: str):
+    def recv(self, at: str, timeout: int = None):
+        """
+        just simple recv, block with timeout default no timeout !TODO :)
+        """
         raise NotImplemented("must be implemented in the child class")
 
     @abstractmethod

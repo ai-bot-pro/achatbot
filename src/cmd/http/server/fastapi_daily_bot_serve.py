@@ -10,11 +10,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
-from src.common.types import DailyRoomBotArgs
 from src.common.logger import Logger
-from src.common.interface import IBot
 from src.services.help.daily_room import DailyRoom, DailyRoomObject
-from src.cmd.bots import BotInfo, import_bots, register_daily_room_bots
+from src.cmd.bots import import_bots, register_daily_room_bots
+from src.cmd.bots.run import BotTaskManager, BotTaskRunnerFE, RunBotInfo
 
 
 from dotenv import load_dotenv
@@ -46,32 +45,8 @@ MAX_BOTS_PER_ROOM = 10
 
 
 # Bot sub-process dict for status reporting and concurrency control
-bot_procs = {}
-
-
-def get_room_bot_proces_num(room_name):
-    num = 0
-    for val in bot_procs.values():
-        proc: multiprocessing.Process = val[0]
-        room: DailyRoomObject = val[1]
-        if room.name == room_name and proc.is_alive():
-            num += 1
-    return num
-
-
-def cleanup():
-    # Clean up function, just to be extra safe
-    for pid, (proc, room) in bot_procs.items():
-        if proc.is_alive():
-            proc.join()
-            proc.terminate()
-            proc.close()
-            logging.info(f"pid:{pid} room:{room.name} proc: {proc} close")
-        else:
-            logging.warning(f"pid:{pid} room:{room.name} proc: {proc} already closed")
-
-
-atexit.register(cleanup)
+bot_task_mgr = BotTaskManager()
+atexit.register(bot_task_mgr.cleanup)
 
 # ------------ Fast API Config ------------ #
 
@@ -220,7 +195,7 @@ def register_bot(bot_name: str = "DummyBot") -> dict[str, Any]:
 
 
 # @app.post("/start_bot")
-def start_bot(info: BotInfo):
+def start_bot(info: RunBotInfo):
     """start run bot"""
     logging.info(f"start bot info:{info}")
 
@@ -245,7 +220,7 @@ curl -XPOST "http://0.0.0.0:4321/bot_join/DailyLangchainRAGBot" \
 
 
 @app.post("/bot_join/{chat_bot_name}")
-async def fastapi_bot_join(chat_bot_name: str, info: BotInfo) -> JSONResponse:
+async def fastapi_bot_join(chat_bot_name: str, info: RunBotInfo) -> JSONResponse:
     try:
         res = await bot_join(chat_bot_name, info)
     except Exception as e:
@@ -255,7 +230,7 @@ async def fastapi_bot_join(chat_bot_name: str, info: BotInfo) -> JSONResponse:
 
 
 async def bot_join(chat_bot_name: str,
-                   info: BotInfo | dict,
+                   info: RunBotInfo | dict,
                    services: dict = None,
                    config_list: list = None,
                    config: dict = None) -> dict[str, Any]:
@@ -263,7 +238,7 @@ async def bot_join(chat_bot_name: str,
 
     logging.info(f"chat_bot_name: {chat_bot_name} request bot info: {info}")
     if isinstance(info, dict):
-        info = BotInfo(**info)
+        info = RunBotInfo(**info)
 
     if import_bots(chat_bot_name) is False:
         detail = f"un import bot: {chat_bot_name}"
@@ -287,24 +262,13 @@ async def bot_join(chat_bot_name: str,
         return APIResponse(error_code=ERROR_CODE_BOT_FAIL_TOKEN, error_detail=detail).model_dump()
 
     logging.info(f"room: {room}")
-    pid = 0
     try:
-        kwargs = DailyRoomBotArgs(
-            bot_config=info.config,
-            room_url=room.url,
-            token=bot_token,
-            bot_name=chat_bot_name,
-            bot_config_list=info.config_list,
-            services=info.services,
-        ).__dict__
-        bot_obj: IBot = register_daily_room_bots[chat_bot_name](**kwargs)
-        bot_process: multiprocessing.Process = multiprocessing.Process(
-            target=bot_obj.run,
-            name=chat_bot_name)
-        bot_process.start()
-        pid = bot_process.pid
-        bot_procs[pid] = (bot_process, room)
-
+        info.chat_bot_name = chat_bot_name
+        info.room_name = room.name
+        info.room_url = room.url
+        info.token = bot_token
+        task_runner = BotTaskRunnerFE(bot_task_mgr, **vars(info))
+        task_runner.run()
     except Exception as e:
         detail = f"bot {chat_bot_name} failed to start process: {e}"
         raise Exception(detail)
@@ -316,8 +280,8 @@ async def bot_join(chat_bot_name: str,
         "room_name": room.name,
         "room_url": room.url,
         "token": user_token,
-        "config": bot_obj.bot_config(),
-        "bot_id": pid,
+        "config": task_runner.bot_config,
+        "bot_id": task_runner.pid,
         "status": "running",
     }
     return APIResponse(data=data).model_dump()
@@ -343,7 +307,10 @@ curl -XPOST "http://0.0.0.0:4321/bot_join/chat-bot/DailyLangchainRAGBot" \
 
 
 @app.post("/bot_join/{room_name}/{chat_bot_name}")
-async def fastapi_bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo) -> JSONResponse:
+async def fastapi_bot_join_room(
+        room_name: str,
+        chat_bot_name: str,
+        info: RunBotInfo) -> JSONResponse:
     try:
         res = await bot_join_room(room_name, chat_bot_name, info)
     except Exception as e:
@@ -353,7 +320,7 @@ async def fastapi_bot_join_room(room_name: str, chat_bot_name: str, info: BotInf
     return JSONResponse(res)
 
 
-async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo | dict,
+async def bot_join_room(room_name: str, chat_bot_name: str, info: RunBotInfo | dict,
                         services: dict = None,
                         config_list: list = None,
                         config: dict = None) -> dict[str, Any]:
@@ -361,9 +328,9 @@ async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo | dict
 
     logging.info(f"room_name: {room_name} chat_bot_name: {chat_bot_name} request bot info: {info}")
     if isinstance(info, dict):
-        info = BotInfo(**info)
+        info = RunBotInfo(**info)
 
-    num_bots_in_room = get_room_bot_proces_num(room_name)
+    num_bots_in_room = bot_task_mgr.get_bot_proces_num(room_name)
     logging.info(f"num_bots_in_room: {num_bots_in_room}")
     if num_bots_in_room >= MAX_BOTS_PER_ROOM:
         detail = f"Max bot limited reach for room: {room_name}"
@@ -387,24 +354,13 @@ async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo | dict
         return APIResponse(error_code=ERROR_CODE_BOT_FAIL_TOKEN, error_detail=detail).model_dump()
 
     logging.info(f"room: {room}")
-    pid = 0
     try:
-        kwargs = DailyRoomBotArgs(
-            bot_config=info.config,
-            room_url=room.url,
-            token=bot_token,
-            bot_name=chat_bot_name,
-            bot_config_list=info.config_list,
-            services=info.services,
-        ).__dict__
-        bot_obj: IBot = register_daily_room_bots[chat_bot_name](**kwargs)
-        bot_process: multiprocessing.Process = multiprocessing.Process(
-            target=bot_obj.run,
-            name=chat_bot_name)
-        bot_process.start()
-        pid = bot_process.pid
-        bot_procs[pid] = (bot_process, room)
-
+        info.chat_bot_name = chat_bot_name
+        info.room_name = room.name
+        info.room_url = room.url
+        info.token = bot_token
+        task_runner = BotTaskRunnerFE(bot_task_mgr, **vars(info))
+        task_runner.run()
     except Exception as e:
         detail = f"bot {chat_bot_name} failed to start process: {e}"
         raise Exception(detail)
@@ -416,8 +372,8 @@ async def bot_join_room(room_name: str, chat_bot_name: str, info: BotInfo | dict
         "room_name": room.name,
         "room_url": room.url,
         "token": user_token,
-        "config": bot_obj.bot_config(),
-        "bot_id": pid,
+        "config": task_runner.bot_config,
+        "bot_id": task_runner.pid,
         "status": "running",
     }
     return APIResponse(data=data).model_dump()
@@ -441,7 +397,7 @@ async def fastapi_get_status(pid: int) -> JSONResponse:
 
 async def get_status(pid: int) -> dict[str, Any]:
     # Look up the subprocess
-    val = bot_procs.get(pid)
+    val = bot_task_mgr.get_bot_processor(pid)
     if val is None:
         detail = "Bot not found"
         return APIResponse(error_code=ERROR_CODE_BOT_UN_PROC, error_detail=detail).model_dump()
@@ -484,7 +440,7 @@ async def fastapi_get_num_bots(room_name: str):
 
 async def get_num_bots(room_name: str):
     data = {
-        "num_bots": get_room_bot_proces_num(room_name),
+        "num_bots": bot_task_mgr.get_bot_proces_num(room_name),
     }
     return APIResponse(data=data).model_dump()
 
@@ -508,7 +464,7 @@ async def fastapi_get_room_bots(room_name: str):
 async def get_room_bots(room_name: str) -> dict[str, Any]:
     procs = []
     _room = None
-    for val in bot_procs.values():
+    for val in bot_task_mgr.bot_procs.values():
         proc: multiprocessing.Process = val[0]
         room: DailyRoomObject = val[1]
         if room.name == room_name:
