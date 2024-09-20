@@ -6,19 +6,15 @@ import uuid
 from apipeline.frames.control_frames import EndFrame
 
 from src.processors.speech.asr.base import ASRProcessorBase
-from src.processors.vision.vision_processor import VisionProcessor
+from src.processors.llm.base import LLMProcessor
 from src.processors.speech.tts.base import TTSProcessorBase
-from src.common import interface
-from src.common.factory import EngineClass
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.modules.speech.asr import ASREnvInit
 from src.core.llm import LLMEnvInit
 from src.modules.speech.tts import TTSEnvInit
-from src.processors.speech.asr.asr_processor import ASRProcessor
-from src.processors.llm.base import LLMProcessor
-from src.processors.speech.tts.tts_processor import TTSProcessor
-from src.processors.llm.openai_llm_processor import OpenAILLMProcessor
 from src.types.ai_conf import ASRConfig, LLMConfig, TTSConfig, AIConfig
+from src.common import interface
+from src.common.factory import EngineClass
 from src.common.types import DailyRoomBotArgs
 from src.common.interface import IBot
 from src.common.session import Session
@@ -108,6 +104,7 @@ class DailyRoomBot(IBot):
                 **self._bot_config.asr.args)
         else:
             # use asr engine processor
+            from src.processors.speech.asr.asr_processor import ASRProcessor
             asr: interface.IAsr | EngineClass | None = None
             if self._bot_config.asr and self._bot_config.asr.tag \
                     and self._bot_config.asr.args:
@@ -129,12 +126,14 @@ class DailyRoomBot(IBot):
                 and "vision" in self._bot_config.llm.tag:
             # engine llm processor(just support vision model, other TODO):
             # (llm_llamacpp, llm_personalai_proxy, llm_transformers etc..)
+            from src.processors.vision.vision_processor import VisionProcessor
             logging.debug(f"init engine llm processor tag: {self._bot_config.llm.tag}")
             session = Session(**SessionCtx(uuid.uuid4()).__dict__)
             llm = LLMEnvInit.initLLMEngine(
                 self._bot_config.llm.tag, self._bot_config.llm.args)
             llm_processor = VisionProcessor(llm, session)
         else:
+            from src.processors.llm.openai_llm_processor import OpenAILLMProcessor
             # default use openai llm processor
             api_key = os.environ.get("OPENAI_API_KEY")
             if "groq" in self._bot_config.llm.base_url:
@@ -161,12 +160,14 @@ class DailyRoomBot(IBot):
                 tts_processor = CartesiaTTSProcessor(**self._bot_config.tts.args)
             else:
                 # use tts engine processor
+                from src.processors.speech.tts.tts_processor import TTSProcessor
                 tts = TTSEnvInit.getEngine(
                     self._bot_config.tts.tag, **self._bot_config.tts.args)
                 self._bot_config.tts = TTSConfig(tag=tts.SELECTED_TAG, args=tts.get_args_dict())
                 tts_processor = TTSProcessor(tts=tts, session=self.session)
         else:
             # default tts engine processor
+            from src.processors.speech.tts.tts_processor import TTSProcessor
             logging.info(f"use default tts engine processor")
             tag = None
             if self._bot_config.tts and self._bot_config.tts.tag:
