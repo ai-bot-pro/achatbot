@@ -1,11 +1,6 @@
 from abc import abstractmethod
-import logging
 
-from apipeline.processors.frame_processor import FrameDirection
-
-from src.processors.aggregators.openai_llm_context import OpenAILLMContext
 from src.processors.ai_processor import AIProcessor
-from src.types.frames.control_frames import UserImageRequestFrame
 
 
 class LLMProcessor(AIProcessor):
@@ -43,36 +38,3 @@ class LLMProcessor(AIProcessor):
         if None in self._callbacks.keys():
             return True
         return function_name in self._callbacks.keys()
-
-    async def call_function(
-            self,
-            *,
-            context: OpenAILLMContext,
-            tool_call_id: str,
-            function_name: str,
-            arguments: str) -> None:
-        f = None
-        if function_name in self._callbacks.keys():
-            f = self._callbacks[function_name]
-        elif None in self._callbacks.keys():
-            f = self._callbacks[None]
-        else:
-            return None
-        await context.call_function(
-            f,
-            function_name=function_name,
-            tool_call_id=tool_call_id,
-            arguments=arguments,
-            llm=self)
-
-    # QUESTION FOR CB: maybe this isn't needed anymore?
-    async def call_start_function(self, context: OpenAILLMContext, function_name: str):
-        if function_name in self._start_callbacks.keys():
-            await self._start_callbacks[function_name](function_name, self, context)
-        elif None in self._start_callbacks.keys():
-            return await self._start_callbacks[None](function_name, self, context)
-
-    async def request_image_frame(self, user_id: str, *, text_content: str | None = None):
-        await self.push_frame(
-            UserImageRequestFrame(user_id=user_id, context=text_content),
-            FrameDirection.UPSTREAM)
