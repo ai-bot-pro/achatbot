@@ -24,7 +24,7 @@ achatbot factory, create chat bots with llm, asr, tts, vad, etc..
   - ai_frameworks
     - [x] langchain rag
     - [ ] (!TODO: llamaindex rag)
-    - [ ] (!TODO: autoagen rag)
+    - [ ] (!TODO: autoagen agent)
   - realtime voice inference(RTVI),
   - transport: 
     - webRTC/webSocket: 
