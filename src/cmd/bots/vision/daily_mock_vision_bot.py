@@ -65,9 +65,9 @@ class MockVisionLMProcessor(VisionProcessorBase):
 
         logging.info(f"Mock img_base64_str+text: {img_base64_str} {frame.text}")
 
-        await asyncio.sleep(1)
+        # await asyncio.sleep(1)
 
-        yield TextFrame(text="hello,你好！niubility, 你他娘的是个人才。")
+        yield TextFrame(text=f"你好！niubility, 你他娘的是个人才。请访问 github a chat bot 进行把玩, 可以在colab中部署免费把玩。")
 
 
 @register_daily_room_bots.register

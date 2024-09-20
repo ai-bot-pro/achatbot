@@ -14,20 +14,29 @@ achatbot factory, create chat bots with llm, asr, tts, vad, etc..
   - grpc-terminal-chat(be/fe)
   - grpc-speaker
   - http fastapi_daily_bot_serve (with chat bots pipeline)
-- support transport connector: pipe(UNIX socket), grpc, queue (redis)
+- support transport connector: 
+  - [x] pipe(UNIX socket), 
+  - [x] grpc, 
+  - [x] queue (redis),
   - [ ] (!TODO: websocket, TCP/IP socket)
 - chat bot processors: 
   - aggreators(llm use, assistant message), 
-  - ai_frameworks(langchain rag)
+  - ai_frameworks
+    - [x] langchain rag
     - [ ] (!TODO: llamaindex rag)
+    - [ ] (!TODO: autoagen rag)
   - realtime voice inference(RTVI),
   - transport: 
-    - webRTC/webSocket: **daily**
+    - webRTC/webSocket: 
+      - [x] **daily**
       - [ ] (!TODO: **livekit**, **cloudflare-calls**, etc..)
   - ai processor: llm, tts, asr etc..
 - core module:
-  - local llm: llama-cpp, transformers(manual, pipeline)
-    - [ ] (!TODO: baby-llm [llama2](https://github.com/ai-bot-pro/baby-llm/tree/main/llama2), [~~gundam~~](https://github.com/ai-bot-pro/baby-llm/tree/main/gundam)), mlx_lm etc..)
+  - local llm: 
+    - [x] llama-cpp, 
+    - [x] transformers(manual, pipeline)
+    - [ ] mlx_lm 
+    - [ ] (!TODO: baby-llm [llama2](https://github.com/ai-bot-pro/baby-llm/tree/main/llama2), [~~gundam~~](https://github.com/ai-bot-pro/baby-llm/tree/main/gundam)), etc..)
   - api llm: personal-ai(like openai api, other ai provider)
 - AI modules:
   - functions:
@@ -65,6 +74,8 @@ use this web sandbox to test config, actions with [DailyRTVIGeneralBot](https://
 deploy it to cloudflare pages, access https://educator-client.pages.dev/
 - [ui/web-client-ui](https://github.com/ai-bot-pro/web-client-ui)
 deploy it to cloudflare pages, access https://chat-client-weedge.pages.dev/
+- [vite-react-web-vision](https://github.com/ai-bot-pro/vite-react-web-vision) 
+deploy it to cloudflare pages, access https://vision-weedge.pages.dev/
 
 
 ## Server Deploy (CD)
