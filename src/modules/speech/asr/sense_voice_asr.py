@@ -2,6 +2,7 @@ from typing import AsyncGenerator
 import asyncio
 import re
 
+from src.common.device_cuda import CUDAInfo
 from src.common.utils.audio_utils import bytes2TorchTensorWith16
 from src.common.session import Session
 from src.modules.speech.asr.base import ASRBase
@@ -13,9 +14,14 @@ class SenseVoiceAsr(ASRBase):
     def __init__(self, **args) -> None:
         from deps.SenseVoice.model import SenseVoiceSmall
         super().__init__(**args)
+        info = CUDAInfo()
+        device = "cpu"
+        if info.is_cuda:
+            device = "cuda:0"
         self.model: SenseVoiceSmall = None
         self.model, self.kwargs = SenseVoiceSmall.from_pretrained(
-            model=self.args.model_name_or_path)
+            model=self.args.model_name_or_path, device=device)
+        self.model.eval()
 
     def set_audio_data(self, audio_data):
         if isinstance(audio_data, (bytes, bytearray)):
@@ -42,6 +48,7 @@ class SenseVoiceAsr(ASRBase):
             data_in=self.asr_audio,
             language=self.args.language,  # "zn", "en", "yue", "ja", "ko", "nospeech"
             use_itn=False,  # use Inverse Text Normalization，ITN
+            ban_emo_unk=False,
             **self.kwargs,
         )
         clean_text = re.sub(r'<\|.*?\|>', '', transcription[0]["text"])
