@@ -4,12 +4,12 @@ import logging
 from typing import AsyncGenerator
 
 from PIL import Image
-from apipeline.pipeline.pipeline import Pipeline, FrameProcessor
+from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.runner import PipelineRunner
-from apipeline.pipeline.task import PipelineTask, FrameDirection, PipelineParams
+from apipeline.pipeline.task import PipelineTask, PipelineParams
 from apipeline.frames.data_frames import Frame, TextFrame
-from apipeline.frames.sys_frames import ErrorFrame
 
+from src.processors.user_image_request_processor import UserImageRequestProcessor
 from src.common.utils.img_utils import image_bytes_to_base64_data_uri
 from src.processors.vision.base import VisionProcessorBase
 from src.processors.aggregators.user_response import UserResponseAggregator
@@ -18,30 +18,8 @@ from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.common.types import DailyParams
 from src.cmd.bots.base import DailyRoomBot
 from src.transports.daily import DailyTransport
-from src.types.frames.control_frames import UserImageRequestFrame
 from src.types.frames.data_frames import VisionImageRawFrame
 from .. import register_daily_room_bots
-
-
-class UserImageRequester(FrameProcessor):
-    def __init__(
-            self,
-            participant_id: str | None = None,
-            init_user_prompt: str | list = "show me the money :)",
-    ):
-        super().__init__()
-        self._participant_id = participant_id
-        self._init_user_prompt = init_user_prompt
-
-    def set_participant_id(self, participant_id: str):
-        self._participant_id = participant_id
-
-    async def process_frame(self, frame: Frame, direction: FrameDirection):
-        await super().process_frame(frame, direction)
-
-        if self._participant_id and isinstance(frame, TextFrame):
-            await self.push_frame(UserImageRequestFrame(self._participant_id), FrameDirection.UPSTREAM)
-        await self.push_frame(frame, direction)
 
 
 class MockVisionLMProcessor(VisionProcessorBase):
@@ -67,7 +45,7 @@ class MockVisionLMProcessor(VisionProcessorBase):
 
         # await asyncio.sleep(1)
 
-        yield TextFrame(text=f"你好！niubility, 你他娘的是个人才。请访问 github a chat bot 进行把玩, 可以在colab中部署免费把玩。")
+        yield TextFrame(text=f"你好！niubility, 你他娘的是个人才。请访问 github achatbot 进行把玩, 可以在colab中部署免费把玩。")
 
 
 @register_daily_room_bots.register
@@ -105,14 +83,14 @@ class DailyMockVisionBot(DailyRoomBot):
 
         # llm_in_aggr = LLMUserResponseAggregator()
         in_aggr = UserResponseAggregator()
-        image_requester = UserImageRequester()
+        image_requester = UserImageRequestProcessor()
         vision_aggregator = VisionImageFrameAggregator()
         llm_processor = MockVisionLMProcessor()
         # llm_out_aggr = LLMAssistantResponseAggregator()
 
         @transport.event_handler("on_first_participant_joined")
         async def on_first_participant_joined(transport: DailyTransport, participant):
-            transport.capture_participant_video(participant["id"])
+            transport.capture_participant_video(participant["id"], framerate=0)
             image_requester.set_participant_id(participant["id"])
 
         pipeline = Pipeline([

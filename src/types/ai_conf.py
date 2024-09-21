@@ -27,6 +27,11 @@ DEFAULT_LLM_MODEL = os.getenv("LLM_OPENAI_MODEL", TOGETHER_LLM_MODEL)
 DEFAULT_LLM_LANG = "zh"
 
 
+class StreamConfig(BaseModel):
+    tag: Optional[str] = "daily_room_stream"
+    args: Optional[dict] = None
+
+
 class VADConfig(BaseModel):
     tag: Optional[str] = None
     args: Optional[dict] = None
@@ -58,3 +63,8 @@ class AIConfig(BaseModel):
     asr: Optional[ASRConfig] = None
     llm: Optional[LLMConfig] = None
     tts: Optional[TTSConfig] = None
+    # TODO: @weedge
+    # - use local pyaudio/cv2 streaming;
+    # - use remote RTC livekit or agora streaming
+    # need to add stream config
+    # stream: Optional[StreamConfig] = None
