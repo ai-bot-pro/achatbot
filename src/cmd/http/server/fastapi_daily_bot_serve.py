@@ -219,8 +219,25 @@ curl -XPOST "http://0.0.0.0:4321/bot_join/DailyLangchainRAGBot" \
 """
 
 
+@app.post("/realtime_ai/bot_join/{chat_bot_name}")
+async def fastapi_bot_join(chat_bot_name: str, info: RunBotInfo) -> JSONResponse:
+    # for realtime-ai, no biz code, api design not good
+    try:
+        res = await bot_join(chat_bot_name, info)
+    except Exception as e:
+        logging.error(f"Exception in bot_join: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"{e}")
+    if res['error_code'] > 0:
+        raise HTTPException(status_code=500, detail=f"{res['error_detail']}")
+    return JSONResponse({
+        "room_url": res['data']['room_url'],
+        "token": res['data']['token']
+    })
+
+
 @app.post("/bot_join/{chat_bot_name}")
 async def fastapi_bot_join(chat_bot_name: str, info: RunBotInfo) -> JSONResponse:
+    # for chat-bot-rtvi-client
     try:
         res = await bot_join(chat_bot_name, info)
     except Exception as e:
@@ -304,6 +321,25 @@ curl -XPOST "http://0.0.0.0:4321/bot_join/chat-bot/DailyLangchainRAGBot" \
     -H "Content-Type: application/json" \
     -d $'{"config":{"llm":{"model":"llama-3.1-70b-versatile","messages":[{"role":"system","content":""}]},"tts":{"voice":"2ee87190-8f84-4925-97da-e52547f9462c"}}}' | jq .
 """
+
+
+@app.post("/realtime-ai/bot_join/{room_name}/{chat_bot_name}")
+async def fastapi_bot_join_room(
+        room_name: str,
+        chat_bot_name: str,
+        info: RunBotInfo) -> JSONResponse:
+    try:
+        res = await bot_join_room(room_name, chat_bot_name, info)
+    except Exception as e:
+        logging.error(f"Exception in bot_join_room: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"{e}")
+
+    if res['error_code'] > 0:
+        raise HTTPException(status_code=500, detail=f"{res['error_detail']}")
+    return JSONResponse({
+        "room_url": res['data']['room_url'],
+        "token": res['data']['token']
+    })
 
 
 @app.post("/bot_join/{room_name}/{chat_bot_name}")
