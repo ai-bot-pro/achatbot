@@ -350,13 +350,14 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                         processors.append(rtvi)
                     case "llm":
                         if self._bot_config.llm:
-                            processors.append(llm_user_ctx_aggr)
                             if self._bot_config.llm.tag and \
                                     "vision" in self._bot_config.llm.tag:
                                 self.image_requester = UserImageRequestProcessor()
                                 processors.append(self.image_requester)
                                 vision_aggregator = VisionImageFrameAggregator()
                                 processors.append(vision_aggregator)
+                            else:
+                                processors.append(llm_user_ctx_aggr)
                         self.llm_processor = self.get_llm_processor()
                         processors.append(self.llm_processor)
                     case "tts":
@@ -384,7 +385,11 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         processors.append(self.transport.output_processor())
         # print(processors)
         if self._bot_config.llm:
-            processors.append(llm_assistant_ctx_aggr)
+            if self._bot_config.llm.tag and \
+                    "vision" in self._bot_config.llm.tag:
+                pass
+            else:
+                processors.append(llm_assistant_ctx_aggr)
         self.task = PipelineTask(Pipeline(processors), params=self._pipeline_params)
 
         self.transport.add_event_handler(
