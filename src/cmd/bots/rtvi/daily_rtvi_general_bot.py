@@ -53,6 +53,14 @@ class DailyRTVIGeneralBot(DailyRoomBot):
             ),
         )
         self.init_bot_config()
+        self.init_processor()
+
+    def init_processor(self):
+        # !TODO: services to init
+        self.asr_processor = None
+        self.image_requester = None
+        self.llm_processor = None
+        self.tts_processor = None
 
     def init_bot_config(self):
         """
