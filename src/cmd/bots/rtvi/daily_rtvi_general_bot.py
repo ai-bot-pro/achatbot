@@ -434,10 +434,10 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                 and "vision" in self._bot_config.llm.tag:
             match self._bot_config.tts.language:
                 case "zh":
-                    await self.tts_processor.say("你好，欢迎使用 Vision Bot. 我是一名虚拟助手，可以结合视频进行提问")
+                    await self.tts_processor.say("你好，欢迎使用 Vision Bot. 我是一名虚拟助手，可以结合视频进行提问。")
                 case "en":
-                    await self.tts_processor.say("Hello, welcome to use Vision Bot, I am your virtual assistant. u can ask me with video")
+                    await self.tts_processor.say("Hello, welcome to use Vision Bot, I am your virtual assistant. u can ask me with video.")
                 case _:
-                    await self.tts_processor.say("Hello, welcome to use Vision Bot, I am your virtual assistant. u can ask me with video")
+                    await self.tts_processor.say("Hello, welcome to use Vision Bot, I am your virtual assistant. u can ask me with video.")
 
         logging.info("First participant joined")

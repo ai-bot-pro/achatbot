@@ -92,6 +92,7 @@ class DailyMockVisionBot(DailyRoomBot):
         async def on_first_participant_joined(transport: DailyTransport, participant):
             transport.capture_participant_video(participant["id"], framerate=0)
             image_requester.set_participant_id(participant["id"])
+            await tts_processor.say("你好，欢迎使用 Vision Bot. 我是一名虚拟助手，可以结合视频进行提问。")
 
         pipeline = Pipeline([
             transport.input_processor(),
