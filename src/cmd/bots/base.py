@@ -162,7 +162,8 @@ class DailyRoomBot(IBot):
                 from src.processors.speech.tts.tts_processor import TTSProcessor
                 tts = TTSEnvInit.getEngine(
                     self._bot_config.tts.tag, **self._bot_config.tts.args)
-                self._bot_config.tts = TTSConfig(tag=tts.SELECTED_TAG, args=tts.get_args_dict())
+                self._bot_config.tts.tag = tts.SELECTED_TAG,
+                self._bot_config.tts.args = tts.get_args_dict()
                 tts_processor = TTSProcessor(tts=tts, session=self.session)
         else:
             # default tts engine processor
