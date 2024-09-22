@@ -6,6 +6,8 @@ from apipeline.pipeline.runner import PipelineRunner
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.processors.frame_processor import FrameProcessor
 
+from src.processors.aggregators.vision_image_frame import VisionImageFrameAggregator
+from src.processors.user_image_request_processor import UserImageRequestProcessor
 from src.processors.rtvi.tts_text_processor import RTVITTSTextProcessor
 from src.processors.aggregators.openai_llm_context import OpenAILLMContext
 from src.processors.aggregators.llm_response import OpenAIAssistantContextAggregator, OpenAIUserContextAggregator
@@ -41,7 +43,6 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         self._bot_config: AIConfig | None = None
         self._pipeline_params: PipelineParams = PipelineParams()
         self.llm_context = OpenAILLMContext()
-        self.init_bot_config()
         self.daily_params = DailyParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
@@ -51,6 +52,15 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                 language="en",
             ),
         )
+        self.init_bot_config()
+        self.init_processor()
+
+    def init_processor(self):
+        # !TODO: services to init
+        self.asr_processor = None
+        self.image_requester = None
+        self.llm_processor = None
+        self.tts_processor = None
 
     def init_bot_config(self):
         """
@@ -63,12 +73,18 @@ class DailyRTVIGeneralBot(DailyRoomBot):
             if "pipeline" in self.rtvi_config._arguments_dict:
                 self._pipeline_params = PipelineParams(
                     **self.rtvi_config._arguments_dict["pipeline"])
+            if "daily_room_stream" in self.rtvi_config._arguments_dict:
+                self.daily_params = DailyParams(
+                    **self.rtvi_config._arguments_dict["daily_room_stream"])
             if self._bot_config.llm is None:
                 self._bot_config.llm = LLMConfig()
         except Exception as e:
             raise Exception(f"Failed to parse bot configuration: {e}")
         logging.info(
-            f'pipeline_params: {self._pipeline_params}, ai bot_config: {self._bot_config}, rtvi_config:{self.rtvi_config}')
+            f'daily_params: {self.daily_params},'
+            f'pipeline_params: {self._pipeline_params},'
+            f'ai bot_config: {self._bot_config}, '
+            f'rtvi_config:{self.rtvi_config}')
         if self._bot_config.llm.messages:
             self.llm_context.set_messages(self._bot_config.llm.messages)
 
@@ -342,7 +358,14 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                         processors.append(rtvi)
                     case "llm":
                         if self._bot_config.llm:
-                            processors.append(llm_user_ctx_aggr)
+                            if self._bot_config.llm.tag and \
+                                    "vision" in self._bot_config.llm.tag:
+                                self.image_requester = UserImageRequestProcessor()
+                                processors.append(self.image_requester)
+                                vision_aggregator = VisionImageFrameAggregator()
+                                processors.append(vision_aggregator)
+                            else:
+                                processors.append(llm_user_ctx_aggr)
                         self.llm_processor = self.get_llm_processor()
                         processors.append(self.llm_processor)
                     case "tts":
@@ -370,7 +393,11 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         processors.append(self.transport.output_processor())
         # print(processors)
         if self._bot_config.llm:
-            processors.append(llm_assistant_ctx_aggr)
+            if self._bot_config.llm.tag and \
+                    "vision" in self._bot_config.llm.tag:
+                pass
+            else:
+                processors.append(llm_assistant_ctx_aggr)
         self.task = PipelineTask(Pipeline(processors), params=self._pipeline_params)
 
         self.transport.add_event_handler(
@@ -389,6 +416,12 @@ class DailyRTVIGeneralBot(DailyRoomBot):
     async def on_first_participant_joined(self, transport: DailyTransport, participant):
         if self.daily_params.transcription_enabled:
             transport.capture_participant_transcription(participant["id"])
+        if self._bot_config.llm \
+                and self._bot_config.llm.tag \
+                and "vision" in self._bot_config.llm.tag:
+            transport.capture_participant_video(participant["id"], framerate=0)
+            self.image_requester and self.image_requester.set_participant_id(participant["id"])
+
         # joined use tts say "hello" to introduce with llm generate
         if self._bot_config.tts \
                 and self._bot_config.llm \
@@ -398,4 +431,13 @@ class DailyRTVIGeneralBot(DailyRoomBot):
             messages[0]["content"] = self._bot_config.llm.messages[0]["content"] + \
                 " Please introduce yourself first."
             await self.task.queue_frames([LLMMessagesFrame(messages)])
+        elif self._bot_config.tts \
+                and self._bot_config.llm \
+                and self._bot_config.llm.tag \
+                and "vision" in self._bot_config.llm.tag:
+            hi = f"[HI_TEXT] Hello, welcome to use Vision Bot, I am your virtual assistant. u can ask me with video. [/HI_TEXT]"
+            match self._bot_config.tts.language:
+                case "zh":
+                    hi = f"[HI_TEXT] 你好，欢迎使用 Vision Bot. 我是一名虚拟助手，可以结合视频进行提问。[/HI_TEXT]"
+            await self.task.queue_frame(TextFrame(text=hi))
         logging.info("First participant joined")

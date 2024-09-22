@@ -40,11 +40,6 @@ if __name__ == "__main__":
     bot_info = RunBotInfo(**bot_config)
     logging.info(f"bot_config:{bot_config}")
 
-    if import_bots(bot_info.chat_bot_name) is False:
-        detail = f"un import bot: {bot_info.chat_bot_name}"
-        logging.error(detail)
-        exit()
-
     room_url = bot_info.room_url
     if len(args.u) > 0:
         bot_info.room_url = args.u

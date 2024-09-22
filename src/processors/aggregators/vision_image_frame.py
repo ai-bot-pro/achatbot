@@ -1,4 +1,5 @@
 import logging
+import re
 
 from apipeline.frames.data_frames import Frame, ImageRawFrame, TextFrame
 from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
@@ -30,7 +31,13 @@ class VisionImageFrameAggregator(FrameProcessor):
         await super().process_frame(frame, direction)
 
         if isinstance(frame, TextFrame):
-            self._describe_text = frame.text
+            # maybe use HiTextFrame
+            match = re.search(r'\[HI_TEXT\](.*?)\[/HI_TEXT\]', frame.text)
+            if match:
+                frame.text = match.group(1).strip()
+                await self.push_frame(frame, direction)
+            else:
+                self._describe_text = frame.text
         elif isinstance(frame, ImageRawFrame):
             if self._describe_text:
                 frame = VisionImageRawFrame(

@@ -125,6 +125,10 @@ class BotTaskRunner:
         return self._pid if self._pid else None
 
     def run_bot(self, bot_info: BotInfo):
+        if import_bots(bot_info.chat_bot_name) is False:
+            detail = f"un import bot: {bot_info.chat_bot_name}"
+            logging.error(detail)
+            return
         match bot_info.bot_type:
             case "daily":
                 self.run_daily_bot(bot_info)
@@ -168,11 +172,6 @@ class BotTaskRunnerBE(BotTaskRunner):
             if msg == "STOP":
                 logging.info(f"bot {bot_info.chat_bot_name} stopped")
                 return
-
-            if import_bots(bot_info.chat_bot_name) is False:
-                detail = f"un import bot: {bot_info.chat_bot_name}"
-                logging.error(detail)
-                continue
 
             match msg:
                 case "RUN_BOT_TASK":

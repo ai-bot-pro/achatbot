@@ -67,3 +67,29 @@ class VisionProcessor(VisionProcessorBase):
         iter = self._llm.chat_completion(self._session)
         for item in iter:
             yield TextFrame(text=item)
+
+
+class MockVisionProcessor(VisionProcessorBase):
+    """
+    just mock
+    """
+
+    def __init__(
+        self,
+    ):
+        super().__init__()
+
+    async def run_vision(self, frame: VisionImageRawFrame) -> AsyncGenerator[Frame, None]:
+        logging.info(f"Mock Analyzing image: {frame}")
+
+        image = Image.frombytes(frame.mode, frame.size, frame.image)
+        with BytesIO() as buffered:
+            image.save(buffered, format=frame.format)
+            img_base64_str = image_bytes_to_base64_data_uri(
+                buffered.getvalue(), frame.format.lower())
+
+        logging.info(f"Mock img_base64_str+text: {img_base64_str} {frame.text}")
+
+        # await asyncio.sleep(1)
+
+        yield TextFrame(text=f"你好！niubility, 你他娘的是个人才。请访问 github achatbot 进行把玩, 可以在colab中部署免费把玩。")
