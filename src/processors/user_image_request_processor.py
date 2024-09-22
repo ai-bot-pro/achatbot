@@ -1,4 +1,5 @@
 
+import re
 from apipeline.pipeline.pipeline import FrameProcessor
 from apipeline.pipeline.task import FrameDirection
 from apipeline.frames.data_frames import Frame, TextFrame

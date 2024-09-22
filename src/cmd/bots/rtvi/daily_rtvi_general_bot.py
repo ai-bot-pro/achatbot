@@ -435,12 +435,9 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                 and self._bot_config.llm \
                 and self._bot_config.llm.tag \
                 and "vision" in self._bot_config.llm.tag:
+            hi = f"[HI_TEXT] Hello, welcome to use Vision Bot, I am your virtual assistant. u can ask me with video. [/HI_TEXT]"
             match self._bot_config.tts.language:
                 case "zh":
-                    await self.tts_processor.say("你好，欢迎使用 Vision Bot. 我是一名虚拟助手，可以结合视频进行提问。")
-                case "en":
-                    await self.tts_processor.say("Hello, welcome to use Vision Bot, I am your virtual assistant. u can ask me with video.")
-                case _:
-                    await self.tts_processor.say("Hello, welcome to use Vision Bot, I am your virtual assistant. u can ask me with video.")
-
+                    hi = f"[HI_TEXT] 你好，欢迎使用 Vision Bot. 我是一名虚拟助手，可以结合视频进行提问。[/HI_TEXT]"
+            await self.task.queue_frame(TextFrame(text=hi))
         logging.info("First participant joined")
