@@ -5,6 +5,7 @@ import uuid
 
 from apipeline.frames.control_frames import EndFrame
 
+from src.processors.vision.vision_processor import MockVisionProcessor
 from src.processors.speech.asr.base import ASRProcessorBase
 from src.processors.llm.base import LLMProcessor
 from src.processors.speech.tts.base import TTSProcessorBase
@@ -127,10 +128,13 @@ class DailyRoomBot(IBot):
             # (llm_llamacpp, llm_personalai_proxy, llm_transformers etc..)
             from src.processors.vision.vision_processor import VisionProcessor
             logging.debug(f"init engine llm processor tag: {self._bot_config.llm.tag}")
-            session = Session(**SessionCtx(uuid.uuid4()).__dict__)
-            llm = LLMEnvInit.initLLMEngine(
-                self._bot_config.llm.tag, self._bot_config.llm.args)
-            llm_processor = VisionProcessor(llm, session)
+            if "mock" in self._bot_config.llm.tag:
+                llm_processor = MockVisionProcessor()
+            else:
+                session = Session(**SessionCtx(uuid.uuid4()).__dict__)
+                llm = LLMEnvInit.initLLMEngine(
+                    self._bot_config.llm.tag, self._bot_config.llm.args)
+                llm_processor = VisionProcessor(llm, session)
         else:
             from src.processors.llm.openai_llm_processor import OpenAILLMProcessor
             # default use openai llm processor

@@ -416,9 +416,12 @@ class DailyRTVIGeneralBot(DailyRoomBot):
     async def on_first_participant_joined(self, transport: DailyTransport, participant):
         if self.daily_params.transcription_enabled:
             transport.capture_participant_transcription(participant["id"])
-        if self.daily_params.camera_out_enabled:
+        if self._bot_config.llm \
+                and self._bot_config.llm.tag \
+                and "vision" in self._bot_config.llm.tag:
             transport.capture_participant_video(participant["id"], framerate=0)
             self.image_requester and self.image_requester.set_participant_id(participant["id"])
+
         # joined use tts say "hello" to introduce with llm generate
         if self._bot_config.tts \
                 and self._bot_config.llm \
