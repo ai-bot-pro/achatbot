@@ -43,11 +43,11 @@ class ASRConfig(BaseModel):
 
 
 class LLMConfig(BaseModel):
-    base_url: Optional[str] = DEFAULT_LLM_URL
-    model: Optional[str] = DEFAULT_LLM_MODEL
-    language: Optional[str] = DEFAULT_LLM_LANG
+    base_url: Optional[str] = None
+    model: Optional[str] = None
+    language: Optional[str] = None
     messages: Optional[List[dict]] = None
-    tag: Optional[str] = "openai_llm_processor"
+    tag: Optional[str] = None
     args: Optional[dict] = None
 
 
@@ -62,6 +62,7 @@ class AIConfig(BaseModel):
     vad: Optional[VADConfig] = None
     asr: Optional[ASRConfig] = None
     llm: Optional[LLMConfig] = None
+    vision_llm: Optional[LLMConfig] = None
     tts: Optional[TTSConfig] = None
     # TODO: @weedge
     # - use local pyaudio/cv2 streaming;

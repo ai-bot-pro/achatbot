@@ -29,10 +29,6 @@ class DailyDescribeVisionBot(DailyRoomBot):
             vad_analyzer=vad_analyzer,
             vad_audio_passthrough=True,
             transcription_enabled=False,
-            camera_out_enabled=True,
-            camera_out_is_live=True,
-            camera_out_width=1280,
-            camera_out_height=720
         )
 
         asr_processor = self.get_asr_processor()

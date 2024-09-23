@@ -88,7 +88,7 @@ class MockVisionProcessor(VisionProcessorBase):
             img_base64_str = image_bytes_to_base64_data_uri(
                 buffered.getvalue(), frame.format.lower())
 
-        logging.info(f"Mock img_base64_str+text: {img_base64_str} {frame.text}")
+        logging.info(f"Mock len(img_base64_str)+text: {len(img_base64_str)} {frame.text}")
 
         # await asyncio.sleep(1)
 
