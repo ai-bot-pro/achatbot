@@ -1,6 +1,7 @@
+from asyncio import AbstractEventLoop
 import logging
 
-from apipeline.pipeline.pipeline import Pipeline
+from apipeline.pipeline.pipeline import Pipeline, FrameProcessor, FrameDirection
 from apipeline.pipeline.parallel_pipeline import ParallelPipeline
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.processors.filters.function_filter import FunctionFilter
@@ -17,7 +18,44 @@ from src.common.types import DailyParams
 from src.cmd.bots.base import DailyRoomBot
 from src.transports.daily import DailyTransport
 from src.types.frames.data_frames import LLMMessagesFrame
+from src.types.frames.control_frames import (
+    UserStartedSpeakingFrame,
+    UserStoppedSpeakingFrame,
+    BotSpeakingFrame,
+    BotStartedSpeakingFrame,
+    BotStoppedSpeakingFrame,
+)
 from .. import register_daily_room_bots
+
+
+class FrameTraceLogger(FrameProcessor):
+
+    def __init__(
+            self,
+            tag: str,
+            *,
+            name: str | None = None,
+            loop: AbstractEventLoop | None = None,
+            **kwargs):
+        super().__init__(name=name, loop=loop, **kwargs)
+        self._tag = tag
+
+    async def process_frame(
+            self,
+            frame: Frame,
+            direction: FrameDirection = FrameDirection.DOWNSTREAM):
+        await super().process_frame(frame, direction)
+
+        from_to = f"{self._prev} ---> {self}"
+        if direction == FrameDirection.UPSTREAM:
+            from_to = f"{self} <--- {self._next} "
+        if not isinstance(frame, BotSpeakingFrame) \
+                and not isinstance(frame, BotStartedSpeakingFrame) \
+                and not isinstance(frame, BotStoppedSpeakingFrame) \
+                and not isinstance(frame, UserStartedSpeakingFrame) \
+                and not isinstance(frame, UserStoppedSpeakingFrame):
+            logging.info(f"Tag: {self._tag}; {from_to} get Frame: {frame}")
+        await self.push_frame(frame, direction)
 
 
 @register_daily_room_bots.register
@@ -31,9 +69,31 @@ class DailyChatVisionBot(DailyRoomBot):
     def __init__(self, **args) -> None:
         super().__init__(**args)
         self.init_bot_config()
+        # LLM answer color egg, english eggs from starcraft specific words :)
         self.llm_answer_text_list = [
             "show me the money.",
-            "奥利给",
+            "power overwhelming.",
+            "operation CWAL.",
+            "the gathering.",
+            "game over man.",
+            "staying alive.",
+            "there is no cow level.",
+            "whats mine is mine.",
+            "something for nothing.",
+            "black sheep wall.",
+            "medieval man.",
+            "modify the phase variance.",
+            "war aint what it used to be.",
+            "food for thought.",
+            "modify the phase variance.",
+            "奥利给。",
+            "大爷的。",
+            "你妹哦。",
+            "靓仔。",
+            "你他娘的是个人才。",
+            "熊二。",
+            "熊大。",
+            "光头强。"
         ]
 
         self.desc_img_prompt = "Describe the image in a short sentence."
@@ -45,13 +105,11 @@ class DailyChatVisionBot(DailyRoomBot):
     async def text_filter(self, frame: Frame):
         if isinstance(frame, TextFrame):
             if frame.text in self.llm_answer_text_list:
-                logging.info(f"text: {frame.text} filter")
                 return False
         return True
 
     async def image_filter(self, frame: Frame):
         if isinstance(frame, ImageRawFrame):
-            logging.info(f"image frame: {frame} filter")
             return False
         return True
 
@@ -93,7 +151,6 @@ class DailyChatVisionBot(DailyRoomBot):
         # NOTE: don't use UserResponseAggregator again,
         # no accumulator_frame interim_accumulator_frame
         # in_aggr = UserResponseAggregator()
-        in_aggr = SentenceAggregator()
         self.image_requester = UserImageTextRequestProcessor(
             init_user_prompts=self.llm_answer_text_list,
             desc_img_prompt=self.desc_img_prompt,
@@ -112,8 +169,10 @@ class DailyChatVisionBot(DailyRoomBot):
             llm_in_aggr,
             llm_processor,
             ParallelPipeline(
-                [in_aggr, self.image_requester, vision_aggregator, vision_llm_processor],
-                [text_filter, img_filter],
+                # NOTE: SentenceAggregator no start/end tag to do, need match sentence to end
+                # [SentenceAggregator(), FrameTraceLogger(tag="1.0")],
+                [SentenceAggregator(), self.image_requester, vision_aggregator, vision_llm_processor],
+                [SentenceAggregator(), text_filter, img_filter],
             ),
             tts_processor,
             transport.output_processor(),
