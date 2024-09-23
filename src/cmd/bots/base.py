@@ -122,17 +122,16 @@ class DailyRoomBot(IBot):
         return asr_processor
 
     def get_vision_llm_processor(self) -> LLMProcessor:
-        # engine llm processor(just support vision model, other TODO):
-        # (llm_llamacpp, llm_personalai_proxy, llm_transformers etc..)
         from src.processors.vision.vision_processor import VisionProcessor
-        logging.debug(f"init engine llm processor tag: {self._bot_config.llm.tag}")
-        if "mock" in self._bot_config.llm.tag:
+        llm_config = self._bot_config.llm
+        if self._bot_config.vision_llm:
+            llm_config = self._bot_config.vision_llm
+        if "mock" in llm_config.tag:
             llm_processor = MockVisionProcessor()
         else:
-            session = Session(**SessionCtx(uuid.uuid4()).__dict__)
-            llm = LLMEnvInit.initLLMEngine(
-                self._bot_config.llm.tag, self._bot_config.llm.args)
-            llm_processor = VisionProcessor(llm, session)
+            logging.debug(f"init engine llm processor tag: {llm_config.tag}")
+            llm = LLMEnvInit.initLLMEngine(llm_config.tag, llm_config.args)
+            llm_processor = VisionProcessor(llm, self.session)
         return llm_processor
 
     def get_openai_llm_processor(self) -> LLMProcessor:
@@ -155,6 +154,8 @@ class DailyRoomBot(IBot):
     def get_llm_processor(self) -> LLMProcessor:
         if self._bot_config.llm and self._bot_config.llm.tag \
                 and "vision" in self._bot_config.llm.tag:
+            # engine llm processor(just support vision model, other TODO):
+            # (llm_llamacpp, llm_personalai_proxy, llm_transformers etc..)
             llm_processor = self.get_vision_llm_processor()
         else:
             llm_processor = self.get_openai_llm_processor()

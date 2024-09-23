@@ -11,13 +11,13 @@ class UserImageBaseProcessor(FrameProcessor):
     def __init__(
             self,
             participant_id: str | None = None,
-            init_user_prompt: str | list = "show me the money :)",
-            desc_img_text: str = "Describe the image in a short sentence.",
+            init_user_prompts: str | list = "show me the money :)",
+            desc_img_prompt: str = "Describe the image in a short sentence.",
     ):
         super().__init__()
         self._participant_id = participant_id
-        self._init_user_prompt = init_user_prompt
-        self._desc_img_text = desc_img_text
+        self._init_user_prompts = init_user_prompts
+        self._desc_img_prompt = desc_img_prompt
 
     def set_participant_id(self, participant_id: str):
         self._participant_id = participant_id
@@ -47,9 +47,9 @@ class UserImageTextRequestProcessor(UserImageBaseProcessor):
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
-        if self.participant_id and isinstance(frame, TextFrame):
-            if frame.text == self._init_user_prompt:
-                await self.push_frame(UserImageRequestFrame(self.participant_id), FrameDirection.UPSTREAM)
-                await self.push_frame(TextFrame(self._desc_img_text))
+        if self._participant_id and isinstance(frame, TextFrame):
+            if frame.text in self._init_user_prompts:
+                await self.push_frame(UserImageRequestFrame(self._participant_id), FrameDirection.UPSTREAM)
+                await self.push_frame(TextFrame(self._desc_img_prompt))
         elif isinstance(frame, UserImageRawFrame):
             await self.push_frame(frame)
