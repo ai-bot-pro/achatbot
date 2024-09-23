@@ -121,35 +121,43 @@ class DailyRoomBot(IBot):
             )
         return asr_processor
 
+    def get_vision_llm_processor(self) -> LLMProcessor:
+        # engine llm processor(just support vision model, other TODO):
+        # (llm_llamacpp, llm_personalai_proxy, llm_transformers etc..)
+        from src.processors.vision.vision_processor import VisionProcessor
+        logging.debug(f"init engine llm processor tag: {self._bot_config.llm.tag}")
+        if "mock" in self._bot_config.llm.tag:
+            llm_processor = MockVisionProcessor()
+        else:
+            session = Session(**SessionCtx(uuid.uuid4()).__dict__)
+            llm = LLMEnvInit.initLLMEngine(
+                self._bot_config.llm.tag, self._bot_config.llm.args)
+            llm_processor = VisionProcessor(llm, session)
+        return llm_processor
+
+    def get_openai_llm_processor(self) -> LLMProcessor:
+        from src.processors.llm.openai_llm_processor import OpenAILLMProcessor
+        # default use openai llm processor
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if "groq" in self._bot_config.llm.base_url:
+            # https://console.groq.com/docs/models
+            api_key = os.environ.get("GROQ_API_KEY")
+        elif "together" in self._bot_config.llm.base_url:
+            # https://docs.together.ai/docs/chat-models
+            api_key = os.environ.get("TOGETHER_API_KEY")
+        llm_processor = OpenAILLMProcessor(
+            model=self._bot_config.llm.model,
+            base_url=self._bot_config.llm.base_url,
+            api_key=api_key,
+        )
+        return llm_processor
+
     def get_llm_processor(self) -> LLMProcessor:
         if self._bot_config.llm and self._bot_config.llm.tag \
                 and "vision" in self._bot_config.llm.tag:
-            # engine llm processor(just support vision model, other TODO):
-            # (llm_llamacpp, llm_personalai_proxy, llm_transformers etc..)
-            from src.processors.vision.vision_processor import VisionProcessor
-            logging.debug(f"init engine llm processor tag: {self._bot_config.llm.tag}")
-            if "mock" in self._bot_config.llm.tag:
-                llm_processor = MockVisionProcessor()
-            else:
-                session = Session(**SessionCtx(uuid.uuid4()).__dict__)
-                llm = LLMEnvInit.initLLMEngine(
-                    self._bot_config.llm.tag, self._bot_config.llm.args)
-                llm_processor = VisionProcessor(llm, session)
+            llm_processor = self.get_vision_llm_processor()
         else:
-            from src.processors.llm.openai_llm_processor import OpenAILLMProcessor
-            # default use openai llm processor
-            api_key = os.environ.get("OPENAI_API_KEY")
-            if "groq" in self._bot_config.llm.base_url:
-                # https://console.groq.com/docs/models
-                api_key = os.environ.get("GROQ_API_KEY")
-            elif "together" in self._bot_config.llm.base_url:
-                # https://docs.together.ai/docs/chat-models
-                api_key = os.environ.get("TOGETHER_API_KEY")
-            llm_processor = OpenAILLMProcessor(
-                model=self._bot_config.llm.model,
-                base_url=self._bot_config.llm.base_url,
-                api_key=api_key,
-            )
+            llm_processor = self.get_openai_llm_processor()
         return llm_processor
 
     def get_tts_processor(self) -> TTSProcessorBase:
