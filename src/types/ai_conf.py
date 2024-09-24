@@ -47,6 +47,7 @@ class LLMConfig(BaseModel):
     model: Optional[str] = None
     language: Optional[str] = None
     messages: Optional[List[dict]] = None
+    tools: Optional[List[dict]] = None
     tag: Optional[str] = None
     args: Optional[dict] = None
 

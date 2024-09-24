@@ -134,7 +134,7 @@ class OpenAILLMContext:
             *,
             function_name: str,
             tool_call_id: str,
-            arguments: str,
+            arguments: dict,
             llm: FrameProcessor) -> None:
 
         # Push a SystemFrame downstream. This frame will let our assistant context aggregator

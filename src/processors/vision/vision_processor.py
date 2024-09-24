@@ -37,9 +37,6 @@ class VisionProcessor(VisionProcessorBase):
         self._llm = llm
 
     async def run_vision(self, frame: VisionImageRawFrame) -> AsyncGenerator[Frame, None]:
-        """
-        !TODO: image frame: PIL.Image, URL(str), base64 img(str) @weedge
-        """
         if not self._llm:
             logging.error(f"{self} error: llm not available")
             yield ErrorFrame("llm not available")
@@ -47,22 +44,24 @@ class VisionProcessor(VisionProcessorBase):
 
         logging.info(f"Analyzing image: {frame}")
 
-        image = Image.frombytes(frame.mode, frame.size, frame.image)
-        with BytesIO() as buffered:
-            image.save(buffered, format=frame.format)
-            img_base64_str = image_bytes_to_base64_data_uri(
-                buffered.getvalue(), frame.format.lower())
-
         self._session.ctx.state["prompt"] = [
             {"type": "text", "text": frame.text},
         ]
-        if "llm_transformers" in self._llm.SELECTED_TAG and \
-                "vision" in self._llm.SELECTED_TAG:  # transformers vision
-            self._session.ctx.state["prompt"].append(
-                {"type": "image", "image": img_base64_str})
-        else:  # llamacpp vision
-            self._session.ctx.state["prompt"].append(
-                {"type": "image_url", "image_url": {"url": img_base64_str}})
+
+        if frame.image:
+            image = Image.frombytes(frame.mode, frame.size, frame.image)
+            with BytesIO() as buffered:
+                image.save(buffered, format=frame.format)
+                img_base64_str = image_bytes_to_base64_data_uri(
+                    buffered.getvalue(), frame.format.lower())
+
+            if "llm_transformers" in self._llm.SELECTED_TAG and \
+                    "vision" in self._llm.SELECTED_TAG:  # transformers vision
+                self._session.ctx.state["prompt"].append(
+                    {"type": "image", "image": img_base64_str})
+            else:  # llamacpp vision
+                self._session.ctx.state["prompt"].append(
+                    {"type": "image_url", "image_url": {"url": img_base64_str}})
 
         iter = self._llm.chat_completion(self._session)
         for item in iter:
@@ -76,20 +75,26 @@ class MockVisionProcessor(VisionProcessorBase):
 
     def __init__(
         self,
+        mock_text: str =
+            f"你好！niubility。"
+            f"你他娘的是个人才。"
+            f"请访问 github achatbot 进行把玩, 可以在colab中部署免费把玩。",
     ):
         super().__init__()
+        self._mock_text = mock_text
 
     async def run_vision(self, frame: VisionImageRawFrame) -> AsyncGenerator[Frame, None]:
         logging.info(f"Mock Analyzing image: {frame}")
 
-        image = Image.frombytes(frame.mode, frame.size, frame.image)
-        with BytesIO() as buffered:
-            image.save(buffered, format=frame.format)
-            img_base64_str = image_bytes_to_base64_data_uri(
-                buffered.getvalue(), frame.format.lower())
+        if frame.image:
+            image = Image.frombytes(frame.mode, frame.size, frame.image)
+            with BytesIO() as buffered:
+                image.save(buffered, format=frame.format)
+                img_base64_str = image_bytes_to_base64_data_uri(
+                    buffered.getvalue(), frame.format.lower())
 
-        logging.info(f"Mock len(img_base64_str)+text: {len(img_base64_str)} {frame.text}")
+            logging.info(f"Mock len(img_base64_str)+text: {len(img_base64_str)} {frame.text}")
 
         # await asyncio.sleep(1)
 
-        yield TextFrame(text=f"你好！niubility, 你他娘的是个人才。请访问 github achatbot 进行把玩, 可以在colab中部署免费把玩。")
+        yield TextFrame(text=self._mock_text)

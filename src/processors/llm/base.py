@@ -1,6 +1,9 @@
 from abc import abstractmethod
 
+from apipeline.pipeline.pipeline import FrameDirection
+
 from src.processors.ai_processor import AIProcessor
+from src.types.frames.control_frames import UserImageRequestFrame
 
 
 class LLMProcessor(AIProcessor):
@@ -38,3 +41,8 @@ class LLMProcessor(AIProcessor):
         if None in self._callbacks.keys():
             return True
         return function_name in self._callbacks.keys()
+
+    async def request_image_frame(self, user_id: str, *, text_content: str | None = None):
+        await self.push_frame(
+            UserImageRequestFrame(user_id=user_id, context=text_content),
+            FrameDirection.UPSTREAM)

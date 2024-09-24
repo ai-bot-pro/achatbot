@@ -24,7 +24,7 @@ from apipeline.pipeline.pipeline import FrameDirection
 
 from src.processors.aggregators.openai_llm_context import OpenAILLMContext, OpenAILLMContextFrame
 from src.processors.llm.base import LLMProcessor
-from src.types.frames.control_frames import LLMFullResponseEndFrame, LLMFullResponseStartFrame, LLMModelUpdateFrame, UserImageRequestFrame
+from src.types.frames.control_frames import LLMFullResponseEndFrame, LLMFullResponseStartFrame, LLMModelUpdateFrame
 from src.types.frames.data_frames import LLMMessagesFrame, VisionImageRawFrame
 
 
@@ -70,7 +70,7 @@ class BaseOpenAILLMProcessor(LLMProcessor):
             context: OpenAILLMContext,
             tool_call_id: str,
             function_name: str,
-            arguments: str) -> None:
+            arguments: dict) -> None:
         f = None
         if function_name in self._callbacks.keys():
             f = self._callbacks[function_name]
@@ -92,10 +92,6 @@ class BaseOpenAILLMProcessor(LLMProcessor):
         elif None in self._start_callbacks.keys():
             return await self._start_callbacks[None](function_name, self, context)
 
-    async def request_image_frame(self, user_id: str, *, text_content: str | None = None):
-        await self.push_frame(
-            UserImageRequestFrame(user_id=user_id, context=text_content),
-            FrameDirection.UPSTREAM)
 
     async def get_chat_completions(
             self,

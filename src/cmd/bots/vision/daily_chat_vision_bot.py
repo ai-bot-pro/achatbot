@@ -60,10 +60,11 @@ class FrameTraceLogger(FrameProcessor):
 
 @register_daily_room_bots.register
 class DailyChatVisionBot(DailyRoomBot):
-    """
+    r"""
     use gen text llm model to chat
     when gen text is  about describe the image, use vision model to describe the image with describe text
     if gen text is about describe the image, and image; filter text and image
+    !NOTE: need write system prompt to guide LLM to answer
     """
 
     def __init__(self, **args) -> None:

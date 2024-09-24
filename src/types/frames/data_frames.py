@@ -149,5 +149,5 @@ class FunctionCallResultFrame(DataFrame):
     """
     function_name: str
     tool_call_id: str
-    arguments: str
+    arguments: dict
     result: Any
