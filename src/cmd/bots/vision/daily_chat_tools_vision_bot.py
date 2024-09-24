@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Any, Awaitable, Callable
 
@@ -51,7 +52,6 @@ class DailyChatToolsVisionBot(DailyRoomBot):
         self.vision_result = ""
         self.llm_context = OpenAILLMContext()
         self.init_bot_config()
-        self.init_vision_pipeline_task()
 
     async def sink_out_cb(self, frame):
         """
@@ -60,7 +60,7 @@ class DailyChatToolsVisionBot(DailyRoomBot):
         if isinstance(frame, TextFrame):
             self.vision_result += frame.text
 
-    def init_vision_pipeline_task(self):
+    async def init_vision_pipeline_task(self):
         out_processor = OutputFrameProcessor(cb=self.sink_out_cb)
         pipeline = Pipeline([
             # SentenceAggregator(),
@@ -123,6 +123,8 @@ class DailyChatToolsVisionBot(DailyRoomBot):
             await result_callback(self.vision_result)
 
     async def arun(self):
+        await self.init_vision_pipeline_task()
+
         vad_analyzer = self.get_vad_analyzer()
         self.daily_params = DailyParams(
             audio_in_enabled=True,
