@@ -39,7 +39,7 @@ class DailyChatToolsVisionBot(DailyRoomBot):
     - TODO: do more tool functions, e.g.: music gen/search, google search etc... become a agent
     !NOTE: need write system prompt to guide LLM to answer
 
-    !THINKING: @weedge (gedigedix3)
+    !THINKING: @weedge (gedigedix3) personal AI(agent)
     - if want a system engine become more easy, need train a LWM(which can call tools with post training) to supporte e2e text,audio,vision (a big bang!);
     - if not, need base text LLM(which can call tools with post training) and more engine pipeline with tools(agents) to support ~!
     - if just develop app with using lm; prompt is all your need (zero or few shots), need know LWM/LLM can do what, follow lm capability.
@@ -81,7 +81,7 @@ class DailyChatToolsVisionBot(DailyRoomBot):
             context: OpenAILLMContext,
             result_callback: Callable[[Any], Awaitable[None]]):
         location = arguments["location"]
-        logging.debug(
+        logging.info(
             f"function_name:{function_name}, tool_call_id:{tool_call_id},"
             f"arguments:{arguments}, llm:{llm}, context:{context}")
         # just a mock response
@@ -97,7 +97,7 @@ class DailyChatToolsVisionBot(DailyRoomBot):
             llm: LLMProcessor,
             context: OpenAILLMContext,
             result_callback: Callable[[Any], Awaitable[None]]):
-        logging.debug(
+        logging.info(
             f"function_name:{function_name}, tool_call_id:{tool_call_id},"
             f"arguments:{arguments}, llm:{llm}, context:{context}")
         if "question" in arguments:
@@ -165,11 +165,9 @@ class DailyChatToolsVisionBot(DailyRoomBot):
         llm_processor = self.get_openai_llm_processor()
 
         # register function
-        if self._bot_config.llm and self._bot_config.llm.tools:
-            for tool in self._bot_config.llm.tools:
-                if "name" in tool and tool["name"] in register_tool_funtions:
-                    llm_processor.register_function(
-                        tool['name'], register_tool_funtions[tool["name"]])
+        logging.info(f"register tool functions: {register_tool_funtions.items()}")
+        llm_processor.register_function("get_weather", self.get_weather)
+        llm_processor.register_function("get_image", self.get_image)
 
         pipeline = Pipeline([
             transport.input_processor(),
@@ -194,11 +192,10 @@ class DailyChatToolsVisionBot(DailyRoomBot):
                 and self._bot_config.llm \
                 and self._bot_config.llm.messages \
                 and len(self._bot_config.llm.messages) == 1:
-            messages = self._bot_config.llm.messages
-            hi_text = "请介绍下自己。"
+            hi_text = "Please introduce yourself first."
             if self._bot_config.llm.language \
                     and self._bot_config.llm.language == "zh":
-                hi_text = "Please introduce yourself first."
+                hi_text = "请用中文介绍下自己。"
             self._bot_config.llm.messages.append({
                 "role": "user",
                 "content": hi_text,

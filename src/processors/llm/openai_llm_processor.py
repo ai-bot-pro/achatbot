@@ -92,7 +92,6 @@ class BaseOpenAILLMProcessor(LLMProcessor):
         elif None in self._start_callbacks.keys():
             return await self._start_callbacks[None](function_name, self, context)
 
-
     async def get_chat_completions(
             self,
             context: OpenAILLMContext,
@@ -161,7 +160,7 @@ class BaseOpenAILLMProcessor(LLMProcessor):
                 if tool_call.function and tool_call.function.name:
                     function_name += tool_call.function.name
                     tool_call_id = tool_call.id
-                    await self.call_start_function(function_name)
+                    await self.call_start_function(context, function_name)
                 if tool_call.function and tool_call.function.arguments:
                     # Keep iterating through the response to collect all the argument fragments
                     arguments += tool_call.function.arguments
@@ -187,7 +186,12 @@ class BaseOpenAILLMProcessor(LLMProcessor):
             arguments: str
     ):
         arguments = json.loads(arguments)
-        result = await self.call_function(function_name, arguments)
+        result = await self.call_function(
+            context=context,
+            tool_call_id=tool_call_id,
+            function_name=function_name,
+            arguments=arguments,
+        )
         arguments = json.dumps(arguments)
         if isinstance(result, (str, dict)):
             # Handle it in "full magic mode"
