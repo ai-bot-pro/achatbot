@@ -156,7 +156,7 @@ class BaseOpenAILLMProcessor(LLMProcessor):
         )
 
         async for chunk in chunk_stream:
-            # logging.info(f"chunk:{chunk.model_dump_json()}")
+            logging.info(f"chunk:{chunk.model_dump_json()}")
             await self.record_llm_usage_tokens(chunk_dict=chunk.model_dump())
 
             if len(chunk.choices) == 0:

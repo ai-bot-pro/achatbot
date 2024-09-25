@@ -73,14 +73,12 @@ class TestVisionProcessor(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(frame.text, self.mock_text)
 
     async def asyncSetUp(self):
-        out_processor = OutputFrameProcessor(cb=self.out_cb)
-        image_requester = UserImageRequestProcessor()
         pipeline = Pipeline([
-            SentenceAggregator(),
-            image_requester,
-            VisionImageFrameAggregator(),
+            # SentenceAggregator(),
+            # UserImageRequestProcessor(),
+            # VisionImageFrameAggregator(),
             self.get_vision_llm_processor(),
-            out_processor,
+            OutputFrameProcessor(cb=self.out_cb),
         ])
         self.vision_task = PipelineTask(
             pipeline,

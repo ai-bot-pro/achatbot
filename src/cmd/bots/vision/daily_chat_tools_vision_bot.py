@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from typing import Any, Awaitable, Callable
 
 from PIL import Image
@@ -12,6 +13,7 @@ from apipeline.pipeline.task import PipelineTask, PipelineParams
 from apipeline.processors.aggregators.sentence import SentenceAggregator
 from apipeline.processors.output_processor import OutputFrameProcessor
 
+from src.processors.frame_log_processor import FrameLogger
 from src.processors.aggregators.vision_image_frame import VisionImageFrameAggregator
 from src.processors.user_image_request_processor import UserImageRequestProcessor
 from src.processors.llm.base import LLMProcessor
@@ -24,7 +26,7 @@ from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.common.types import DailyParams
 from src.cmd.bots.base import DailyRoomBot
 from src.transports.daily import DailyTransport
-from src.types.frames.data_frames import LLMMessagesFrame, UserImageRawFrame, VisionImageRawFrame
+from src.types.frames.data_frames import FunctionCallResultFrame, LLMMessagesFrame, UserImageRawFrame, VisionImageRawFrame
 from src.common.register import Register
 from .. import register_daily_room_bots
 
@@ -46,12 +48,16 @@ class DailyChatToolsVisionBot(DailyRoomBot):
     - if want a system engine become more easy, need train a LWM(which can call tools with post training) to supporte e2e text,audio,vision (a big bang!);
     - if not, need base text LLM(which can call tools with post training) and more engine pipeline with tools(agents) to support ~!
     - if just develop app with using lm; prompt is all your need (zero or few shots), need know LWM/LLM can do what, follow lm capability.
+    - all tool function need to async run and set task timeout with using LLM's Parallel Tool
+    - multi async agent sync msg with connector(local pipe; async queue or sync rpc)
+    — Think about logically rigorous scenarios:
+        - like o1 (need CoT prompting with llm, un-control, maybe just use openai o1,but no money :|)
     """
 
     def __init__(self, **args) -> None:
         super().__init__(**args)
-        self.vision_task = None
         self.participant_uid = None  # support one user which chats with many bots
+        self.max_function_call_cn = int(os.environ.get("MAX_FUNCTION_CALL_CN", "3"))
         self.vision_result = ""
         self.llm_context = OpenAILLMContext()
         self.init_bot_config()
@@ -62,17 +68,6 @@ class DailyChatToolsVisionBot(DailyRoomBot):
         """
         if isinstance(frame, TextFrame):
             self.vision_result += frame.text
-
-    async def init_vision_pipeline_task(self):
-        out_processor = OutputFrameProcessor(cb=self.sink_out_cb)
-        pipeline = Pipeline([
-            # SentenceAggregator(),
-            # UserImageRequestProcessor(),
-            # VisionImageFrameAggregator(),
-            self.get_vision_llm_processor(),
-            out_processor,
-        ])
-        self.vision_task = PipelineTask(pipeline, params=PipelineParams())
 
     @register_tool_funtions.register
     async def get_weather(
@@ -89,10 +84,14 @@ class DailyChatToolsVisionBot(DailyRoomBot):
             f"arguments:{arguments}, llm:{llm}, context:{context}")
         # just a mock response
         # add result to assistant context
-        await result_callback(f"The weather in {location} is currently 72 degrees and sunny.")
+        self.get_weather_call_cn += 1
+        if self.max_function_call_cn > self.get_weather_call_cn:
+            await result_callback(f"The weather in {location} is currently 72 degrees and sunny.")
+        else:
+            self.get_weather_call_cn = 0
 
     @register_tool_funtions.register
-    async def get_image(
+    async def describe_image(
             self,
             function_name: str,
             tool_call_id: str,
@@ -118,15 +117,25 @@ class DailyChatToolsVisionBot(DailyRoomBot):
                 frame.size = arguments["image"].size
                 frame.format = arguments["image"].format
                 frame.mode = arguments["image"].mode
-            await self.vision_task.queue_frames([
+
+            pipeline = Pipeline([
+                # SentenceAggregator(),
+                # UserImageRequestProcessor(),
+                # VisionImageFrameAggregator(),
+                self.get_vision_llm_processor(),
+                OutputFrameProcessor(cb=self.sink_out_cb),
+            ])
+            vision_task = PipelineTask(pipeline)
+            await vision_task.queue_frames([
                 frame,
                 EndFrame(),
             ])
-            await PipelineRunner().run(self.vision_task)
+            runner = PipelineRunner()
+            await runner.run(vision_task)
+            # return describe image tool result
             await result_callback(self.vision_result)
 
     async def arun(self):
-        await self.init_vision_pipeline_task()
 
         vad_analyzer = self.get_vad_analyzer()
         self.daily_params = DailyParams(
@@ -170,7 +179,9 @@ class DailyChatToolsVisionBot(DailyRoomBot):
         # register function
         logging.info(f"register tool functions: {register_tool_funtions.items()}")
         llm_processor.register_function("get_weather", self.get_weather)
-        llm_processor.register_function("get_image", self.get_image)
+        self.get_weather_call_cn = 0
+        llm_processor.register_function("describe_image", self.describe_image)
+        self.describe_image_call_cn = 0
 
         pipeline = Pipeline([
             transport.input_processor(),
@@ -179,9 +190,10 @@ class DailyChatToolsVisionBot(DailyRoomBot):
             llm_processor,
             tts_processor,
             transport.output_processor(),
+            # FrameLogger(include_frame_types=[FunctionCallResultFrame]),
             llm_assistant_ctx_aggr,
         ])
-        self.task = PipelineTask(pipeline, params=PipelineParams())
+        self.task = PipelineTask(pipeline, params=PipelineParams(enable_metrics=False))
         await PipelineRunner().run(self.task)
 
     async def on_first_participant_joined(self, transport: DailyTransport, participant):

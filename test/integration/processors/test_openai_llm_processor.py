@@ -53,7 +53,8 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         cls.messages = [
             {
                 "role": "system",
-                "content": "You are a weather assistant. Use the get_weather function to retrieve weather information for a given location."
+                # "content": "You are a weather assistant. Use the get_weather function to retrieve weather information for a given location."
+                "content": "You are a helpful assistant who converses with a user and answers questions. Respond concisely to general questions.  Your response will be turned into speech so use only simple words and punctuation.\n  You have access to two tools: get_weather and describe_image.  You can respond to questions about the weather using the get_weather tool.\n  You can answer questions about the user's video stream using the describe_image tool.\n Some examples of phrases that indicate you should use the describe_image tool are: \n - What do you see?  \n - What's in the video? \n - Can you describe the video?\n - Tell me about what you see.\n  - Tell me something interesting about what you see.\n  - What's happening in the video?\n  If you need to use a tool, simply use the tool. Do not tell the user the tool you are using. Be brief and concise.\n Please communicate in Chinese"
             }
         ]
         cls.tools = [
@@ -70,7 +71,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
                             },
                         "required": [
                                 "location"
-                            ],
+                        ],
                         "type": "object"
                     }
                 },
