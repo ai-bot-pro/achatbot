@@ -139,9 +139,20 @@ class BaseOpenAILLMProcessor(LLMProcessor):
         )
 
         async for chunk in chunk_stream:
+            if chunk.usage:
+                tokens = {
+                    "processor": self.name,
+                    "model": self._model,
+                    "prompt_tokens": chunk.usage.prompt_tokens,
+                    "completion_tokens": chunk.usage.completion_tokens,
+                    "total_tokens": chunk.usage.total_tokens
+                }
+                await self.start_llm_usage_metrics(tokens)
+
             if len(chunk.choices) == 0:
                 continue
 
+            logging.info(f"chunk:{chunk.model_dump_json()}")
             await self.stop_ttfb_metrics()
 
             if chunk.choices[0].delta.tool_calls:
@@ -186,48 +197,12 @@ class BaseOpenAILLMProcessor(LLMProcessor):
             arguments: str
     ):
         arguments = json.loads(arguments)
-        result = await self.call_function(
+        await self.call_function(
             context=context,
             tool_call_id=tool_call_id,
             function_name=function_name,
             arguments=arguments,
         )
-        arguments = json.dumps(arguments)
-        if isinstance(result, (str, dict)):
-            # Handle it in "full magic mode"
-            tool_call = ChatCompletionFunctionMessageParam({
-                "role": "assistant",
-                "tool_calls": [
-                    {
-                        "id": tool_call_id,
-                        "function": {
-                            "arguments": arguments,
-                            "name": function_name
-                        },
-                        "type": "function"
-                    }
-                ]
-            })
-            context.add_message(tool_call)
-            if isinstance(result, dict):
-                result = json.dumps(result)
-            tool_result = ChatCompletionToolParam({
-                "tool_call_id": tool_call_id,
-                "role": "tool",
-                "content": result
-            })
-            context.add_message(tool_result)
-            # re-prompt to get a human answer
-            await self._process_context(context)
-        elif isinstance(result, list):
-            # reduced magic
-            for msg in result:
-                context.add_message(msg)
-            await self._process_context(context)
-        elif isinstance(result, type(None)):
-            pass
-        else:
-            raise TypeError(f"Unknown return type from function callback: {type(result)}")
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)

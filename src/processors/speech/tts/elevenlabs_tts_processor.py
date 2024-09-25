@@ -74,6 +74,8 @@ class ElevenLabsTTSProcessor(TTSProcessorBase):
                 self._tts_done_event.set()
                 return
 
+            await self.start_tts_usage_metrics(text)
+
             async for chunk in r.content:
                 if len(chunk) > 0:
                     await self.stop_ttfb_metrics()

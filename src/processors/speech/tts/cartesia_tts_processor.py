@@ -230,6 +230,7 @@ class CartesiaTTSProcessor(TTSProcessorBase):
             # logging.info(f"SENDING MESSAGE {json.dumps(msg)}")
             try:
                 await self._websocket.send(json.dumps(msg))
+                await self.start_tts_usage_metrics(text)
             except Exception as e:
                 logging.exception(f"{self} error sending message: {e}")
                 await self._disconnect()

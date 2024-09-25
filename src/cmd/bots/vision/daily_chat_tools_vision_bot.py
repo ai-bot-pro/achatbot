@@ -157,7 +157,7 @@ class DailyChatToolsVisionBot(DailyRoomBot):
             self.on_call_state_updated)
 
         if self._bot_config.llm and self._bot_config.llm.messages:
-            self.llm_context.add_messages(self._bot_config.llm.messages)
+            self.llm_context.set_messages(self._bot_config.llm.messages)
         if self._bot_config.llm and self._bot_config.llm.tools:
             self.llm_context.set_tools(self._bot_config.llm.tools)
         llm_user_ctx_aggr = OpenAIUserContextAggregator(self.llm_context)

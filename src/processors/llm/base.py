@@ -1,9 +1,18 @@
+import logging
 from abc import abstractmethod
 
 from apipeline.pipeline.pipeline import FrameDirection
+from apipeline.processors.frame_processor import FrameProcessorMetrics, MetricsFrame
 
 from src.processors.ai_processor import AIProcessor
 from src.types.frames.control_frames import UserImageRequestFrame
+
+
+class LLMProcessorMetrics(FrameProcessorMetrics):
+    async def start_llm_usage_metrics(self, tokens: dict):
+        logging.debug(
+            f"{self._name} prompt tokens: {tokens['prompt_tokens']}, completion tokens: {tokens['completion_tokens']}")
+        return MetricsFrame(tokens=[tokens])
 
 
 class LLMProcessor(AIProcessor):
@@ -13,6 +22,7 @@ class LLMProcessor(AIProcessor):
         super().__init__(**kwargs)
         self._callbacks = {}
         self._start_callbacks = {}
+        self._metrics = LLMProcessorMetrics(name=self.name)
 
     @abstractmethod
     async def set_model(self, model: str):
@@ -46,3 +56,9 @@ class LLMProcessor(AIProcessor):
         await self.push_frame(
             UserImageRequestFrame(user_id=user_id, context=text_content),
             FrameDirection.UPSTREAM)
+
+    async def start_llm_usage_metrics(self, tokens: dict):
+        if self.can_generate_metrics() and self.usage_metrics_enabled:
+            frame = await self._metrics.start_llm_usage_metrics(tokens)
+            if frame:
+                await self.push_frame(frame)

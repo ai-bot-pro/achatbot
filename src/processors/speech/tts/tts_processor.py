@@ -57,6 +57,7 @@ class TTSProcessor(TTSProcessorBase):
         try:
             stream_info = self._tts.get_stream_info()
             await self.start_ttfb_metrics()
+            await self.start_tts_usage_metrics(text)
             async for chunk in self._tts.synthesize(self._session):
                 if len(chunk) > 0:
                     await self.stop_ttfb_metrics()

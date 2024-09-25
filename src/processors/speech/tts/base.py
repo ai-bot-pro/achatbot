@@ -3,15 +3,25 @@ import logging
 from abc import abstractmethod
 from typing import AsyncGenerator
 
-from apipeline.processors.frame_processor import FrameDirection
+from apipeline.processors.frame_processor import FrameDirection, FrameProcessorMetrics
 from apipeline.pipeline.pipeline import FrameDirection
 from apipeline.frames.control_frames import EndFrame
+from apipeline.frames.sys_frames import Frame, MetricsFrame, StartInterruptionFrame
 from apipeline.utils.string import match_endofsentence
 
 from src.processors.ai_processor import AIProcessor
 from src.types.frames.control_frames import LLMFullResponseEndFrame, TTSStartedFrame, TTSStoppedFrame, TTSVoiceUpdateFrame
-from src.types.frames.data_frames import Frame, TTSSpeakFrame, TextFrame
-from apipeline.frames.sys_frames import StartInterruptionFrame
+from src.types.frames.data_frames import TTSSpeakFrame, TextFrame
+
+
+class TTSProcessorMetrics(FrameProcessorMetrics):
+    async def start_tts_usage_metrics(self, text: str):
+        characters = {
+            "processor": self._name,
+            "value": len(text),
+        }
+        logging.debug(f"{self._name} usage characters: {characters['value']}")
+        return MetricsFrame(characters=[characters])
 
 
 class TTSProcessorBase(AIProcessor):
@@ -24,6 +34,8 @@ class TTSProcessorBase(AIProcessor):
             sync_order_send: bool = False,
             **kwargs):
         super().__init__(**kwargs)
+        self._metrics = TTSProcessorMetrics(name=self.name)
+
         self._aggregate_sentences: bool = aggregate_sentences
         self._push_text_frames: bool = push_text_frames
         self._current_sentence: str = ""
@@ -51,6 +63,12 @@ class TTSProcessorBase(AIProcessor):
     @abstractmethod
     async def run_tts(self, text: str) -> AsyncGenerator[Frame, None]:
         pass
+
+    async def start_tts_usage_metrics(self, text: str):
+        if self.can_generate_metrics() and self.usage_metrics_enabled:
+            frame = await self._metrics.start_tts_usage_metrics(text)
+            if frame:
+                await self.push_frame(frame)
 
     async def say(self, text: str):
         await self.process_frame(TextFrame(text=text), FrameDirection.DOWNSTREAM)
