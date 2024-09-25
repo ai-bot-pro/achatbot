@@ -42,7 +42,13 @@ class BaseOpenAILLMProcessor(LLMProcessor):
     calls from the LLM.
     """
 
-    def __init__(self, *, model: str, api_key="", base_url="", **kwargs):
+    def __init__(
+            self,
+            *,
+            model: str,
+            api_key="",
+            base_url="",
+            **kwargs):
         super().__init__(**kwargs)
         # api_key = os.environ.get("OPENAI_API_KEY", api_key)
         self._model: str = model
@@ -127,6 +133,17 @@ class BaseOpenAILLMProcessor(LLMProcessor):
 
         return chunks
 
+    async def record_llm_usage_tokens(self, chunk_dict: dict):
+        tokens = {
+            "processor": self.name,
+            "model": self._model,
+        }
+        if chunk_dict["usage"]:
+            tokens["prompt_tokens"] = chunk_dict["usage"]["prompt_tokens"]
+            tokens["completion_tokens"] = chunk_dict["usage"]["completion_tokens"]
+            tokens["total_tokens"] = chunk_dict["usage"]["total_tokens"]
+            await self.start_llm_usage_metrics(tokens)
+
     async def _process_context(self, context: OpenAILLMContext):
         function_name = ""
         arguments = ""
@@ -139,20 +156,11 @@ class BaseOpenAILLMProcessor(LLMProcessor):
         )
 
         async for chunk in chunk_stream:
-            if chunk.usage:
-                tokens = {
-                    "processor": self.name,
-                    "model": self._model,
-                    "prompt_tokens": chunk.usage.prompt_tokens,
-                    "completion_tokens": chunk.usage.completion_tokens,
-                    "total_tokens": chunk.usage.total_tokens
-                }
-                await self.start_llm_usage_metrics(tokens)
+            # logging.info(f"chunk:{chunk.model_dump_json()}")
+            await self.record_llm_usage_tokens(chunk_dict=chunk.model_dump())
 
             if len(chunk.choices) == 0:
                 continue
-
-            logging.info(f"chunk:{chunk.model_dump_json()}")
             await self.stop_ttfb_metrics()
 
             if chunk.choices[0].delta.tool_calls:
@@ -229,7 +237,28 @@ class BaseOpenAILLMProcessor(LLMProcessor):
 
 
 class OpenAILLMProcessor(BaseOpenAILLMProcessor):
+    """
+    use OpenAI's client lib
+    """
     TAG = "openai_llm_processor"
 
     def __init__(self, model: str = "gpt-4o", **kwargs):
         super().__init__(model=model, **kwargs)
+
+
+class OpenAIGroqLLMProcessor(BaseOpenAILLMProcessor):
+    """
+    Groq API to be mostly compatible with OpenAI's client lib
+    detail see: https://console.groq.com/docs/openai
+    """
+    TAG = "openai_groq_llm_processor"
+
+    def __init__(self, model: str = "llama-3.1-70b-versatile", **kwargs):
+        super().__init__(model=model, **kwargs)
+
+    async def record_llm_usage_tokens(self, chunk_dict: dict):
+        if "x_groq" in chunk_dict and "usage" in chunk_dict["x_groq"]:
+            tokens = chunk_dict["x_groq"]["usage"]
+            tokens["processor"] = self.name
+            tokens["model"] = self._model
+            await self.start_llm_usage_metrics(tokens)

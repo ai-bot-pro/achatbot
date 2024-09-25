@@ -11,7 +11,6 @@ import json
 from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
 from apipeline.frames.sys_frames import StartInterruptionFrame
 
-from src.processors.aggregators.openai_llm_context import OpenAILLMContextFrame, OpenAILLMContext
 from src.types.frames.control_frames import (
     LLMFullResponseEndFrame,
     LLMFullResponseStartFrame,
@@ -20,7 +19,6 @@ from src.types.frames.control_frames import (
 )
 from src.types.frames.data_frames import (
     Frame,
-    FunctionCallResultFrame,
     InterimTranscriptionFrame,
     LLMMessagesAppendFrame,
     LLMMessagesFrame,
@@ -247,145 +245,3 @@ class LLMFullResponseAggregator(FrameProcessor):
             self._aggregation = ""
         else:
             await self.push_frame(frame, direction)
-
-
-class LLMContextAggregator(LLMResponseAggregator):
-    def __init__(self, *, context: OpenAILLMContext, **kwargs):
-
-        self._context = context
-        super().__init__(**kwargs)
-
-    @property
-    def context(self):
-        return self._context
-
-    def get_context_frame(self) -> OpenAILLMContextFrame:
-        return OpenAILLMContextFrame(context=self._context)
-
-    async def push_context_frame(self):
-        frame = self.get_context_frame()
-        await self.push_frame(frame)
-
-    # TODO-CB: Types
-    def _add_messages(self, messages):
-        self._context.add_messages(messages)
-
-    def _set_messages(self, messages):
-        self._context.set_messages(messages)
-
-    def _set_tools(self, tools: List):
-        self._context.set_tools(tools)
-
-    async def _push_aggregation(self):
-        if len(self._aggregation) > 0:
-            self._context.add_message({"role": self._role, "content": self._aggregation})
-
-            # Reset the aggregation. Reset it before pushing it down, otherwise
-            # if the tasks gets cancelled we won't be able to clear things up.
-            self._aggregation = ""
-
-            frame = OpenAILLMContextFrame(self._context)
-            await self.push_frame(frame)
-
-            # Reset our accumulator state.
-            self._reset()
-
-
-class LLMAssistantContextAggregator(LLMContextAggregator):
-    def __init__(self, context: OpenAILLMContext):
-        super().__init__(
-            messages=[],
-            context=context,
-            role="assistant",
-            start_frame=LLMFullResponseStartFrame,
-            end_frame=LLMFullResponseEndFrame,
-            accumulator_frame=TextFrame,
-            handle_interruptions=True
-        )
-
-
-class LLMUserContextAggregator(LLMContextAggregator):
-    def __init__(self, context: OpenAILLMContext):
-        super().__init__(
-            messages=[],
-            context=context,
-            role="user",
-            start_frame=UserStartedSpeakingFrame,
-            end_frame=UserStoppedSpeakingFrame,
-            accumulator_frame=TranscriptionFrame,
-            interim_accumulator_frame=InterimTranscriptionFrame
-        )
-
-
-class OpenAIUserContextAggregator(LLMUserContextAggregator):
-    def __init__(self, context: OpenAILLMContext):
-        super().__init__(context=context)
-
-
-class OpenAIAssistantContextAggregator(LLMAssistantContextAggregator):
-    def __init__(self, user_context_aggregator: OpenAIUserContextAggregator):
-        super().__init__(context=user_context_aggregator._context)
-        self._user_context_aggregator = user_context_aggregator
-        self._function_call_in_progress = None
-        self._function_call_result = None
-
-    async def process_frame(self, frame, direction):
-        await super().process_frame(frame, direction)
-        # See note above about not calling push_frame() here.
-        if isinstance(frame, StartInterruptionFrame):
-            self._function_call_in_progress = None
-            self._function_call_finished = None
-        elif isinstance(frame, FunctionCallInProgressFrame):
-            self._function_call_in_progress = frame
-        elif isinstance(frame, FunctionCallResultFrame):
-            if self._function_call_in_progress and self._function_call_in_progress.tool_call_id == frame.tool_call_id:
-                self._function_call_in_progress = None
-                self._function_call_result = frame
-                await self._push_aggregation()
-            else:
-                logging.warning(
-                    f"FunctionCallResultFrame tool_call_id does not match FunctionCallInProgressFrame tool_call_id")
-                self._function_call_in_progress = None
-                self._function_call_result = None
-
-    async def _push_aggregation(self):
-        if not (self._aggregation or self._function_call_result):
-            return
-
-        run_llm = False
-
-        aggregation = self._aggregation
-        self._aggregation = ""
-
-        try:
-            if self._function_call_result:
-                frame = self._function_call_result
-                self._function_call_result = None
-                if frame.result:
-                    self._context.add_message({
-                        "role": "assistant",
-                        "tool_calls": [
-                            {
-                                "id": frame.tool_call_id,
-                                "function": {
-                                    "name": frame.function_name,
-                                    "arguments": json.dumps(frame.arguments)
-                                },
-                                "type": "function"
-                            }
-                        ]
-                    })
-                    self._context.add_message({
-                        "role": "tool",
-                        "content": json.dumps(frame.result),
-                        "tool_call_id": frame.tool_call_id
-                    })
-                    run_llm = True
-            else:
-                self._context.add_message({"role": "assistant", "content": aggregation})
-
-            if run_llm:
-                await self._user_context_aggregator.push_context_frame()
-
-        except Exception as e:
-            logging.error(f"Error processing frame: {e}")

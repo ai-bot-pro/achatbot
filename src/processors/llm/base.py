@@ -11,7 +11,7 @@ from src.types.frames.control_frames import UserImageRequestFrame
 class LLMProcessorMetrics(FrameProcessorMetrics):
     async def start_llm_usage_metrics(self, tokens: dict):
         logging.debug(
-            f"{self._name} prompt tokens: {tokens['prompt_tokens']}, completion tokens: {tokens['completion_tokens']}")
+            f"{self._name} tokens: {tokens}")
         return MetricsFrame(tokens=[tokens])
 
 
