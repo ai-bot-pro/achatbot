@@ -69,9 +69,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
                                     "type": "string"
                                 }
                             },
-                        "required": [
-                                "location"
-                        ],
+                        "required": ["location"],
                         "type": "object"
                     }
                 },

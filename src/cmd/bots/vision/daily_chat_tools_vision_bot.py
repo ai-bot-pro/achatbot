@@ -7,12 +7,15 @@ from PIL import Image
 
 from apipeline.frames.data_frames import TextFrame
 from apipeline.frames.control_frames import EndFrame
+from apipeline.frames.sys_frames import Frame
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.pipeline.task import PipelineTask, PipelineParams
 from apipeline.processors.aggregators.sentence import SentenceAggregator
 from apipeline.processors.output_processor import OutputFrameProcessor
+from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
 
+from src.common.audio_stream.helper import RingBuffer
 from src.processors.frame_log_processor import FrameLogger
 from src.processors.aggregators.vision_image_frame import VisionImageFrameAggregator
 from src.processors.user_image_request_processor import UserImageRequestProcessor
@@ -33,6 +36,23 @@ from .. import register_daily_room_bots
 register_tool_funtions = Register('daily-chat-vision-tool-functions')
 
 
+class ImageCaptureProcessor(FrameProcessor):
+    def __init__(self, capture_cn: int = 1, **kwargs):
+        super().__init__(**kwargs)
+        self._capture_imgs = RingBuffer(capture_cn)
+
+    @property
+    def capture_imgs(self):
+        return self._capture_imgs
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection):
+        await super().process_frame(frame, direction)
+        if isinstance(frame, UserImageRawFrame):
+            logging.info(f"capture image ---> {frame}")
+            self._capture_imgs.append(frame)
+        await self.push_frame(frame, direction)
+
+
 @register_daily_room_bots.register
 class DailyChatToolsVisionBot(DailyRoomBot):
     r"""
@@ -51,7 +71,7 @@ class DailyChatToolsVisionBot(DailyRoomBot):
     - all tool function need to async run and set task timeout with using LLM's Parallel Tool
     - multi async agent sync msg with connector(local pipe; async queue or sync rpc)
     — Think about logically rigorous scenarios:
-        - like o1 (need CoT prompting with llm, un-control, maybe just use openai o1,but no money :|)
+        - like o1 (need CoT prompting with llm, un-control, maybe just use openai o1,but no enough money to support :|)
     """
 
     def __init__(self, **args) -> None:
@@ -102,40 +122,38 @@ class DailyChatToolsVisionBot(DailyRoomBot):
         logging.info(
             f"function_name:{function_name}, tool_call_id:{tool_call_id},"
             f"arguments:{arguments}, llm:{llm}, context:{context}")
-        if "question" in arguments:
-            frame = VisionImageRawFrame(
-                text=arguments["question"],
-                image=bytes([]),
-                size=(0, 0),
-                format=None,
-                mode=None,
-            )
-            if "image" in arguments \
-                    and isinstance(arguments["image"], UserImageRawFrame) \
-                    and arguments["image"].user_id == self.participant_uid:
-                frame.image = arguments["image"].image
-                frame.size = arguments["image"].size
-                frame.format = arguments["image"].format
-                frame.mode = arguments["image"].mode
+        arguments["question"] = "describe image."
+        images = self.image_capture_processor.capture_imgs.get(cls=list)
+        if len(images) == 0:
+            # no described image, so return tips
+            await result_callback(f"no described image, please try again.")
+            return
 
-            pipeline = Pipeline([
-                # SentenceAggregator(),
-                # UserImageRequestProcessor(),
-                # VisionImageFrameAggregator(),
-                self.get_vision_llm_processor(),
-                OutputFrameProcessor(cb=self.sink_out_cb),
-            ])
-            vision_task = PipelineTask(pipeline)
-            await vision_task.queue_frames([
-                frame,
-                EndFrame(),
-            ])
-            runner = PipelineRunner()
-            await runner.run(vision_task)
-            # return describe image tool result
-            await result_callback(self.vision_result)
+        image: UserImageRawFrame = images[0]
+        frame = VisionImageRawFrame(
+            text=arguments["question"],
+            image=image.image,
+            size=image.size,
+            format=image.format,
+            mode=image.mode,
+        )
+        await self.vision_task.queue_frames([
+            frame,
+            EndFrame(),
+        ])
+        await PipelineRunner().run(self.vision_task)
+        # return describe image tool result
+        await result_callback(self.vision_result)
 
     async def arun(self):
+        self.image_capture_processor = ImageCaptureProcessor()
+        self.vision_task = PipelineTask(Pipeline([
+            # SentenceAggregator(),
+            # UserImageRequestProcessor(),
+            # VisionImageFrameAggregator(),
+            self.get_vision_llm_processor(),
+            OutputFrameProcessor(cb=self.sink_out_cb),
+        ]))
 
         vad_analyzer = self.get_vad_analyzer()
         self.daily_params = DailyParams(
@@ -185,6 +203,8 @@ class DailyChatToolsVisionBot(DailyRoomBot):
 
         pipeline = Pipeline([
             transport.input_processor(),
+            FrameLogger(include_frame_types=[UserImageRawFrame]),
+            self.image_capture_processor,
             asr_processor,
             llm_user_ctx_aggr,
             llm_processor,

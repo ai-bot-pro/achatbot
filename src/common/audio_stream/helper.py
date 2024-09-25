@@ -14,13 +14,32 @@ class RingBuffer(object):
     def lenght(self):
         return len(self._buf)
 
-    def extend(self, data):
-        """Adds data to the end of buffer"""
-        self._buf.extend(data)
+    def append(self, data, at: str = "end"):
+        """Add a data to the front/end of buffer"""
+        match at:
+            case "front":
+                self._buf.appendleft(data)
+            case "end":
+                self._buf.append(data)
+            case _:
+                self._buf.append(data)
 
-    def get(self, is_clear=True):
+    def extend(self, data, at: str = "end"):
+        """Adds data to the front/end of buffer"""
+        match at:
+            case "front":
+                self._buf.extendleft(data)
+            case "end":
+                self._buf.extend(data)
+            case _:
+                self._buf.extend(data)
+
+    def get(self, is_clear=True, cls=bytes):
         """Retrieves data from the beginning of buffer and clears it"""
-        tmp = bytes(bytearray(self._buf))
+        if issubclass(cls, bytes):
+            tmp = bytes(bytearray(self._buf))
+        else:
+            tmp = list(self._buf)
         is_clear and self._buf.clear()
         return tmp
 
