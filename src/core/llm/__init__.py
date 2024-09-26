@@ -22,6 +22,8 @@ class LLMEnvInit():
             from . import personalai
         elif "llm_transformers_manual_vision_qwen" in tag:
             from .transformers import manual_vision_qwen
+        elif "llm_transformers_manual_vision_llama" in tag:
+            from .transformers import manual_vision_llama
         elif "llm_transformers_manual" in tag:
             from .transformers import manual
         elif "llm_transformers_pipeline" in tag:
@@ -119,4 +121,5 @@ class LLMEnvInit():
         'llm_transformers_manual': get_llm_transformers_args,
         'llm_transformers_pipeline': get_llm_transformers_args,
         'llm_transformers_manual_vision_qwen': get_llm_transformers_args,
+        'llm_transformers_manual_vision_llama': get_llm_transformers_args,
     }
