@@ -15,7 +15,7 @@ from src.common.session import Session
 from src.common.types import SessionCtx, MODELS_DIR, TEST_DIR
 from src.core.llm import LLMEnvInit
 from src.common.logger import Logger
-from src.processors.frame_log_processor import FrameLogger
+from apipeline.processors.logger import FrameLogger
 from src.types.frames.data_frames import VisionImageRawFrame
 
 from dotenv import load_dotenv

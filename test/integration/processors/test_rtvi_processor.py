@@ -25,7 +25,7 @@ from src.common.logger import Logger
 from src.types.frames.data_frames import TranscriptionFrame
 from src.types.frames.control_frames import LLMFullResponseEndFrame, LLMFullResponseStartFrame, UserStartedSpeakingFrame, UserStoppedSpeakingFrame
 from src.common.utils.time import time_now_iso8601
-from src.processors.frame_log_processor import FrameLogger
+from apipeline.processors.logger import FrameLogger
 
 from dotenv import load_dotenv
 load_dotenv()

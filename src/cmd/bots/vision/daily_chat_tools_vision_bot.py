@@ -14,9 +14,9 @@ from apipeline.pipeline.task import PipelineTask, PipelineParams
 from apipeline.processors.aggregators.sentence import SentenceAggregator
 from apipeline.processors.output_processor import OutputFrameProcessor
 from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
+from apipeline.processors.logger import FrameLogger
 
 from src.common.audio_stream.helper import RingBuffer
-from src.processors.frame_log_processor import FrameLogger
 from src.processors.aggregators.vision_image_frame import VisionImageFrameAggregator
 from src.processors.user_image_request_processor import UserImageRequestProcessor
 from src.processors.llm.base import LLMProcessor
@@ -48,7 +48,6 @@ class ImageCaptureProcessor(FrameProcessor):
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
         if isinstance(frame, UserImageRawFrame):
-            logging.info(f"capture image ---> {frame}")
             self._capture_imgs.append(frame)
         await self.push_frame(frame, direction)
 
@@ -203,7 +202,7 @@ class DailyChatToolsVisionBot(DailyRoomBot):
 
         pipeline = Pipeline([
             transport.input_processor(),
-            FrameLogger(include_frame_types=[UserImageRawFrame]),
+            # FrameLogger(include_frame_types=[UserImageRawFrame]),
             self.image_capture_processor,
             asr_processor,
             llm_user_ctx_aggr,
@@ -218,7 +217,7 @@ class DailyChatToolsVisionBot(DailyRoomBot):
 
     async def on_first_participant_joined(self, transport: DailyTransport, participant):
         self.participant_uid = participant["id"]
-        transport.capture_participant_video(participant["id"], framerate=0)
+        transport.capture_participant_video(participant["id"])
         if self.daily_params.transcription_enabled:
             transport.capture_participant_transcription(participant["id"])
 

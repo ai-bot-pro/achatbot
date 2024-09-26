@@ -27,11 +27,11 @@ class DailyEchoVisionBot(DailyRoomBot):
 
         @transport.event_handler("on_first_participant_joined")
         async def on_first_participant_joined(transport, participant):
-            transport.capture_participant_video(participant["id"], framerate=0)
+            transport.capture_participant_video(participant["id"])
 
         pipeline = Pipeline([
             transport.input_processor(),
-            FrameLogger(include_frame_types=[UserImageRawFrame]),
+            # FrameLogger(include_frame_types=[UserImageRawFrame]),
             transport.output_processor(),
         ])
         task = PipelineTask(pipeline)
