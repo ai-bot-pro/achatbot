@@ -503,7 +503,7 @@ llm_transformers_manual_vision_qwen = [
     #"transformers@git+https://github.com/huggingface/transformers",
     # https://github.com/huggingface/transformers/releases/tag/v4.45.0
     "transformers~=4.45.0",
-    "wen-vl-utils",
+    "qwen-vl-utils",
     "av",
     "torch~=2.2.2",
     "torchaudio~=2.2.2",
