@@ -55,7 +55,7 @@ class ImageCaptureProcessor(FrameProcessor):
 @register_daily_room_bots.register
 class DailyChatToolsVisionBot(DailyRoomBot):
     r"""
-    use function tools llm model to chat (text LLM)
+    use function tools llm model to chat (for text LLM)
     - when tool is describe image, use describe_image function which use vision model to describe the image with describe text (vision LLM)
         - just use vision lm(Vertical Domain(OCR, etc..) or General(VIT)) to detecte objects and describe the image/video with text
     - when tool is get weather, use get_weather function to get weahter info. this function just a demo
@@ -70,7 +70,7 @@ class DailyChatToolsVisionBot(DailyRoomBot):
     - all tool function need to async run and set task timeout with using LLM's Parallel Tool
     - multi async agent sync msg with connector(local pipe; async queue or sync rpc)
     — Think about logically rigorous scenarios:
-        - like o1 (need CoT prompting with llm, un-control, maybe just use openai o1,but no enough money to support :|)
+        - like o1 (need CoT prompting with llm, maybe un-control, just use openai o1.)
     """
 
     def __init__(self, **args) -> None:
@@ -121,7 +121,8 @@ class DailyChatToolsVisionBot(DailyRoomBot):
         logging.info(
             f"function_name:{function_name}, tool_call_id:{tool_call_id},"
             f"arguments:{arguments}, llm:{llm}, context:{context}")
-        arguments["question"] = "describe image."
+        if "question" not in arguments:
+            arguments["question"] = "describe image."
         images = self.image_capture_processor.capture_imgs.get(cls=list)
         if len(images) == 0:
             # no described image, so return tips
