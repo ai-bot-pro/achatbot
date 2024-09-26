@@ -21,3 +21,4 @@ class ASRArgs:
     verbose: bool = True
     prompt: str = ""
     sample_rate: int = RATE
+    device: str | dict | None = None
