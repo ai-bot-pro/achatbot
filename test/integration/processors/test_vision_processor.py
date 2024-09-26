@@ -15,7 +15,7 @@ from src.common.session import Session
 from src.common.types import SessionCtx, MODELS_DIR, TEST_DIR
 from src.core.llm import LLMEnvInit
 from src.common.logger import Logger
-from src.processors.frame_log_processor import FrameLogger
+from apipeline.processors.logger import FrameLogger
 from src.types.frames.data_frames import VisionImageRawFrame
 
 from dotenv import load_dotenv
@@ -28,6 +28,12 @@ LLM_MODEL_TYPE=chat LLM_MODEL_NAME="minicpm-v-2.6" \
     LLM_CLIP_MODEL_PATH="./models/openbmb/MiniCPM-V-2_6-gguf/mmproj-model-f16.gguf" \
     LLM_CHAT_FORMAT=minicpm-v-2.6 \
     python -m unittest test.integration.processors.test_vision_processor.TestVisionProcessor
+
+LLM_MODEL_TYPE=chat LLM_MODEL_NAME="minicpm-v-2.6" \
+    LLM_MODEL_PATH="./models/openbmb/MiniCPM-V-2_6-gguf/ggml-model-Q4_0.gguf" \
+    LLM_CLIP_MODEL_PATH="./models/openbmb/MiniCPM-V-2_6-gguf/mmproj-model-f16.gguf" \
+    LLM_CHAT_FORMAT=minicpm-v-2.6 \
+    python -m unittest test.integration.processors.test_vision_processor.TestVisionProcessor.test_run_text
 
 LLM_TAG=llm_transformers_manual_vision_qwen \
     LLM_MODEL_NAME_OR_PATH="./models/Qwen/Qwen2-VL-2B-Instruct" \
@@ -77,6 +83,20 @@ class TestVisionProcessor(unittest.IsolatedAsyncioTestCase):
                 format=self.img.format,
                 mode=self.img.mode,
                 text="请描述下图片",
+            ),
+            StopTaskFrame(),
+        ])
+        await runner.run(self.task)
+
+    async def test_run_text(self):
+        runner = PipelineRunner()
+        await self.task.queue_frames([
+            VisionImageRawFrame(
+                text="你好",
+                image=bytes([]),
+                size=(0, 0),
+                format=None,
+                mode=None,
             ),
             StopTaskFrame(),
         ])

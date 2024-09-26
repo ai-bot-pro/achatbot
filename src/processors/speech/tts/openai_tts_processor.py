@@ -64,6 +64,7 @@ class OpenAITTSProcessor(TTSProcessorBase):
                     yield ErrorFrame(f"Error getting audio (status: {r.status_code}, error: {error})")
                     self._tts_done_event.set()
                     return
+                await self.start_tts_usage_metrics(text)
                 async for chunk in r.iter_bytes(8192):
                     if len(chunk) > 0:
                         await self.stop_ttfb_metrics()

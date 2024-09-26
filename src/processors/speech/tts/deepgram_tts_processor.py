@@ -6,6 +6,7 @@ from apipeline.frames.sys_frames import ErrorFrame
 from apipeline.frames.data_frames import Frame, AudioRawFrame
 
 from src.processors.speech.tts.base import TTSProcessorBase
+from types.frames.control_frames import TTSStartedFrame
 
 
 class DeepgramTTSProcessor(TTSProcessorBase):
@@ -66,6 +67,8 @@ class DeepgramTTSProcessor(TTSProcessorBase):
                         f"{self} error getting audio (status: {r.status}, error: {response_text})")
                     yield ErrorFrame(f"Error getting audio (status: {r.status}, error: {response_text})")
                     return
+
+                await self.start_tts_usage_metrics(text)
 
                 async for data in r.content:
                     await self.stop_ttfb_metrics()

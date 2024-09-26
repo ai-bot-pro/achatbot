@@ -52,7 +52,7 @@ classifiers = [
 ]
 dependencies = [
     "requests~=2.32.3",
-    "apipeline~=0.1.17",
+    "apipeline~=0.1.20",
     "python-dotenv~=1.0.1",
     "pydub~=0.25.1",        # need install ffmpeg
     "pillow~=10.4.0",
@@ -500,8 +500,9 @@ llama_cpp = ["llama-cpp-python~=0.2.82"]
 llm_personalai_proxy = ["geocoder~=1.38.1"]
 # transof
 llm_transformers_manual_vision_qwen = [
-    "transformers@git+https://github.com/huggingface/transformers",
-    #"transformers~=4.45.0",# maybe use next ver 4.45.0
+    #"transformers@git+https://github.com/huggingface/transformers",
+    # https://github.com/huggingface/transformers/releases/tag/v4.45.0
+    "transformers~=4.45.0",
     "qwen-vl-utils",
     "av",
     "torch~=2.2.2",

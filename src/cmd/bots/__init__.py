@@ -49,5 +49,8 @@ def import_bots(bot_name: str = "DummyBot"):
     if "DailyChatVisionBot" in bot_name:
         from .vision import daily_chat_vision_bot
         return True
+    if "DailyChatToolsVisionBot" in bot_name:
+        from .vision import daily_chat_tools_vision_bot
+        return True
 
     return False

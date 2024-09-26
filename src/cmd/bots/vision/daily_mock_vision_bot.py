@@ -4,6 +4,7 @@ from PIL import Image
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.pipeline.task import PipelineTask, PipelineParams
+from apipeline.processors.logger import FrameLogger
 
 from src.processors.vision.vision_processor import MockVisionProcessor
 from src.processors.user_image_request_processor import UserImageRequestProcessor
@@ -13,6 +14,7 @@ from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.common.types import DailyParams
 from src.cmd.bots.base import DailyRoomBot
 from src.transports.daily import DailyTransport
+from src.types.frames.data_frames import UserImageRawFrame
 from .. import register_daily_room_bots
 
 
@@ -60,6 +62,7 @@ class DailyMockVisionBot(DailyRoomBot):
 
         pipeline = Pipeline([
             transport.input_processor(),
+            FrameLogger(include_frame_types=[UserImageRawFrame]),
             asr_processor,
             # llm_in_aggr,
             in_aggr,

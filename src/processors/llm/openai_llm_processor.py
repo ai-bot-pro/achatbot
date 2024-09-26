@@ -24,7 +24,7 @@ from apipeline.pipeline.pipeline import FrameDirection
 
 from src.processors.aggregators.openai_llm_context import OpenAILLMContext, OpenAILLMContextFrame
 from src.processors.llm.base import LLMProcessor
-from src.types.frames.control_frames import LLMFullResponseEndFrame, LLMFullResponseStartFrame, LLMModelUpdateFrame, UserImageRequestFrame
+from src.types.frames.control_frames import LLMFullResponseEndFrame, LLMFullResponseStartFrame, LLMModelUpdateFrame
 from src.types.frames.data_frames import LLMMessagesFrame, VisionImageRawFrame
 
 
@@ -42,7 +42,13 @@ class BaseOpenAILLMProcessor(LLMProcessor):
     calls from the LLM.
     """
 
-    def __init__(self, *, model: str, api_key="", base_url="", **kwargs):
+    def __init__(
+            self,
+            *,
+            model: str,
+            api_key="",
+            base_url="",
+            **kwargs):
         super().__init__(**kwargs)
         # api_key = os.environ.get("OPENAI_API_KEY", api_key)
         self._model: str = model
@@ -70,7 +76,7 @@ class BaseOpenAILLMProcessor(LLMProcessor):
             context: OpenAILLMContext,
             tool_call_id: str,
             function_name: str,
-            arguments: str) -> None:
+            arguments: dict) -> None:
         f = None
         if function_name in self._callbacks.keys():
             f = self._callbacks[function_name]
@@ -91,11 +97,6 @@ class BaseOpenAILLMProcessor(LLMProcessor):
             await self._start_callbacks[function_name](function_name, self, context)
         elif None in self._start_callbacks.keys():
             return await self._start_callbacks[None](function_name, self, context)
-
-    async def request_image_frame(self, user_id: str, *, text_content: str | None = None):
-        await self.push_frame(
-            UserImageRequestFrame(user_id=user_id, context=text_content),
-            FrameDirection.UPSTREAM)
 
     async def get_chat_completions(
             self,
@@ -132,6 +133,17 @@ class BaseOpenAILLMProcessor(LLMProcessor):
 
         return chunks
 
+    async def record_llm_usage_tokens(self, chunk_dict: dict):
+        tokens = {
+            "processor": self.name,
+            "model": self._model,
+        }
+        if chunk_dict["usage"]:
+            tokens["prompt_tokens"] = chunk_dict["usage"]["prompt_tokens"]
+            tokens["completion_tokens"] = chunk_dict["usage"]["completion_tokens"]
+            tokens["total_tokens"] = chunk_dict["usage"]["total_tokens"]
+            await self.start_llm_usage_metrics(tokens)
+
     async def _process_context(self, context: OpenAILLMContext):
         function_name = ""
         arguments = ""
@@ -144,9 +156,11 @@ class BaseOpenAILLMProcessor(LLMProcessor):
         )
 
         async for chunk in chunk_stream:
+            # logging.info(f"chunk:{chunk.model_dump_json()}")
+            await self.record_llm_usage_tokens(chunk_dict=chunk.model_dump())
+
             if len(chunk.choices) == 0:
                 continue
-
             await self.stop_ttfb_metrics()
 
             if chunk.choices[0].delta.tool_calls:
@@ -165,7 +179,7 @@ class BaseOpenAILLMProcessor(LLMProcessor):
                 if tool_call.function and tool_call.function.name:
                     function_name += tool_call.function.name
                     tool_call_id = tool_call.id
-                    await self.call_start_function(function_name)
+                    await self.call_start_function(context, function_name)
                 if tool_call.function and tool_call.function.arguments:
                     # Keep iterating through the response to collect all the argument fragments
                     arguments += tool_call.function.arguments
@@ -191,43 +205,12 @@ class BaseOpenAILLMProcessor(LLMProcessor):
             arguments: str
     ):
         arguments = json.loads(arguments)
-        result = await self.call_function(function_name, arguments)
-        arguments = json.dumps(arguments)
-        if isinstance(result, (str, dict)):
-            # Handle it in "full magic mode"
-            tool_call = ChatCompletionFunctionMessageParam({
-                "role": "assistant",
-                "tool_calls": [
-                    {
-                        "id": tool_call_id,
-                        "function": {
-                            "arguments": arguments,
-                            "name": function_name
-                        },
-                        "type": "function"
-                    }
-                ]
-            })
-            context.add_message(tool_call)
-            if isinstance(result, dict):
-                result = json.dumps(result)
-            tool_result = ChatCompletionToolParam({
-                "tool_call_id": tool_call_id,
-                "role": "tool",
-                "content": result
-            })
-            context.add_message(tool_result)
-            # re-prompt to get a human answer
-            await self._process_context(context)
-        elif isinstance(result, list):
-            # reduced magic
-            for msg in result:
-                context.add_message(msg)
-            await self._process_context(context)
-        elif isinstance(result, type(None)):
-            pass
-        else:
-            raise TypeError(f"Unknown return type from function callback: {type(result)}")
+        await self.call_function(
+            context=context,
+            tool_call_id=tool_call_id,
+            function_name=function_name,
+            arguments=arguments,
+        )
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
@@ -254,7 +237,28 @@ class BaseOpenAILLMProcessor(LLMProcessor):
 
 
 class OpenAILLMProcessor(BaseOpenAILLMProcessor):
+    """
+    use OpenAI's client lib
+    """
     TAG = "openai_llm_processor"
 
     def __init__(self, model: str = "gpt-4o", **kwargs):
         super().__init__(model=model, **kwargs)
+
+
+class OpenAIGroqLLMProcessor(BaseOpenAILLMProcessor):
+    """
+    Groq API to be mostly compatible with OpenAI's client lib
+    detail see: https://console.groq.com/docs/openai
+    """
+    TAG = "openai_groq_llm_processor"
+
+    def __init__(self, model: str = "llama-3.2-11b-text-preview", **kwargs):
+        super().__init__(model=model, **kwargs)
+
+    async def record_llm_usage_tokens(self, chunk_dict: dict):
+        if "x_groq" in chunk_dict and "usage" in chunk_dict["x_groq"]:
+            tokens = chunk_dict["x_groq"]["usage"]
+            tokens["processor"] = self.name
+            tokens["model"] = self._model
+            await self.start_llm_usage_metrics(tokens)

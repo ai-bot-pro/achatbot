@@ -38,6 +38,8 @@ class VisionImageFrameAggregator(FrameProcessor):
                 await self.push_frame(frame, direction)
             else:
                 self._describe_text = frame.text
+        elif isinstance(frame, VisionImageRawFrame):
+            await self.push_frame(frame, direction)
         elif isinstance(frame, ImageRawFrame):
             if self._describe_text:
                 frame = VisionImageRawFrame(

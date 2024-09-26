@@ -112,7 +112,6 @@ class DailyInputTransportProcessor(AudioVADInputProcessor):
 
     def request_participant_image(self, participant_id: str):
         if participant_id in self._video_renderers:
-
             self._video_renderers[participant_id]["render_next_frame"] = True
 
     async def _on_participant_video_frame(self, participant_id: str, buffer, size, color_format):
@@ -126,6 +125,7 @@ class DailyInputTransportProcessor(AudioVADInputProcessor):
             next_time = prev_time + 1 / framerate
             render_frame = (curr_time - next_time) < 0.1
         elif self._video_renderers[participant_id]["render_next_frame"]:
+            # e.g.: push UserImageRequestFrame to render a UserImageRawFrame
             self._video_renderers[participant_id]["render_next_frame"] = False
             render_frame = True
 
