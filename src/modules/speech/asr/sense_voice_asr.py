@@ -14,10 +14,13 @@ class SenseVoiceAsr(ASRBase):
     def __init__(self, **args) -> None:
         from deps.SenseVoice.model import SenseVoiceSmall
         super().__init__(**args)
-        info = CUDAInfo()
         device = "cpu"
-        if info.is_cuda:
-            device = "cuda:0"
+        if self.args.device:
+            device = self.args.device
+        else:
+            info = CUDAInfo()
+            if info.is_cuda:
+                device = "cuda:0"
         self.model: SenseVoiceSmall = None
         self.model, self.kwargs = SenseVoiceSmall.from_pretrained(
             model=self.args.model_name_or_path, device=device)

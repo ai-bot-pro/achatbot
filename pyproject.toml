@@ -498,8 +498,7 @@ openai = ["openai~=1.40.6"]
 # if want to use other lib(cuda), see: https://github.com/abetlen/llama-cpp-python#installation-configuration
 llama_cpp = ["llama-cpp-python~=0.2.82"]
 llm_personalai_proxy = ["geocoder~=1.38.1"]
-# transof
-llm_transformers_manual_vision_qwen = [
+llm_transformers_manual_vision = [
     #"transformers@git+https://github.com/huggingface/transformers",
     # https://github.com/huggingface/transformers/releases/tag/v4.45.0
     "transformers~=4.45.0",
@@ -509,6 +508,13 @@ llm_transformers_manual_vision_qwen = [
     "torchaudio~=2.2.2",
     "torchvision~=0.17.2",
 ]
+llm_transformers_manual_vision_qwen = [
+    "achatbot[llm_transformers_manual_vision]",
+]
+llm_transformers_manual_vision_llama = [
+    "achatbot[llm_transformers_manual_vision]",
+]
+
 
 # for transformers awq model
 autoawq = ["autoawq"]
