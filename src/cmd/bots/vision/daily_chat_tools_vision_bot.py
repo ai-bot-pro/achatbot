@@ -105,7 +105,7 @@ class DailyChatToolsVisionBot(DailyRoomBot):
         # add result to assistant context
         self.get_weather_call_cn += 1
         if self.max_function_call_cn > self.get_weather_call_cn:
-            await result_callback(f"The weather in {location} is currently 72 degrees and sunny.")
+            await result_callback(f"The weather in {location} is currently 32 degrees and sunny.")
         else:
             self.get_weather_call_cn = 0
 

@@ -4,6 +4,7 @@ import asyncio
 import uuid
 
 from apipeline.frames.control_frames import EndFrame
+from apipeline.pipeline.task import PipelineTask
 
 from src.processors.vision.vision_processor import MockVisionProcessor
 from src.processors.speech.asr.base import ASRProcessorBase
@@ -39,7 +40,7 @@ class DailyRoomBot(IBot):
         if self.args.bot_name is None or len(self.args.bot_name) == 0:
             self.args.bot_name = self.__class__.__name__
 
-        self.task = None
+        self.task: PipelineTask = None
         self.session = Session(**SessionCtx(uuid.uuid4()).__dict__)
 
         self._bot_config_list = self.args.bot_config_list
@@ -59,10 +60,19 @@ class DailyRoomBot(IBot):
         return self._bot_config
 
     def run(self):
+        asyncio.run(self.try_run())
+
+    async def try_run(self):
         try:
-            asyncio.run(self.arun())
+            await self.arun()
+        except asyncio.CancelledError:
+            logging.info("CancelledError, Exiting!")
+            if self.task is not None:
+                await self.task.queue_frame(EndFrame())
         except KeyboardInterrupt:
             logging.warning("Ctrl-C detected. Exiting!")
+            if self.task is not None:
+                await self.task.queue_frame(EndFrame())
         except Exception as e:
             logging.error(f"run error: {e}", exc_info=True)
 
