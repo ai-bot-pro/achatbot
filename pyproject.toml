@@ -500,9 +500,10 @@ llama_cpp = ["llama-cpp-python~=0.2.82"]
 llm_personalai_proxy = ["geocoder~=1.38.1"]
 # transof
 llm_transformers_manual_vision_qwen = [
-    "transformers@git+https://github.com/huggingface/transformers",
-    #"transformers~=4.45.0",# maybe use next ver 4.45.0
-    "qwen-vl-utils",
+    #"transformers@git+https://github.com/huggingface/transformers",
+    # https://github.com/huggingface/transformers/releases/tag/v4.45.0
+    "transformers~=4.45.0",
+    "wen-vl-utils",
     "av",
     "torch~=2.2.2",
     "torchaudio~=2.2.2",

@@ -70,7 +70,7 @@ class DailyChatToolsVisionBot(DailyRoomBot):
     - all tool function need to async run and set task timeout with using LLM's Parallel Tool
     - multi async agent sync msg with connector(local pipe; async queue or sync rpc)
     — Think about logically rigorous scenarios:
-        - like o1 (need CoT prompting with llm, maybe un-control, just use openai o1.)
+        - like o1 (need CoT prompting with llm, or use openai o1.)
     """
 
     def __init__(self, **args) -> None:
@@ -137,23 +137,24 @@ class DailyChatToolsVisionBot(DailyRoomBot):
             format=image.format,
             mode=image.mode,
         )
-        await self.vision_task.queue_frames([
+        vision_task = PipelineTask(Pipeline([
+            # SentenceAggregator(),
+            # UserImageRequestProcessor(),
+            # VisionImageFrameAggregator(),
+            self.vision_llm_processor,
+            OutputFrameProcessor(cb=self.sink_out_cb),
+        ]))
+        await vision_task.queue_frames([
             frame,
             EndFrame(),
         ])
-        await PipelineRunner().run(self.vision_task)
+        await PipelineRunner().run(vision_task)
         # return describe image tool result
         await result_callback(self.vision_result)
 
     async def arun(self):
         self.image_capture_processor = ImageCaptureProcessor()
-        self.vision_task = PipelineTask(Pipeline([
-            # SentenceAggregator(),
-            # UserImageRequestProcessor(),
-            # VisionImageFrameAggregator(),
-            self.get_vision_llm_processor(),
-            OutputFrameProcessor(cb=self.sink_out_cb),
-        ]))
+        self.vision_llm_processor = self.get_vision_llm_processor()
 
         vad_analyzer = self.get_vad_analyzer()
         self.daily_params = DailyParams(

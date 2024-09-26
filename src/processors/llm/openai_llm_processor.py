@@ -253,7 +253,7 @@ class OpenAIGroqLLMProcessor(BaseOpenAILLMProcessor):
     """
     TAG = "openai_groq_llm_processor"
 
-    def __init__(self, model: str = "llama-3.1-70b-versatile", **kwargs):
+    def __init__(self, model: str = "llama-3.2-11b-text-preview", **kwargs):
         super().__init__(model=model, **kwargs)
 
     async def record_llm_usage_tokens(self, chunk_dict: dict):
