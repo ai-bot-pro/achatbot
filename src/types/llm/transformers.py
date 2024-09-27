@@ -89,7 +89,7 @@ class TransformersLMArgs:
             "help": "Controls the randomness of the output. Set to 0.0 for deterministic (repeatable) outputs. Default is 0.0."
         },
     )
-    lm_gen_top_k: float = field(
+    lm_gen_top_k: int = field(
         default=20,
         metadata={
             "help": "Changing the top - k parameter sets the size of the shortlist the model samples from as it outputs each token. Setting top - k to 1 gives us greedy decoding. Default is 20"
