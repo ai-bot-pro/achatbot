@@ -120,7 +120,7 @@ class TransformersBaseLLM(BaseLLM, ILlm):
     def count_tokens(self, text: str | bytes) -> int:
         return len(self._tokenizer.encode(text)) if self._tokenizer else 0
 
-    def _warmup(self, target, kwargs):
+    def _warmup(self, target, args=(), kwargs=None):
         logging.info(f"Warming up {self.__class__.__name__}")
 
         if self._model.device == "cuda":
@@ -131,7 +131,7 @@ class TransformersBaseLLM(BaseLLM, ILlm):
 
         n_steps = self.args.warnup_steps
         for step in range(n_steps):
-            thread = Thread(target=target, kwargs=kwargs)
+            thread = Thread(target=target, args=args, kwargs=kwargs)
             thread.start()
             times = []
             start_time = time.perf_counter()

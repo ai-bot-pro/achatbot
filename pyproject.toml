@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.7.1"
+version = "0.0.7.2"
 requires-python = ">= 3.10"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
@@ -71,6 +71,11 @@ Changelog = "https://github.com/ai-bot-pro/chat-bot/blob/main/CHANGELOG.md"
 
 
 [project.optional-dependencies]
+# base opt dep
+tensorrt = ["tensorrt~=10.4.0"]
+einops = ["~=0.8.0"]
+
+
 # default fastapi_daily_bot_server
 # achatbot[fastapi_bot_server,daily_rtvi_bot,daily_langchain_rag_bot]
 # use all asr tts e.g.:
@@ -513,6 +518,9 @@ llm_transformers_manual_vision_qwen = [
 ]
 llm_transformers_manual_vision_llama = [
     "achatbot[llm_transformers_manual_vision]",
+]
+llm_transformers_manual_vision_molmo = [
+    "achatbot[llm_transformers_manual_vision,einops]",
 ]
 
 
