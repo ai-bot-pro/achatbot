@@ -44,6 +44,11 @@ LLM_TAG=llm_transformers_manual_vision_llama \
     LLM_MODEL_NAME_OR_PATH="./models/unsloth/Llama-3.2-11B-Vision-Instruct" \
     LLM_CHAT_HISTORY_SIZE=0 \
     python -m unittest test.integration.processors.test_vision_processor.TestVisionProcessor
+
+LLM_TAG=llm_transformers_manual_vision_molmo \
+    LLM_MODEL_NAME_OR_PATH=./models/allenai/Molmo-7B-D-0924 \
+    LLM_CHAT_HISTORY_SIZE=0 \
+    python -m unittest test.integration.processors.test_vision_processor.TestVisionProcessor
 """
 
 

@@ -73,7 +73,7 @@ Changelog = "https://github.com/ai-bot-pro/chat-bot/blob/main/CHANGELOG.md"
 [project.optional-dependencies]
 # base opt dep
 tensorrt = ["tensorrt~=10.4.0"]
-einops = ["~=0.8.0"]
+einops = ["einops~=0.8.0"]
 
 
 # default fastapi_daily_bot_server
