@@ -24,6 +24,8 @@ class TransformersManualLLM(TransformersBaseLLM):
             streamer=self._streamer,
             min_new_tokens=self.args.lm_gen_min_new_tokens,
             max_new_tokens=self.args.lm_gen_max_new_tokens,
+            top_k=self.args.lm_gen_top_k,
+            top_p=self.args.lm_gen_top_p,
             do_sample=self.args.lm_gen_do_sample,
             temperature=self.args.lm_gen_temperature,
             repetition_penalty=self.args.lm_gen_repetition_penalty,
@@ -51,6 +53,8 @@ class TransformersManualLLM(TransformersBaseLLM):
             streamer=self._streamer,
             do_sample=self.args.lm_gen_do_sample,
             temperature=self.args.lm_gen_temperature,
+            top_k=self.args.lm_gen_top_k,
+            top_p=self.args.lm_gen_top_p,
             repetition_penalty=self.args.lm_gen_repetition_penalty,
             min_new_tokens=self.args.lm_gen_min_new_tokens,
             max_new_tokens=self.args.lm_gen_max_new_tokens)
