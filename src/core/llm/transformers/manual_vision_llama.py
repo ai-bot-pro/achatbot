@@ -88,6 +88,9 @@ class TransformersManualVisionLlamaLLM(TransformersBaseLLM):
         warmup_gen_kwargs = dict(
             model_inputs,
             streamer=self._streamer,
+            do_sample=self.args.lm_gen_do_sample,
+            temperature=self.args.lm_gen_temperature,
+            repetition_penalty=self.args.lm_gen_repetition_penalty,
             min_new_tokens=self.args.lm_gen_min_new_tokens,
             max_new_tokens=self.args.lm_gen_max_new_tokens,
         )
@@ -124,6 +127,9 @@ class TransformersManualVisionLlamaLLM(TransformersBaseLLM):
         generation_kwargs = dict(
             model_inputs,
             streamer=self._streamer,
+            do_sample=self.args.lm_gen_do_sample,
+            temperature=self.args.lm_gen_temperature,
+            repetition_penalty=self.args.lm_gen_repetition_penalty,
             min_new_tokens=self.args.lm_gen_min_new_tokens,
             max_new_tokens=self.args.lm_gen_max_new_tokens)
         thread = Thread(target=self._model.generate, kwargs=generation_kwargs)

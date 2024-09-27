@@ -27,6 +27,9 @@ class TransformersPipelineLLM(TransformersBaseLLM, ILlm):
             text_inputs=dummy_msgs,
             streamer=self._streamer,
             return_full_text=False,
+            do_sample=self.args.lm_gen_do_sample,
+            temperature=self.args.lm_gen_temperature,
+            repetition_penalty=self.args.lm_gen_repetition_penalty,
             min_new_tokens=self.args.lm_gen_min_new_tokens,
             max_new_tokens=self.args.lm_gen_max_new_tokens,
         )
@@ -46,6 +49,9 @@ class TransformersPipelineLLM(TransformersBaseLLM, ILlm):
             text_inputs=msgs,
             return_full_text=False,
             streamer=self._streamer,
+            do_sample=self.args.lm_gen_do_sample,
+            temperature=self.args.lm_gen_temperature,
+            repetition_penalty=self.args.lm_gen_repetition_penalty,
             min_new_tokens=self.args.lm_gen_min_new_tokens,
             max_new_tokens=self.args.lm_gen_max_new_tokens)
         thread = Thread(target=self._pipeline, kwargs=generation_kwargs)

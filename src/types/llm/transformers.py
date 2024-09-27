@@ -77,16 +77,35 @@ class TransformersLMArgs:
             "help": "Minimum number of new tokens to generate in a single completion. Default is 0."
         },
     )
+    lm_gen_do_sample: bool = field(
+        default=False,
+        metadata={
+            "help": "Whether to use sampling; set this to False for deterministic outputs. Default is False."
+        },
+    )
     lm_gen_temperature: float = field(
         default=0.0,
         metadata={
             "help": "Controls the randomness of the output. Set to 0.0 for deterministic (repeatable) outputs. Default is 0.0."
         },
     )
-    lm_gen_do_sample: bool = field(
-        default=False,
+    lm_gen_top_k: float = field(
+        default=20,
         metadata={
-            "help": "Whether to use sampling; set this to False for deterministic outputs. Default is False."
+            "help": "Changing the top - k parameter sets the size of the shortlist the model samples from as it outputs each token. Setting top - k to 1 gives us greedy decoding. Default is 20"
+
+        },
+    )
+    lm_gen_top_p: float = field(
+        default=0.8,
+        metadata={
+            "help": "Top-p is usually set to a high value (like 0.75) with the purpose of limiting the long tail of low-probability tokens that may be sampled. We can use both top-k and top-p together. If both k and p are enabled, p acts after k. Default is 0.8."
+        },
+    )
+    lm_gen_repetition_penalty: float = field(
+        default=1.0,
+        metadata={
+            "help": "Controls the token repetition pealty.  no repetition Default is 1.0, >1.0: low repetition, <1.0: high repetition"
         },
     )
     chat_history_size: int | None = field(
