@@ -120,10 +120,10 @@ class TransformersBaseLLM(BaseLLM, ILlm):
     def count_tokens(self, text: str | bytes) -> int:
         return len(self._tokenizer.encode(text)) if self._tokenizer else 0
 
-    def _warmup(self, target, kwargs):
-        logging.info(f"Warming up {self.__class__.__name__}")
+    def _warmup(self, target, args=(), kwargs=None):
+        logging.info(f"Warming up {self.__class__.__name__} device: {self._model.device}")
 
-        if self._model.device == "cuda":
+        if "cuda" in str(self._model.device):
             start_event = torch.cuda.Event(enable_timing=True)
             end_event = torch.cuda.Event(enable_timing=True)
             torch.cuda.synchronize()
@@ -131,7 +131,7 @@ class TransformersBaseLLM(BaseLLM, ILlm):
 
         n_steps = self.args.warnup_steps
         for step in range(n_steps):
-            thread = Thread(target=target, kwargs=kwargs)
+            thread = Thread(target=target, args=args, kwargs=kwargs)
             thread.start()
             times = []
             start_time = time.perf_counter()
@@ -139,9 +139,9 @@ class TransformersBaseLLM(BaseLLM, ILlm):
                 times.append(time.perf_counter() - start_time)
                 start_time = time.perf_counter()
                 pass
-            logging.debug(f"step {step} warnup TTFT time: {times[0]} s")
+            logging.info(f"step {step} warnup TTFT time: {times[0]} s")
 
-        if self._model.device == "cuda":
+        if "cuda" in str(self._model.device):
             end_event.record()
             torch.cuda.synchronize()
             logging.info(

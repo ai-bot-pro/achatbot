@@ -16,6 +16,10 @@ load_dotenv(override=True)
 r"""
 LLM_MODEL_NAME_OR_PATH=./models/unsloth/Llama-3.2-11B-Vision-Instruct \
     python -m unittest test.core.llm.test_transformers_v_llama.TestTransformersVLlama.test_chat_completion_prompts
+
+LLM_TAG=llm_transformers_manual_vision_molmo \
+    LLM_MODEL_NAME_OR_PATH=./models/allenai/Molmo-7B-D-0924 \
+    python -m unittest test.core.llm.test_transformers_v_llama.TestTransformersVLlama.test_chat_completion_prompts
 """
 
 
