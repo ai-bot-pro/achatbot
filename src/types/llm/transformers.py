@@ -78,21 +78,21 @@ class TransformersLMArgs:
         },
     )
     lm_gen_do_sample: bool = field(
-        default=False,
+        default=True,
         metadata={
             "help": "Whether to use sampling; set this to False for deterministic outputs. Default is False."
         },
     )
     lm_gen_temperature: float = field(
-        default=0.0,
+        default=0.1,
         metadata={
-            "help": "Controls the randomness of the output. Set to 0.0 for deterministic (repeatable) outputs. Default is 0.0."
+            "help": "Controls the randomness of the output. Set to 0.0 for deterministic (repeatable) outputs. Default is 0.1."
         },
     )
     lm_gen_top_k: int = field(
-        default=20,
+        default=1,
         metadata={
-            "help": "Changing the top - k parameter sets the size of the shortlist the model samples from as it outputs each token. Setting top - k to 1 gives us greedy decoding. Default is 20"
+            "help": "Changing the top - k parameter sets the size of the shortlist the model samples from as it outputs each token. Setting top - k to 1 gives us greedy decoding. Default is 1"
 
         },
     )
