@@ -123,7 +123,7 @@ class TransformersBaseLLM(BaseLLM, ILlm):
     def _warmup(self, target, args=(), kwargs=None):
         logging.info(f"Warming up {self.__class__.__name__} device: {self._model.device}")
 
-        if "cuda" in self._model.device:
+        if "cuda" in str(self._model.device):
             start_event = torch.cuda.Event(enable_timing=True)
             end_event = torch.cuda.Event(enable_timing=True)
             torch.cuda.synchronize()
@@ -139,9 +139,9 @@ class TransformersBaseLLM(BaseLLM, ILlm):
                 times.append(time.perf_counter() - start_time)
                 start_time = time.perf_counter()
                 pass
-            logging.debug(f"step {step} warnup TTFT time: {times[0]} s")
+            logging.info(f"step {step} warnup TTFT time: {times[0]} s")
 
-        if "cuda" in self._model.device:
+        if "cuda" in str(self._model.device):
             end_event.record()
             torch.cuda.synchronize()
             logging.info(
