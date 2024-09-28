@@ -121,9 +121,9 @@ class TransformersBaseLLM(BaseLLM, ILlm):
         return len(self._tokenizer.encode(text)) if self._tokenizer else 0
 
     def _warmup(self, target, args=(), kwargs=None):
-        logging.info(f"Warming up {self.__class__.__name__}")
+        logging.info(f"Warming up {self.__class__.__name__} device: {self._model.device}")
 
-        if self._model.device == "cuda":
+        if "cuda" in self._model.device:
             start_event = torch.cuda.Event(enable_timing=True)
             end_event = torch.cuda.Event(enable_timing=True)
             torch.cuda.synchronize()
@@ -141,7 +141,7 @@ class TransformersBaseLLM(BaseLLM, ILlm):
                 pass
             logging.debug(f"step {step} warnup TTFT time: {times[0]} s")
 
-        if self._model.device == "cuda":
+        if "cuda" in self._model.device:
             end_event.record()
             torch.cuda.synchronize()
             logging.info(

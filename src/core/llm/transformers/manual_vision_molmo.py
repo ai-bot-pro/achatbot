@@ -1,6 +1,8 @@
+from io import BytesIO
 import logging
 from threading import Thread
 
+from PIL import Image
 import torch
 try:
     from qwen_vl_utils import process_vision_info
@@ -13,7 +15,6 @@ except ModuleNotFoundError as e:
     raise Exception(f"Missing module: {e}")
 
 
-from src.common.chat_history import ChatHistory
 from src.common.session import Session
 from src.types.speech.language import TO_LLM_LANGUAGE
 from src.types.llm.transformers import TransformersLMArgs
@@ -70,21 +71,26 @@ class TransformersManualVisionMolmoLLM(TransformersBaseLLM):
     def warmup(self):
         dummy_input_text = self.args.warnup_prompt
 
+        dummy_image = Image.new(mode="RGB", size=(300, 300))
+        img_obj = None
+        with BytesIO() as buffered:
+            dummy_image.save(buffered, "JPEG")
+            img_obj = Image.open(BytesIO(buffered.getvalue()))
+
         # Preparation for inference
         inputs = self._processor.process(
-            images=None,
+            images=[img_obj],
             text=dummy_input_text,
         )
         # move inputs to the correct device and make a batch of size 1
         model_inputs = {k: v.to(self._model.device).unsqueeze(0) for k, v in inputs.items()}
 
         warmup_gen_kwargs = dict(
-            model_inputs,
             streamer=self._streamer,
             tokenizer=self._processor.tokenizer,
         )
         warmup_gen_args = (
-            inputs,
+            model_inputs,
             GenerationConfig(
                 do_sample=self.args.lm_gen_do_sample,
                 top_k=self.args.lm_gen_top_k,
@@ -93,7 +99,7 @@ class TransformersManualVisionMolmoLLM(TransformersBaseLLM):
                 repetition_penalty=self.args.lm_gen_repetition_penalty,
                 min_new_tokens=self.args.lm_gen_min_new_tokens,
                 max_new_tokens=self.args.lm_gen_max_new_tokens,
-                stop_strings="<|endoftext|>")),
+                stop_strings="<|endoftext|>"))
         self._warmup(
             target=self._model.generate_from_batch,
             args=warmup_gen_args,
@@ -116,7 +122,8 @@ class TransformersManualVisionMolmoLLM(TransformersBaseLLM):
             text = prompt
         elif isinstance(prompt, list):
             # no chat template so get image with textpromt
-            image_inputs = process_vision_info(item)
+            image_inputs, _ = process_vision_info(
+                [{"role": self.args.user_role, "content": prompt}])
             for item in prompt:
                 if "type" in item and item["type"] == "text":
                     text += item["text"]
@@ -132,12 +139,11 @@ class TransformersManualVisionMolmoLLM(TransformersBaseLLM):
         model_inputs = {k: v.to(self._model.device).unsqueeze(0) for k, v in inputs.items()}
 
         gen_kwargs = dict(
-            model_inputs,
             streamer=self._streamer,
             tokenizer=self._processor.tokenizer,
         )
         gen_args = (
-            inputs,
+            model_inputs,
             GenerationConfig(
                 do_sample=self.args.lm_gen_do_sample,
                 top_k=self.args.lm_gen_top_k,
@@ -146,7 +152,7 @@ class TransformersManualVisionMolmoLLM(TransformersBaseLLM):
                 repetition_penalty=self.args.lm_gen_repetition_penalty,
                 min_new_tokens=self.args.lm_gen_min_new_tokens,
                 max_new_tokens=self.args.lm_gen_max_new_tokens,
-                stop_strings="<|endoftext|>")),
+                stop_strings="<|endoftext|>"))
         thread = Thread(
             target=self._model.generate_from_batch,
             args=gen_args, kwargs=gen_kwargs)
