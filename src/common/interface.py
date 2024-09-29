@@ -1,6 +1,6 @@
 
 from abc import ABC, abstractmethod
-from typing import Iterator, AsyncGenerator, Generator
+from typing import Iterator, AsyncGenerator, Generator, List
 
 
 class IModel(ABC):
@@ -249,7 +249,7 @@ class IConnector(ABC):
     @abstractmethod
     def recv(self, at: str, timeout: float | None = None):
         """
-        just simple recv, block with timeout default no timeout 
+        just simple recv, block with timeout default no timeout
         """
         raise NotImplemented("must be implemented in the child class")
 
@@ -269,4 +269,20 @@ class IBot(ABC):
 
     @abstractmethod
     def bot_config(self) -> dict:
+        raise NotImplemented("must be implemented in the child class")
+
+
+class IVisionDetector(ABC):
+    @abstractmethod
+    def detect(self, session) -> bool:
+        """detect object with confidence should be above threshold"""
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def detect_stream(self, session) -> Generator[dict, None]:
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def get_classes(self, session) -> List[str]:
+        """get support dectected classes"""
         raise NotImplemented("must be implemented in the child class")
