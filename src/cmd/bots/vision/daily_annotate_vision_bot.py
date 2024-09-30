@@ -1,4 +1,5 @@
 from apipeline.pipeline.pipeline import Pipeline
+from apipeline.pipeline.parallel_pipeline import ParallelPipeline
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.pipeline.task import PipelineTask
 from apipeline.processors.logger import FrameLogger
@@ -13,6 +14,10 @@ from .. import register_daily_room_bots
 
 @register_daily_room_bots.register
 class DailyAnnotateVisionBot(DailyRoomBot):
+    def __init__(self, **args) -> None:
+        super().__init__(**args)
+        self.init_bot_config()
+
     async def arun(self):
         daily_params = DailyParams(
             audio_in_enabled=True,
@@ -45,9 +50,11 @@ class DailyAnnotateVisionBot(DailyRoomBot):
 
         pipeline = Pipeline([
             transport.input_processor(),
-            self.annotate_processor,
+            ParallelPipeline(
+                [self.annotate_processor],
+                [self.tts_processor],
+            ),
             # FrameLogger(include_frame_types=[UserImageRawFrame]),
-            # self.tts_processor,
             transport.output_processor(),
         ])
         task = PipelineTask(pipeline)
@@ -55,4 +62,4 @@ class DailyAnnotateVisionBot(DailyRoomBot):
 
     async def on_first_participant_joined(self, transport: DailyTransport, participant):
         transport.capture_participant_video(participant["id"])
-        await self.tts_processor.say("你好，欢迎使用 Vision Bot. 我是一名虚拟助手，可以结合视频进行提问。")
+        await self.tts_processor.say("你好。我是智能助理。")

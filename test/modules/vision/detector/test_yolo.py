@@ -29,7 +29,7 @@ class TestYOLODetector(unittest.TestCase):
         cls.tag = os.getenv('DETECTOR_TAG', "vision_yolo_detector")
         img_file = os.path.join(TEST_DIR, f"img_files", f"dog.jpeg")
         cls.img_file = os.getenv('IMG_FILE', img_file)
-        cls.model_path = os.getenv('YOLO_MODEL', os.path.join(MODELS_DIR, "yolov8n.pt"))
+        cls.model = os.getenv('YOLO_MODEL', os.path.join(MODELS_DIR, "yolov8n.pt"))
         cls.stream = bool(os.getenv('YOLO_STREAM', "0"))
         cls.classes = os.getenv(
             'YOLO_WD_CLASSES',
@@ -43,7 +43,7 @@ class TestYOLODetector(unittest.TestCase):
 
     def setUp(self):
         kwargs = VisionDetectorArgs(
-            model_path=self.model_path,
+            model=self.model,
             verbose=True,
             stream=self.stream,
             custom_classes=self.classes,
@@ -63,7 +63,7 @@ class TestYOLODetector(unittest.TestCase):
                 CustomConfidence(
                     boolean_op="or",
                     class_name="car",
-                    d_confidence=0.3,
+                    d_confidence=0.2,
                     d_min_cn=1
                 ),
             ]

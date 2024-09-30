@@ -46,7 +46,7 @@ class TestAnnotateProcessor(unittest.IsolatedAsyncioTestCase):
         img_file = os.getenv('IMG_FILE', img_file)
         cls.img = Image.open(img_file)
         cls.tag = os.getenv('DETECTOR_TAG', "vision_yolo_detector")
-        cls.model_path = os.getenv('YOLO_MODEL', os.path.join(MODELS_DIR, "yolov8n.pt"))
+        cls.model = os.getenv('YOLO_MODEL', os.path.join(MODELS_DIR, "yolov8n.pt"))
         cls.stream = bool(os.getenv('YOLO_STREAM', "0"))
         cls.classes = os.getenv(
             'YOLO_WD_CLASSES',
@@ -60,7 +60,7 @@ class TestAnnotateProcessor(unittest.IsolatedAsyncioTestCase):
 
     def get_vision_processor(self):
         kwargs = VisionDetectorArgs(
-            model_path=self.model_path,
+            model=self.model,
             verbose=True,
             stream=self.stream,
             custom_classes=self.classes,

@@ -30,7 +30,7 @@ class VisionYoloDetector(EngineClass, IVisionDetector):
     def __init__(self, **args) -> None:
         self.args = VisionDetectorArgs(**args)
         self._detected_filter: Callable[[sv.Detections], sv.Detections] = None
-        self._model = YOLO(self.args.model_path,
+        self._model = YOLO(self.args.model,
                            task=self.args.task,
                            verbose=self.args.verbose)
         if hasattr(self._model, "set_classes"):

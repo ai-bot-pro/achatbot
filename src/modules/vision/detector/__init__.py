@@ -38,7 +38,7 @@ class VisionDetectorEnvInit():
         kwargs = VisionDetectorArgs(
             verbose=bool(os.getenv('YOLO_VERBOSE', "0")),
             stream=bool(os.getenv('YOLO_STREAM', "0")),
-            model_path=os.getenv('YOLO_MODEL', os.path.join(MODELS_DIR, "yolov8n")),
+            model=os.getenv('YOLO_MODEL', os.path.join(MODELS_DIR, "yolov8n")),
         ).__dict__
 
         return kwargs

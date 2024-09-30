@@ -19,7 +19,7 @@ class CustomConfidence(BaseModel):
 
 
 class VisionDetectorArgs(BaseModel):
-    model_path: str = "yolov8n"
+    model: str = "yolov8n"
     task: Optional[str] = None
     verbose: bool = False
     stream: bool = False
