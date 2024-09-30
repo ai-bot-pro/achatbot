@@ -22,7 +22,7 @@ from src.common.session import Session
 from src.common.types import SessionCtx, MODELS_DIR, TEST_DIR
 from src.core.llm import LLMEnvInit
 from src.common.logger import Logger
-from src.types.frames.data_frames import VisionImageRawFrame
+from src.types.frames.data_frames import UserImageRawFrame
 from src.types.vision import CustomConfidence, VisionDetectorArgs
 
 from dotenv import load_dotenv
@@ -112,12 +112,12 @@ class TestAnnotateProcessor(unittest.IsolatedAsyncioTestCase):
     async def test_run(self):
         runner = PipelineRunner()
         await self.vision_task.queue_frames([
-            VisionImageRawFrame(
+            UserImageRawFrame(
                 image=self.img.tobytes(),
                 size=self.img.size,
                 format=self.img.format,
                 mode=self.img.mode,
-                text="",
+                user_id="110",
             ),
             EndFrame(),
         ])
@@ -126,12 +126,12 @@ class TestAnnotateProcessor(unittest.IsolatedAsyncioTestCase):
     async def test_run_empty(self):
         runner = PipelineRunner()
         await self.vision_task.queue_frames([
-            VisionImageRawFrame(
-                text="",
+            UserImageRawFrame(
                 image=bytes([]),
                 size=(0, 0),
                 format=None,
                 mode=None,
+                user_id="110",
             ),
             EndFrame(),
         ])

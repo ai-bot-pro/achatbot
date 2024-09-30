@@ -37,6 +37,11 @@ class VADConfig(BaseModel):
     args: Optional[dict] = None
 
 
+class VisionDetectorConfig(BaseModel):
+    tag: Optional[str] = None
+    args: Optional[dict] = None
+
+
 class ASRConfig(BaseModel):
     tag: Optional[str] = None
     args: Optional[dict] = None
@@ -64,6 +69,7 @@ class AIConfig(BaseModel):
     asr: Optional[ASRConfig] = None
     llm: Optional[LLMConfig] = None
     vision_llm: Optional[LLMConfig] = None
+    vision_detector: Optional[VisionDetectorConfig] = None
     tts: Optional[TTSConfig] = None
     # TODO: @weedge
     # - use local pyaudio/cv2 streaming;

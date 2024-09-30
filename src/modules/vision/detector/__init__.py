@@ -21,10 +21,14 @@ class VisionDetectorEnvInit():
         return engine
 
     @staticmethod
-    def initVisionDetectorEngine() -> interface.IVisionDetector | EngineClass:
+    def initVisionDetectorEngine(
+            tag: str | None = None,
+            kwargs: dict | None = None
+    ) -> interface.IVisionDetector | EngineClass:
         # vision detector
-        tag = os.getenv('VISION_DETECTOR_TAG', "vision_yolo_detector")
-        kwargs = VisionDetectorEnvInit.map_config_func[tag]()
+        tag = tag if tag else os.getenv('VISION_DETECTOR_TAG', "vision_yolo_detector")
+        if kwargs is None:
+            kwargs = VisionDetectorEnvInit.map_config_func[tag]()
         engine = VisionDetectorEnvInit.getEngine(tag, **kwargs)
         logging.info(f"initVisionDetectorEngine: {tag}, {engine}")
         return engine
