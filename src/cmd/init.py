@@ -18,6 +18,7 @@ from src.modules.speech.player import PlayerEnvInit
 from src.modules.speech.recorder import RecorderEnvInit
 from src.modules.speech.tts import TTSEnvInit
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
+from src.modules.vision.detector import VisionDetectorEnvInit
 
 from dotenv import load_dotenv
 load_dotenv(override=True)
@@ -33,6 +34,7 @@ class Env(
     LLMEnvInit, SearchFuncEnvInit, WeatherFuncEnvInit,
     TTSEnvInit,
     PlayerEnvInit,
+    VisionDetectorEnvInit,
 ):
 
     @classmethod

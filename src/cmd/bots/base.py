@@ -6,6 +6,8 @@ import uuid
 from apipeline.frames.control_frames import EndFrame
 from apipeline.pipeline.task import PipelineTask
 
+from src.modules.vision.detector import VisionDetectorEnvInit
+from src.processors.ai_processor import AIProcessor
 from src.processors.vision.vision_processor import MockVisionProcessor
 from src.processors.speech.asr.base import ASRProcessorBase
 from src.processors.llm.base import LLMProcessor
@@ -143,6 +145,14 @@ class DailyRoomBot(IBot):
             llm = LLMEnvInit.initLLMEngine(llm_config.tag, llm_config.args)
             llm_processor = VisionProcessor(llm, self.session)
         return llm_processor
+
+    def get_vision_annotate_processor(self) -> AIProcessor:
+        from src.processors.vision.annotate_processor import AnnotateProcessor
+        detector = VisionDetectorEnvInit.initVisionDetectorEngine(
+            self._bot_config.vision_detector.tag,
+            self._bot_config.vision_detector.args)
+        annotate_processor = AnnotateProcessor(detector, self.session)
+        return annotate_processor
 
     def get_openai_llm_processor(self) -> LLMProcessor:
         from src.processors.llm.openai_llm_processor import OpenAILLMProcessor, OpenAIGroqLLMProcessor

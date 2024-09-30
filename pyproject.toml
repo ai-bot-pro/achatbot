@@ -562,6 +562,9 @@ silero_vad_analyzer = ["torch~=2.2.2", "torchaudio~=2.2.2"]
 # player module tag -> pkgs
 stream_player = []
 
+# vision detector
+vision_yolo_detector = ["ultralytics~=8.2.102", "supervision~=0.23.0"]
+
 # data process
 pytube = ["pytube~=15.0.0"]
 deep_translator = ["deep_translator~=1.11.4"]
