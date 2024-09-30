@@ -277,12 +277,3 @@ class IVisionDetector(ABC):
     def detect(self, session) -> bool:
         """detect object with confidence should be above threshold"""
         raise NotImplemented("must be implemented in the child class")
-
-    @abstractmethod
-    def detect_stream(self, session) -> Generator[dict, None]:
-        raise NotImplemented("must be implemented in the child class")
-
-    @abstractmethod
-    def get_classes(self, session) -> List[str]:
-        """get support dectected classes"""
-        raise NotImplemented("must be implemented in the child class")

@@ -1,11 +1,34 @@
-from dataclasses import dataclass
-from typing import List
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, PrivateAttr
 
 
-@dataclass
-class VisionDetectorArgs:
+class CustomConfidence(BaseModel):
+    """
+    # just for one level check,from right to left check, e.g:
+    a,b,c = True,False,False
+    a and b and c => False
+    a or b and c => True
+    a and b or c => False
+    a or b or c => True
+    """
+    boolean_op: str = "and"  # `is_detected` | and `is_detected` | or `is_detected`
+    class_name: str = "person"
+    d_min_cn: int = 1
+    d_confidence: float = 0.5
+
+
+class VisionDetectorArgs(BaseModel):
     model_path: str = "yolov8n"
-    task: str | None = None
+    task: Optional[str] = None
     verbose: bool = False
-    confidence_score: float = 0.5
-    custom_classes: List[str] = []
+    stream: bool = False
+    custom_classes: List[str] = ["person"]
+    custom_confidences: List[CustomConfidence] = [CustomConfidence()]
+    _custom_confidences_dict: Dict[str, CustomConfidence] = PrivateAttr(default={})
+
+    def model_post_init(self, __context: Any) -> None:
+        self._custom_confidences_dict = {}
+        for conf in self.custom_confidences:
+            self._custom_confidences_dict[conf.class_name] = conf
+        return super().model_post_init(__context)
