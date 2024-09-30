@@ -1,6 +1,6 @@
 
 from abc import ABC, abstractmethod
-from typing import Iterator, AsyncGenerator, Generator, List
+from typing import Any, Iterator, AsyncGenerator, Generator, List
 
 
 class IModel(ABC):
@@ -275,5 +275,18 @@ class IBot(ABC):
 class IVisionDetector(ABC):
     @abstractmethod
     def detect(self, session) -> bool:
-        """detect object with confidence should be above threshold"""
+        """
+        input: session.ctx.state["detect_img"]
+        detect object with confidence should be above threshold
+        return bool
+        """
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def annotate(self, session) -> Generator[Any, None, None]:
+        """
+        input: session.ctx.state["detect_img"]
+        annotate object from dectections,
+        return Generator
+        """
         raise NotImplemented("must be implemented in the child class")

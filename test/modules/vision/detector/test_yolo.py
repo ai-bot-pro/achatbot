@@ -16,6 +16,10 @@ r"""
 python -m unittest test.modules.vision.detector.test_yolo.TestYOLODetector.test_detect
 YOLO_MODEL=./models/yolov10n.pt python -m unittest test.modules.vision.detector.test_yolo.TestYOLODetector.test_detect
 YOLO_MODEL=./models/yolov8s-worldv2.pt python -m unittest test.modules.vision.detector.test_yolo.TestYOLODetector.test_detect
+
+python -m unittest test.modules.vision.detector.test_yolo.TestYOLODetector.test_annotate
+YOLO_MODEL=./models/yolov10n.pt python -m unittest test.modules.vision.detector.test_yolo.TestYOLODetector.test_annotate
+YOLO_MODEL=./models/yolov8s-worldv2.pt python -m unittest test.modules.vision.detector.test_yolo.TestYOLODetector.test_annotate
 """
 
 
@@ -27,6 +31,9 @@ class TestYOLODetector(unittest.TestCase):
         cls.img_file = os.getenv('IMG_FILE', img_file)
         cls.model_path = os.getenv('YOLO_MODEL', os.path.join(MODELS_DIR, "yolov8n.pt"))
         cls.stream = bool(os.getenv('YOLO_STREAM', "0"))
+        cls.classes = os.getenv(
+            'YOLO_WD_CLASSES',
+            "person,backpack,dog,eye,nose,ear,tongue").split(",")
 
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
@@ -39,6 +46,7 @@ class TestYOLODetector(unittest.TestCase):
             model_path=self.model_path,
             verbose=True,
             stream=self.stream,
+            custom_classes=self.classes,
             custom_confidences=[
                 CustomConfidence(
                     boolean_op="and",
@@ -73,3 +81,11 @@ class TestYOLODetector(unittest.TestCase):
         self.session.ctx.state['detect_img'] = Image.open(img_file)
         is_detected = self.detector.detect(self.session)
         self.assertEqual(is_detected, True)
+
+    def test_annotate(self):
+        img_file = os.path.join(TEST_DIR, f"img_files", f"dog.jpeg")
+        self.session.ctx.state['detect_img'] = Image.open(img_file)
+        img_iter = self.detector.annotate(self.session)
+        for img in img_iter:
+            print(img)
+            self.assertIsInstance(img, Image.Image)

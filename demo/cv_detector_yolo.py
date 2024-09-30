@@ -25,6 +25,7 @@ def yolo_detector(model_path: str = "yolov8n.pt"):
         ret, frame = cap.read()
         if not ret:
             break
+        print("cv read frame", type(frame))
 
         # 进行流式目标检测
         results = model(frame, stream=True)
@@ -41,7 +42,21 @@ def yolo_detector(model_path: str = "yolov8n.pt"):
                 detections,
                 detections.data["class_name"])
             # 绘制检测结果
-            annotated_frame = item.plot()
+            labels = [
+                f"{class_name} {confidence:.2f}"
+                for class_name, confidence
+                in zip(detections['class_name'], detections.confidence)
+            ]
+
+            BOUNDING_BOX_ANNOTATOR = sv.BoundingBoxAnnotator(thickness=2)
+            LABEL_ANNOTATOR = sv.LabelAnnotator(
+                text_thickness=2, text_scale=1, text_color=sv.Color.BLACK)
+            annotated_image = frame.copy()
+            annotated_image = BOUNDING_BOX_ANNOTATOR.annotate(annotated_image, detections)
+            annotated_image = LABEL_ANNOTATOR.annotate(annotated_image, detections, labels=labels)
+            annotated_frame = annotated_image
+            # annotated_frame = item.plot()
+
             print("annotated_frame-->:", type(annotated_frame))
 
             # 显示结果
@@ -64,6 +79,7 @@ def yolo_detector(model_path: str = "yolov8n.pt"):
                 is_check = True
 
         if is_check:
+            # pass
             break
 
         if cv2.waitKey(1) & 0xFF == ord('q'):

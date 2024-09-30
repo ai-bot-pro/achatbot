@@ -26,6 +26,7 @@ class VisionDetectorArgs(BaseModel):
     custom_classes: List[str] = ["person"]
     custom_confidences: List[CustomConfidence] = [CustomConfidence()]
     _custom_confidences_dict: Dict[str, CustomConfidence] = PrivateAttr(default={})
+    annotator_type: str = "box"  # default box, box | mask
 
     def model_post_init(self, __context: Any) -> None:
         self._custom_confidences_dict = {}

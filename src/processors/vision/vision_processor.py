@@ -19,7 +19,9 @@ from src.types.frames.data_frames import VisionImageRawFrame
 
 class VisionProcessor(VisionProcessorBase):
     """
+    input: image frame
     use vision lm to process image frames
+    output: text frame
     """
 
     def __init__(

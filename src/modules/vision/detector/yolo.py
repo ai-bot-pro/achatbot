@@ -1,5 +1,8 @@
 import logging
+from typing import Any, Callable, Dict
 
+from PIL import Image
+import numpy as np
 
 try:
     from ultralytics import YOLO
@@ -18,11 +21,15 @@ from src.common.interface import IVisionDetector
 class VisionYoloDetector(EngineClass, IVisionDetector):
     """
     You Only Look Once
+    see:
+    - https://docs.ultralytics.com/models/
+    - https://supervision.roboflow.com/develop/how_to/detect_and_annotate/
     """
     TAG = "vision_yolo_detector"
 
     def __init__(self, **args) -> None:
         self.args = VisionDetectorArgs(**args)
+        self._detected_filter: Callable[[sv.Detections], sv.Detections] = None
         self._model = YOLO(self.args.model_path,
                            task=self.args.task,
                            verbose=self.args.verbose)
@@ -37,7 +44,7 @@ class VisionYoloDetector(EngineClass, IVisionDetector):
     def detect(self, session) -> bool:
         if "detect_img" not in session.ctx.state:
             logging.warning("No detect_img in session ctx state")
-            return
+            return False
 
         results = self._model(session.ctx.state['detect_img'], stream=self.args.stream)
         cf_dict = {}
@@ -71,3 +78,44 @@ class VisionYoloDetector(EngineClass, IVisionDetector):
                 return True
 
         return False
+
+    def set_filter(self, hanlder: Callable[[sv.Detections], sv.Detections]):
+        self._detected_filter = hanlder
+
+    def annotate(self, session):
+        if "detect_img" not in session.ctx.state:
+            logging.warning("No detect_img in session ctx state")
+            yield None
+            return
+
+        img = session.ctx.state['detect_img']
+        results = self._model(img, stream=self.args.stream)
+        for item in results:
+            detections = sv.Detections.from_ultralytics(item)
+            if self._detected_filter:
+                detections = self._detected_filter(detections)
+
+            # !TODO: Annotator Args to use for different annotators @weedge
+            match self.args.annotator_type:
+                case "box":
+                    annotator = sv.BoxAnnotator()
+                case "mask":
+                    annotator = sv.MaskAnnotator()
+                case _:
+                    annotator = sv.BoxAnnotator()
+
+            label_annotator = sv.LabelAnnotator(text_position=sv.Position.TOP_LEFT)
+            labels = [
+                f"{class_name} {confidence:.2f}"
+                for class_name, confidence
+                in zip(detections['class_name'], detections.confidence)
+            ]
+
+            annotated_img = annotator.annotate(
+                scene=img, detections=detections)
+            annotated_img = label_annotator.annotate(
+                scene=annotated_img, detections=detections, labels=labels)
+            if isinstance(annotated_img, np.ndarray):
+                annotated_img = Image.fromarray(annotated_img)
+
+            yield annotated_img
