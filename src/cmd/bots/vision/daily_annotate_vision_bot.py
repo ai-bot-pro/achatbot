@@ -62,4 +62,4 @@ class DailyAnnotateVisionBot(DailyRoomBot):
 
     async def on_first_participant_joined(self, transport: DailyTransport, participant):
         transport.capture_participant_video(participant["id"])
-        await self.tts_processor.say("你好。我是智能助理。")
+        await self.tts_processor.say("你好。这是一个图像检测注释demo。")
