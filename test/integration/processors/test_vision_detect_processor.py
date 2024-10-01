@@ -60,9 +60,12 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
     def get_vision_processor(self):
         kwargs = VisionDetectorArgs(
             model=self.model,
-            verbose=True,
+            verbose=False,
             stream=self.stream,
             custom_classes=self.classes,
+            # conf=0.0,  # "Confidence Threshold", 0.0, 1.0, 0.25, 0.01
+            # iou=0.0,  # "IoU Threshold", 0.0, 1.0, 0.45, 0.01
+            selected_classes=[],
             custom_confidences=[
                 CustomConfidence(
                     boolean_op="and",
