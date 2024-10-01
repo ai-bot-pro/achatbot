@@ -34,7 +34,7 @@ class AnnotateProcessor(AIProcessor):
             self._session = Session(**SessionCtx(uuid.uuid4()).__dict__)
 
     async def run_detect(self, frame: UserImageRawFrame) -> AsyncGenerator[Frame, None]:
-        logging.info(f"Annotating image: {frame}")
+        logging.debug(f"Annotating image: {frame}")
         if not frame.image:
             yield None
             return

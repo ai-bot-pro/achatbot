@@ -45,13 +45,13 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         img_file = os.getenv('IMG_FILE', img_file)
         cls.img = Image.open(img_file)
         cls.tag = os.getenv('DETECTOR_TAG', "vision_yolo_detector")
-        cls.detected_text = os.getenv('DETECTED_TEXT', "识别成功")
         cls.model = os.getenv('YOLO_MODEL', os.path.join(MODELS_DIR, "yolov10n.pt"))
         cls.stream = bool(os.getenv('YOLO_STREAM', "0"))
         cls.classes = os.getenv(
             'YOLO_WD_CLASSES',
             "person,backpack,dog,eye,nose,ear,tongue").split(",")
-        cls.detected_text = os.getenv('DETECTED_TEXT', "识别成功")
+        cls.detected_text = os.getenv('DETECTED_TEXT', "你好。")
+        cls.out_detected_text = os.getenv('OUT_DETECTED_TEXT', "拜拜。")
 
     @classmethod
     def tearDownClass(cls):
@@ -88,8 +88,11 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         self.detector: IVisionDetector | EngineClass = VisionDetectorEnvInit.getEngine(
             self.tag, **kwargs)
         self.session = Session(**SessionCtx(f"{__class__}").__dict__)
-        return DetectProcessor(detected_text=self.detected_text,
-                               detector=self.detector, session=self.session)
+        return DetectProcessor(
+            detected_text=self.detected_text,
+            out_detected_text=self.out_detected_text,
+            detector=self.detector,
+            session=self.session)
 
     async def out_cb(self, frame):
         # await asyncio.sleep(1)

@@ -44,7 +44,7 @@ class VisionProcessor(VisionProcessorBase):
             yield ErrorFrame("llm not available")
             return
 
-        logging.info(f"Analyzing image: {frame}")
+        logging.debug(f"Analyzing image: {frame}")
 
         self._session.ctx.state["prompt"] = [
             {"type": "text", "text": frame.text},
@@ -86,7 +86,7 @@ class MockVisionProcessor(VisionProcessorBase):
         self._mock_text = mock_text
 
     async def run_vision(self, frame: VisionImageRawFrame) -> AsyncGenerator[Frame, None]:
-        logging.info(f"Mock Analyzing image: {frame}")
+        logging.debug(f"Mock Analyzing image: {frame}")
 
         if frame.image:
             image = Image.frombytes(frame.mode, frame.size, frame.image)

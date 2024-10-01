@@ -47,7 +47,7 @@ class DetectProcessor(AIProcessor):
         self._out_detected_text = out_detected_text
 
     async def run_detect(self, frame: UserImageRawFrame) -> AsyncGenerator[Frame, None]:
-        logging.info(f"detect object from image: {frame}")
+        logging.debug(f"detect object from image: {frame}")
         if not frame.image:
             yield None
             return
@@ -56,7 +56,7 @@ class DetectProcessor(AIProcessor):
         self._session.ctx.state["detect_img"] = image
 
         curr_detected = self._detector.detect(self._session)
-        logging.debug(f"current detected:{curr_detected}")
+        logging.info(f"current detected:{curr_detected}, dectected state:{self._detected}")
         if curr_detected != self._detected:
             self._detected = curr_detected
             if curr_detected:
