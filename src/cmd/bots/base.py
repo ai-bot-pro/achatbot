@@ -20,11 +20,12 @@ from src.types.ai_conf import ASRConfig, LLMConfig, TTSConfig, AIConfig
 from src.common import interface
 from src.common.factory import EngineClass
 from src.common.types import DailyRoomBotArgs
-from src.common.interface import IBot
+from src.common.interface import IBot, IVisionDetector
 from src.common.session import Session
 from src.common.types import SessionCtx
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 
@@ -148,11 +149,37 @@ class DailyRoomBot(IBot):
 
     def get_vision_annotate_processor(self) -> AIProcessor:
         from src.processors.vision.annotate_processor import AnnotateProcessor
+        detector: IVisionDetector | EngineClass = VisionDetectorEnvInit.initVisionDetectorEngine(
+            self._bot_config.vision_detector.tag,
+            self._bot_config.vision_detector.args)
+        processor = AnnotateProcessor(detector, self.session)
+        return processor
+
+    def get_vision_detect_processor(self) -> AIProcessor:
+        from src.processors.vision.detect_processor import DetectProcessor
         detector = VisionDetectorEnvInit.initVisionDetectorEngine(
             self._bot_config.vision_detector.tag,
             self._bot_config.vision_detector.args)
-        annotate_processor = AnnotateProcessor(detector, self.session)
-        return annotate_processor
+
+        desc, out_desc = "", ""
+        if "desc" in self._bot_config.vision_detector.args:
+            desc = self._bot_config.vision_detector.args["desc"]
+        if "out_desc" in self._bot_config.vision_detector.args:
+            out_desc = self._bot_config.vision_detector.args["out_desc"]
+        if desc and out_desc:
+            processor = DetectProcessor(detected_text=desc,
+                                        out_detected_text=out_desc,
+                                        detector=detector, session=self.session)
+        elif desc:
+            processor = DetectProcessor(detected_text=desc,
+                                        detector=detector, session=self.session)
+        elif out_desc:
+            processor = DetectProcessor(out_detected_text=out_desc,
+                                        detector=detector, session=self.session)
+        else:
+            processor = DetectProcessor(detector=detector, session=self.session)
+
+        return processor
 
     def get_openai_llm_processor(self) -> LLMProcessor:
         from src.processors.llm.openai_llm_processor import OpenAILLMProcessor, OpenAIGroqLLMProcessor

@@ -14,8 +14,8 @@ class CustomConfidence(BaseModel):
     """
     boolean_op: str = "and"  # `is_detected` | and `is_detected` | or `is_detected`
     class_name: str = "person"
-    d_min_cn: int = 1
-    d_confidence: float = 0.5
+    d_min_cn: int = 1  # min detected obj cn in image
+    d_confidence: float = 0.5  # beyond confidence
 
 
 class VisionDetectorArgs(BaseModel):
@@ -27,6 +27,8 @@ class VisionDetectorArgs(BaseModel):
     custom_confidences: List[CustomConfidence] = [CustomConfidence()]
     _custom_confidences_dict: Dict[str, CustomConfidence] = PrivateAttr(default={})
     annotator_type: str = "box"  # default box, box | mask
+    desc: str | list = ""  # (in) detected describe by custom
+    out_desc: str | list = ""  # un(out) detected describe by custom
 
     def model_post_init(self, __context: Any) -> None:
         self._custom_confidences_dict = {}
