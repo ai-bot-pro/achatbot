@@ -37,16 +37,39 @@ class VisionYoloDetector(EngineClass, IVisionDetector):
             # for yolo-world
             if len(self.args.custom_classes) > 0:
                 self._model.set_classes(self.args.custom_classes)
+        self._class_names = list(self._model.names.values())
+
         model_million_params = sum(p.numel() for p in self._model.parameters()) / 1e6
         logging.debug(f"{self.TAG} have {model_million_params}M parameters")
         logging.debug(self._model)
+        logging.debug(f"class_names:{self._class_names}")
+
+    @property
+    def class_names(self):
+        return self._class_names
 
     def detect(self, session) -> bool:
         if "detect_img" not in session.ctx.state:
             logging.warning("No detect_img in session ctx state")
             return False
 
-        results = self._model(session.ctx.state['detect_img'], stream=self.args.stream)
+        kwargs = {}
+        if self.args.selected_classes:
+            selected_ind = [self._class_names.index(option)
+                            for option in self.args.selected_classes]
+            if not isinstance(selected_ind, list):
+                selected_ind = list(selected_ind)
+            kwargs["classes"] = selected_ind
+        if self.args.conf is not None:
+            kwargs["conf"] = self.args.conf
+        if self.args.iou is not None:
+            kwargs["iou"] = self.args.iou
+        # print("kwargs--->:", kwargs)
+        results = self._model.predict(
+            session.ctx.state['detect_img'],
+            stream=self.args.stream,
+            **kwargs,
+        )
         cf_dict = {}
         for item in results:
             detections = sv.Detections.from_ultralytics(item)
@@ -74,7 +97,7 @@ class VisionYoloDetector(EngineClass, IVisionDetector):
                         eval_str = f"{eval_str} and {is_detected}"
             eval_str = eval_str.lstrip(" or").lstrip(" and")
             logging.debug(f"eval_str:{eval_str}")
-            if eval(eval_str):
+            if eval_str and eval(eval_str):
                 return True
 
         return False
