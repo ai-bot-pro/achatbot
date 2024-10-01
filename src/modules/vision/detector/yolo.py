@@ -74,7 +74,7 @@ class VisionYoloDetector(EngineClass, IVisionDetector):
                         eval_str = f"{eval_str} and {is_detected}"
             eval_str = eval_str.lstrip(" or").lstrip(" and")
             logging.debug(f"eval_str:{eval_str}")
-            if eval(eval_str):
+            if eval_str and eval(eval_str):
                 return True
 
         return False

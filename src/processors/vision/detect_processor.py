@@ -56,12 +56,12 @@ class DetectProcessor(AIProcessor):
         self._session.ctx.state["detect_img"] = image
 
         curr_detected = self._detector.detect(self._session)
-        logging.info(f"current detected:{curr_detected}, dectected state:{self._detected}")
         if curr_detected != self._detected:
+            logging.info(f"current detected:{curr_detected}, dectected state:{self._detected}")
             self._detected = curr_detected
-            if curr_detected:
+            if curr_detected and self._detected_text:
                 yield TextFrame(text=random.choice(self._detected_text))
-            else:
+            if curr_detected is False and self._out_detected_text:
                 yield TextFrame(text=random.choice(self._out_detected_text))
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
