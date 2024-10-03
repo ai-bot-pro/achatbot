@@ -74,6 +74,9 @@ Changelog = "https://github.com/ai-bot-pro/chat-bot/blob/main/CHANGELOG.md"
 # base opt dep
 tensorrt = ["tensorrt~=10.4.0"]
 einops = ["einops~=0.8.0"]
+# with --no-build-isolation
+flash-attn = ["flash-attn~=2.6.3"]
+tiktoken = ["tiktoken~=0.7.0"]
 
 
 # default fastapi_daily_bot_server
