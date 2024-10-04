@@ -7,6 +7,7 @@ class TransformersGoTOCRArgs:
     just use transformers Got OCR2.0
     """
     lm_model_name_or_path: str = field(
+        # see: https://huggingface.co/stepfun-ai/GOT-OCR2_0/discussions/26
         default="weege007/GOT-OCR2_0",  # from stepfun-ai/GOT-OCR2_0, change modeling_GOT.py for streamer
         metadata={
             "help": "The pretrained language model to use. Default is 'weege007/GOT-OCR2_0'."},
@@ -70,6 +71,12 @@ class TransformersGoTOCRArgs:
         default="",
         metadata={
             "help": "ocr_box bbox, e.g.:'[x1,y1]' or '[x1,y1,x2,y2]' . Default is empty str."
+        },
+    )
+    ocr_color: str = field(
+        default="",
+        metadata={
+            "help": "ocr_color, e.g.:'GREEN'. Default is empty str."
         },
     )
     render: bool = field(

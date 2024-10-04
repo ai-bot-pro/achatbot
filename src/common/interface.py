@@ -290,3 +290,14 @@ class IVisionDetector(ABC):
         return Generator
         """
         raise NotImplemented("must be implemented in the child class")
+
+
+class IVisionOCR(ABC):
+    @abstractmethod
+    def generate(self, session) -> Iterator[str]:
+        """
+        input: session.ctx.state["ocr_img"]
+        detect object and generate text
+        return iterator str
+        """
+        raise NotImplemented("must be implemented in the child class")

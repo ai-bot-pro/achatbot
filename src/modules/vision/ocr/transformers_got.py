@@ -3,26 +3,25 @@ from threading import Thread
 import time
 
 import torch
+from PIL import Image
 
 from src.core.llm.base import BaseLLM
-from src.common.factory import EngineClass
 from src.common.session import Session
-from src.common.interface import ILlm
+from src.common.interface import IVisionOCR
 from src.types.vision.ocr.transformers_got import TransformersGoTOCRArgs
 
 try:
-    from qwen_vl_utils import process_vision_info
+    from qwen_vl_utils import fetch_image
     from transformers import AutoModel, AutoTokenizer, TextIteratorStreamer
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        f"In order to use GOT OCR2.0 language models., you need to `pip install achatbot[lm_transformers_manual_vision_got_ocr]`,"
-        f"use awq model need to `pip install achatbot[lm_transformers_manual_vision_got_ocr]`")
+        f"In order to use GOT OCR2.0 language models., you need to `pip install achatbot[vision_transformers_got_ocr]`,"
+        f"use awq model need to `pip install achatbot[vision_transformers_got_ocr]`")
     raise Exception(f"Missing module: {e}")
 
 
-
-class TransformersGOTOCRLM(BaseLLM, ILlm):
+class TransformersGOTOCRLM(BaseLLM, IVisionOCR):
     """
     the General OCR Theory (GOT), ViTDet(vision encoder) + qwen2 0.5B
     the ViTDet backbone available at:
@@ -71,36 +70,49 @@ class TransformersGOTOCRLM(BaseLLM, ILlm):
     def warmup(self):
         pass
 
-    def generate(self, session: Session):
+    def _generate(self, session: Session):
         if 'ocr_img' not in session.ctx.state:
             yield None
             return
 
-        image = session.ctx.state['ocr_img']
+        ocr_image = session.ctx.state['ocr_img']
+        if isinstance(ocr_image, dict) \
+            and all(
+                isinstance(k, str)
+                and isinstance(v, (str, Image.Image)) for k, v in ocr_image.items()):
+            image = fetch_image(ocr_image)
+        elif isinstance(ocr_image, Image.Image):
+            image = ocr_image
+        else:
+            raise ValueError(
+                f"Unrecognized image input: PIL.Image or dict key:image/image_url, val:support local path, http url, base64 and PIL.Image, got {ocr_image}")
+
         generation_kwargs = dict(
+            ocr_type=self.args.ocr_type,
+            ocr_box=self.args.ocr_box,
+            ocr_color=self.args.ocr_color,
+            stream_flag=True,
+            gradio_input=True,
             streamer=self._streamer,
-            ocr_type=self.args.ocr_box,
-            ocr_box=self.args.ocr_box)
+        )
         thread = Thread(
             target=self._model.chat,
             args=(self._tokenizer, image),
             kwargs=generation_kwargs)
         thread.start()
 
-        generated_text = ""
         for new_text in self._streamer:
-            generated_text += new_text
             yield new_text
 
-    def chat_completion(self, session: Session):
+    def generate(self, session: Session):
         if self.args.lm_stream is False:
             res = ""
-            for text in self.generate(session):
+            for text in self._generate(session):
                 res += text
             yield res
         else:
             res = ""
-            for text in self.generate(session):
+            for text in self._generate(session):
                 res += text
                 pos = self._have_special_char(res)
                 if pos > -1:
