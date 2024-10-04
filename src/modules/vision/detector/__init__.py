@@ -4,7 +4,7 @@ import os
 from src.common import interface
 from src.common.factory import EngineClass, EngineFactory
 from src.common.types import MODELS_DIR
-from src.types.vision import VisionDetectorArgs
+from src.types.vision.detector.yolo import VisionDetectorArgs
 
 from dotenv import load_dotenv
 load_dotenv(override=True)

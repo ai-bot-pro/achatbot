@@ -22,7 +22,7 @@ from src.common.session import Session
 from src.common.types import SessionCtx, MODELS_DIR, TEST_DIR
 from src.common.logger import Logger
 from src.types.frames.data_frames import UserImageRawFrame
-from src.types.vision import CustomConfidence, VisionDetectorArgs
+from src.types.vision.detector.yolo import CustomConfidence, VisionDetectorArgs
 
 from dotenv import load_dotenv
 load_dotenv()
