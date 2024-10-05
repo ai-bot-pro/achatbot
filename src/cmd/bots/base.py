@@ -6,7 +6,7 @@ import uuid
 from apipeline.frames.control_frames import EndFrame
 from apipeline.pipeline.task import PipelineTask
 
-from modules.vision.ocr import VisionOCREnvInit
+from src.modules.vision.ocr import VisionOCREnvInit
 from src.modules.vision.detector import VisionDetectorEnvInit
 from src.processors.ai_processor import AIProcessor
 from src.processors.vision.vision_processor import MockVisionProcessor

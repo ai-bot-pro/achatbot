@@ -21,7 +21,7 @@ class TransformersGoTOCRArgs:
     lm_device: str = field(
         default="cpu",
         metadata={
-            "help": "The device for single cpu/mps/gpu. use 'cuda' for GPU acceleration, 'mps'(apple), 'cpu'. default cuda"
+            "help": "The device for single cpu/mps/gpu. use 'cuda' for GPU acceleration, 'mps'(apple), 'cpu'. default cpu"
         },
     )
     lm_torch_dtype: str = field(
