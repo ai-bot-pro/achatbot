@@ -7,18 +7,15 @@ from PIL import Image
 
 from apipeline.frames.data_frames import TextFrame
 from apipeline.frames.control_frames import EndFrame
-from apipeline.frames.sys_frames import Frame
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.pipeline.task import PipelineTask, PipelineParams
 from apipeline.processors.aggregators.sentence import SentenceAggregator
 from apipeline.processors.output_processor import OutputFrameProcessor
-from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
 from apipeline.processors.logger import FrameLogger
 
-from src.common.audio_stream.helper import RingBuffer
+from src.processors.image_capture_processor import ImageCaptureProcessor
 from src.processors.aggregators.vision_image_frame import VisionImageFrameAggregator
-from src.processors.user_image_request_processor import UserImageRequestProcessor
 from src.processors.llm.base import LLMProcessor
 from src.processors.aggregators.openai_llm_context import (
     OpenAILLMContext,
@@ -34,22 +31,6 @@ from src.common.register import Register
 from .. import register_daily_room_bots
 
 register_tool_funtions = Register('daily-chat-vision-tool-functions')
-
-
-class ImageCaptureProcessor(FrameProcessor):
-    def __init__(self, capture_cn: int = 1, **kwargs):
-        super().__init__(**kwargs)
-        self._capture_imgs = RingBuffer(capture_cn)
-
-    @property
-    def capture_imgs(self):
-        return self._capture_imgs
-
-    async def process_frame(self, frame: Frame, direction: FrameDirection):
-        await super().process_frame(frame, direction)
-        if isinstance(frame, UserImageRawFrame):
-            self._capture_imgs.append(frame)
-        await self.push_frame(frame, direction)
 
 
 @register_daily_room_bots.register
