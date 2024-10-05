@@ -119,4 +119,4 @@ class TransformersGOTOCRLM(BaseLLM, IVisionOCR):
                     yield res[:pos + 1]
                     res = res[pos + 1:]
             if len(res) > 0:
-                yield res
+                yield res + "."
