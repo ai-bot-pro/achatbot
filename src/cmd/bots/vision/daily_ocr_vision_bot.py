@@ -76,4 +76,4 @@ class DailyOCRVisionBot(DailyRoomBot):
         self.image_requester.set_participant_id(participant["id"])
         await self.tts_processor.say(f"你好。这是一个图像OCR demo。"
                                      f"对视频中识别的物体请说配置项vision ocr, trigger texts中的识别内容词。"
-                                     f"默认：'识别内容。'")
+                                     f"默认：'识别内容'。")
