@@ -6,6 +6,7 @@ import uuid
 from apipeline.frames.control_frames import EndFrame
 from apipeline.pipeline.task import PipelineTask
 
+from src.modules.vision.ocr import VisionOCREnvInit
 from src.modules.vision.detector import VisionDetectorEnvInit
 from src.processors.ai_processor import AIProcessor
 from src.processors.vision.vision_processor import MockVisionProcessor
@@ -179,6 +180,14 @@ class DailyRoomBot(IBot):
         else:
             processor = DetectProcessor(detector=detector, session=self.session)
 
+        return processor
+
+    def get_vision_ocr_processor(self) -> AIProcessor:
+        from src.processors.vision.ocr_processor import OCRProcessor
+        ocr = VisionOCREnvInit.initVisionOCREngine(
+            self._bot_config.vision_ocr.tag,
+            self._bot_config.vision_ocr.args)
+        processor = OCRProcessor(ocr=ocr, session=self.session)
         return processor
 
     def get_openai_llm_processor(self) -> LLMProcessor:

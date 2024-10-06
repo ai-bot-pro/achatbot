@@ -13,7 +13,7 @@ except ModuleNotFoundError as e:
         f"In order to use yolo model, you need to `pip install achatbot[vision_yolo_detector]`")
     raise Exception(f"Missing module: {e}")
 
-from src.types.vision import VisionDetectorArgs
+from src.types.vision.detector.yolo import VisionDetectorArgs
 from src.common.factory import EngineClass
 from src.common.interface import IVisionDetector
 

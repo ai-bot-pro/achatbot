@@ -50,6 +50,7 @@ class UserImageTextRequestProcessor(UserImageBaseProcessor):
         if self._participant_id and isinstance(frame, TextFrame):
             if frame.text in self._init_user_prompts:
                 await self.push_frame(UserImageRequestFrame(self._participant_id), FrameDirection.UPSTREAM)
-                await self.push_frame(TextFrame(self._desc_img_prompt))
+                if self._desc_img_prompt:
+                    await self.push_frame(TextFrame(self._desc_img_prompt))
         elif isinstance(frame, UserImageRawFrame):
             await self.push_frame(frame)

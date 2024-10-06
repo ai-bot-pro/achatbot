@@ -26,13 +26,14 @@ class CosyVoiceTTS(BaseTTS, ITts):
         return {**CosyVoiceTTSArgs().__dict__, **kwargs}
 
     def __init__(self, **args) -> None:
+        cur_dir = os.path.dirname(__file__)
         if bool(os.getenv("ACHATBOT_PKG", "")):
-            cur_dir = os.path.dirname(__file__)
             sys.path.insert(1, os.path.join(cur_dir, '../../../CosyVoice'))
             sys.path.insert(2, os.path.join(cur_dir, '../../../CosyVoice/third_party/Matcha-TTS'))
         else:
-            sys.path.insert(1, os.path.join(sys.path[0], 'deps/CosyVoice'))
-            sys.path.insert(2, os.path.join(sys.path[0], 'deps/CosyVoice/third_party/Matcha-TTS'))
+            sys.path.insert(1, os.path.join(cur_dir, '../../../../deps/CosyVoice'))
+            sys.path.insert(2, os.path.join(cur_dir,
+                                            '../../../../deps/CosyVoice/third_party/Matcha-TTS'))
         from deps.CosyVoice.cosyvoice.cli.cosyvoice import CosyVoice
         from deps.CosyVoice.cosyvoice.utils.file_utils import load_wav
         self.args = CosyVoiceTTSArgs(**args)

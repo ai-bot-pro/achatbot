@@ -10,7 +10,7 @@ from src.common.factory import EngineClass
 from src.common.session import Session
 from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR
 from src.common.interface import IVisionDetector
-from src.types.vision import CustomConfidence, VisionDetectorArgs
+from src.types.vision.detector.yolo import CustomConfidence, VisionDetectorArgs
 
 r"""
 python -m unittest test.modules.vision.detector.test_yolo.TestYOLODetector.test_detect

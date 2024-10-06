@@ -58,5 +58,8 @@ def import_bots(bot_name: str = "DummyBot"):
     if "DailyDetectVisionBot" in bot_name:
         from .vision import daily_detect_vision_bot
         return True
+    if "DailyOCRVisionBot" in bot_name:
+        from .vision import daily_ocr_vision_bot
+        return True
 
     return False
