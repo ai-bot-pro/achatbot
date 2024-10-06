@@ -15,11 +15,12 @@ from src.types.vision.ocr.transformers_got import TransformersGoTOCRArgs
 try:
     from qwen_vl_utils import fetch_image
     from transformers import AutoModel, AutoTokenizer, TextIteratorStreamer
+    cur_dir = os.path.dirname(__file__)
     if bool(os.getenv("ACHATBOT_PKG", "")):
-        cur_dir = os.path.dirname(__file__)
         sys.path.insert(1, os.path.join(cur_dir, '../../../GOTOCR2'))
     else:
-        sys.path.insert(1, os.path.join(sys.path[0], 'deps/GOTOCR2'))
+        sys.path.insert(1, os.path.join(cur_dir, '../../../../deps/GOTOCR2'))
+    print(sys.path)
     from deps.GOTOCR2.GOT.utils.utils import disable_torch_init, KeywordsStoppingCriteria
     from deps.GOTOCR2.GOT.utils.conversation import conv_templates, SeparatorStyle
     from deps.GOTOCR2.GOT.model.plug.blip_process import BlipImageEvalProcessor
