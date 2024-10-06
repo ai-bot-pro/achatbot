@@ -14,7 +14,7 @@ from src.types.vision.ocr.transformers_got import TransformersGoTOCRArgs
 
 try:
     from qwen_vl_utils import fetch_image
-    from transformers import AutoModel, AutoTokenizer, TextIteratorStreamer, AutoModelForCausalLM
+    from transformers import AutoModel, AutoTokenizer, TextIteratorStreamer
     if bool(os.getenv("ACHATBOT_PKG", "")):
         cur_dir = os.path.dirname(__file__)
         sys.path.insert(1, os.path.join(cur_dir, '../../../GOTOCR2'))
@@ -84,7 +84,7 @@ class TransformersGOTOCRLM(BaseLLM, IVisionOCR):
                 pad_token_id=self._tokenizer.eos_token_id,
                 trust_remote_code=True,
             ).eval().to(self.args.lm_device)
-        logging.debug(f"GOT model:{self._model}")
+        logging.debug(f"GOT model:{self._model}, device: {self._model.device}")
 
         self._streamer = TextIteratorStreamer(
             self._tokenizer, skip_prompt=True, skip_special_tokens=True)
@@ -214,25 +214,25 @@ class TransformersGOTOCRLM(BaseLLM, IVisionOCR):
         prompt = conv.get_prompt()
         logging.debug(f"ocr prompt: {prompt}")
 
+        # text input tokens
         inputs = self._tokenizer([prompt])
         input_ids = torch.as_tensor(inputs.input_ids).to(self._model.device)
 
+        # ocr image input
         image_processor_high = BlipImageEvalProcessor(image_size=1024)
         image_tensor = image_processor_high(self._image)
+        image = image_tensor.unsqueeze(0).half().to(self._model.device)
 
+        # stoping criteria (end/stop tokens)
         stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
         stopping_criteria = KeywordsStoppingCriteria([stop_str], self._tokenizer, input_ids)
 
-        device = "cuda" if "cuda" in str(self._model.device) else "cpu"
+        device_type = "cuda" if "cuda" in str(self._model.device) else "cpu"
+        logging.debug(
+            f"inference device_type: {device_type}, image shape:{image.shape}, image dtype:{image.dtype}")
 
         def run():
-            with torch.autocast(device, dtype=torch.bfloat16):
-                if device == "cpu":
-                    image = image_tensor.unsqueeze(0).half().cpu()
-                else:
-                    image = image_tensor.unsqueeze(0).half().cuda()
-                logging.debug(
-                    f"inference device: {device}, image shape:{image.shape}, image dtype:{image.dtype}")
+            with torch.autocast(device_type, dtype=torch.bfloat16):
                 self._model.generate(
                     input_ids,
                     images=[(None, image)],
