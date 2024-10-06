@@ -20,7 +20,6 @@ try:
         sys.path.insert(1, os.path.join(cur_dir, '../../../GOTOCR2'))
     else:
         sys.path.insert(1, os.path.join(cur_dir, '../../../../deps/GOTOCR2'))
-    print(sys.path)
     from deps.GOTOCR2.GOT.utils.utils import disable_torch_init, KeywordsStoppingCriteria
     from deps.GOTOCR2.GOT.utils.conversation import conv_templates, SeparatorStyle
     from deps.GOTOCR2.GOT.model.plug.blip_process import BlipImageEvalProcessor
