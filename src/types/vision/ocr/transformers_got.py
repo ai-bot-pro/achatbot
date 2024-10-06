@@ -25,7 +25,7 @@ class TransformersGoTOCRArgs:
         },
     )
     lm_torch_dtype: str = field(
-        default="auto",
+        default="bfloat16",
         metadata={
             "help": "The PyTorch data type for the model and input tensors. One of `float32` (full-precision), `float16` or `bfloat16` (both half-precision), auto. default auto"
         },
@@ -77,6 +77,12 @@ class TransformersGoTOCRArgs:
         default="",
         metadata={
             "help": "ocr_color, e.g.:'GREEN'. Default is empty str."
+        },
+    )
+    conv_mode: str = field(
+        default="mpt",
+        metadata={
+            "help": "conversation mode, e.g.:'mpt'. Default is 'mpt'."
         },
     )
     render: bool = field(

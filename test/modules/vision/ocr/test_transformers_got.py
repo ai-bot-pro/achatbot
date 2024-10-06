@@ -58,6 +58,7 @@ class TestTransformersGOTOCR(unittest.TestCase):
                     generated_text += item
                     times.append(perf_counter() - start_time)
                     start_time = perf_counter()
+                self.assertGreater(len(times), 0)
                 logging.info(f"generate TTFT time: {times[0]} s")
                 logging.info(f"generated text: {generated_text}")
                 self.assertGreater(len(generated_text), 0)
