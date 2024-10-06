@@ -68,8 +68,8 @@ class DailyOCRVisionBot(DailyRoomBot):
             self.tts_processor,
             transport.output_processor(),
         ])
-        task = PipelineTask(pipeline)
-        await PipelineRunner().run(task)
+        self.task = PipelineTask(pipeline)
+        await PipelineRunner().run(self.task)
 
     async def on_first_participant_joined(self, transport: DailyTransport, participant):
         transport.capture_participant_video(participant["id"], framerate=0)

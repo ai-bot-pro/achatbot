@@ -27,7 +27,7 @@ try:
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        f"In order to use GOT OCR2.0 language models., you need to `pip install achatbot[vision_transformers_got_ocr]`,"
+        f"In order to use GOT OCR2.0 language models, you need to `pip install achatbot[vision_transformers_got_ocr]`,"
         f"use awq model need to `pip install achatbot[vision_transformers_got_ocr]`")
     raise Exception(f"Missing module: {e}")
 
