@@ -21,7 +21,7 @@ class VisionOCREnvInit():
         return engine
 
     @staticmethod
-    def initVisionDetectorEngine(
+    def initVisionOCREngine(
             tag: str | None = None,
             kwargs: dict | None = None
     ) -> interface.IVisionOCR | EngineClass:
@@ -40,8 +40,9 @@ class VisionOCREnvInit():
                 'LM_GOT_OCR_MODEL',
                 os.path.join(MODELS_DIR, "stepfun-ai/GOT-OCR2_0")),
             lm_attn_impl=os.getenv('LM_ATTN_IMPL', None),
+            lm_device_map=os.getenv('LM_DEVICE_MAP', ""),
             lm_device=os.getenv('LM_DEVICE', "cpu"),
-            lm_torch_dtype=os.getenv('LM_TORCH_DTYPE', 'auto'),
+            lm_torch_dtype=os.getenv('LM_TORCH_DTYPE', 'bfloat16'),
             lm_stream=bool(os.getenv('LM_STREAM', '1')),
             model_type=os.getenv('GOT_MODEL_TYPE', 'chat'),
             ocr_type=os.getenv('GOT_OCR_TYPE', 'ocr'),

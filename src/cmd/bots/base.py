@@ -184,7 +184,7 @@ class DailyRoomBot(IBot):
 
     def get_vision_ocr_processor(self) -> AIProcessor:
         from src.processors.vision.ocr_processor import OCRProcessor
-        ocr = VisionOCREnvInit.initVisionDetectorEngine(
+        ocr = VisionOCREnvInit.initVisionOCREngine(
             self._bot_config.vision_ocr.tag,
             self._bot_config.vision_ocr.args)
         processor = OCRProcessor(ocr=ocr, session=self.session)

@@ -52,7 +52,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
 
     def get_vision_ocr_processor(self):
         self.session = Session(**SessionCtx(f"test_{self.tag}_client_id").__dict__)
-        engine: IVisionOCR = VisionOCREnvInit.initVisionDetectorEngine(self.tag)
+        engine: IVisionOCR = VisionOCREnvInit.initVisionOCREngine(self.tag)
         return OCRProcessor(ocr=engine, session=self.session)
 
     async def out_cb(self, frame):

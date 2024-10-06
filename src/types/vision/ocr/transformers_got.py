@@ -27,7 +27,7 @@ class TransformersGoTOCRArgs:
     lm_torch_dtype: str = field(
         default="bfloat16",
         metadata={
-            "help": "The PyTorch data type for the model and input tensors. One of `float32` (full-precision), `float16` or `bfloat16` (both half-precision), auto. default auto"
+            "help": "The PyTorch data type for the model and input tensors. One of `float32` (full-precision), `float16` or `bfloat16` (both half-precision). default bfloat16"
         },
     )
     # https://huggingface.co/docs/transformers/perf_infer_gpu_one

@@ -51,10 +51,10 @@ class TransformersGOTOCRLM(BaseLLM, IVisionOCR):
 
         self.args = TransformersGoTOCRArgs(**args)
 
-        if self.args.lm_torch_dtype != "auto":
+        if hasattr(torch, self.args.lm_torch_dtype):
             self.torch_dtype = getattr(torch, self.args.lm_torch_dtype)
         else:
-            self.torch_dtype = "auto"
+            raise Exception(f"torch unsupport dtype: {self.args.lm_torch_dtype}")
 
         disable_torch_init()
 
@@ -65,7 +65,7 @@ class TransformersGOTOCRLM(BaseLLM, IVisionOCR):
             # self._model = AutoModel.from_pretrained(
             self._model = GOTQwenForCausalLM.from_pretrained(
                 self.args.lm_model_name_or_path,
-                torch_dtype=self.args.lm_torch_dtype,
+                torch_dtype=self.torch_dtype,
                 #!NOTE: https://github.com/huggingface/transformers/issues/20896
                 # device_map for multi cpu/gpu with accelerate
                 device_map=self.args.lm_device_map,
@@ -73,12 +73,12 @@ class TransformersGOTOCRLM(BaseLLM, IVisionOCR):
                 use_safetensors=True,
                 pad_token_id=self._tokenizer.eos_token_id,
                 trust_remote_code=True,
-            )
+            ).eval()
         else:
             # self._model = AutoModel.from_pretrained(
             self._model = GOTQwenForCausalLM.from_pretrained(
                 self.args.lm_model_name_or_path,
-                torch_dtype=self.args.lm_torch_dtype,
+                torch_dtype=self.torch_dtype,
                 attn_implementation=self.args.lm_attn_impl,
                 use_safetensors=True,
                 pad_token_id=self._tokenizer.eos_token_id,
@@ -232,7 +232,7 @@ class TransformersGOTOCRLM(BaseLLM, IVisionOCR):
             f"inference device_type: {device_type}, image shape:{image.shape}, image dtype:{image.dtype}")
 
         def run():
-            with torch.autocast(device_type, dtype=torch.bfloat16):
+            with torch.autocast(device_type, dtype=self.torch_dtype):
                 self._model.generate(
                     input_ids,
                     images=[(None, image)],

@@ -33,7 +33,7 @@ class TestTransformersGOTOCR(unittest.TestCase):
     def setUp(self):
         self.session = Session(**SessionCtx(f"test_{self.tag}_client_id").__dict__)
 
-        engine = VisionOCREnvInit.initVisionDetectorEngine(self.tag)
+        engine = VisionOCREnvInit.initVisionOCREngine(self.tag)
         self.assertIsInstance(engine, IVisionOCR)
         self.engine: IVisionOCR = engine
 
@@ -48,13 +48,13 @@ class TestTransformersGOTOCR(unittest.TestCase):
         for image in image_cases:
             with self.subTest(image=image):
                 self.session.ctx.state["ocr_img"] = image
-                iter = self.engine.generate(self.session)
+                iter = self.engine.stream_infer(self.session)
 
                 generated_text = ""
                 times = []
                 start_time = perf_counter()
                 for item in iter:
-                    # print(item)
+                    print(item, end="")
                     generated_text += item
                     times.append(perf_counter() - start_time)
                     start_time = perf_counter()
