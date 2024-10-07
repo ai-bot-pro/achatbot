@@ -29,7 +29,8 @@ achatbot factory, create chat bots with llm, asr, tts, vad, etc..
   - transport: 
     - webRTC/webSocket: 
       - [x] **daily**
-      - [ ] (!TODO: **livekit**, **cloudflare-calls**, etc..)
+      - [ ] **[livekit](https://github.com/livekit/python-sdks/)**
+      - [ ] (!TODO:  **[agora-audio](https://github.com/AgoraIO/agora-realtime-ai-api)**, etc..)
   - ai processor: llm, tts, asr etc..
 - core module:
   - local llm: 
