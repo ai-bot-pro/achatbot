@@ -3,18 +3,24 @@ import asyncio
 from typing import Any, Awaitable, Callable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 
-from daily import (
-    CallClient,
-    Daily,
-    EventHandler,
-    VirtualCameraDevice,
-    VirtualMicrophoneDevice,
-    VirtualSpeakerDevice)
 from pydantic.main import BaseModel
 from apipeline.frames.data_frames import AudioRawFrame, ImageRawFrame
 
 from src.common.types import DailyParams
 from src.types.frames.data_frames import TransportMessageFrame, DailyTransportMessageFrame
+
+try:
+    from daily import (
+        CallClient,
+        Daily,
+        EventHandler,
+        VirtualCameraDevice,
+        VirtualMicrophoneDevice,
+        VirtualSpeakerDevice)
+except ModuleNotFoundError as e:
+    logging.error(f"Exception: {e}")
+    logging.error("In order to use daily, you need to `pip install achatbot[daily]`.")
+    raise Exception(f"Missing module: {e}")
 
 
 class DailyCallbacks(BaseModel):

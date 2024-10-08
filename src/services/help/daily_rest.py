@@ -11,6 +11,7 @@ Methods that wrap the Daily API to create rooms, check room URLs, and get meetin
 
 """
 
+# TODO: use async aiohttp @weedge
 import requests
 import time
 
@@ -110,15 +111,26 @@ class DailyRESTHelper:
         room_name = self._get_name_from_url(room_url)
         return self.get_room_from_name(room_name)
 
-    def get_token(self, room_url: str, expiry_time: float = 60 * 60, owner: bool = True) -> str:
+    def get_token_by_url(
+            self,
+            room_url: str,
+            expiry_time: float = 60 * 60,
+            owner: bool = True) -> str:
         if not room_url:
             raise Exception(
                 "No Daily room specified. You must specify a Daily room in order a token to be generated.")
 
-        expiration: float = time.time() + expiry_time
-
         room_name = self._get_name_from_url(room_url)
 
+        return self.get_token_by_name(room_name,
+                                      expiry_time=expiry_time, owner=owner)
+
+    def get_token_by_name(
+            self,
+            room_name: str,
+            expiry_time: float = 60 * 60,
+            owner: bool = True) -> str:
+        expiration: float = time.time() + expiry_time
         res: requests.Response = requests.post(
             f"{self.daily_api_url}/meeting-tokens",
             headers={

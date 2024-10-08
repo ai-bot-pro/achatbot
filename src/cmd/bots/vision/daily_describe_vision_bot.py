@@ -55,6 +55,12 @@ class DailyDescribeVisionBot(DailyRoomBot):
             transport.capture_participant_video(participant["id"], framerate=0)
             image_requester.set_participant_id(participant["id"])
             await tts_processor.say("你好，欢迎使用 Vision Bot. 我是一名虚拟助手，可以结合视频进行提问。")
+        transport.add_event_handler(
+            "on_participant_left",
+            self.on_participant_left)
+        transport.add_event_handler(
+            "on_call_state_updated",
+            self.on_call_state_updated)
 
         pipeline = Pipeline([
             transport.input_processor(),
@@ -68,5 +74,5 @@ class DailyDescribeVisionBot(DailyRoomBot):
             transport.output_processor(),
             # llm_out_aggr,
         ])
-        task = PipelineTask(pipeline, params=PipelineParams())
-        await PipelineRunner().run(task)
+        self.task = PipelineTask(pipeline, params=PipelineParams())
+        await PipelineRunner().run(self.task)

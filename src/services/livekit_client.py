@@ -1,10 +1,8 @@
 import asyncio
 import logging
-import os
 from typing import Awaitable, Callable, List
 
 from pydantic import BaseModel
-import numpy as np
 from apipeline.frames.data_frames import AudioRawFrame, ImageRawFrame
 
 from src.common.types import SAMPLE_WIDTH, LiveKitParams

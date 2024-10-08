@@ -5,10 +5,11 @@ from typing import Optional
 
 from pydantic import BaseModel
 
+from src.common.const import *
 from src.common.session import Session
 from src.common.connector import ConnectorInit
 from src.common.interface import IBot, IConnector
-from src.common.types import DailyRoomBotArgs, SessionCtx
+from src.common.types import RoomBotArgs, SessionCtx
 from src.cmd.bots import BotInfo, import_bots, register_daily_room_bots
 
 
@@ -91,19 +92,19 @@ class BotTaskRunner:
         self._pid = 0
         self._bot_obj: IBot | None = None
 
-    def run_daily_bot(self, bot_info: BotInfo):
+    async def run_daily_bot(self, bot_info: BotInfo):
         room_url = bot_info.room_url
         bot_token = bot_info.token
         if len(bot_info.room_url.strip()) == 0:
             from src.services.help.daily_rest import DailyRoomObject
             from src.services.help.daily_room import DailyRoom
             daily_room_obj = DailyRoom()
-            room: DailyRoomObject = daily_room_obj.create_room(
-                bot_info.room_name, exp_time_s=DailyRoom.ROOM_EXPIRE_TIME)
-            bot_token = daily_room_obj.get_token(room.url, DailyRoom.ROOM_EXPIRE_TIME)
+            room: DailyRoomObject = await daily_room_obj.create_room(
+                bot_info.room_name, exp_time_s=ROOM_EXPIRE_TIME)
+            bot_token = await daily_room_obj.gen_token(room.name, ROOM_EXPIRE_TIME)
             room_url = room.url
 
-        kwargs = DailyRoomBotArgs(
+        kwargs = RoomBotArgs(
             room_url=room_url,
             token=bot_token,
             bot_name=bot_info.chat_bot_name,
@@ -124,36 +125,36 @@ class BotTaskRunner:
     def pid(self):
         return self._pid if self._pid else None
 
-    def run_bot(self, bot_info: BotInfo):
+    async def run_bot(self, bot_info: BotInfo):
         if import_bots(bot_info.chat_bot_name) is False:
             detail = f"un import bot: {bot_info.chat_bot_name}"
             logging.error(detail)
             return
         match bot_info.bot_type:
             case "daily":
-                self.run_daily_bot(bot_info)
+                await self.run_daily_bot(bot_info)
             case _:
-                self.run_daily_bot(bot_info)
+                await self.run_daily_bot(bot_info)
 
-    def run(self):
+    async def run(self):
         pass
 
 
 class BotTaskRunnerFE(BotTaskRunner):
-    def run(self):
+    async def run(self):
         # run local bot
         if self.task_connector is None:
-            self.run_bot(self.run_bot_info)
+            await self.run_bot(self.run_bot_info)
             return
 
         self.task_connector.send(("RUN_BOT_TASK", self.run_bot_info, self.session), 'fe')
 
 
 class BotTaskRunnerBE(BotTaskRunner):
-    def run(self):
+    async def run(self):
         # run local bot
         if self.task_connector is None:
-            self.run_bot(self.run_bot_info)
+            await self.run_bot(self.run_bot_info)
             return
 
         # run remote bot, bot info from connector recv
@@ -176,6 +177,6 @@ class BotTaskRunnerBE(BotTaskRunner):
             match msg:
                 case "RUN_BOT_TASK":
                     logging.info(f"bot {bot_info.chat_bot_name} running")
-                    self.run_bot(bot_info)
+                    await self.run_bot(bot_info)
                 case _:
                     logging.warn(f"{msg} unsupport")

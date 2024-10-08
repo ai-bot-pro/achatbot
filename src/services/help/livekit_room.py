@@ -1,35 +1,112 @@
-import os
-import time
+import datetime
 import logging
+import uuid
 
-from src.common.interface import IRoom
+try:
+    from livekit import api
+except ModuleNotFoundError as e:
+    logging.error(f"Exception: {e}")
+    logging.error("In order to use LiveKit API, you need to `pip install achatbot[livekit-api]`.")
+    raise Exception(f"Missing module: {e}")
+
+from src.common.const import *
+from src.common.types import GeneralRoomInfo
+from src.common.interface import IRoomManager
+from src.common.factory import EngineClass
 
 
 from dotenv import load_dotenv
 load_dotenv(override=True)
 
 
-class LivekitRoom(IRoom):
-    ROOM_EXPIRE_TIME = 30 * 60  # 30 minutes
-    ROOM_TOKEN_EXPIRE_TIME = 30 * 60  # 30 minutes
-    RANDOM_ROOM_EXPIRE_TIME = 5 * 60  # 5 minutes
-    RANDOM_ROOM_TOKEN_EXPIRE_TIME = 5 * 60  # 5 minutes
+class LivekitRoom(IRoomManager, EngineClass):
+    TAG = "livekit_room"
 
-    DAILYLANGCHAINRAGBOT_EXPIRE_TIME = 25 * 60
+    def __init__(
+        self,
+        room_name: str,
+        bot_name: str,
+        # if use session, need manual close async http session
+        is_common_session: bool = False,
+    ) -> None:
+        self._room_name = room_name
+        self._bot_name = bot_name
+        # live kit http api with pb(protobuf) serialize data
+        self._http_api = api.LiveKitAPI() if is_common_session else None
 
-    def __init__(self) -> None:
-        pass
+    async def close_session(self):
+        if self._http_api:
+            self._http_api.aclose()
 
-    def create_room(self, room_name, exp_time_s: int = ROOM_EXPIRE_TIME):
-        room = None
+    async def create_room(
+            self,
+            room_name: str | None = None,
+            exp_time_s: int = ROOM_EXPIRE_TIME) -> GeneralRoomInfo:
+        name = room_name
+        empty_time_s = exp_time_s if exp_time_s else ROOM_EXPIRE_TIME
+        if not room_name:
+            name = f"room_" + str(uuid.uuid4())
+            if not exp_time_s:
+                empty_time_s = RANDOM_ROOM_EXPIRE_TIME
 
-        return room
+        http_api = self._http_api if self._http_api else api.LiveKitAPI()
+        room = await http_api.room.create_room(
+            api.CreateRoomRequest(
+                name=name,
+                empty_timeout=empty_time_s,
+            )
+        )
+        logging.debug(f"create_room:{room}")
 
-    def token(self, exp_time_s: int = ROOM_TOKEN_EXPIRE_TIME) -> str:
-        token = ""
+        if not self._http_api:
+            http_api.aclose()
+
+        g_room = GeneralRoomInfo(
+            sid=room.sid,
+            name=room.name,
+            ttl_s=room.empty_timeout,
+            creation_time=room.creation_time,
+            extra_data=room.__dict__,
+        )
+
+        return g_room
+
+    async def gen_token(self, room_name: str, exp_time_s: int = ROOM_TOKEN_EXPIRE_TIME) -> str:
+        user_identity = str(uuid.uuid4())
+
+        token = (
+            api.AccessToken()
+            .with_identity(user_identity)
+            .with_name(self._bot_name)
+            .with_grants(
+                api.VideoGrants(
+                    room_join=True,
+                    room=room_name,
+                )
+            )
+            .with_ttl(datetime.timedelta(seconds=exp_time_s))
+            .to_jwt()
+        )
+        logging.debug(f"token:{token}")
+
         return token
 
-    def get_room(self, room_name):
-        room = None
+    async def get_room(self, room_name: str) -> GeneralRoomInfo:
+        http_api = self._http_api if self._http_api else api.LiveKitAPI()
+        result = await http_api.room.list_rooms(
+            api.ListRoomsRequest(names=[room_name]))
+        logging.debug(f"list_rooms:{result.rooms}")
+        if len(result.rooms) > 0:
+            room = result.rooms[0]
 
-        return room
+        if not self._http_api:
+            http_api.aclose()
+
+        g_room = GeneralRoomInfo(
+            sid=room.sid,
+            name=room.name,
+            creation_time=room.creation_time,
+            extra_data=room.__dict__,
+        )
+
+        return g_room

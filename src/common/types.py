@@ -1,7 +1,7 @@
 r"""
 use SOTA LLM like chatGPT to generate config file(json,yaml,toml) from dataclass type
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import (
     Optional,
@@ -513,10 +513,20 @@ class LiveKitParams(AudioCameraParams):
     audio_out_sample_rate: int = 48000
 
 
-# ---------------- Bots -------------
+# ---------------- Room Bots -------------
+@dataclass
+class GeneralRoomInfo:
+    """general room info for diff webRTC room info to align"""
+    sid: str = ""
+    name: str = ""
+    url: str = ""
+    ttl_s: int | None = None
+    creation_time: int | None = None
+    extra_data: dict = field(default_factory=dict)
+
 
 @dataclass
-class DailyRoomBotArgs:
+class RoomBotArgs:
     room_url: str = ""
     token: str = ""
     bot_config: dict | None = None

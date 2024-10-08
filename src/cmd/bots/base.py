@@ -20,7 +20,7 @@ from src.modules.speech.tts import TTSEnvInit
 from src.types.ai_conf import ASRConfig, LLMConfig, TTSConfig, AIConfig
 from src.common import interface
 from src.common.factory import EngineClass
-from src.common.types import DailyRoomBotArgs
+from src.common.types import RoomBotArgs
 from src.common.interface import IBot, IVisionDetector
 from src.common.session import Session
 from src.common.types import SessionCtx
@@ -40,7 +40,7 @@ class DailyRoomBot(IBot):
     """
 
     def __init__(self, **args) -> None:
-        self.args = DailyRoomBotArgs(**args)
+        self.args = RoomBotArgs(**args)
         if self.args.bot_name is None or len(self.args.bot_name) == 0:
             self.args.bot_name = self.__class__.__name__
 
