@@ -309,3 +309,29 @@ class IVisionOCR(ABC):
         return iterator next token (str)
         """
         raise NotImplemented("must be implemented in the child class")
+
+
+class IRoom(ABC):
+    @abstractmethod
+    def create_room(self, room_name, exp_time_s):
+        """
+        create room by room name with expire time(s)
+        if the room has been created, return
+        if room_name is None or empty, create random name room
+        return room info
+        """
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def gen_token(self, exp_time_s) -> str:
+        """
+        generate a token to join room
+        """
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    def get_room(self, room_name):
+        """
+        get room info by room name
+        """
+        raise NotImplemented("must be implemented in the child class")

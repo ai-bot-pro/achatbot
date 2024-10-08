@@ -443,27 +443,7 @@ class VADAnalyzerArgs:
 class SileroVADAnalyzerArgs(SileroVADArgs, VADAnalyzerArgs):
     pass
 
-# --------------- daily -------------------------------
-
-
-class DailyDialinSettings(BaseModel):
-    call_id: str = ""
-    call_domain: str = ""
-
-
-# https://reference-python.daily.co/types.html#transcriptionsettings
-class DailyTranscriptionSettings(BaseModel):
-    language: str = "en"
-    tier: str = "nova"
-    model: str = "2-conversationalai"
-    profanity_filter: bool = True
-    redact: bool = False
-    endpointing: bool = True
-    punctuate: bool = True
-    includeRawResponse: bool = True
-    extra: Mapping[str, Any] = {
-        "interim_results": True
-    }
+# --------------- in/out audio camera(video) params -------------------
 
 
 class AudioParams(BaseModel):
@@ -493,7 +473,29 @@ class CameraParams(BaseModel):
 
 
 class AudioCameraParams(CameraParams, AudioVADParams):
-    pass
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+# --------------- daily -------------------------------
+
+class DailyDialinSettings(BaseModel):
+    call_id: str = ""
+    call_domain: str = ""
+
+
+# https://reference-python.daily.co/types.html#transcriptionsettings
+class DailyTranscriptionSettings(BaseModel):
+    language: str = "en"
+    tier: str = "nova"
+    model: str = "2-conversationalai"
+    profanity_filter: bool = True
+    redact: bool = False
+    endpointing: bool = True
+    punctuate: bool = True
+    includeRawResponse: bool = True
+    extra: Mapping[str, Any] = {
+        "interim_results": True
+    }
 
 
 class DailyParams(AudioCameraParams):
@@ -502,6 +504,13 @@ class DailyParams(AudioCameraParams):
     dialin_settings: DailyDialinSettings | None = None
     transcription_enabled: bool = False
     transcription_settings: DailyTranscriptionSettings = DailyTranscriptionSettings()
+
+
+# --------------- livekit -------------------------------
+
+class LiveKitParams(AudioCameraParams):
+    vad_enabled: bool = True
+    audio_out_sample_rate: int = 48000
 
 
 # ---------------- Bots -------------

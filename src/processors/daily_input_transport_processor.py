@@ -17,6 +17,7 @@ from src.types.frames.data_frames import (
 from src.types.frames.control_frames import UserImageRequestFrame
 from src.common.types import DailyParams
 from src.types.frames.data_frames import DailyTransportMessageFrame
+from src.modules.speech.vad_analyzer.daily_webrtc import DailyWebRTCVADAnalyzer
 
 
 class DailyInputTransportProcessor(AudioVADInputProcessor):
@@ -24,8 +25,13 @@ class DailyInputTransportProcessor(AudioVADInputProcessor):
     def __init__(self, client: DailyTransportClient, params: DailyParams, **kwargs):
         super().__init__(params, **kwargs)
 
-        self._client = client
+        if params.vad_enabled and not params.vad_analyzer:
+            # Default use DailyWebRTCVADAnalyzer
+            self._vad_analyzer = DailyWebRTCVADAnalyzer(
+                sample_rate=self._params.audio_in_sample_rate,
+                num_channels=self._params.audio_in_channels)
 
+        self._client = client
         self._video_renderers = {}
 
     async def start(self, frame: StartFrame):
@@ -39,14 +45,14 @@ class DailyInputTransportProcessor(AudioVADInputProcessor):
             self._audio_in_task = self.get_event_loop().create_task(self._audio_in_task_handler())
 
     async def stop(self):
-        # Parent stop.
-        await super().stop()
-        # Leave the room.
-        await self._client.leave()
         # Stop audio thread.
         if self._params.audio_in_enabled or self._params.vad_enabled:
             self._audio_in_task.cancel()
             await self._audio_in_task
+        # Leave the room.
+        await self._client.leave()
+        # Parent stop.
+        await super().stop()
 
     async def cleanup(self):
         await super().cleanup()

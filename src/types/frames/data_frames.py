@@ -144,6 +144,11 @@ class DailyTransportMessageFrame(TransportMessageFrame):
 
 
 @dataclass
+class LivekitTransportMessageFrame(TransportMessageFrame):
+    participant_id: str | None = None
+
+
+@dataclass
 class FunctionCallResultFrame(DataFrame):
     """A frame containing the result of an LLM function (tool) call.
     """

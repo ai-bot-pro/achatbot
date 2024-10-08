@@ -4,12 +4,11 @@ from concurrent.futures import ThreadPoolExecutor
 
 from apipeline.frames.base import Frame
 from apipeline.frames.control_frames import StartFrame
-from apipeline.frames.sys_frames import StartInterruptionFrame, StopInterruptionFrame, SystemFrame
+from apipeline.frames.sys_frames import StartInterruptionFrame, StopInterruptionFrame, SystemFrame, CancelFrame
 from apipeline.frames.data_frames import AudioRawFrame
 from apipeline.processors.frame_processor import FrameDirection
 from apipeline.processors.input_processor import InputProcessor
 
-from src.modules.speech.vad_analyzer.daily_webrtc import DailyWebRTCVADAnalyzer
 from src.common.interface import IVADAnalyzer
 from src.common.types import AudioVADParams, VADState
 from src.types.frames.control_frames import UserStartedSpeakingFrame, UserStoppedSpeakingFrame
@@ -28,14 +27,13 @@ class AudioVADInputProcessor(InputProcessor):
         self._executor = ThreadPoolExecutor(max_workers=3)
 
         self._vad_analyzer: IVADAnalyzer | None = params.vad_analyzer
-        if params.vad_enabled and not params.vad_analyzer:
-            self._vad_analyzer = DailyWebRTCVADAnalyzer(
-                sample_rate=self._params.audio_in_sample_rate,
-                num_channels=self._params.audio_in_channels)
 
     @property
     def vad_analyzer(self) -> IVADAnalyzer | None:
         return self._params.vad_analyzer
+
+    def set_vad_analyzer(self, analyzer: IVADAnalyzer):
+        self._vad_analyzer = analyzer
 
     #
     # Audio task
@@ -52,6 +50,25 @@ class AudioVADInputProcessor(InputProcessor):
         if self._params.audio_in_enabled or self._params.vad_enabled:
             self._audio_task.cancel()
             await self._audio_task
+
+        # Wait for the push frame task to finish. It will finish when the
+        # EndFrame is actually processed.
+        try:
+            await self._push_frame_task
+        except asyncio.CancelledError:
+            pass
+
+    async def cancel(self, frame: CancelFrame):
+        """
+        Cancel all the tasks and wait for them to finish.
+        """
+        if self._params.audio_in_enabled or self._params.vad_enabled:
+            # Wait for audio_task cancel to finish
+            self._audio_task.cancel()
+            await self._audio_task
+
+        # Wait for async processor push_frame_task cancel to finish
+        await self.cleanup()
 
     async def push_audio_frame(self, frame: AudioRawFrame):
         if self._params.audio_in_enabled or self._params.vad_enabled:
@@ -108,15 +125,9 @@ class AudioVADInputProcessor(InputProcessor):
         if not self.interruptions_allowed:
             return
 
-        # Cancel the task. This will stop pushing frames downstream.
-        self._push_frame_task.cancel()
-        await self._push_frame_task
-        # Push an out-of-band frame (i.e. not using the ordered push
-        # frame task) to stop everything, specially at the output
-        # transport.
-        await self.push_frame(StartInterruptionFrame())
-        # Create a new queue and task.
-        self._create_push_task()
+        # use async frame processor _handle_interruptions
+        # (cancel old then create new)
+        await super()._handle_interruptions(StartInterruptionFrame())
 
     async def _stop_interruption(self):
         if not self.interruptions_allowed:
