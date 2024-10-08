@@ -337,6 +337,14 @@ class IRoomManager(ABC):
         raise NotImplemented("must be implemented in the child class")
 
     @abstractmethod
+    async def check_vaild_room(self, room_name, token) -> bool:
+        """
+        check valid token and room status
+        return bool is vaild room
+        """
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
     async def close_session(self):
         """
         if api session(http or ws) is common long session, need to close

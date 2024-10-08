@@ -14,7 +14,7 @@ from src.common.const import *
 from src.common.logger import Logger
 from src.common.types import GeneralRoomInfo
 from src.services.help.daily_room import DailyRoom
-from src.cmd.bots import import_bots, register_daily_room_bots
+from src.cmd.bots import import_bots, register_ai_room_bots
 from src.cmd.bots.run import BotTaskManager, BotTaskRunnerFE, RunBotInfo
 
 
@@ -184,16 +184,16 @@ def fastapi_register_bot(bot_name: str = "DummyBot") -> JSONResponse:
 
 def register_bot(bot_name: str = "DummyBot") -> dict[str, Any]:
     """register bot, !NOTE: just for single machine state :)"""
-    logging.info(f"before register bots: {register_daily_room_bots.dict()}")
+    logging.info(f"before register bots: {register_ai_room_bots.dict()}")
     is_register = import_bots(bot_name)
     if not is_register:
         logging.info(f"name:{bot_name} not existent bot to import")
 
-    logging.info(f"after register bots: {register_daily_room_bots.dict()}")
+    logging.info(f"after register bots: {register_ai_room_bots.dict()}")
     return APIResponse(
         data={
             "is_register": is_register,
-            "register_bots": register_daily_room_bots.keys_str(),
+            "register_bots": register_ai_room_bots.keys_str(),
         },
     ).model_dump()
 
@@ -265,8 +265,8 @@ async def bot_join(chat_bot_name: str,
         detail = f"un import bot: {chat_bot_name}"
         return APIResponse(error_code=ERROR_CODE_BOT_UN_REGISTER, error_detail=detail).model_dump()
 
-    logging.info(f"register bots: {register_daily_room_bots.items()}")
-    if chat_bot_name not in register_daily_room_bots:
+    logging.info(f"register bots: {register_ai_room_bots.items()}")
+    if chat_bot_name not in register_ai_room_bots:
         detail = f"bot {chat_bot_name} don't exist"
         return APIResponse(error_code=ERROR_CODE_BOT_UN_REGISTER, error_detail=detail).model_dump()
 
@@ -380,8 +380,8 @@ async def bot_join_room(room_name: str, chat_bot_name: str, info: RunBotInfo | d
         detail = f"un import bot: {chat_bot_name}"
         return APIResponse(error_code=ERROR_CODE_BOT_UN_REGISTER, error_detail=detail).model_dump()
 
-    logging.info(f"register bots: {register_daily_room_bots.items()}")
-    if chat_bot_name not in register_daily_room_bots:
+    logging.info(f"register bots: {register_ai_room_bots.items()}")
+    if chat_bot_name not in register_ai_room_bots:
         detail = f"bot {chat_bot_name} don't exist"
         return APIResponse(error_code=ERROR_CODE_BOT_UN_REGISTER, error_detail=detail).model_dump()
 

@@ -62,12 +62,22 @@ class DailyRoomObject(BaseModel):
     config: DailyRoomProperties
 
 
+class TokenObject(BaseModel):
+    exp: int
+    room_name: str
+    is_owner: bool
+    nbf: Optional[int] = None
+    enable_screenshare: Optional[bool] = None
+    enable_recording: Optional[str] = None
+
+
 class DailyRESTHelper:
     def __init__(self, daily_api_key: str, daily_api_url: str = "https://api.daily.co/v1"):
         self.daily_api_key = daily_api_key
         self.daily_api_url = daily_api_url
 
-    def _get_name_from_url(self, room_url: str) -> str:
+    @staticmethod
+    def get_name_from_url(room_url: str) -> str:
         return urlparse(room_url).path[1:]
 
     def create_room(self, params: DailyRoomParams) -> DailyRoomObject:
@@ -108,7 +118,7 @@ class DailyRESTHelper:
         return room
 
     def get_room_from_url(self, room_url: str,) -> DailyRoomObject:
-        room_name = self._get_name_from_url(room_url)
+        room_name = DailyRESTHelper.get_name_from_url(room_url)
         return self.get_room_from_name(room_name)
 
     def get_token_by_url(
@@ -120,7 +130,7 @@ class DailyRESTHelper:
             raise Exception(
                 "No Daily room specified. You must specify a Daily room in order a token to be generated.")
 
-        room_name = self._get_name_from_url(room_url)
+        room_name = DailyRESTHelper.get_name_from_url(room_url)
 
         return self.get_token_by_name(room_name,
                                       expiry_time=expiry_time, owner=owner)
@@ -148,5 +158,27 @@ class DailyRESTHelper:
                 f"Failed to create meeting token: {res.status_code} {res.text}")
 
         token: str = res.json()["token"]
+
+        return token
+
+    def verify_token(self, token: str) -> TokenObject:
+        if not token:
+            return False
+
+        res: requests.Response = requests.get(
+            f"{self.daily_api_url}/meeting-tokens/{token}",
+            headers={"Authorization": f"Bearer {self.daily_api_key}"}
+        )
+
+        if res.status_code != 200:
+            raise Exception(f"Token not found: {token}")
+
+        data = res.json()
+
+        try:
+            print("data--->", data)
+            token = TokenObject(**data)
+        except ValidationError as e:
+            raise Exception(f"Invalid response: {e}")
 
         return token

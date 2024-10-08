@@ -25,8 +25,8 @@ from src.processors.speech.asr.base import TranscriptionTimingLogProcessor
 from src.common.types import DailyParams
 from src.transports.daily import DailyTransport
 from src.cmd.bots.rag.helper import get_tidb_url
-from src.cmd.bots.base import DailyRoomBot
-from src.cmd.bots import register_daily_room_bots
+from src.cmd.bots.base import AIRoomBot
+from src.cmd.bots import register_ai_room_bots
 
 from dotenv import load_dotenv
 load_dotenv(override=True)
@@ -43,8 +43,8 @@ You are Andrej Karpathy, a Slovak-Canadian computer scientist who served as the 
 """
 
 
-@register_daily_room_bots.register
-class DailyLangchainRAGBot(DailyRoomBot):
+@register_ai_room_bots.register
+class DailyLangchainRAGBot(AIRoomBot):
     """
     Video playback scenario(e.g. education/meeting video playback).
     offline pipeline:

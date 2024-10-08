@@ -27,12 +27,12 @@ from src.common.types import DailyParams, DailyTranscriptionSettings
 from src.transports.daily import DailyTransport
 from src.types.ai_conf import AIConfig, LLMConfig
 from src.types.frames.data_frames import LLMMessagesFrame, TextFrame
-from src.cmd.bots.base import DailyRoomBot
-from src.cmd.bots import register_daily_room_bots
+from src.cmd.bots.base import AIRoomBot
+from src.cmd.bots import register_ai_room_bots
 
 
-@register_daily_room_bots.register
-class DailyRTVIGeneralBot(DailyRoomBot):
+@register_ai_room_bots.register
+class DailyRTVIGeneralBot(AIRoomBot):
     r"""
     use daily (webrtc) transport rtvi general bot
     - init setup pipeline by bot config

@@ -6,18 +6,18 @@ from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
 
+from src.services.help.daily_rest import DailyRESTHelper
 from src.processors.llm.base import LLMProcessor
 from src.processors.speech.tts.tts_processor import TTSProcessor
-from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.processors.rtvi.rtvi_asr_llm_tts_processor import RTVIProcessor, RTVISetup
 from src.common.types import DailyParams, RoomBotArgs
 from src.transports.daily import DailyTransport
-from src.cmd.bots.base import DailyRoomBot
-from src.cmd.bots import register_daily_room_bots
+from src.cmd.bots.base import AIRoomBot
+from src.cmd.bots import register_ai_room_bots
 
 
-@register_daily_room_bots.register
-class DailyAsrRTVIBot(DailyRoomBot):
+@register_ai_room_bots.register
+class DailyAsrRTVIBot(AIRoomBot):
     """
     use asr processor, don't use daily transcirption
     """
@@ -103,6 +103,7 @@ if __name__ == "__main__":
 
     if config.u and bot_config:
         kwargs = RoomBotArgs(
+            room_name=DailyRESTHelper.get_name_from_url(config.u),
             bot_config=bot_config,
             room_url=config.u,
             token=config.t,

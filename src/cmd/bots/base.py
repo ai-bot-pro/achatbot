@@ -30,7 +30,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 
-class DailyRoomBot(IBot):
+class AIRoomBot(IBot):
     r"""
     use ai bot config
     !TODONE: need config processor with bot config (redefine api params) @weedge

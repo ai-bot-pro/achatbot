@@ -2,7 +2,7 @@ from pydantic import BaseModel
 
 from src.common.register import Register
 
-register_daily_room_bots = Register('daily-room-bots')
+register_ai_room_bots = Register('ai-room-bots')
 
 
 class BotInfo(BaseModel):
@@ -14,7 +14,6 @@ class BotInfo(BaseModel):
     token: str = ""
     config_list: list = []
     services: dict = {}
-    bot_type: str = "daily"  # default: daily webrtc
 
 
 def import_bots(bot_name: str = "DummyBot"):

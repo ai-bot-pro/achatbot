@@ -12,12 +12,13 @@ from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.processors.rtvi.rtvi_asr_llm_tts_processor import RTVIProcessor, RTVISetup
 from src.common.types import DailyParams, RoomBotArgs, DailyTranscriptionSettings
 from src.transports.daily import DailyTransport
-from src.cmd.bots.base import DailyRoomBot
-from src.cmd.bots import register_daily_room_bots
+from src.services.help.daily_rest import DailyRESTHelper
+from src.cmd.bots.base import AIRoomBot
+from src.cmd.bots import register_ai_room_bots
 
 
-@register_daily_room_bots.register
-class DailyRTVIBot(DailyRoomBot):
+@register_ai_room_bots.register
+class DailyRTVIBot(AIRoomBot):
     r"""
     use daily transcirption
     """
@@ -99,6 +100,7 @@ if __name__ == "__main__":
 
     if config.u and config.t and bot_config:
         kwargs = RoomBotArgs(
+            room_name=DailyRESTHelper.get_name_from_url(config.u),
             bot_config=bot_config,
             room_url=config.u,
             token=config.t,

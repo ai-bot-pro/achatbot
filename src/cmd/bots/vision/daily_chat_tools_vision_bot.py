@@ -24,17 +24,17 @@ from src.processors.aggregators.openai_llm_context import (
 )
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.common.types import DailyParams
-from src.cmd.bots.base import DailyRoomBot
+from src.cmd.bots.base import AIRoomBot
 from src.transports.daily import DailyTransport
 from src.types.frames.data_frames import FunctionCallResultFrame, LLMMessagesFrame, UserImageRawFrame, VisionImageRawFrame
 from src.common.register import Register
-from .. import register_daily_room_bots
+from .. import register_ai_room_bots
 
 register_tool_funtions = Register('daily-chat-vision-tool-functions')
 
 
-@register_daily_room_bots.register
-class DailyChatToolsVisionBot(DailyRoomBot):
+@register_ai_room_bots.register
+class DailyChatToolsVisionBot(AIRoomBot):
     r"""
     use function tools llm model to chat (for text LLM)
     - when tool is describe image, use describe_image function which use vision model to describe the image with describe text (vision LLM)

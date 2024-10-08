@@ -1,5 +1,6 @@
 import asyncio
-from typing import List
+import os
+from typing import List, Optional
 import logging
 
 from apipeline.frames.control_frames import EndFrame
@@ -9,22 +10,22 @@ from apipeline.frames.data_frames import AudioRawFrame
 
 from src.processors.livekit_input_transport_processor import LivekitInputTransportProcessor
 from src.processors.livekit_output_transport_processor import LivekitOutputTransportProcessor
-from src.common.types import LiveKitParams
+from src.common.types import LivekitParams
 from src.services.livekit_client import LivekitCallbacks, LivekitTransportClient
 from src.transports.base import BaseTransport
 from src.types.frames.data_frames import LivekitTransportMessageFrame
 
 
-class LiveKitTransport(BaseTransport):
+class LivekitTransport(BaseTransport):
     def __init__(
         self,
-        websocket_url: str,
         token: str,
         room_name: str,
-        params: LiveKitParams = LiveKitParams(),
-        input_name: str | None = None,
-        output_name: str | None = None,
-        loop: asyncio.AbstractEventLoop | None = None,
+        websocket_url: Optional[str] = None,
+        params: LivekitParams = LivekitParams(),
+        input_name: Optional[str] = None,
+        output_name: Optional[str] = None,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
     ):
         super().__init__(input_name=input_name, output_name=output_name, loop=loop)
 
@@ -40,6 +41,7 @@ class LiveKitTransport(BaseTransport):
         )
         self._params = params
 
+        websocket_url = websocket_url or os.getenv("LIVEKIT_URL")
         self._client = LivekitTransportClient(
             websocket_url, token, room_name, self._params, callbacks, self._loop,
         )
@@ -57,13 +59,13 @@ class LiveKitTransport(BaseTransport):
         self._register_event_handler("on_participant_left")
         self._register_event_handler("on_call_state_updated")
 
-    def input(self) -> LivekitInputTransportProcessor:
+    def input_processor(self) -> LivekitInputTransportProcessor:
         if not self._input:
             self._input = LivekitInputTransportProcessor(
                 self._client, self._params, name=self._input_name)
         return self._input
 
-    def output(self) -> LivekitOutputTransportProcessor:
+    def output_processor(self) -> LivekitOutputTransportProcessor:
         if not self._output:
             self._output = LivekitOutputTransportProcessor(
                 self._client, self._params, name=self._output_name

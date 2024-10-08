@@ -4,6 +4,7 @@ use SOTA LLM like chatGPT to generate config file(json,yaml,toml) from dataclass
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import (
+    Literal,
     Optional,
     Sequence,
     List,
@@ -506,11 +507,21 @@ class DailyParams(AudioCameraParams):
     transcription_settings: DailyTranscriptionSettings = DailyTranscriptionSettings()
 
 
+class DailyRoomArgs(BaseModel):
+    privacy: Literal['private', 'public'] = "public"
+
+
 # --------------- livekit -------------------------------
 
-class LiveKitParams(AudioCameraParams):
+class LivekitParams(AudioCameraParams):
     vad_enabled: bool = True
     audio_out_sample_rate: int = 48000
+
+
+class LivekitRoomArgs(BaseModel):
+    bot_name: str = "chat-bot"
+    # if use session, need manual close async http session
+    is_common_session: bool = False
 
 
 # ---------------- Room Bots -------------
@@ -527,6 +538,7 @@ class GeneralRoomInfo:
 
 @dataclass
 class RoomBotArgs:
+    room_name: str = ""
     room_url: str = ""
     token: str = ""
     bot_config: dict | None = None

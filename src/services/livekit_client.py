@@ -5,7 +5,7 @@ from typing import Awaitable, Callable, List
 from pydantic import BaseModel
 from apipeline.frames.data_frames import AudioRawFrame, ImageRawFrame
 
-from src.common.types import SAMPLE_WIDTH, LiveKitParams
+from src.common.types import SAMPLE_WIDTH, LivekitParams
 from src.common.utils.audio_utils import convertSampleRateTo16khz
 from src.types.frames.data_frames import LivekitTransportMessageFrame, TransportMessageFrame
 
@@ -14,7 +14,7 @@ try:
     from tenacity import retry, stop_after_attempt, wait_exponential
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
-    logging.error("In order to use LiveKit, you need to `pip install achatbot[livekit]`.")
+    logging.error("In order to use Livekit, you need to `pip install achatbot[livekit]`.")
     raise Exception(f"Missing module: {e}")
 
 
@@ -35,7 +35,7 @@ class LivekitTransportClient:
         websocket_url: str,
         token: str,
         room_name: str,
-        params: LiveKitParams,
+        params: LivekitParams,
         callbacks: LivekitCallbacks,
         loop: asyncio.AbstractEventLoop,
     ):

@@ -27,3 +27,9 @@ def generate_token():
 if __name__ == "__main__":
     token = generate_token()
     print(token)
+    res = api.TokenVerifier().verify(token)
+    print(res)
+    try:
+        api.TokenVerifier().verify("123")
+    except Exception as e:
+        print(f"Exception: {e}")

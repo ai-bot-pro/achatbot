@@ -3,7 +3,7 @@ import time
 import logging
 
 from src.common.const import *
-from src.common.types import GeneralRoomInfo
+from src.common.types import DailyRoomArgs, GeneralRoomInfo
 from src.common.interface import IRoomManager
 from src.common.factory import EngineClass
 from src.services.help.daily_rest import DailyRESTHelper, DailyRoomObject, DailyRoomParams, DailyRoomProperties
@@ -13,10 +13,11 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 
-class DailyRoom(IRoomManager, EngineClass):
+class DailyRoom(EngineClass, IRoomManager):
     TAG = "daily_room"
 
-    def __init__(self) -> None:
+    def __init__(self, **kwargs) -> None:
+        self.args = DailyRoomArgs(**kwargs)
         # Create a Daily rest helper
         self.daily_rest_helper = DailyRESTHelper(
             os.getenv("DAILY_API_KEY", ""),
@@ -42,6 +43,7 @@ class DailyRoom(IRoomManager, EngineClass):
             try:
                 params = DailyRoomParams(
                     name=room_name,
+                    privacy=self.args.privacy,
                     properties=DailyRoomProperties(
                         exp=time.time() + exp_time_s,
                     ),
@@ -66,6 +68,7 @@ class DailyRoom(IRoomManager, EngineClass):
         room: DailyRoomObject | None = None
         try:
             params = DailyRoomParams(
+                privacy=self.args.privacy,
                 properties=DailyRoomProperties(
                     exp=time.time() + exp_time_s,
                 ),
@@ -89,13 +92,36 @@ class DailyRoom(IRoomManager, EngineClass):
         return token
 
     async def get_room(self, room_name: str) -> GeneralRoomInfo:
-        room = self.daily_rest_helper.get_room_from_name(room_name)
-        logging.debug(f"room:{room}")
-        g_room = GeneralRoomInfo(
-            sid=room.id,
-            name=room.name,
-            url=room.url,
-            creation_time=room.created_at,
-            extra_data=room.config.model_dump(),
-        )
-        return g_room
+        try:
+            room = self.daily_rest_helper.get_room_from_name(room_name)
+            logging.debug(f"room:{room}")
+            g_room = GeneralRoomInfo(
+                sid=room.id,
+                name=room.name,
+                url=room.url,
+                creation_time=room.created_at,
+                extra_data=room.config.model_dump(),
+            )
+            return g_room
+        except Exception as ex:
+            logging.warning(
+                f"Failed to get room {room_name} from Daily REST API: {ex}")
+            return None
+
+    async def check_vaild_room(self, room_name: str, token: str) -> bool:
+        if not room_name or not token:
+            return False
+
+        if self.args.privacy == "private":
+            try:
+                token = self.daily_rest_helper.verify_token(token)
+                logging.debug(f"token:{token}")
+            except Exception as ex:
+                logging.warning(f"{token} verify Exception: {ex}")
+                return False
+
+        room = await self.get_room(room_name)
+        if not room:
+            return False
+
+        return True

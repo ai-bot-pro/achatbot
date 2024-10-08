@@ -2,15 +2,17 @@ import datetime
 import logging
 import uuid
 
+from pydantic import BaseModel
+
 try:
     from livekit import api
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
-    logging.error("In order to use LiveKit API, you need to `pip install achatbot[livekit-api]`.")
+    logging.error("In order to use Livekit API, you need to `pip install achatbot[livekit-api]`.")
     raise Exception(f"Missing module: {e}")
 
 from src.common.const import *
-from src.common.types import GeneralRoomInfo
+from src.common.types import GeneralRoomInfo, LivekitRoomArgs
 from src.common.interface import IRoomManager
 from src.common.factory import EngineClass
 
@@ -19,20 +21,16 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 
-class LivekitRoom(IRoomManager, EngineClass):
+class LivekitRoom(EngineClass, IRoomManager):
     TAG = "livekit_room"
 
     def __init__(
         self,
-        room_name: str,
-        bot_name: str,
-        # if use session, need manual close async http session
-        is_common_session: bool = False,
+        **kwargs
     ) -> None:
-        self._room_name = room_name
-        self._bot_name = bot_name
+        self.args = LivekitRoomArgs(**kwargs)
         # live kit http api with pb(protobuf) serialize data
-        self._http_api = api.LiveKitAPI() if is_common_session else None
+        self._http_api = api.LiveKitAPI() if self.args.is_common_session else None
 
     async def close_session(self):
         if self._http_api:
@@ -77,7 +75,7 @@ class LivekitRoom(IRoomManager, EngineClass):
         token = (
             api.AccessToken()
             .with_identity(user_identity)
-            .with_name(self._bot_name)
+            .with_name(self.args.bot_name)
             .with_grants(
                 api.VideoGrants(
                     room_join=True,
@@ -95,13 +93,15 @@ class LivekitRoom(IRoomManager, EngineClass):
         http_api = self._http_api if self._http_api else api.LiveKitAPI()
         result = await http_api.room.list_rooms(
             api.ListRoomsRequest(names=[room_name]))
+
         logging.debug(f"list_rooms:{result.rooms}")
-        if len(result.rooms) > 0:
-            room = result.rooms[0]
+        if len(result.rooms) == 0:
+            return None
 
         if not self._http_api:
             http_api.aclose()
 
+        room = result.rooms[0]
         g_room = GeneralRoomInfo(
             sid=room.sid,
             name=room.name,
@@ -110,3 +110,19 @@ class LivekitRoom(IRoomManager, EngineClass):
         )
 
         return g_room
+
+    async def check_vaild_room(self, room_name: str, token: str) -> bool:
+        if not room_name or not token:
+            return False
+
+        try:
+            api.TokenVerifier().verify(token)
+        except Exception as e:
+            logging.warning(f"{token} verify Exception: {e}")
+            return False
+
+        room = await self.get_room(room_name)
+        if not room:
+            return False
+
+        return True

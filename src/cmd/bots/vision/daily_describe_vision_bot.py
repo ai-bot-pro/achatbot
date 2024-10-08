@@ -9,13 +9,13 @@ from src.processors.aggregators.user_response import UserResponseAggregator
 from src.processors.aggregators.vision_image_frame import VisionImageFrameAggregator
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.common.types import DailyParams
-from src.cmd.bots.base import DailyRoomBot
+from src.cmd.bots.base import AIRoomBot
 from src.transports.daily import DailyTransport
-from .. import register_daily_room_bots
+from .. import register_ai_room_bots
 
 
-@register_daily_room_bots.register
-class DailyDescribeVisionBot(DailyRoomBot):
+@register_ai_room_bots.register
+class DailyDescribeVisionBot(AIRoomBot):
     def __init__(self, **args) -> None:
         super().__init__(**args)
         self.init_bot_config()

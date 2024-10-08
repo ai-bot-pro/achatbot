@@ -3,10 +3,10 @@ import logging
 import time
 
 from src.common.interface import IBot
-from . import register_daily_room_bots
+from . import register_ai_room_bots
 
 
-@register_daily_room_bots.register
+@register_ai_room_bots.register
 class DummyBot(IBot):
     def __init__(self, **args) -> None:
         self.args = args

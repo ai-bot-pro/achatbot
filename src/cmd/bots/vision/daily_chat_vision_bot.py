@@ -15,7 +15,7 @@ from src.processors.aggregators.user_response import UserResponseAggregator
 from src.processors.aggregators.vision_image_frame import VisionImageFrameAggregator
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.common.types import DailyParams
-from src.cmd.bots.base import DailyRoomBot
+from src.cmd.bots.base import AIRoomBot
 from src.transports.daily import DailyTransport
 from src.types.frames.data_frames import LLMMessagesFrame
 from src.types.frames.control_frames import (
@@ -25,7 +25,7 @@ from src.types.frames.control_frames import (
     BotStartedSpeakingFrame,
     BotStoppedSpeakingFrame,
 )
-from .. import register_daily_room_bots
+from .. import register_ai_room_bots
 
 
 class FrameTraceLogger(FrameProcessor):
@@ -58,8 +58,8 @@ class FrameTraceLogger(FrameProcessor):
         await self.push_frame(frame, direction)
 
 
-@register_daily_room_bots.register
-class DailyChatVisionBot(DailyRoomBot):
+@register_ai_room_bots.register
+class DailyChatVisionBot(AIRoomBot):
     r"""
     use gen text llm model to chat
     when gen text is  about describe the image, use vision model to describe the image with describe text
