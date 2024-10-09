@@ -7,6 +7,8 @@ import os
 
 from livekit import api, rtc
 
+# https://docs.livekit.io/home/client/events/#Events
+
 
 async def main(room: rtc.Room) -> None:
     @room.on("participant_connected")
@@ -124,14 +126,6 @@ async def main(room: rtc.Room) -> None:
     def on_reconnected() -> None:
         logging.info("reconnected")
 
-    # chat
-    chat = rtc.ChatManager(room)
-    # receiving chat
-
-    @chat.on("message_received")
-    def on_message_received(msg: rtc.ChatMessage):
-        print(f"message received: {msg.participant.identity}: {msg.message}")
-
     # will automatically use the LIVEKIT_API_KEY and LIVEKIT_API_SECRET env vars
     token = (
         api.AccessToken()
@@ -154,6 +148,14 @@ async def main(room: rtc.Room) -> None:
     await asyncio.sleep(2)
     # pub data
     await room.local_participant.publish_data("hello world")
+
+    # chat
+    chat = rtc.ChatManager(room)
+
+    # receiving chat
+    @chat.on("message_received")
+    def on_message_received(msg: rtc.ChatMessage):
+        print(f"message received: {msg.participant.identity}: {msg.message}")
     # send msg
     await chat.send_message("hello world msg")
 

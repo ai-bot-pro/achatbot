@@ -516,6 +516,10 @@ class DailyRoomArgs(BaseModel):
 class LivekitParams(AudioCameraParams):
     vad_enabled: bool = True
     audio_out_sample_rate: int = 48000
+    websocket_url: str = ""  # project url
+    api_key: str = ""
+    api_secret: str = ""
+    e2ee_shared_key: Optional[bytes] = None
 
 
 class LivekitRoomArgs(BaseModel):

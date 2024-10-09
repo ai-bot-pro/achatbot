@@ -37,6 +37,23 @@ class DailyTransport(BaseTransport):
             loop=loop
         )
 
+        # Register supported handlers.
+        # User will only be able to register these handlers.
+        self._register_event_handler("on_joined")
+        self._register_event_handler("on_left")
+        self._register_event_handler("on_app_message")
+        self._register_event_handler("on_call_state_updated")
+        self._register_event_handler("on_dialin_ready")
+        self._register_event_handler("on_dialout_answered")
+        self._register_event_handler("on_dialout_connected")
+        self._register_event_handler("on_dialout_stopped")
+        self._register_event_handler("on_dialout_error")
+        self._register_event_handler("on_dialout_warning")
+        self._register_event_handler("on_first_participant_joined")
+        self._register_event_handler("on_participant_joined")
+        self._register_event_handler("on_participant_left")
+        self._register_event_handler("on_participant_updated")
+        logging.info(f"DailyTransport register event names: {self.event_names}")
         callbacks = DailyCallbacks(
             on_joined=self._on_joined,
             on_left=self._on_left,
@@ -54,31 +71,15 @@ class DailyTransport(BaseTransport):
             on_participant_left=self._on_participant_left,
             on_participant_updated=self._on_participant_updated,
         )
+
+        self._params = params
+        self._params.api_key = os.getenv("DAILY_API_KEY")
         self._client = DailyTransportClient(
-            room_url, token, bot_name, params, callbacks, self._loop)
+            room_url, token, bot_name, self._params, callbacks, self._loop)
 
         self._input: DailyInputTransportProcessor | None = None
         self._output: DailyOutputTransportProcessor | None = None
 
-        self._params = params
-        self._params.api_key = os.getenv("DAILY_API_KEY")
-
-        # Register supported handlers. The user will only be able to register
-        # these handlers.
-        self._register_event_handler("on_joined")
-        self._register_event_handler("on_left")
-        self._register_event_handler("on_app_message")
-        self._register_event_handler("on_call_state_updated")
-        self._register_event_handler("on_dialin_ready")
-        self._register_event_handler("on_dialout_answered")
-        self._register_event_handler("on_dialout_connected")
-        self._register_event_handler("on_dialout_stopped")
-        self._register_event_handler("on_dialout_error")
-        self._register_event_handler("on_dialout_warning")
-        self._register_event_handler("on_first_participant_joined")
-        self._register_event_handler("on_participant_joined")
-        self._register_event_handler("on_participant_left")
-        self._register_event_handler("on_participant_updated")
     #
     # BaseTransport
     #

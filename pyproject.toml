@@ -81,7 +81,7 @@ verovio = ["verovio~=4.3.1"]
 accelerate = ["accelerate~=0.28.0"]
 
 # webRTC
-daily = ["daily-python~=0.10.1"]
+daily = ["daily-python~=0.11.0"]
 livekit = ["livekit~=0.17.4"]
 # http api sdk
 livekit-api = ["livekit-api~=0.7.1"]
@@ -94,7 +94,7 @@ livekit-api = ["livekit-api~=0.7.1"]
 fastapi_daily_bot_server = [
     "fastapi~=0.112.0",
     "uvicorn~=0.30.6",
-    "daily-python~=0.10.1",
+    "daily-python~=0.11.0",
     "openai~=1.40.6",              # like as openai api, groq, together llm
     "groq~=0.9.0",                 # whisper_groq_asr asr engine
     "edge-tts~=6.1.12",            # tts_edge tts engine
@@ -114,7 +114,7 @@ fastapi_bot_server = ["fastapi~=0.112.0", "uvicorn~=0.30.6"]
 # when use vad asr tts engine: achatbot[daily_rtvi_bot,speech_vad_analyzer,asr_processor,tts_processor]
 # default daily_rtvi_bot
 daily_rtvi_bot = [
-    "daily-python~=0.10.1",
+    "daily-python~=0.11.0",
     "openai~=1.40.6",       # like as openai api, groq, together llm
     "groq~=0.9.0",          # whisper_groq_asr asr engine
     "edge-tts~=6.1.12",     # tts_edge tts engine
@@ -126,7 +126,7 @@ daily_rtvi_bot = [
 # when use vad asr tts engine: achatbot[daily_langchain_rag_bot,speech_vad_analyzer,asr_processor,tts_processor]
 # default daily_langchain_rag_bot
 daily_langchain_rag_bot = [
-    "daily-python~=0.10.1",        # default daily vad analyzer
+    "daily-python~=0.11.0",        # default daily vad analyzer
     "openai~=1.40.6",              # like as openai api, groq, together llm
     "groq~=0.9.0",                 # whisper_groq_asr asr engine
     "edge-tts~=6.1.12",            # tts_edge tts engine
@@ -188,7 +188,7 @@ local_terminal_chat_bot = [
 ]
 
 daily_webrtc_terminal_chat_bot = [
-    "daily-python~=0.10.1",
+    "daily-python~=0.11.0",
     # speech_waker
     "pvporcupine~=3.0.2",
     # speech_vad
@@ -232,7 +232,7 @@ daily_webrtc_terminal_chat_bot = [
 # achatbot[speech_audio_stream,queue,stream_player]
 remote_queue_chat_bot_fe = [
     "PyAudio~=0.2.14",
-    "daily-python~=0.10.1",
+    "daily-python~=0.11.0",
     "redis~=5.0.0",
 ]
 # achatbot[queue,speech_waker,speech_vad,speech_asr,core_llm,speech_tts]
@@ -283,7 +283,7 @@ remote_queue_chat_bot_be_worker = [
 remote_rpc_chat_bot_fe = [
     #speech_audio_stream
     "PyAudio~=0.2.14",
-    "daily-python~=0.10.1",
+    "daily-python~=0.11.0",
     # rpc
     "grpcio>=1.65.1",
 ]
@@ -418,7 +418,7 @@ cartesia_tts_processor = ["websockets~=12.0"]
 
 
 # multi modules engine
-speech_audio_stream = ["PyAudio~=0.2.14", "daily-python~=0.10.1"]
+speech_audio_stream = ["PyAudio~=0.2.14", "daily-python~=0.11.0"]
 speech_waker = ["pvporcupine~=3.0.2"]
 speech_vad = [
     "pyannote.audio~=3.2.0",
@@ -427,7 +427,7 @@ speech_vad = [
     "torchaudio~=2.2.2",
 ]
 speech_vad_analyzer = [
-    "daily-python~=0.10.1",
+    "daily-python~=0.11.0",
     "torch~=2.2.2",
     "torchaudio~=2.2.2",
 ]
@@ -476,7 +476,7 @@ redis = ["redis~=5.0.0"]
 
 # audio_stream module tag -> pkgs
 pyaudio_stream = ["PyAudio~=0.2.14"]
-daily_room_audio_stream = ["daily-python~=0.10.1"]
+daily_room_audio_stream = ["daily-python~=0.11.0"]
 
 # waker module tag -> pkgs
 porcupine_wakeword = ["pvporcupine~=3.0.2"]
@@ -570,7 +570,7 @@ tts_g = ["gTTS~=2.5.1"]
 tts_pyttsx3 = ["pyttsx3~=2.90"]
 
 # vad_analyzer module tag -> pkgs
-daily_webrtc_vad_analyzer = ["daily-python~=0.10.1"]
+daily_webrtc_vad_analyzer = ["daily-python~=0.11.0"]
 silero_vad_analyzer = ["torch~=2.2.2", "torchaudio~=2.2.2"]
 
 # player module tag -> pkgs

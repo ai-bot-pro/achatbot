@@ -29,6 +29,7 @@ if __name__ == "__main__":
     print(token)
     res = api.TokenVerifier().verify(token)
     print(res)
+    print(res.video.room)
     try:
         api.TokenVerifier().verify("123")
     except Exception as e:

@@ -11,6 +11,7 @@ from src.common.types import LivekitParams
 from src.transports.livekit import LivekitTransport
 from src.cmd.bots.base import AIRoomBot
 from src.cmd.bots import register_ai_room_bots
+from src.types.frames.data_frames import LLMMessagesFrame
 
 from dotenv import load_dotenv
 load_dotenv(override=True)
@@ -51,14 +52,9 @@ class LivekitBot(AIRoomBot):
             params=params,
         )
 
-        messages = [
-            {
-                "role": "system",
-                "content": "You are Chatbot, a friendly, helpful robot. Your goal is to demonstrate your capabilities in a succinct way. Your output will be converted to audio so don't include special characters in your answers. Respond to what the user said in a creative and helpful way, but keep your responses brief. Start by introducing yourself.",
-            },
-        ]
-        if self._bot_config.llm.language == "zh":
-            messages[0]["content"] += " Please communicate in Chinese"
+        messages = []
+        if self._bot_config.llm.messages:
+            messages = self._bot_config.llm.messages
 
         user_response = LLMUserResponseAggregator(messages)
         assistant_response = LLMAssistantResponseAggregator(messages)
@@ -80,9 +76,9 @@ class LivekitBot(AIRoomBot):
             ),
         )
 
-        transport.add_event_handler(
+        transport.add_event_handlers(
             "on_first_participant_joined",
-            self.on_first_participant_joined)
+            [self.on_first_participant_joined, self.on_first_participant_say_hi])
         transport.add_event_handler(
             "on_participant_left",
             self.on_participant_left)
@@ -91,3 +87,19 @@ class LivekitBot(AIRoomBot):
             self.on_call_state_updated)
 
         await PipelineRunner().run(self.task)
+
+    async def on_first_participant_say_hi(self, transport: LivekitTransport, participant):
+        # joined use tts say "hello" to introduce with llm generate
+        if self._bot_config.tts \
+                and self._bot_config.llm \
+                and self._bot_config.llm.messages \
+                and len(self._bot_config.llm.messages) == 1:
+            hi_text = "Please introduce yourself first."
+            if self._bot_config.llm.language \
+                    and self._bot_config.llm.language == "zh":
+                hi_text = "请用中文介绍下自己。"
+            self._bot_config.llm.messages.append({
+                "role": "user",
+                "content": hi_text,
+            })
+            await self.task.queue_frames([LLMMessagesFrame(self._bot_config.llm.messages)])

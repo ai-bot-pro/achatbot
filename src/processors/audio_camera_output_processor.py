@@ -70,7 +70,7 @@ class AudioCameraOutputProcessor(OutputProcessor):
         pass
 
     async def _handle_interruptions(self, frame: Frame):
-        await super()._handle_interruptions()
+        await super()._handle_interruptions(frame)
         if isinstance(frame, StartInterruptionFrame):
             # Let's send a bot stopped speaking if we have to.
             if self._bot_speaking:

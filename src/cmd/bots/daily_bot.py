@@ -12,8 +12,10 @@ from src.common.types import DailyParams
 from src.transports.daily import DailyTransport
 from src.cmd.bots.base import AIRoomBot
 from src.cmd.bots import register_ai_room_bots
+from src.types.frames.data_frames import LLMMessagesFrame
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 
@@ -29,7 +31,7 @@ class DailyBot(AIRoomBot):
 
     async def arun(self):
         vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
-        daily_params = DailyParams(
+        self.daily_params = DailyParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
             vad_enabled=True,
@@ -44,25 +46,19 @@ class DailyBot(AIRoomBot):
 
         tts_processor: TTSProcessor = self.get_tts_processor()
         stream_info = tts_processor.get_stream_info()
-        daily_params.audio_out_sample_rate = stream_info["sample_rate"]
-        daily_params.audio_out_channels = tts_processor.get_stream_info()["channels"]
+        self.daily_params.audio_out_sample_rate = stream_info["sample_rate"]
+        self.daily_params.audio_out_channels = tts_processor.get_stream_info()["channels"]
 
         transport = DailyTransport(
             self.args.room_url,
             self.args.token,
             self.args.bot_name,
-            daily_params,
+            self.daily_params,
         )
 
-        messages = [
-            {
-                "role": "system",
-                "content": "You are Chatbot, a friendly, helpful robot. Your goal is to demonstrate your capabilities in a succinct way. Your output will be converted to audio so don't include special characters in your answers. Respond to what the user said in a creative and helpful way, but keep your responses brief. Start by introducing yourself.",
-            },
-        ]
-        if self._bot_config.llm.language == "zh":
-            messages[0]["content"] += " Please communicate in Chinese"
-
+        messages = []
+        if self._bot_config.llm.messages:
+            messages = self._bot_config.llm.messages
         user_response = LLMUserResponseAggregator(messages)
         assistant_response = LLMAssistantResponseAggregator(messages)
 
@@ -83,9 +79,9 @@ class DailyBot(AIRoomBot):
             ),
         )
 
-        transport.add_event_handler(
+        transport.add_event_handlers(
             "on_first_participant_joined",
-            self.on_first_participant_joined)
+            [self.on_first_participant_joined, self.on_first_participant_say_hi])
         transport.add_event_handler(
             "on_participant_left",
             self.on_participant_left)
@@ -94,3 +90,23 @@ class DailyBot(AIRoomBot):
             self.on_call_state_updated)
 
         await PipelineRunner().run(self.task)
+
+    async def on_first_participant_say_hi(self, transport: DailyTransport, participant):
+        self.session.set_client_id(participant["id"])
+        if self.daily_params.transcription_enabled:
+            transport.capture_participant_transcription(participant["id"])
+
+        # joined use tts say "hello" to introduce with llm generate
+        if self._bot_config.tts \
+                and self._bot_config.llm \
+                and self._bot_config.llm.messages \
+                and len(self._bot_config.llm.messages) == 1:
+            hi_text = "Please introduce yourself first."
+            if self._bot_config.llm.language \
+                    and self._bot_config.llm.language == "zh":
+                hi_text = "请用中文介绍下自己。"
+            self._bot_config.llm.messages.append({
+                "role": "user",
+                "content": hi_text,
+            })
+            await self.task.queue_frames([LLMMessagesFrame(self._bot_config.llm.messages)])

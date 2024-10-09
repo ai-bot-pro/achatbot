@@ -29,6 +29,19 @@ class LivekitTransport(BaseTransport):
     ):
         super().__init__(input_name=input_name, output_name=output_name, loop=loop)
 
+        self._register_event_handler("on_connected")
+        self._register_event_handler("on_disconnected")
+        self._register_event_handler("on_participant_connected")
+        self._register_event_handler("on_participant_disconnected")
+        self._register_event_handler("on_audio_track_subscribed")
+        self._register_event_handler("on_audio_track_unsubscribed")
+        self._register_event_handler("on_video_track_subscribed")
+        self._register_event_handler("on_video_track_unsubscribed")
+        self._register_event_handler("on_data_received")
+        self._register_event_handler("on_first_participant_joined")
+        self._register_event_handler("on_participant_left")
+        self._register_event_handler("on_call_state_updated")
+        logging.info(f"LivekitTransport register event names: {self.event_names}")
         callbacks = LivekitCallbacks(
             on_connected=self._on_connected,
             on_disconnected=self._on_disconnected,
@@ -36,28 +49,22 @@ class LivekitTransport(BaseTransport):
             on_participant_disconnected=self._on_participant_disconnected,
             on_audio_track_subscribed=self._on_audio_track_subscribed,
             on_audio_track_unsubscribed=self._on_audio_track_unsubscribed,
+            on_video_track_subscribed=self._on_video_track_subscribed,
+            on_video_track_unsubscribed=self._on_video_track_unsubscribed,
             on_data_received=self._on_data_received,
             on_first_participant_joined=self._on_first_participant_joined,
         )
-        self._params = params
 
-        websocket_url = websocket_url or os.getenv("LIVEKIT_URL")
+        self._params = params
+        self._params.websocket_url = websocket_url or os.getenv("LIVEKIT_URL")
+        self._params.api_key = params.api_key or os.getenv("LIVEKIT_API_KEY")
+        self._params.api_secret = params.api_secret or os.getenv("LIVEKIT_API_SECRET")
         self._client = LivekitTransportClient(
-            websocket_url, token, room_name, self._params, callbacks, self._loop,
+            token, room_name, self._params, callbacks, self._loop,
         )
+
         self._input: LivekitInputTransportProcessor | None = None
         self._output: LivekitOutputTransportProcessor | None = None
-
-        self._register_event_handler("on_connected")
-        self._register_event_handler("on_disconnected")
-        self._register_event_handler("on_participant_connected")
-        self._register_event_handler("on_participant_disconnected")
-        self._register_event_handler("on_audio_track_subscribed")
-        self._register_event_handler("on_audio_track_unsubscribed")
-        self._register_event_handler("on_data_received")
-        self._register_event_handler("on_first_participant_joined")
-        self._register_event_handler("on_participant_left")
-        self._register_event_handler("on_call_state_updated")
 
     def input_processor(self) -> LivekitInputTransportProcessor:
         if not self._input:
@@ -120,15 +127,15 @@ class LivekitTransport(BaseTransport):
 
     async def _on_audio_track_subscribed(self, participant_id: str):
         await self._call_event_handler("on_audio_track_subscribed", participant_id)
-        participant = self._client._room.remote_participants.get(participant_id)
-        if participant:
-            for publication in participant.audio_tracks.values():
-                self._client._on_track_subscribed_wrapper(
-                    publication.track, publication, participant
-                )
 
     async def _on_audio_track_unsubscribed(self, participant_id: str):
         await self._call_event_handler("on_audio_track_unsubscribed", participant_id)
+
+    async def _on_video_track_subscribed(self, participant_id: str):
+        await self._call_event_handler("on_video_track_subscribed", participant_id)
+
+    async def _on_video_track_unsubscribed(self, participant_id: str):
+        await self._call_event_handler("on_video_track_unsubscribed", participant_id)
 
     async def _on_data_received(self, data: bytes, participant_id: str):
         if self._input:
@@ -145,7 +152,7 @@ class LivekitTransport(BaseTransport):
             await self._input.cleanup()
         if self._output:
             await self._output.cleanup()
-        await self._client.disconnect()
+        await self._client.leave()
 
     async def on_room_event(self, event):
         # Handle room events
