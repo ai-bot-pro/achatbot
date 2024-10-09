@@ -275,6 +275,7 @@ class LivekitTransportClient:
             asyncio.create_task(self._process_audio_stream(audio_stream, participant.sid))
             await self._callbacks.on_audio_track_subscribed(participant.sid)
         elif track.kind == rtc.TrackKind.KIND_VIDEO \
+                and self._params.camera_in_enabled \
                 and self._start_capture_participant_video:
             logging.info(f"Video track subscribed: {track} from participant {participant.sid}")
             self._video_tracks[participant.sid] = track

@@ -105,9 +105,10 @@ class LivekitInputTransportProcessor(AudioVADInputProcessor):
     async def _camera_in_task_handler(self):
         while True:
             try:
-                frame = await self._client.read_next_image_frame()
+                frame = await self._client.read_next_image_frame(
+                    target_color_mode=self._params.camera_in_color_format)
                 if frame:
-                    self._on_participant_video_frame()
+                    self._on_participant_video_frame(frame)
             except asyncio.CancelledError:
                 logging.info("Video input task cancelled")
                 break
