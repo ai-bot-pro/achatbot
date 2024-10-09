@@ -121,6 +121,9 @@ class DailyInputTransportProcessor(AudioVADInputProcessor):
             self._video_renderers[participant_id]["render_next_frame"] = True
 
     async def _on_participant_video_frame(self, participant_id: str, buffer, size, color_format):
+        """
+        control render image frame rate or request participant image to render
+        """
         render_frame = False
 
         curr_time = time.time()

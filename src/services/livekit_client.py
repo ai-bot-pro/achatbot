@@ -3,12 +3,13 @@ import logging
 from typing import Awaitable, Callable, List
 
 import numpy as np
+from PIL import Image
 from pydantic import BaseModel
 from apipeline.frames.data_frames import AudioRawFrame, ImageRawFrame
 
 from src.common.types import SAMPLE_WIDTH, LivekitParams
 from src.common.utils.audio_utils import convertSampleRateTo16khz
-from src.types.frames.data_frames import LivekitTransportMessageFrame, TransportMessageFrame
+from src.types.frames.data_frames import LivekitTransportMessageFrame, TransportMessageFrame, UserImageRawFrame
 
 try:
     from livekit import rtc, api
@@ -266,7 +267,8 @@ class LivekitTransportClient:
         publication: rtc.RemoteTrackPublication,
         participant: rtc.RemoteParticipant,
     ):
-        if track.kind == rtc.TrackKind.KIND_AUDIO:
+        if track.kind == rtc.TrackKind.KIND_AUDIO \
+                and self._params.audio_in_enabled or self._params.vad_enabled:
             logging.info(f"Audio track subscribed: {track} from participant {participant.sid}")
             self._audio_tracks[participant.sid] = track
             audio_stream = rtc.AudioStream(track)
@@ -381,21 +383,48 @@ class LivekitTransportClient:
             else:
                 logging.warning(f"Received unexpected event type: {type(event)}")
 
-    async def read_next_image_frame(self) -> ImageRawFrame | None:
-        video_frame_event, _ = await self._video_queue.get()
-        image_frame = self._convert_input_video_image(video_frame_event)
+    async def read_next_image_frame(
+            self, target_color_mode: str = "RGB") -> UserImageRawFrame | None:
+        video_frame_event, participant_id = await self._video_queue.get()
+        image_frame = self._convert_input_video_image(
+            participant_id, video_frame_event,
+            target_color_mode=target_color_mode)
         return image_frame
 
     def _convert_input_video_image(
-        self, video_frame_event: rtc.VideoFrameEvent
-    ) -> ImageRawFrame | None:
+            self,
+            participant_id: str,
+            video_frame_event: rtc.VideoFrameEvent,
+            target_color_mode: str = "RGB") -> UserImageRawFrame | None:
         buffer = video_frame_event.frame
 
-        return ImageRawFrame(
-            image=buffer.data,
+        match buffer.type:
+            case rtc.VideoBufferType.RGBA:
+                image = Image.frombuffer(
+                    "RGBA", (buffer.width, buffer.height), buffer.data, "raw", "RGBA", 0, 1)
+            case rtc.VideoBufferType.ABGR:
+                image = Image.frombuffer(
+                    "ABGR", (buffer.width, buffer.height), buffer.data, "raw", "ABGR", 0, 1)
+            case rtc.VideoBufferType.ARGB:
+                image = Image.frombuffer(
+                    "ARGB", (buffer.width, buffer.height), buffer.data, "raw", "ARGB", 0, 1)
+            case rtc.VideoBufferType.BGRA:
+                image = Image.frombuffer(
+                    "BGRA", (buffer.width, buffer.height), buffer.data, "raw", "BGRA", 0, 1)
+            case rtc.VideoBufferType.RGB24:
+                image = Image.frombuffer(
+                    "RGB", (buffer.width, buffer.height), buffer.data, "raw", "RGB", 0, 1)
+            case _:
+                logging.warning(f"buffer type:{buffer.type} un support convert")
+                return None
+
+        image = image.convert(target_color_mode)
+        return UserImageRawFrame(
+            image=image.tobytes(),
             size=(buffer.width, buffer.height),
-            mode="RGB",  # TODO: need change to RGB from buffer.type
+            mode=target_color_mode,
             format="JPEG",
+            participant_id=participant_id,
         )
 
     def capture_participant_video(
@@ -405,17 +434,29 @@ class LivekitTransportClient:
             framerate: int = 30,
             video_source: str = "camera",
             color_format: str = "RGB"):
-        # TODO: sub participant_id's video_source to do callback
+        # just open to capture_participant_video
         self._start_capture_participant_video = True
 
     # Camera out
 
     async def write_frame_to_camera(self, frame: ImageRawFrame):
-        """publish image frame to camera"""
+        """
+        publish image frame  to camera
+        !NOTE: (now just support RGB color_format/mode)
+        !TODO: from diff detector stream to display, like audio out sample rate to play
+        """
+        rtc_frame_type = rtc.VideoBufferType.RGB24
+        match frame.mode:
+            case "RGB":
+                rtc_frame_type = rtc.VideoBufferType.RGB24
+            case _:
+                logging.warning(f"frame mode:{frame.mode} unsupport pub to camera")
+                return
         video_frame = rtc.VideoFrame(
             self._params.camera_out_width,
             self._params.camera_out_height,
-            rtc.VideoBufferType.RGBA,
-            frame.image)
+            rtc_frame_type,
+            frame.image
+        )
         self._video_source.capture_frame(video_frame)
         pass

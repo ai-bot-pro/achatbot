@@ -464,6 +464,7 @@ class AudioVADParams(AudioParams):
 
 
 class CameraParams(BaseModel):
+    camera_in_enabled: bool = False
     camera_out_enabled: bool = False
     camera_out_is_live: bool = False
     camera_out_width: int = 1024

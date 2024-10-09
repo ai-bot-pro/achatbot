@@ -7,25 +7,25 @@ from apipeline.frames.base import Frame
 from apipeline.frames.control_frames import StartFrame
 from apipeline.processors.frame_processor import FrameDirection
 
+from src.common.types import LivekitParams
 from src.processors.audio_input_processor import AudioVADInputProcessor
 from src.services.livekit_client import LivekitTransportClient
 from src.types.frames.data_frames import (
-    InterimTranscriptionFrame,
-    TranscriptionFrame,
     UserImageRawFrame,
 )
 from src.types.frames.control_frames import UserImageRequestFrame
-from src.common.types import DailyParams
 from src.types.frames.data_frames import LivekitTransportMessageFrame
 
 
 class LivekitInputTransportProcessor(AudioVADInputProcessor):
 
-    def __init__(self, client: LivekitTransportClient, params: DailyParams, **kwargs):
+    def __init__(self, client: LivekitTransportClient, params: LivekitParams, **kwargs):
         super().__init__(params, **kwargs)
+        self._params = params
         self._client = client
         self._video_renderers = {}
         self._audio_in_task = None
+        self._camera_in_task = None
 
     async def start(self, frame: StartFrame):
         # Parent start.
@@ -37,11 +37,18 @@ class LivekitInputTransportProcessor(AudioVADInputProcessor):
         if self._params.audio_in_enabled or self._params.vad_enabled:
             self._audio_in_task = self.get_event_loop().create_task(self._audio_in_task_handler())
 
+        if self._params.camera_in_enabled:
+            self._camera_in_task = self.get_event_loop().create_task(self._camera_in_task_handler())
+
     async def stop(self):
-        # Stop audio thread.
+        # Stop audio input thread.
         if self._params.audio_in_enabled or self._params.vad_enabled:
             self._audio_in_task.cancel()
             await self._audio_in_task
+        # Stop camera input thread.
+        if self._params.camera_in_enabled:
+            self._camera_in_task.cancel()
+            await self._camera_in_task
         # Leave the room.
         await self._client.leave()
         # Parent stop.
@@ -51,6 +58,9 @@ class LivekitInputTransportProcessor(AudioVADInputProcessor):
         if self._params.audio_in_enabled or self._params.vad_enabled:
             self._audio_in_task.cancel()
             await self._audio_in_task
+        if self._params.camera_in_enabled:
+            self._camera_in_task.cancel()
+            await self._camera_in_task
         await self._client.cleanup()
         await super().cleanup()
 
@@ -67,10 +77,6 @@ class LivekitInputTransportProcessor(AudioVADInputProcessor):
     #
     # Frames
     #
-
-    async def push_transcription_frame(self, frame: TranscriptionFrame | InterimTranscriptionFrame):
-        await self.queue_frame(frame)
-
     async def push_app_message(self, message: Any, sender: str):
         frame = LivekitTransportMessageFrame(message=message, participant_id=sender)
         await self.queue_frame(frame)
@@ -96,6 +102,17 @@ class LivekitInputTransportProcessor(AudioVADInputProcessor):
     #
     # Camera in
     #
+    async def _camera_in_task_handler(self):
+        while True:
+            try:
+                frame = await self._client.read_next_image_frame()
+                if frame:
+                    self._on_participant_video_frame()
+            except asyncio.CancelledError:
+                logging.info("Video input task cancelled")
+                break
+            except Exception as e:
+                logging.error(f"Error in video input task: {e}")
 
     def capture_participant_video(
             self,
@@ -121,29 +138,25 @@ class LivekitInputTransportProcessor(AudioVADInputProcessor):
         if participant_id in self._video_renderers:
             self._video_renderers[participant_id]["render_next_frame"] = True
 
-    async def _on_participant_video_frame(self, participant_id: str, buffer, size, color_format):
+    async def _on_participant_video_frame(self, frame: UserImageRawFrame):
+        """
+        control render image frame rate or request participant image to render
+        """
         render_frame = False
 
         curr_time = time.time()
-        prev_time = self._video_renderers[participant_id]["timestamp"] or curr_time
-        framerate = self._video_renderers[participant_id]["framerate"]
+        prev_time = self._video_renderers[frame.participant_id]["timestamp"] or curr_time
+        framerate = self._video_renderers[frame.participant_id]["framerate"]
 
         if framerate > 0:
             next_time = prev_time + 1 / framerate
             render_frame = (curr_time - next_time) < 0.1
-        elif self._video_renderers[participant_id]["render_next_frame"]:
+        elif self._video_renderers[frame.participant_id]["render_next_frame"]:
             # e.g.: push UserImageRequestFrame to render a UserImageRawFrame
-            self._video_renderers[participant_id]["render_next_frame"] = False
+            self._video_renderers[frame.participant_id]["render_next_frame"] = False
             render_frame = True
 
         if render_frame:
-            frame = UserImageRawFrame(
-                image=buffer,
-                size=size,
-                format="JPEG",  # from frame bytes, no save format, need add a save format e.g.: JPEG,PNG,
-                mode=color_format,  # default: RGB
-                user_id=participant_id,
-            )
             await self.queue_frame(frame)
 
-        self._video_renderers[participant_id]["timestamp"] = curr_time
+        self._video_renderers[frame.participant_id]["timestamp"] = curr_time

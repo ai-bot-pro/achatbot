@@ -108,7 +108,9 @@ async def frame_loop(video_stream: rtc.VideoStream) -> None:
     cv2.namedWindow("livekit_video", cv2.WINDOW_AUTOSIZE)
     cv2.startWindowThread()
     async for frame_event in video_stream:
+        print(frame_event)
         buffer = frame_event.frame
+        print(buffer.type, len(buffer.data))
 
         arr = np.frombuffer(buffer.data, dtype=np.uint8)
         arr = arr.reshape((buffer.height, buffer.width, 3))
