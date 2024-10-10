@@ -74,19 +74,15 @@ class TestTTSProcessor(unittest.IsolatedAsyncioTestCase):
             params=PipelineParams(allow_interruptions=True)
         )
 
-        print(
-            f"bot {self.livekit_room.args.bot_name} joined room sandbox url",
-            self.room_sandbox_url)
-
         # Register an event handler so we can play the audio
         # when the participant joins.
-        @transport.event_handler("on_participant_connected")
+        # @transport.event_handler("on_participant_connected")
         @transport.event_handler("on_first_participant_joined")
         async def on_new_participant_joined(
                 transport: LivekitTransport,
                 participant: rtc.RemoteParticipant):
-            print("transport", transport)
-            print("participant", participant)
+            print("transport---->", transport)
+            print("participant---->", participant)
             participant_name = participant.name if participant.name else participant.identity
             await task.queue_frames([
                 TextFrame(f"你好，Hello there. {participant_name},"),

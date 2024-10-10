@@ -82,7 +82,7 @@ accelerate = ["accelerate~=0.28.0"]
 
 # webRTC
 daily = ["daily-python~=0.11.0"]
-livekit = ["livekit~=0.17.4"]
+livekit = ["livekit~=0.17.5"]
 # http api sdk
 livekit-api = ["livekit-api~=0.7.1"]
 

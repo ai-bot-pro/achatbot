@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import List, Optional
+from typing import List, Optional, Union
 import logging
 
 from livekit import rtc, protocol
@@ -104,7 +104,7 @@ class LivekitTransport(BaseTransport):
     async def _on_connected(self):
         await self._call_event_handler("on_connected")
 
-    async def _on_disconnected(self, reason: protocol.models.DisconnectReason):
+    async def _on_disconnected(self, reason: Union[protocol.models.DisconnectReason, str]):
         await self._call_event_handler("on_disconnected", reason)
         return
         # Attempt to reconnect for test participant already exists

@@ -179,8 +179,14 @@ if __name__ == "__main__":
 
     async def cleanup():
         print("isconnected:", room.isconnected())
-        await room.disconnect()
+        try:
+            await room.disconnect()
+        except AssertionError as err:
+            print("AssertionError", err)
+        except Exception as e:
+            print("Exception", e)
         loop.stop()
+        print("cleanup ok")
 
     asyncio.ensure_future(main(room))
     for signal in [SIGINT, SIGTERM]:

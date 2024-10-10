@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Awaitable, Callable, List
+from typing import Awaitable, Callable, List, Union
 
 import numpy as np
 from PIL import Image
@@ -23,7 +23,7 @@ except ModuleNotFoundError as e:
 
 class LivekitCallbacks(BaseModel):
     on_connected: Callable[[], Awaitable[None]]
-    on_disconnected: Callable[[protocol.models.DisconnectReason], Awaitable[None]]
+    on_disconnected: Callable[[Union[protocol.models.DisconnectReason, str]], Awaitable[None]]
     on_participant_connected: Callable[[rtc.RemoteParticipant], Awaitable[None]]
     on_participant_disconnected: Callable[[rtc.RemoteParticipant], Awaitable[None]]
     on_audio_track_subscribed: Callable[[rtc.RemoteParticipant], Awaitable[None]]
@@ -154,8 +154,12 @@ class LivekitTransportClient:
             # Check if there are already participants in the room
             participants = self.get_participants()
             if len(participants) > 0 and not self._other_participant_has_joined:
+                logging.info(f"first participant {participants[0]} join")
                 self._other_participant_has_joined = True
                 await self._callbacks.on_first_participant_joined(participants[0])
+
+            room_url = f"{self._params.sandbox_room_url}/rooms/{self._room_name}"
+            logging.info(f"u can access sandbox url: {room_url}")
         except Exception as e:
             logging.error(f"Error connecting to {self._room_name}: {e}", exc_info=True)
             raise
@@ -169,6 +173,7 @@ class LivekitTransportClient:
         # need sleep to disconnect
         await asyncio.sleep(1)
         await self._room.disconnect()
+        # if end processor, leave room
         # need manual touch disconnect callback,some reason disconnect fail
         await self._async_on_disconnected(reason="Leave Room.")
 
@@ -327,7 +332,7 @@ class LivekitTransportClient:
     async def _async_on_connected(self):
         await self._callbacks.on_connected()
 
-    async def _async_on_disconnected(self, reason: protocol.models.DisconnectReason):
+    async def _async_on_disconnected(self, reason: Union[protocol.models.DisconnectReason, str]):
         if not self._connected:
             logging.debug(f"Had Disconnected from {self._room_name}. Reason: {reason}")
             return

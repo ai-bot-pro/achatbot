@@ -521,6 +521,7 @@ class LivekitParams(AudioCameraParams):
     api_key: str = ""
     api_secret: str = ""
     e2ee_shared_key: Optional[bytes] = None
+    sandbox_room_url: str = "https://ultra-terminal-re8nmd.sandbox.livekit.io"
 
 
 class LivekitRoomArgs(BaseModel):
