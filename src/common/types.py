@@ -516,8 +516,7 @@ class DailyRoomArgs(BaseModel):
 # --------------- livekit -------------------------------
 
 class LivekitParams(AudioCameraParams):
-    vad_enabled: bool = True
-    audio_out_sample_rate: int = 48000
+    audio_in_sample_rate: int = 48000  # livekit audio in stream default sample rate 48000
     websocket_url: str = ""  # project url
     api_key: str = ""
     api_secret: str = ""

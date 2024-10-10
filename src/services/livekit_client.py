@@ -12,7 +12,7 @@ from src.common.utils.audio_utils import convertSampleRateTo16khz
 from src.types.frames.data_frames import LivekitTransportMessageFrame, TransportMessageFrame, UserImageRawFrame
 
 try:
-    from livekit import rtc, api
+    from livekit import rtc, api, protocol
     from tenacity import retry, stop_after_attempt, wait_exponential
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
@@ -23,15 +23,15 @@ except ModuleNotFoundError as e:
 
 class LivekitCallbacks(BaseModel):
     on_connected: Callable[[], Awaitable[None]]
-    on_disconnected: Callable[[], Awaitable[None]]
-    on_participant_connected: Callable[[str], Awaitable[None]]
-    on_participant_disconnected: Callable[[str], Awaitable[None]]
-    on_audio_track_subscribed: Callable[[str], Awaitable[None]]
-    on_audio_track_unsubscribed: Callable[[str], Awaitable[None]]
-    on_video_track_subscribed: Callable[[str], Awaitable[None]]
-    on_video_track_unsubscribed: Callable[[str], Awaitable[None]]
-    on_data_received: Callable[[bytes, str], Awaitable[None]]
-    on_first_participant_joined: Callable[[str], Awaitable[None]]
+    on_disconnected: Callable[[protocol.models.DisconnectReason], Awaitable[None]]
+    on_participant_connected: Callable[[rtc.RemoteParticipant], Awaitable[None]]
+    on_participant_disconnected: Callable[[rtc.RemoteParticipant], Awaitable[None]]
+    on_audio_track_subscribed: Callable[[rtc.RemoteParticipant], Awaitable[None]]
+    on_audio_track_unsubscribed: Callable[[rtc.RemoteParticipant], Awaitable[None]]
+    on_video_track_subscribed: Callable[[rtc.RemoteParticipant], Awaitable[None]]
+    on_video_track_unsubscribed: Callable[[rtc.RemoteParticipant], Awaitable[None]]
+    on_data_received: Callable[[bytes, rtc.RemoteParticipant], Awaitable[None]]
+    on_first_participant_joined: Callable[[rtc.RemoteParticipant], Awaitable[None]]
 
 
 class LivekitTransportClient:
@@ -69,6 +69,7 @@ class LivekitTransportClient:
 
         # Set up room event handlers to call register handlers
         # https://docs.livekit.io/home/client/events/#Events
+        # NOTE!!!! please see Room on method Available events Arguments :)
         self._room.on("participant_connected")(self._on_participant_connected_wrapper)
         self._room.on("participant_disconnected")(self._on_participant_disconnected_wrapper)
         self._room.on("track_subscribed")(self._on_track_subscribed_wrapper)
@@ -98,7 +99,9 @@ class LivekitTransportClient:
         if self._connected:
             return
 
-        logging.info(f"Connecting to {self._room_name}")
+        participants = self.get_participants()
+        logging.info(f"Connecting to {self._room_name},"
+                     f" current remote participants:{participants}")
 
         try:
             options = rtc.RoomOptions(auto_subscribe=True)
@@ -117,7 +120,8 @@ class LivekitTransportClient:
             )
             self._connected = True
             self._participant_id = self._room.local_participant.sid
-            logging.info(f"Connected to {self._room_name}")
+            logging.info(
+                f"local_participant:{self._room.local_participant} joined room: {self._room_name}")
 
             # Set up audio source and track for pub out to microphone
             self._audio_source = rtc.AudioSource(
@@ -145,15 +149,15 @@ class LivekitTransportClient:
                 self._video_track, options)
             logging.info(f"video track local publication {publication}")
 
-            await self._callbacks.on_connected()
+            # await self._callbacks.on_connected()
 
             # Check if there are already participants in the room
             participants = self.get_participants()
-            if participants and not self._other_participant_has_joined:
+            if len(participants) > 0 and not self._other_participant_has_joined:
                 self._other_participant_has_joined = True
                 await self._callbacks.on_first_participant_joined(participants[0])
         except Exception as e:
-            logging.error(f"Error connecting to {self._room_name}: {e}")
+            logging.error(f"Error connecting to {self._room_name}: {e}", exc_info=True)
             raise
 
     async def leave(self):
@@ -161,10 +165,12 @@ class LivekitTransportClient:
             return
 
         logging.info(f"Disconnecting from {self._room_name}")
+        # if join and leave quick,and some message is async send message
+        # need sleep to disconnect
+        await asyncio.sleep(1)
         await self._room.disconnect()
-        self._connected = False
-        logging.info(f"Disconnected from {self._room_name}")
-        await self._callbacks.on_disconnected()
+        # need manual touch disconnect callback,some reason disconnect fail
+        await self._async_on_disconnected(reason="Leave Room.")
 
     async def send_message(self, frame: TransportMessageFrame):
         if not self._connected:
@@ -184,8 +190,12 @@ class LivekitTransportClient:
         except Exception as e:
             logging.error(f"Error sending data: {e}")
 
-    def get_participants(self) -> List[str]:
+    def get_participant_ids(self) -> List[str]:
         return [p.sid for p in self._room.remote_participants.values()]
+
+    def get_participants(self) -> List[rtc.RemoteParticipant]:
+        #!NOTE: python dict is un order
+        return list(self._room.remote_participants.values())
 
     async def get_participant_metadata(self, participant_id: str) -> dict:
         participant = self._room.remote_participants.get(participant_id)
@@ -244,20 +254,20 @@ class LivekitTransportClient:
     def _on_connected_wrapper(self):
         asyncio.create_task(self._async_on_connected())
 
-    def _on_disconnected_wrapper(self):
-        asyncio.create_task(self._async_on_disconnected())
+    def _on_disconnected_wrapper(self, reason: protocol.models.DisconnectReason):
+        asyncio.create_task(self._async_on_disconnected(reason))
 
     # Async methods for event handling
     async def _async_on_participant_connected(self, participant: rtc.RemoteParticipant):
         logging.info(f"Participant connected: {participant.identity}")
-        await self._callbacks.on_participant_connected(participant.sid)
+        await self._callbacks.on_participant_connected(participant)
         if not self._other_participant_has_joined:
             self._other_participant_has_joined = True
-            await self._callbacks.on_first_participant_joined(participant.sid)
+            await self._callbacks.on_first_participant_joined(participant)
 
     async def _async_on_participant_disconnected(self, participant: rtc.RemoteParticipant):
         logging.info(f"Participant disconnected: {participant.identity}")
-        await self._callbacks.on_participant_disconnected(participant.sid)
+        await self._callbacks.on_participant_disconnected(participant)
         if len(self.get_participants()) == 0:
             self._other_participant_has_joined = False
 
@@ -268,20 +278,35 @@ class LivekitTransportClient:
         participant: rtc.RemoteParticipant,
     ):
         if track.kind == rtc.TrackKind.KIND_AUDIO \
-                and self._params.audio_in_enabled or self._params.vad_enabled:
+                and (self._params.audio_in_enabled or self._params.vad_enabled):
             logging.info(f"Audio track subscribed: {track} from participant {participant.sid}")
             self._audio_tracks[participant.sid] = track
-            audio_stream = rtc.AudioStream(track)
+            audio_stream = rtc.AudioStream(
+                track,
+                sample_rate=self._params.audio_in_sample_rate,
+                num_channels=self._params.audio_in_channels,
+            )
             asyncio.create_task(self._process_audio_stream(audio_stream, participant.sid))
-            await self._callbacks.on_audio_track_subscribed(participant.sid)
+            await self._callbacks.on_audio_track_subscribed(participant)
         elif track.kind == rtc.TrackKind.KIND_VIDEO \
                 and self._params.camera_in_enabled \
                 and self._start_capture_participant_video:
             logging.info(f"Video track subscribed: {track} from participant {participant.sid}")
             self._video_tracks[participant.sid] = track
-            video_stream = rtc.VideoStream(track)
+            livekit_video_buffer_type = rtc.VideoBufferType.RGB24
+            match self._params.camera_in_color_format:
+                case "RGB":
+                    livekit_video_buffer_type = rtc.VideoBufferType.RGB24  # jpeg
+                case "RGBA":
+                    livekit_video_buffer_type = rtc.VideoBufferType.RGBA  # png
+                case "_":
+                    livekit_video_buffer_type = rtc.VideoBufferType.RGB24  # other defualt RGB24
+            video_stream = rtc.VideoStream(
+                track,
+                format=livekit_video_buffer_type,
+            )
             asyncio.create_task(self._process_video_stream(video_stream, participant.sid))
-            await self._callbacks.on_video_track_subscribed(participant.sid)
+            await self._callbacks.on_video_track_subscribed(participant)
 
     async def _async_on_track_unsubscribed(
         self,
@@ -291,21 +316,25 @@ class LivekitTransportClient:
     ):
         logging.info(f"Track unsubscribed: {publication.sid} from {participant.identity}")
         if track.kind == rtc.TrackKind.KIND_AUDIO:
-            await self._callbacks.on_audio_track_unsubscribed(participant.sid)
+            await self._callbacks.on_audio_track_unsubscribed(participant)
         elif track.kind == rtc.TrackKind.KIND_VIDEO:
             self._start_capture_participant_video = False
-            await self._callbacks.on_video_track_unsubscribed(participant.sid)
+            await self._callbacks.on_video_track_unsubscribed(participant)
 
     async def _async_on_data_received(self, data: rtc.DataPacket):
-        await self._callbacks.on_data_received(data.data, data.participant.sid)
+        await self._callbacks.on_data_received(data.data, data.participant)
 
     async def _async_on_connected(self):
         await self._callbacks.on_connected()
 
-    async def _async_on_disconnected(self, reason=None):
+    async def _async_on_disconnected(self, reason: protocol.models.DisconnectReason):
+        if not self._connected:
+            logging.debug(f"Had Disconnected from {self._room_name}. Reason: {reason}")
+            return
+
         self._connected = False
         logging.info(f"Disconnected from {self._room_name}. Reason: {reason}")
-        await self._callbacks.on_disconnected()
+        await self._callbacks.on_disconnected(reason)
 
     # Audio in
 

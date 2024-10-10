@@ -48,7 +48,6 @@ class LivekitBot(AIRoomBot):
 
         transport = LivekitTransport(
             self.args.token,
-            self.args.room_name,
             params=params,
         )
 

@@ -3,6 +3,7 @@ import os
 from typing import List, Optional
 import logging
 
+from livekit import rtc, protocol
 from apipeline.frames.control_frames import EndFrame
 from apipeline.processors.frame_processor import FrameDirection
 from apipeline.frames.data_frames import AudioRawFrame
@@ -20,8 +21,6 @@ class LivekitTransport(BaseTransport):
     def __init__(
         self,
         token: str,
-        room_name: str,
-        websocket_url: Optional[str] = None,
         params: LivekitParams = LivekitParams(),
         input_name: Optional[str] = None,
         output_name: Optional[str] = None,
@@ -39,7 +38,6 @@ class LivekitTransport(BaseTransport):
         self._register_event_handler("on_video_track_unsubscribed")
         self._register_event_handler("on_data_received")
         self._register_event_handler("on_first_participant_joined")
-        self._register_event_handler("on_participant_left")
         self._register_event_handler("on_call_state_updated")
         logging.info(f"LivekitTransport register event names: {self.event_names}")
         callbacks = LivekitCallbacks(
@@ -56,12 +54,13 @@ class LivekitTransport(BaseTransport):
         )
 
         self._params = params
-        self._params.websocket_url = websocket_url or os.getenv("LIVEKIT_URL")
+        self._params.websocket_url = params.websocket_url or os.getenv("LIVEKIT_URL")
         self._params.api_key = params.api_key or os.getenv("LIVEKIT_API_KEY")
         self._params.api_secret = params.api_secret or os.getenv("LIVEKIT_API_SECRET")
         self._client = LivekitTransportClient(
-            token, room_name, self._params, callbacks, self._loop,
+            token, self._params, callbacks, self._loop,
         )
+        logging.debug(f"LivekitTransport params:{self._params}")
 
         self._input: LivekitInputTransportProcessor | None = None
         self._output: LivekitOutputTransportProcessor | None = None
@@ -87,7 +86,7 @@ class LivekitTransport(BaseTransport):
         if self._output:
             await self._output.process_frame(frame, FrameDirection.DOWNSTREAM)
 
-    def get_participants(self) -> List[str]:
+    def get_participants(self) -> List[rtc.RemoteParticipant]:
         return self._client.get_participants()
 
     async def get_participant_metadata(self, participant_id: str) -> dict:
@@ -105,42 +104,42 @@ class LivekitTransport(BaseTransport):
     async def _on_connected(self):
         await self._call_event_handler("on_connected")
 
-    async def _on_disconnected(self):
-        await self._call_event_handler("on_disconnected")
-        # Attempt to reconnect
+    async def _on_disconnected(self, reason: protocol.models.DisconnectReason):
+        await self._call_event_handler("on_disconnected", reason)
+        return
+        # Attempt to reconnect for test participant already exists
         try:
-            await self._client.connect()
+            await self._client.join()
             await self._call_event_handler("on_connected")
         except Exception as e:
             logging.error(f"Failed to reconnect: {e}")
 
-    async def _on_participant_connected(self, participant_id: str):
-        await self._call_event_handler("on_participant_connected", participant_id)
+    async def _on_participant_connected(self, participant: rtc.RemoteParticipant):
+        await self._call_event_handler("on_participant_connected", participant)
 
-    async def _on_participant_disconnected(self, participant_id: str):
-        await self._call_event_handler("on_participant_disconnected", participant_id)
-        await self._call_event_handler("on_participant_left", participant_id, "disconnected")
+    async def _on_participant_disconnected(self, participant: rtc.RemoteParticipant):
+        await self._call_event_handler("on_participant_disconnected", participant)
         if self._input:
             await self._input.process_frame(EndFrame(), FrameDirection.DOWNSTREAM)
         if self._output:
             await self._output.process_frame(EndFrame(), FrameDirection.DOWNSTREAM)
 
-    async def _on_audio_track_subscribed(self, participant_id: str):
-        await self._call_event_handler("on_audio_track_subscribed", participant_id)
+    async def _on_audio_track_subscribed(self, participant: rtc.RemoteParticipant):
+        await self._call_event_handler("on_audio_track_subscribed", participant)
 
-    async def _on_audio_track_unsubscribed(self, participant_id: str):
-        await self._call_event_handler("on_audio_track_unsubscribed", participant_id)
+    async def _on_audio_track_unsubscribed(self, participant: rtc.RemoteParticipant):
+        await self._call_event_handler("on_audio_track_unsubscribed", participant)
 
-    async def _on_video_track_subscribed(self, participant_id: str):
-        await self._call_event_handler("on_video_track_subscribed", participant_id)
+    async def _on_video_track_subscribed(self, participant: rtc.RemoteParticipant):
+        await self._call_event_handler("on_video_track_subscribed", participant)
 
-    async def _on_video_track_unsubscribed(self, participant_id: str):
-        await self._call_event_handler("on_video_track_unsubscribed", participant_id)
+    async def _on_video_track_unsubscribed(self, participant: rtc.RemoteParticipant):
+        await self._call_event_handler("on_video_track_unsubscribed", participant)
 
-    async def _on_data_received(self, data: bytes, participant_id: str):
+    async def _on_data_received(self, data: bytes, participant: rtc.RemoteParticipant):
         if self._input:
-            await self._input.push_app_message(data.decode(), participant_id)
-        await self._call_event_handler("on_data_received", data, participant_id)
+            await self._input.push_app_message(data.decode(), participant.sid)
+        await self._call_event_handler("on_data_received", data, participant)
 
     async def send_message(self, message: str, participant_id: str | None = None):
         if self._output:
@@ -169,5 +168,5 @@ class LivekitTransport(BaseTransport):
     async def _on_call_state_updated(self, state: str):
         await self._call_event_handler("on_call_state_updated", self, state)
 
-    async def _on_first_participant_joined(self, participant_id: str):
-        await self._call_event_handler("on_first_participant_joined", participant_id)
+    async def _on_first_participant_joined(self, participant: rtc.RemoteParticipant):
+        await self._call_event_handler("on_first_participant_joined", participant)

@@ -313,7 +313,7 @@ class IVisionOCR(ABC):
 
 class IRoomManager(ABC):
     @abstractmethod
-    async def create_room(self, room_name, exp_time_s):
+    async def create_room(self, room_name: str, exp_time_s: int):
         """
         create room by room name with expire time(s)
         if the room has been created, return
@@ -323,21 +323,21 @@ class IRoomManager(ABC):
         raise NotImplemented("must be implemented in the child class")
 
     @abstractmethod
-    async def gen_token(self, exp_time_s) -> str:
+    async def gen_token(self, room_name: str, exp_time_s: int) -> str:
         """
         generate a token to join room
         """
         raise NotImplemented("must be implemented in the child class")
 
     @abstractmethod
-    async def get_room(self, room_name):
+    async def get_room(self, room_name: str):
         """
         get general room info by room name
         """
         raise NotImplemented("must be implemented in the child class")
 
     @abstractmethod
-    async def check_vaild_room(self, room_name, token) -> bool:
+    async def check_vaild_room(self, room_name: str, token: str) -> bool:
         """
         check valid token and room status
         return bool is vaild room

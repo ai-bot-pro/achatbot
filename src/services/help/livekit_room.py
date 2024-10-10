@@ -34,7 +34,7 @@ class LivekitRoom(EngineClass, IRoomManager):
 
     async def close_session(self):
         if self._http_api:
-            self._http_api.aclose()
+            await self._http_api.aclose()
 
     async def create_room(
             self,
@@ -71,7 +71,6 @@ class LivekitRoom(EngineClass, IRoomManager):
 
     async def gen_token(self, room_name: str, exp_time_s: int = ROOM_TOKEN_EXPIRE_TIME) -> str:
         user_identity = str(uuid.uuid4())
-
         token = (
             api.AccessToken()
             .with_identity(user_identity)

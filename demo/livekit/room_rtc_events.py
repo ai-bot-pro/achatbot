@@ -5,9 +5,10 @@ from signal import SIGINT, SIGTERM
 from typing import Union
 import os
 
-from livekit import api, rtc
+from livekit import api, rtc, protocol
 
 # https://docs.livekit.io/home/client/events/#Events
+# NOTE!!!! please see Room on method Available events Arguments :)
 
 
 async def main(room: rtc.Room) -> None:
@@ -115,8 +116,8 @@ async def main(room: rtc.Room) -> None:
         logging.info("connected")
 
     @room.on("disconnected")
-    def on_disconnected() -> None:
-        logging.info("disconnected")
+    def on_disconnected(reason: protocol.models.DisconnectReason) -> None:
+        logging.info(f"disconnected reason:{reason}")
 
     @room.on("reconnecting")
     def on_reconnecting() -> None:
@@ -145,7 +146,6 @@ async def main(room: rtc.Room) -> None:
     logging.info("connected to room %s", room.name)
     logging.info("participants: %s", room.remote_participants)
 
-    await asyncio.sleep(2)
     # pub data
     await room.local_participant.publish_data("hello world")
 
@@ -159,12 +159,15 @@ async def main(room: rtc.Room) -> None:
     # send msg
     await chat.send_message("hello world msg")
 
+    await asyncio.sleep(1)
+    await room.disconnect()
 
 if __name__ == "__main__":
     # golang style
 
     logging.basicConfig(
         level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s',
         handlers=[
             # logging.FileHandler("room_rtc_events.log"),
             logging.StreamHandler()
@@ -175,6 +178,7 @@ if __name__ == "__main__":
     room = rtc.Room(loop=loop)
 
     async def cleanup():
+        print("isconnected:", room.isconnected())
         await room.disconnect()
         loop.stop()
 
