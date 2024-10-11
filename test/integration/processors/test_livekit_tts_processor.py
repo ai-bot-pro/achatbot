@@ -3,7 +3,7 @@ import os
 import logging
 
 import unittest
-from livekit import rtc, api
+from livekit import rtc
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.pipeline.task import PipelineTask, PipelineParams
@@ -12,7 +12,7 @@ from apipeline.frames.data_frames import TextFrame
 
 from src.services.help.livekit_room import LivekitRoom
 from src.services.help import RoomManagerEnvInit
-from src.common.types import DailyParams, LivekitParams
+from src.common.types import LivekitParams
 from src.common.logger import Logger
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.modules.speech.tts import TTSEnvInit
@@ -37,9 +37,6 @@ class TestTTSProcessor(unittest.IsolatedAsyncioTestCase):
     def setUpClass(cls):
         Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
         cls.room_name = os.getenv("ROOM_NAME", "chat-room")
-        cls.room_sandbox_url = os.getenv(
-            "ROOM_SANDBOX_URL",
-            f"https://ultra-terminal-re8nmd.sandbox.livekit.io/rooms/{cls.room_name}")
 
     @classmethod
     def tearDownClass(cls):
@@ -84,11 +81,13 @@ class TestTTSProcessor(unittest.IsolatedAsyncioTestCase):
             print("transport---->", transport)
             print("participant---->", participant)
             participant_name = participant.name if participant.name else participant.identity
+            await transport.send_message(
+                f"hello,你好，{participant_name}, 我是机器人。",
+                participant_id=participant.identity,
+            )
             await task.queue_frames([
                 TextFrame(f"你好，Hello there. {participant_name},"),
                 TextFrame(f"你是一个中国人。"),
-                # TextFrame(f"一名中文助理，请用中文简短回答，回答限制在5句话内。"),
-                # TextFrame(f"我是Andrej Karpathy，我在YouTube上发布关于机器学习和深度学习的视频。如果你有任何关于这些视频的疑问或需要帮助，请告诉我！"),
                 EndFrame(),
             ])
 

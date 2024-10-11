@@ -29,6 +29,8 @@ class LivekitTransport(BaseTransport):
         super().__init__(input_name=input_name, output_name=output_name, loop=loop)
 
         self._register_event_handler("on_connected")
+        self._register_event_handler("on_error")
+        self._register_event_handler("on_connection_state_changed")
         self._register_event_handler("on_disconnected")
         self._register_event_handler("on_participant_connected")
         self._register_event_handler("on_participant_disconnected")
@@ -38,10 +40,11 @@ class LivekitTransport(BaseTransport):
         self._register_event_handler("on_video_track_unsubscribed")
         self._register_event_handler("on_data_received")
         self._register_event_handler("on_first_participant_joined")
-        self._register_event_handler("on_call_state_updated")
         logging.info(f"LivekitTransport register event names: {self.event_names}")
         callbacks = LivekitCallbacks(
             on_connected=self._on_connected,
+            on_error=self._on_error,
+            on_connection_state_changed=self._on_connection_state_changed,
             on_disconnected=self._on_disconnected,
             on_participant_connected=self._on_participant_connected,
             on_participant_disconnected=self._on_participant_disconnected,
@@ -101,8 +104,14 @@ class LivekitTransport(BaseTransport):
     async def unmute_participant(self, participant_id: str):
         await self._client.unmute_participant(participant_id)
 
-    async def _on_connected(self):
-        await self._call_event_handler("on_connected")
+    async def _on_connected(self, room: rtc.Room):
+        await self._call_event_handler("on_connected", room)
+
+    async def _on_error(self, error_msg: str):
+        await self._call_event_handler("on_error", error_msg)
+
+    async def _on_connection_state_changed(self, state: rtc.ConnectionState):
+        await self._call_event_handler("on_connection_state_changed", state)
 
     async def _on_disconnected(self, reason: Union[protocol.models.DisconnectReason, str]):
         await self._call_event_handler("on_disconnected", reason)
@@ -164,9 +173,6 @@ class LivekitTransport(BaseTransport):
     async def on_track_event(self, event):
         # Handle track events
         pass
-
-    async def _on_call_state_updated(self, state: str):
-        await self._call_event_handler("on_call_state_updated", self, state)
 
     async def _on_first_participant_joined(self, participant: rtc.RemoteParticipant):
         await self._call_event_handler("on_first_participant_joined", participant)

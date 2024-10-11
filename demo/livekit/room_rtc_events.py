@@ -64,6 +64,7 @@ async def main(room: rtc.Room) -> None:
     ):
         logging.info("track subscribed: %s", publication.sid)
         if track.kind == rtc.TrackKind.KIND_VIDEO:
+            print("Subscribed to an Video Track")
             _video_stream = rtc.VideoStream(track)
             # video_stream is an async iterator that yields VideoFrame
         elif track.kind == rtc.TrackKind.KIND_AUDIO:
@@ -143,11 +144,13 @@ async def main(room: rtc.Room) -> None:
     )
     # need LIVEKIT_URL env vars to connect
     await room.connect(os.getenv("LIVEKIT_URL"), token)
+    logging.info(f"room isconnected:{room.isconnected()}")
+    logging.info("local participant: %s", room.local_participant)
     logging.info("connected to room %s", room.name)
     logging.info("participants: %s", room.remote_participants)
 
     # pub data
-    await room.local_participant.publish_data("hello world")
+    await room.local_participant.publish_data("hello world", destination_identities=[p.sid for p in room.remote_participants.values()])
 
     # chat
     chat = rtc.ChatManager(room)
@@ -159,8 +162,13 @@ async def main(room: rtc.Room) -> None:
     # send msg
     await chat.send_message("hello world msg")
 
-    await asyncio.sleep(1)
-    await room.disconnect()
+    # have some disconnect BUG
+    # while room.isconnected():
+    #    print("room disconnecting")
+    #    await asyncio.sleep(1)
+    #    await room.disconnect()
+
+    logging.info(f"room isconnected:{room.isconnected()}")
 
 if __name__ == "__main__":
     # golang style

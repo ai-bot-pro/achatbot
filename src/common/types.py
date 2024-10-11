@@ -452,6 +452,7 @@ class AudioParams(BaseModel):
     audio_out_sample_rate: int = RATE
     audio_out_channels: int = CHANNELS
     audio_in_enabled: bool = False
+    audio_in_participant_enabled: bool = False
     audio_in_sample_rate: int = RATE
     audio_in_channels: int = CHANNELS
 
@@ -516,7 +517,7 @@ class DailyRoomArgs(BaseModel):
 # --------------- livekit -------------------------------
 
 class LivekitParams(AudioCameraParams):
-    audio_in_sample_rate: int = 48000  # livekit audio in stream default sample rate 48000
+    # audio_in_sample_rate: int = 48000  # livekit audio in stream default sample rate 48000
     websocket_url: str = ""  # project url
     api_key: str = ""
     api_secret: str = ""

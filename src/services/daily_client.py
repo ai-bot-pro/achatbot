@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pydantic.main import BaseModel
 from apipeline.frames.data_frames import AudioRawFrame, ImageRawFrame
 
+from src.common.utils import task
 from src.common.types import DailyParams
 from src.types.frames.data_frames import TransportMessageFrame, DailyTransportMessageFrame
 
@@ -84,8 +85,6 @@ class DailyTransportClient(EventHandler):
         self._joined = False
         self._joining = False
         self._leaving = False
-
-        self._executor = ThreadPoolExecutor(max_workers=5)
 
         self._client: CallClient = CallClient(event_handler=self)
 
@@ -290,7 +289,7 @@ class DailyTransportClient(EventHandler):
         return await asyncio.wait_for(future, timeout=10)
 
     async def cleanup(self):
-        await self._loop.run_in_executor(self._executor, self._cleanup)
+        await task.async_task(self._cleanup)
 
     def _cleanup(self):
         if self._client:

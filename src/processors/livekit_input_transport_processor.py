@@ -25,7 +25,6 @@ class LivekitInputTransportProcessor(AudioVADInputProcessor):
         self._client = client
         self._video_renderers = {}
         self._audio_in_task = None
-        self._camera_in_task = None
 
     async def start(self, frame: StartFrame):
         # Parent start.
@@ -37,30 +36,20 @@ class LivekitInputTransportProcessor(AudioVADInputProcessor):
         if self._params.audio_in_enabled or self._params.vad_enabled:
             self._audio_in_task = self.get_event_loop().create_task(self._audio_in_task_handler())
 
-        if self._params.camera_in_enabled:
-            self._camera_in_task = self.get_event_loop().create_task(self._camera_in_task_handler())
-
     async def stop(self):
         # Stop audio input thread.
-        if self._params.audio_in_enabled or self._params.vad_enabled:
+        if self._audio_in_task and (self._params.audio_in_enabled or self._params.vad_enabled):
             self._audio_in_task.cancel()
             await self._audio_in_task
-        # Stop camera input thread.
-        if self._params.camera_in_enabled:
-            self._camera_in_task.cancel()
-            await self._camera_in_task
         # Leave the room.
         await self._client.leave()
         # Parent stop.
         await super().stop()
 
     async def cleanup(self):
-        if self._params.audio_in_enabled or self._params.vad_enabled:
+        if self._audio_in_task and (self._params.audio_in_enabled or self._params.vad_enabled):
             self._audio_in_task.cancel()
             await self._audio_in_task
-        if self._params.camera_in_enabled:
-            self._camera_in_task.cancel()
-            await self._camera_in_task
         await self._client.cleanup()
         await super().cleanup()
 
@@ -86,9 +75,9 @@ class LivekitInputTransportProcessor(AudioVADInputProcessor):
     #
 
     async def _audio_in_task_handler(self):
-        while True:
+        async for frame in self._client.read_next_audio_frame_iter():
+            # read next frame from local microphone audio stream
             try:
-                frame = await self._client.read_next_audio_frame()
                 if frame:
                     # NOTE: use vad_audio_passthrough param to push queue with unblock
                     # await self.push_frame(frame)
@@ -102,18 +91,6 @@ class LivekitInputTransportProcessor(AudioVADInputProcessor):
     #
     # Camera in
     #
-    async def _camera_in_task_handler(self):
-        while True:
-            try:
-                frame = await self._client.read_next_image_frame(
-                    target_color_mode=self._params.camera_in_color_format)
-                if frame:
-                    self._on_participant_video_frame(frame)
-            except asyncio.CancelledError:
-                logging.info("Video input task cancelled")
-                break
-            except Exception as e:
-                logging.error(f"Error in video input task: {e}")
 
     def capture_participant_video(
             self,

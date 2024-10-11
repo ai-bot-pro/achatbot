@@ -24,9 +24,12 @@ class ASREnvInit():
         return engine
 
     @staticmethod
-    def initASREngine() -> interface.IAsr | EngineClass:
+    def initASREngine(
+        tag: str | None = None,
+        # kwargs: dict | None = None
+    ) -> interface.IAsr | EngineClass:
         # asr
-        tag = os.getenv('ASR_TAG', "whisper_timestamped_asr")
+        tag = tag or os.getenv('ASR_TAG', "whisper_timestamped_asr")
         kwargs = {}
         kwargs["model_name_or_path"] = os.getenv(
             'ASR_MODEL_NAME_OR_PATH', 'base')
