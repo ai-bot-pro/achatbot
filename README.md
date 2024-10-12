@@ -347,7 +347,7 @@ ACHATBOT_PKG=1 TTS_TAG=tts_cosy_voice IS_RELOAD=1 python -m achatbot.cmd.grpc.sp
 
 
 ## vision (CV)
-- stream-ocr (realtime-object-dectection)
+- stream-ocr (realtime-object-detection)
 
 ## more
 - Embodied Intelligence: Robots that touch the world, perceive and move
