@@ -30,6 +30,9 @@ load_dotenv(override=True)
 r"""
 LIVEKIT_BOT_NAME=chat-bot ROOM_NAME=bot-room \
     python -m unittest test.integration.processors.test_livekit_echo_processor.TestProcessor
+
+LIVEKIT_BOT_NAME=chat-bot ROOM_NAME=bot-room RUN_TIMEOUT=3600 \
+    python -m unittest test.integration.processors.test_livekit_echo_processor.TestProcessor
 """
 
 
@@ -51,17 +54,16 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
 
     async def test_tts_daily_output(self):
         token = await self.livekit_room.gen_token(self.room_name)
-        transport = LivekitTransport(
-            token,
-            params=LivekitParams(
-                audio_in_enabled=True,
-                audio_in_sample_rate=16000,
-                audio_in_channels=1,
-                audio_out_enabled=True,
-                audio_out_sample_rate=16000,
-                audio_out_channels=1,
-            )
+        self.params = LivekitParams(
+            audio_in_enabled=True,
+            # audio_in_participant_enabled=True,
+            audio_in_sample_rate=16000,
+            audio_in_channels=1,
+            audio_out_enabled=True,
+            audio_out_sample_rate=16000,
+            audio_out_channels=1,
         )
+        transport = LivekitTransport(token, self.params)
         self.assertGreater(len(transport.event_names), 0)
 
         self.task = PipelineTask(
@@ -93,6 +95,19 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             "on_connection_state_changed",
             self.on_connection_state_changed)
 
+        transport.add_event_handler(
+            "on_audio_track_subscribed",
+            self.on_audio_track_subscribed)
+        transport.add_event_handler(
+            "on_audio_track_unsubscribed",
+            self.on_audio_track_unsubscribed)
+        transport.add_event_handler(
+            "on_video_track_subscribed",
+            self.on_video_track_subscribed)
+        transport.add_event_handler(
+            "on_video_track_unsubscribed",
+            self.on_video_track_unsubscribed)
+
         runner = PipelineRunner()
         try:
             await asyncio.wait_for(runner.run(self.task), int(os.getenv("RUN_TIMEOUT", "60")))
@@ -116,8 +131,15 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             self,
             transport: LivekitTransport,
             participant: rtc.RemoteParticipant):
-        logging.debug(f"transport---->{transport}")
-        logging.debug(f"participant---->{participant}")
+        print(f"on_first_participant_joined---->{participant}")
+
+        # TODO: need know room anchor participant
+        # now just support one by one chat with bot
+        # need open audio_in_participant_enabled
+        transport.capture_participant_audio(
+            participant_id=participant.sid,
+        )
+
         participant_name = participant.name if participant.name else participant.identity
         await transport.send_message(
             f"hello,你好，{participant_name}, 我是机器人。",
@@ -145,3 +167,27 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         logging.info("connection state %s " % state)
         if state == rtc.ConnectionState.CONN_DISCONNECTED:
             await self.task.queue_frame(EndFrame())
+
+    async def on_audio_track_subscribed(
+            self,
+            transport: LivekitTransport,
+            participant: rtc.RemoteParticipant):
+        print(f"on_audio_track_subscribed---->{participant}")
+
+    async def on_audio_track_unsubscribed(
+            self,
+            transport: LivekitTransport,
+            participant: rtc.RemoteParticipant):
+        print(f"on_audio_track_unsubscribed---->{participant}")
+
+    async def on_video_track_subscribed(
+            self,
+            transport: LivekitTransport,
+            participant: rtc.RemoteParticipant):
+        print(f"on_video_track_subscribed---->{participant}")
+
+    async def on_video_track_unsubscribed(
+            self,
+            transport: LivekitTransport,
+            participant: rtc.RemoteParticipant):
+        print(f"on_video_track_unsubscribed---->{participant}")

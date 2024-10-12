@@ -7,10 +7,11 @@ from apipeline.frames.base import Frame
 from apipeline.frames.control_frames import StartFrame
 from apipeline.processors.frame_processor import FrameDirection
 
-from src.common.types import LivekitParams
+from src.common.types import CHANNELS, RATE, LivekitParams
 from src.processors.audio_input_processor import AudioVADInputProcessor
 from src.services.livekit_client import LivekitTransportClient
 from src.types.frames.data_frames import (
+    UserAudioRawFrame,
     UserImageRawFrame,
 )
 from src.types.frames.control_frames import UserImageRequestFrame
@@ -24,32 +25,33 @@ class LivekitInputTransportProcessor(AudioVADInputProcessor):
         self._params = params
         self._client = client
         self._video_renderers = {}
-        self._audio_in_task = None
+        self._audio_in_task: asyncio.Task | None = None
 
     async def start(self, frame: StartFrame):
         # Parent start.
         await super().start(frame)
         # Join the room.
         await self._client.join()
-        # Create audio task. It reads audio frames from Daily and push them
-        # internally for VAD processing.
-        if self._params.audio_in_enabled or self._params.vad_enabled:
-            self._audio_in_task = self.get_event_loop().create_task(self._audio_in_task_handler())
+        # Start sub room in audio stream task
+        if not self._audio_in_task \
+                and (self._params.audio_in_enabled or self._params.vad_enabled):
+            self._audio_in_task = asyncio.create_task(self._audio_in_task_handler())
 
     async def stop(self):
-        # Stop audio input thread.
-        if self._audio_in_task and (self._params.audio_in_enabled or self._params.vad_enabled):
+        # Cancel sub room in audio stream task
+        if self._audio_in_task \
+                and not self._audio_in_task.uncancel():
             self._audio_in_task.cancel()
             await self._audio_in_task
+
         # Leave the room.
         await self._client.leave()
         # Parent stop.
         await super().stop()
+        # Clear
+        await self.cleanup()
 
     async def cleanup(self):
-        if self._audio_in_task and (self._params.audio_in_enabled or self._params.vad_enabled):
-            self._audio_in_task.cancel()
-            await self._audio_in_task
         await self._client.cleanup()
         await super().cleanup()
 
@@ -73,31 +75,49 @@ class LivekitInputTransportProcessor(AudioVADInputProcessor):
     #
     # Audio in
     #
-
     async def _audio_in_task_handler(self):
-        async for frame in self._client.read_next_audio_frame_iter():
-            # read next frame from local microphone audio stream
+        logging.info("Start sub room in audio stream task")
+        while True:
             try:
+                frame = await self._client.read_next_audio_frame()
                 if frame:
-                    # NOTE: use vad_audio_passthrough param to push queue with unblock
-                    # await self.push_frame(frame)
                     await self.push_audio_frame(frame)
             except asyncio.CancelledError:
-                logging.info("Audio input task cancelled")
+                logging.info("Cancelled sub room in audio stream task")
                 break
-            except Exception as e:
-                logging.error(f"Error in audio input task: {e}")
+
+    def capture_participant_audio(
+        self,
+        participant_id: str,
+        sample_rate=None,
+        num_channels=None,
+    ):
+        self._client.capture_participant_audio(
+            participant_id,
+            self._on_participant_audio_frame,
+            sample_rate=sample_rate,
+            num_channels=num_channels,
+        )
+
+    async def _on_participant_audio_frame(self, frame: UserAudioRawFrame):
+        """
+        push to audio vad
+        """
+        if frame:
+            # NOTE: use vad_audio_passthrough param to push queue with unblock
+            await self.push_audio_frame(frame)
 
     #
     # Camera in
     #
 
     def capture_participant_video(
-            self,
-            participant_id: str,
-            framerate: int = 30,
-            video_source: str = "camera",
-            color_format: str = "RGB"):
+        self,
+        participant_id: str,
+        framerate: int = 30,
+        video_source: str = "camera",
+        color_format: str = "RGB",
+    ):
         self._video_renderers[participant_id] = {
             "framerate": framerate,
             "timestamp": 0,

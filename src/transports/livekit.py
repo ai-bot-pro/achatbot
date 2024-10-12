@@ -11,7 +11,7 @@ from apipeline.frames.data_frames import AudioRawFrame
 
 from src.processors.livekit_input_transport_processor import LivekitInputTransportProcessor
 from src.processors.livekit_output_transport_processor import LivekitOutputTransportProcessor
-from src.common.types import LivekitParams
+from src.common.types import CHANNELS, RATE, LivekitParams
 from src.services.livekit_client import LivekitCallbacks, LivekitTransportClient
 from src.transports.base import BaseTransport
 from src.types.frames.data_frames import LivekitTransportMessageFrame
@@ -176,3 +176,26 @@ class LivekitTransport(BaseTransport):
 
     async def _on_first_participant_joined(self, participant: rtc.RemoteParticipant):
         await self._call_event_handler("on_first_participant_joined", participant)
+
+    def capture_participant_audio(
+        self,
+        participant_id: str,
+        *,
+        sample_rate=None,
+        num_channels=None,
+    ):
+        if self._input:
+            self._input.capture_participant_audio(
+                participant_id, sample_rate, num_channels)
+
+    def capture_participant_video(
+        self,
+        participant_id: str,
+        *,
+        framerate: int = 30,
+        video_source: str = "camera",
+        color_format: str = "RGB",
+    ):
+        if self._input:
+            self._input.capture_participant_video(
+                participant_id, framerate, video_source, color_format)

@@ -51,6 +51,7 @@ class DailyInputTransportProcessor(AudioVADInputProcessor):
             await self._audio_in_task
         # Leave the room.
         await self._client.leave()
+        await self.cleanup()
         # Parent stop.
         await super().stop()
 

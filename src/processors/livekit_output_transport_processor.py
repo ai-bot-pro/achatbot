@@ -24,15 +24,19 @@ class LivekitOutputTransportProcessor(AudioCameraOutputProcessor):
 
     async def stop(self, frame: EndFrame):
         # Parent stop.
-        await super().stop(EndFrame)
+        await super().stop(frame)
         # Leave the room.
         await self._client.leave()
+        # Clear
+        await self.cleanup()
 
     async def cancel(self, frame: CancelFrame):
         # Parent stop.
         await super().cancel(frame)
         # Leave the room.
         await self._client.leave()
+        # Clear
+        await self.cleanup()
 
     async def cleanup(self):
         await super().cleanup()
