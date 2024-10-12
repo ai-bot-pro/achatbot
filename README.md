@@ -2,7 +2,7 @@
 [![PyPI](https://img.shields.io/pypi/v/achatbot)](https://pypi.org/project/achatbot/)
 <a href="https://app.commanddash.io/agent/github_ai-bot-pro_achatbot"><img src="https://img.shields.io/badge/AI-Code%20Agent-EB9FDA"></a>
 
-achatbot factory, create chat bots with llm, asr, tts, vad, etc.. 
+achatbot factory, create chat bots with llm, asr, tts, vad, ocr, detect object etc..
 
 # Project Structure
 ![project-structure](https://github.com/user-attachments/assets/5bf7cebb-e590-4718-a78a-6b0c0b36ea28)
@@ -18,42 +18,46 @@ achatbot factory, create chat bots with llm, asr, tts, vad, etc..
   - [x] pipe(UNIX socket), 
   - [x] grpc, 
   - [x] queue (redis),
-  - [ ] (!TODO: websocket, TCP/IP socket)
+  - [ ] websocket
+  - [ ] TCP/IP socket
 - chat bot processors: 
   - aggreators(llm use, assistant message), 
   - ai_frameworks
     - [x] langchain rag
-    - [ ] (!TODO: llamaindex rag)
-    - [ ] (!TODO: autoagen agent)
+    - [ ] llamaindex rag
+    - [ ] autoagen multi agent
   - realtime voice inference(RTVI),
   - transport: 
     - webRTC/webSocket: 
-      - [x] **daily**
-      - [ ] **[livekit](https://github.com/livekit/python-sdks/)**
-      - [ ] (!TODO:  **[agora-audio](https://github.com/AgoraIO/agora-realtime-ai-api)**, etc..)
+      - [x] **[daily](https://github.com/daily-co/daily-python)**: audio, video(image)
+      - [x] **[livekit](https://github.com/livekit/python-sdks/)**: audio, video(image)
+      - [ ] **[agora-audio](https://github.com/AgoraIO/agora-realtime-ai-api)**
   - ai processor: llm, tts, asr etc..
 - core module:
   - local llm: 
     - [x] llama-cpp (support text,vision with function-call model)
     - [x] transformers(manual, pipeline) (support text,vision:🦙,Qwen2-vl,Molmo with function-call model)
     - [ ] mlx_lm 
-    - [ ] (!TODO: baby-llm [llama2](https://github.com/ai-bot-pro/baby-llm/tree/main/llama2), [~~gundam~~](https://github.com/ai-bot-pro/baby-llm/tree/main/gundam)), etc..)
   - api llm: personal-ai(like openai api, other ai provider)
 - AI modules:
   - functions:
-    - search: search,search1,serper
-    - weather: openweathermap
+    - [x] search: search,search1,serper
+    - [x] weather: openweathermap
   - speech:
-    - asr: sense_voice_asr, whisper_asr, whisper_timestamped_asr, whisper_faster_asr, whisper_transformers_asr, whisper_mlx_asr, lightning_whisper_mlx_asr(!TODO), whisper_groq_asr
-    - audio_stream: daily_room_audio_stream(in/out), pyaudio_stream(in/out)
-    - detector: porcupine_wakeword,pyannote_vad,webrtc_vad,silero_vad,webrtc_silero_vad
-    - player: stream_player
-    - recorder: rms_recorder, wakeword_rms_recorder, vad_recorder, wakeword_vad_recorder
-    - tts: tts_chat,tts_coqui,tts_cosy_voice,tts_edge,tts_g
-    - vad_analyzer: daily_webrtc_vad_analyzer,silero_vad_analyzer
+    - [x] asr: sense_voice_asr, whisper_asr, whisper_timestamped_asr, whisper_faster_asr, whisper_transformers_asr, whisper_mlx_asr, lightning_whisper_mlx_asr(!TODO), whisper_groq_asr
+    - [x] audio_stream: daily_room_audio_stream(in/out), pyaudio_stream(in/out)
+    - [x] detector: porcupine_wakeword,pyannote_vad,webrtc_vad,silero_vad,webrtc_silero_vad
+    - [x] player: stream_player
+    - [x] recorder: rms_recorder, wakeword_rms_recorder, vad_recorder, wakeword_vad_recorder
+    - [x] tts: tts_chat,tts_coqui,tts_cosy_voice,tts_edge,tts_g
+    - [x] vad_analyzer: daily_webrtc_vad_analyzer,silero_vad_analyzer
   - vision
-    - [x] OCR: GOT(the General OCR Theory)
-    - [x] Detector: YOLO(You Only Look Once)
+    - [x] OCR(*Optical Character Recognition*):
+      - [ ] [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)
+      - [x]  [GOT](https://github.com/Ucas-HaoranWei/GOT-OCR2.0)(*the General OCR Theory*)
+    - [x] Detector:
+      - [x] YOLO(*You Only Look Once*)
+      - [ ] DETR(*End-to-End Object Detection with Transformers*)
 - gen modules config(*.yaml, local/test/prod) from env with file: `.env`
  u also use HfArgumentParser this module's args to local cmd parse args
 - deploy to cloud ☁️ serverless: 
