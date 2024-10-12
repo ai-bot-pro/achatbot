@@ -69,7 +69,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         self.task = PipelineTask(
             Pipeline([
                 transport.input_processor(),
-                FrameLogger(include_frame_types=[AudioRawFrame]),
+                # FrameLogger(include_frame_types=[AudioRawFrame]),
                 transport.output_processor(),
             ]),
             params=PipelineParams(allow_interruptions=True)

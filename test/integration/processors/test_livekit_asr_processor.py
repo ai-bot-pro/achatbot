@@ -63,6 +63,7 @@ class TestASRProcessor(unittest.IsolatedAsyncioTestCase):
             token,
             params=LivekitParams(
                 audio_in_enabled=True,
+                audio_in_sample_rate=48000,
             )
         )
         self.assertGreater(len(transport.event_names), 0)

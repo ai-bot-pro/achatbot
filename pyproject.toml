@@ -52,7 +52,7 @@ classifiers = [
 ]
 dependencies = [
     "requests~=2.32.3",
-    "apipeline~=0.1.20",
+    "apipeline~=0.1.22",
     "python-dotenv~=1.0.1",
     "pydub~=0.25.1",        # need install ffmpeg
     "pillow~=10.4.0",

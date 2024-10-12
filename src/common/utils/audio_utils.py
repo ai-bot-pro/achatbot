@@ -1,6 +1,6 @@
-from scipy.signal import resample_poly
+from scipy import signal
 from scipy.io.wavfile import read, write
-import pyloudnorm as pyln
+# import pyloudnorm as pyln
 import numpy as np
 import torch
 
@@ -65,16 +65,23 @@ def postprocess_tts_wave(chunk: torch.Tensor | list) -> bytes:
     return chunk.tobytes()
 
 
-def convertSampleRateTo16khz(audio_data: bytes | bytearray, sample_rate):
-    if sample_rate == 16000:
+def convertSampleRateTo16khz(audio_data: bytes | bytearray, original_sample_rate):
+    if original_sample_rate == 16000:
         return audio_data
 
     pcm_data = np.frombuffer(audio_data, dtype=np.int16)
-    data_16000 = resample_poly(
-        pcm_data, 16000, sample_rate)
-    audio_data = data_16000.astype(np.int16).tobytes()
+    pcm_data_16K = resample_audio(pcm_data, original_sample_rate, 16000)
+    audio_data = pcm_data_16K.tobytes()
 
     return audio_data
+
+
+def resample_audio(pcm_data: np.ndarray,
+                   original_rate: int, target_rate: int) -> np.ndarray:
+    num_samples = int(len(pcm_data) * target_rate / original_rate)
+    resampled_audio = signal.resample(pcm_data, num_samples)
+    # resampled_audio = signal.resample_poly(pcm_data, target_rate, original_rate)
+    return resampled_audio.astype(np.int16)
 
 
 def convert_sampling_rate_to_16k(input_file, output_file):
@@ -83,7 +90,5 @@ def convert_sampling_rate_to_16k(input_file, output_file):
         return
     up = 16000
     down = original_rate
-    resampled_data = resample_poly(data, up, down)
+    resampled_data = signal.resample_poly(data, up, down)
     write(output_file, 16000, resampled_data.astype(np.int16))
-
-

@@ -2,12 +2,14 @@ import asyncio
 import logging
 from typing import AsyncGenerator, Awaitable, Callable, Dict, List, Union
 
+import numpy as np
+from scipy import signal
 from PIL import Image
 from pydantic import BaseModel
 from apipeline.frames.data_frames import AudioRawFrame, ImageRawFrame
 
 from src.common.types import CHANNELS, RATE, SAMPLE_WIDTH, LivekitParams
-from src.common.utils.audio_utils import convertSampleRateTo16khz
+from src.common.utils.audio_utils import convertSampleRateTo16khz, resample_audio
 from src.types.frames.data_frames import LivekitTransportMessageFrame, TransportMessageFrame, UserAudioRawFrame, UserImageRawFrame
 
 try:
@@ -67,8 +69,7 @@ class LivekitTransportClient:
         self._out_audio_source: rtc.AudioSource | None = None
         self._out_audio_track: rtc.LocalAudioTrack | None = None
         # audio in
-        # local participant audio stream unsupport to get from local speaker
-        # maybe don't work
+        # TODO:local participant audio stream unsupport to get from local speaker
         self._in_local_audio_stream: rtc.AudioStream | None = None
         # for sub multi remote participant audio stream,
         self._in_participant_audio_tracks: Dict[str, rtc.AudioTrack] = {}
@@ -436,7 +437,7 @@ class LivekitTransportClient:
     # Audio in
 
     async def read_next_audio_frame(self) -> AudioRawFrame | None:
-        """get all room sub audio frame from queue"""
+        """get room sub all participant audio frame from a queue"""
         audio_frame_event, participant_id = await self._in_audio_queue.get()
         audio_frame = self._convert_input_audio(audio_frame_event, participant_id)
         return audio_frame
@@ -521,13 +522,15 @@ class LivekitTransportClient:
         participant_id: str = "",
     ) -> UserAudioRawFrame | None:
         audio_data = audio_frame_event.frame.data
+        pcm_data = np.frombuffer(audio_data, dtype=np.int16)
         original_sample_rate = audio_frame_event.frame.sample_rate
         original_num_channels = audio_frame_event.frame.num_channels
 
         # Allow 8kHz and 16kHz, other sampple rate convert to 16kHz
         if original_sample_rate not in [8000, 16000]:
-            audio_data = convertSampleRateTo16khz(audio_data, original_sample_rate)
             sample_rate = 16000
+            pcm_data = resample_audio(
+                pcm_data, original_sample_rate, sample_rate)
         else:
             sample_rate = original_sample_rate
 
@@ -541,7 +544,7 @@ class LivekitTransportClient:
 
         return UserAudioRawFrame(
             user_id=participant_id,
-            audio=audio_data,
+            audio=pcm_data.tobytes(),
             sample_rate=sample_rate,
             num_channels=original_num_channels,
         )
