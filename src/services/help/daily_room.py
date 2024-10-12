@@ -2,6 +2,10 @@ import os
 import time
 import logging
 
+from src.common.const import *
+from src.common.types import DailyRoomArgs, GeneralRoomInfo
+from src.common.interface import IRoomManager
+from src.common.factory import EngineClass
 from src.services.help.daily_rest import DailyRESTHelper, DailyRoomObject, DailyRoomParams, DailyRoomProperties
 
 
@@ -9,21 +13,27 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 
-class DailyRoom():
-    ROOM_EXPIRE_TIME = 30 * 60  # 30 minutes
-    ROOM_TOKEN_EXPIRE_TIME = 30 * 60  # 30 minutes
-    RANDOM_ROOM_EXPIRE_TIME = 5 * 60  # 5 minutes
-    RANDOM_ROOM_TOKEN_EXPIRE_TIME = 5 * 60  # 5 minutes
+class DailyRoom(EngineClass, IRoomManager):
+    TAG = "daily_room"
 
-    DAILYLANGCHAINRAGBOT_EXPIRE_TIME = 25 * 60
-
-    def __init__(self) -> None:
+    def __init__(self, **kwargs) -> None:
+        self.args = DailyRoomArgs(**kwargs)
         # Create a Daily rest helper
         self.daily_rest_helper = DailyRESTHelper(
             os.getenv("DAILY_API_KEY", ""),
             os.getenv("DAILY_API_URL", "https://api.daily.co/v1"))
 
-    def create_room(self, room_name, exp_time_s: int = ROOM_EXPIRE_TIME):
+    async def close_session(self):
+        # http rest api shot session, don't do anything
+        pass
+
+    async def create_room(
+            self,
+            room_name: str | None = None,
+            exp_time_s: int = ROOM_EXPIRE_TIME) -> GeneralRoomInfo:
+        room: DailyRoomObject | None = None
+        if not room_name:
+            return await self.create_random_room(exp_time_s=exp_time_s)
         try:
             room = self.daily_rest_helper.get_room_from_name(room_name)
         except Exception as ex:
@@ -33,6 +43,7 @@ class DailyRoom():
             try:
                 params = DailyRoomParams(
                     name=room_name,
+                    privacy=self.args.privacy,
                     properties=DailyRoomProperties(
                         exp=time.time() + exp_time_s,
                     ),
@@ -41,24 +52,76 @@ class DailyRoom():
             except Exception as e:
                 raise Exception(f"{e}")
 
-        return room
-
-    def create_random_room(self, exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME):
-        # Create a new room
-        room: DailyRoomObject | None = None
-        params = DailyRoomParams(
-            properties=DailyRoomProperties(
-                exp=time.time() + exp_time_s,
-            ),
+        logging.debug(f"room:{room}")
+        return GeneralRoomInfo(
+            sid=room.id,
+            name=room.name,
+            url=room.url,
+            creation_time=room.created_at,
+            extra_data=room.config.model_dump(),
         )
-        room = self.daily_rest_helper.create_room(params=params)
 
-        return room
+    async def create_random_room(
+            self,
+            exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME) -> GeneralRoomInfo:
+        # Create a new random name room
+        room: DailyRoomObject | None = None
+        try:
+            params = DailyRoomParams(
+                privacy=self.args.privacy,
+                properties=DailyRoomProperties(
+                    exp=time.time() + exp_time_s,
+                ),
+            )
+            room = self.daily_rest_helper.create_room(params=params)
+        except Exception as e:
+            raise Exception(f"{e}")
 
-    def get_token(self, room_url: str, exp_time_s: int = ROOM_TOKEN_EXPIRE_TIME) -> str:
-        user_token = self.daily_rest_helper.get_token(room_url, exp_time_s)
-        return user_token
+        logging.debug(f"room:{room}")
+        return GeneralRoomInfo(
+            sid=room.id,
+            name=room.name,
+            url=room.url,
+            creation_time=room.created_at,
+            extra_data=room.config.model_dump(),
+        )
 
-    def get_room(self, room_name):
-        room = self.daily_rest_helper.get_room_from_name(room_name)
-        return room
+    async def gen_token(self, room_name: str, exp_time_s: int = ROOM_TOKEN_EXPIRE_TIME) -> str:
+        token = self.daily_rest_helper.get_token_by_name(room_name, exp_time_s)
+        logging.debug(f"token:{token}")
+        return token
+
+    async def get_room(self, room_name: str) -> GeneralRoomInfo:
+        try:
+            room = self.daily_rest_helper.get_room_from_name(room_name)
+            logging.debug(f"room:{room}")
+            g_room = GeneralRoomInfo(
+                sid=room.id,
+                name=room.name,
+                url=room.url,
+                creation_time=room.created_at,
+                extra_data=room.config.model_dump(),
+            )
+            return g_room
+        except Exception as ex:
+            logging.warning(
+                f"Failed to get room {room_name} from Daily REST API: {ex}")
+            return None
+
+    async def check_vaild_room(self, room_name: str, token: str) -> bool:
+        if not room_name or not token:
+            return False
+
+        if self.args.privacy == "private":
+            try:
+                token = self.daily_rest_helper.verify_token(token)
+                logging.debug(f"token:{token}")
+            except Exception as ex:
+                logging.warning(f"{token} verify Exception: {ex}")
+                return False
+
+        room = await self.get_room(room_name)
+        if not room:
+            return False
+
+        return True

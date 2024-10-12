@@ -1,9 +1,10 @@
 r"""
 use SOTA LLM like chatGPT to generate config file(json,yaml,toml) from dataclass type
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import (
+    Literal,
     Optional,
     Sequence,
     List,
@@ -443,8 +444,43 @@ class VADAnalyzerArgs:
 class SileroVADAnalyzerArgs(SileroVADArgs, VADAnalyzerArgs):
     pass
 
-# --------------- daily -------------------------------
+# --------------- in/out audio camera(video) params -------------------
 
+
+class AudioParams(BaseModel):
+    audio_out_enabled: bool = False
+    audio_out_sample_rate: int = RATE
+    audio_out_channels: int = CHANNELS
+    audio_in_enabled: bool = False
+    audio_in_participant_enabled: bool = False
+    audio_in_sample_rate: int = RATE
+    audio_in_channels: int = CHANNELS
+
+
+class AudioVADParams(AudioParams):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    vad_enabled: bool = False
+    vad_audio_passthrough: bool = False
+    vad_analyzer: IVADAnalyzer | EngineClass | None = None
+
+
+class CameraParams(BaseModel):
+    camera_in_enabled: bool = False
+    camera_in_color_format: str = "RGB"
+    camera_out_enabled: bool = False
+    camera_out_is_live: bool = False
+    camera_out_width: int = 1024
+    camera_out_height: int = 768
+    camera_out_bitrate: int = 800000
+    camera_out_framerate: int = 30
+    camera_out_color_format: str = "RGB"
+
+
+class AudioCameraParams(CameraParams, AudioVADParams):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+# --------------- daily -------------------------------
 
 class DailyDialinSettings(BaseModel):
     call_id: str = ""
@@ -466,36 +502,6 @@ class DailyTranscriptionSettings(BaseModel):
     }
 
 
-class AudioParams(BaseModel):
-    audio_out_enabled: bool = False
-    audio_out_sample_rate: int = RATE
-    audio_out_channels: int = CHANNELS
-    audio_in_enabled: bool = False
-    audio_in_sample_rate: int = RATE
-    audio_in_channels: int = CHANNELS
-
-
-class AudioVADParams(AudioParams):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    vad_enabled: bool = False
-    vad_audio_passthrough: bool = False
-    vad_analyzer: IVADAnalyzer | EngineClass | None = None
-
-
-class CameraParams(BaseModel):
-    camera_out_enabled: bool = False
-    camera_out_is_live: bool = False
-    camera_out_width: int = 1024
-    camera_out_height: int = 768
-    camera_out_bitrate: int = 800000
-    camera_out_framerate: int = 30
-    camera_out_color_format: str = "RGB"
-
-
-class AudioCameraParams(CameraParams, AudioVADParams):
-    pass
-
-
 class DailyParams(AudioCameraParams):
     api_url: str = "https://api.daily.co/v1"
     api_key: str = ""
@@ -504,10 +510,42 @@ class DailyParams(AudioCameraParams):
     transcription_settings: DailyTranscriptionSettings = DailyTranscriptionSettings()
 
 
-# ---------------- Bots -------------
+class DailyRoomArgs(BaseModel):
+    privacy: Literal['private', 'public'] = "public"
+
+
+# --------------- livekit -------------------------------
+
+class LivekitParams(AudioCameraParams):
+    # audio_in_sample_rate: int = 48000  # livekit audio in stream default sample rate 48000
+    websocket_url: str = ""  # project url
+    api_key: str = ""
+    api_secret: str = ""
+    e2ee_shared_key: Optional[bytes] = None
+    sandbox_room_url: str = "https://ultra-terminal-re8nmd.sandbox.livekit.io"
+
+
+class LivekitRoomArgs(BaseModel):
+    bot_name: str = "chat-bot"
+    # if use session, need manual close async http session
+    is_common_session: bool = False
+
+
+# ---------------- Room Bots -------------
+@dataclass
+class GeneralRoomInfo:
+    """general room info for diff webRTC room info to align"""
+    sid: str = ""
+    name: str = ""
+    url: str = ""
+    ttl_s: int | None = None
+    creation_time: int | None = None
+    extra_data: dict = field(default_factory=dict)
+
 
 @dataclass
-class DailyRoomBotArgs:
+class RoomBotArgs:
+    room_name: str = ""
     room_url: str = ""
     token: str = ""
     bot_config: dict | None = None

@@ -309,3 +309,44 @@ class IVisionOCR(ABC):
         return iterator next token (str)
         """
         raise NotImplemented("must be implemented in the child class")
+
+
+class IRoomManager(ABC):
+    @abstractmethod
+    async def create_room(self, room_name: str, exp_time_s: int):
+        """
+        create room by room name with expire time(s)
+        if the room has been created, return
+        if room_name is None or empty, create random name room
+        return general room info
+        """
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    async def gen_token(self, room_name: str, exp_time_s: int) -> str:
+        """
+        generate a token to join room
+        """
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    async def get_room(self, room_name: str):
+        """
+        get general room info by room name
+        """
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    async def check_vaild_room(self, room_name: str, token: str) -> bool:
+        """
+        check valid token and room status
+        return bool is vaild room
+        """
+        raise NotImplemented("must be implemented in the child class")
+
+    @abstractmethod
+    async def close_session(self):
+        """
+        if api session(http or ws) is common long session, need to close
+        """
+        raise NotImplemented("must be implemented in the child class")

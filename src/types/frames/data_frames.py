@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any, List
 
 
-from apipeline.frames.data_frames import Frame, DataFrame, TextFrame, ImageRawFrame
+from apipeline.frames.data_frames import Frame, DataFrame, TextFrame, ImageRawFrame, AudioRawFrame
 
 
 @dataclass
@@ -144,6 +144,11 @@ class DailyTransportMessageFrame(TransportMessageFrame):
 
 
 @dataclass
+class LivekitTransportMessageFrame(TransportMessageFrame):
+    participant_id: str | None = None
+
+
+@dataclass
 class FunctionCallResultFrame(DataFrame):
     """A frame containing the result of an LLM function (tool) call.
     """
@@ -151,3 +156,18 @@ class FunctionCallResultFrame(DataFrame):
     tool_call_id: str
     arguments: dict
     result: Any
+
+
+@dataclass
+class UserAudioRawFrame(AudioRawFrame):
+    """An audio associated to a user. Will be shown by the transport if the
+    transport's audio is enabled.
+
+    """
+    user_id: str = ""
+
+    def __post_init__(self):
+        super().__post_init__()
+
+    def __str__(self):
+        return f"user_id:{self.user_id} {super().__str__()}"

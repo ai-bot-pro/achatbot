@@ -108,7 +108,12 @@ class SegmentedASRProcessor(ASRProcessorBase):
         volume = self._get_smoothed_volume(frame)
         if volume >= self._min_volume and frame.audio and len(frame.audio) > 0:
             # If volume is high enough, write new data to wave file
-            self._wave.writeframes(frame.audio)
+            # Check if _wave is not None before writing
+            if self._wave is not None:
+                self._wave.writeframes(frame.audio)
+            else:
+                logging.error("Wave object is None, cannot write frames.")
+
             self._silence_num_frames = 0
         else:
             self._silence_num_frames += frame.num_frames

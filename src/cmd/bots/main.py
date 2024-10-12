@@ -3,6 +3,7 @@ import os
 import json
 import logging
 import argparse
+import asyncio
 
 from src.common.logger import Logger
 from src.common.types import CONFIG_DIR
@@ -48,7 +49,7 @@ if __name__ == "__main__":
         bot_info.token = args.t
     try:
         task_runner = BotTaskRunnerBE(bot_task_mgr, **vars(bot_info))
-        task_runner.run()
+        asyncio.get_event_loop().run_until_complete(task_runner.run())
     except KeyboardInterrupt:
         logging.warning("Ctrl-C detected. Exiting!")
     except Exception as e:

@@ -1,11 +1,16 @@
 import logging
 import inspect
+from typing import Dict
 
 
 class EventHandlerManager:
 
     def __init__(self):
-        self._event_handlers: dict = {}
+        self._event_handlers: Dict[str, list] = {}
+
+    @property
+    def event_names(self):
+        return self._event_handlers.keys()
 
     def event_handler(self, event_name: str):
         def decorator(handler):
@@ -22,6 +27,11 @@ class EventHandlerManager:
         if event_name not in self._event_handlers:
             raise Exception(f"Event handler {event_name} not registered")
         self._event_handlers[event_name].append(handler)
+
+    def add_event_handlers(self, event_name: str, handlers: list):
+        if event_name not in self._event_handlers:
+            raise Exception(f"Event handler {event_name} not registered")
+        self._event_handlers[event_name].extend(handlers)
 
     async def _call_event_handler(self, event_name: str, *args, **kwargs):
         try:

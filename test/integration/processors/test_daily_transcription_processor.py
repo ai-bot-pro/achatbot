@@ -92,12 +92,11 @@ class TestDailyTranscriptionProcessor(unittest.IsolatedAsyncioTestCase):
         if not isinstance(frame, TextFrame):
             return
 
-        if len(self.texts) == 2:  # hi 2 times
+        self.texts.append(frame.text)
+        if len(self.texts) == 2:  # asr 2 times (speech to text)
             print(f"sink_callback ----> send end frame")
             await self.task.queue_frame(EndFrame())
             return
-
-        self.texts.append(frame.text)
 
     async def on_first_participant_joined(self, transport: DailyTransport, participant):
         # register transcription event handler, exec it when daily event is received

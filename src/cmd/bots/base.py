@@ -20,7 +20,7 @@ from src.modules.speech.tts import TTSEnvInit
 from src.types.ai_conf import ASRConfig, LLMConfig, TTSConfig, AIConfig
 from src.common import interface
 from src.common.factory import EngineClass
-from src.common.types import DailyRoomBotArgs
+from src.common.types import RoomBotArgs
 from src.common.interface import IBot, IVisionDetector
 from src.common.session import Session
 from src.common.types import SessionCtx
@@ -30,7 +30,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 
-class DailyRoomBot(IBot):
+class AIRoomBot(IBot):
     r"""
     use ai bot config
     !TODONE: need config processor with bot config (redefine api params) @weedge
@@ -40,11 +40,11 @@ class DailyRoomBot(IBot):
     """
 
     def __init__(self, **args) -> None:
-        self.args = DailyRoomBotArgs(**args)
+        self.args = RoomBotArgs(**args)
         if self.args.bot_name is None or len(self.args.bot_name) == 0:
             self.args.bot_name = self.__class__.__name__
 
-        self.task: PipelineTask = None
+        self.task: PipelineTask | None = None
         self.session = Session(**SessionCtx(uuid.uuid4()).__dict__)
 
         self._bot_config_list = self.args.bot_config_list
@@ -82,20 +82,6 @@ class DailyRoomBot(IBot):
 
     async def arun(self):
         pass
-
-    async def on_first_participant_joined(self, transport, participant):
-        self.session.set_client_id(participant['id'])
-        logging.info(f"First participant {participant['id']} joined")
-
-    async def on_participant_left(self, transport, participant, reason):
-        if self.task is not None:
-            await self.task.queue_frame(EndFrame())
-        logging.info("Partcipant left. Exiting.")
-
-    async def on_call_state_updated(self, transport, state):
-        logging.info("Call state %s " % state)
-        if state == "left" and self.task is not None:
-            await self.task.queue_frame(EndFrame())
 
     def get_vad_analyzer(self) -> interface.IVADAnalyzer | EngineClass:
         vad_analyzer: interface.IVADAnalyzer | EngineClass = None

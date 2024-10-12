@@ -10,12 +10,12 @@ from src.processors.user_image_request_processor import UserImageTextRequestProc
 from src.processors.vision.ocr_processor import OCRProcessor
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.common.types import DailyParams
-from src.cmd.bots.base import DailyRoomBot
+from src.cmd.bots.base_daily import DailyRoomBot
 from src.transports.daily import DailyTransport
-from .. import register_daily_room_bots
+from .. import register_ai_room_bots
 
 
-@register_daily_room_bots.register
+@register_ai_room_bots.register
 class DailyOCRVisionBot(DailyRoomBot):
     def __init__(self, **args) -> None:
         super().__init__(**args)
