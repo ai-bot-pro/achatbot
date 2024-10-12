@@ -6,25 +6,19 @@ from typing import Union
 import unittest
 from livekit import rtc, protocol
 from apipeline.pipeline.pipeline import Pipeline
-from apipeline.processors.logger import FrameLogger
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.pipeline.task import PipelineTask, PipelineParams
 from apipeline.frames.control_frames import EndFrame
+from apipeline.processors.logger import FrameLogger
 from apipeline.frames.data_frames import TextFrame, DataFrame, AudioRawFrame, ImageRawFrame
-from apipeline.processors.output_processor import OutputFrameProcessor
 
-from src.modules.speech.asr import ASREnvInit
-from src.processors.speech.asr.asr_processor import ASRProcessor
 from src.services.help.livekit_room import LivekitRoom
 from src.services.help import RoomManagerEnvInit
 from src.common.types import LivekitParams
 from src.common.logger import Logger
 from src.transports.livekit import LivekitTransport
-from src.types.frames.data_frames import TranscriptionFrame
 
 from dotenv import load_dotenv
-
-
 load_dotenv(override=True)
 
 r"""

@@ -10,7 +10,7 @@ from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.common.types import DailyParams
 from src.transports.daily import DailyTransport
-from src.cmd.bots.base import AIRoomBot
+from src.cmd.bots.base_daily import DailyRoomBot
 from src.cmd.bots import register_ai_room_bots
 from src.types.frames.data_frames import LLMMessagesFrame
 
@@ -20,7 +20,7 @@ load_dotenv(override=True)
 
 
 @register_ai_room_bots.register
-class DailyBot(AIRoomBot):
+class DailyBot(DailyRoomBot):
     """
     use asr processor, don't use daily transcirption
     """

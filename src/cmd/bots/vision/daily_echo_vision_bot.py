@@ -4,14 +4,14 @@ from apipeline.pipeline.task import PipelineTask
 from apipeline.processors.logger import FrameLogger
 
 from src.common.types import DailyParams
-from src.cmd.bots.base import AIRoomBot
+from src.cmd.bots.base_daily import DailyRoomBot
 from src.transports.daily import DailyTransport
 from src.types.frames.data_frames import UserImageRawFrame
 from .. import register_ai_room_bots
 
 
 @register_ai_room_bots.register
-class DailyEchoVisionBot(AIRoomBot):
+class DailyEchoVisionBot(DailyRoomBot):
     async def arun(self):
         transport = DailyTransport(
             self.args.room_url, self.args.token, self.args.bot_name,

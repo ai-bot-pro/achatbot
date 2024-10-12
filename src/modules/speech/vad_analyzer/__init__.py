@@ -52,9 +52,9 @@ class VADAnalyzerEnvInit():
         kwargs: dict | None = None
     ) -> interface.IVADAnalyzer | EngineClass:
         # vad Analyzer
-        # tag = os.getenv('VAD_ANALYZER_TAG', "silero_vad_analyzer")
         # daily_webrtc_vad_analyzer for english, chinese vad don't ok~ :)
-        tag = tag or os.getenv('VAD_ANALYZER_TAG', "daily_webrtc_vad_analyzer")
+        # tag = tag or os.getenv('VAD_ANALYZER_TAG', "daily_webrtc_vad_analyzer")
+        tag = tag or os.getenv('VAD_ANALYZER_TAG', "silero_vad_analyzer")
         kwargs = kwargs or VADAnalyzerEnvInit.map_config_func[tag]()
         engine = VADAnalyzerEnvInit.getEngine(tag, **kwargs)
         logging.info(f"initVADEngine: {tag}, {engine}")

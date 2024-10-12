@@ -12,12 +12,12 @@ from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.processors.rtvi.rtvi_asr_llm_tts_processor import RTVIProcessor, RTVISetup
 from src.common.types import DailyParams, RoomBotArgs
 from src.transports.daily import DailyTransport
-from src.cmd.bots.base import AIRoomBot
+from src.cmd.bots.base_daily import DailyRoomBot
 from src.cmd.bots import register_ai_room_bots
 
 
 @register_ai_room_bots.register
-class DailyAsrRTVIBot(AIRoomBot):
+class DailyAsrRTVIBot(DailyRoomBot):
     """
     use asr processor, don't use daily transcirption
     """

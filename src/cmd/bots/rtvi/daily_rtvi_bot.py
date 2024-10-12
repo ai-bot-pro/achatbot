@@ -13,12 +13,12 @@ from src.processors.rtvi.rtvi_asr_llm_tts_processor import RTVIProcessor, RTVISe
 from src.common.types import DailyParams, RoomBotArgs, DailyTranscriptionSettings
 from src.transports.daily import DailyTransport
 from src.services.help.daily_rest import DailyRESTHelper
-from src.cmd.bots.base import AIRoomBot
+from src.cmd.bots.base_daily import DailyRoomBot
 from src.cmd.bots import register_ai_room_bots
 
 
 @register_ai_room_bots.register
-class DailyRTVIBot(AIRoomBot):
+class DailyRTVIBot(DailyRoomBot):
     r"""
     use daily transcirption
     """

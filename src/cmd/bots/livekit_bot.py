@@ -9,7 +9,7 @@ from src.processors.llm.base import LLMProcessor
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.common.types import LivekitParams
 from src.transports.livekit import LivekitTransport
-from src.cmd.bots.base import AIRoomBot
+from src.cmd.bots.base_livekit import LivekitRoomBot
 from src.cmd.bots import register_ai_room_bots
 from src.types.frames.data_frames import LLMMessagesFrame
 
@@ -18,7 +18,7 @@ load_dotenv(override=True)
 
 
 @register_ai_room_bots.register
-class LivekitBot(AIRoomBot):
+class LivekitBot(LivekitRoomBot):
     """
     audio chat with livekit webRTC room bot
     """
@@ -38,9 +38,7 @@ class LivekitBot(AIRoomBot):
         )
 
         asr_processor = self.get_asr_processor()
-
         llm_processor: LLMProcessor = self.get_llm_processor()
-
         tts_processor: TTSProcessor = self.get_tts_processor()
         stream_info = tts_processor.get_stream_info()
         params.audio_out_sample_rate = stream_info["sample_rate"]
@@ -77,13 +75,7 @@ class LivekitBot(AIRoomBot):
 
         transport.add_event_handlers(
             "on_first_participant_joined",
-            [self.on_first_participant_joined, self.on_first_participant_say_hi])
-        transport.add_event_handler(
-            "on_participant_left",
-            self.on_participant_left)
-        transport.add_event_handler(
-            "on_call_state_updated",
-            self.on_call_state_updated)
+            [self.on_first_participant_say_hi])
 
         await PipelineRunner().run(self.task)
 

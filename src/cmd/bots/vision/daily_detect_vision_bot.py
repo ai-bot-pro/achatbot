@@ -7,13 +7,13 @@ from apipeline.processors.logger import FrameLogger
 from src.processors.vision.detect_processor import DetectProcessor
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.common.types import DailyParams
-from src.cmd.bots.base import AIRoomBot
+from src.cmd.bots.base_daily import DailyRoomBot
 from src.transports.daily import DailyTransport
 from .. import register_ai_room_bots
 
 
 @register_ai_room_bots.register
-class DailyDetectVisionBot(AIRoomBot):
+class DailyDetectVisionBot(DailyRoomBot):
     def __init__(self, **args) -> None:
         super().__init__(**args)
         self.init_bot_config()
