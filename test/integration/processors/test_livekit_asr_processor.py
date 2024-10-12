@@ -23,11 +23,12 @@ from src.transports.livekit import LivekitTransport
 from src.types.frames.data_frames import TranscriptionFrame
 
 from dotenv import load_dotenv
-
-
 load_dotenv(override=True)
 
 r"""
+LIVEKIT_BOT_NAME=chat-bot \
+    python -m unittest test.integration.processors.test_livekit_asr_processor.TestASRProcessor
+
 LIVEKIT_BOT_NAME=chat-bot  \
     ASR_LANG=zn \
     ASR_MODEL_NAME_OR_PATH=./models/FunAudioLLM/SenseVoiceSmall \
@@ -72,11 +73,10 @@ class TestASRProcessor(unittest.IsolatedAsyncioTestCase):
         self.task = PipelineTask(
             Pipeline([
                 transport.input_processor(),
-                FrameLogger(include_frame_types=[AudioRawFrame]),
+                # FrameLogger(include_frame_types=[AudioRawFrame]),
                 asr_processor,
                 FrameLogger(include_frame_types=[TranscriptionFrame]),
                 out_processor,
-                transport.output_processor(),
             ]),
             params=PipelineParams(allow_interruptions=True)
         )
@@ -107,12 +107,11 @@ class TestASRProcessor(unittest.IsolatedAsyncioTestCase):
         if not isinstance(frame, TextFrame):
             return
 
-        if len(self.texts) == 2:  # hi 2 times
+        self.texts.append(frame.text)
+        if len(self.texts) == 2:  # asr 2 times (speech to text)
             print(f"sink_callback ----> send end frame")
             await self.task.queue_frame(EndFrame())
             return
-
-        self.texts.append(frame.text)
 
     async def on_first_participant_joined(
             self,
@@ -131,7 +130,6 @@ class TestASRProcessor(unittest.IsolatedAsyncioTestCase):
             transport: LivekitTransport,
             participant: rtc.RemoteParticipant):
         logging.info(f"Partcipant {participant} left. Exiting.")
-        await self.task.queue_frame(EndFrame())
 
     async def on_disconnected(
             self,
