@@ -56,8 +56,8 @@ achatbot factory, create chat bots with llm, asr, tts, vad, ocr, detect object e
       - [ ] [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)
       - [x]  [GOT](https://github.com/Ucas-HaoranWei/GOT-OCR2.0)(*the General OCR Theory*)
     - [x] Detector:
-      - [x] YOLO(*You Only Look Once*)
-      - [ ] DETR(*End-to-End Object Detection with Transformers*)
+      - [x] [YOLO](https://docs.ultralytics.com/) (*You Only Look Once*)
+      - [ ] [RT-DETR](https://github.com/lyuwenyu/RT-DETR) (*RealTime End-to-End Object Detection with Transformers*)
 - gen modules config(*.yaml, local/test/prod) from env with file: `.env`
  u also use HfArgumentParser this module's args to local cmd parse args
 - deploy to cloud ☁️ serverless: 
