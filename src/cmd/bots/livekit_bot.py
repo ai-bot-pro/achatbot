@@ -67,7 +67,8 @@ class LivekitBot(LivekitRoomBot):
                 assistant_response,
             ]),
             params=PipelineParams(
-                allow_interruptions=True,
+                # TODO: open interruptions some issue when sub remote participant
+                allow_interruptions=False,
                 enable_metrics=True,
                 send_initial_empty_metrics=False,
             ),

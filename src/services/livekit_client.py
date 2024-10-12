@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import pickle
 from typing import AsyncGenerator, Awaitable, Callable, Dict, List, Union
 
 import numpy as np
@@ -277,7 +278,8 @@ class LivekitTransportClient:
         if isinstance(frame, LivekitTransportMessageFrame):
             if frame.participant_id:
                 destination_identities.append(frame.participant_id)
-        data = frame.message.encode()
+        # TODO: need use pb or msgpkg with fe sdk(metrics) @weedge
+        data = pickle.dumps(frame.message)
 
         try:
             await self._room.local_participant.publish_data(

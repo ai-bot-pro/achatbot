@@ -57,7 +57,7 @@ class LivekitRoom(EngineClass, IRoomManager):
         logging.debug(f"create_room:{room}")
 
         if not self._http_api:
-            http_api.aclose()
+            await http_api.aclose()
 
         g_room = GeneralRoomInfo(
             sid=room.sid,
@@ -98,7 +98,7 @@ class LivekitRoom(EngineClass, IRoomManager):
             return None
 
         if not self._http_api:
-            http_api.aclose()
+            await http_api.aclose()
 
         room = result.rooms[0]
         g_room = GeneralRoomInfo(
