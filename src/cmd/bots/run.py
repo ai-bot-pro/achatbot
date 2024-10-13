@@ -69,13 +69,16 @@ class BotTaskManager:
     def cleanup(self):
         # Clean up function, just to be extra safe
         for pid, (proc, tag) in self._bot_procs.items():
-            if proc.is_alive():
-                proc.join()
-                proc.terminate()
-                proc.close()
-                logging.info(f"pid:{pid} tag:{tag} proc: {proc} close")
-            else:
-                logging.warning(f"pid:{pid} tag:{tag} proc: {proc} already closed")
+            try:
+                if proc.is_alive():
+                    proc.join(timeout=5)
+                    proc.terminate()
+                    proc.close()
+                    logging.info(f"pid:{pid} tag:{tag} proc: {proc} close")
+                else:
+                    logging.warning(f"pid:{pid} tag:{tag} proc: {proc} already closed")
+            except Exception as e:
+                logging.error(f"Error while cleaning up process {pid}: {e}")
 
 
 class BotTaskRunner:

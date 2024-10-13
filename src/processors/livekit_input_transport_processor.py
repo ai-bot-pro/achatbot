@@ -143,18 +143,18 @@ class LivekitInputTransportProcessor(AudioVADInputProcessor):
         render_frame = False
 
         curr_time = time.time()
-        prev_time = self._video_renderers[frame.participant_id]["timestamp"] or curr_time
-        framerate = self._video_renderers[frame.participant_id]["framerate"]
+        prev_time = self._video_renderers[frame.user_id]["timestamp"] or curr_time
+        framerate = self._video_renderers[frame.user_id]["framerate"]
 
         if framerate > 0:
             next_time = prev_time + 1 / framerate
             render_frame = (curr_time - next_time) < 0.1
-        elif self._video_renderers[frame.participant_id]["render_next_frame"]:
+        elif self._video_renderers[frame.user_id]["render_next_frame"]:
             # e.g.: push UserImageRequestFrame to render a UserImageRawFrame
-            self._video_renderers[frame.participant_id]["render_next_frame"] = False
+            self._video_renderers[frame.user_id]["render_next_frame"] = False
             render_frame = True
 
         if render_frame:
             await self.queue_frame(frame)
 
-        self._video_renderers[frame.participant_id]["timestamp"] = curr_time
+        self._video_renderers[frame.user_id]["timestamp"] = curr_time
