@@ -155,9 +155,9 @@ class AudioCameraOutputProcessor(OutputProcessor):
             await self._camera_out_queue.put(frame)
         else:
             if isinstance(frame, ImageRawFrame):
-                self._set_camera_images([frame.image])
+                await self._set_camera_images([frame])
             if isinstance(frame, SpriteFrame):
-                self._set_camera_images(frame.images)
+                await self._set_camera_images(frame.images)
 
     async def send_image(self, frame: ImageRawFrame | SpriteFrame):
         await self.process_frame(frame, FrameDirection.DOWNSTREAM)

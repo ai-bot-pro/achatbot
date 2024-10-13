@@ -75,6 +75,7 @@ class LivekitTransportClient:
         # for sub multi remote participant audio stream,
         self._in_participant_audio_tracks: Dict[str, rtc.AudioTrack] = {}
         self._on_participant_audio_frame_task: asyncio.Task | None = None
+        self._capture_participant_audio_stream: rtc.AudioStream | None = None
         # TODO: switch room anchor participant, need know room anchor
         self._participant_audio_stream: rtc.AudioStream | None = None
         self._in_audio_queue = asyncio.Queue()
@@ -89,6 +90,7 @@ class LivekitTransportClient:
         # chat bot need see participant video, so need sub participant video stream
         self._in_participant_video_tracks: Dict[str, rtc.VideoTrack] = {}
         self._on_participant_video_frame_task: asyncio.Task | None = None
+        self._capture_participant_video_stream: rtc.VideoStream | None = None
 
         # Set up room event handlers to call register handlers
         # https://docs.livekit.io/home/client/events/#Events
@@ -134,7 +136,6 @@ class LivekitTransportClient:
                 and not self._on_participant_video_frame_task.cancelled():
             self._on_participant_video_frame_task.cancel()
             await self._on_participant_video_frame_task
-        self._in_local_audio_stream and await self._in_local_audio_stream.aclose()
 
     # @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
     async def _join(self):
@@ -240,6 +241,8 @@ class LivekitTransportClient:
         await self._async_on_disconnected(reason="Leave Room.")
         self._in_local_audio_stream and await self._in_local_audio_stream.aclose()
         self._participant_audio_stream and await self._participant_audio_stream.aclose()
+        self._capture_participant_audio_stream and await self._capture_participant_audio_stream.aclose()
+        self._capture_participant_video_stream and await self._capture_participant_video_stream.aclose()
         await self._room.disconnect()
 
     async def leave(self):
@@ -394,8 +397,8 @@ class LivekitTransportClient:
                     num_channels=self._params.audio_in_channels,
                 )
                 self._in_audio_task = asyncio.create_task(
-                    self._process_audio_stream(self._participant_audio_stream,
-                                               participant.sid))
+                    self._process_audio_stream(
+                        self._participant_audio_stream, participant.sid))
             await self._callbacks.on_audio_track_subscribed(participant)
         elif track.kind == rtc.TrackKind.KIND_VIDEO \
                 and self._params.camera_in_enabled:
@@ -455,14 +458,14 @@ class LivekitTransportClient:
         audio_track = self._in_participant_audio_tracks.get(participant_id)
         if not audio_track:
             return
-        audio_stream = rtc.AudioStream(
+        self._capture_participant_audio_stream = rtc.AudioStream(
             audio_track,
             sample_rate=sample_rate if sample_rate else self._params.audio_in_sample_rate,
             num_channels=num_channels if num_channels else self._params.audio_in_channels,
         )
         self._on_participant_audio_frame_task = asyncio.create_task(
-            self._async_on_participant_audio_frame,
-            participant_id, callback, audio_stream)
+            self._async_on_participant_audio_frame(
+                participant_id, callback, self._capture_participant_audio_stream))
 
     async def _async_on_participant_audio_frame(
         self,
@@ -485,7 +488,7 @@ class LivekitTransportClient:
                     logging.warning(
                         f"Received unexpected event type: {type(audio_frame_event)} and participant {participant_id}")
             except asyncio.CancelledError:
-                audio_stream.aclose()
+                await audio_stream.aclose()
                 logging.info("task cancelled")
                 break
             except Exception as e:
@@ -505,7 +508,7 @@ class LivekitTransportClient:
         async for audio_frame_event in audio_stream:
             audio_frame = self._convert_input_audio(audio_frame_event, participant_id)
             yield audio_frame
-        audio_stream.aclose()
+        await audio_stream.aclose()
 
     async def read_next_audio_frame_iter(self) -> AsyncGenerator[AudioRawFrame, None]:
         """read next audio frame from local microphone source"""
@@ -606,11 +609,11 @@ class LivekitTransportClient:
 
         image = image.convert(target_color_mode)
         return UserImageRawFrame(
+            user_id=participant_id,
             image=image.tobytes(),
             size=(buffer.width, buffer.height),
             mode=target_color_mode,
             format="JPEG",
-            participant_id=participant_id,
         )
 
     def _get_livekit_video_buffer_type(self):
@@ -636,13 +639,14 @@ class LivekitTransportClient:
         video_track = self._in_participant_video_tracks.get(participant_id)
         if not video_track:
             return
-        video_stream = rtc.VideoStream(
+        self._capture_participant_video_stream = rtc.VideoStream(
             video_track,
             format=self._get_livekit_video_buffer_type(),
         )
         self._on_participant_video_frame_task = asyncio.create_task(
-            self._async_on_participant_video_frame,
-            participant_id, callback, video_stream, color_format)
+            self._async_on_participant_video_frame(
+                participant_id, callback,
+                self._capture_participant_video_stream, color_format))
 
     async def _async_on_participant_video_frame(
         self,
@@ -651,6 +655,8 @@ class LivekitTransportClient:
         video_stream: rtc.VideoStream,
         color_format: str = "RGB"
     ):
+        logging.info(
+            f"Started capture participant_id:{participant_id} from video stream {video_stream}")
         async for video_frame_event in video_stream:
             try:
                 if isinstance(video_frame_event, rtc.VideoFrameEvent):
@@ -666,13 +672,11 @@ class LivekitTransportClient:
                     logging.warning(
                         f"Received unexpected event type: {type(video_frame_event)} and participant {participant_id}")
             except asyncio.CancelledError:
-                video_stream.aclose()
+                await video_stream.aclose()
                 logging.info("task cancelled")
                 break
             except Exception as e:
                 logging.error(f"task Error: {e}", exc_info=True)
-
-        video_stream.aclose()
 
     # Camera out
 
