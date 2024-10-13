@@ -143,9 +143,3 @@ class LivekitRoomBot(AIRoomBot):
         transport.capture_participant_audio(
             participant_id=participant.sid,
         )
-
-        participant_name = participant.name if participant.name else participant.identity
-        await transport.send_message(
-            f"hello,你好，{participant_name}, 我是机器人。",
-            participant_id=participant.identity,
-        )

@@ -638,6 +638,7 @@ class LivekitTransportClient:
         # just capture one participant video
         video_track = self._in_participant_video_tracks.get(participant_id)
         if not video_track:
+            logging.warning(f"participant_id {participant_id} no vidio track")
             return
         self._capture_participant_video_stream = rtc.VideoStream(
             video_track,

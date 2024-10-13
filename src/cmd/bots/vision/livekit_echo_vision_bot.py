@@ -20,7 +20,7 @@ class LivekitEchoVisionBot(LivekitRoomBot):
             LivekitParams(
                 camera_in_enabled=True,
                 camera_out_enabled=True,
-                #camera_out_is_live=True,
+                camera_out_is_live=True,
                 camera_out_width=1280,
                 camera_out_height=720,
             )
