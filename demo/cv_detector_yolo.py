@@ -93,5 +93,6 @@ if __name__ == "__main__":
     # NOTE: just test to print all models stream predict info :)
     # yolo_detector("./models/yolov8n.pt")
     # yolo_detector("./models/yolov10n.pt")
-    yolo_detector("./models/yolov8s-worldv2.pt")
+    yolo_detector("./models/yolo11n.pt")
+    # yolo_detector("./models/yolov8s-worldv2.pt")
     # yolo_detector("./models/rtdetr-l.pt")  # v1

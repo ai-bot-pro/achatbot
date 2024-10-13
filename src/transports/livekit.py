@@ -196,6 +196,13 @@ class LivekitTransport(BaseTransport):
         video_source: str = "camera",
         color_format: str = "RGB",
     ):
+        r"""
+        ### !NOTE: need LivekitParams camera_in_enabled=True
+        - if room just a bot, then participant join room
+         do capture_participant_video
+         after livekit subscribed a participant video
+        - if want switch the latest subscribed participant
+        """
         if self._input:
             self._input.capture_participant_video(
                 participant_id, framerate, video_source, color_format)

@@ -64,19 +64,19 @@ class LivekitRoomBot(AIRoomBot):
         transport: LivekitTransport,
         room: rtc.Room,
     ):
-        logging.debug(f"connected room--->{room}")
+        logging.debug(f"on_connected room---->{room}")
 
     async def on_error(
             self,
             transport: LivekitTransport,
             error_msg: str):
-        logging.debug("error_msg--->{error_msg}")
+        logging.debug("on_error error_msg---->{error_msg}")
 
     async def on_connection_state_changed(
             self,
             transport: LivekitTransport,
             state: rtc.ConnectionState):
-        logging.debug("connection state %s " % state)
+        logging.debug("on_connection_state_changed----> state %s " % state)
         if state == rtc.ConnectionState.CONN_DISCONNECTED:
             await self.task.queue_frame(EndFrame())
 
@@ -84,7 +84,7 @@ class LivekitRoomBot(AIRoomBot):
             self,
             transport: LivekitTransport,
             reason: Union[protocol.models.DisconnectReason, str]):
-        logging.info("disconnected reason %s, Exiting." % reason)
+        logging.info("on_disconnected----> reason %s, Exiting." % reason)
         await self.task.queue_frame(EndFrame())
 
     async def on_participant_connected(
@@ -135,17 +135,11 @@ class LivekitRoomBot(AIRoomBot):
             self,
             transport: LivekitTransport,
             participant: rtc.RemoteParticipant):
-        logging.debug(f"on_first_participant_joined---->{participant}")
+        logging.info(f"on_first_participant_joined---->{participant}")
 
         # TODO: need know room anchor participant
         # now just support one by one chat with bot
         # need open audio_in_participant_enabled
         transport.capture_participant_audio(
             participant_id=participant.sid,
-        )
-
-        participant_name = participant.name if participant.name else participant.identity
-        await transport.send_message(
-            f"hello,你好，{participant_name}, 我是机器人。",
-            participant_id=participant.identity,
         )

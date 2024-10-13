@@ -64,6 +64,8 @@ class LivekitTransportClient:
         self._leaving = False
 
         self._other_participant_has_joined = False
+        self._current_sub_audio_participant_id: str = ""
+        self._current_sub_video_participant_id: str = ""
 
         # audio out
         # local participant audio stream
@@ -365,14 +367,14 @@ class LivekitTransportClient:
 
     # Async methods for event handling
     async def _async_on_participant_connected(self, participant: rtc.RemoteParticipant):
-        logging.info(f"Participant connected: {participant.identity}")
+        logging.info(f"Participant:{participant} connected")
         await self._callbacks.on_participant_connected(participant)
         if not self._other_participant_has_joined:
             self._other_participant_has_joined = True
             await self._callbacks.on_first_participant_joined(participant)
 
     async def _async_on_participant_disconnected(self, participant: rtc.RemoteParticipant):
-        logging.info(f"Participant disconnected: {participant.identity}")
+        logging.info(f"Participant:{participant} disconnected")
         await self._callbacks.on_participant_disconnected(participant)
         if len(self.get_participants()) == 0:
             self._other_participant_has_joined = False
@@ -419,10 +421,12 @@ class LivekitTransportClient:
     ):
         logging.info(f"track unsubscribed: {track} from participant {participant}")
         if track.kind == rtc.TrackKind.KIND_AUDIO:
-            self._in_participant_audio_tracks.pop(participant.sid)
+            if participant.sid in self._in_participant_audio_tracks:
+                self._in_participant_audio_tracks.pop(participant.sid)
             await self._callbacks.on_audio_track_unsubscribed(participant)
         elif track.kind == rtc.TrackKind.KIND_VIDEO:
-            self._in_participant_video_tracks.pop(participant.sid)
+            if participant.sid in self._in_participant_video_tracks:
+                self._in_participant_video_tracks.pop(participant.sid)
             await self._callbacks.on_video_track_unsubscribed(participant)
 
     async def _async_on_data_received(self, data: rtc.DataPacket):
@@ -457,7 +461,23 @@ class LivekitTransportClient:
         # just capture one participant audio
         audio_track = self._in_participant_audio_tracks.get(participant_id)
         if not audio_track:
+            logging.warning(f"participant_id {participant_id} no audio track")
             return
+
+        if self._current_sub_audio_participant_id \
+                and self._capture_participant_audio_stream \
+                and self._current_sub_audio_participant_id == participant_id:
+            logging.info(
+                f"participant_id {participant_id} has captured aduio stream: {self._capture_participant_audio_stream}")
+            return
+
+        # switch audio stream
+        if self._current_sub_audio_participant_id \
+                and self._capture_participant_audio_stream \
+                and self._current_sub_audio_participant_id != participant_id:
+            self._current_sub_audio_participant_id = participant_id
+            asyncio.create_task(self._capture_participant_audio_stream.aclose())
+
         self._capture_participant_audio_stream = rtc.AudioStream(
             audio_track,
             sample_rate=sample_rate if sample_rate else self._params.audio_in_sample_rate,
@@ -638,11 +658,28 @@ class LivekitTransportClient:
         # just capture one participant video
         video_track = self._in_participant_video_tracks.get(participant_id)
         if not video_track:
+            logging.warning(f"participant_id {participant_id} no video track")
             return
+
+        if self._current_sub_video_participant_id \
+                and self._capture_participant_video_stream \
+                and self._current_sub_video_participant_id == participant_id:
+            logging.info(
+                f"participant_id {participant_id} has captured video stream: {self._capture_participant_video_stream}")
+            return
+
+        # switch video stream
+        if self._current_sub_video_participant_id \
+                and self._capture_participant_video_stream \
+                and self._current_sub_video_participant_id != participant_id:
+            self._current_sub_video_participant_id = participant_id
+            asyncio.create_task(self._capture_participant_video_stream.aclose())
+
         self._capture_participant_video_stream = rtc.VideoStream(
             video_track,
             format=self._get_livekit_video_buffer_type(),
         )
+
         self._on_participant_video_frame_task = asyncio.create_task(
             self._async_on_participant_video_frame(
                 participant_id, callback,

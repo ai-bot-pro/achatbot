@@ -2,9 +2,6 @@
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.pipeline.task import PipelineTask
-from apipeline.frames.data_frames import TextFrame
-from apipeline.frames.sys_frames import Frame
-from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
 
 from src.processors.user_image_request_processor import UserImageTextRequestProcessor
 from src.processors.vision.ocr_processor import OCRProcessor
