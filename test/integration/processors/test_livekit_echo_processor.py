@@ -2,9 +2,8 @@ import asyncio
 import os
 import logging
 
-from typing import Union
 import unittest
-from livekit import rtc, protocol
+from livekit import rtc
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.pipeline.task import PipelineTask, PipelineParams
@@ -150,7 +149,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
     async def on_disconnected(
             self,
             transport: LivekitTransport,
-            reason: Union[protocol.models.DisconnectReason, str]):
+            reason: str):
         logging.info("disconnected reason %s, Exiting." % reason)
         await self.task.queue_frame(EndFrame())
 

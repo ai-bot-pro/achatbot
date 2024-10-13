@@ -86,6 +86,14 @@ livekit = ["livekit~=0.17.5"]
 # http api sdk
 livekit-api = ["livekit-api~=0.7.1"]
 
+# transports
+livekit_transport = ["achatbot[livekit,livekit-api]"]
+daily_transport = ["daily-python~=0.11.0"]
+
+# audio_stream module tag -> pkgs
+pyaudio_stream = ["PyAudio~=0.2.14"]
+daily_room_audio_stream = ["achatbot[daily]"]
+
 
 # default fastapi_daily_bot_server
 # achatbot[fastapi_bot_server,daily_rtvi_bot,daily_langchain_rag_bot]
@@ -472,11 +480,6 @@ grpc_tools = ["grpcio-tools>=1.65.1"]
 conf = ["omegaconf~=2.3.0"]
 grpc = ["grpcio>=1.65.1"]
 redis = ["redis~=5.0.0"]
-
-
-# audio_stream module tag -> pkgs
-pyaudio_stream = ["PyAudio~=0.2.14"]
-daily_room_audio_stream = ["daily-python~=0.11.0"]
 
 # waker module tag -> pkgs
 porcupine_wakeword = ["pvporcupine~=3.0.2"]

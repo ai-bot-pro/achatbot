@@ -1,16 +1,15 @@
 import asyncio
 import logging
 import pickle
-from typing import AsyncGenerator, Awaitable, Callable, Dict, List, Union
+from typing import AsyncGenerator, Awaitable, Callable, Dict, List
 
 import numpy as np
-from scipy import signal
 from PIL import Image
 from pydantic import BaseModel
 from apipeline.frames.data_frames import AudioRawFrame, ImageRawFrame
 
-from src.common.types import CHANNELS, RATE, SAMPLE_WIDTH, LivekitParams
-from src.common.utils.audio_utils import convertSampleRateTo16khz, resample_audio
+from src.common.types import SAMPLE_WIDTH, LivekitParams
+from src.common.utils.audio_utils import resample_audio
 from src.types.frames.data_frames import LivekitTransportMessageFrame, TransportMessageFrame, UserAudioRawFrame, UserImageRawFrame
 
 try:
@@ -27,7 +26,8 @@ class LivekitCallbacks(BaseModel):
     on_connected: Callable[[rtc.Room], Awaitable[None]]
     on_error: Callable[[str], Awaitable[None]]
     on_connection_state_changed: Callable[[rtc.ConnectionState], Awaitable[None]]
-    on_disconnected: Callable[[Union[protocol.models.DisconnectReason, str]], Awaitable[None]]
+    # on_disconnected: Callable[[Union[protocol.models.DisconnectReason, str]], Awaitable[None]]
+    on_disconnected: Callable[[str], Awaitable[None]]  # use str replace Union for python3.10
     on_participant_connected: Callable[[rtc.RemoteParticipant], Awaitable[None]]
     on_participant_disconnected: Callable[[rtc.RemoteParticipant], Awaitable[None]]
     on_audio_track_subscribed: Callable[[rtc.RemoteParticipant], Awaitable[None]]
@@ -363,7 +363,7 @@ class LivekitTransportClient:
         asyncio.create_task(self._async_on_connection_state_changed(state))
 
     def _on_disconnected_wrapper(self, reason: protocol.models.DisconnectReason):
-        asyncio.create_task(self._async_on_disconnected(reason))
+        asyncio.create_task(self._async_on_disconnected(str(reason)))
 
     # Async methods for event handling
     async def _async_on_participant_connected(self, participant: rtc.RemoteParticipant):
@@ -438,7 +438,7 @@ class LivekitTransportClient:
     async def _async_on_connection_state_changed(self, state: rtc.ConnectionState):
         await self._callbacks.on_connection_state_changed(state)
 
-    async def _async_on_disconnected(self, reason: Union[protocol.models.DisconnectReason, str]):
+    async def _async_on_disconnected(self, reason: str):
         self._joined = False
         logging.info(f"Disconnected from {self._room_name}. Reason: {reason}")
         await self._callbacks.on_disconnected(reason)

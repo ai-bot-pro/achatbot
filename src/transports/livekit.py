@@ -1,9 +1,9 @@
 import asyncio
 import os
-from typing import List, Optional, Union
+from typing import List, Optional
 import logging
 
-from livekit import rtc, protocol
+from livekit import rtc
 from apipeline.frames.control_frames import EndFrame
 from apipeline.processors.frame_processor import FrameDirection
 from apipeline.frames.data_frames import AudioRawFrame
@@ -113,7 +113,7 @@ class LivekitTransport(BaseTransport):
     async def _on_connection_state_changed(self, state: rtc.ConnectionState):
         await self._call_event_handler("on_connection_state_changed", state)
 
-    async def _on_disconnected(self, reason: Union[protocol.models.DisconnectReason, str]):
+    async def _on_disconnected(self, reason: str):
         await self._call_event_handler("on_disconnected", reason)
         return
         # Attempt to reconnect for test participant already exists

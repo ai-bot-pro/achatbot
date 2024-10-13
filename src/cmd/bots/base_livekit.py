@@ -1,7 +1,6 @@
 import logging
-from typing import Union
 
-from livekit import rtc, protocol
+from livekit import rtc
 from apipeline.frames.control_frames import EndFrame
 
 from src.cmd.bots.base import AIRoomBot
@@ -83,7 +82,7 @@ class LivekitRoomBot(AIRoomBot):
     async def on_disconnected(
             self,
             transport: LivekitTransport,
-            reason: Union[protocol.models.DisconnectReason, str]):
+            reason: str):
         logging.info("on_disconnected----> reason %s, Exiting." % reason)
         await self.task.queue_frame(EndFrame())
 
