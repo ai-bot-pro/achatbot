@@ -20,10 +20,10 @@ class DailyDetectVisionBot(DailyRoomBot):
 
     async def arun(self):
         daily_params = DailyParams(
-            audio_in_enabled=True,
+            camera_in_enabled=True,
             audio_out_enabled=True,
         )
-        self.detect_processor: DetectProcessor = self.get_vision_detect_processor()
+        detect_processor: DetectProcessor = self.get_vision_detect_processor()
         self.tts_processor: TTSProcessor = self.get_tts_processor()
         stream_info = self.tts_processor.get_stream_info()
 
@@ -46,7 +46,7 @@ class DailyDetectVisionBot(DailyRoomBot):
 
         pipeline = Pipeline([
             transport.input_processor(),
-            self.detect_processor,
+            detect_processor,
             self.tts_processor,
             # FrameLogger(include_frame_types=[UserImageRawFrame]),
             transport.output_processor(),

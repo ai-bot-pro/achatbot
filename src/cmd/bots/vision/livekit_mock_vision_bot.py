@@ -63,8 +63,8 @@ class LivekitMockVisionBot(LivekitRoomBot):
                 transport: LivekitTransport,
                 participant: rtc.RemoteParticipant,
         ):
-            # if want subscribed the first participant
-            # transport.capture_participant_video(participant.sid, framerate=0)
+            # subscribed the first participant
+            transport.capture_participant_video(participant.sid, framerate=0)
             image_requester.set_participant_id(participant.sid)
             participant_name = participant.name if participant.name else participant.identity
             await transport.send_message(
@@ -78,9 +78,6 @@ class LivekitMockVisionBot(LivekitRoomBot):
                 transport: LivekitTransport,
                 participant: rtc.RemoteParticipant,
         ):
-            #!NOTE: do capture_participant_video
-            # after livekit subscribed a participant video
-            # if want switch the latest subscribed participant
             transport.capture_participant_video(participant.sid, framerate=0)
 
         pipeline = Pipeline([

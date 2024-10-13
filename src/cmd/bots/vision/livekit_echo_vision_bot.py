@@ -1,3 +1,4 @@
+import logging
 
 from livekit import rtc
 from apipeline.pipeline.pipeline import Pipeline
@@ -30,6 +31,13 @@ class LivekitEchoVisionBot(LivekitRoomBot):
 
         @transport.event_handler("on_first_participant_joined")
         async def on_first_participant_joined(
+                transport: LivekitTransport,
+                participant: rtc.RemoteParticipant,
+        ):
+            transport.capture_participant_video(participant.sid)
+
+        @transport.event_handler("on_video_track_subscribed")
+        async def on_video_track_subscribed(
                 transport: LivekitTransport,
                 participant: rtc.RemoteParticipant,
         ):
