@@ -20,7 +20,6 @@ class DailyAnnotateVisionBot(DailyRoomBot):
 
     async def arun(self):
         daily_params = DailyParams(
-            audio_in_enabled=True,
             audio_out_enabled=True,
             camera_out_enabled=True,
             camera_out_is_live=True,
