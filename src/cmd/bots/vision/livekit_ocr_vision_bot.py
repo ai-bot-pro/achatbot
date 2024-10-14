@@ -38,7 +38,7 @@ class LivekitOCRVisionBot(LivekitRoomBot):
             desc_img_prompt="",
         )
 
-        stream_info = self.tts_processor.get_stream_info()
+        stream_info = tts_processor.get_stream_info()
         livekit_params.audio_out_sample_rate = stream_info["sample_rate"]
         livekit_params.audio_out_channels = stream_info["channels"]
 

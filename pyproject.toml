@@ -75,7 +75,7 @@ Changelog = "https://github.com/ai-bot-pro/chat-bot/blob/main/CHANGELOG.md"
 tensorrt = ["tensorrt~=10.4.0"]
 einops = ["einops~=0.8.0"]
 # with --no-build-isolation
-flash-attn = ["flash-attn~=2.5.6"]
+flash-attn = ["flash-attn==2.5.6"]
 tiktoken = ["tiktoken~=0.7.0"]
 verovio = ["verovio~=4.3.1"]
 accelerate = ["accelerate~=0.28.0"]
