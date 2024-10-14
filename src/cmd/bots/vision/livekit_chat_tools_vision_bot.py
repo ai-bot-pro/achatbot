@@ -207,8 +207,6 @@ class LivekitChatToolsVisionBot(LivekitRoomBot):
     ):
         self.participant_uid = participant.sid
         transport.capture_participant_video(participant.sid)
-        if self.livekit_params.transcription_enabled:
-            transport.capture_participant_transcription(participant.sid)
 
         # joined use tts say "hello" to introduce with llm generate
         if self._bot_config.tts \
