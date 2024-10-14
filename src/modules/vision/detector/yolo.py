@@ -13,6 +13,7 @@ except ModuleNotFoundError as e:
         f"In order to use yolo model, you need to `pip install achatbot[vision_yolo_detector]`")
     raise Exception(f"Missing module: {e}")
 
+from src.common.device_cuda import CUDAInfo
 from src.types.vision.detector.yolo import VisionDetectorArgs
 from src.common.factory import EngineClass
 from src.common.interface import IVisionDetector
@@ -30,9 +31,16 @@ class VisionYoloDetector(EngineClass, IVisionDetector):
     def __init__(self, **args) -> None:
         self.args = VisionDetectorArgs(**args)
         self._detected_filter: Callable[[sv.Detections], sv.Detections] = None
+        device = "cpu"
+        if self.args.device:
+            device = self.args.device
+        else:
+            info = CUDAInfo()
+            if info.is_cuda:
+                device = "cuda"
         self._model = YOLO(self.args.model,
                            task=self.args.task,
-                           verbose=self.args.verbose)
+                           verbose=self.args.verbose).to(device)
         if hasattr(self._model, "set_classes"):
             # for yolo-world
             if len(self.args.custom_classes) > 0:
@@ -40,9 +48,9 @@ class VisionYoloDetector(EngineClass, IVisionDetector):
         self._class_names = list(self._model.names.values())
 
         model_million_params = sum(p.numel() for p in self._model.parameters()) / 1e6
-        logging.debug(f"{self.TAG} have {model_million_params}M parameters")
+        logging.info(f"{self.TAG} have {model_million_params}M parameters on {self._model.device}")
+        logging.info(f"class_names:{self._class_names}")
         logging.debug(self._model)
-        logging.debug(f"class_names:{self._class_names}")
 
     @property
     def class_names(self):

@@ -21,6 +21,7 @@ class CustomConfidence(BaseModel):
 
 class VisionDetectorArgs(BaseModel):
     model: str = "yolov8n"
+    device: Optional[str] = None
     task: Optional[str] = None
     verbose: bool = False
     stream: bool = False
