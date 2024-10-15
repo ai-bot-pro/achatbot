@@ -14,7 +14,7 @@ try:
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        "In order to use ❤️ Google Generativ AI ❤️, you need to `pip install achatbot[google_llm_processor]`. Also, set the environment variable GOOGLE_API_KEY`."
+        "In order to use ❤️ Google Generative AI ❤️, you need to `pip install achatbot[google_llm_processor]`. Also, set the environment variable GOOGLE_API_KEY`."
     )
     raise Exception(f"Missing module: {e}")
 
