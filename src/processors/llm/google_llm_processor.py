@@ -1,7 +1,7 @@
 import logging
 import asyncio
 import os
-from typing import List
+from typing import Iterable, List, AsyncGenerator, Literal
 
 
 from apipeline.frames.data_frames import TextFrame, Frame
@@ -11,6 +11,7 @@ from apipeline.pipeline.pipeline import FrameDirection
 try:
     import google.ai.generativelanguage as glm
     import google.generativeai as gai
+    from google.generativeai.types import content_types, generation_types
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
@@ -35,15 +36,43 @@ class GoogleAILLMProcessor(LLMProcessor):
     TODO: tools
     """
 
-    def __init__(self, *, api_key: str, model: str = "gemini-1.5-flash-latest", **kwargs):
+    def __init__(self, *,
+                 api_key: str = "",
+                 model: str = "gemini-1.5-flash-latest",
+                 tools: content_types.FunctionLibraryType | None = None,
+                 tools_mode: Literal["none", "auto", "any"] = "auto",
+                 mode: Literal["auto", "manual"] = "manual",
+                 **kwargs):
+        r"""
+        > !NOTE:
+        mode:
+        - auto: autiomatic function calling, use chat,
+                have chat.history, don't need context,
+        - manual: manual function calling, use generate,
+                no history, need context,
+        """
         super().__init__(**kwargs)
         api_key = api_key or os.getenv("GOOGLE_API_KEY")
-        gai.configure(api_key=api_key)
-        self.set_model(model)
-        self._client = gai.GenerativeModel(model)
+        gai.configure(api_key=api_key, transport="grpc_asyncio")
+        self._client = gai.GenerativeModel(model, tools=tools)
+        self._model = model
+        self._tools_mode = tools_mode
+        self._tools = tools
+        self._chat = None
+        self._mode = mode
+        if mode == "auto":
+            self._chat = self._client.start_chat(
+                enable_automatic_function_calling=tools_mode != "none")
 
     def can_generate_metrics(self) -> bool:
         return True
+
+    def set_model(self, model: str):
+        self._model = model
+        self._client._model_name = model
+
+    def set_tools(self, tools: content_types.FunctionLibraryType | None):
+        self._tools = tools
 
     def _get_messages_from_openai_context(self, context: OpenAILLMContext) -> List[glm.Content]:
         openai_messages = context.get_messages()
@@ -70,32 +99,74 @@ class GoogleAILLMProcessor(LLMProcessor):
 
         return google_messages
 
-    async def _async_generator_wrapper(self, sync_generator):
-        for item in sync_generator:
-            yield item
-            await asyncio.sleep(0)
+    def tool_config_from_mode(self, mode: str, fns: Iterable[str] = ()):
+        """
+        Create a tool config with the specified function calling mode.
+        mode: none, auto, any
+        fns: (function tools)
+        """
+        if mode not in ["none", "auto", "any"]:
+            logging.error(f"Invalid mode: {mode}. Defaulting to 'none'.")
+            mode = "none"
+
+        return content_types.to_tool_config(
+            {"function_calling_config": {"mode": mode, "allowed_function_names": fns}}
+        )
+
+    async def record_llm_usage_tokens(self, chunk_dict: dict):
+        tokens = {
+            "processor": self.name,
+            "model": self._model,
+        }
+        if chunk_dict["usage_metadata"]:
+            tokens["prompt_tokens"] = chunk_dict["usage_metadata"]["prompt_token_count"]
+            tokens["completion_tokens"] = chunk_dict["usage_metadata"]["candidates_token_count"]
+            tokens["total_tokens"] = chunk_dict["usage_metadata"]["total_token_count"]
+            await self.start_llm_usage_metrics(tokens)
+
+    async def infer(
+            self,
+            messages: content_types.ContentType,
+            stream: bool = False,
+    ) -> generation_types.AsyncGenerateContentResponse:
+        if self._chat:
+            # send_message with stream now just support text, no function tools
+            stream = stream if self._tools_mode == "none" else False
+            response = await self._chat.send_message_async(
+                messages, stream=stream,
+                tools=self._tools,
+                tool_config=self.tool_config_from_mode(self._tools_mode),
+            )
+        else:
+            response = await self._client.generate_content_async(
+                messages, stream=stream,
+                tools=self._tools,
+                tool_config=self.tool_config_from_mode(self._tools_mode),
+            )
+        return response
 
     async def _process_context(self, context: OpenAILLMContext):
         try:
             logging.debug(f"Generating chat: {context.get_messages_json()}")
             messages = self._get_messages_from_openai_context(context)
-
             await self.start_ttfb_metrics()
-            response = self._client.generate_content(messages, stream=True)
-            async for chunk in self._async_generator_wrapper(response):
-                # logging.info(f"chunk:{chunk.model_dump_json()}")
+            responese = await self.infer(messages, stream=True)
+            async for chunk in responese:
+                logging.info(f"chunk:{chunk}")
+                await self.stop_ttfb_metrics()
+                await self.record_llm_usage_tokens(chunk_dict=chunk.to_dict())
                 try:
+                    parts = chunk.parts
                     text = chunk.text
                     if len(text) == 0:
                         continue
-                    await self.stop_ttfb_metrics()
                     await self.push_frame(TextFrame(text))
                 except Exception as e:
                     # Google LLMs seem to flag safety issues a lot!
                     if chunk.candidates[0].finish_reason == 3:
-                        logging.debug(
-                            f"LLM refused to generate content for safety reasons - {messages}."
-                        )
+                        logging.warning(
+                            f"LLM refused to generate content"
+                            f" for safety reasons - {messages}.")
                     else:
                         logging.exception(f"{self} error: {e}")
 
