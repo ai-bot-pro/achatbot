@@ -23,13 +23,9 @@ from apipeline.frames.data_frames import TextFrame, Frame
 from apipeline.pipeline.pipeline import FrameDirection
 
 from src.processors.aggregators.openai_llm_context import OpenAILLMContext, OpenAILLMContextFrame
-from src.processors.llm.base import LLMProcessor
+from src.processors.llm.base import LLMProcessor, UnhandledFunctionException
 from src.types.frames.control_frames import LLMFullResponseEndFrame, LLMFullResponseStartFrame, LLMModelUpdateFrame
 from src.types.frames.data_frames import LLMMessagesFrame, VisionImageRawFrame
-
-
-class OpenAIUnhandledFunctionException(Exception):
-    pass
 
 
 class BaseOpenAILLMProcessor(LLMProcessor):
@@ -188,7 +184,7 @@ class BaseOpenAILLMProcessor(LLMProcessor):
             if self.has_function(function_name):
                 await self._handle_function_call(context, tool_call_id, function_name, arguments)
             else:
-                raise OpenAIUnhandledFunctionException(
+                raise UnhandledFunctionException(
                     f"The LLM tried to call a function named '{function_name}', but there isn't a callback registered for that function.")
 
     async def _handle_function_call(

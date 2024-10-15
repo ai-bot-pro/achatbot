@@ -85,10 +85,11 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             llm: LLMProcessor,
             context: OpenAILLMContext,
             result_callback: Callable[[Any], Awaitable[None]]):
-        location = arguments["location"]
         logging.info(
             f"function_name:{function_name}, tool_call_id:{tool_call_id},"
             f"arguments:{arguments}, llm:{llm}, context:{context}")
+
+        location = arguments["location"]
         # just a mock response
         # add result to assistant context
         self.get_weather_call_cn += 1

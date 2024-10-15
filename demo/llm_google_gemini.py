@@ -163,6 +163,7 @@ def run_manual_function_calling(stream: bool = True):
          "parts": [function_response]},
         # fmt: on
     ]
+    print("messages-->", messages)
     # Generate the next response
     response = model.generate_content(messages, stream=stream)
     print(f"run_manual_function_calling Generate the next response:{response}")
@@ -334,12 +335,19 @@ def run_auto_function_calling_with_config():
     tool_config = tool_config_from_mode("any", available_fns)
     response = chat.send_message("Make this place PURPLE!", tool_config=tool_config)
     print(response.parts[0])
+    for content in chat.history:
+        print(content.role, "->", [type(part).to_dict(part) for part in content.parts])
+        print("-" * 80)
 
     print("-------any function call with chat complete-----------")
     available_fns = ["enable_lights"]
     tool_config = tool_config_from_mode("any", available_fns)
     auto_chat = model.start_chat(enable_automatic_function_calling=True)
-    auto_chat.send_message("It's awful dark in here...", tool_config=tool_config)
+    response = auto_chat.send_message("It's awful dark in here...", tool_config=tool_config)
+    print(response.parts[0])
+    for content in chat.history:
+        print(content.role, "->", [type(part).to_dict(part) for part in content.parts])
+        print("-" * 80)
 
 
 if __name__ == '__main__':

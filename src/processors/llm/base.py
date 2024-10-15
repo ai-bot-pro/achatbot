@@ -7,6 +7,10 @@ from src.processors.ai_processor import AIProcessor
 from src.types.frames.control_frames import UserImageRequestFrame
 
 
+class UnhandledFunctionException(Exception):
+    pass
+
+
 class LLMProcessorMetrics(FrameProcessorMetrics):
     async def start_llm_usage_metrics(self, tokens: dict):
         logging.debug(
