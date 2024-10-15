@@ -94,6 +94,8 @@ daily_transport = ["daily-python~=0.11.0"]
 pyaudio_stream = ["PyAudio~=0.2.14"]
 daily_room_audio_stream = ["achatbot[daily]"]
 
+google_ai = ["google-generativeai~=0.8.3"]
+openai = ["openai~=1.40.6"]
 
 # default fastapi_daily_bot_server
 # achatbot[fastapi_bot_server,daily_rtvi_bot,daily_langchain_rag_bot]
@@ -389,7 +391,8 @@ asr_processor = [
     "funasr~=1.1.8",
     "groq~=0.9.0",
 ]
-llm_processor = ["openai~=1.40.6"]
+openai_llm_processor = ["achatbot[openai]]"]
+google_llm_processor = ["achatbot[google_ai,openai]"]
 img_processor = ["openai~=1.40.6"]
 tts_processor = [
     "websockets~=12.0",
@@ -512,7 +515,6 @@ whisper_groq_asr = ["groq~=0.9.0"]
 sense_voice_asr = ["torch~=2.2.2", "funasr~=1.1.8"]
 
 # llm module tag -> pkgs
-openai = ["openai~=1.40.6"]
 # init  use cpu Pre-built Wheel to install, 
 # if want to use other lib(cuda), see: https://github.com/abetlen/llama-cpp-python#installation-configuration
 llama_cpp = ["llama-cpp-python~=0.2.82"]

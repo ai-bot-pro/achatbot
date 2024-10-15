@@ -16,7 +16,7 @@ try:
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        "In order to use OpenAI, you need to `pip install openai`. Also, set `OPENAI_API_KEY` environment variable.")
+        "In order to use OpenAI, you need to `pip install achatbot[openai_llm_processor]`. Also, set `OPENAI_API_KEY` environment variable.")
     raise Exception(f"Missing module: {e}")
 import httpx
 from apipeline.frames.data_frames import TextFrame, Frame
@@ -63,12 +63,6 @@ class BaseOpenAILLMProcessor(LLMProcessor):
                 )
             )
         )
-
-    async def set_model(self, model: str):
-        self._model: str = model
-
-    def can_generate_metrics(self) -> bool:
-        return True
 
     async def call_function(
             self,

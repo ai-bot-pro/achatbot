@@ -1,11 +1,9 @@
-import asyncio
 import os
+import uuid
 import logging
 from typing import Any, Awaitable, Callable
-import uuid
 
 import unittest
-
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineTask, PipelineParams
 from apipeline.pipeline.runner import PipelineRunner
@@ -14,6 +12,7 @@ from apipeline.frames.data_frames import TextFrame
 from apipeline.frames.control_frames import EndFrame
 from apipeline.frames.sys_frames import MetricsFrame
 
+from src.processors.llm.google_llm_processor import GoogleAILLMProcessor
 from src.common.utils.time import time_now_iso8601
 from src.processors.aggregators.openai_llm_context import (
     OpenAILLMContext,
@@ -21,29 +20,23 @@ from src.processors.aggregators.openai_llm_context import (
     OpenAIUserContextAggregator,
 )
 from src.processors.llm.base import LLMProcessor
-from src.processors.llm.openai_llm_processor import OpenAIGroqLLMProcessor, OpenAILLMProcessor
 from src.processors.vision.vision_processor import MockVisionProcessor, VisionProcessor
 from src.common.session import Session
 from src.common.types import SessionCtx
 from src.core.llm import LLMEnvInit
 from src.common.logger import Logger
-from src.types.frames.data_frames import LLMMessagesFrame, TranscriptionFrame
+from src.types.frames.data_frames import TranscriptionFrame
 from src.types.frames.control_frames import UserStartedSpeakingFrame, UserStoppedSpeakingFrame
 
 from dotenv import load_dotenv
-
 load_dotenv()
 
 
 """
-python -m unittest test.integration.processors.test_openai_llm_processor.TestProcessor.test_run
+python -m unittest test.integration.processors.test_google_llm_processor.TestProcessor.test_run_text
 
+python -m unittest test.integration.processors.test_google_llm_processor.TestProcessor.test_run_tools
 
-MODEL=llama-3.1-70b-versatile \
-    python -m unittest test.integration.processors.test_openai_llm_processor.TestProcessor.test_run
-
-BASE_URL=https://api.together.xyz/v1 MODEL=meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo \
-    python -m unittest test.integration.processors.test_openai_llm_processor.TestProcessor.test_run
 """
 
 
@@ -112,27 +105,13 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         llm = LLMEnvInit.initLLMEngine()
         return VisionProcessor(llm=llm, session=session)
 
-    def get_openai_llm_processor(self) -> LLMProcessor:
+    def get_google_llm_processor(self) -> LLMProcessor:
         # default use openai llm processor
-        api_key = os.environ.get("OPENAI_API_KEY")
-        base_url = os.environ.get("BASE_URL", "https://api.groq.com/openai/v1")
-        model = os.environ.get("MODEL", "llama3-groq-70b-8192-tool-use-preview")
-        if "groq" in base_url:
-            # https://console.groq.com/docs/models
-            api_key = os.environ.get("GROQ_API_KEY")
-            llm_processor = OpenAIGroqLLMProcessor(
-                model=model,
-                base_url=base_url,
-                api_key=api_key,
-            )
-            return llm_processor
-        elif "together" in base_url:
-            # https://docs.together.ai/docs/chat-models
-            api_key = os.environ.get("TOGETHER_API_KEY")
-        llm_processor = OpenAILLMProcessor(
-            model=model,
-            base_url=base_url,
+        api_key = os.environ.get("GOOGLE_API_KEY")
+        model = os.environ.get("MODEL", "gemini-1.5-flash-latest")
+        llm_processor = GoogleAILLMProcessor(
             api_key=api_key,
+            model=model,
         )
         return llm_processor
 
@@ -143,7 +122,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         llm_user_ctx_aggr = OpenAIUserContextAggregator(self.llm_context)
         llm_assistant_ctx_aggr = OpenAIAssistantContextAggregator(llm_user_ctx_aggr)
 
-        llm_processor = self.get_openai_llm_processor()
+        llm_processor = self.get_google_llm_processor()
         llm_processor.register_function("get_weather", self.get_weather)
         self.get_weather_call_cn = 0
 
@@ -161,7 +140,27 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self):
         pass
 
-    async def test_run(self):
+    async def test_run_text(self):
+        runner = PipelineRunner()
+        await self.task.queue_frames([
+            UserStartedSpeakingFrame(),
+            TranscriptionFrame(
+                "what's your name? ",
+                "",
+                time_now_iso8601(),
+                "en"),
+            UserStoppedSpeakingFrame(),
+            EndFrame(),
+        ])
+        await runner.run(self.task)
+        msgs = self.llm_context.get_messages()
+        print(msgs)
+        self.assertEqual(len(msgs), 3)
+        self.assertEqual(msgs[0]['role'], "system")
+        self.assertEqual(msgs[1]['role'], "user")
+        self.assertEqual(msgs[2]['role'], "assistant")
+
+    async def test_run_tools(self):
         runner = PipelineRunner()
         await self.task.queue_frames([
             UserStartedSpeakingFrame(),

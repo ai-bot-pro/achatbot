@@ -1,5 +1,4 @@
 import logging
-from abc import abstractmethod
 
 from apipeline.pipeline.pipeline import FrameDirection
 from apipeline.processors.frame_processor import FrameProcessorMetrics, MetricsFrame
@@ -23,13 +22,15 @@ class LLMProcessor(AIProcessor):
         self._callbacks = {}
         self._start_callbacks = {}
         self._metrics = LLMProcessorMetrics(name=self.name)
+        self._model = ""
 
-    @abstractmethod
-    async def set_model(self, model: str):
-        pass
+    def set_model(self, model: str):
+        self._model: str = model
 
-    @abstractmethod
-    async def set_llm_args(self, **args):
+    def can_generate_metrics(self) -> bool:
+        return True
+
+    def set_llm_args(self, **args):
         pass
 
     # !TODO: use callback function type @weedge

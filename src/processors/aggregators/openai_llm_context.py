@@ -11,12 +11,18 @@ import json
 import logging
 
 from PIL import Image
-from openai._types import NOT_GIVEN, NotGiven
-from openai.types.chat import (
-    ChatCompletionToolParam,
-    ChatCompletionToolChoiceOptionParam,
-    ChatCompletionMessageParam
-)
+try:
+    from openai._types import NOT_GIVEN, NotGiven
+    from openai.types.chat import (
+        ChatCompletionToolParam,
+        ChatCompletionToolChoiceOptionParam,
+        ChatCompletionMessageParam
+    )
+except ModuleNotFoundError as e:
+    logging.error(f"Exception: {e}")
+    logging.error(
+        "In order to use OpenAI types, you need to `pip install achatbot[openai]`. ")
+    raise Exception(f"Missing module: {e}")
 from apipeline.processors.frame_processor import FrameProcessor
 from apipeline.frames.sys_frames import StartInterruptionFrame
 

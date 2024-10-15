@@ -135,9 +135,9 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                     pass
                 case "args":
                     if isinstance(option.value, dict):
-                        await self.llm_processor.set_llm_args(**option.value)
+                        self.llm_processor.set_llm_args(**option.value)
                 case "model":
-                    await self.llm_processor.set_model(option.value)
+                    self.llm_processor.set_model(option.value)
                 case "messages":
                     if isinstance(option.value, list):
                         self.llm_context.set_messages(option.value)
