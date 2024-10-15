@@ -9,11 +9,13 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
 
 # Feature
 - cmd chat bots:
-  - local-terminal-chat(be/fe)
-  - remote-queue-chat(be/fe)
-  - grpc-terminal-chat(be/fe)
-  - grpc-speaker
-  - http fastapi_daily_bot_serve (with chat bots pipeline)
+  - [local-terminal-chat](https://github.com/ai-bot-pro/achatbot/tree/main/src/cmd/local-terminal-chat)(be/fe)
+  - [remote-queue-chat](https://github.com/ai-bot-pro/achatbot/tree/main/src/cmd/remote-queue-chat)(be/fe)
+  - [grpc-terminal-chat](https://github.com/ai-bot-pro/achatbot/tree/main/src/cmd/grpc/terminal-chat)(be/fe)
+  - [grpc-speaker](https://github.com/ai-bot-pro/achatbot/tree/main/src/cmd/grpc/speaker)
+  - [http fastapi_daily_bot_serve](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/http/server/fastapi_daily_bot_serve.py) (with chat bots pipeline)
+  - [**bots with config**](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/main.py)  see notebooks:
+    - [Run chat bots with colab notebook](https://github.com/ai-bot-pro/achatbot?tab=readme-ov-file#run-chat-bots-with-colab-notebook)  🏃
 - support transport connector: 
   - [x] pipe(UNIX socket), 
   - [x] grpc, 
@@ -348,7 +350,7 @@ ACHATBOT_PKG=1 TTS_TAG=tts_cosy_voice IS_RELOAD=1 python -m achatbot.cmd.grpc.sp
 
 
 ## vision (CV)
-- stream-ocr (realtime-object-dectection)
+- stream-ocr (realtime-object-detection)
 
 ## more
 - Embodied Intelligence: Robots that touch the world, perceive and move
