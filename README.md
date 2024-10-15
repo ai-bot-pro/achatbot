@@ -2,7 +2,7 @@
 [![PyPI](https://img.shields.io/pypi/v/achatbot)](https://pypi.org/project/achatbot/)
 <a href="https://app.commanddash.io/agent/github_ai-bot-pro_achatbot"><img src="https://img.shields.io/badge/AI-Code%20Agent-EB9FDA"></a>
 
-achatbot factory, create chat bots with llm, asr, tts, vad, ocr, detect object etc..
+achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect object etc..
 
 # Project Structure
 ![project-structure](https://github.com/user-attachments/assets/5bf7cebb-e590-4718-a78a-6b0c0b36ea28)
@@ -25,9 +25,9 @@ achatbot factory, create chat bots with llm, asr, tts, vad, ocr, detect object e
 - chat bot processors: 
   - aggreators(llm use, assistant message), 
   - ai_frameworks
-    - [x] langchain rag
-    - [ ] llamaindex rag
-    - [ ] autoagen multi agent
+    - [x] [langchain](https://www.langchain.com/): RAG
+    - [ ] [llamaindex](https://www.llamaindex.ai/): RAG
+    - [ ] [autoagen](https://github.com/microsoft/autogen): multi Agents
   - realtime voice inference(RTVI),
   - transport: 
     - webRTC/webSocket: 
