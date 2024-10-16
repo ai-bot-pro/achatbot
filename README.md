@@ -355,3 +355,11 @@ ACHATBOT_PKG=1 TTS_TAG=tts_cosy_voice IS_RELOAD=1 python -m achatbot.cmd.grpc.sp
 
 ## more
 - Embodied Intelligence: Robots that touch the world, perceive and move
+
+# License
+
+torchchat is released under the [BSD 3 license](LICENSE). (Additional
+code in this distribution is covered by the MIT and Apache Open Source
+licenses.) However you may have other legal obligations that govern
+your use of content, such as the terms of service for third-party
+models.
