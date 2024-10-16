@@ -83,3 +83,4 @@ class AIConfig(BaseModel):
     # - use remote RTC livekit or agora streaming
     # need to add stream config
     # stream: Optional[StreamConfig] = None
+    extends: Optional[dict] = None

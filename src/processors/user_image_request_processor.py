@@ -41,7 +41,7 @@ class UserImageRequestProcessor(UserImageBaseProcessor):
 class UserImageTextRequestProcessor(UserImageBaseProcessor):
     """
     process:
-    - text frame for push user image request frame to upstream
+    - text frame in init_user_prompts for push user image request frame to upstream
     - user image raw frame to downstream
     """
 
@@ -54,3 +54,22 @@ class UserImageTextRequestProcessor(UserImageBaseProcessor):
                     await self.push_frame(TextFrame(self._desc_img_prompt))
         elif isinstance(frame, UserImageRawFrame):
             await self.push_frame(frame)
+
+
+class UserImageOrTextRequestProcessor(UserImageBaseProcessor):
+    """
+    process:
+    - text frame in init_user_prompts for push user image request frame to upstream
+    - all frames to downstream
+    """
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection):
+        await super().process_frame(frame, direction)
+
+        if self._participant_id and isinstance(frame, TextFrame):
+            if self._init_user_prompts \
+                    and frame.text in self._init_user_prompts:
+                await self.push_frame(
+                    UserImageRequestFrame(self._participant_id),
+                    FrameDirection.UPSTREAM)
+        await self.push_frame(frame, direction)
