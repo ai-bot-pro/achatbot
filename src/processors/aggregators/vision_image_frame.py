@@ -23,9 +23,10 @@ class VisionImageFrameAggregator(FrameProcessor):
     !NOTE: no llm chat history messages, just process raw TextFrame and ImageRawFrame
     """
 
-    def __init__(self):
+    def __init__(self, pass_text: bool = False):
         super().__init__()
         self._describe_text = None
+        self._pass_text = pass_text
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
@@ -38,6 +39,8 @@ class VisionImageFrameAggregator(FrameProcessor):
                 await self.push_frame(frame, direction)
             else:
                 self._describe_text = frame.text
+                if self._pass_text:
+                    await self.push_frame(frame, direction)
         elif isinstance(frame, VisionImageRawFrame):
             await self.push_frame(frame, direction)
         elif isinstance(frame, ImageRawFrame):

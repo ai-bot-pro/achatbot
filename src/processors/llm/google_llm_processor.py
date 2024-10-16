@@ -45,6 +45,7 @@ class GoogleAILLMProcessor(LLMProcessor):
                  tools: content_types.FunctionLibraryType | None = None,
                  tools_mode: Literal["none", "auto", "any"] = "auto",
                  mode: Literal["auto", "manual"] = "manual",
+                 generation_config: generation_types.GenerationConfigType | None = None,
                  **kwargs):
         r"""
         > !NOTE:
@@ -57,15 +58,13 @@ class GoogleAILLMProcessor(LLMProcessor):
         super().__init__(**kwargs)
         api_key = api_key or os.getenv("GOOGLE_API_KEY")
         gai.configure(api_key=api_key, transport="grpc_asyncio")
-        self._client = gai.GenerativeModel(model, tools=tools)
         self._model = model
         self._tools_mode = tools_mode
         self._tools = tools
         self._chat = None
         self._mode = mode
-        if mode == "auto":
-            self._chat = self._client.start_chat(
-                enable_automatic_function_calling=tools_mode != "none")
+        self._generation_config = generation_config
+        self.set_client()
 
     def can_generate_metrics(self) -> bool:
         return True
@@ -73,6 +72,16 @@ class GoogleAILLMProcessor(LLMProcessor):
     def set_model(self, model: str):
         self._model = model
         self._client._model_name = model
+
+    def set_client(self):
+        self._client = gai.GenerativeModel(
+            model_name=self._model,
+            tools=self._tools,
+            generation_config=self._generation_config,
+        )
+        if self._mode == "auto":
+            self._chat = self._client.start_chat(
+                enable_automatic_function_calling=self._tools_mode != "none")
 
     def set_tools(self, tools: content_types.FunctionLibraryType | None):
         self._tools = tools
@@ -237,7 +246,7 @@ class GoogleAILLMProcessor(LLMProcessor):
             await self.start_ttfb_metrics()
             responese = await self.infer(messages, tools=tools, stream=True)
             async for chunk in responese:
-                # logging.info(f"chunk:{chunk}")
+                logging.debug(f"chunk:{chunk}")
                 await self.record_llm_usage_tokens(chunk_dict=chunk.to_dict())
 
                 if len(chunk.candidates) == 0:

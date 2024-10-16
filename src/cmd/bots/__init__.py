@@ -60,6 +60,9 @@ def import_bots(bot_name: str = "DummyBot"):
     if "DailyOCRVisionBot" in bot_name:
         from .vision import daily_ocr_vision_bot
         return True
+    if "DailyDescribeVisionToolsBot" in bot_name:
+        from .vision import daily_describe_vision_tools_bot
+        return True
     if "LivekitBot" in bot_name:
         from . import livekit_bot
         return True
@@ -86,6 +89,9 @@ def import_bots(bot_name: str = "DummyBot"):
         return True
     if "LivekitOCRVisionBot" in bot_name:
         from .vision import livekit_ocr_vision_bot
+        return True
+    if "LivekitDescribeVisionToolsBot" in bot_name:
+        from .vision import livekit_describe_vision_tools_bot
         return True
 
     return False
