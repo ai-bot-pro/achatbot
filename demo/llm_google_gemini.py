@@ -58,11 +58,20 @@ def run_auto_function_calling():
     """
     model = genai.GenerativeModel(
         model_name="gemini-1.5-flash-latest",
-        tools=[add, subtract, multiply, divide]
+        tools=[
+            add,
+            subtract,
+            multiply,
+            divide],
+        system_instruction="You are a helpful assistant who converses with a user and answers questions. Respond concisely to general questions. ",
     )
+    print(model._generation_config)
     chat = model.start_chat(enable_automatic_function_calling=True)
     response = chat.send_message(
-        "I have 57 cats, each owns 44 mittens, how many mittens is that in total?",
+        [
+            # "what's your name?",
+            "I have 57 cats, each owns 44 mittens, how many mittens is that in total?",
+        ],
         # stream=True, # enable_automatic_function_calling=True, unsupport stream
     )
     print(f"run_auto_function_calling response: {response}")

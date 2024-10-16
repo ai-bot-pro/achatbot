@@ -122,6 +122,9 @@ class AIRoomBot(IBot):
         return asr_processor
 
     def get_vision_llm_processor(self) -> LLMProcessor:
+        """
+        get local vision llm
+        """
         from src.processors.vision.vision_processor import VisionProcessor
         llm_config = self._bot_config.llm
         if self._bot_config.vision_llm:
@@ -132,6 +135,65 @@ class AIRoomBot(IBot):
             logging.debug(f"init engine llm processor tag: {llm_config.tag}")
             llm = LLMEnvInit.initLLMEngine(llm_config.tag, llm_config.args)
             llm_processor = VisionProcessor(llm, self.session)
+        return llm_processor
+
+    def get_remote_llm_processor(self) -> LLMProcessor:
+        """
+        get remote vision llm
+        """
+        if self._bot_config.llm and self._bot_config.llm.tag \
+                and "google" in self._bot_config.llm.tag:
+            llm_processor = self.get_google_llm_processor()
+        else:
+            llm_processor = self.get_openai_llm_processor()
+        return llm_processor
+
+    def get_openai_llm_processor(self) -> LLMProcessor:
+        from src.processors.llm.openai_llm_processor import OpenAILLMProcessor, OpenAIGroqLLMProcessor
+        # default use openai llm processor
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if "groq" in self._bot_config.llm.base_url:
+            # https://console.groq.com/docs/models
+            api_key = os.environ.get("GROQ_API_KEY")
+            llm_processor = OpenAIGroqLLMProcessor(
+                model=self._bot_config.llm.model,
+                base_url=self._bot_config.llm.base_url,
+                api_key=api_key,
+            )
+            return llm_processor
+        elif "together" in self._bot_config.llm.base_url:
+            # https://docs.together.ai/docs/chat-models
+            api_key = os.environ.get("TOGETHER_API_KEY")
+        llm_processor = OpenAILLMProcessor(
+            model=self._bot_config.llm.model,
+            base_url=self._bot_config.llm.base_url,
+            api_key=api_key,
+        )
+        return llm_processor
+
+    def get_google_llm_processor(self) -> LLMProcessor:
+        from src.processors.llm.google_llm_processor import GoogleAILLMProcessor
+        llm_config = self._bot_config.llm
+        if llm_config and llm_config.args:
+            llm_processor = GoogleAILLMProcessor(**llm_config.args)
+        else:
+            api_key = os.environ.get("GOOGLE_API_KEY")
+            model = os.environ.get("MODEL", "gemini-1.5-flash-latest")
+            llm_processor = GoogleAILLMProcessor(
+                api_key=api_key,
+                model=model,
+            )
+
+        return llm_processor
+
+    def get_llm_processor(self) -> LLMProcessor:
+        if self._bot_config.llm and self._bot_config.llm.tag \
+                and "vision" in self._bot_config.llm.tag:
+            # engine llm processor(just support vision model, other TODO):
+            # (llm_llamacpp, llm_personalai_proxy, llm_transformers etc..)
+            llm_processor = self.get_vision_llm_processor()
+        else:
+            llm_processor = self.get_remote_llm_processor()
         return llm_processor
 
     def get_vision_annotate_processor(self) -> AIProcessor:
@@ -175,39 +237,6 @@ class AIRoomBot(IBot):
             self._bot_config.vision_ocr.args)
         processor = OCRProcessor(ocr=ocr, session=self.session)
         return processor
-
-    def get_openai_llm_processor(self) -> LLMProcessor:
-        from src.processors.llm.openai_llm_processor import OpenAILLMProcessor, OpenAIGroqLLMProcessor
-        # default use openai llm processor
-        api_key = os.environ.get("OPENAI_API_KEY")
-        if "groq" in self._bot_config.llm.base_url:
-            # https://console.groq.com/docs/models
-            api_key = os.environ.get("GROQ_API_KEY")
-            llm_processor = OpenAIGroqLLMProcessor(
-                model=self._bot_config.llm.model,
-                base_url=self._bot_config.llm.base_url,
-                api_key=api_key,
-            )
-            return llm_processor
-        elif "together" in self._bot_config.llm.base_url:
-            # https://docs.together.ai/docs/chat-models
-            api_key = os.environ.get("TOGETHER_API_KEY")
-        llm_processor = OpenAILLMProcessor(
-            model=self._bot_config.llm.model,
-            base_url=self._bot_config.llm.base_url,
-            api_key=api_key,
-        )
-        return llm_processor
-
-    def get_llm_processor(self) -> LLMProcessor:
-        if self._bot_config.llm and self._bot_config.llm.tag \
-                and "vision" in self._bot_config.llm.tag:
-            # engine llm processor(just support vision model, other TODO):
-            # (llm_llamacpp, llm_personalai_proxy, llm_transformers etc..)
-            llm_processor = self.get_vision_llm_processor()
-        else:
-            llm_processor = self.get_openai_llm_processor()
-        return llm_processor
 
     def get_tts_processor(self) -> TTSProcessorBase:
         tts_processor: TTSProcessorBase | None = None
