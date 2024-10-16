@@ -93,6 +93,7 @@ daily_transport = ["daily-python~=0.11.0"]
 # audio_stream module tag -> pkgs
 pyaudio_stream = ["PyAudio~=0.2.14"]
 daily_room_audio_stream = ["achatbot[daily]"]
+livekit_room_audio_stream = ["achatbot[livekit,livekit-api]"]
 
 google_ai = ["google-generativeai~=0.8.3"]
 openai = ["openai~=1.40.6"]
