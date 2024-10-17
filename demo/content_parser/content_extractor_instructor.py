@@ -24,6 +24,13 @@ client = instructor.from_gemini(
         model_name="models/gemini-1.5-flash-latest",
     ),
     mode=instructor.Mode.GEMINI_JSON,
+    generation_config={
+        "max_output_tokens": 10240,
+        # "temperature": 1.0,
+        # "top_p": 0.1,
+        # "top_k": 40,
+        "response_mime_type": "text/plain",
+    }
 )
 
 app = typer.Typer()
@@ -101,7 +108,7 @@ def extract_content(
 
 
 def extract_chapters(content: str, language="en"):
-    res = client.chat.completions.create_partial(
+    res = client.create_partial(
         response_model=chapter.Chapters,
         messages=[
             {
@@ -131,7 +138,7 @@ def instruct_content(
 
             console.print("\nChapter extraction complete!")
         except Exception as e:
-            logging.error(f"An error occurred while processing {source}: {str(e)}")
+            logging.error(f"An error occurred while processing {source}: {str(e)}", exc_info=True)
 
 
 r"""
