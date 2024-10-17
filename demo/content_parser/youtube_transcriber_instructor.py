@@ -1,10 +1,13 @@
 import os
 from typing import List
-from youtube_transcript_api import YouTubeTranscriptApi
 import logging
-import typer
 
-logger = logging.getLogger(__name__)
+import typer
+from rich.console import Console
+from youtube_transcript_api import YouTubeTranscriptApi
+
+from .table import chapter
+
 app = typer.Typer()
 
 
@@ -19,12 +22,12 @@ class YouTubeTranscriber:
             ])
             return cleaned_transcript
         except Exception as e:
-            logger.error(f"Error extracting YouTube transcript: {str(e)}")
+            logging.error(f"Error extracting YouTube transcript: {str(e)}")
             raise
 
 
 @app.command()
-def main(
+def extract_content(
     urls: List[str],
     output_dir: str = 'videos/transcripts/',
 ) -> None:
@@ -47,7 +50,25 @@ def main(
             print("First 500 characters of the transcript:")
             print(transcript[:500] + "..." if len(transcript) > 500 else transcript)
         except Exception as e:
-            logger.error(f"An error occurred: {str(e)}")
+            logging.error(f"An error occurred: {str(e)}")
+
+
+@app.command()
+def instruct_content(youtube_urls: List[str], language: str = 'en') -> None:
+    console = Console()
+    extractor = YouTubeTranscriber()
+    for url in youtube_urls:
+        try:
+            with console.status("[bold green]Processing URL...") as status:
+                video_id = url.split("v=")[-1]
+                content = extractor.extract_transcript(video_id)
+                status.update("[bold blue]Generating Clips...")
+                chapters = chapter.extract_chapters(content, language=language)
+                chapter.console_table(chapters)
+
+            console.print("\nChapter extraction complete!")
+        except Exception as e:
+            logging.error(f"An error occurred while processing {url}: {str(e)}")
 
 
 r"""
@@ -55,10 +76,25 @@ r"""
 # A Hackers' Guide to Language Models
 # Transformer论文逐段精读
 
-python demo/content_parser/youtube_extractor.py \
+python -m demo.content_parser.youtube_transcriber_instructor extract-content \
     "https://www.youtube.com/watch?v=aR6CzM0x-g0" \
     "https://www.youtube.com/watch?v=jkrNMKz9pWU" \
     "https://www.youtube.com/watch?v=nzqlFIcCSWQ"
+
+python -m demo.content_parser.youtube_transcriber_instructor instruct-content \
+    "https://www.youtube.com/watch?v=aR6CzM0x-g0" \
+    "https://www.youtube.com/watch?v=jkrNMKz9pWU" \
+    "https://www.youtube.com/watch?v=nzqlFIcCSWQ" \
+    --language zh
+
 """
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s',
+        handlers=[
+            # logging.FileHandler("extractor.log"),
+            logging.StreamHandler()
+        ],
+    )
     app()

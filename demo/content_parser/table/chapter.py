@@ -1,5 +1,54 @@
+import os
 from typing import Generator
+
 from pydantic import BaseModel, Field
+from dotenv import load_dotenv
+import google.generativeai as genai
+import instructor
+
+from .. import types
+
+# Load environment variables from .env file
+load_dotenv(override=True)
+
+genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
+client = instructor.from_gemini(
+    client=genai.GenerativeModel(
+        model_name="models/gemini-1.5-flash-latest",
+    ),
+    mode=instructor.Mode.GEMINI_JSON,
+    generation_config={
+        # "max_output_tokens": 1024,
+        # "temperature": 1.0,
+        # "top_p": 0.1,
+        # "top_k": 40,
+        # "response_mime_type": "text/plain",
+    }
+)
+
+
+def extract_chapters(content: str, language="en"):
+    # !NOTE: the same as ell use python function  :)
+    res = client.create_partial(
+        response_model=Chapters,
+        messages=[
+            {
+                "role": "system",
+                "content": get_system_prompt(language=language),
+            },
+            {"role": "user", "content": content},
+        ],
+    )
+    return res
+
+
+class ChapterSystemPromptArgs(BaseModel):
+    language: str = 'en'
+
+
+def get_system_prompt(**kwargs) -> str:
+    args = ChapterSystemPromptArgs(**kwargs)
+    return f"Analyze the given YouTube transcript and extract chapters. For each chapter, provide a start timestamp, end timestamp, title, and summary. Output language should be in {types.TO_LLM_LANGUAGE[args.language]}"
 
 
 class Chapter(BaseModel):

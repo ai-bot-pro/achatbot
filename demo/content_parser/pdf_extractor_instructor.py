@@ -6,24 +6,10 @@ from typing import List
 
 import typer
 import pymupdf
-import instructor
 from rich.console import Console
-import google.generativeai as genai
 
-from . import types
 from .table import chapter
 
-# Load environment variables from .env file
-from dotenv import load_dotenv
-load_dotenv(override=True)
-
-genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
-client = instructor.from_gemini(
-    client=genai.GenerativeModel(
-        model_name="models/gemini-1.5-flash-latest",
-    ),
-    mode=instructor.Mode.GEMINI_JSON,
-)
 
 app = typer.Typer()
 
@@ -77,20 +63,6 @@ def extract_content(
             print(f"An error occurred: {str(e)}")
 
 
-def extract_chapters(content: str, language="en"):
-    res = client.chat.completions.create_partial(
-        response_model=chapter.Chapters,
-        messages=[
-            {
-                "role": "system",
-                "content": f"Analyze the given YouTube transcript and extract chapters. For each chapter, provide a start timestamp, end timestamp, title, and summary. Output language should be in {types.TO_LLM_LANGUAGE[language]}",
-            },
-            {"role": "user", "content": content},
-        ],
-    )
-    return res
-
-
 @app.command()
 def instruct_content(test_urls: List[str], language: str = 'en') -> None:
     console = Console()
@@ -100,7 +72,7 @@ def instruct_content(test_urls: List[str], language: str = 'en') -> None:
             with console.status("[bold green]Processing URL...") as status:
                 content = extractor.extract_content(url)
                 status.update("[bold blue]Generating Clips...")
-                chapters = extract_chapters(content, language=language)
+                chapters = chapter.extract_chapters(content, language=language)
                 chapter.console_table(chapters)
 
             console.print("\nChapter extraction complete!")
