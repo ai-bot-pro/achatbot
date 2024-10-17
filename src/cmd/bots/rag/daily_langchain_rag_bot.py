@@ -135,9 +135,11 @@ class DailyLangchainRAGBot(DailyRoomBot):
                 and len(self._bot_config.llm.messages[0]['content']) > 0:
             system_prompt = self._bot_config.llm.messages[0]['content']
         logging.info(f"use system prompt: {system_prompt}")
-        answer_prompt = ChatPromptTemplate.from_messages([(
-            "system", system_prompt + """ \
-                {context}"""), MessagesPlaceholder("chat_history"), ("human", "{input}"), ])
+        answer_prompt = ChatPromptTemplate.from_messages([
+            ("system", system_prompt + """{context}"""),
+            MessagesPlaceholder("chat_history"),
+            ("human", "{input}"),
+        ])
         question_answer_chain = create_stuff_documents_chain(llm, answer_prompt)
         rag_chain = create_retrieval_chain(retriever, question_answer_chain)
         # chain = prompt | rag
