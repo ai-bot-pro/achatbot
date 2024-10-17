@@ -9,6 +9,7 @@ from rich.table import Table
 from rich.live import Live
 
 from . import types
+from .table import chapter
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
@@ -36,7 +37,7 @@ def get_youtube_transcript(video_id: str, languages=('en', 'zh-CN')) -> str:
 
 def extract_chapters(transcript: str, language="en"):
     class Chapters(BaseModel):
-        chapters: list[types.Chapter]
+        chapters: list[chapter.Chapter]  # type: ignore
 
     return client.chat.completions.create_partial(
         response_model=Chapters,
