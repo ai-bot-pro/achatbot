@@ -117,6 +117,8 @@ python -m demo.content_parser.pdf_extractor_instructor instruct-content \
     "/Users/wuyong/Documents/论文/llm/Attention Is All You Need.pdf" \
     "/Users/wuyong/Documents/论文/llm/《深度学习入门：基于Python的理论与实现》高清中文版.pdf" \
     --language zh
+
+#TODO: use OCR model extract PDF content e.g.: OCR-GOT2.0 :)
 """
 if __name__ == "__main__":
     logging.basicConfig(

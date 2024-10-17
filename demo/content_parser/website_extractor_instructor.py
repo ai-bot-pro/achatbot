@@ -169,6 +169,7 @@ python -m demo.content_parser.website_extractor_instructor extract-content \
 
 python -m demo.content_parser.website_extractor_instructor instruct-content \
     "https://en.wikipedia.org/wiki/Large_language_model" \
+    "https://en.wikipedia.org/wiki/Gundam" \
     "https://weedge.github.io/post/paper/rag/rag-for-llms-a-survey/" \
     --language zh
 """
