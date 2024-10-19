@@ -97,7 +97,7 @@ def instruct_content(
             with console.status("[bold green]Processing URL...") as status:
                 content = extractor.extract_content(source)
                 status.update("[bold blue]Generating Clips...")
-                chapters = chapter.extract_chapters(content, language=language)
+                chapters = chapter.extract_models(content, language=language)
                 chapter.console_table(chapters)
 
             console.print("\nChapter extraction complete!")

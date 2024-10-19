@@ -63,7 +63,7 @@ def instruct_content(youtube_urls: List[str], language: str = 'en') -> None:
                 video_id = url.split("v=")[-1]
                 content = extractor.extract_transcript(video_id)
                 status.update("[bold blue]Generating Clips...")
-                chapters = chapter.extract_chapters(content, language=language)
+                chapters = chapter.extract_models(content, language=language)
                 chapter.console_table(chapters)
 
             console.print("\nChapter extraction complete!")

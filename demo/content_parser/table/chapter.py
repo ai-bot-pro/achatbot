@@ -27,14 +27,15 @@ client = instructor.from_gemini(
 )
 
 
-def extract_chapters(content: str, language="en"):
+def extract_models(content: str, **kwargs):
     # !NOTE: the same as ell use python function  :)
+    sys_prompt = get_system_prompt(**kwargs)
     res = client.create_partial(
         response_model=Chapters,
         messages=[
             {
                 "role": "system",
-                "content": get_system_prompt(language=language),
+                "content": sys_prompt,
             },
             {"role": "user", "content": content},
         ],
@@ -73,7 +74,7 @@ class Chapters(BaseModel):
     chapters: list[Chapter]
 
 
-def console_table(chapters: Generator[Chapter, None, None]):
+def console_table(chapters: Generator[Chapters, None, None]):
     from rich.table import Table
     from rich.live import Live
 
