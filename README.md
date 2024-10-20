@@ -8,7 +8,25 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
 ![project-structure](https://github.com/user-attachments/assets/5bf7cebb-e590-4718-a78a-6b0c0b36ea28)
 
 # Feature
+- demo
+  
+  - [podcast](https://github.com/ai-bot-pro/achatbot/blob/main/demo/content_parser_tts.py)
+  
+    ```shell
+    # need GOOGLE_API_KEY in environment variables
+    
+    python -m demo.content_parser_tts instruct-content-tts \
+        "https://en.wikipedia.org/wiki/Large_language_model"
+    
+    python -m demo.content_parser_tts instruct-content-tts \
+        --role-tts-voices zh-CN-YunjianNeural \
+        --role-tts-voices zh-CN-XiaoxiaoNeural \
+        --language zh \
+        "https://en.wikipedia.org/wiki/Large_language_model"
+    ```
+  
 - cmd chat bots:
+
   - [local-terminal-chat](https://github.com/ai-bot-pro/achatbot/tree/main/src/cmd/local-terminal-chat)(be/fe)
   - [remote-queue-chat](https://github.com/ai-bot-pro/achatbot/tree/main/src/cmd/remote-queue-chat)(be/fe)
   - [grpc-terminal-chat](https://github.com/ai-bot-pro/achatbot/tree/main/src/cmd/grpc/terminal-chat)(be/fe)
@@ -16,12 +34,14 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
   - [http fastapi_daily_bot_serve](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/http/server/fastapi_daily_bot_serve.py) (with chat bots pipeline)
   - [**bots with config**](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/main.py)  see notebooks:
     - [Run chat bots with colab notebook](https://github.com/ai-bot-pro/achatbot?tab=readme-ov-file#run-chat-bots-with-colab-notebook)  🏃
+
 - support transport connector: 
   - [x] pipe(UNIX socket), 
   - [x] grpc, 
   - [x] queue (redis),
   - [ ] websocket
   - [ ] TCP/IP socket
+
 - chat bot processors: 
   - aggreators(llm use, assistant message), 
   - ai_frameworks
@@ -35,12 +55,14 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
       - [x] **[livekit](https://github.com/livekit/python-sdks/)**: audio, video(image)
       - [ ] **[agora-audio](https://github.com/AgoraIO/agora-realtime-ai-api)**
   - ai processor: llm, tts, asr etc..
+
 - core module:
   - local llm: 
     - [x] llama-cpp (support text,vision with function-call model)
     - [x] transformers(manual, pipeline) (support text,vision:🦙,Qwen2-vl,Molmo with function-call model)
     - [ ] mlx_lm 
   - api llm: personal-ai(like openai api, other ai provider)
+
 - AI modules:
   - functions:
     - [x] search: search,search1,serper
@@ -60,8 +82,10 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
     - [x] Detector:
       - [x] [YOLO](https://docs.ultralytics.com/) (*You Only Look Once*)
       - [ ] [RT-DETR](https://github.com/lyuwenyu/RT-DETR) (*RealTime End-to-End Object Detection with Transformers*)
+
 - gen modules config(*.yaml, local/test/prod) from env with file: `.env`
- u also use HfArgumentParser this module's args to local cmd parse args
+   u also use HfArgumentParser this module's args to local cmd parse args
+
 - deploy to cloud ☁️ serverless: 
   - vercel (frontend ui pages)
   - Cloudflare(frontend ui pages), personal ai workers 
