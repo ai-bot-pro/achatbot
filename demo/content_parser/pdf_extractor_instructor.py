@@ -8,7 +8,7 @@ import typer
 import pymupdf
 from rich.console import Console
 
-from .table import chapter
+from .table import table
 
 
 app = typer.Typer()
@@ -72,8 +72,8 @@ def instruct_content(test_urls: List[str], language: str = 'en') -> None:
             with console.status("[bold green]Processing URL...") as status:
                 content = extractor.extract_content(url)
                 status.update("[bold blue]Generating Clips...")
-                chapters = chapter.extract_models(content, language=language)
-                chapter.console_table(chapters)
+                clips = table.extract_models(content, language=language)
+                table.console_table(clips)
 
             console.print("\nChapter extraction complete!")
         except Exception as e:

@@ -9,7 +9,6 @@ import typer
 from .youtube_transcriber_instructor import YouTubeTranscriber
 from .website_extractor_instructor import WebsiteExtractor
 from .pdf_extractor_instructor import PDFExtractor, get_pdf_file_name
-from .table import chapter
 
 app = typer.Typer()
 
@@ -64,6 +63,10 @@ class ContentExtractor:
             logging.error(f"Error extracting content from {source}: {str(e)}")
             raise
 
+    @property
+    def file_name(self):
+        return self._file_name
+
 
 @app.command()
 def extract_content(
@@ -90,6 +93,7 @@ def instruct_content(
     sources: List[str],
     language: str = 'en',
 ) -> None:
+    from .table import table
     console = Console()
     extractor = ContentExtractor()
     for source in sources:
@@ -97,8 +101,8 @@ def instruct_content(
             with console.status("[bold green]Processing URL...") as status:
                 content = extractor.extract_content(source)
                 status.update("[bold blue]Generating Clips...")
-                chapters = chapter.extract_models(content, language=language)
-                chapter.console_table(chapters)
+                clips = table.extract_models(content, language=language)
+                table.console_table(clips)
 
             console.print("\nChapter extraction complete!")
         except Exception as e:

@@ -154,6 +154,7 @@ cython_debug/
 .DS_Store
 models/*
 records/*
+audios/*
 videos/*
 images/*
 asset/*

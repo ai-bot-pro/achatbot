@@ -6,7 +6,7 @@ import typer
 from rich.console import Console
 from youtube_transcript_api import YouTubeTranscriptApi
 
-from .table import chapter
+from .table import table
 
 app = typer.Typer()
 
@@ -63,8 +63,8 @@ def instruct_content(youtube_urls: List[str], language: str = 'en') -> None:
                 video_id = url.split("v=")[-1]
                 content = extractor.extract_transcript(video_id)
                 status.update("[bold blue]Generating Clips...")
-                chapters = chapter.extract_models(content, language=language)
-                chapter.console_table(chapters)
+                clips = table.extract_models(content, language=language)
+                table.console_table(clips)
 
             console.print("\nChapter extraction complete!")
         except Exception as e:

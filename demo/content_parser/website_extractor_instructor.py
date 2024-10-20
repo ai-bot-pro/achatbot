@@ -10,7 +10,7 @@ import typer
 from bs4 import BeautifulSoup
 from rich.console import Console
 
-from . import table
+from .table import table
 
 app = typer.Typer()
 
