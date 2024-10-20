@@ -35,7 +35,7 @@ def get_youtube_transcript(video_id: str, languages=('en', 'zh-CN')) -> str:
         return ""
 
 
-def extract_chapters(transcript: str, language="en"):
+def extract_models(transcript: str, language="en"):
     class Chapters(BaseModel):
         chapters: list[chapter.Chapter]  # type: ignore
 
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     with console.status("[bold green]Processing YouTube URL...") as status:
         transcripts = get_youtube_transcript(video_id)
         status.update("[bold blue]Generating Clips...")
-        chapters = extract_chapters(transcripts, language=language)
+        chapters = extract_models(transcripts, language=language)
 
         table = Table(title="Video Chapters")
         table.add_column("Title", style="magenta")

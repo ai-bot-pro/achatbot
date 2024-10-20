@@ -8,7 +8,7 @@ import typer
 import pymupdf
 from rich.console import Console
 
-from .table import chapter
+from .table import table
 
 
 app = typer.Typer()
@@ -72,8 +72,8 @@ def instruct_content(test_urls: List[str], language: str = 'en') -> None:
             with console.status("[bold green]Processing URL...") as status:
                 content = extractor.extract_content(url)
                 status.update("[bold blue]Generating Clips...")
-                chapters = chapter.extract_chapters(content, language=language)
-                chapter.console_table(chapters)
+                clips = table.extract_models(content, language=language)
+                table.console_table(clips)
 
             console.print("\nChapter extraction complete!")
         except Exception as e:
@@ -85,9 +85,16 @@ python -m demo.content_parser.pdf_extractor_instructor extract-content \
     "/Users/wuyong/Documents/论文/llm/Attention Is All You Need.pdf" \
     "/Users/wuyong/Documents/论文/llm/《深度学习入门：基于Python的理论与实现》高清中文版.pdf"
 
+python -m demo.content_parser.pdf_extractor_instructor extract-content \
+    "/Users/wuyong/Desktop/iOS_18_All_New_Features_Sept_2024.pdf"
+
 python -m demo.content_parser.pdf_extractor_instructor instruct-content \
     "/Users/wuyong/Documents/论文/llm/Attention Is All You Need.pdf" \
     "/Users/wuyong/Documents/论文/llm/《深度学习入门：基于Python的理论与实现》高清中文版.pdf" \
+    --language zh
+
+python -m demo.content_parser.pdf_extractor_instructor instruct-content \
+    "/Users/wuyong/Desktop/iOS_18_All_New_Features_Sept_2024.pdf" \
     --language zh
 
 #TODO: use OCR model extract PDF content e.g.: OCR-GOT2.0 :)

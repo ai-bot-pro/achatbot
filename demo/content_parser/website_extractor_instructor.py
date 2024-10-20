@@ -10,8 +10,7 @@ import typer
 from bs4 import BeautifulSoup
 from rich.console import Console
 
-from .table import chapter
-
+from .table import table
 
 app = typer.Typer()
 
@@ -126,12 +125,11 @@ def instruct_content(test_urls: List[str], language: str = 'en') -> None:
             with console.status("[bold green]Processing URL...") as status:
                 content = extractor.extract_content(url)
                 status.update("[bold blue]Generating Clips...")
-                chapters = chapter.extract_chapters(content, language=language)
-                chapter.console_table(chapters)
+                table.console_table(table.extract_models(content, language=language))
 
             console.print("\nChapter extraction complete!")
         except Exception as e:
-            logging.error(f"An error occurred while processing {url}: {str(e)}")
+            logging.error(f"An error occurred while processing {url}: {str(e)}", exc_info=True)
 
 
 r"""
@@ -144,6 +142,9 @@ python -m demo.content_parser.website_extractor_instructor instruct-content \
     "https://en.wikipedia.org/wiki/Gundam" \
     "https://weedge.github.io/post/paper/rag/rag-for-llms-a-survey/" \
     --language zh
+
+TABLE_MODEL=podcast python -m demo.content_parser.website_extractor_instructor instruct-content \
+    "https://en.wikipedia.org/wiki/Large_language_model" --language zh
 """
 if __name__ == "__main__":
     logging.basicConfig(

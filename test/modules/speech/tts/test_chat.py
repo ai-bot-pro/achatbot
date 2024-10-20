@@ -17,12 +17,24 @@ python -m unittest test.modules.speech.tts.test_chat.TestChatTTS.test_synthesize
 STREAM=1 python -m unittest test.modules.speech.tts.test_chat.TestChatTTS.test_synthesize_speak
 """
 
+r"""
+<speak>
+    <p>欢迎使用a chat bot!</p>
+    <break time="1s"/>
+    <p>SSML语音合成标记语言,待测试。</p>
+    <emphasis level="strong">哇塞!</emphasis>
+</speak>
+"""
+
 
 class TestChatTTS(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tts_tag = os.getenv('LLM_TAG', "tts_chat")
-        cls.tts_text = os.getenv('TTS_TEXT', "你好，我是机器人")
+        cls.tts_text = os.getenv(
+            'TTS_TEXT',
+            "你好，我是机器人"
+        )
         cls.stream = os.getenv('STREAM', "")
         cls.compile = os.getenv('COMPILE', "")
         cls.source = os.getenv('SOURCE', "custom")

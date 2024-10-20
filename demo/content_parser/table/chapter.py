@@ -27,14 +27,44 @@ client = instructor.from_gemini(
 )
 
 
-def extract_chapters(content: str, language="en"):
-    # !NOTE: the same as ell use python function  :)
+def extract_models(content: str, **kwargs):
+    sys_prompt = get_system_prompt(**kwargs)
     res = client.create_partial(
         response_model=Chapters,
         messages=[
             {
                 "role": "system",
-                "content": get_system_prompt(language=language),
+                "content": sys_prompt,
+            },
+            {"role": "user", "content": content},
+        ],
+    )
+    return res
+
+
+def extract_models_iterable(content: str, **kwargs):
+    sys_prompt = get_system_prompt(**kwargs)
+    res = client.create_iterable(
+        response_model=Chapters,
+        messages=[
+            {
+                "role": "system",
+                "content": sys_prompt,
+            },
+            {"role": "user", "content": content},
+        ],
+    )
+    return res
+
+
+def extract_models_text(content: str, **kwargs):
+    sys_prompt = get_system_prompt(**kwargs)
+    res = client.create(
+        response_model=Chapters,
+        messages=[
+            {
+                "role": "system",
+                "content": sys_prompt,
             },
             {"role": "user", "content": content},
         ],
@@ -47,6 +77,9 @@ class ChapterSystemPromptArgs(BaseModel):
 
 
 def get_system_prompt(**kwargs) -> str:
+    r"""
+    !NOTE: the same as ell use python function  :)
+    """
     args = ChapterSystemPromptArgs(**kwargs)
     return f"Analyze the given YouTube transcript and extract chapters. For each chapter, provide a start timestamp, end timestamp, title, and summary. Output language should be in {types.TO_LLM_LANGUAGE[args.language]}"
 
@@ -73,7 +106,7 @@ class Chapters(BaseModel):
     chapters: list[Chapter]
 
 
-def console_table(chapters: Generator[Chapter, None, None]):
+def console_table(chapters: Generator[Chapters, None, None]):
     from rich.table import Table
     from rich.live import Live
 
