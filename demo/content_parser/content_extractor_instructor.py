@@ -122,10 +122,10 @@ python -m demo.content_parser.content_extractor_instructor extract-content --is-
 
 
 python -m demo.content_parser.content_extractor_instructor instruct-content \
-    "https://en.wikipedia.org/wiki/Large_language_model" \
+    --language zh \
     "https://www.youtube.com/watch?v=aR6CzM0x-g0" \
-    "/Users/wuyong/Documents/论文/llm/Attention Is All You Need.pdf" \
-    --language zh
+    "https://en.wikipedia.org/wiki/Large_language_model" \
+    "/Users/wuyong/Documents/论文/llm/Attention Is All You Need.pdf"
 """
 
 if __name__ == "__main__":

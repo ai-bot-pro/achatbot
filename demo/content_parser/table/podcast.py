@@ -116,7 +116,7 @@ class RoleSystemPromptArgs(BaseModel):
         "humor",
     ]
     word_count: int = Field(
-        default=2000,
+        default=10000,
         description="the max gen word count about podcast",
     )
     is_SSML: bool = Field(
@@ -182,8 +182,8 @@ exact_flow:
 [FactChecking: Double-check that all discussed points accurately reflect the input content]
 {speech_synthesis_markup_language_shots}
 [Refinement: Suggest improvements for clarity, accuracy of summary, and TTS optimization. Avoid slangs.]
-[Language: Output language should be in {output_language}.]
 [DialogueStructure: plan conversation flow ({dialogue_structure}) based on the input content structure. Start the conversation greeting the audience listening also saying "welcome to {args.podcast_name}  - {args.podcast_tagline}." End the conversation greeting the audience with all roles also saying a good bye message. ]
+[Language: Output language should be in {output_language}.]
 ```
 [[Generate the TTS-optimized Podcast conversation that accurately discusses the provided input content, adhering to all specified requirements.]]
 """

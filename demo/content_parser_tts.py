@@ -73,6 +73,7 @@ async def gen_podcast_tts_audios(
         pre_cn = cur_cn
         cur_cn = len(extraction.roles)
         if pre_cn == cur_cn:
+            # print(extraction.roles)
             print(f"pre_cn == cur_cn :{pre_cn} continue")
             continue
         if pre_cn > cur_cn:
@@ -174,7 +175,10 @@ python -m demo.content_parser_tts instruct-content-tts \
     --role-tts-voices zh-CN-YunjianNeural \
     --role-tts-voices zh-CN-XiaoxiaoNeural \
     --language zh \
-    "https://en.wikipedia.org/wiki/Large_language_model"
+    "https://en.wikipedia.org/wiki/Large_language_model" \
+    "https://www.youtube.com/watch?v=aR6CzM0x-g0" \
+    "/Users/wuyong/Desktop/iOS_18_All_New_Features_Sept_2024.pdf"
+
 """
 if __name__ == "__main__":
     logging.basicConfig(
