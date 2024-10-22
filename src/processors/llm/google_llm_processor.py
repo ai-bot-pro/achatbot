@@ -221,6 +221,9 @@ class GoogleAILLMProcessor(LLMProcessor):
             tools: content_types.FunctionLibraryType | None = None,
             stream: bool = False,
     ) -> generation_types.AsyncGenerateContentResponse:
+        """
+        https://ai.google.dev/api/generate-content
+        """
         tools = tools or self._tools
         if self._chat:
             # send_message with stream now just support text, no function tools
