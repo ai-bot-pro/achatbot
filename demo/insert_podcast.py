@@ -3,6 +3,7 @@ import os
 import logging
 import uuid
 
+from pydub import AudioSegment
 from pydantic import BaseModel
 import typer
 from dotenv import load_dotenv
@@ -28,6 +29,9 @@ CREATE TABLE IF NOT EXISTS podcast (
   audio_url text NOT NULL,
   audio_content text DEFAULT "",
   cover_img_url text DEFAULT "",
+  duration int DEFAULT 0,
+  tags text DEFAULT "",
+  category text DEFAULT "",
   create_time text NOT NULL,
   update_time text NOT NULL
 );
@@ -42,6 +46,24 @@ class Podcast(BaseModel):
     audio_url: str = ""
     audio_content: str = ""
     cover_img_url: str = ""
+    duration: int = 0
+
+
+@app.command('get_audio_duration')
+def get_audio_duration(file_path, format='mp3'):
+    audio = None
+    match format:
+        case "flv":
+            audio = AudioSegment.from_flv(file_path)
+        case "ogg":
+            audio = AudioSegment.from_ogg(file_path)
+        case "wav":
+            audio = AudioSegment.from_wav(file_path)
+        case _:
+            audio = AudioSegment.from_mp3(file_path)
+    duration = len(audio) // 1000  # s
+    logging.info(f"{file_path} duration: {duration}s")
+    return duration
 
 
 @app.command('get_podcast')
@@ -57,6 +79,7 @@ def get_podcast(
     cover_img_url = r2_upload("podcast", img_file)
 
     audio_url = r2_upload("podcast", audio_file)
+    duration = get_audio_duration(audio_file, format=audio_file.split(".")[-1])
 
     podcast = Podcast(
         pid=uuid.uuid4().hex,
@@ -66,6 +89,7 @@ def get_podcast(
         audio_content=audio_content,
         audio_url=audio_url,
         cover_img_url=cover_img_url,
+        duration=duration,
     )
     logging.info(f"podcast:{podcast}")
     return podcast
@@ -88,7 +112,7 @@ def insert_podcast_to_d1(
     now = datetime.now()
     formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
     db_id = os.getenv("PODCAST_D1_DB_ID")
-    sql = "insert into podcast(pid,title,author,speakers,audio_url,audio_content,cover_img_url,create_time,update_time) values(?,?,?,?,?,?,?,?,?);"
+    sql = "insert into podcast(pid,title,author,speakers,audio_url,audio_content,cover_img_url,duration,create_time,update_time) values(?,?,?,?,?,?,?,?,?,?);"
     sql_params = [
         podcast.pid,
         podcast.title,
@@ -97,8 +121,27 @@ def insert_podcast_to_d1(
         podcast.audio_url,
         podcast.audio_content,
         podcast.cover_img_url,
+        podcast.duration,
         formatted_time,
         formatted_time,
+    ]
+    res = d1_table_query(db_id, sql, sql_params)
+    return res["success"]
+
+
+@app.command('update_podcast_cover_to_d1')
+def update_podcast_cover_to_d1(
+    pid: str,
+    cover_img_url: str,
+) -> Podcast:
+    now = datetime.now()
+    formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
+    db_id = os.getenv("PODCAST_D1_DB_ID")
+    sql = "update podcast set cover_img_url=?, update_time=? where pid=?;"
+    sql_params = [
+        cover_img_url,
+        formatted_time,
+        pid,
     ]
     res = d1_table_query(db_id, sql, sql_params)
     return res["success"]
@@ -116,14 +159,16 @@ python -m demo.insert_podcast insert_podcast_to_d1 \
     "large language model" \
     "weedge" \
     "zh-CN-YunjianNeural,zh-CN-XiaoxiaoNeural"
+
+python -m demo.insert_podcast update_podcast_cover_to_d1 \
+    195b08f114a94819bbb90ea2deac3220 \
+    "https://pcsolutions2001.com/wp-content/uploads/2024/09/IOS_18_logo.png"
 """
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s',
         handlers=[
-            # logging.FileHandler("content_parser_tts.log"),
-            logging.StreamHandler()
-        ],
+            logging.StreamHandler()],
     )
     app()
