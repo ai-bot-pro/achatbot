@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 from demo.aws.upload import r2_upload
 from demo.cloudflare.rest_api import d1_table_query
-from demo.image_together_flux import save_gen_image
+from demo.together_ai import save_gen_image
 
 
 # Load environment variables from .env file
@@ -22,16 +22,25 @@ app = typer.Typer()
 r"""
 DROP TABLE IF EXISTS podcast;
 CREATE TABLE IF NOT EXISTS podcast (
+  id INTEGER PRIMARY KEY,
   pid text NOT NULL,
   title text NOT NULL,
   author text NOT NULL,
+  /*speakker: use ',' split*/
   speakers text NOT NULL,
+  /*source: video_youtube | pdf | text | img | audio */
+  source text DEFAULT "",
   audio_url text NOT NULL,
+  description text DEFAULT "",
   audio_content text DEFAULT "",
   cover_img_url text DEFAULT "",
   duration int DEFAULT 0,
   tags text DEFAULT "",
-  category text DEFAULT "",
+  /*category: 0: unknow 1:tech 2:education 3:food 4:travel 5:code 6:life 7:sport 8:music */
+  category int DEFAULT 0,
+  /*status: 0:init 1:edited 2:checking 3:passed 4:rejected 5:deleted */
+  status int DEFAULT 0,
+  is_published boolean DEFAULT false,
   create_time text NOT NULL,
   update_time text NOT NULL
 );
@@ -44,9 +53,15 @@ class Podcast(BaseModel):
     author: str = ""
     speakers: str = ""
     audio_url: str = ""
+    source: str = ""
     audio_content: str = ""
     cover_img_url: str = ""
     duration: int = 0
+    description: str = ""
+    tags: str = ""
+    status: int = 0
+    category: int = 0
+    is_published: bool = False
 
 
 @app.command('get_audio_duration')
@@ -102,6 +117,9 @@ def insert_podcast_to_d1(
     author: str,
     speakers: str,
     audio_content: str = "",
+    is_published: bool = False,
+    status: int = 0,
+    category: int = 0,
 ) -> Podcast:
     podcast = get_podcast(
         audio_file=audio_file, title=title,
@@ -112,7 +130,7 @@ def insert_podcast_to_d1(
     now = datetime.now()
     formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
     db_id = os.getenv("PODCAST_D1_DB_ID")
-    sql = "insert into podcast(pid,title,author,speakers,audio_url,audio_content,cover_img_url,duration,create_time,update_time) values(?,?,?,?,?,?,?,?,?,?);"
+    sql = "insert into podcast(pid,title,author,speakers,audio_url,audio_content,cover_img_url,duration,is_published,status,category,create_time,update_time) values(?,?,?,?,?,?,?,?,?,?,?,?,?);"
     sql_params = [
         podcast.pid,
         podcast.title,
@@ -122,6 +140,9 @@ def insert_podcast_to_d1(
         podcast.audio_content,
         podcast.cover_img_url,
         podcast.duration,
+        is_published,
+        status,
+        category,
         formatted_time,
         formatted_time,
     ]

@@ -1,8 +1,8 @@
 TO_LLM_LANGUAGE = {
     "bg": "Bulgarian",
     "ca": "Catalan",
-    "zh": "Chinese simplified",
-    "zh-TW": "Chinese traditional",
+    "zh": "Chinese simplified(简体中文)",
+    "zh-TW": "Chinese traditional(繁体中文)",
     "zn": "Chinese and English",
     "cs": "Czech",
     "da": "Danish",
@@ -44,4 +44,3 @@ TO_LLM_LANGUAGE = {
     "uk": "Ukrainian",
     "vi": "Vietnamese",
 }
-

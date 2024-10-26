@@ -155,7 +155,7 @@ def instruct_content_tts(
         try:
             content = extractor.extract_content(source)
             now = datetime.now()
-            formatted_time = now.strftime("%Y-%m-%d_%H:%M:%S")
+            formatted_time = now.strftime("%Y-%m-%d_%H-%M-%S")
             output_file = os.path.join(save_dir, f"{extractor.file_name}_{formatted_time}.mp3")
             tmp_dir = os.path.join(save_dir, extractor.file_name)
             # podcast_cn = instruct_role_tts(content, tmp_dir, role_tts_voices, language)

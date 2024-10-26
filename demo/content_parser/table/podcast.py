@@ -29,7 +29,6 @@ client = instructor.from_gemini(
 
 def extract_models(content: str, **kwargs):
     sys_prompt = get_system_prompt(**kwargs)
-    # print(sys_prompt)
     res = client.create_partial(
         response_model=Podcast,
         messages=[
@@ -162,7 +161,7 @@ PrimaryFocus:  {conversation_style} Dialogue Discussing Provided Content for TTS
 [Only display the conversation in your output, don't use markdown format , Example:
 Role1: "Welcome to {args.podcast_name}! Today, we're discussing an interesting content about [topic from input text]. Let's dive in!"
 Role2: "I'm excited to discuss this!  What's the main point of the content we're covering today?"
-[Extract podcast roles. For each role, provide name and content.]
+[Extract podcast title, description, roles. For each role, provide name and content.]
 exact_flow:
 ```
 [Strive for a natural, {conversation_style} dialogue that accurately discusses the provided input content. Hide this section in your output.]
@@ -203,10 +202,18 @@ class Role(BaseModel):
 
 
 class Podcast(BaseModel):
+    title: str = Field(
+        ...,
+        description="The podcast name",
+    )
+    description: str = Field(
+        ...,
+        description="The podcast description",
+    )
     roles: list[Role]
 
 
-def console_table(roles: Generator[Podcast, None, None]):
+def console_table(podcasts: Generator[Podcast, None, None]):
     from rich.table import Table
     from rich.live import Live
 
@@ -215,16 +222,20 @@ def console_table(roles: Generator[Podcast, None, None]):
     table.add_column("Content", style="green")
 
     with Live(refresh_per_second=4) as live:
-        for extraction in roles:
-            if not extraction.roles:
+        for podcast in podcasts:
+            if not podcast.roles:
                 continue
 
-            new_table = Table(title="Podcast Roles")
-            new_table.add_column("Name", style="magenta")
-            new_table.add_column("Content", style="green")
+            new_table = Table(title="Podcast")
+            new_table.add_column("PodcastTitle", style="yellow")
+            new_table.add_column("PodcastDesc", style="red")
+            new_table.add_column("RoleName", style="magenta")
+            new_table.add_column("RoleSpeakContent", style="green")
 
-            for role in extraction.roles:
+            for role in podcast.roles:
                 new_table.add_row(
+                    podcast.title,
+                    podcast.description,
                     role.name,
                     role.content,
                 )
