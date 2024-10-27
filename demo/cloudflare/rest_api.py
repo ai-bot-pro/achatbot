@@ -87,8 +87,6 @@ if __name__ == "__main__":
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s',
         handlers=[
-            # logging.FileHandler("content_parser_tts.log"),
-            logging.StreamHandler()
-        ],
+            logging.StreamHandler()],
     )
     app()

@@ -50,14 +50,16 @@ def save_gen_image(
         save_dir: str = "./images",
         width: int = 640,
         height: int = 480,
+        n: int = 1,
 ):
-    base64_imgs = gen_image(prompt, width=width, height=height, steps=4, n=1)
+    base64_imgs = gen_image(prompt, width=width, height=height, steps=4, n=n)
     if not base64_imgs:
         raise Exception("no gen image")
+    i = 0
     for base64_img in base64_imgs:
         img_bytes = io.BytesIO(base64.b64decode(base64_img))
         img = Image.open(img_bytes)
-        save_path = os.path.join(save_dir, f"{file_name}.png")
+        save_path = os.path.join(save_dir, f"{i}_{file_name}.png")
         # img.show()
         img.save(save_path, "PNG")
         return save_path
@@ -65,15 +67,13 @@ def save_gen_image(
 
 r"""
 python -m demo.image_together_flux gen_image "llama, sitting in a field of flowers"
-python -m demo.image_together_flux save_image "llama, sitting in a field of flowers" 123
+python -m demo.image_together_flux save_image "llama, sitting in a field of flowers" 123 --n 2
 """
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s',
         handlers=[
-            # logging.FileHandler("content_parser_tts.log"),
-            logging.StreamHandler()
-        ],
+            logging.StreamHandler()],
     )
     app()

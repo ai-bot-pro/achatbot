@@ -92,6 +92,7 @@ def extract_content(
 def instruct_content(
     sources: List[str],
     language: str = 'en',
+    mode: str = 'text',
 ) -> None:
     from .table import table
     console = Console()
@@ -101,8 +102,8 @@ def instruct_content(
             with console.status("[bold green]Processing URL...") as status:
                 content = extractor.extract_content(source)
                 status.update("[bold blue]Generating Clips...")
-                clips = table.extract_models(content, language=language)
-                table.console_table(clips)
+                data_models = table.extract_models(content, mode=mode, language=language)
+                table.console_table(data_models)
 
             console.print("\nChapter extraction complete!")
         except Exception as e:

@@ -117,7 +117,11 @@ def extract_content(test_urls: List[str]) -> None:
 
 
 @app.command()
-def instruct_content(test_urls: List[str], language: str = 'en') -> None:
+def instruct_content(
+    test_urls: List[str],
+    language: str = 'en',
+    mode='text',
+) -> None:
     console = Console()
     extractor = WebsiteExtractor()
     for url in test_urls:
@@ -125,7 +129,8 @@ def instruct_content(test_urls: List[str], language: str = 'en') -> None:
             with console.status("[bold green]Processing URL...") as status:
                 content = extractor.extract_content(url)
                 status.update("[bold blue]Generating Clips...")
-                table.console_table(table.extract_models(content, language=language))
+                data_models = table.extract_models(content, mode=mode, language=language)
+                table.console_table(data_models)
 
             console.print("\nChapter extraction complete!")
         except Exception as e:

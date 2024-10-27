@@ -15,7 +15,7 @@
 - https://smith.langchain.com/hub
 
 # TODO
-- [ ] sink to db, auto admin dashbord
+- [ ] sink to db, auto admin dashboard
   
 
 # License
