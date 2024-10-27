@@ -1,5 +1,5 @@
 import os
-from typing import Generator
+from typing import Generator, List
 
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
@@ -27,7 +27,14 @@ client = instructor.from_gemini(
 )
 
 
-def extract_models(content: str, **kwargs):
+def extract_models(content: str, mode="text", **kwargs):
+    match mode:
+        case "partial": return extract_models_partial(content, **kwargs)
+        case "iterable": return extract_models_iterable(content, **kwargs)
+        case _: return extract_models_text(content, **kwargs)
+
+
+def extract_models_partial(content: str, **kwargs):
     sys_prompt = get_system_prompt(**kwargs)
     res = client.create_partial(
         response_model=Chapters,
@@ -106,7 +113,7 @@ class Chapters(BaseModel):
     chapters: list[Chapter]
 
 
-def console_table(chapters: Generator[Chapters, None, None]):
+def console_table(chapters: Generator[Chapters, None, None] | List[Chapter]):
     from rich.table import Table
     from rich.live import Live
 

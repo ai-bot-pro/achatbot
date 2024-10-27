@@ -3,6 +3,7 @@ import re
 import logging
 import asyncio
 from datetime import datetime
+import shutil
 from typing import Generator, List, Union
 
 from pydub import AudioSegment
@@ -68,16 +69,17 @@ async def gen_podcast_tts_audios(
         p_save_dir = os.path.join(save_dir, str(podcast_index))
         if not os.path.exists(p_save_dir):
             os.makedirs(p_save_dir)
-        print(f"----------podcast {podcast_index}----{len(extraction.roles)}---------")
+        # print(f"----------podcast {podcast_index}----{len(extraction.roles)}---------")
 
+        pre_role = ""
         pre_cn = cur_cn
         cur_cn = len(extraction.roles)
         if pre_cn == cur_cn:
-            # print(extraction.roles)
-            print(f"pre_cn == cur_cn :{pre_cn} continue")
+            # print(f"pre_cn == cur_cn :{pre_cn} continue")
             continue
         if pre_cn > cur_cn:
-            # a new podcast data model
+            # just use the first podcast, break
+            break
             podcast_index += 1
             pre_cn = 1
             role_index = 0
@@ -86,13 +88,17 @@ async def gen_podcast_tts_audios(
         for role in extraction.roles[pre_cn - 1:]:
             if not role.content:
                 continue
+            if pre_role == role.name:
+                logging.warning(f"duplicate {role.name}: {role.content}")
+                continue
             output_file = os.path.join(p_save_dir, f"{role_index}_{role.name}.mp3")
             voice = role_tts_voices[role_index % len(role_tts_voices)]
             print(f"{role_index}. {role.name}: {role.content} speaker:{voice} \n")
+            pre_role = role.name
             role_index += 1
             await edge_tts_conversion(role.content, output_file, voice)
 
-    return podcast_index + 1 if role_index > 0 or podcast_index > 0 else 0
+    return extraction
 
 
 def merge_audio_files(input_dir: str, output_file: str) -> None:
@@ -136,8 +142,9 @@ def instruct_podcast_tts(
     role_tts_voices: List[str] = ["en-US-JennyNeural", "en-US-EricNeural"],
     language: str = 'en',
 ):
+    if os.path.exists(tmp_dir):
+        shutil.rmtree(tmp_dir)
     data_models = podcast.extract_models(content, language=language)
-    # data_models = podcast.extract_models_iterable(content, language=language)
     return asyncio.run(gen_podcast_tts_audios(data_models, tmp_dir, role_tts_voices))
 
 
@@ -147,10 +154,11 @@ def instruct_content_tts(
         role_tts_voices: List[str] = ["en-US-JennyNeural", "en-US-EricNeural"],
         language: str = 'en',
         save_dir: str = "./audios/podcast",
-) -> None:
+) -> list:
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     extractor = ContentExtractor()
+    res = []
     for source in sources:
         try:
             content = extractor.extract_content(source)
@@ -158,13 +166,14 @@ def instruct_content_tts(
             formatted_time = now.strftime("%Y-%m-%d_%H-%M-%S")
             output_file = os.path.join(save_dir, f"{extractor.file_name}_{formatted_time}.mp3")
             tmp_dir = os.path.join(save_dir, extractor.file_name)
-            # podcast_cn = instruct_role_tts(content, tmp_dir, role_tts_voices, language)
-            podcast_cn = instruct_podcast_tts(content, tmp_dir, role_tts_voices, language)
-            for podcast_index in range(0, podcast_cn):
-                p_tmp_dir = os.path.join(tmp_dir, str(podcast_index))
-                merge_audio_files(input_dir=p_tmp_dir, output_file=output_file)
+            extraction = instruct_podcast_tts(content, tmp_dir, role_tts_voices, language)
+            p_tmp_dir = os.path.join(tmp_dir, "0")
+            merge_audio_files(input_dir=p_tmp_dir, output_file=output_file)
         except Exception as e:
             logging.error(f"An error occurred while processing {source}: {str(e)}", exc_info=True)
+        res.append((source, extraction, output_file))
+
+    return res
 
 
 r"""

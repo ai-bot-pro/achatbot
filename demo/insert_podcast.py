@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS podcast (
   author text NOT NULL,
   /*speakker: use ',' split*/
   speakers text NOT NULL,
-  /*source: video_youtube | pdf | text | img | audio */
+  /*source: video_youtube | pdf | text(txt,md) | img(jpeg,png) | audio(mp3) */
   source text DEFAULT "",
   audio_url text NOT NULL,
   description text DEFAULT "",
@@ -44,6 +44,9 @@ CREATE TABLE IF NOT EXISTS podcast (
   create_time text NOT NULL,
   update_time text NOT NULL
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_podcast_pid ON podcast(pid);
+CREATE INDEX IF NOT EXISTS idx_podcast_ctime ON podcast(create_time);
+CREATE INDEX IF NOT EXISTS idx_podcast_status ON podcast(is_published,category,status) where status!=5;
 """
 
 
@@ -88,16 +91,22 @@ def get_podcast(
     author: str,
     speakers: str,
     audio_content: str = "",
+    pid: str = "",
 ) -> Podcast:
-    gen_img_prompt = f"podcast cover image which content is about {title}, image no words."
-    img_file = save_gen_image(gen_img_prompt, uuid.uuid4().hex)
-    cover_img_url = r2_upload("podcast", img_file)
+    cover_img_url = ""
+    if title:
+        gen_img_prompt = f"podcast cover image which content is about {title}, image no words."
+        img_file = save_gen_image(gen_img_prompt, uuid.uuid4().hex)
+        cover_img_url = r2_upload("podcast", img_file)
 
-    audio_url = r2_upload("podcast", audio_file)
-    duration = get_audio_duration(audio_file, format=audio_file.split(".")[-1])
+    audio_url = ""
+    duration = 0
+    if audio_file:
+        audio_url = r2_upload("podcast", audio_file)
+        duration = get_audio_duration(audio_file, format=audio_file.split(".")[-1])
 
     podcast = Podcast(
-        pid=uuid.uuid4().hex,
+        pid=uuid.uuid4().hex if not pid else pid,
         title=title,
         author=author,
         speakers=speakers,
@@ -116,26 +125,32 @@ def insert_podcast_to_d1(
     title: str,
     author: str,
     speakers: str,
+    description: str = "",
     audio_content: str = "",
     is_published: bool = False,
     status: int = 0,
     category: int = 0,
+    source: str = "",
+    pid: str = "",
 ) -> Podcast:
     podcast = get_podcast(
         audio_file=audio_file, title=title,
         author=author, speakers=speakers,
         audio_content=audio_content,
+        pid=pid,
     )
 
     now = datetime.now()
     formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
     db_id = os.getenv("PODCAST_D1_DB_ID")
-    sql = "insert into podcast(pid,title,author,speakers,audio_url,audio_content,cover_img_url,duration,is_published,status,category,create_time,update_time) values(?,?,?,?,?,?,?,?,?,?,?,?,?);"
+    sql = "replace into podcast(pid,title,description,author,speakers,source,audio_url,audio_content,cover_img_url,duration,is_published,status,category,create_time,update_time) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);"
     sql_params = [
         podcast.pid,
         podcast.title,
+        description,
         podcast.author,
         podcast.speakers,
+        source,
         podcast.audio_url,
         podcast.audio_content,
         podcast.cover_img_url,

@@ -1,5 +1,6 @@
+import json
 import os
-from typing import Generator, List
+from typing import Generator, List, Set
 
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
@@ -27,7 +28,14 @@ client = instructor.from_gemini(
 )
 
 
-def extract_models(content: str, **kwargs):
+def extract_models(content: str, mode="partial", **kwargs):
+    match mode:
+        case "partial": return extract_models_partial(content, **kwargs)
+        case "iterable": return extract_models_iterable(content, **kwargs)
+        case _: return extract_models_text(content, **kwargs)
+
+
+def extract_models_partial(content: str, **kwargs):
     sys_prompt = get_system_prompt(**kwargs)
     res = client.create_partial(
         response_model=Podcast,
@@ -62,7 +70,7 @@ def extract_models_text(content: str, **kwargs):
     sys_prompt = get_system_prompt(**kwargs)
     # print(sys_prompt)
     res = client.create(
-        response_model=Podcast,
+        response_model=List[Podcast],
         messages=[
             {
                 "role": "system",
@@ -92,7 +100,7 @@ def extract_role_models_iterable(content: str, **kwargs):
 
 class RoleSystemPromptArgs(BaseModel):
     language: str = 'en'
-    podcast_name: str = "Weedge Radio FM"
+    podcast_name: str = "AI Radio FM - Technical Channel"
     podcast_tagline: str = "Your Personal Generative AI Podcast"
     conversation_style: List[str] = [
         "engaging",
@@ -100,12 +108,13 @@ class RoleSystemPromptArgs(BaseModel):
         "enthusiastic",
     ]
     roles: List[str] = [
-        "main summarizer",
-        "questioner/clarifier",
+        "question-master which question or summarizes expert's answer",
+        "technical expert which name is weedge",
     ]
     dialogue_structure: List[str] = [
         "Introduction"
-        "Main Content Summary"
+        "Main Content Detail Explain and Summarize"
+        # "Main Content Summary"
         "Conclusion"
     ]
     engagement_techniques: List[str] = [
@@ -121,6 +130,10 @@ class RoleSystemPromptArgs(BaseModel):
     is_SSML: bool = Field(
         default=False,
         description="Speech Synthesis Markup Language: https://www.w3.org/TR/speech-synthesis/",
+    )
+    round_cn: int = Field(
+        default=6,
+        description="at least maintain rounds of conversation",
     )
 
 
@@ -158,9 +171,18 @@ INSTRUCTION: Discuss the below input in a podcast conversation format, following
 Attention Focus: TTS-Optimized Podcast Conversation Discussing Specific Input content in {output_language}
 PrimaryFocus:  {conversation_style} Dialogue Discussing Provided Content for TTS
 [start] trigger - scratchpad - place insightful step-by-step logic in scratchpad block: (scratchpad). Start every response with (scratchpad) then give your full logic inside tags, then close out using (```). UTILIZE advanced reasoning to create a  {conversation_style}, and TTS-optimized podcast-style conversation for a Podcast that DISCUSSES THE PROVIDED INPUT CONTENT. Do not generate content on a random topic. Stay focused on discussing the given input. Input content can be in different format/multimodal (e.g. text, image). Strike a good balance covering content from different types. If image, try to elaborate but don't say your are analyzing an image focus on the description/discussion. Avoid statements such as "This image describes..." or "The two images are interesting".
-[Only display the conversation in your output, don't use markdown format , Example:
-Role1: "Welcome to {args.podcast_name}! Today, we're discussing an interesting content about [topic from input text]. Let's dive in!"
-Role2: "I'm excited to discuss this!  What's the main point of the content we're covering today?"
+[Your output will be converted to audio so don't include special characters, Example: "*" or "**".]
+[Only display the conversation in your output, your output don't use markdown format.]
+[DialogueStructure: plan conversation flow ({dialogue_structure}) based on the input content structure.]
+[Start the conversation greeting the audience listening and saying "Welcome to {args.podcast_name} , {args.podcast_tagline}." Example:
+Role1: "Welcome to {args.podcast_name},  {args.podcast_tagline}! Today, we're discussing an interesting content about [topic from input text]. Let's dive in!"
+Role2: "I'm excited to discuss this! [simple description from input text]"]
+[End the conversation greeting the audience with all roles and saying good bye message.  Example:
+Role1: "Thank you for your sharing."
+Role2: "It's an honor to be here, and it's a pleasure to share it with the audience and have a chance to talk about it next time."]
+Role1: "Thanks for subscribing {args.podcast_name}, See you next time!"
+Role2: "Bye, see you next time!"
+[Maintain at least {args.round_cn} rounds of conversation.]
 [Extract podcast title, description, roles. For each role, provide name and content.]
 exact_flow:
 ```
@@ -181,7 +203,6 @@ exact_flow:
 [FactChecking: Double-check that all discussed points accurately reflect the input content]
 {speech_synthesis_markup_language_shots}
 [Refinement: Suggest improvements for clarity, accuracy of summary, and TTS optimization. Avoid slangs.]
-[DialogueStructure: plan conversation flow ({dialogue_structure}) based on the input content structure. Start the conversation greeting the audience listening also saying "welcome to {args.podcast_name}  - {args.podcast_tagline}." End the conversation greeting the audience with all roles also saying a good bye message. ]
 [Language: Output language should be in {output_language}.]
 ```
 [[Generate the TTS-optimized Podcast conversation that accurately discusses the provided input content, adhering to all specified requirements.]]
@@ -213,7 +234,40 @@ class Podcast(BaseModel):
     roles: list[Role]
 
 
-def console_table(podcasts: Generator[Podcast, None, None]):
+def role_names(podcast: Podcast) -> List[str]:
+    names = set()
+    for role in podcast.roles:
+        names.add(role.name)
+    return list(names)
+
+
+def speakers(podcast: Podcast, speakers: List[str]) -> List[str]:
+    names = role_names(podcast)
+    if len(speakers) != len(names):
+        raise ValueError(
+            f"The number of speakers ({len(speakers)}) does not match the number of roles ({len(names)}).")
+
+    res = []
+    for item in zip(speakers, names):
+        res.append(f"{item[0]}({item[1]})")
+    return res
+
+
+def content(podcast: Podcast, format="text") -> str:
+    content = ""
+    match format:
+        case "json":
+            content = json.dumps(podcast.roles)
+        case "html":
+            for item in podcast.roles:
+                content += f"{item.name}: {item.content} <br>"
+        case "_":
+            for item in podcast.roles:
+                content += f"{item.name}: {item.content} \n"
+    return content
+
+
+def console_table(podcasts: Generator[Podcast, None, None] | List[Podcast]):
     from rich.table import Table
     from rich.live import Live
 
@@ -226,16 +280,12 @@ def console_table(podcasts: Generator[Podcast, None, None]):
             if not podcast.roles:
                 continue
 
-            new_table = Table(title="Podcast")
-            new_table.add_column("PodcastTitle", style="yellow")
-            new_table.add_column("PodcastDesc", style="red")
+            new_table = Table(title=podcast.title + '\n' + podcast.description)
             new_table.add_column("RoleName", style="magenta")
             new_table.add_column("RoleSpeakContent", style="green")
 
             for role in podcast.roles:
                 new_table.add_row(
-                    podcast.title,
-                    podcast.description,
                     role.name,
                     role.content,
                 )
