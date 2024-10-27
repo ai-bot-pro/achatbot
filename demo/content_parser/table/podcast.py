@@ -100,7 +100,7 @@ def extract_role_models_iterable(content: str, **kwargs):
 
 class RoleSystemPromptArgs(BaseModel):
     language: str = 'en'
-    podcast_name: str = "AI Radio FM - Technical Channel"
+    podcast_name: str = "AI Radio FM - Technology Channel"
     podcast_tagline: str = "Your Personal Generative AI Podcast"
     conversation_style: List[str] = [
         "engaging",
@@ -132,7 +132,7 @@ class RoleSystemPromptArgs(BaseModel):
         description="Speech Synthesis Markup Language: https://www.w3.org/TR/speech-synthesis/",
     )
     round_cn: int = Field(
-        default=6,
+        default=20,
         description="at least maintain rounds of conversation",
     )
 
@@ -260,10 +260,12 @@ def content(podcast: Podcast, format="text") -> str:
             content = json.dumps(podcast.roles)
         case "html":
             for item in podcast.roles:
-                content += f"{item.name}: {item.content} <br>"
-        case "_":
+                if item.content:
+                    content += f"{item.name}: {item.content} <br>"
+        case _:
             for item in podcast.roles:
-                content += f"{item.name}: {item.content} \n"
+                if item.content:
+                    content += f"{item.name}: {item.content} \n"
     return content
 
 

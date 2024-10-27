@@ -55,6 +55,7 @@ def run(
     language: str = 'en',
     save_dir: str = "./audios/podcast",
     category: int = 0,
+    is_published: bool = False,
 ):
     data_list = instruct_content_tts(
         sources,
@@ -69,7 +70,7 @@ def run(
 
         speakers = podcast.speakers(extraction, role_tts_voices)
         logging.info(f"speakers:{speakers}")
-        audio_content = podcast.content(extraction, "html")
+        audio_content = podcast.content(extraction, "text")
         logging.info(f"audio_content:{audio_content}")
         insert_podcast_to_d1(
             audio_output_file,
@@ -78,11 +79,12 @@ def run(
             ",".join(speakers),
             description=extraction.description,
             audio_content=audio_content,
-            is_published=True,
+            is_published=is_published,
             category=category,
             # source=get_source_type(source),
             source=source,
             # pid="",
+            language=language,
         )
 
 
@@ -95,8 +97,9 @@ python -m demo.gen_podcast run \
     --role-tts-voices zh-CN-YunjianNeural \
     --category 1 \
     --language zh \
-    "https://en.wikipedia.org/wiki/Large_language_model" \
+    --is-published \
     "https://www.youtube.com/watch?v=aR6CzM0x-g0" \
+    "https://en.wikipedia.org/wiki/Large_language_model" \
     "/Users/wuyong/Desktop/iOS_18_All_New_Features_Sept_2024.pdf"
 
 """

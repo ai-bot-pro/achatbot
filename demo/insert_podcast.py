@@ -3,6 +3,7 @@ import os
 import logging
 import uuid
 
+from deep_translator import GoogleTranslator
 from pydub import AudioSegment
 from pydantic import BaseModel
 import typer
@@ -92,10 +93,17 @@ def get_podcast(
     speakers: str,
     audio_content: str = "",
     pid: str = "",
+    language: str = "en",
 ) -> Podcast:
     cover_img_url = ""
     if title:
-        gen_img_prompt = f"podcast cover image which content is about {title}, image no words."
+        en_title = title
+        if language != "en":
+            language = "zh-CN" if language == "zh" else language
+            en_title = GoogleTranslator(
+                source=language, target="en",
+            ).translate(title)
+        gen_img_prompt = f"podcast cover image which content is about {en_title}"
         img_file = save_gen_image(gen_img_prompt, uuid.uuid4().hex)
         cover_img_url = r2_upload("podcast", img_file)
 
@@ -132,12 +140,13 @@ def insert_podcast_to_d1(
     category: int = 0,
     source: str = "",
     pid: str = "",
+    language: str = "en",
 ) -> Podcast:
     podcast = get_podcast(
         audio_file=audio_file, title=title,
         author=author, speakers=speakers,
         audio_content=audio_content,
-        pid=pid,
+        pid=pid, language=language,
     )
 
     now = datetime.now()
@@ -155,7 +164,7 @@ def insert_podcast_to_d1(
         podcast.audio_content,
         podcast.cover_img_url,
         podcast.duration,
-        is_published,
+        1 if is_published else 0,
         status,
         category,
         formatted_time,
