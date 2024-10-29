@@ -35,6 +35,9 @@ class TogetherImageGenProcessor(ImageGenProcessor):
         self._steps = steps
         self._client = AsyncTogether()
 
+    def set_aiohttp_session(self, session):
+        pass
+
     async def run_image_gen(self, prompt: str) -> AsyncGenerator[Frame, None]:
         logging.debug(f"Generating image from prompt: {prompt}")
 

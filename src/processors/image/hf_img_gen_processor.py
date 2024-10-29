@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import io
 import os
 import logging
@@ -19,10 +20,9 @@ class HFApiInferenceImageGenProcessor(ImageGenProcessor):
         self,
         *,
         aiohttp_session: aiohttp.ClientSession,
-        api_key: str,
         model: str = "stabilityai/stable-diffusion-3.5-large",
-        width: int = 640,
-        height: int = 480,
+        width: int = 1024,
+        height: int = 1024,
         steps: int = 28,
     ):
         super().__init__()
@@ -30,7 +30,7 @@ class HFApiInferenceImageGenProcessor(ImageGenProcessor):
         self._width = width
         self._height = height
         self._steps = steps
-        self._api_key = os.environ.get("HF_API_KEY", api_key)
+        self._api_key = os.environ.get("HF_API_KEY")
         self._aiohttp_session = aiohttp_session
 
     async def run_image_gen(self, prompt: str) -> AsyncGenerator[Frame, None]:
