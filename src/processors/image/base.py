@@ -5,7 +5,7 @@ from typing import AsyncGenerator
 from apipeline.pipeline.pipeline import FrameDirection
 
 from src.processors.ai_processor import AIProcessor
-from types.frames.data_frames import Frame, TextFrame
+from src.types.frames.data_frames import Frame, TextFrame
 
 
 class ImageGenProcessor(AIProcessor):
@@ -28,4 +28,3 @@ class ImageGenProcessor(AIProcessor):
             await self.stop_processing_metrics()
         else:
             await self.push_frame(frame, direction)
-

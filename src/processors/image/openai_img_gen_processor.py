@@ -26,13 +26,12 @@ class OpenAIImageGenProcessor(ImageGenProcessor):
         *,
         image_size: Literal["256x256", "512x512", "1024x1024", "1792x1024", "1024x1792"],
         aiohttp_session: aiohttp.ClientSession,
-        api_key: str,
         model: str = "dall-e-3",
     ):
         super().__init__()
         self._model = model
         self._image_size = image_size
-        api_key = os.environ.get("OPENAI_API_KEY", api_key)
+        api_key = os.environ.get("OPENAI_API_KEY")
         self._client = AsyncOpenAI(api_key=api_key)
         self._aiohttp_session = aiohttp_session
 
@@ -46,7 +45,7 @@ class OpenAIImageGenProcessor(ImageGenProcessor):
             size=self._image_size
         )
 
-        image_url = image.data[0].url
+        image_url = image.data[0].url if len(image.data) > 0 else None
 
         if not image_url:
             logging.error(f"{self} No image provided in response: {image}")
@@ -56,6 +55,12 @@ class OpenAIImageGenProcessor(ImageGenProcessor):
         # Load the image from the url
         async with self._aiohttp_session.get(image_url) as response:
             image_stream = io.BytesIO(await response.content.read())
-            image = Image.open(image_stream)
-            frame = URLImageRawFrame(image_url, image.tobytes(), image.size, image.format)
+            image = Image.open(image_stream).convert("RGB")
+            frame = URLImageRawFrame(
+                url=image_url,
+                image=image.tobytes(),
+                size=image.size,
+                format=image.format,
+                mode="RGB",
+            )
             yield frame

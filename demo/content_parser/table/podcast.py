@@ -98,6 +98,51 @@ def extract_role_models_iterable(content: str, **kwargs):
     return res
 
 
+class PaperRoleSystemPromptArgs(BaseModel):
+    language: str = 'en'
+    podcast_name: str = "AI Radio FM - Paper Read Channel"
+    podcast_tagline: str = "Your Personal Generative AI Podcast"
+    conversation_style: List[str] = [
+        "engaging",
+        "fast-paced",
+        "enthusiastic",
+    ]
+    roles: List[str] = [
+        "question-master which question or summarizes expert's answer",
+        "technical expert which name is weedge",
+    ]
+    dialogue_structure: List[str] = [
+        "Introduction",
+        "Main Content Detail Explain and Summarize"
+        "What problem is this paper trying to solve",
+        "What are the relevant studies",
+        "How does the paper solve this problem",
+        "What experiments were done in the paper",
+        "What points can be explored further",
+        "Summarize the main content of the paper",
+        "Want to know more about the paper",
+        "Conclusion",
+    ]
+    engagement_techniques: List[str] = [
+        "rhetorical questions",
+        "anecdotes",
+        "analogies",
+        "humor",
+    ]
+    word_count: int = Field(
+        default=10000,
+        description="the max gen word count about podcast",
+    )
+    is_SSML: bool = Field(
+        default=False,
+        description="Speech Synthesis Markup Language: https://www.w3.org/TR/speech-synthesis/",
+    )
+    round_cn: int = Field(
+        default=30,
+        description="at least maintain rounds of conversation",
+    )
+
+
 class RoleSystemPromptArgs(BaseModel):
     language: str = 'en'
     podcast_name: str = "AI Radio FM - Technology Channel"
@@ -142,6 +187,7 @@ def get_system_prompt(**kwargs) -> str:
     !NOTE: the same as ell use python function  :)
     """
     args = RoleSystemPromptArgs(**kwargs)
+    # args = PaperRoleSystemPromptArgs(**kwargs)
     roles_cn = len(args.roles)
     if roles_cn < 2 or roles_cn > 9:
         raise Exception("roles number must >=2 and <10")
