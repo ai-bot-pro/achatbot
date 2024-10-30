@@ -19,7 +19,7 @@ class HFApiInferenceImageGenProcessor(ImageGenProcessor):
     def __init__(
         self,
         *,
-        aiohttp_session: aiohttp.ClientSession,
+        aiohttp_session: aiohttp.ClientSession = None,
         model: str = "stabilityai/stable-diffusion-3.5-large",
         width: int = 1024,
         height: int = 1024,
@@ -42,6 +42,7 @@ class HFApiInferenceImageGenProcessor(ImageGenProcessor):
             API_URL, headers=headers,
             json={
                 "inputs": prompt,
+                # target_size is not work, use default params
                 # "target_size": {
                 #    "width": self._width,
                 #    "height": self._height,
@@ -55,10 +56,14 @@ class HFApiInferenceImageGenProcessor(ImageGenProcessor):
             yield ErrorFrame("Image generation failed")
             return
 
+        image_stream = io.BytesIO(image_bytes)
+        image = Image.open(image_stream).convert("RGB")
+        # if image.size != (self._width, self._height):
+        #    image = image.resize((self._width, self._height))
         frame = ImageRawFrame(
-            image=image_bytes,
-            size=(1024, 1024),
-            format="",
-            mode="",
+            image=image.tobytes(),
+            size=image.size,
+            format=image.format if image.format else "JPEG",
+            mode=image.mode,
         )
         yield frame

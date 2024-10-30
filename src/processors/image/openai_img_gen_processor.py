@@ -35,6 +35,9 @@ class OpenAIImageGenProcessor(ImageGenProcessor):
         self._client = AsyncOpenAI(api_key=api_key)
         self._aiohttp_session = aiohttp_session
 
+    def set_size(self, width: int, height: int):
+        self._image_size = f"{width}x{height}"
+
     async def run_image_gen(self, prompt: str) -> AsyncGenerator[Frame, None]:
         logging.debug(f"Generating image from prompt: {prompt}")
 
@@ -60,7 +63,7 @@ class OpenAIImageGenProcessor(ImageGenProcessor):
                 url=image_url,
                 image=image.tobytes(),
                 size=image.size,
-                format=image.format,
-                mode="RGB",
+                format=image.format if image.format else "JPEG",
+                mode=image.mode,
             )
             yield frame

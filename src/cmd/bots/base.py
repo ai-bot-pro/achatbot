@@ -271,6 +271,9 @@ class AIRoomBot(IBot):
         return tts_processor
 
     def get_image_gen_processor(self) -> ImageGenProcessor:
+        if not self._bot_config.img_gen \
+            or not self._bot_config.img_gen.args:
+            raise Exception("need img_gen args params")
         return get_image_gen_processor(
             self._bot_config.img_gen.tag,
             **self._bot_config.img_gen.args)

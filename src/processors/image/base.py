@@ -13,9 +13,15 @@ class ImageGenProcessor(AIProcessor):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._aiohttp_session = None
+        self._width = 0
+        self._height = 0
 
     def set_aiohttp_session(self, session):
         self._aiohttp_session = session
+
+    def set_size(self, width: int, height: int):
+        self._width = width
+        self._height = height
 
     # Renders the image. Returns an Image object.
     @abstractmethod

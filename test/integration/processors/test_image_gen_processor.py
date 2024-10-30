@@ -42,7 +42,8 @@ class SaveImageProcessor(FrameProcessor):
         await super().process_frame(frame, direction)
         if isinstance(frame, ImageRawFrame):
             print("save-->", frame, self.save_file)
-            img = Image.open(io.BytesIO(frame.image))
+            img = Image.frombytes(
+                mode=frame.mode, size=frame.size, data=frame.image)
             img.save(self.save_file, frame.format)
 
 
@@ -74,8 +75,8 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             kwargs["image_size"] = "1024x1024"
             kwargs["model"] = "dall-e-3"
         if self.processor == "TogetherImageGenProcessor":
-            kwargs["width"] = 512
-            kwargs["height"] = 512
+            kwargs["width"] = 1280
+            kwargs["height"] = 720
             kwargs["steps"] = 4
             kwargs["model"] = "black-forest-labs/FLUX.1-schnell-Free"
 

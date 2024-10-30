@@ -1,7 +1,9 @@
+import asyncio
 import base64
 import io
 import os
 import logging
+import time
 from typing import AsyncGenerator, Literal
 
 
@@ -27,6 +29,7 @@ class TogetherImageGenProcessor(ImageGenProcessor):
         height: int = 480,
         model: str = "black-forest-labs/FLUX.1-schnell-Free",
         steps: int = 4,
+        gen_rate_s: int = 10,  # gen image per 10 s
     ):
         super().__init__()
         self._model = model
@@ -34,6 +37,8 @@ class TogetherImageGenProcessor(ImageGenProcessor):
         self._height = height
         self._steps = steps
         self._client = AsyncTogether()
+        self._gen_rate_s = gen_rate_s
+        self._pre_time_s = 0
 
     def set_aiohttp_session(self, session):
         pass
@@ -41,6 +46,9 @@ class TogetherImageGenProcessor(ImageGenProcessor):
     async def run_image_gen(self, prompt: str) -> AsyncGenerator[Frame, None]:
         logging.debug(f"Generating image from prompt: {prompt}")
 
+        dur = int(time.time()) - self._pre_time_s
+        if dur < self._gen_rate_s:
+            await asyncio.sleep(self._gen_rate_s - dur)
         image = await self._client.images.generate(
             prompt=prompt,
             model=self._model,
@@ -50,6 +58,7 @@ class TogetherImageGenProcessor(ImageGenProcessor):
             n=1,
             response_format="b64_json",
         )
+        self._pre_time_s = int(time.time())
 
         b64_img = image.data[0].b64_json if len(image.data) > 0 else None
 
@@ -59,10 +68,12 @@ class TogetherImageGenProcessor(ImageGenProcessor):
             return
 
         image_bytes = base64.b64decode(b64_img)
+        image_stream = io.BytesIO(image_bytes)
+        image = Image.open(image_stream).convert("RGB")
         frame = ImageRawFrame(
-            image=image_bytes,
-            size=(self._width, self._height),
-            format="",
-            mode="",
+            image=image.tobytes(),
+            size=image.size,
+            format=image.format if image.format else "JPEG",
+            mode=image.mode,
         )
         yield frame
