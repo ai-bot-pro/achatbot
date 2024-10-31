@@ -101,6 +101,7 @@ async def gen_podcast_tts_audios(
     return extraction
 
 
+@app.command('merge_audio_files')
 def merge_audio_files(input_dir: str, output_file: str) -> None:
     try:
         # Function to sort filenames naturally
@@ -188,6 +189,8 @@ python -m demo.content_parser_tts instruct-content-tts \
     "https://www.youtube.com/watch?v=aR6CzM0x-g0" \
     "/Users/wuyong/Desktop/iOS_18_All_New_Features_Sept_2024.pdf"
 
+python -m demo.content_parser_tts merge_audio_files \
+    audios/podcast/2401.02669/0  audios/podcast/2401.02669.mp3
 """
 if __name__ == "__main__":
     logging.basicConfig(

@@ -5,13 +5,23 @@ from typing import AsyncGenerator
 from apipeline.pipeline.pipeline import FrameDirection
 
 from src.processors.ai_processor import AIProcessor
-from types.frames.data_frames import Frame, TextFrame
+from src.types.frames.data_frames import Frame, TextFrame
 
 
 class ImageGenProcessor(AIProcessor):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self._aiohttp_session = None
+        self._width = 0
+        self._height = 0
+
+    def set_aiohttp_session(self, session):
+        self._aiohttp_session = session
+
+    def set_size(self, width: int, height: int):
+        self._width = width
+        self._height = height
 
     # Renders the image. Returns an Image object.
     @abstractmethod
@@ -28,4 +38,3 @@ class ImageGenProcessor(AIProcessor):
             await self.stop_processing_metrics()
         else:
             await self.push_frame(frame, direction)
-

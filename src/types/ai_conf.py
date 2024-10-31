@@ -48,6 +48,11 @@ class VisionOCRConfig(BaseModel):
     args: Optional[dict] = None
 
 
+class ImageGenConfig(BaseModel):
+    tag: Optional[str] = None
+    args: Optional[dict] = None
+
+
 class ASRConfig(BaseModel):
     tag: Optional[str] = None
     args: Optional[dict] = None
@@ -78,6 +83,7 @@ class AIConfig(BaseModel):
     vision_detector: Optional[VisionDetectorConfig] = None
     vision_ocr: Optional[VisionOCRConfig] = None
     tts: Optional[TTSConfig] = None
+    img_gen: Optional[ImageGenConfig] = None
     # TODO: @weedge
     # - use local pyaudio/cv2 streaming;
     # - use remote RTC livekit or agora streaming

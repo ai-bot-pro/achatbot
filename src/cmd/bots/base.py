@@ -6,6 +6,8 @@ import uuid
 from apipeline.frames.control_frames import EndFrame
 from apipeline.pipeline.task import PipelineTask
 
+from src.processors.image.base import ImageGenProcessor
+from src.processors.image import get_image_gen_processor
 from src.modules.vision.ocr import VisionOCREnvInit
 from src.modules.vision.detector import VisionDetectorEnvInit
 from src.processors.ai_processor import AIProcessor
@@ -267,3 +269,11 @@ class AIRoomBot(IBot):
             tts_processor = TTSProcessor(tts=tts, session=self.session)
 
         return tts_processor
+
+    def get_image_gen_processor(self) -> ImageGenProcessor:
+        if not self._bot_config.img_gen \
+            or not self._bot_config.img_gen.args:
+            raise Exception("need img_gen args params")
+        return get_image_gen_processor(
+            self._bot_config.img_gen.tag,
+            **self._bot_config.img_gen.args)
