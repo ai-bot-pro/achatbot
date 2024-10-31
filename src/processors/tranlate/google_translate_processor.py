@@ -18,10 +18,17 @@ class GoogleTranslateProcessor(FrameProcessor):
         self.translator = GoogleTranslator(
             source=src, target=target
         )
+        self._translate_frame = TextFrame
+
+    def set_translate_frame(self, frame: TextFrame):
+        self._translate_frame = frame
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
-        if isinstance(frame, TextFrame):
+        if isinstance(frame, self._translate_frame):
+            if self._src == self._target:
+                await self.push_frame(frame, direction)
+                return
             try_cn = 3
             while try_cn > 0:
                 try:
@@ -33,6 +40,6 @@ class GoogleTranslateProcessor(FrameProcessor):
                     try_cn -= 1
             if self._is_keep_original:
                 translated_text = f"{frame.text}\n{translated_text}"
-            await self.push_frame(TextFrame(text=translated_text))
+            await self.push_frame(self._translate_frame(text=translated_text))
         else:
             await self.push_frame(frame, direction)

@@ -8,6 +8,7 @@ from apipeline.frames.data_frames import TextFrame, ImageRawFrame, AudioRawFrame
 from apipeline.frames.sys_frames import StopTaskFrame
 from apipeline.processors.logger import FrameLogger
 
+from src.processors.tranlate.google_translate_processor import GoogleTranslateProcessor
 from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.processors.speech.tts.tts_processor import TTSProcessor
@@ -16,6 +17,7 @@ from src.common.types import DailyParams
 from src.transports.daily import DailyTransport
 from src.types.frames.data_frames import DailyTransportMessageFrame, LLMMessagesFrame
 from src.cmd.bots import register_ai_room_bots
+from src.types.speech.language import TO_LLM_LANGUAGE
 
 
 from .utils.helpers import load_images, load_sounds
@@ -44,8 +46,8 @@ class DailyStoryTellingBot(DailyRoomBot):
                 transcription_enabled=False,
                 audio_out_enabled=True,
                 camera_out_enabled=True,
-                camera_out_width=1280,
-                camera_out_height=720
+                camera_out_width=768,
+                camera_out_height=768,
             )
 
             asr_processor = self.get_asr_processor()
@@ -94,20 +96,26 @@ class DailyStoryTellingBot(DailyRoomBot):
             # run the intro pipeline, task will exit after StopTaskFrame is processed.
             await self.runner.run(self.intro_task)
 
+            language = self._bot_config.llm.language if self._bot_config.llm.language else "en"
+            translate_processor = GoogleTranslateProcessor(src=language, target="en")
+            translate_processor.set_translate_frame(StoryImageFrame)
+
             story_pages = []
             story_processor = StoryProcessor(self._bot_config.llm.messages, story_pages)
             user_response = LLMUserResponseAggregator(self._bot_config.llm.messages)
             assistant_response = LLMAssistantResponseAggregator(self._bot_config.llm.messages)
+
             self.task = PipelineTask(
                 Pipeline([
                     transport.input_processor(),
                     asr_processor,
                     user_response,
-                    FrameLogger(include_frame_types=[TextFrame]),
                     llm_processor,
                     FrameLogger(include_frame_types=[TextFrame]),
                     story_processor,
                     FrameLogger(include_frame_types=[StoryImageFrame, StoryPageFrame, StoryPromptFrame]),
+                    translate_processor,
+                    FrameLogger(include_frame_types=[StoryImageFrame]),
                     image_gen_processor,
                     tts_processor,
                     FrameLogger(include_frame_types=[ImageRawFrame, AudioRawFrame]),
@@ -127,13 +135,12 @@ class DailyStoryTellingBot(DailyRoomBot):
         if self.daily_params.transcription_enabled:
             transport.capture_participant_transcription(participant["id"])
 
-        if not self._bot_config.llm \
-                or not self._bot_config.llm.messages:
-            self._bot_config.llm.messages = [LLM_INTRO_PROMPT]
+        language = self._bot_config.llm.language if self._bot_config.llm.language else "en"
 
-        if self._bot_config.llm.language \
-                and self._bot_config.llm.language == "zh":
-            self._bot_config.llm.messages[0]["content"] += "请用中文交流。"
+        self._bot_config.llm.messages = [LLM_INTRO_PROMPT]
+        content = LLM_INTRO_PROMPT["content"] % TO_LLM_LANGUAGE[language]
+        self._bot_config.llm.messages[0]["content"] = content
+
         await self.intro_task.queue_frames([
             images["book1"],
             LLMMessagesFrame(copy.deepcopy(self._bot_config.llm.messages)),
@@ -144,6 +151,5 @@ class DailyStoryTellingBot(DailyRoomBot):
         ])
 
         self._bot_config.llm.messages = [LLM_BASE_PROMPT]
-        if self._bot_config.llm.language \
-                and self._bot_config.llm.language == "zh":
-            self._bot_config.llm.messages[0]["content"] += " 请用中文交流。"
+        content = LLM_BASE_PROMPT["content"] % TO_LLM_LANGUAGE[language]
+        self._bot_config.llm.messages[0]["content"] = content
