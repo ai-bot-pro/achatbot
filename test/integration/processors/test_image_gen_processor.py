@@ -22,6 +22,8 @@ load_dotenv()
 
 
 """
+mkdir -p images
+
 IMAGE_GEN_PROCESSOR=HFApiInferenceImageGenProcessor \
     python -m unittest test.integration.processors.test_image_gen_processor.TestProcessor
 

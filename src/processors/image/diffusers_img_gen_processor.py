@@ -90,7 +90,7 @@ class HFStableDiffusionImageGenProcessor(ImageGenProcessor):
             yield ErrorFrame("Image generation failed")
             return
 
-        image = Image.convert("RGB")
+        image = image.convert("RGB")
         # if image.size != (self._width, self._height):
         #    image = image.resize((self._width, self._height))
         frame = ImageRawFrame(
