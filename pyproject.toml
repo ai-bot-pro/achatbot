@@ -81,7 +81,7 @@ verovio = ["verovio~=4.3.1"]
 accelerate = ["accelerate~=0.28.0"]
 
 # diffusers DiT with quantizing model
-diffusers = ["diffusers[torch]~=0.31.0"]
+diffusers = ["torch==2.5.0", "diffusers[torch]~=0.31.0"]
 bitsandbytes = ["bitsandbytes"]
 
 # webRTC

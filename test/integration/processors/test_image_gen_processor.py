@@ -30,6 +30,9 @@ IMAGE_GEN_PROCESSOR=OpenAIImageGenProcessor \
 
 IMAGE_GEN_PROCESSOR=TogetherImageGenProcessor \
     python -m unittest test.integration.processors.test_image_gen_processor.TestProcessor
+
+IMAGE_GEN_PROCESSOR=HFStableDiffusionImageGenProcessor \
+    python -m unittest test.integration.processors.test_image_gen_processor.TestProcessor
 """
 
 
@@ -54,6 +57,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
         cls.processor = os.getenv("IMAGE_GEN_PROCESSOR", "HFApiInferenceImageGenProcessor")
         cls.save_img_file = os.getenv("SAVE_FILE_PATH", "./images/test_gen.jpeg")
+        cls.device = os.getenv("DEVICE", "auto")
         cls.client_session = None
 
     @classmethod
@@ -84,8 +88,8 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             kwargs["height"] = 720
             kwargs["steps"] = 28
             kwargs["guidance_scale"] = 3.5
-            kwargs["guidance_scale"] = True
-            kwargs["device"] = "auto"
+            kwargs["is_quantizing"] = True
+            kwargs["device"] = self.device
             kwargs["model"] = "stabilityai/stable-diffusion-3.5-large"
 
         return get_image_gen_processor(self.processor, **kwargs)
