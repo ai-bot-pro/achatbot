@@ -79,6 +79,14 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             kwargs["height"] = 720
             kwargs["steps"] = 4
             kwargs["model"] = "black-forest-labs/FLUX.1-schnell-Free"
+        if self.processor == "HFStableDiffusionImageGenProcessor":
+            kwargs["width"] = 1280
+            kwargs["height"] = 720
+            kwargs["steps"] = 28
+            kwargs["guidance_scale"] = 3.5
+            kwargs["guidance_scale"] = True
+            kwargs["device"] = "auto"
+            kwargs["model"] = "stabilityai/stable-diffusion-3.5-large"
 
         return get_image_gen_processor(self.processor, **kwargs)
 

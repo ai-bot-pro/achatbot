@@ -11,3 +11,6 @@ def get_image_gen_processor(tag, **kwargs) -> ImageGenProcessor:
     if tag == "TogetherImageGenProcessor":
         from .together_img_gen_processor import TogetherImageGenProcessor
         return TogetherImageGenProcessor(**kwargs)
+    if tag == "HFStableDiffusionImageGenProcessor":
+        from .diffusers_img_gen_processor import HFStableDiffusionImageGenProcessor
+        return HFStableDiffusionImageGenProcessor(**kwargs)
