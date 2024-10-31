@@ -22,6 +22,7 @@ class Language(StrEnum):
     BG = "bg"            # Bulgarian
     CA = "ca"            # Catalan
     ZH = "zh"            # Chinese simplified
+    ZH_CN = "zh-CN"            # Chinese simplified
     ZH_TW = "zh-TW"      # Chinese traditional
     ZN = "zn"            # Chinese and English
     CS = "cs"            # Czech
@@ -68,8 +69,9 @@ class Language(StrEnum):
 TO_LLM_LANGUAGE = {
     "bg": "Bulgarian",
     "ca": "Catalan",
-    "zh": "Chinese simplified",
-    "zh-TW": "Chinese traditional",
+    "zh": "Chinese simplified(简体中文)",
+    "zh-CN": "Chinese simplified(简体中文)",
+    "zh-TW": "Chinese traditional(繁体中文)",
     "zn": "Chinese and English",
     "cs": "Czech",
     "da": "Danish",
