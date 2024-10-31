@@ -74,6 +74,9 @@ class HFStableDiffusionImageGenProcessor(ImageGenProcessor):
         # self._pipe.enable_xformers_memory_efficient_attention()
         logging.debug(f"sd pipeline: {self._pipe}, device: {self._pipe.device}")
 
+    def set_aiohttp_session(self, session):
+        pass
+
     async def run_image_gen(self, prompt: str) -> AsyncGenerator[Frame, None]:
         logging.debug(f"Generating image from prompt: {prompt}")
 

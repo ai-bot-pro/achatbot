@@ -92,7 +92,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             kwargs["guidance_scale"] = 3.5
             kwargs["is_quantizing"] = True
             kwargs["device"] = self.device
-            kwargs["model"] = "stabilityai/stable-diffusion-3.5-large"
+            kwargs["model"] = os.getenv("SD_MODEL", "stabilityai/stable-diffusion-3.5-large")
 
         return get_image_gen_processor(self.processor, **kwargs)
 
