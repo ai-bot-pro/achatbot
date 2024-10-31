@@ -1,14 +1,11 @@
-import asyncio
-from dataclasses import dataclass
+import copy
 
 import aiohttp
-from apipeline.frames.sys_frames import Frame
-from apipeline.pipeline.pipeline import Pipeline, FrameProcessor
+from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.frames.data_frames import TextFrame, ImageRawFrame, AudioRawFrame
-from apipeline.processors.frame_processor import FrameDirection
-from apipeline.processors.aggregators.sentence import SentenceAggregator
+from apipeline.frames.sys_frames import StopTaskFrame
 from apipeline.processors.logger import FrameLogger
 
 from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
@@ -16,14 +13,14 @@ from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.cmd.bots.base_daily import DailyRoomBot
 from src.common.types import DailyParams
-from src.types.frames.control_frames import LLMFullResponseStartFrame
 from src.transports.daily import DailyTransport
 from src.types.frames.data_frames import DailyTransportMessageFrame, LLMMessagesFrame
 from src.cmd.bots import register_ai_room_bots
 
 
 from .utils.helpers import load_images, load_sounds
-from .prompts import CUE_USER_TURN, LLM_INTRO_PROMPT
+from .processors import StoryImageFrame, StoryPageFrame, StoryProcessor, StoryPromptFrame
+from .prompts import CUE_USER_TURN, LLM_BASE_PROMPT, LLM_INTRO_PROMPT
 
 
 sounds = load_sounds(["listening.wav"])
@@ -53,11 +50,6 @@ class DailyStoryTellingBot(DailyRoomBot):
 
             asr_processor = self.get_asr_processor()
             llm_processor = self.get_llm_processor()
-            messages = []
-            if self._bot_config.llm.messages:
-                messages = self._bot_config.llm.messages
-            user_response = LLMUserResponseAggregator(messages)
-            assistant_response = LLMAssistantResponseAggregator(messages)
 
             tts_processor: TTSProcessor = self.get_tts_processor()
             stream_info = tts_processor.get_stream_info()
@@ -70,12 +62,13 @@ class DailyStoryTellingBot(DailyRoomBot):
                 width=self.daily_params.camera_out_width,
                 height=self.daily_params.camera_out_height,
             )
+            image_gen_processor.set_gen_image_frame(StoryImageFrame)
 
             transport = DailyTransport(
                 self.args.room_url, self.args.token, self.args.bot_name,
                 self.daily_params,
             )
-            transport.add_event_handler(
+            transport.add_event_handlers(
                 "on_first_participant_joined",
                 [
                     self.on_first_participant_joined,
@@ -89,48 +82,68 @@ class DailyStoryTellingBot(DailyRoomBot):
                 "on_call_state_updated",
                 self.on_call_state_updated)
 
+            self.intro_task = PipelineTask(
+                Pipeline([
+                    llm_processor,
+                    FrameLogger(include_frame_types=[TextFrame]),
+                    tts_processor,
+                    transport.output_processor(),
+                ]),
+            )
+            self.runner = PipelineRunner()
+            # run the intro pipeline, task will exit after StopTaskFrame is processed.
+            await self.runner.run(self.intro_task)
+
+            story_pages = []
+            story_processor = StoryProcessor(self._bot_config.llm.messages, story_pages)
+            user_response = LLMUserResponseAggregator(self._bot_config.llm.messages)
+            assistant_response = LLMAssistantResponseAggregator(self._bot_config.llm.messages)
             self.task = PipelineTask(
                 Pipeline([
                     transport.input_processor(),
                     asr_processor,
                     user_response,
+                    FrameLogger(include_frame_types=[TextFrame]),
                     llm_processor,
+                    FrameLogger(include_frame_types=[TextFrame]),
+                    story_processor,
+                    FrameLogger(include_frame_types=[StoryImageFrame, StoryPageFrame, StoryPromptFrame]),
                     image_gen_processor,
                     tts_processor,
+                    FrameLogger(include_frame_types=[ImageRawFrame, AudioRawFrame]),
                     transport.output_processor(),
                     assistant_response,
                 ]),
                 params=PipelineParams(
-                    allow_interruptions=True,
+                    allow_interruptions=False,
                     enable_metrics=True,
                     send_initial_empty_metrics=False,
                 ),
             )
 
-            await PipelineRunner().run(self.task)
+            await self.runner.run(self.task)
 
     async def on_first_participant_say_hi(self, transport: DailyTransport, participant):
         if self.daily_params.transcription_enabled:
             transport.capture_participant_transcription(participant["id"])
 
-        # joined use tts say "hello" to introduce with llm generate
-        if self._bot_config.tts \
-                and self._bot_config.llm \
-                and self._bot_config.llm.messages \
-                and len(self._bot_config.llm.messages) == 1:
-            hi_text = "Please introduce yourself first."
-            if self._bot_config.llm.language \
-                    and self._bot_config.llm.language == "zh":
-                hi_text = "请用中文介绍下自己。"
-            self._bot_config.llm.messages.append({
-                "role": "user",
-                "content": hi_text,
-            })
-            await self.task.queue_frames([
-                #LLMMessagesFrame(self._bot_config.llm.messages),
-                images["book1"],
-                LLMMessagesFrame([LLM_INTRO_PROMPT]),
-                DailyTransportMessageFrame(CUE_USER_TURN),
-                sounds["listening"],
-                images["book2"],
-            ])
+        if not self._bot_config.llm \
+                or not self._bot_config.llm.messages:
+            self._bot_config.llm.messages = [LLM_INTRO_PROMPT]
+
+        if self._bot_config.llm.language \
+                and self._bot_config.llm.language == "zh":
+            self._bot_config.llm.messages[0]["content"] += "请用中文交流。"
+        await self.intro_task.queue_frames([
+            images["book1"],
+            LLMMessagesFrame(copy.deepcopy(self._bot_config.llm.messages)),
+            DailyTransportMessageFrame(CUE_USER_TURN),
+            sounds["listening"],
+            images["book2"],
+            StopTaskFrame(),
+        ])
+
+        self._bot_config.llm.messages = [LLM_BASE_PROMPT]
+        if self._bot_config.llm.language \
+                and self._bot_config.llm.language == "zh":
+            self._bot_config.llm.messages[0]["content"] += " 请用中文交流。"
