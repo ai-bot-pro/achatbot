@@ -14,7 +14,7 @@ sounds = load_sounds(["talking.wav", "listening.wav", "ding.wav"])
 
 
 class StoryPageFrame(TextFrame):
-    # Frame for each sentence in the story before a [break]
+    # Frame for each sentence in the story before a [END]
     pass
 
 
@@ -41,7 +41,7 @@ class StoryProcessor(FrameProcessor):
         _story (list): A list to store the story sentences, or 'pages'.
 
     Methods:
-        process_frame: Processes a frame and removes any [break] or [image] tokens.
+        process_frame: Processes a frame and removes any [end] or [image] tokens.
     """
 
     def __init__(self, messages, story):
@@ -59,36 +59,36 @@ class StoryProcessor(FrameProcessor):
             await self.push_frame(sounds["talking"])
 
         elif isinstance(frame, TextFrame):
-            # We want to look for sentence breaks in the text
+            # We want to look for sentence ends in the text
             # but since TextFrames are streamed from the LLM
             # we need to keep a buffer of the text we've seen so far
             self._text += frame.text
 
             # IMAGE PROMPT
-            # Looking for: < [image prompt] > in the LLM response
+            # Looking for: { [image prompt] } in the LLM response
             # We prompted our LLM to add an image prompt in the response
             # so we use regex matching to find it and yield a StoryImageFrame
-            if re.search(r"<.*?>", self._text):
-                if not re.search(r"<.*?>.*?>", self._text):
+            if re.search(r"{.*?}", self._text):
+                if not re.search(r"{.*?}.*?}", self._text):
                     # Pass any frames until we have a closing bracket
                     # otherwise the image prompt will be passed to TTS
                     pass
                 # Extract the image prompt from the text using regex
-                image_prompt = re.search(r"<(.*?)>", self._text).group(1)
+                image_prompt = re.search(r"{(.*?)}", self._text).group(1)
                 # Remove the image prompt from the text
-                self._text = re.sub(r"<.*?>", "", self._text, count=1)
+                self._text = re.sub(r"{.*?}", "", self._text, count=1)
                 # Process the image prompt frame
                 image_prompt = IMAGE_GEN_PROMPT % image_prompt
                 await self.push_frame(StoryImageFrame(image_prompt))
 
             # STORY PAGE
-            # Looking for: [break] in the LLM response
-            # We prompted our LLM to add a [break] after each sentence
+            # Looking for: [END] in the LLM response
+            # We prompted our LLM to add a [end] after each sentence
             # so we use regex matching to find it in the LLM response
-            if re.search(r".*\[[bB]reak\].*", self._text):
-                # Remove the [break] token from the text
+            if re.search(r".*\[END\].*", self._text):
+                # Remove the [end] token from the text
                 # so it isn't spoken out loud by the TTS
-                self._text = re.sub(r"\[[bB]reak\]", "", self._text, flags=re.IGNORECASE)
+                self._text = re.sub(r"\[END\]", "", self._text, flags=re.IGNORECASE)
                 self._text = self._text.replace("\n", " ")
                 if len(self._text) > 2:
                     # Append the sentence to the story
@@ -113,3 +113,7 @@ class StoryProcessor(FrameProcessor):
         # Anything that is not a TextFrame pass through
         else:
             await self.push_frame(frame)
+
+
+class StoryJsonProcessor(FrameProcessor):
+    pass

@@ -111,14 +111,20 @@ class DailyStoryTellingBot(DailyRoomBot):
                     asr_processor,
                     user_response,
                     llm_processor,
-                    FrameLogger(include_frame_types=[TextFrame]),
+                    # FrameLogger(include_frame_types=[TextFrame]),
                     story_processor,
-                    FrameLogger(include_frame_types=[StoryImageFrame, StoryPageFrame, StoryPromptFrame]),
+                    # FrameLogger(
+                    #    include_frame_types=[
+                    #        StoryImageFrame,
+                    #        StoryPageFrame,
+                    #        StoryPromptFrame,
+                    #    ]
+                    # ),
                     translate_processor,
                     FrameLogger(include_frame_types=[StoryImageFrame]),
                     image_gen_processor,
                     tts_processor,
-                    FrameLogger(include_frame_types=[ImageRawFrame, AudioRawFrame]),
+                    # FrameLogger(include_frame_types=[ImageRawFrame, AudioRawFrame]),
                     transport.output_processor(),
                     assistant_response,
                 ]),
@@ -151,5 +157,6 @@ class DailyStoryTellingBot(DailyRoomBot):
         ])
 
         self._bot_config.llm.messages = [LLM_BASE_PROMPT]
-        content = LLM_BASE_PROMPT["content"] % TO_LLM_LANGUAGE[language]
+        content = LLM_BASE_PROMPT["content"] % (
+            TO_LLM_LANGUAGE[language], TO_LLM_LANGUAGE[language])
         self._bot_config.llm.messages[0]["content"] = content
