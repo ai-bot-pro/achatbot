@@ -66,6 +66,9 @@ def import_bots(bot_name: str = "DummyBot"):
     if "DailyMonthNarrationBot" in bot_name:
         from .image import daily_month_narration_bot
         return True
+    if "DailyStoryTellingBot" in bot_name:
+        from .image.storytelling import daily_bot
+        return True
     if "LivekitBot" in bot_name:
         from . import livekit_bot
         return True
