@@ -121,6 +121,8 @@ deploy it to cloudflare pages, access https://educator-client.pages.dev/
 deploy it to cloudflare pages, access https://chat-client-weedge.pages.dev/
 - [vite-react-web-vision](https://github.com/ai-bot-pro/vite-react-web-vision) 
 deploy it to cloudflare pages, access https://vision-weedge.pages.dev/
+- [nextjs-react-web-storytelling](https://github.com/ai-bot-pro/nextjs-react-web-storytelling) 
+deploy it to cloudflare pages, access https://storytelling.pages.dev/ 
 
 
 ## Server Deploy (CD)
