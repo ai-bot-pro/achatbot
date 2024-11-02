@@ -533,6 +533,15 @@ async def get_room_bots(room_name: str) -> dict[str, Any]:
     return response.model_dump()
 
 
+def ngrok_proxy(port):
+    from pyngrok import ngrok
+    import nest_asyncio
+
+    ngrok_tunnel = ngrok.connect(port)
+    print('Public URL:', ngrok_tunnel.public_url)
+    nest_asyncio.apply()
+
+
 if __name__ == "__main__":
     import uvicorn
 
@@ -547,8 +556,13 @@ if __name__ == "__main__":
                         default=default_port, help="Port number")
     parser.add_argument("--reload", action="store_true",
                         help="Reload code on change")
+    parser.add_argument("--ngrok", type=bool,
+                        default=False, help="use ngrok proxy")
 
     config = parser.parse_args()
+
+    if config.ngrok:
+        ngrok_proxy(config.port)
 
     # api docs: http://0.0.0.0:4321/docs
     uvicorn.run(
