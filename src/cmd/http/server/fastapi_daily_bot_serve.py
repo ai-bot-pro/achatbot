@@ -275,7 +275,7 @@ async def bot_join(chat_bot_name: str,
         exp += DAILYLANGCHAINRAGBOT_EXPIRE_TIME
 
     daily_room_obj = DailyRoom()
-    room = await daily_room_obj.create_room(exp)
+    room = await daily_room_obj.create_room(exp_time_s=exp)
     # Give the agent a token to join the session
     bot_token = await daily_room_obj.gen_token(room.name, exp)
     if not room or not bot_token:

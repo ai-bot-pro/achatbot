@@ -6,14 +6,14 @@ from abc import abstractmethod
 from typing import AsyncGenerator
 
 from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
-from apipeline.frames.sys_frames import CancelFrame, MetricsFrame
+from apipeline.frames.sys_frames import CancelFrame, MetricsFrame, ErrorFrame
 from apipeline.frames.control_frames import EndFrame
 from apipeline.frames.data_frames import Frame, AudioRawFrame
 
 from src.processors.speech.audio_volume_time_processor import AudioVolumeTimeProcessor
 from src.processors.ai_processor import AsyncAIProcessor
 from src.common.utils.helper import exp_smoothing, calculate_audio_volume
-from src.types.frames.data_frames import TranscriptionFrame
+from src.types.frames.data_frames import DailyTransportMessageFrame, TranscriptionFrame
 from src.types.speech.language import Language
 from src.types.frames.control_frames import ASRArgsUpdateFrame, ASRLanguageUpdateFrame, ASRModelUpdateFrame
 
