@@ -8,6 +8,7 @@ from apipeline.frames.data_frames import TextFrame, ImageRawFrame, AudioRawFrame
 from apipeline.frames.sys_frames import StopTaskFrame
 from apipeline.processors.logger import FrameLogger
 
+from src.processors.transcript_processor import UserTranscriptionProcessor
 from src.processors.tranlate.google_translate_processor import GoogleTranslateProcessor
 from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
@@ -109,6 +110,7 @@ class DailyStoryTellingBot(DailyRoomBot):
                 Pipeline([
                     transport.input_processor(),
                     asr_processor,
+                    UserTranscriptionProcessor(),
                     user_response,
                     llm_processor,
                     # FrameLogger(include_frame_types=[TextFrame]),
