@@ -8,6 +8,7 @@ from apipeline.frames.data_frames import TextFrame, ImageRawFrame, AudioRawFrame
 from apipeline.frames.sys_frames import StopTaskFrame
 from apipeline.processors.logger import FrameLogger
 
+from src.processors.app_message_processor import AppMessageControllProcessor, BotLLMTextProcessor, BotTTSTextProcessor, UserTranscriptionProcessor
 from src.processors.tranlate.google_translate_processor import GoogleTranslateProcessor
 from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
@@ -87,8 +88,10 @@ class DailyStoryTellingBot(DailyRoomBot):
             self.intro_task = PipelineTask(
                 Pipeline([
                     llm_processor,
-                    FrameLogger(include_frame_types=[TextFrame]),
+                    # FrameLogger(include_frame_types=[TextFrame]),
                     tts_processor,
+                    AppMessageControllProcessor(),
+                    BotTTSTextProcessor(),
                     transport.output_processor(),
                 ]),
             )
@@ -109,8 +112,11 @@ class DailyStoryTellingBot(DailyRoomBot):
                 Pipeline([
                     transport.input_processor(),
                     asr_processor,
+                    AppMessageControllProcessor(),
+                    UserTranscriptionProcessor(),
                     user_response,
                     llm_processor,
+                    # BotLLMTextProcessor(),
                     # FrameLogger(include_frame_types=[TextFrame]),
                     story_processor,
                     # FrameLogger(
@@ -125,6 +131,8 @@ class DailyStoryTellingBot(DailyRoomBot):
                     image_gen_processor,
                     tts_processor,
                     # FrameLogger(include_frame_types=[ImageRawFrame, AudioRawFrame]),
+                    AppMessageControllProcessor(),
+                    BotTTSTextProcessor(),
                     transport.output_processor(),
                     assistant_response,
                 ]),
