@@ -243,11 +243,49 @@ async def fastapi_bot_join(chat_bot_name: str, info: RunBotInfo) -> JSONResponse
 async def fastapi_bot_join(chat_bot_name: str, info: RunBotInfo) -> JSONResponse:
     # for chat-bot-rtvi-client
     try:
-        res = await bot_join(chat_bot_name, info)
+        if info.transport_type == "websocket":
+            res = await bot_websocket_join(chat_bot_name, info)
+        else:
+            res = await bot_join(chat_bot_name, info)
     except Exception as e:
         logging.error(f"Exception in bot_join: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"{e}")
     return JSONResponse(res)
+
+
+async def bot_websocket_join(chat_bot_name: str,
+                             info: RunBotInfo | dict,
+                             services: dict = None,
+                             config_list: list = None,
+                             config: dict = None) -> dict[str, Any]:
+    """join websocket chat with bot"""
+    logging.info(f"chat_bot_name: {chat_bot_name} request bot info: {info}")
+    if isinstance(info, dict):
+        info = RunBotInfo(**info)
+
+    if import_bots(chat_bot_name) is False:
+        detail = f"un import bot: {chat_bot_name}"
+        return APIResponse(error_code=ERROR_CODE_BOT_UN_REGISTER, error_detail=detail).model_dump()
+
+    logging.info(f"register bots: {register_ai_room_bots.items()}")
+    if chat_bot_name not in register_ai_room_bots:
+        detail = f"bot {chat_bot_name} don't exist"
+        return APIResponse(error_code=ERROR_CODE_BOT_UN_REGISTER, error_detail=detail).model_dump()
+
+    try:
+        info.chat_bot_name = chat_bot_name
+        task_runner = BotTaskRunnerFE(bot_task_mgr, **vars(info))
+        await task_runner.run()
+    except Exception as e:
+        detail = f"bot {chat_bot_name} failed to start process: {e}"
+        raise Exception(detail)
+
+    data = {
+        "config": task_runner.bot_config,
+        "bot_id": task_runner.pid,
+        "status": "running",
+    }
+    return APIResponse(data=data).model_dump()
 
 
 async def bot_join(chat_bot_name: str,

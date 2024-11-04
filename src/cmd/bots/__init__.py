@@ -16,6 +16,7 @@ class BotInfo(BaseModel):
     services: dict = {}
     websocket_server_host: str = "localhost"
     websocket_server_port: int = 8765
+    transport_type: str = "room"  # room(daily,livekit), websocket(websocket,fastapi_websocket)
 
 
 def import_bots(bot_name: str = "DummyBot"):
@@ -100,6 +101,9 @@ def import_bots(bot_name: str = "DummyBot"):
         return True
     if "LivekitDescribeVisionToolsBot" in bot_name:
         from .vision import livekit_describe_vision_tools_bot
+        return True
+    if "WebsocketServerBot" in bot_name:
+        from . import websocket_server_bot
         return True
 
     return False
