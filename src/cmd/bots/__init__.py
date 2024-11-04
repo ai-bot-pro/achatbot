@@ -14,6 +14,8 @@ class BotInfo(BaseModel):
     token: str = ""
     config_list: list = []
     services: dict = {}
+    websocket_server_host: str = "localhost"
+    websocket_server_port: int = 8765
 
 
 def import_bots(bot_name: str = "DummyBot"):

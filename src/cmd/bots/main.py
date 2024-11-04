@@ -28,6 +28,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Chat Bot")
     parser.add_argument("-u", type=str, default="", help="Room URL")
     parser.add_argument("-t", type=str, default="", help="Token")
+    parser.add_argument("-wsp", type=int, default=8765, help="WebSocket Port")
+    parser.add_argument("-wsh", type=str, default="localhost", help="WebSocket Host")
     parser.add_argument(
         "-f", type=str,
         default=os.path.join(CONFIG_DIR, "bots/dummy_bot.json"),
@@ -47,6 +49,12 @@ if __name__ == "__main__":
     token = bot_info.token
     if len(args.t) > 0:
         bot_info.token = args.t
+    if len(args.wsp) > 0:
+        bot_info.websocket_server_port = args.wsp
+    token = bot_info.token
+    if len(args.wsh) > 0:
+        bot_info.websocket_server_host = args.wsh
+
     try:
         task_runner = BotTaskRunnerBE(bot_task_mgr, **vars(bot_info))
         asyncio.get_event_loop().run_until_complete(task_runner.run())

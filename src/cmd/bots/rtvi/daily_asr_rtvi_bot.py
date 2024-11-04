@@ -10,7 +10,7 @@ from src.services.help.daily_rest import DailyRESTHelper
 from src.processors.llm.base import LLMProcessor
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.processors.rtvi.rtvi_asr_llm_tts_processor import RTVIProcessor, RTVISetup
-from src.common.types import DailyParams, RoomBotArgs
+from src.common.types import DailyParams, BotRunArgs
 from src.transports.daily import DailyTransport
 from src.cmd.bots.base_daily import DailyRoomBot
 from src.cmd.bots import register_ai_room_bots
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     bot_config = json.loads(config.c) if config.c else {}
 
     if config.u and bot_config:
-        kwargs = RoomBotArgs(
+        kwargs = BotRunArgs(
             room_name=DailyRESTHelper.get_name_from_url(config.u),
             bot_config=bot_config,
             room_url=config.u,

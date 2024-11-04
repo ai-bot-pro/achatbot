@@ -10,7 +10,7 @@ from src.common.const import *
 from src.common.session import Session
 from src.common.connector import ConnectorInit
 from src.common.interface import IBot, IConnector, IRoomManager
-from src.common.types import GeneralRoomInfo, RoomBotArgs, SessionCtx
+from src.common.types import GeneralRoomInfo, BotRunArgs, SessionCtx
 from src.cmd.bots import BotInfo, import_bots, register_ai_room_bots
 
 
@@ -127,7 +127,7 @@ class BotTaskRunner:
             room_url = room.url
             room_name = room.name
 
-        kwargs = RoomBotArgs(
+        kwargs = BotRunArgs(
             room_name=room_name,
             room_url=room_url,
             token=bot_token,
@@ -135,6 +135,8 @@ class BotTaskRunner:
             bot_config=bot_info.config,
             bot_config_list=bot_info.config_list,
             services=bot_info.services,
+            websocket_server_host=bot_info.websocket_server_host,
+            websocket_server_port=bot_info.websocket_server_port,
         ).__dict__
         self._bot_obj = register_ai_room_bots[bot_info.chat_bot_name](**kwargs)
 
