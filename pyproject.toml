@@ -52,7 +52,7 @@ classifiers = [
 ]
 dependencies = [
     "requests~=2.32.3",
-    "apipeline~=0.1.22",
+    "apipeline~=0.1.25",
     "python-dotenv~=1.0.1",
     "pydub~=0.25.1",        # need install ffmpeg
     "pillow~=10.4.0",
@@ -90,6 +90,10 @@ diffusers = [
 bitsandbytes = ["bitsandbytes~=0.44.1"]
 
 
+# network framework
+fastapi = ["fastapi~=0.112.0"]
+websocket = ["websockets~=12.0"]
+
 # webRTC
 daily = ["daily-python~=0.11.0"]
 livekit = ["livekit~=0.17.5"]
@@ -98,7 +102,8 @@ livekit-api = ["livekit-api~=0.7.1"]
 
 # transports
 livekit_transport = ["achatbot[livekit,livekit-api]"]
-daily_transport = ["daily-python~=0.11.0"]
+daily_transport = ["achatbot[daily]"]
+websocket_server_transport = ["achatbot[websocket]"]
 
 # audio_stream module tag -> pkgs
 pyaudio_stream = ["PyAudio~=0.2.14"]

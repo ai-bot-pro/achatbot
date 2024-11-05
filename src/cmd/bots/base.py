@@ -22,7 +22,7 @@ from src.modules.speech.tts import TTSEnvInit
 from src.types.ai_conf import ASRConfig, LLMConfig, TTSConfig, AIConfig
 from src.common import interface
 from src.common.factory import EngineClass
-from src.common.types import RoomBotArgs
+from src.common.types import BotRunArgs
 from src.common.interface import IBot, IVisionDetector
 from src.common.session import Session
 from src.common.types import SessionCtx
@@ -42,7 +42,7 @@ class AIRoomBot(IBot):
     """
 
     def __init__(self, **args) -> None:
-        self.args = RoomBotArgs(**args)
+        self.args = BotRunArgs(**args)
         if self.args.bot_name is None or len(self.args.bot_name) == 0:
             self.args.bot_name = self.__class__.__name__
 
@@ -272,7 +272,7 @@ class AIRoomBot(IBot):
 
     def get_image_gen_processor(self) -> ImageGenProcessor:
         if not self._bot_config.img_gen \
-            or not self._bot_config.img_gen.args:
+                or not self._bot_config.img_gen.args:
             raise Exception("need img_gen args params")
         return get_image_gen_processor(
             self._bot_config.img_gen.tag,

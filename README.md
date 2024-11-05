@@ -63,10 +63,11 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
     - [ ] [autoagen](https://github.com/microsoft/autogen): multi Agents
   - realtime voice inference(RTVI),
   - transport: 
-    - webRTC/webSocket: 
-      - [x] **[daily](https://github.com/daily-co/daily-python)**: audio, video(image)
-      - [x] **[livekit](https://github.com/livekit/python-sdks/)**: audio, video(image)
+    - webRTC: 
+      - [x] **[daily](https://github.com/ai-bot-pro/achatbot/blob/main/src/transports/daily.py)**: audio, video(image)
+      - [x] **[livekit](https://github.com/ai-bot-pro/achatbot/blob/main/src/transports/livekit.py)**: audio, video(image)
       - [ ] **[agora-audio](https://github.com/AgoraIO/agora-realtime-ai-api)**
+    - [x] [Websocket server](https://github.com/ai-bot-pro/achatbot/blob/main/src/transports/websocket_server.py)
   - ai processor: llm, tts, asr etc..
 
 - core module:
@@ -94,7 +95,7 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
       - [x]  [GOT](https://github.com/Ucas-HaoranWei/GOT-OCR2.0)(*the General OCR Theory*)
     - [x] Detector:
       - [x] [YOLO](https://docs.ultralytics.com/) (*You Only Look Once*)
-      - [ ] [RT-DETR](https://github.com/lyuwenyu/RT-DETR) (*RealTime End-to-End Object Detection with Transformers*)
+      - [ ] [RT-DETR v2](https://github.com/lyuwenyu/RT-DETR) (*RealTime End-to-End Object Detection with Transformers*)
 
 - gen modules config(*.yaml, local/test/prod) from env with file: `.env`
    u also use HfArgumentParser this module's args to local cmd parse args
@@ -123,6 +124,7 @@ deploy it to cloudflare pages, access https://chat-client-weedge.pages.dev/
 deploy it to cloudflare pages, access https://vision-weedge.pages.dev/
 - [nextjs-react-web-storytelling](https://github.com/ai-bot-pro/nextjs-react-web-storytelling) 
 deploy it to cloudflare pages, access https://storytelling.pages.dev/ 
+- [websocket-demo](https://github.com/ai-bot-pro/achatbot/blob/main/ui/websocket/simple-demo): websocket audio chat bot demo
 
 
 ## Server Deploy (CD)
@@ -177,7 +179,7 @@ pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
 | [daily_ocr_vision_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/vision/daily_ocr_vision_bot.py)<br />[livekit_ocr_vision_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/vision/livekit_ocr_vision_bot.py) | e.g.:<br />daily_room_audio_stream \| livekit_room_audio_stream<br />sense_voice_asr,<br />vision_transformers_got_ocr<br />tts_edge | <a href="https://github.com/weedge/doraemon-nb/blob/main/daily_ocr_vision_bot.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | T4(free)                                                     | e.g.:<br />daily \| livekit room in stream<br />-> silero (vad)<br />-> sense_voice (asr) <br />vision_transformers_got_ocr<br />-> edge (tts)<br />-> daily \| livekit room out stream |
 | [daily_month_narration_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/image/daily_month_narration_bot.py) | e.g.:<br />daily_room_audio_stream <br />groq \|together api llm(text),<br />hf_sd, together api (image)<br />tts_edge | <a href="https://github.com/weedge/doraemon-nb/blob/main/achatbot_daily_month_narration_bot.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | when use sd model with diffusers<br />T4(free) cpu+cuda (slow)<br />L4 cpu+cuda<br/>A100 all cuda<br /> | e.g.:<br />daily room in stream<br />-> together  (llm) <br />-> hf sd gen image model<br />-> edge (tts)<br />-> daily  room out stream |
 | [daily_storytelling_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/image/storytelling/daily_bot.py) | e.g.:<br />daily_room_audio_stream <br />groq \|together api llm(text),<br />hf_sd, together api (image)<br />tts_edge | <a href="https://github.com/weedge/doraemon-nb/blob/main/achatbot_daily_storytelling_bot.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | cpu (2 cores)<br />when use sd model with diffusers<br />T4(free) cpu+cuda (slow)<br />L4 cpu+cuda<br/>A100 all cuda<br /> | e.g.:<br />daily room in stream<br />-> together  (llm) <br />-> hf sd gen image model<br />-> edge (tts)<br />-> daily  room out stream |
-|                                                              |                                                              |                                                              |                                                              |                                                              |
+| [websocket_server_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/image/storytelling/websocket_server_bot.py) | e.g.:<br /> websocket_server<br />sense_voice_asr,<br />groq \|together api llm(text),<br /><br />tts_edge | <a href="https://github.com/weedge/doraemon-nb/blob/main/achatbot_websocket_server_bot.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | cpu(2 cores)                                                 | e.g.:<br />websocket protocol  in stream<br />-> silero (vad)<br />-> sense_voice (asr) <br />-> together  (llm) <br />-> edge (tts)<br />-> websocket protocol out stream |
 |                                                              |                                                              |                                                              |                                                              |                                                              |
 |                                                              |                                                              |                                                              |                                                              |                                                              |
 
@@ -400,8 +402,5 @@ ACHATBOT_PKG=1 TTS_TAG=tts_cosy_voice IS_RELOAD=1 python -m achatbot.cmd.grpc.sp
 
 # License
 
-torchchat is released under the [BSD 3 license](LICENSE). (Additional
-code in this distribution is covered by the MIT and Apache Open Source
-licenses.) However you may have other legal obligations that govern
-your use of content, such as the terms of service for third-party
-models.
+torchchat is released under the [BSD 3 license](LICENSE). (Additional code in this distribution is covered by the MIT and Apache Open Source
+licenses.) However you may have other legal obligations that govern your use of content, such as the terms of service for third-party models.

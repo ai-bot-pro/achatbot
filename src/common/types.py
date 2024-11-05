@@ -544,7 +544,7 @@ class GeneralRoomInfo:
 
 
 @dataclass
-class RoomBotArgs:
+class BotRunArgs:
     room_name: str = ""
     room_url: str = ""
     token: str = ""
@@ -552,3 +552,5 @@ class RoomBotArgs:
     bot_name: str | None = None
     bot_config_list: list | None = None
     services: dict | None = None
+    websocket_server_host: str = "localhost"
+    websocket_server_port: int = 8765

@@ -10,7 +10,7 @@ from src.common.const import *
 from src.common.session import Session
 from src.common.connector import ConnectorInit
 from src.common.interface import IBot, IConnector, IRoomManager
-from src.common.types import GeneralRoomInfo, RoomBotArgs, SessionCtx
+from src.common.types import GeneralRoomInfo, BotRunArgs, SessionCtx
 from src.cmd.bots import BotInfo, import_bots, register_ai_room_bots
 
 
@@ -110,7 +110,7 @@ class BotTaskRunner:
         self._pid = 0
         self._bot_obj: IBot | None = None
 
-    async def _run_bot(self, bot_info: BotInfo):
+    async def _run_room_bot(self, bot_info: BotInfo):
         room_name = bot_info.room_name
         room_url = bot_info.room_url
         bot_token = bot_info.token
@@ -127,7 +127,7 @@ class BotTaskRunner:
             room_url = room.url
             room_name = room.name
 
-        kwargs = RoomBotArgs(
+        kwargs = BotRunArgs(
             room_name=room_name,
             room_url=room_url,
             token=bot_token,
@@ -138,6 +138,19 @@ class BotTaskRunner:
         ).__dict__
         self._bot_obj = register_ai_room_bots[bot_info.chat_bot_name](**kwargs)
 
+        self._pid = self.task_mgr.run_task(
+            self._bot_obj.run, bot_info.chat_bot_name, bot_info.room_name)
+
+    async def _run_websocket_bot(self, bot_info: BotInfo):
+        kwargs = BotRunArgs(
+            bot_name=bot_info.chat_bot_name,
+            bot_config=bot_info.config,
+            bot_config_list=bot_info.config_list,
+            services=bot_info.services,
+            websocket_server_port=bot_info.websocket_server_port,
+            websocket_server_host=bot_info.websocket_server_host,
+        ).__dict__
+        self._bot_obj = register_ai_room_bots[bot_info.chat_bot_name](**kwargs)
         self._pid = self.task_mgr.run_task(
             self._bot_obj.run, bot_info.chat_bot_name, bot_info.room_name)
 
@@ -154,7 +167,11 @@ class BotTaskRunner:
             detail = f"un import bot: {bot_info.chat_bot_name}"
             logging.error(detail)
             return
-        await self._run_bot(bot_info)
+
+        if bot_info.transport_type == "websocket":
+            await self._run_websocket_bot(bot_info)
+        else:
+            await self._run_room_bot(bot_info)
 
     async def run(self):
         pass
