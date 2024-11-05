@@ -6,11 +6,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.jsdelivr.net/npm/protobufjs@7.X.X/dist/protobuf.min.js"></script>
     <title>Achatbot WebSocket Client Example</title>
+    <style>
+        #wsUrl {
+            resize: both; /* 允许水平和垂直调整 */
+            overflow: auto; /* 允许出现滚动条 */
+            width: 100%; /* 设置宽度为100% */
+            max-width: 600px; /* 设置最大宽度 */
+        }
+    </style>
   </head>
 
   <body>
     <h1>Achatbot WebSocket Client Example</h1>
     <h3><div id="progressText">Loading, wait...</div></h2>
+    <input type="text" id="wsUrl" placeholder="Enter WebSocket URL" value="ws://localhost:8765" />
+    <br/>
     <button id="startAudioBtn">Start Audio</button>
     <button id="stopAudioBtn">Stop Audio</button>
     <script>
@@ -63,7 +73,8 @@
       });
 
       function initWebSocket() {
-          ws = new WebSocket('ws://localhost:8765');
+          const wsUrl = document.getElementById('wsUrl').value;
+          ws = new WebSocket(wsUrl);
 
           ws.addEventListener('open', () => console.log('WebSocket connection established.'));
           ws.addEventListener('message', handleWebSocketMessage);
