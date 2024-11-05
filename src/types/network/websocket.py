@@ -9,7 +9,7 @@ from src.common.types import AudioCameraParams
 
 class WebsocketServerParams(AudioCameraParams):
     add_wav_header: bool = False
-    audio_frame_size: int = 6400  # 200ms
+    audio_frame_size: int = 6400  # 200ms with 16K hz 1 channel 2 sample_width
     serializer: FrameSerializer = ProtobufFrameSerializer()
 
 

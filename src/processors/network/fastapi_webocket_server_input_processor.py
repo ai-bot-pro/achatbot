@@ -29,8 +29,8 @@ class FastapiWebsocketServerInputProcessor(AudioVADInputProcessor):
         await self._callbacks.on_client_connected(self._websocket)
         self._receive_task = self.get_event_loop().create_task(self._receive_messages())
 
-    async def stop(self, frame: EndFrame):
-        await super().stop(frame)
+    async def stop(self):
+        await super().stop()
         if self._websocket.client_state != WebSocketState.DISCONNECTED:
             await self._websocket.close()
 
@@ -40,7 +40,9 @@ class FastapiWebsocketServerInputProcessor(AudioVADInputProcessor):
             await self._websocket.close()
 
     async def _receive_messages(self):
-        async for message in self._websocket.iter_text():
+        # async for message in self._websocket.iter_text():
+        # async for message in self._websocket.iter_json():
+        async for message in self._websocket.iter_bytes():
             frame = self._params.serializer.deserialize(message)
 
             if not frame:

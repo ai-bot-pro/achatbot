@@ -54,7 +54,7 @@ async def websocket_endpoint(websocket: WebSocket, chat_bot_name: str):
         services=bot_info.services,
     )
     run_bot = FastapiWebsocketServerBot(websocket=websocket, **vars(bot_args))
-    await run_bot.arun()
+    await run_bot.try_run()
 
 
 if __name__ == "__main__":
