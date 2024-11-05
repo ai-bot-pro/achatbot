@@ -4,6 +4,7 @@ import wave
 
 import websockets
 from apipeline.frames.data_frames import AudioRawFrame
+import websockets.connection
 
 from src.processors.audio_camera_output_processor import AudioCameraOutputProcessor
 from src.types.network.websocket import WebsocketServerParams
@@ -40,7 +41,7 @@ class WebsocketServerOutputProcessor(AudioCameraOutputProcessor):
             if self._params.add_wav_header:
                 content = io.BytesIO()
                 ww = wave.open(content, "wb")
-                ww.setsampwidth(2)
+                ww.setsampwidth(frame.sample_width)
                 ww.setnchannels(frame.num_channels)
                 ww.setframerate(frame.sample_rate)
                 ww.writeframes(frame.audio)

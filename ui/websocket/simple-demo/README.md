@@ -84,3 +84,4 @@ access http://localhost:8000/  to click `Start Audio` to chat with bot
 - [Websocket](https://en.wikipedia.org/wiki/WebSocket)
 - [protobuf.js](https://github.com/protobufjs/protobuf.js)
 - [Protocol Buffers Documentation](https://protobuf.dev/overview/)
+- [Web-API Docs](https://developer.mozilla.org/en-US/docs/Web/API)
