@@ -6,7 +6,7 @@ import websockets
 from apipeline.frames.data_frames import AudioRawFrame
 
 from src.processors.audio_camera_output_processor import AudioCameraOutputProcessor
-from src.transports.websocket_server import WebsocketServerParams
+from src.types.network.websocket import WebsocketServerParams
 
 
 class WebsocketServerOutputProcessor(AudioCameraOutputProcessor):
