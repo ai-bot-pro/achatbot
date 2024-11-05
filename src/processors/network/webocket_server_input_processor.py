@@ -34,8 +34,8 @@ class WebsocketServerInputProcessor(AudioVADInputProcessor):
         self._server_task = self.get_event_loop().create_task(self._server_task_handler())
         await super().start(frame)
 
-    async def stop(self, frame: EndFrame):
-        await super().stop(frame)
+    async def stop(self):
+        await super().stop()
         self._stop_server_event.set()
         await self._server_task
 

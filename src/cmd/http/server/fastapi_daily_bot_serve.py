@@ -14,7 +14,7 @@ from src.common.const import *
 from src.common.logger import Logger
 from src.common.types import GeneralRoomInfo
 from src.services.help.daily_room import DailyRoom
-from src.cmd.bots import import_bots, register_ai_room_bots
+from src.cmd.bots import import_bots, import_websocket_bots, register_ai_room_bots
 from src.cmd.bots.run import BotTaskManager, BotTaskRunnerFE, RunBotInfo
 
 
@@ -263,7 +263,7 @@ async def bot_websocket_join(chat_bot_name: str,
     if isinstance(info, dict):
         info = RunBotInfo(**info)
 
-    if import_bots(chat_bot_name) is False:
+    if import_websocket_bots(chat_bot_name) is False:
         detail = f"un import bot: {chat_bot_name}"
         return APIResponse(error_code=ERROR_CODE_BOT_UN_REGISTER, error_detail=detail).model_dump()
 

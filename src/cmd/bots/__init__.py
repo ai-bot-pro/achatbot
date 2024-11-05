@@ -102,6 +102,11 @@ def import_bots(bot_name: str = "DummyBot"):
     if "LivekitDescribeVisionToolsBot" in bot_name:
         from .vision import livekit_describe_vision_tools_bot
         return True
+
+    return False
+
+
+def import_websocket_bots(bot_name: str = "DummyBot"):
     if "WebsocketServerBot" in bot_name:
         from . import websocket_server_bot
         return True

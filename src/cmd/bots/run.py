@@ -11,7 +11,7 @@ from src.common.session import Session
 from src.common.connector import ConnectorInit
 from src.common.interface import IBot, IConnector, IRoomManager
 from src.common.types import GeneralRoomInfo, BotRunArgs, SessionCtx
-from src.cmd.bots import BotInfo, import_bots, register_ai_room_bots
+from src.cmd.bots import BotInfo, import_bots, import_websocket_bots, register_ai_room_bots
 
 
 class EngineClassInfo(BaseModel):
@@ -163,14 +163,18 @@ class BotTaskRunner:
         return self._pid if self._pid else None
 
     async def run_bot(self, bot_info: BotInfo):
-        if import_bots(bot_info.chat_bot_name) is False:
-            detail = f"un import bot: {bot_info.chat_bot_name}"
-            logging.error(detail)
-            return
 
         if bot_info.transport_type == "websocket":
+            if import_websocket_bots(bot_info.chat_bot_name) is False:
+                detail = f"un import bot: {bot_info.chat_bot_name}"
+                logging.error(detail)
+                return
             await self._run_websocket_bot(bot_info)
         else:
+            if import_bots(bot_info.chat_bot_name) is False:
+                detail = f"un import bot: {bot_info.chat_bot_name}"
+                logging.error(detail)
+                return
             await self._run_room_bot(bot_info)
 
     async def run(self):
