@@ -1,3 +1,4 @@
+
 import base64
 import json
 import os
@@ -6,7 +7,8 @@ from typing import List
 
 
 try:
-    from openai import AsyncOpenAI, AsyncStream, DefaultAsyncHttpxClient
+    from openai import AsyncStream
+    import litellm
     from openai.types.chat import (
         ChatCompletionChunk,
         ChatCompletionFunctionMessageParam,
@@ -16,7 +18,9 @@ try:
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        "In order to use OpenAI, you need to `pip install achatbot[openai_llm_processor]`. Also, set `OPENAI_API_KEY` environment variable.")
+        f"In order to use OpenAI, you need to `pip install achatbot[litellm_processor]`. "
+        f"Also, set environment variable such as `OPENAI_API_KEY`."
+        f"see: https://docs.litellm.ai/docs/")
     raise Exception(f"Missing module: {e}")
 import httpx
 from apipeline.frames.data_frames import TextFrame, Frame
@@ -28,37 +32,22 @@ from src.types.frames.control_frames import LLMFullResponseEndFrame, LLMFullResp
 from src.types.frames.data_frames import LLMMessagesFrame, VisionImageRawFrame
 
 
-class BaseOpenAILLMProcessor(LLMProcessor):
-    """This is the base for all processors that use the AsyncOpenAI client.
-
-    This processor consumes OpenAILLMContextFrame frames, which contain a reference
-    to an OpenAILLMContext frame. The OpenAILLMContext object defines the context
-    sent to the LLM for a completion. This includes user, assistant and system messages
-    as well as tool choices and the tool, which is used if requesting function
-    calls from the LLM.
+class LiteLLMProcessor(LLMProcessor):
     """
+    llm proxy to use the OpenAI Input/Output Format
+    see: https://docs.litellm.ai/docs/
+    """
+    TAG = "litellm_processor"
 
-    def __init__(
-            self,
-            *,
-            model: str,
-            api_key="",
-            base_url="",
-            **kwargs):
+    def __init__(self,
+                 model: str = "github/gpt-4o",
+                 set_verbose: bool = False,
+                 **kwargs):
+        super().__init__(model=model, **kwargs)
         super().__init__(**kwargs)
-        # api_key = os.environ.get("OPENAI_API_KEY", api_key)
         self._model: str = model
-        self._client = AsyncOpenAI(
-            api_key=api_key,
-            base_url=base_url,
-            http_client=DefaultAsyncHttpxClient(
-                limits=httpx.Limits(
-                    max_keepalive_connections=100,
-                    max_connections=1000,
-                    keepalive_expiry=None,
-                )
-            )
-        )
+        litellm.set_verbose = set_verbose
+        # self._response_format = {"type": "json_object"}
 
     async def call_function(
             self,
@@ -92,14 +81,17 @@ class BaseOpenAILLMProcessor(LLMProcessor):
             self,
             context: OpenAILLMContext,
             messages: List[ChatCompletionMessageParam]) -> AsyncStream[ChatCompletionChunk]:
-        chunks = await self._client.chat.completions.create(
+        chunks = await litellm.acompletion(
             model=self._model,
             stream=True,
-            messages=messages,
+            # trim_messages ensures tokens(messages) < max_tokens(model)
+            messages=litellm.utils.trim_messages(messages, self._model),
             tools=context.tools,
             tool_choice=context.tool_choice,
+            stream_options={"include_usage": True},
             # stream Structured Outputs json mode !TODO @weedge -> partial support
-            # response_format={ "type": "json-object" }
+            # https://docs.litellm.ai/docs/completion/json_mode
+            # response_format={"type": "json_object"}  # 👈 KEY CHANGE
         )
         return chunks
 
@@ -130,7 +122,7 @@ class BaseOpenAILLMProcessor(LLMProcessor):
             "processor": self.name,
             "model": self._model,
         }
-        if chunk_dict["usage"]:
+        if hasattr(chunk_dict, "usage") and chunk_dict["usage"]:
             tokens["prompt_tokens"] = chunk_dict["usage"]["prompt_tokens"]
             tokens["completion_tokens"] = chunk_dict["usage"]["completion_tokens"]
             tokens["total_tokens"] = chunk_dict["usage"]["total_tokens"]
@@ -226,31 +218,3 @@ class BaseOpenAILLMProcessor(LLMProcessor):
             await self._process_context(context)
             await self.stop_processing_metrics()
             await self.push_frame(LLMFullResponseEndFrame())
-
-
-class OpenAILLMProcessor(BaseOpenAILLMProcessor):
-    """
-    use OpenAI's client lib
-    """
-    TAG = "openai_llm_processor"
-
-    def __init__(self, model: str = "gpt-4o", **kwargs):
-        super().__init__(model=model, **kwargs)
-
-
-class OpenAIGroqLLMProcessor(BaseOpenAILLMProcessor):
-    """
-    Groq API to be mostly compatible with OpenAI's client lib
-    detail see: https://console.groq.com/docs/openai
-    """
-    TAG = "openai_groq_llm_processor"
-
-    def __init__(self, model: str = "llama-3.2-11b-text-preview", **kwargs):
-        super().__init__(model=model, **kwargs)
-
-    async def record_llm_usage_tokens(self, chunk_dict: dict):
-        if "x_groq" in chunk_dict and "usage" in chunk_dict["x_groq"]:
-            tokens = chunk_dict["x_groq"]["usage"]
-            tokens["processor"] = self.name
-            tokens["model"] = self._model
-            await self.start_llm_usage_metrics(tokens)
