@@ -14,6 +14,7 @@ from apipeline.processors.logger import FrameLogger
 from apipeline.frames.data_frames import TextFrame
 from apipeline.frames.control_frames import EndFrame
 from apipeline.frames.sys_frames import Frame, MetricsFrame
+import litellm
 
 from src.processors.llm.litellm_processor import LiteLLMProcessor
 from src.processors.aggregators.vision_image_frame import VisionImageFrameAggregator
@@ -47,21 +48,17 @@ LITELLM_MODEL="github/gpt-4o" \
 LITELLM_MODEL="gemini/gemini-1.5-flash-latest" \
     python -m unittest test.integration.processors.test_litellm_processor.TestProcessor.test_run_tools
 
-LITELLM_MODEL="github/gpt-4o"
-python -m unittest test.integration.processors.test_litellm_processor.TestProcessor.test_run_tools_describe_image
-LITELLM_MODEL="gemini/gemini-1.5-flash-latest"
-python -m unittest test.integration.processors.test_litellm_processor.TestProcessor.test_run_tools_describe_image
-
-
 LITELLM_MODEL="github/gpt-4o" \
-    python -m unittest test.integration.processors.test_litellm_processor.TestProcessor.test_run_image
-LITELLM_MODEL="gemini/gemini-1.5-flash-latest"
-python -m unittest test.integration.processors.test_litellm_processor.TestProcessor.test_run_image
+    python -m unittest test.integration.processors.test_litellm_processor.TestProcessor.test_run_tools_describe_image
+LITELLM_MODEL="gemini/gemini-1.5-flash-latest" \
+    python -m unittest test.integration.processors.test_litellm_processor.TestProcessor.test_run_tools_describe_image
 
-LITELLM_MODEL="github/gpt-4o"
-python -m unittest test.integration.processors.test_litellm_processor.TestProcessor.test_run_all
-LITELLM_MODEL="gemini/gemini-1.5-flash-latest"
-python -m unittest test.integration.processors.test_litellm_processor.TestProcessor.test_run_all
+
+LITELLM_MODEL="gemini/gemini-1.5-flash-latest" \
+    python -m unittest test.integration.processors.test_litellm_processor.TestProcessor.test_run_image
+
+LITELLM_MODEL="gemini/gemini-1.5-flash-latest" \
+    python -m unittest test.integration.processors.test_litellm_processor.TestProcessor.test_run_all
 """
 
 
@@ -188,7 +185,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         return VisionProcessor(llm=llm, session=session)
 
     def get_litellm_processor(self) -> LLMProcessor:
-        llm_processor = LiteLLMProcessor(model=self.model, set_verbose=True)
+        llm_processor = LiteLLMProcessor(model=self.model, set_verbose=False)
         return llm_processor
 
     async def asyncSetUp(self):
@@ -209,7 +206,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             VisionImageFrameAggregator(pass_text=True),
             llm_user_ctx_aggr,
             llm_processor,
-            FrameLogger(include_frame_types=[TextFrame]),
+            # FrameLogger(include_frame_types=[TextFrame]),
             llm_assistant_ctx_aggr,
             FrameLogger(include_frame_types=[MetricsFrame]),
         ])
@@ -242,6 +239,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(msgs[2]['role'], "assistant")
 
     async def test_run_tools(self):
+        # assert litellm.supports_function_calling(model=self.model)
         runner = PipelineRunner()
         await self.task.queue_frames([
             UserStartedSpeakingFrame(),
@@ -271,6 +269,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(msgs[4]['role'], "assistant")
 
     async def test_run_tools_describe_image(self):
+        # assert litellm.supports_function_calling(model=self.model)
         runner = PipelineRunner()
         await self.task.queue_frames([
             UserStartedSpeakingFrame(),
@@ -300,6 +299,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(msgs[4]['role'], "assistant")
 
     async def test_run_image(self):
+        # assert litellm.supports_vision(model=self.model)
         img_file = os.path.join(TEST_DIR, "img_files", "03-Confusing-Pictures.jpg")
         img_file = os.getenv('IMG_FILE', img_file)
         img = Image.open(img_file)
@@ -323,6 +323,8 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(msgs[1]['role'], "assistant")
 
     async def test_run_all(self):
+        assert litellm.supports_function_calling(model=self.model)
+        assert litellm.supports_vision(model=self.model)
         img_file = os.path.join(TEST_DIR, "img_files", "03-Confusing-Pictures.jpg")
         img_file = os.getenv('IMG_FILE', img_file)
         img = Image.open(img_file)

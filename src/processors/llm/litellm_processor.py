@@ -85,7 +85,10 @@ class LiteLLMProcessor(LLMProcessor):
             model=self._model,
             stream=True,
             # trim_messages ensures tokens(messages) < max_tokens(model)
-            messages=litellm.utils.trim_messages(messages, self._model),
+            # need HF_TOKEN to be set
+            # issue: https://github.com/BerriAI/litellm/issues/6505
+            # messages=litellm.utils.trim_messages(messages, self._model),
+            messages=messages,
             tools=context.tools,
             tool_choice=context.tool_choice,
             stream_options={"include_usage": True},
