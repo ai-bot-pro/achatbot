@@ -69,13 +69,17 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
       - [ ] **[agora-audio](https://github.com/AgoraIO/agora-realtime-ai-api)**
     - [x] [Websocket server](https://github.com/ai-bot-pro/achatbot/blob/main/src/transports/websocket_server.py)
   - ai processor: llm, tts, asr etc..
+    - llm_processor:
+      - [x] [openai](https://github.com/ai-bot-pro/achatbot/blob/main/test/integration/processors/test_openai_llm_processor.py)(use openai sdk)
+      - [x] [google gemini](https://github.com/ai-bot-pro/achatbot/blob/main/test/integration/processors/test_google_llm_processor.py)(use google-generativeai sdk)
+      - [x] [litellm](https://github.com/ai-bot-pro/achatbot/blob/main/test/integration/processors/test_litellm_processor.py)(use openai input/output format proxy sdk) 
 
 - core module:
   - local llm: 
     - [x] llama-cpp (support text,vision with function-call model)
     - [x] transformers(manual, pipeline) (support text,vision:🦙,Qwen2-vl,Molmo with function-call model)
     - [ ] mlx_lm 
-  - api llm: personal-ai(like openai api, other ai provider)
+  - remote api llm: personal-ai(like openai api, other ai provider)
 
 - AI modules:
   - functions:
