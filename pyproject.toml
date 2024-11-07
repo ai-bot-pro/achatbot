@@ -111,27 +111,10 @@ daily_room_audio_stream = ["achatbot[daily]"]
 livekit_room_audio_stream = ["achatbot[livekit,livekit-api]"]
 
 google_ai = ["google-generativeai~=0.8.3"]
-openai = ["openai~=1.40.6"]
+openai = ["openai~=1.54.1"]
 together_ai = ["together~=1.3.3"]
+litellm = ["litellm~=1.52.0"]
 
-
-# default fastapi_daily_bot_server
-# achatbot[fastapi_bot_server,daily_rtvi_bot,daily_langchain_rag_bot]
-# use all asr tts e.g.:
-# achatbot[fastapi_bot_server,daily_rtvi_bot,daily_langchain_rag_bot,speech_vad_analyzer,asr_processor,tts_processor]
-fastapi_daily_bot_server = [
-    "fastapi~=0.112.0",
-    "uvicorn~=0.30.6",
-    "daily-python~=0.11.0",
-    "openai~=1.40.6",              # like as openai api, groq, together llm
-    "groq~=0.9.0",                 # whisper_groq_asr asr engine
-    "edge-tts~=6.1.12",            # tts_edge tts engine
-    "langchain~=0.2.13",
-    "langchain-openai~=0.1.22",
-    "langchain-community~=0.2.12", # langchain.community.embeddings use Jina embeddings
-    "tidb-vector~=0.0.10",         # TIDB vss
-    "pymysql~=1.1.1",              # mysql py client
-]
 
 # for simple dummy bot server to test
 fastapi_bot_server = ["fastapi~=0.112.0", "uvicorn~=0.30.6"]
@@ -146,7 +129,7 @@ ngrok_proxy = ["pyngrok~=7.2.0", "nest-asyncio~=1.6.0"]
 # default daily_rtvi_bot
 daily_rtvi_bot = [
     "daily-python~=0.11.0",
-    "openai~=1.40.6",       # like as openai api, groq, together llm
+    "openai~=1.54.1",       # like as openai api, groq, together llm
     "groq~=0.9.0",          # whisper_groq_asr asr engine
     "edge-tts~=6.1.12",     # tts_edge tts engine
 ]
@@ -157,15 +140,16 @@ daily_rtvi_bot = [
 # when use vad asr tts engine: achatbot[daily_langchain_rag_bot,speech_vad_analyzer,asr_processor,tts_processor]
 # default daily_langchain_rag_bot
 daily_langchain_rag_bot = [
-    "daily-python~=0.11.0",        # default daily vad analyzer
-    "openai~=1.40.6",              # like as openai api, groq, together llm
-    "groq~=0.9.0",                 # whisper_groq_asr asr engine
-    "edge-tts~=6.1.12",            # tts_edge tts engine
-    "langchain~=0.2.13",
-    "langchain-openai~=0.1.22",
-    "langchain-community~=0.2.12", # langchain.community.embeddings use Jina embeddings
-    "tidb-vector~=0.0.10",         # TIDB vss
-    "pymysql~=1.1.1",              # mysql py client
+    "daily-python~=0.11.0",            # default daily vad analyzer
+    "openai~=1.54.1",                  # like as openai api, groq, together llm
+    "groq~=0.9.0",                     # whisper_groq_asr asr engine
+    "edge-tts~=6.1.12",                # tts_edge tts engine
+    "langchain~=0.3.7",
+    "langchain-text-splitters~=0.3.2",
+    "langchain-openai~=0.2.6",
+    "langchain-community~=0.3.5",      # langchain.community.embeddings use Jina embeddings
+    "tidb-vector~=0.0.10",             # TIDB vss
+    "pymysql~=1.1.1",                  # mysql py client
 ]
 
 # PyAudio need install python3-pyaudio 
@@ -414,10 +398,11 @@ asr_processor = [
 ]
 openai_llm_processor = ["achatbot[openai]"]
 google_llm_processor = ["achatbot[google_ai,openai]"]
-img_processor = ["openai~=1.40.6"]
+litellm_processor = ["achatbot[openai,litellm]"]
+img_processor = ["openai~=1.54.1"]
 tts_processor = [
     "websockets~=12.0",
-    "openai~=1.40.6",
+    "openai~=1.54.1",
     # speech_tts engine
     "TTS~=0.22.0",
     "edge-tts~=6.1.12",
