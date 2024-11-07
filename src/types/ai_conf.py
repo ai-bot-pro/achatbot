@@ -79,6 +79,7 @@ class AIConfig(BaseModel):
     vad: Optional[VADConfig] = None
     asr: Optional[ASRConfig] = None
     llm: Optional[LLMConfig] = None
+    nlp_task_llm: Optional[LLMConfig] = None
     vision_llm: Optional[LLMConfig] = None
     vision_detector: Optional[VisionDetectorConfig] = None
     vision_ocr: Optional[VisionOCRConfig] = None
