@@ -146,6 +146,9 @@ class AIRoomBot(IBot):
         if self._bot_config.llm and self._bot_config.llm.tag \
                 and "google" in self._bot_config.llm.tag:
             llm_processor = self.get_google_llm_processor()
+        elif self._bot_config.llm and self._bot_config.llm.tag \
+                and "litellm" in self._bot_config.llm.tag:
+            llm_processor = self.get_litellm_processor()
         else:
             llm_processor = self.get_openai_llm_processor()
         return llm_processor
@@ -186,6 +189,11 @@ class AIRoomBot(IBot):
                 model=model,
             )
 
+        return llm_processor
+
+    def get_litellm_processor(self) -> LLMProcessor:
+        from src.processors.llm.litellm_processor import LiteLLMProcessor
+        llm_processor = LiteLLMProcessor(model=self.model, set_verbose=False)
         return llm_processor
 
     def get_llm_processor(self) -> LLMProcessor:
