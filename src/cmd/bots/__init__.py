@@ -73,7 +73,7 @@ def import_bots(bot_name: str = "DummyBot"):
         from .image.storytelling import daily_bot
         return True
     if "DailyNaturalConversationBot" in bot_name:
-        from . import daily_natural_conversation_bot
+        from .nlp import daily_natural_conversation_bot
         return True
     if "LivekitBot" in bot_name:
         from . import livekit_bot

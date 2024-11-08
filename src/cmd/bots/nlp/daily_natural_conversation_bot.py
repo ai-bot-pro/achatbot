@@ -3,13 +3,16 @@ import logging
 from apipeline.frames import Frame
 from apipeline.processors.filters.null_filter import NullFilter
 from apipeline.processors.filters.function_filter import FunctionFilter
+from apipeline.processors.filters.frame_filter import FrameFilter
 from apipeline.notifiers.event_notifier import EventNotifier
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.parallel_pipeline import ParallelPipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.processors.aggregators.hold import HoldFramesAggregator, HoldLastFrameAggregator
+from apipeline.processors.logger import FrameLogger
 
+from src.processors.aggregators.openai_llm_context import OpenAIAssistantContextAggregator, OpenAILLMContext, OpenAILLMContextFrame, OpenAIUserContextAggregator
 from src.processors.user_idle_processor import UserIdleProcessor
 from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
 from src.processors.llm.base import LLMProcessor
@@ -31,8 +34,11 @@ class DailyNaturalConversationBot(DailyRoomBot):
     """
     natural conversation bot with daily webrtc
     use 2 llm to conversation with user
-    - statement_llm_processor: use llm to do sentence completion NLP task
-    - chat_llm_processor: chat
+    - statement_llm_processor: use open source llm to do sentence completion NLP task, e.g. google/gemma-2-27b-it
+    - chat_llm_processor: chat instruct model e.g.: gemini/gemini-1.5-flash-latest
+
+    TODO: use open source llm to correct user input
+    - corrector_llm_processor: use llm to correct user input NLP task e.g.: Qwen/Qwen2.5-72B-Instruct-Turbo, google/gemma-2-27b-it
     """
 
     def __init__(self, **args) -> None:
@@ -41,9 +47,20 @@ class DailyNaturalConversationBot(DailyRoomBot):
         self._notifier = EventNotifier()
 
     async def wake_notifier_filter(self, frame: Frame):
+        """
+        just notify when user transcription include YES,
+        don't pass through any frame unless system frame.
+        """
         if isinstance(frame, TextFrame) and frame.text == "YES":
             await self._notifier.notify()
-        return True
+        return False
+
+    async def idle_callback(self, processor: UserIdleProcessor):
+        """
+        Sometimes the LLM will fail detecting if a user has completed a sentence,
+        this will wake up the notifier if that happens.
+        """
+        await self._notifier.notify()
 
     async def arun(self):
         vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
@@ -72,14 +89,18 @@ class DailyNaturalConversationBot(DailyRoomBot):
         chat_llm_processor: LLMProcessor = self.get_llm_processor()
         chat_messages = [{
             "role": "system",
-            "content": "You are a helpful LLM in a WebRTC call. Your goal is to demonstrate your capabilities in a succinct way. Your output will be converted to audio so don't include special characters in your answers. Respond to what the user said in a creative and helpful way.",
+            "content": "You are a helpful LLM in a WebRTC call. Your goal is to demonstrate your capabilities in a succinct way. Your output will be converted to audio, so don't include special characters and don't use markdown format in your answers. Respond to what the user said in a creative and helpful way.",
         }]
-        if self._bot_config.llm.messages:
-            chat_messages = self._bot_config.llm.messages
-        user_response = LLMUserResponseAggregator(chat_messages)
-        assistant_response = LLMAssistantResponseAggregator(chat_messages)
+        if not self._bot_config.llm.messages:
+            self._bot_config.llm.messages = chat_messages
+        llm_user_ctx_aggr = OpenAIUserContextAggregator(OpenAILLMContext(
+            messages=self._bot_config.llm.messages))
+        llm_assistant_ctx_aggr = OpenAIAssistantContextAggregator(llm_user_ctx_aggr)
+        # user_response = LLMUserResponseAggregator(self._bot_config.llm.messages)
+        # assistant_response = LLMAssistantResponseAggregator(self._bot_config.llm.messages)
 
-        statement_llm_processor: LLMProcessor = self.get_llm_processor()
+        statement_llm_processor: LLMProcessor = self.get_llm_processor(
+            self._bot_config.nlp_task_llm)
         statement_messages = [{
             "role": "system",
             "content": "Determine if the user's statement is a complete sentence or question, ending in a natural pause or punctuation. Return 'YES' if it is complete and 'NO' if it seems to leave a thought unfinished.",
@@ -88,38 +109,39 @@ class DailyNaturalConversationBot(DailyRoomBot):
             statement_messages = self._bot_config.nlp_task_llm.messages
         statement_user_response = LLMUserResponseAggregator(statement_messages)
 
-        # Sometimes the LLM will fail detecting if a user has completed a sentence,
-        # this will wake up the notifier if that happens.
-        async def idle_callback(processor: UserIdleProcessor):
-            await self._notifier.notify()
-        user_idle = UserIdleProcessor(callback=idle_callback, timeout=3.0)
-
-        # This processor keeps the last context
+        # This processor keeps the last OpenAILLMContextFrame
         # and will let it through once the notifier is woken up.
         hold_last_frame_aggregator = HoldLastFrameAggregator(
-            self._notifier, hold_frame_classes=(LLMMessagesFrame,))
+            self._notifier, hold_frame_classes=(OpenAILLMContextFrame,))
 
+        # !TIPS: u can one by one pipeline to debug
         self.task = PipelineTask(
             Pipeline([
                 transport.input_processor(),
                 asr_processor,
                 ParallelPipeline(
                     [
+                        FrameFilter(include_frame_types=[LLMMessagesFrame]),
                         statement_user_response,
                         statement_llm_processor,
+                        # FrameLogger(prefix="check statement ==>", include_frame_types=[TextFrame]),
                         FunctionFilter(filter=self.wake_notifier_filter),
                         NullFilter(),
+                        # check no downstream frame to log
+                        # FrameLogger(),
                     ],
                     [
-                        user_response,
+                        llm_user_ctx_aggr,
                         hold_last_frame_aggregator,
+                        FrameLogger(include_frame_types=[OpenAILLMContextFrame]),
                         chat_llm_processor,
+                        # FrameLogger(include_frame_types=[TextFrame]),
                     ],
                 ),
-                user_idle,
+                # UserIdleProcessor(callback=self.idle_callback, timeout=3.0),
                 tts_processor,
                 transport.output_processor(),
-                assistant_response,
+                llm_assistant_ctx_aggr,
             ]),
             params=PipelineParams(
                 allow_interruptions=True,
@@ -158,4 +180,4 @@ class DailyNaturalConversationBot(DailyRoomBot):
                 "role": "user",
                 "content": hi_text,
             })
-            await self.task.queue_frames([LLMMessagesFrame(self._bot_config.llm.messages)])
+            await self.task.queue_frame(LLMMessagesFrame(self._bot_config.llm.messages))
