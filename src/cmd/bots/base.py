@@ -123,62 +123,64 @@ class AIRoomBot(IBot):
             )
         return asr_processor
 
-    def get_vision_llm_processor(self) -> LLMProcessor:
+    def get_vision_llm_processor(self, llm_config: LLMConfig | None = None) -> LLMProcessor:
         """
         get local vision llm
         """
         from src.processors.vision.vision_processor import VisionProcessor
-        llm_config = self._bot_config.llm
-        if self._bot_config.vision_llm:
+        if not llm_config:
             llm_config = self._bot_config.vision_llm
         if "mock" in llm_config.tag:
             llm_processor = MockVisionProcessor()
         else:
             logging.debug(f"init engine llm processor tag: {llm_config.tag}")
-            llm = LLMEnvInit.initLLMEngine(llm_config.tag, llm_config.args)
-            llm_processor = VisionProcessor(llm, self.session)
+            llm_engine = LLMEnvInit.initLLMEngine(llm_config.tag, llm_config.args)
+            llm_processor = VisionProcessor(llm_engine, self.session)
         return llm_processor
 
-    def get_remote_llm_processor(self) -> LLMProcessor:
+    def get_remote_llm_processor(self, llm: LLMConfig | None = None) -> LLMProcessor:
         """
         get remote vision llm
         """
-        if self._bot_config.llm and self._bot_config.llm.tag \
-                and "google" in self._bot_config.llm.tag:
-            llm_processor = self.get_google_llm_processor()
-        elif self._bot_config.llm and self._bot_config.llm.tag \
-                and "litellm" in self._bot_config.llm.tag:
-            llm_processor = self.get_litellm_processor()
+        if not llm:
+            llm = self._bot_config.llm
+        if llm and llm.tag \
+                and "google" in llm.tag:
+            llm_processor = self.get_google_llm_processor(llm)
+        elif llm and llm.tag and "litellm" in llm.tag:
+            llm_processor = self.get_litellm_processor(llm)
         else:
-            llm_processor = self.get_openai_llm_processor()
+            llm_processor = self.get_openai_llm_processor(llm)
         return llm_processor
 
-    def get_openai_llm_processor(self) -> LLMProcessor:
+    def get_openai_llm_processor(self, llm: LLMConfig | None = None) -> LLMProcessor:
         from src.processors.llm.openai_llm_processor import OpenAILLMProcessor, OpenAIGroqLLMProcessor
+        if not llm:
+            llm = self._bot_config.llm
         # default use openai llm processor
         api_key = os.environ.get("OPENAI_API_KEY")
-        if "groq" in self._bot_config.llm.base_url:
+        if "groq" in llm.base_url:
             # https://console.groq.com/docs/models
             api_key = os.environ.get("GROQ_API_KEY")
             llm_processor = OpenAIGroqLLMProcessor(
-                model=self._bot_config.llm.model,
-                base_url=self._bot_config.llm.base_url,
+                model=llm.model,
+                base_url=llm.base_url,
                 api_key=api_key,
             )
             return llm_processor
-        elif "together" in self._bot_config.llm.base_url:
+        elif "together" in llm.base_url:
             # https://docs.together.ai/docs/chat-models
             api_key = os.environ.get("TOGETHER_API_KEY")
         llm_processor = OpenAILLMProcessor(
-            model=self._bot_config.llm.model,
-            base_url=self._bot_config.llm.base_url,
+            model=llm.model,
+            base_url=llm.base_url,
             api_key=api_key,
         )
         return llm_processor
 
-    def get_google_llm_processor(self) -> LLMProcessor:
+    def get_google_llm_processor(self, llm: LLMConfig) -> LLMProcessor:
         from src.processors.llm.google_llm_processor import GoogleAILLMProcessor
-        llm_config = self._bot_config.llm
+        llm_config = llm
         if llm_config and llm_config.args:
             llm_processor = GoogleAILLMProcessor(**llm_config.args)
         else:
@@ -191,19 +193,20 @@ class AIRoomBot(IBot):
 
         return llm_processor
 
-    def get_litellm_processor(self) -> LLMProcessor:
+    def get_litellm_processor(self, llm: LLMConfig) -> LLMProcessor:
         from src.processors.llm.litellm_processor import LiteLLMProcessor
-        llm_processor = LiteLLMProcessor(model=self.model, set_verbose=False)
+        llm_processor = LiteLLMProcessor(model=llm.model, set_verbose=False)
         return llm_processor
 
-    def get_llm_processor(self) -> LLMProcessor:
-        if self._bot_config.llm and self._bot_config.llm.tag \
-                and "vision" in self._bot_config.llm.tag:
+    def get_llm_processor(self, llm: LLMConfig | None = None) -> LLMProcessor:
+        if not llm:
+            llm = self._bot_config.llm
+        if llm and llm.tag and "vision" in llm.tag:
             # engine llm processor(just support vision model, other TODO):
             # (llm_llamacpp, llm_personalai_proxy, llm_transformers etc..)
-            llm_processor = self.get_vision_llm_processor()
+            llm_processor = self.get_vision_llm_processor(llm)
         else:
-            llm_processor = self.get_remote_llm_processor()
+            llm_processor = self.get_remote_llm_processor(llm)
         return llm_processor
 
     def get_vision_annotate_processor(self) -> AIProcessor:

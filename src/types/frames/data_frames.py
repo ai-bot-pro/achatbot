@@ -91,6 +91,9 @@ class LLMMessagesFrame(DataFrame):
     """
     messages: List[dict]
 
+    def __str__(self):
+        return f"{self.name}(messages: {self.messages})"
+
 
 @dataclass
 class TransportMessageFrame(DataFrame):
