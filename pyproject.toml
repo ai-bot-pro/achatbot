@@ -122,6 +122,9 @@ fastapi_bot_server = ["fastapi~=0.112.0", "uvicorn~=0.30.6"]
 # ngrok proxy
 ngrok_proxy = ["pyngrok~=7.2.0", "nest-asyncio~=1.6.0"]
 
+# voice processor
+moshi_voice_processor = ["moshi~=0.1.0"]
+
 # when use asr tts processor 
 #   e.g.: 
 #   - achatbot[daily_rtvi_bot,deepgram_asr_processor,cartesia_tts_processor]

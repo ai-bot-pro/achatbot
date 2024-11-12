@@ -5,39 +5,26 @@ import unittest
 from apipeline.pipeline.pipeline import Pipeline, FrameDirection
 from apipeline.pipeline.task import PipelineTask, PipelineParams
 from apipeline.pipeline.runner import PipelineRunner
-from apipeline.frames.data_frames import DataFrame, TextFrame, Frame
-from apipeline.frames.control_frames import EndFrame
-from apipeline.processors.frame_processor import FrameProcessor
+from apipeline.processors.logger import FrameLogger
+from apipeline.frames import TextFrame, AudioRawFrame
 
+from src.processors.voice.moshi_voice_processor import MoshiVoiceProcessor
 from src.modules.speech.vad_analyzer.silero import SileroVADAnalyzer
-from src.processors.speech.asr.deepgram_asr_processor import DeepgramAsrProcessor
 from src.common.types import DailyParams
 from src.common.logger import Logger
 from src.transports.daily import DailyTransport
-from src.types.frames.data_frames import TranscriptionFrame
-from src.common.session import Session
-from src.common.types import SessionCtx
+from src.types.llm.lmgen import LMGenArgs
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 """
-python -m unittest test.integration.processors.test_asr_deepgram_processor.TestASRDeepgramProcessor
-DEEPGRAM_LANGUAGE=zh \
-    python -m unittest test.integration.processors.test_asr_deepgram_processor.TestASRDeepgramProcessor
+python -m unittest test.integration.processors.test_moshi_voice_processor.TestProcessor
 """
 
 
-class TranscriptionLogger(FrameProcessor):
-
-    async def process_frame(self, frame: Frame, direction: FrameDirection):
-        await super().process_frame(frame, direction)
-
-        if isinstance(frame, TranscriptionFrame):
-            print(f"get Transcription Frame: {frame}, text len:{len(frame.text)}")
-
-
-class TestASRDeepgramProcessor(unittest.IsolatedAsyncioTestCase):
+class TestProcessor(unittest.IsolatedAsyncioTestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -54,6 +41,7 @@ class TestASRDeepgramProcessor(unittest.IsolatedAsyncioTestCase):
         daily_pramams: DailyParams = DailyParams(
             audio_in_enabled=True,
             transcription_enabled=False,
+            audio_out_enabled=True,
         )
         if self.vad_enabled is True:
             daily_pramams.vad_enabled = True
@@ -62,26 +50,23 @@ class TestASRDeepgramProcessor(unittest.IsolatedAsyncioTestCase):
         transport = DailyTransport(
             self.room_url,
             self.room_token,
-            "Transcription bot",
+            "daily moshi voice bot",
             daily_pramams,
         )
 
-        asr_processor = DeepgramAsrProcessor(
-            api_key=os.getenv("DEEPGRAM_API_KEY"),
-            language=os.getenv("DEEPGRAM_LANGUAGE", "en"),
-        )
-
-        tl_porcessor = TranscriptionLogger()
+        voice_processor = MoshiVoiceProcessor(lm_gen_args=LMGenArgs())
 
         pipeline = Pipeline([
             transport.input_processor(),
-            asr_processor,
-            tl_porcessor])
+            voice_processor,  # output TextFrame and AudioRawFrame
+            FrameLogger(include_frame_types=[TextFrame, AudioRawFrame]),
+            transport.output_processor(),
+        ])
 
         self.task = PipelineTask(
             pipeline,
             PipelineParams(
-                allow_interruptions=True,
+                allow_interruptions=False,  # close pipeline interruptions, use model interrupt
                 enable_metrics=True,
             )
         )

@@ -174,3 +174,17 @@ class UserAudioRawFrame(AudioRawFrame):
 
     def __str__(self):
         return f"user_id:{self.user_id} {super().__str__()}"
+
+
+@dataclass
+class UserVoiceRawFrame(UserAudioRawFrame):
+    """
+    An user audio associated to llm response text.
+    """
+    text: str = ""
+
+    def __post_init__(self):
+        super().__post_init__()
+
+    def __str__(self):
+        return f"text:{self.text} {super().__str__()}"

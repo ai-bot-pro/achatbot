@@ -61,7 +61,7 @@ class TestElevenlabsTTSProcessor(unittest.IsolatedAsyncioTestCase):
         )
 
         task = PipelineTask(Pipeline([tts, transport.output_processor()]),
-                            params=PipelineParams(all_interruptions=True))
+                            params=PipelineParams(allow_interruptions=True))
 
         # Register an event handler so we can play the audio when the
         # participant joins.
