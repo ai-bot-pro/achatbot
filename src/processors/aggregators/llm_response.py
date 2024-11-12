@@ -213,21 +213,6 @@ class LLMFullResponseAggregator(FrameProcessor):
 
     when passed the last frame.
 
-    >>> async def print_frames(aggregator, frame):
-    ...     async for frame in aggregator.process_frame(frame):
-    ...         if isinstance(frame, TextFrame):
-    ...             print(frame.text)
-    ...         else:
-    ...             print(frame.__class__.__name__)
-
-    >>> aggregator = LLMFullResponseAggregator()
-    >>> asyncio.run(print_frames(aggregator, TextFrame("Hello,")))
-    >>> asyncio.run(print_frames(aggregator, TextFrame(" world.")))
-    >>> asyncio.run(print_frames(aggregator, TextFrame(" I am")))
-    >>> asyncio.run(print_frames(aggregator, TextFrame(" an LLM.")))
-    >>> asyncio.run(print_frames(aggregator, LLMFullResponseEndFrame()))
-    Hello, world. I am an LLM.
-    LLMFullResponseEndFrame
     """
 
     def __init__(self):
