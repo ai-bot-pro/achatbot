@@ -34,10 +34,10 @@ def seed_all(seed):
     torch.backends.cudnn.benchmark = False
 
 
-class MoshiVoiceProcessor(VoiceProcessorBase):
+class MoshiVoiceOpusStreamProcessor(VoiceProcessorBase):
     """
-    use mimi speech codec + moshi lm(moshiko/moshika)
-    - A1-T2A2: (speech)-to-(speech and text) (mimi(speech encoder)) -> (llm) -- text|speech tokens --> mimi(speech decoder))
+    use mimi speech codec + moshi lm(moshiko/moshika) with opus w/r streamer
+    - A1-T2A2: (speech)-to-(speech and text) (mimi(speech encoder)) -> (llm) -- text|speech tokens --> bpe(text decoder)|mimi(speech decoder))
 
     NOTE:
     - moshi genative lm no system prompt and funciton call.
@@ -74,11 +74,17 @@ class MoshiVoiceProcessor(VoiceProcessorBase):
 
         self._frame_size = int(self._mimi.sample_rate / self._mimi.frame_rate)
 
+        # open streaming with batch_size:1,
+        # if not, need use with lm_gen.streaming(1):
+        self._mimi.streaming_forever(1)
+        self._lm_gen.streaming_forever(1)
+        self.warmup()
+
         self._audio_in_task = None
         self._audio_out_task = None
 
     @property
-    async def stream_info(self) -> dict:
+    def stream_info(self) -> dict:
         """Return dict stream info"""
         return {
             "sample_rate": self._mimi.sample_rate,
@@ -87,35 +93,37 @@ class MoshiVoiceProcessor(VoiceProcessorBase):
 
     async def start(self, frame: StartFrame):
         await super().start(frame)
-        self.warmup()
-
-        self._mimi.streaming_forever(1)
-        self._lm_gen.streaming_forever(1)
 
         # https://opus-codec.org/
         # https://github.com/kyutai-labs/sphn (python binds rust lib so)
         # Easily load various audio file formats (bytes) into numpy arrays.
         # Read/write ogg/opus audio files with streaming support.
+        # have some issue with daily-core rust lib so
         self._opus_writer = OpusStreamWriter(self._mimi.sample_rate)
         self._opus_reader = OpusStreamReader(self._mimi.sample_rate)
 
         self._audio_in_task = self.get_event_loop().create_task(self._audio_in_task_handler())
         self._audio_out_task = self.get_event_loop().create_task(self._audio_out_task_handler())
 
+        logging.info("start done")
+
     async def stop(self, frame: EndFrame):
         self._mimi.reset_streaming()
         self._lm_gen.reset_streaming()
 
-        self._audio_in_task.cancel()
-        await self._audio_in_task
-        self._audio_out_task.cancel()
-        await self._audio_out_task
+        if self._audio_in_task:
+            self._audio_in_task.cancel()
+            await self._audio_in_task
+        if self._audio_out_task:
+            self._audio_out_task.cancel()
+            await self._audio_out_task
 
         self._opus_writer: OpusStreamWriter = None
         self._opus_reader.close()
         self._opus_reader: OpusStreamReader = None
 
         await super().stop(frame)
+        logging.info("stop done")
 
     async def cancel(self, frame: CancelFrame):
         await super().cancel(frame)
@@ -143,10 +151,12 @@ class MoshiVoiceProcessor(VoiceProcessorBase):
             self._moshi_lm,
             **self._lm_gen_args.__dict__,
         )
-        logging("moshi loaded")
+        logging.info("moshi loaded")
 
     def warmup(self):
-        for chunk in range(4):
+        logging.info("start warmup")
+        for i in range(4):
+            be = time.time()
             chunk = torch.zeros(1, 1, self._frame_size, dtype=torch.float32, device=self._device)
             codes = self._mimi.encode(chunk)
             for c in range(codes.shape[-1]):
@@ -154,7 +164,9 @@ class MoshiVoiceProcessor(VoiceProcessorBase):
                 if tokens is None:
                     continue
                 _ = self._mimi.decode(tokens[:, 1:])
+            logging.info(f"chunk warmup {i} in {1000 * (time.time() - be):.1f}ms")
         torch.cuda.synchronize()
+        logging.info("end warmup")
 
     async def _audio_in_task_handler(self):
         while True:
@@ -213,3 +225,16 @@ class MoshiVoiceProcessor(VoiceProcessorBase):
 
     async def run_voice(self, audio: bytes) -> AsyncGenerator[Frame, None]:
         self._opus_reader.append_bytes(audio)
+        yield None
+
+
+class MoshiVoiceProcessor(VoiceProcessorBase):
+    """
+    use mimi speech codec + moshi lm(moshiko/moshika)
+    - A1-T2A2: (speech)-to-(speech and text) (mimi(speech encoder)) -> (llm) -- text|speech tokens --> bpe(text decoder)|mimi(speech decoder))
+
+    NOTE:
+    - moshi genative lm no system prompt and funciton call.
+    - just a simple chat bot, but the code is pretty good.
+    """
+    pass

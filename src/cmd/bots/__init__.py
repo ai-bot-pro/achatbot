@@ -105,6 +105,9 @@ def import_bots(bot_name: str = "DummyBot"):
     if "LivekitDescribeVisionToolsBot" in bot_name:
         from .vision import livekit_describe_vision_tools_bot
         return True
+    if "LivekitMoshiVoiceBot" in bot_name:
+        from .voice import livekit_moshi_bot
+        return True
 
     return False
 

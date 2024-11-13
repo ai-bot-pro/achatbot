@@ -27,14 +27,15 @@ class VoiceProcessorBase(AsyncAIProcessor):
         super().__init__(**kwargs)
 
     @property
-    async def stream_info(self) -> dict:
+    def stream_info(self) -> dict:
         """Return dict stream info"""
         return {"sample_rate": 16000, "channels": 2}
 
     @abstractmethod
     async def run_voice(self, audio: bytes) -> AsyncGenerator[Frame, None]:
-        """Return UserVoiceRawFrame | AudioRawFrame + TextFrame async generator"""
-        pass
+        """
+        Return UserVoiceRawFrame | AudioRawFrame + TextFrame async generator
+        """
 
     async def process_audio_frame(self, frame: AudioRawFrame):
         await self.process_generator(self.run_voice(frame.audio))

@@ -3,12 +3,14 @@ import logging
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
+from apipeline.processors.logger import FrameLogger
+from apipeline.frames import AudioRawFrame, TextFrame
 
-from src.processors.voice.moshi_voice_processor import MoshiVoiceProcessor
+from src.processors.voice.moshi_voice_processor import MoshiVoiceOpusStreamProcessor
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
-from src.common.types import DailyParams
-from src.transports.daily import DailyTransport
-from src.cmd.bots.base_daily import DailyRoomBot
+from src.common.types import LivekitParams
+from src.transports.livekit import LivekitTransport
+from src.cmd.bots.base_livekit import LivekitRoomBot
 from src.cmd.bots import register_ai_room_bots
 from src.types.frames.data_frames import LLMMessagesFrame
 from src.types.llm.lmgen import LMGenArgs
@@ -18,7 +20,7 @@ load_dotenv(override=True)
 
 
 @register_ai_room_bots.register
-class DailyMoshiVoiceBot(DailyRoomBot):
+class LivekitMoshiVoiceBot(LivekitRoomBot):
     """
     use moshi voice processor, just a simple chat bot.
     """
@@ -29,25 +31,22 @@ class DailyMoshiVoiceBot(DailyRoomBot):
 
     async def arun(self):
         vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
-        self.daily_params = DailyParams(
+        self.params = LivekitParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
             vad_enabled=True,
             vad_analyzer=vad_analyzer,
             vad_audio_passthrough=True,
-            transcription_enabled=False,
         )
 
-        voice_processor = MoshiVoiceProcessor(lm_gen_args=LMGenArgs())
+        voice_processor = MoshiVoiceOpusStreamProcessor(lm_gen_args=LMGenArgs())
         stream_info = voice_processor.stream_info
-        self.daily_params.audio_out_sample_rate = stream_info["sample_rate"]
-        self.daily_params.audio_out_channels = stream_info["channels"]
+        self.params.audio_out_sample_rate = stream_info["sample_rate"]
+        self.params.audio_out_channels = stream_info["channels"]
 
-        transport = DailyTransport(
-            self.args.room_url,
+        transport = LivekitTransport(
             self.args.token,
-            self.args.bot_name,
-            self.daily_params,
+            params=self.params,
         )
 
         messages = []
@@ -57,11 +56,13 @@ class DailyMoshiVoiceBot(DailyRoomBot):
         self.task = PipelineTask(
             Pipeline([
                 transport.input_processor(),
+                FrameLogger(include_frame_types=[AudioRawFrame]),
                 voice_processor,
+                FrameLogger(include_frame_types=[AudioRawFrame, TextFrame]),
                 transport.output_processor(),
             ]),
             params=PipelineParams(
-                allow_interruptions=True,
+                allow_interruptions=False,
                 enable_metrics=True,
                 send_initial_empty_metrics=False,
             ),
@@ -69,17 +70,9 @@ class DailyMoshiVoiceBot(DailyRoomBot):
 
         transport.add_event_handlers(
             "on_first_participant_joined",
-            [self.on_first_participant_joined, self.on_first_participant_say_hi])
-        transport.add_event_handler(
-            "on_participant_left",
-            self.on_participant_left)
-        transport.add_event_handler(
-            "on_call_state_updated",
-            self.on_call_state_updated)
+            [self.on_first_participant_say_hi])
 
         await PipelineRunner().run(self.task)
 
-    async def on_first_participant_say_hi(self, transport: DailyTransport, participant):
-        self.session.set_client_id(participant["id"])
-        if self.daily_params.transcription_enabled:
-            transport.capture_participant_transcription(participant["id"])
+    async def on_first_participant_say_hi(self, transport: LivekitTransport, participant):
+        pass
