@@ -6,7 +6,7 @@ from apipeline.pipeline.runner import PipelineRunner
 from apipeline.processors.logger import FrameLogger
 from apipeline.frames import AudioRawFrame, TextFrame
 
-from src.processors.voice.moshi_voice_processor import MoshiVoiceOpusStreamProcessor
+from src.processors.voice.moshi_voice_processor import MoshiVoiceProcessor
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.common.types import LivekitParams
 from src.transports.livekit import LivekitTransport
@@ -39,7 +39,7 @@ class LivekitMoshiVoiceBot(LivekitRoomBot):
             vad_audio_passthrough=True,
         )
 
-        voice_processor = MoshiVoiceOpusStreamProcessor(lm_gen_args=LMGenArgs())
+        voice_processor = MoshiVoiceProcessor(lm_gen_args=LMGenArgs())
         stream_info = voice_processor.stream_info
         self.params.audio_out_sample_rate = stream_info["sample_rate"]
         self.params.audio_out_channels = stream_info["channels"]

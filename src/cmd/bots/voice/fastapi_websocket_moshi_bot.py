@@ -8,10 +8,10 @@ from apipeline.frames import AudioRawFrame, TextFrame
 from fastapi import WebSocket
 from dotenv import load_dotenv
 
-from src.cmd.bots.base import AIRoomBot
+from src.cmd.bots.base_fastapi_websocket_server import AIFastapiWebsocketBot
 from src.processors.voice.moshi_voice_processor import MoshiVoiceOpusStreamProcessor
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
-from src.cmd.bots import register_ai_room_bots
+from src.cmd.bots import register_ai_fastapi_ws_bots
 from src.types.llm.lmgen import LMGenArgs
 from src.types.network.fastapi_websocket import FastapiWebsocketServerParams
 from src.transports.fastapi_websocket_server import FastapiWebsocketTransport
@@ -20,7 +20,8 @@ from src.transports.fastapi_websocket_server import FastapiWebsocketTransport
 load_dotenv(override=True)
 
 
-class FastapiWebsocketMoshiVoiceBot(AIRoomBot):
+@register_ai_fastapi_ws_bots.register
+class FastapiWebsocketMoshiVoiceBot(AIFastapiWebsocketBot):
     """
     use moshi voice processor, just a simple chat bot.
     """
@@ -28,7 +29,7 @@ class FastapiWebsocketMoshiVoiceBot(AIRoomBot):
     def __init__(self, websocket: WebSocket | None = None, **args) -> None:
         super().__init__(**args)
         self.init_bot_config()
-        self._websocket = websocket
+        self._voice_processor = self.get_voice_processor()
 
     async def arun(self):
         if self._websocket is None:
@@ -44,8 +45,7 @@ class FastapiWebsocketMoshiVoiceBot(AIRoomBot):
             transcription_enabled=False,
         )
 
-        voice_processor = MoshiVoiceOpusStreamProcessor(lm_gen_args=LMGenArgs())
-        stream_info = voice_processor.stream_info
+        stream_info = self._voice_processor.stream_info
         self.params.audio_out_sample_rate = stream_info["sample_rate"]
         self.params.audio_out_channels = stream_info["channels"]
 
@@ -62,7 +62,7 @@ class FastapiWebsocketMoshiVoiceBot(AIRoomBot):
             Pipeline([
                 transport.input_processor(),
                 FrameLogger(include_frame_types=[AudioRawFrame]),
-                voice_processor,
+                self._voice_processor,
                 FrameLogger(include_frame_types=[AudioRawFrame, TextFrame]),
                 transport.output_processor(),
             ]),
@@ -80,19 +80,4 @@ class FastapiWebsocketMoshiVoiceBot(AIRoomBot):
             "on_client_disconnected",
             self.on_client_disconnected)
 
-        await PipelineRunner().run(self.task)
-
-    async def on_client_connected(
-        self,
-        transport: FastapiWebsocketTransport,
-        websocket: WebSocket,
-    ):
-        logging.info(f"on_client_disconnected client:{websocket.client}")
-        self.session.set_client_id(client_id=f"{websocket.client.host}:{websocket.client.port}")
-
-    async def on_client_disconnected(
-        self,
-        transport: FastapiWebsocketTransport,
-        websocket: WebSocket,
-    ):
-        logging.info(f"on_client_disconnected client:{websocket.client}")
+        await PipelineRunner(handle_sigint=self._handle_sigint).run(self.task)

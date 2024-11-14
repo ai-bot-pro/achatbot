@@ -38,6 +38,7 @@ class WebsocketServerInputProcessor(AudioVADInputProcessor):
         await super().stop()
         self._stop_server_event.set()
         await self._server_task
+        print("-----websocket server input stop------")
 
     async def cancel(self, frame: CancelFrame):
         await super().cancel(frame)

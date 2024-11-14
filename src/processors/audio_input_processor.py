@@ -52,9 +52,11 @@ class AudioVADInputProcessor(InputProcessor):
             await self._audio_task
 
         # Wait for the push frame task to finish. It will finish when the
-        # EndFrame is actually processed.
+        # EndFrame is actually processed. wait timeout 1s
         try:
-            await self._push_frame_task
+            await asyncio.wait_for(self._push_frame_task, 1)
+        except asyncio.TimeoutError:
+            pass
         except asyncio.CancelledError:
             pass
 

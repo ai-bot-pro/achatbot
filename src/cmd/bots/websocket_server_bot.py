@@ -1,9 +1,11 @@
 import logging
 
+from apipeline.frames import EndFrame
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
 import websockets
+from dotenv import load_dotenv
 
 from src.cmd.bots.base import AIRoomBot
 from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
@@ -12,9 +14,6 @@ from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.types.frames.data_frames import LLMMessagesFrame
 from src.cmd.bots import register_ai_room_bots
-
-from dotenv import load_dotenv
-
 from src.transports.websocket_server import WebsocketServerTransport
 from src.types.network.websocket import WebsocketServerParams
 
@@ -113,3 +112,5 @@ class WebsocketServerBot(AIRoomBot):
         client: websockets.WebSocketServerProtocol
     ):
         logging.info(f"on_client_disconnected client:{client}")
+        if self.task is not None:
+            await self.task.queue_frame(EndFrame())

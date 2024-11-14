@@ -46,7 +46,7 @@ class MoshiVoiceOpusStreamProcessor(VoiceProcessorBase):
 
     def __init__(self,
                  *,
-                 lm_gen_args: LMGenArgs,
+                 lm_gen_args: LMGenArgs = LMGenArgs(),
                  model_name: str = loaders.DEFAULT_REPO,
                  mimi_weight_file: str | None = None,
                  text_tokenizer_file: str | None = None,
