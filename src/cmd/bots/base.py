@@ -263,7 +263,10 @@ class AIBot(IBot):
                 else:
                     llm_processor = MoshiVoiceOpusStreamProcessor()
             else:
-                llm_processor = MoshiVoiceProcessor()
+                if llm.args:
+                    llm_processor = MoshiVoiceProcessor(**llm.args)
+                else:
+                    llm_processor = MoshiVoiceProcessor()
         else:
             # @TODO: add default voice processor
             pass
