@@ -46,7 +46,7 @@ class MoshiVoiceOpusStreamProcessor(VoiceProcessorBase):
 
     def __init__(self,
                  *,
-                 lm_gen_args: LMGenArgs = LMGenArgs(),
+                 lm_gen_args: LMGenArgs | dict = LMGenArgs(),
                  model_name: str = loaders.DEFAULT_REPO,
                  mimi_weight_file: str | None = None,
                  text_tokenizer_file: str | None = None,
@@ -56,6 +56,8 @@ class MoshiVoiceOpusStreamProcessor(VoiceProcessorBase):
         super().__init__(**kwargs)
         seed_all(12345678)
         self._lm_gen_args = lm_gen_args
+        if isinstance(lm_gen_args, dict):
+            self._lm_gen_args = LMGenArgs(**lm_gen_args)
         self._model_name = model_name
         self._mimi_weight_file = mimi_weight_file
         self._text_tokenizer_file = text_tokenizer_file
@@ -72,7 +74,6 @@ class MoshiVoiceOpusStreamProcessor(VoiceProcessorBase):
 
         self.load_models()
 
-        self._frame_size = int(self._mimi.sample_rate / self._mimi.frame_rate)
 
         # open streaming with batch_size:1,
         # if not, need use with lm_gen.streaming(1):
@@ -91,16 +92,25 @@ class MoshiVoiceOpusStreamProcessor(VoiceProcessorBase):
             "channels": self._mimi.channels,
         }
 
-    async def start(self, frame: StartFrame):
-        await super().start(frame)
-
+    def reset_state(self):
         # https://opus-codec.org/
         # https://github.com/kyutai-labs/sphn (python binds rust lib so)
         # Easily load various audio file formats (bytes) into numpy arrays.
         # Read/write ogg/opus audio files with streaming support.
-        # have some issue with daily-core rust lib so
+        # use Opus format for audio across the websocket, 
+        # as it can be safely streamed and decoded in real-time
         self._opus_writer = OpusStreamWriter(self._mimi.sample_rate)
         self._opus_reader = OpusStreamReader(self._mimi.sample_rate)
+
+        # LLM is stateful, maintaining chat history, 
+        # so reset it on each connection
+        self._mimi.reset_streaming()
+        self._lm_gen.reset_streaming()
+
+    async def start(self, frame: StartFrame):
+        await super().start(frame)
+
+        self.reset_state()
 
         self._audio_in_task = self.get_event_loop().create_task(self._audio_in_task_handler())
         self._audio_out_task = self.get_event_loop().create_task(self._audio_out_task_handler())
@@ -108,9 +118,6 @@ class MoshiVoiceOpusStreamProcessor(VoiceProcessorBase):
         logging.info("start done")
 
     async def stop(self, frame: EndFrame):
-        self._mimi.reset_streaming()
-        self._lm_gen.reset_streaming()
-
         if self._audio_in_task:
             self._audio_in_task.cancel()
             await self._audio_in_task
@@ -134,6 +141,8 @@ class MoshiVoiceOpusStreamProcessor(VoiceProcessorBase):
         if self._mimi_weight_file is None:
             self._mimi_weight_file = hf_hub_download(self._model_name, loaders.MIMI_NAME)
         self._mimi = loaders.get_mimi(self._mimi_weight_file, self._device)
+        self._mimi.set_num_codebooks(8)
+        self._frame_size = int(self._mimi.sample_rate / self._mimi.frame_rate)
         logging.info("mimi loaded")
 
         logging.info("loading text tokenizer")
