@@ -28,17 +28,17 @@ class VoiceProcessorBase(AsyncAIProcessor):
 
     @property
     def stream_info(self) -> dict:
-        """Return dict stream info"""
+        """Return dict out stream info"""
         return {"sample_rate": 16000, "channels": 2}
 
     @abstractmethod
-    async def run_voice(self, audio: bytes) -> AsyncGenerator[Frame, None]:
+    async def run_voice(self, frame: AudioRawFrame) -> AsyncGenerator[Frame, None]:
         """
-        Return UserVoiceRawFrame | AudioRawFrame + TextFrame async generator
+        Return AudioRawFrame | AudioRawFrame + TextFrame async generator
         """
 
     async def process_audio_frame(self, frame: AudioRawFrame):
-        await self.process_generator(self.run_voice(frame.audio))
+        await self.process_generator(self.run_voice(frame))
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         """Processes a frame of audio data, either buffering or transcribing it."""
@@ -117,6 +117,11 @@ class SegmentedVoiceProcessor(VoiceProcessorBase):
             self._wave.close()
             self._content.seek(0)
             await self.start_processing_metrics()
-            await self.process_generator(self.run_voice(self._content.read()))
+            await self.process_generator(self.run_voice(AudioRawFrame(
+                audio=self._content.read(),
+                sample_rate=self._sample_rate,
+                num_channels=self._num_channels,
+                sample_width=2,
+            )))
             await self.stop_processing_metrics()
             (self._content, self._wave) = self._new_wave()

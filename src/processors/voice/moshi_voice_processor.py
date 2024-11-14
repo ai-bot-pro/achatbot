@@ -12,7 +12,7 @@ from src.processors.voice.base import VoiceProcessorBase
 from src.types.llm.lmgen import LMGenArgs
 
 try:
-    from sphn import OpusStreamReader, OpusStreamWriter
+    from sphn import OpusStreamReader, OpusStreamWriter, resample
     from sentencepiece import SentencePieceProcessor
     from moshi.models import loaders, MimiModel, LMModel, LMGen
     from huggingface_hub import hf_hub_download
@@ -74,7 +74,6 @@ class MoshiVoiceOpusStreamProcessor(VoiceProcessorBase):
 
         self.load_models()
 
-
         # open streaming with batch_size:1,
         # if not, need use with lm_gen.streaming(1):
         self._mimi.streaming_forever(1)
@@ -83,10 +82,11 @@ class MoshiVoiceOpusStreamProcessor(VoiceProcessorBase):
 
         self._audio_in_task = None
         self._audio_out_task = None
+        self._cur_in_sample_rate = 0
 
     @property
     def stream_info(self) -> dict:
-        """Return dict stream info"""
+        """Return dict out stream info"""
         return {
             "sample_rate": self._mimi.sample_rate,
             "channels": self._mimi.channels,
@@ -97,12 +97,16 @@ class MoshiVoiceOpusStreamProcessor(VoiceProcessorBase):
         # https://github.com/kyutai-labs/sphn (python binds rust lib so)
         # Easily load various audio file formats (bytes) into numpy arrays.
         # Read/write ogg/opus audio files with streaming support.
-        # use Opus format for audio across the websocket, 
+        # use Opus format for audio across the websocket,
         # as it can be safely streamed and decoded in real-time
         self._opus_writer = OpusStreamWriter(self._mimi.sample_rate)
+        # NOTE:
+        # new stream reader thread,
+        # in thread event loop have block,
+        # https://github.com/kyutai-labs/sphn/blob/main/src/opus.rs#L345
         self._opus_reader = OpusStreamReader(self._mimi.sample_rate)
 
-        # LLM is stateful, maintaining chat history, 
+        # LLM is stateful, maintaining chat history,
         # so reset it on each connection
         self._mimi.reset_streaming()
         self._lm_gen.reset_streaming()
@@ -112,7 +116,7 @@ class MoshiVoiceOpusStreamProcessor(VoiceProcessorBase):
 
         self.reset_state()
 
-        self._audio_in_task = self.get_event_loop().create_task(self._audio_in_task_handler())
+        self._audio_in_task = asyncio.new_event_loop().create_task(self._audio_in_task_handler())
         self._audio_out_task = self.get_event_loop().create_task(self._audio_out_task_handler())
 
         logging.info("start done")
@@ -125,9 +129,8 @@ class MoshiVoiceOpusStreamProcessor(VoiceProcessorBase):
             self._audio_out_task.cancel()
             await self._audio_out_task
 
-        self._opus_writer: OpusStreamWriter = None
         self._opus_reader.close()
-        self._opus_reader: OpusStreamReader = None
+        self.reset_state()
 
         await super().stop(frame)
         logging.info("stop done")
@@ -177,10 +180,15 @@ class MoshiVoiceOpusStreamProcessor(VoiceProcessorBase):
         torch.cuda.synchronize()
         logging.info("end warmup")
 
+    def resample(self, pcm):
+        if self._cur_in_sample_rate != self._mimi.sample_rate:
+            resample(pcm, self._cur_in_sample_rate, self._mimi.sample_rate)
+
     async def _audio_in_task_handler(self):
         while True:
             try:
                 pcm = self._opus_reader.read_pcm()
+                pcm = resample(pcm)
                 if pcm.shape[-1] == 0:
                     continue
                 if all_pcm_data is None:
@@ -232,8 +240,13 @@ class MoshiVoiceOpusStreamProcessor(VoiceProcessorBase):
             except asyncio.CancelledError:
                 break
 
-    async def run_voice(self, audio: bytes) -> AsyncGenerator[Frame, None]:
-        self._opus_reader.append_bytes(audio)
+    async def run_voice(self, frame: AudioRawFrame) -> AsyncGenerator[Frame, None]:
+        """
+        StreamReader sample_rate: 48000, 24000
+        https://github.com/kyutai-labs/sphn/blob/main/src/opus.rs#L337
+        """
+        self._cur_in_sample_rate = frame.sample_rate
+        self._opus_reader.append_bytes(frame.audio)
         yield None
 
 
