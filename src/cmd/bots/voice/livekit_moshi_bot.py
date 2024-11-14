@@ -28,19 +28,19 @@ class LivekitMoshiVoiceBot(LivekitRoomBot):
     def __init__(self, **args) -> None:
         super().__init__(**args)
         self.init_bot_config()
+        self._voice_processor = self.get_voice_processor()
+        self._vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
 
     async def arun(self):
-        vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
         self.params = LivekitParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
             vad_enabled=True,
-            vad_analyzer=vad_analyzer,
+            vad_analyzer=self._vad_analyzer,
             vad_audio_passthrough=True,
         )
 
-        voice_processor = MoshiVoiceProcessor(lm_gen_args=LMGenArgs())
-        stream_info = voice_processor.stream_info
+        stream_info = self._voice_processor.stream_info
         self.params.audio_out_sample_rate = stream_info["sample_rate"]
         self.params.audio_out_channels = stream_info["channels"]
 
@@ -57,7 +57,7 @@ class LivekitMoshiVoiceBot(LivekitRoomBot):
             Pipeline([
                 transport.input_processor(),
                 FrameLogger(include_frame_types=[AudioRawFrame]),
-                voice_processor,
+                self._voice_processor,
                 FrameLogger(include_frame_types=[AudioRawFrame, TextFrame]),
                 transport.output_processor(),
             ]),
@@ -67,6 +67,7 @@ class LivekitMoshiVoiceBot(LivekitRoomBot):
                 send_initial_empty_metrics=False,
             ),
         )
+        self.regisiter_room_event(transport)
 
         transport.add_event_handlers(
             "on_first_participant_joined",

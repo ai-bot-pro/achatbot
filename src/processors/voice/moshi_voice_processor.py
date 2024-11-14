@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import multiprocessing
 import random
 import time
 from typing import AsyncGenerator
@@ -9,7 +10,7 @@ from moshi.models.loaders import DEFAULT_REPO
 import numpy as np
 import torch
 
-from common.utils.audio_utils import bytes2NpArrayWith16, postprocess_tts_wave_int16
+from src.common.utils.audio_utils import bytes2NpArrayWith16, postprocess_tts_wave_int16, resample_audio
 from src.processors.voice.base import VoiceProcessorBase
 from src.types.llm.lmgen import LMGenArgs
 
@@ -79,6 +80,8 @@ class MoshiVoiceBaseProcessor(VoiceProcessorBase):
         self.warmup()
 
         self._cur_in_sample_rate = 0
+        self._all_pcm_data = None
+        multiprocessing.set_start_method('spawn', force=True)
 
     @property
     def stream_info(self) -> dict:
@@ -131,7 +134,8 @@ class MoshiVoiceBaseProcessor(VoiceProcessorBase):
 
     def resample(self, pcm):
         if self._cur_in_sample_rate != self._mimi.sample_rate:
-            resample(pcm, self._cur_in_sample_rate, self._mimi.sample_rate)
+            return resample(pcm, self._cur_in_sample_rate, self._mimi.sample_rate)
+        return pcm
 
 
 class MoshiVoiceOpusStreamProcessor(MoshiVoiceBaseProcessor):
@@ -174,7 +178,6 @@ class MoshiVoiceOpusStreamProcessor(MoshiVoiceBaseProcessor):
         self._opus_writer = OpusStreamWriter(self._mimi.sample_rate)
         # NOTE:
         # new stream reader thread,
-        # in thread event loop have block,
         # https://github.com/kyutai-labs/sphn/blob/main/src/opus.rs#L345
         self._opus_reader = OpusStreamReader(self._mimi.sample_rate)
 
@@ -212,22 +215,25 @@ class MoshiVoiceOpusStreamProcessor(MoshiVoiceBaseProcessor):
         logging.info("cancel done")
 
     async def _audio_in_task_handler(self):
+        self._all_pcm_data = None
         while True:
             try:
                 pcm = self._opus_reader.read_pcm()
-                pcm = self.resample(pcm)
                 if pcm.shape[-1] == 0:
+                    # sleep to yield to avoid busy loop
+                    await asyncio.sleep(0.001)
                     continue
-                if all_pcm_data is None:
-                    all_pcm_data = pcm
+                pcm = self.resample(pcm)
+                if self._all_pcm_data is None:
+                    self._all_pcm_data = pcm
                 else:
-                    all_pcm_data = np.concatenate((all_pcm_data, pcm))
+                    self._all_pcm_data = np.concatenate((self._all_pcm_data, pcm))
                 await self.start_processing_metrics()
                 ttfb_metric = True
-                while all_pcm_data.shape[-1] >= self._frame_size:
+                while self._all_pcm_data.shape[-1] >= self._frame_size:
                     be = time.time()
-                    chunk = all_pcm_data[: self._frame_size]
-                    all_pcm_data = all_pcm_data[self._frame_size:]
+                    chunk = self._all_pcm_data[: self._frame_size]
+                    self._all_pcm_data = self._all_pcm_data[self._frame_size:]
                     chunk = torch.from_numpy(chunk)
                     chunk = chunk.to(device=self._device)[None, None]
                     codes = self._mimi.encode(chunk)
@@ -290,16 +296,16 @@ class MoshiVoiceProcessor(MoshiVoiceBaseProcessor):
         if pcm.shape[-1] == 0:
             yield None
             return
-        if all_pcm_data is None:
-            all_pcm_data = pcm
+        if self._all_pcm_data is None:
+            self._all_pcm_data = pcm
         else:
-            all_pcm_data = np.concatenate((all_pcm_data, pcm))
+            self._all_pcm_data = np.concatenate((self._all_pcm_data, pcm))
         await self.start_processing_metrics()
         ttfb_metric = True
-        while all_pcm_data.shape[-1] >= self._frame_size:
+        while self._all_pcm_data.shape[-1] >= self._frame_size:
             be = time.time()
-            chunk = all_pcm_data[: self._frame_size]
-            all_pcm_data = all_pcm_data[self._frame_size:]
+            chunk = self._all_pcm_data[: self._frame_size]
+            self._all_pcm_data = self._all_pcm_data[self._frame_size:]
             chunk = torch.from_numpy(chunk)
             chunk = chunk.to(device=self._device)[None, None]
             codes = self._mimi.encode(chunk)
