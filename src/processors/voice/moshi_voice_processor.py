@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import multiprocessing
 import random
 import time
 from typing import AsyncGenerator
@@ -81,7 +80,6 @@ class MoshiVoiceBaseProcessor(VoiceProcessorBase):
 
         self._cur_in_sample_rate = 0
         self._all_pcm_data = None
-        multiprocessing.set_start_method('spawn', force=True)
 
     @property
     def stream_info(self) -> dict:

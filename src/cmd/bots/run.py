@@ -45,6 +45,7 @@ class BotTaskManager:
         - use threading to run task
         - use asyncio create task to run
         """
+        multiprocessing.set_start_method('spawn')
         bot_process: multiprocessing.Process = multiprocessing.Process(
             target=target, name=bot_name, kwargs=kwargs)
         bot_process.start()
