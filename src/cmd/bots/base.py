@@ -39,6 +39,9 @@ class AIBot(IBot):
     bot config: Dict[str, Dict[str,Any]]
     e.g. {"llm":{"key":val,"tag":TAG,"args":{}}, "tts":{"key":val,"tag":TAG,"args":{}}}
     !TIPS: RTVI config options can transfer to ai bot config
+
+    !NOTE:
+    use multiprocessing pipe to run bot with unix socket, bot __init__ to new a bot obj must be serializable (pickle); or wraper a func, don't use bot obj methed.
     """
 
     def __init__(self, **args) -> None:

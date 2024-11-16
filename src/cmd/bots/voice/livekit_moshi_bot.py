@@ -6,14 +6,11 @@ from apipeline.pipeline.runner import PipelineRunner
 from apipeline.processors.logger import FrameLogger
 from apipeline.frames import AudioRawFrame, TextFrame
 
-from src.processors.voice.moshi_voice_processor import MoshiVoiceProcessor
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.common.types import LivekitParams
 from src.transports.livekit import LivekitTransport
 from src.cmd.bots.base_livekit import LivekitRoomBot
 from src.cmd.bots import register_ai_room_bots
-from src.types.frames.data_frames import LLMMessagesFrame
-from src.types.llm.lmgen import LMGenArgs
 
 from dotenv import load_dotenv
 load_dotenv(override=True)
@@ -28,10 +25,9 @@ class LivekitMoshiVoiceBot(LivekitRoomBot):
     def __init__(self, **args) -> None:
         super().__init__(**args)
         self.init_bot_config()
-        self._voice_processor = self.get_voice_processor()
-        self._vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
 
     async def arun(self):
+        self._vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
         self.params = LivekitParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
@@ -40,6 +36,7 @@ class LivekitMoshiVoiceBot(LivekitRoomBot):
             vad_audio_passthrough=True,
         )
 
+        self._voice_processor = self.get_voice_processor()
         stream_info = self._voice_processor.stream_info
         self.params.audio_out_sample_rate = stream_info["sample_rate"]
         self.params.audio_out_channels = stream_info["channels"]
