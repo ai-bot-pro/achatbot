@@ -46,7 +46,7 @@ class TaskManager(ABC):
         return self._tasks
 
     @abstractmethod
-    def run_task(self, target, name: str, tag: str, **kwargs):
+    async def run_task(self, target, name: str, tag: str, **kwargs):
         """
         - use multiprocessing to run task
         - use threading to run task
@@ -61,13 +61,13 @@ class TaskManager(ABC):
                 num += 1
         return num
 
-    def get_task(self, tid):
+    def get_task(self, tid: str):
         if tid in self._tasks:
             return self._tasks[tid]
         return None
 
     @abstractmethod
-    async def cleanup(self):
+    def cleanup(self):
         """
         clean up process
         """

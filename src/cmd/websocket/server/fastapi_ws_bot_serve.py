@@ -36,7 +36,7 @@ if __name__ == "__main__":
     default_port = int(os.getenv("FAST_API_PORT", "4321"))
 
     parser = argparse.ArgumentParser(
-        description="RTVI Bot Runner")
+        description="Fastapi Websocket Bot Runner")
     parser.add_argument("--host", type=str,
                         default=default_host, help="Host address")
     parser.add_argument("--port", type=int,

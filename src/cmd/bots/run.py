@@ -1,10 +1,10 @@
 import uuid
 import logging
-import multiprocessing
 from typing import Optional
 
 from pydantic import BaseModel
 
+from src.common.task_manager.base import TaskManager
 from src.services.help import RoomManagerEnvInit
 from src.common.const import *
 from src.common.session import Session
@@ -24,69 +24,8 @@ class RunBotInfo(BotInfo):
     room_manager: Optional[EngineClassInfo] = None
 
 
-class BotTaskManager:
-    def __init__(self) -> None:
-        """
-        just use dict to store bot process for local task
-        !TODO: @weedge
-        - if distributed task, need database to storage bot process info
-        - shecdule task
-        """
-        self._bot_procs = {}
-
-    @property
-    def bot_procs(self):
-        return self._bot_procs
-
-    def run_task(self, target, bot_name: str, tag: str, **kwargs):
-        """
-        use multiprocessing to run task
-        !TODO: @weedge
-        - use threading to run task
-        - use asyncio create task to run
-        """
-        multiprocessing.set_start_method('spawn')
-        bot_process: multiprocessing.Process = multiprocessing.Process(
-            target=target, name=bot_name, kwargs=kwargs)
-        bot_process.start()
-        pid = bot_process.pid
-        self._bot_procs[pid] = (bot_process, tag)
-        return pid
-
-    def get_bot_proces_num(self, tag: str):
-        num = 0
-        for val in self._bot_procs.values():
-            proc: multiprocessing.Process = val[0]
-            _tag = val[1]
-            if _tag == tag and proc.is_alive():
-                num += 1
-        return num
-
-    def get_bot_processor(self, pid):
-        if pid in self._bot_procs:
-            return self._bot_procs[pid]
-        return None
-
-    def cleanup(self):
-        # Clean up function, just to be extra safe
-        for pid, (proc, tag) in self._bot_procs.items():
-            try:
-                if proc.is_alive():
-                    proc.terminate()
-                    proc.join(timeout=5)
-                    proc.close()
-                    logging.info(f"pid:{pid} tag:{tag} proc: {proc} close")
-                else:
-                    logging.warning(f"pid:{pid} tag:{tag} proc: {proc} already closed")
-            except Exception as e:
-                logging.error(f"Error while cleaning up process {pid}: {e}")
-                if proc.is_alive():
-                    proc.kill()
-                    logging.warning(f"pid:{pid} tag:{tag} proc: {proc} killed")
-
-
 class BotTaskRunner:
-    def __init__(self, task_mgr: BotTaskManager | None = None, **kwargs):
+    def __init__(self, task_mgr: TaskManager | None = None, **kwargs):
         if task_mgr is None:
             raise ValueError("task_mgr is None")
         self.task_mgr = task_mgr
@@ -139,7 +78,7 @@ class BotTaskRunner:
         ).__dict__
         self._bot_obj = register_ai_room_bots[bot_info.chat_bot_name](**kwargs)
 
-        self._pid = self.task_mgr.run_task(
+        self._pid = await self.task_mgr.run_task(
             self._bot_obj.run, bot_info.chat_bot_name, bot_info.room_name)
 
     async def _run_websocket_bot(self, bot_info: BotInfo):
@@ -152,7 +91,7 @@ class BotTaskRunner:
             websocket_server_host=bot_info.websocket_server_host,
         ).__dict__
         self._bot_obj = register_ai_room_bots[bot_info.chat_bot_name](**kwargs)
-        self._pid = self.task_mgr.run_task(
+        self._pid = await self.task_mgr.run_task(
             self._bot_obj.run, bot_info.chat_bot_name, bot_info.room_name)
 
     @ property

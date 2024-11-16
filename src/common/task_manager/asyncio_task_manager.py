@@ -7,9 +7,18 @@ from src.common.task_manager.base import Task, TaskManager
 
 
 class AsyncioTaskManager(TaskManager):
-    def __init__(self) -> None:
-        super().__init__()
-        self._loop = asyncio.get_event_loop()
+    """
+    use asyncio
+    !TODO: @weedge
+    - use [uvloop](https://github.com/MagicStack/uvloop) to speed up
+    """
+
+    def __init__(
+            self,
+            task_done_timeout: int = 5,
+            loop: asyncio.AbstractEventLoop | None = None) -> None:
+        super().__init__(task_done_timeout=task_done_timeout)
+        self._loop = loop or asyncio.get_event_loop()
 
     async def run_task(self, target, name: str, tag: str, **kwargs):
         task_id = str(uuid.uuid4())

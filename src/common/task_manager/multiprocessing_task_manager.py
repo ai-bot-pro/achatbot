@@ -6,14 +6,14 @@ from src.common.task_manager.base import Task, TaskManager
 
 class MultiprocessingTaskManager(TaskManager):
 
-    def run_task(self, target, name: str, tag: str, **kwargs):
+    async def run_task(self, target, name: str, tag: str, **kwargs):
         """
         use multiprocessing(spawn/fork/forkserver,default fork) to run task
         """
         process: multiprocessing.Process = multiprocessing.Process(
             target=target, name=name, kwargs=kwargs)
         process.start()
-        pid = process.pid
+        pid = str(process.pid)
         self._tasks[pid] = Task(tid=pid, name=name, tag=tag, task=process)
         return pid
 

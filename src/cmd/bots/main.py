@@ -1,4 +1,5 @@
 import atexit
+import multiprocessing
 import os
 import json
 import logging
@@ -7,8 +8,8 @@ import asyncio
 
 from src.common.logger import Logger
 from src.common.types import CONFIG_DIR
-from src.cmd.bots import import_bots
-from src.cmd.bots.run import BotTaskManager, BotTaskRunnerBE, RunBotInfo
+from src.cmd.bots.run import BotTaskRunnerBE, RunBotInfo
+from src.common.task_manager import TaskManagerFactory
 
 from dotenv import load_dotenv
 load_dotenv(override=True)
@@ -16,16 +17,22 @@ load_dotenv(override=True)
 
 Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
 
-bot_task_mgr = BotTaskManager()
-atexit.register(bot_task_mgr.cleanup)
 
 if __name__ == "__main__":
     """
     python -m src.cmd.bots.main -f config/bots/dummy_bot.json
     python -m src.cmd.bots.main -f config/bots/daily_rtvi_general_bot.json
     python -m src.cmd.bots.main -f config/bots/daily_describe_vision_bot.json
+
+    python -m src.cmd.bots.main -f config/bots/dummy_bot.json --task_type asyncio
+    python -m src.cmd.bots.main -f config/bots/dummy_bot.json --task_type threading
     """
+    if os.getenv("ACHATBOT_WORKER_MULTIPROC_METHOD", "fork") == "spawn":
+        multiprocessing.set_start_method('spawn')
+
     parser = argparse.ArgumentParser(description="Chat Bot")
+    parser.add_argument("--task_type", type=str, default="multiprocessing", help="task type")
+    parser.add_argument("--task_done_timeout", type=int, default=5, help="task done timeout s")
     parser.add_argument("-u", type=str, default="", help="Room URL")
     parser.add_argument("-t", type=str, default="", help="Token")
     parser.add_argument("-wsp", type=int, default=0, help="WebSocket Port")
@@ -35,6 +42,15 @@ if __name__ == "__main__":
         default=os.path.join(CONFIG_DIR, "bots/dummy_bot.json"),
         help="Bot configuration json file")
     args = parser.parse_args()
+
+    TaskManagerFactory.loop = asyncio.get_event_loop()
+    # Bot task dict for status reporting and concurrency control
+    bot_task_mgr = TaskManagerFactory.task_manager(
+        type=os.getenv("ACHATBOT_TASK_TYPE") or args.task_type,
+        task_done_timeout=int(
+            os.getenv("ACHATBOT_TASK_DONE_TIMEOUT") or 0) or args.task_done_timeout,
+    )
+    atexit.register(lambda: TaskManagerFactory.cleanup(bot_task_mgr.cleanup))
 
     bot_config = {}
     with open(args.f, 'r') as f:
@@ -57,7 +73,7 @@ if __name__ == "__main__":
 
     try:
         task_runner = BotTaskRunnerBE(bot_task_mgr, **vars(bot_info))
-        asyncio.get_event_loop().run_until_complete(task_runner.run())
+        TaskManagerFactory.loop.run_until_complete(task_runner.run())
     except KeyboardInterrupt:
         logging.warning("Ctrl-C detected. Exiting!")
     except Exception as e:

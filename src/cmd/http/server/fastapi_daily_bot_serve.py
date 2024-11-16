@@ -1,3 +1,4 @@
+import asyncio
 import atexit
 import logging
 import multiprocessing
@@ -10,12 +11,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
+from src.common.task_manager import TaskManagerFactory
 from src.common.const import *
 from src.common.logger import Logger
 from src.common.types import GeneralRoomInfo
 from src.services.help.daily_room import DailyRoom
 from src.cmd.bots import import_bots, import_websocket_bots, register_ai_room_bots
-from src.cmd.bots.run import BotTaskManager, BotTaskRunnerFE, RunBotInfo
+from src.cmd.bots.run import BotTaskRunnerFE, RunBotInfo
 
 
 from dotenv import load_dotenv
@@ -46,9 +48,13 @@ ERROR_CODE_BOT_UN_PROC = 10004
 MAX_BOTS_PER_ROOM = 10
 
 
-# Bot sub-process dict for status reporting and concurrency control
-bot_task_mgr = BotTaskManager()
-atexit.register(bot_task_mgr.cleanup)
+TaskManagerFactory.loop = asyncio.get_event_loop()
+# Bot task dict for status reporting and concurrency control
+bot_task_mgr = TaskManagerFactory.task_manager(
+    type=os.getenv("ACHATBOT_TASK_TYPE", "multiprocessing"),
+    task_done_timeout=int(os.getenv("ACHATBOT_TASK_DONE_TIMEOUT", "5")),
+)
+atexit.register(lambda: TaskManagerFactory.cleanup(bot_task_mgr.cleanup))
 
 # ------------ Fast API Config ------------ #
 
@@ -408,7 +414,7 @@ async def bot_join_room(room_name: str, chat_bot_name: str, info: RunBotInfo | d
     if isinstance(info, dict):
         info = RunBotInfo(**info)
 
-    num_bots_in_room = bot_task_mgr.get_bot_proces_num(room_name)
+    num_bots_in_room = bot_task_mgr.get_task_num(room_name)
     logging.info(f"num_bots_in_room: {num_bots_in_room}")
     if num_bots_in_room >= MAX_BOTS_PER_ROOM:
         detail = f"Max bot limited reach for room: {room_name}"
@@ -463,7 +469,7 @@ curl -XGET "http://0.0.0.0:4321/status/53187" | jq .
 
 
 @ app.get("/status/{pid}")
-async def fastapi_get_status(pid: int) -> JSONResponse:
+async def fastapi_get_status(pid: str) -> JSONResponse:
     try:
         res = await get_status(pid)
     except Exception as e:
@@ -473,24 +479,33 @@ async def fastapi_get_status(pid: int) -> JSONResponse:
     return JSONResponse(res)
 
 
-async def get_status(pid: int) -> dict[str, Any]:
-    # Look up the subprocess
-    val = bot_task_mgr.get_bot_processor(pid)
+async def get_status(pid: str) -> dict[str, Any]:
+    # Look up task
+    val = bot_task_mgr.get_task(pid)
     if val is None:
         detail = "Bot not found"
         return APIResponse(error_code=ERROR_CODE_BOT_UN_PROC, error_detail=detail).model_dump()
-    proc: multiprocessing.Process = val[0]
-    room: GeneralRoomInfo = val[1]
-    # If the subprocess doesn't exist, return an error
-    if not proc:
-        detail = f"Bot with process id: {pid} not found"
+    task = val.task
+    # If the task doesn't exist, return an error
+    if not task:
+        detail = f"Bot with task id: {pid} not found"
         return APIResponse(error_code=ERROR_CODE_BOT_UN_PROC, error_detail=detail).model_dump()
 
-    # Check the status of the subprocess
-    if proc.is_alive():
+    # Check the status of the task
+    if val.is_alive():
         status = "running"
     else:
         status = "finished"
+
+    try:
+        room_name = val.tag
+        daily_room_obj = DailyRoom()
+        room = await daily_room_obj.get_room(room_name)
+    except Exception as ex:
+        return APIResponse(
+            error_code=ERROR_CODE_NO_ROOM,
+            error_detail=f"Failed to get room {room_name} from Daily REST API: {ex}",
+        ).model_dump()
 
     data = {
         "bot_id": pid,
@@ -518,7 +533,7 @@ async def fastapi_get_num_bots(room_name: str):
 
 async def get_num_bots(room_name: str):
     data = {
-        "num_bots": bot_task_mgr.get_bot_proces_num(room_name),
+        "num_bots": bot_task_mgr.get_task_num(room_name),
     }
     return APIResponse(data=data).model_dump()
 
@@ -541,30 +556,26 @@ async def fastapi_get_room_bots(room_name: str):
 
 async def get_room_bots(room_name: str) -> dict[str, Any]:
     procs = []
-    _room = None
-    for val in bot_task_mgr.bot_procs.values():
-        proc: multiprocessing.Process = val[0]
-        room: GeneralRoomInfo = val[1]
-        if room.name == room_name:
+    room = None
+    for val in bot_task_mgr.tasks.values():
+        if val.tag == room_name:
             procs.append({
-                "pid": proc.pid,
-                "name": proc.name,
-                "status": "running" if proc.is_alive() else "finished",
+                "pid": val.tid,
+                "name": val.name,
+                "status": "running" if val.is_alive() else "finished",
             })
-            _room = room
 
-    if _room is None:
-        try:
-            daily_room_obj = DailyRoom()
-            _room = await daily_room_obj.get_room(room_name)
-        except Exception as ex:
-            return APIResponse(
-                error_code=ERROR_CODE_NO_ROOM,
-                error_detail=f"Failed to get room {room_name} from Daily REST API: {ex}",
-            ).model_dump()
+    try:
+        daily_room_obj = DailyRoom()
+        room = await daily_room_obj.get_room(room_name)
+    except Exception as ex:
+        return APIResponse(
+            error_code=ERROR_CODE_NO_ROOM,
+            error_detail=f"Failed to get room {room_name} from Daily REST API: {ex}",
+        ).model_dump()
 
     response = APIResponse(data={
-        "room_info": _room.model_dump(),
+        "room_info": room.model_dump(),
         "bots": procs,
     })
 
@@ -581,13 +592,23 @@ def ngrok_proxy(port):
 
 
 if __name__ == "__main__":
+    """
+    ACHATBOT_TASK_TYPE=multiprocessing python -m src.cmd.http.server.fastapi_daily_bot_serve
+    ACHATBOT_TASK_TYPE=threading python -m src.cmd.http.server.fastapi_daily_bot_serve
+    ACHATBOT_TASK_TYPE=asyncio python -m src.cmd.http.server.fastapi_daily_bot_serve
+    """
     import uvicorn
+
+    if os.getenv("ACHATBOT_WORKER_MULTIPROC_METHOD", "fork") == "spawn":
+        multiprocessing.set_start_method('spawn')
 
     default_host = os.getenv("HOST", "0.0.0.0")
     default_port = int(os.getenv("FAST_API_PORT", "4321"))
 
     parser = argparse.ArgumentParser(
-        description="RTVI Bot Runner")
+        description="Fastapi Bot Server")
+    parser.add_argument("--task_type", type=str, default="multiprocessing", help="task type")
+    parser.add_argument("--task_done_timeout", type=int, default=5, help="task done timeout s")
     parser.add_argument("--host", type=str,
                         default=default_host, help="Host address")
     parser.add_argument("--port", type=int,
