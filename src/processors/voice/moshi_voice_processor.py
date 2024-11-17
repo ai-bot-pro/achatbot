@@ -173,9 +173,11 @@ class MoshiVoiceOpusStreamProcessor(MoshiVoiceBaseProcessor):
         # Read/write ogg/opus audio files with streaming support.
         # use Opus format for audio across the websocket,
         # as it can be safely streamed and decoded in real-time
+
+        # opus writer encode pcm(float32) to apus format
         self._opus_writer = OpusStreamWriter(self._mimi.sample_rate)
         # NOTE:
-        # new stream reader thread,
+        # new stream reader thread to decode apus format to pcm(float32),
         # https://github.com/kyutai-labs/sphn/blob/main/src/opus.rs#L345
         self._opus_reader = OpusStreamReader(self._mimi.sample_rate)
 
@@ -287,6 +289,7 @@ class MoshiVoiceProcessor(MoshiVoiceBaseProcessor):
         """
         StreamReader sample_rate: 48000, 24000
         https://github.com/kyutai-labs/sphn/blob/main/src/opus.rs#L337
+        !TODO: need buffer
         """
         self._cur_in_sample_rate = frame.sample_rate
         pcm = bytes2NpArrayWith16(frame.audio)
@@ -327,7 +330,7 @@ class MoshiVoiceProcessor(MoshiVoiceBaseProcessor):
                 if text_token not in (0, 3):
                     _text = self._text_tokenizer.id_to_piece(text_token)
                     _text = _text.replace("▁", " ")
-                    logging.info(f"text token '{_text}'")
+                    logging.debug(f"text token '{_text}'")
                     yield TextFrame(text=_text)
             logging.info(f"frame handled in {1000 * (time.time() - be):.1f}ms")
         await self.stop_processing_metrics()

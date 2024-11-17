@@ -18,7 +18,7 @@ load_dotenv(override=True)
 Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
 
 
-@app.websocket("/run_bot")
+@app.websocket("/")
 async def websocket_endpoint(websocket: WebSocket):
     # run_bot: AIFastapiWebsocketBot = await BotLoader.load_bot(config.f, bot_type="fastapi_ws_bot")
 
