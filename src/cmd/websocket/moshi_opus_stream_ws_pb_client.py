@@ -83,20 +83,22 @@ class Connection:
                         num_channels=self.channels,
                     )
                     bytes_audio_frame = self.serializer.serialize(audio_frame)
+                    # print("send __audio_frame__", audio_frame)
                     await self.ws.send_bytes(bytes_audio_frame)
-                    print("send __audio_frame__", audio_frame)
                 except Exception as e:
                     print(f"Error in send_loop: {e}")
-                    return
+                    break
+        print("send_loop done")
+        if not self.ws.closed:
+            await self.ws.close()
 
     async def receive_loop(self):
         '''
         Async loop for receiving messages from the websocket, including text and opus stream
         '''
         sentence = ""
-        try:
-            async for msg in self.ws:
-                print("____receive msg", msg)
+        async for msg in self.ws:
+            try:
                 if shutdown_flag.is_set():
                     break
                 msg_bytes = msg.data
@@ -105,24 +107,25 @@ class Connection:
 
                 # receive frame
                 frame = self.serializer.deserialize(msg_bytes)
-                print("____receive frame____", frame)
-
+                # print("____deserialize receive frame____", frame)
                 if isinstance(frame, AudioRawFrame):
                     # payload is opus audio
                     self.opus_reader.append_bytes(frame.audio)
 
                 if isinstance(frame, TextFrame):
                     # payload is text output from the model, print it to the console
-                    token = frame.text.decode("utf8")
+                    token = frame.text
                     sentence += token
                     sys.stdout.write(f"\r{GREEN}{sentence.lstrip()}{RESET}")
                     sys.stdout.flush()
                     if sentence.strip()[-1] in [".", "!", "?"]:
                         sys.stdout.write("\n")
                         sentence = ""
+            except Exception as e:
+                print(f"Error in receive_loop: {e}")
+                break
 
-        except Exception as e:
-            print(f"Error in receive_loop: {e}")
+        print("receive_loop done")
 
     async def decoder_loop(self):
         '''
@@ -143,6 +146,7 @@ class Connection:
             while all_pcm_data.shape[-1] >= self.frame_size:
                 self.out_queue.put(all_pcm_data[: self.frame_size])
                 all_pcm_data = np.array(all_pcm_data[self.frame_size:])
+        print("decoder_loop done")
 
     async def run(self):
         try:
@@ -157,7 +161,7 @@ class Connection:
 
 def sigint_handler(signum, frame):
     # Handle keyboard interrupts
-    print("\n\nEnding conversation...")
+    print("\nEnding conversation...")
     shutdown_flag.set()
 
 
@@ -169,7 +173,6 @@ async def run(endpoint: str):
     async with aiohttp.ClientSession() as session:
         try:
             async with session.ws_connect(endpoint) as ws:
-                print('ws:', type(ws), ws)
                 connection = Connection(ws)
                 print("Connection established.")
                 print("Conversation started. Press Ctrl+C to exit.\n")

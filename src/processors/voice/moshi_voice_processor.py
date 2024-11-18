@@ -334,3 +334,135 @@ class MoshiVoiceProcessor(MoshiVoiceBaseProcessor):
                     yield TextFrame(text=_text)
             logging.info(f"frame handled in {1000 * (time.time() - be):.1f}ms")
         await self.stop_processing_metrics()
+
+
+class VoiceOpusStreamEchoProcessor(VoiceProcessorBase):
+    """
+    use opuse stream to echo
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        seed_all(12345678)
+
+        self.sample_rate = 24000
+        self.channels = 1
+        self._frame_size = 1920
+
+        self._cur_in_sample_rate = 0
+        self._all_pcm_data = None
+
+        self._opus_writer: OpusStreamWriter = None
+        self._opus_reader: OpusStreamReader = None
+
+        self._audio_in_task = None
+        self._audio_out_task = None
+
+    @property
+    def stream_info(self) -> dict:
+        """Return dict out stream info"""
+        return {
+            "sample_rate": self.sample_rate,
+            "channels": self.channels,
+        }
+
+    def resample(self, pcm):
+        if self._cur_in_sample_rate != self.sample_rate:
+            print(self._cur_in_sample_rate, "->", self.sample_rate)
+            return resample(pcm, self._cur_in_sample_rate, self.sample_rate)
+        return pcm
+
+    def reset_state(self):
+        # https://opus-codec.org/
+        # https://github.com/kyutai-labs/sphn (python binds rust lib so)
+        # Easily load various audio file formats (bytes) into numpy arrays.
+        # Read/write ogg/opus audio files with streaming support.
+        # use Opus format for audio across the websocket,
+        # as it can be safely streamed and decoded in real-time
+
+        # opus writer encode pcm(float32) to apus format
+        self._opus_writer = OpusStreamWriter(self.sample_rate)
+        # NOTE:
+        # new stream reader thread to decode apus format to pcm(float32),
+        # https://github.com/kyutai-labs/sphn/blob/main/src/opus.rs#L345
+        self._opus_reader = OpusStreamReader(self.sample_rate)
+
+    async def start(self, frame: StartFrame):
+        await super().start(frame)
+
+        self.reset_state()
+
+        self._audio_in_task = self.get_event_loop().create_task(self._audio_in_task_handler())
+        self._audio_out_task = self.get_event_loop().create_task(self._audio_out_task_handler())
+
+        logging.info("start done")
+
+    async def stop(self, frame: EndFrame):
+        if self._audio_in_task:
+            self._audio_in_task.cancel()
+            await self._audio_in_task
+        if self._audio_out_task:
+            self._audio_out_task.cancel()
+            await self._audio_out_task
+
+        self._opus_reader.close()
+        self.reset_state()
+
+        await super().stop(frame)
+        logging.info("stop done")
+
+    async def cancel(self, frame: CancelFrame):
+        await super().cancel(frame)
+        logging.info("cancel done")
+
+    async def _audio_in_task_handler(self):
+        self._all_pcm_data = None
+        while True:
+            try:
+                pcm = self._opus_reader.read_pcm()
+                # print(pcm, type(pcm), pcm.shape)
+                if pcm.shape[-1] == 0:
+                    # sleep to yield to avoid busy loop
+                    await asyncio.sleep(0.001)
+                    continue
+                pcm = self.resample(pcm)
+                if self._all_pcm_data is None:
+                    self._all_pcm_data = pcm
+                else:
+                    self._all_pcm_data = np.concatenate((self._all_pcm_data, pcm))
+                await self.start_processing_metrics()
+                while self._all_pcm_data.shape[-1] >= self._frame_size:
+                    be = time.time()
+                    chunk = self._all_pcm_data[: self._frame_size]
+                    self._all_pcm_data = self._all_pcm_data[self._frame_size:]
+                    # print("1", chunk, type(chunk), chunk.shape)
+                    self._opus_writer.append_pcm(chunk)
+                    logging.debug(f"frame handled in {1000 * (time.time() - be):.1f}ms")
+                await self.stop_processing_metrics()
+            except asyncio.CancelledError:
+                break
+
+    async def _audio_out_task_handler(self):
+        while True:
+            try:
+                await asyncio.sleep(0.001)
+                audio_bytes = self._opus_writer.read_bytes()
+                if len(audio_bytes) > 0:
+                    # print("audio_bytes====>", len(audio_bytes))
+                    await self.push_frame(AudioRawFrame(
+                        audio=audio_bytes,
+                        sample_rate=self.sample_rate,
+                        num_channels=self.channels,
+                    ))
+            except asyncio.CancelledError:
+                break
+
+    async def run_voice(self, frame: AudioRawFrame) -> AsyncGenerator[Frame, None]:
+        """
+        StreamReader sample_rate: 48000, 24000
+        https://github.com/kyutai-labs/sphn/blob/main/src/opus.rs#L337
+        """
+        self._cur_in_sample_rate = frame.sample_rate
+        # print("---frame---", frame)
+        self._opus_reader.append_bytes(frame.audio)
+        yield None

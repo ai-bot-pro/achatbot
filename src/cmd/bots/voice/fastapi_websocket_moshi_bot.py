@@ -25,7 +25,7 @@ class FastapiWebsocketMoshiVoiceBot(AIFastapiWebsocketBot):
     """
 
     def __init__(self, websocket: WebSocket | None = None, **args) -> None:
-        super().__init__(**args)
+        super().__init__(websocket, **args)
         self.init_bot_config()
         self._voice_processor = self.get_voice_processor()
         self._vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
@@ -35,9 +35,10 @@ class FastapiWebsocketMoshiVoiceBot(AIFastapiWebsocketBot):
             return
 
         self.params = FastapiWebsocketServerParams(
+            audio_in_enabled=True,
             audio_out_enabled=True,
-            add_wav_header=True,
-            vad_enabled=True,
+            add_wav_header=False,  # no wav header, if use opus codec format
+            vad_enabled=False,
             vad_analyzer=self._vad_analyzer,
             vad_audio_passthrough=True,
             transcription_enabled=False,
@@ -59,7 +60,7 @@ class FastapiWebsocketMoshiVoiceBot(AIFastapiWebsocketBot):
         self.task = PipelineTask(
             Pipeline([
                 transport.input_processor(),
-                FrameLogger(include_frame_types=[AudioRawFrame]),
+                # FrameLogger(include_frame_types=[AudioRawFrame]),
                 self._voice_processor,
                 FrameLogger(include_frame_types=[AudioRawFrame, TextFrame]),
                 transport.output_processor(),

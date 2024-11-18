@@ -51,7 +51,7 @@ class FastapiWebsocketServerOutputProcessor(AudioCameraOutputProcessor):
 
             payload = self._params.serializer.serialize(frame)
             if payload and self._websocket.client_state == WebSocketState.CONNECTED:
-                await self._websocket.send_text(payload)
+                await self.send_payload(payload)
 
             self._websocket_audio_buffer = self._websocket_audio_buffer[
                 self._params.audio_frame_size:
@@ -60,4 +60,11 @@ class FastapiWebsocketServerOutputProcessor(AudioCameraOutputProcessor):
     async def _write_frame(self, frame: Frame):
         payload = self._params.serializer.serialize(frame)
         if payload and self._websocket.client_state == WebSocketState.CONNECTED:
+            await self.send_payload(payload)
+
+    async def send_payload(self, payload: str | bytes):
+        if isinstance(payload, str):
             await self._websocket.send_text(payload)
+        else:
+            await self._websocket.send_bytes(payload)
+        # logging.debug(f"send payload: {type(payload)} len:{len(payload)}")

@@ -41,6 +41,7 @@ class FastapiWebsocketServerBot(AIFastapiWebsocketBot):
             return
 
         self.params = FastapiWebsocketServerParams(
+            audio_in_enabled=True,
             audio_out_enabled=True,
             add_wav_header=True,
             vad_enabled=True,

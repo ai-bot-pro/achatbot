@@ -6,6 +6,7 @@ import uuid
 from apipeline.frames.control_frames import EndFrame
 from apipeline.pipeline.task import PipelineTask
 
+from src.processors.voice.moshi_voice_processor import VoiceOpusStreamEchoProcessor
 from src.processors.image.base import ImageGenProcessor
 from src.processors.image import get_image_gen_processor
 from src.modules.vision.ocr import VisionOCREnvInit
@@ -271,8 +272,8 @@ class AIBot(IBot):
                 else:
                     llm_processor = MoshiVoiceProcessor()
         else:
-            # @TODO: add default voice processor
-            pass
+            # default VoiceOpusStreamEchoProcessor
+            llm_processor = VoiceOpusStreamEchoProcessor()
         return llm_processor
 
     def get_tts_processor(self) -> TTSProcessorBase:
