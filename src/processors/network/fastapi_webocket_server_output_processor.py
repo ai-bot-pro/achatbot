@@ -62,16 +62,20 @@ class FastapiWebsocketServerOutputProcessor(AudioCameraOutputProcessor):
         await self.send_payload(frame)
 
     async def send_payload(self, frame: Frame):
-        payload = self._params.serializer.serialize(frame)
-        if not payload:
-            logging.warning(f"serialize frame: {frame} no payload")
-            return
-        if self._websocket.client_state != WebSocketState.CONNECTED:
-            logging.warning(f"websocket not connected, client_state:{self._websocket.client_state}")
-            return
+        try:
+            payload = self._params.serializer.serialize(frame)
+            if not payload:
+                logging.warning(f"serialize frame: {frame} no payload")
+                return
+            if self._websocket.client_state != WebSocketState.CONNECTED:
+                logging.warning(
+                    f"websocket not connected, client_state:{self._websocket.client_state}")
+                return
 
-        if isinstance(payload, str):
-            await self._websocket.send_text(payload)
-        else:
-            await self._websocket.send_bytes(payload)
-        # logging.debug(f"send payload: {type(payload)} len:{len(payload)}")
+            if isinstance(payload, str):
+                await self._websocket.send_text(payload)
+            else:
+                await self._websocket.send_bytes(payload)
+            # logging.debug(f"send payload: {type(payload)} len:{len(payload)}")
+        except Exception as e:
+            logging.error(f"send_payload error: {e}")

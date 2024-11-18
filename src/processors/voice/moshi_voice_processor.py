@@ -260,6 +260,7 @@ class MoshiVoiceOpusStreamProcessor(MoshiVoiceBaseProcessor):
                             main_pcm = self._mimi.decode(tokens[:, 1:])
                             main_pcm = main_pcm.cpu()
                             self._opus_writer.append_pcm(main_pcm[0, 0].numpy())
+                            # print("_1___opus_writer.append_pcm____", main_pcm, main_pcm.shape)
 
                             # bpe decode text tensor tokens, replace bpe _
                             # send text frame
@@ -279,15 +280,18 @@ class MoshiVoiceOpusStreamProcessor(MoshiVoiceBaseProcessor):
     async def _audio_out_task_handler(self):
         while True:
             try:
-                await asyncio.sleep(0.001)
+                # TODO: check read why slow
                 audio_bytes = self._opus_writer.read_bytes()
-                print("___opus_writer.read_bytes____", audio_bytes)
-                if len(audio_bytes) > 0:
-                    await self.push_frame(AudioRawFrame(
-                        audio=audio_bytes,
-                        sample_rate=self._mimi.sample_rate,
-                        num_channels=self._mimi.channels,
-                    ))
+                # print("_2__opus_writer.read_bytes____", audio_bytes)
+                if not audio_bytes or len(audio_bytes) == 0:
+                    await asyncio.sleep(0.001)
+                    continue
+
+                await self.queue_frame(AudioRawFrame(
+                    audio=audio_bytes,
+                    sample_rate=self._mimi.sample_rate,
+                    num_channels=self._mimi.channels,
+                ))
             except asyncio.CancelledError:
                 break
 

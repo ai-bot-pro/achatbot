@@ -107,7 +107,7 @@ class Connection:
 
                 # receive frame
                 frame = self.serializer.deserialize(msg_bytes)
-                print("____deserialize receive frame____", frame)
+                # print("____deserialize receive frame____", frame)
                 if isinstance(frame, AudioRawFrame):
                     # payload is opus audio
                     self.opus_reader.append_bytes(frame.audio)

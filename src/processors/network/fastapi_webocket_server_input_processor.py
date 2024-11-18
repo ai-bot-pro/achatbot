@@ -40,15 +40,20 @@ class FastapiWebsocketServerInputProcessor(AudioVADInputProcessor):
             await self._websocket.close()
 
     async def _receive_messages(self):
-        # async for message in self._websocket.iter_text():
-        # async for message in self._websocket.iter_json():
-        async for message in self._websocket.iter_bytes():
-            frame = self._params.serializer.deserialize(message)
+        try:
+            # async for message in self._websocket.iter_text():
+            # async for message in self._websocket.iter_json():
+            async for message in self._websocket.iter_bytes():
+                frame = self._params.serializer.deserialize(message)
 
-            if not frame:
-                continue
+                if not frame:
+                    continue
 
-            if isinstance(frame, AudioRawFrame):
-                await self.push_audio_frame(frame)
+                if isinstance(frame, AudioRawFrame):
+                    await self.push_audio_frame(frame)
+
+        except Exception as e:
+            logging.error(f"receive_messages error: {e}")
+            return
 
         await self._callbacks.on_client_disconnected(self._websocket)
