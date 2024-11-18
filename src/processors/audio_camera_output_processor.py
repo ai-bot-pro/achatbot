@@ -7,7 +7,7 @@ from typing import List
 from PIL import Image
 from apipeline.frames.sys_frames import SystemFrame, CancelFrame, StartInterruptionFrame
 from apipeline.frames.control_frames import StartFrame, ControlFrame, EndFrame
-from apipeline.frames.data_frames import Frame, AudioRawFrame, DataFrame, ImageRawFrame
+from apipeline.frames.data_frames import Frame, AudioRawFrame, DataFrame, ImageRawFrame, TextFrame
 from apipeline.processors.frame_processor import FrameDirection
 from apipeline.processors.output_processor import OutputProcessor
 
@@ -69,6 +69,9 @@ class AudioCameraOutputProcessor(OutputProcessor):
     async def send_message(self, frame: TransportMessageFrame):
         pass
 
+    async def send_text(self, frame: TextFrame):
+        pass
+
     async def _handle_interruptions(self, frame: Frame):
         await super()._handle_interruptions(frame)
         if isinstance(frame, StartInterruptionFrame):
@@ -81,7 +84,10 @@ class AudioCameraOutputProcessor(OutputProcessor):
     #
 
     async def sink(self, frame: DataFrame):
-        if isinstance(frame, TransportMessageFrame):  # text
+        if isinstance(frame, TextFrame):  # text
+            await self.send_text(frame)
+        elif isinstance(frame, TransportMessageFrame):
+            # transport mssage
             await self.send_message(frame)
         elif isinstance(frame, AudioRawFrame):  # audio
             await self._handle_audio(frame)
@@ -125,14 +131,14 @@ class AudioCameraOutputProcessor(OutputProcessor):
 
         audio = frame.audio
         #!TODO: if tts processor is slow(network,best way to deloy all model on local machine(CPU,GPU)), we need to buffer the audio,e.g.buff 1 second :)
-        # print(f"len audio:{len(audio)}, audio_chunk_size{self._audio_chunk_size}")
+        # print(f"len audio:{len(audio)}, audio_chunk_size:{self._audio_chunk_size}")
         # self._audio_out_buff.extend(audio)
         # if len(audio) >= self._audio_chunk_size:
         # print( f"len audio_out_buff:{len(self._audio_out_buff)}, audio_chunk_size{self._audio_chunk_size}")
         for i in range(0, len(audio), self._audio_chunk_size):
             chunk = audio[i: i + self._audio_chunk_size]
-            if len(chunk) % 2 != 0:
-                chunk = chunk[:len(chunk) - 1]
+            # if len(chunk) % 2 != 0: don't do that, need subclass to do
+            #    chunk = chunk[:len(chunk) - 1]
             await self.write_raw_audio_frames(chunk)
             await self.push_frame(BotSpeakingFrame(), FrameDirection.UPSTREAM)
         # self._audio_out_buff.clear()

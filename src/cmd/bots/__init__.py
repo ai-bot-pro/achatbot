@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from src.common.register import Register
 
 register_ai_room_bots = Register('ai-room-bots')
+register_ai_fastapi_ws_bots = Register('fastapi-ws-bots')
 
 
 class BotInfo(BaseModel):
@@ -17,6 +18,7 @@ class BotInfo(BaseModel):
     websocket_server_host: str = "localhost"
     websocket_server_port: int = 8765
     transport_type: str = "room"  # room(daily,livekit), websocket(websocket,fastapi_websocket)
+    handle_sigint: bool = True
 
 
 def import_bots(bot_name: str = "DummyBot"):
@@ -105,6 +107,9 @@ def import_bots(bot_name: str = "DummyBot"):
     if "LivekitDescribeVisionToolsBot" in bot_name:
         from .vision import livekit_describe_vision_tools_bot
         return True
+    if "LivekitMoshiVoiceBot" in bot_name:
+        from .voice import livekit_moshi_bot
+        return True
 
     return False
 
@@ -112,6 +117,18 @@ def import_bots(bot_name: str = "DummyBot"):
 def import_websocket_bots(bot_name: str = "DummyBot"):
     if "WebsocketServerBot" in bot_name:
         from . import websocket_server_bot
+        return True
+
+    return False
+
+
+def import_fastapi_websocket_bots(bot_name: str = "DummyBot"):
+    if "FastapiWebsocketServerBot" in bot_name:
+        from . import fastapi_websocket_server_bot
+        return True
+
+    if "FastapiWebsocketMoshiVoiceBot" in bot_name:
+        from .voice import fastapi_websocket_moshi_bot
         return True
 
     return False

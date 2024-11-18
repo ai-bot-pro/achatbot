@@ -103,7 +103,7 @@ class TestASRProcessor(unittest.IsolatedAsyncioTestCase):
         self.task = PipelineTask(
             pipeline,
             PipelineParams(
-                llow_interruptions=True,
+                allow_interruptions=True,
                 enable_metrics=True,
             )
         )

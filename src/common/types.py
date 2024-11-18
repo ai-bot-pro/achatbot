@@ -554,3 +554,4 @@ class BotRunArgs:
     services: dict | None = None
     websocket_server_host: str = "localhost"
     websocket_server_port: int = 8765
+    handle_sigint: bool = True

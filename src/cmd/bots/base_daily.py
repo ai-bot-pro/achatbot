@@ -24,7 +24,7 @@ class DailyRoomBot(AIRoomBot):
     ):
         if self.task is not None:
             await self.task.queue_frame(EndFrame())
-        logging.info("Partcipant left. Exiting.")
+        logging.info(f"Partcipant {participant} left. Exiting.")
 
     async def on_call_state_updated(
         self,

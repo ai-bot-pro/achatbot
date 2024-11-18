@@ -34,7 +34,7 @@ class DailyNaturalConversationBot(DailyRoomBot):
     """
     natural conversation bot with daily webrtc
     use 2 llm to conversation with user
-    - statement_llm_processor: use open source llm to do sentence completion NLP task, e.g. google/gemma-2-27b-it
+    - statement_llm_processor: use open source llm to do sentence completion NLP task, e.g. google/gemma-2-27b-it, or like bert model
     - chat_llm_processor: chat instruct model e.g.: gemini/gemini-1.5-flash-latest
 
     TODO: use open source llm to correct user input

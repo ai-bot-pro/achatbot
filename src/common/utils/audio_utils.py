@@ -34,7 +34,7 @@ def npArray2bytes(np_arr: np.ndarray) -> bytearray:
 
 
 def torchTensor2bytes(tensor: torch.Tensor) -> bytearray:
-    # Convert a NumPy array to bytes
+    # Convert a torch tensor to bytes
     np_arr = tensor.numpy()
 
     return npArray2bytes(np_arr)

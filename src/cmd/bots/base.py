@@ -6,6 +6,7 @@ import uuid
 from apipeline.frames.control_frames import EndFrame
 from apipeline.pipeline.task import PipelineTask
 
+from src.processors.voice.moshi_voice_processor import VoiceOpusStreamEchoProcessor
 from src.processors.image.base import ImageGenProcessor
 from src.processors.image import get_image_gen_processor
 from src.modules.vision.ocr import VisionOCREnvInit
@@ -32,13 +33,16 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 
-class AIRoomBot(IBot):
+class AIBot(IBot):
     r"""
     use ai bot config
     !TODONE: need config processor with bot config (redefine api params) @weedge
     bot config: Dict[str, Dict[str,Any]]
     e.g. {"llm":{"key":val,"tag":TAG,"args":{}}, "tts":{"key":val,"tag":TAG,"args":{}}}
     !TIPS: RTVI config options can transfer to ai bot config
+
+    !NOTE:
+    use multiprocessing pipe to run bot with unix socket, bot __init__ to new a bot obj must be serializable (pickle); or wraper a func, don't use bot obj methed.
     """
 
     def __init__(self, **args) -> None:
@@ -51,6 +55,7 @@ class AIRoomBot(IBot):
 
         self._bot_config_list = self.args.bot_config_list
         self._bot_config = self.args.bot_config
+        self._handle_sigint = self.args.handle_sigint
 
     def init_bot_config(self):
         try:
@@ -251,6 +256,26 @@ class AIRoomBot(IBot):
         processor = OCRProcessor(ocr=ocr, session=self.session)
         return processor
 
+    def get_voice_processor(self, llm: LLMConfig | None = None) -> LLMProcessor:
+        if not llm:
+            llm = self._bot_config.voice_llm
+        if llm and llm.tag and "moshi" in llm.tag:
+            from src.processors.voice.moshi_voice_processor import MoshiVoiceOpusStreamProcessor, MoshiVoiceProcessor
+            if "moshi_opus" in llm.tag:
+                if llm.args:
+                    llm_processor = MoshiVoiceOpusStreamProcessor(**llm.args)
+                else:
+                    llm_processor = MoshiVoiceOpusStreamProcessor()
+            else:
+                if llm.args:
+                    llm_processor = MoshiVoiceProcessor(**llm.args)
+                else:
+                    llm_processor = MoshiVoiceProcessor()
+        else:
+            # default VoiceOpusStreamEchoProcessor
+            llm_processor = VoiceOpusStreamEchoProcessor()
+        return llm_processor
+
     def get_tts_processor(self) -> TTSProcessorBase:
         tts_processor: TTSProcessorBase | None = None
         if self._bot_config.tts and self._bot_config.tts.tag and self._bot_config.tts.args:
@@ -288,3 +313,8 @@ class AIRoomBot(IBot):
         return get_image_gen_processor(
             self._bot_config.img_gen.tag,
             **self._bot_config.img_gen.args)
+
+
+class AIRoomBot(AIBot):
+    def __init__(self, **args) -> None:
+        super().__init__(**args)
