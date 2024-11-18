@@ -7,7 +7,7 @@ from typing import List
 from PIL import Image
 from apipeline.frames.sys_frames import SystemFrame, CancelFrame, StartInterruptionFrame
 from apipeline.frames.control_frames import StartFrame, ControlFrame, EndFrame
-from apipeline.frames.data_frames import Frame, AudioRawFrame, DataFrame, ImageRawFrame
+from apipeline.frames.data_frames import Frame, AudioRawFrame, DataFrame, ImageRawFrame, TextFrame
 from apipeline.processors.frame_processor import FrameDirection
 from apipeline.processors.output_processor import OutputProcessor
 
@@ -69,6 +69,9 @@ class AudioCameraOutputProcessor(OutputProcessor):
     async def send_message(self, frame: TransportMessageFrame):
         pass
 
+    async def send_text(self, frame: TextFrame):
+        pass
+
     async def _handle_interruptions(self, frame: Frame):
         await super()._handle_interruptions(frame)
         if isinstance(frame, StartInterruptionFrame):
@@ -81,7 +84,10 @@ class AudioCameraOutputProcessor(OutputProcessor):
     #
 
     async def sink(self, frame: DataFrame):
-        if isinstance(frame, TransportMessageFrame):  # text
+        if isinstance(frame, TextFrame):  # text
+            await self.send_text(frame)
+        elif isinstance(frame, TransportMessageFrame):
+            # transport mssage
             await self.send_message(frame)
         elif isinstance(frame, AudioRawFrame):  # audio
             await self._handle_audio(frame)

@@ -219,42 +219,59 @@ class MoshiVoiceOpusStreamProcessor(MoshiVoiceBaseProcessor):
         while True:
             try:
                 pcm = self._opus_reader.read_pcm()
-                if pcm.shape[-1] == 0:
-                    # sleep to yield to avoid busy loop
+                if pcm is None or pcm.shape[-1] == 0:
                     await asyncio.sleep(0.001)
                     continue
+
                 pcm = self.resample(pcm)
                 if self._all_pcm_data is None:
                     self._all_pcm_data = pcm
                 else:
                     self._all_pcm_data = np.concatenate((self._all_pcm_data, pcm))
+
                 await self.start_processing_metrics()
                 ttfb_metric = True
                 while self._all_pcm_data.shape[-1] >= self._frame_size:
                     be = time.time()
+
                     chunk = self._all_pcm_data[: self._frame_size]
                     self._all_pcm_data = self._all_pcm_data[self._frame_size:]
-                    chunk = torch.from_numpy(chunk)
-                    chunk = chunk.to(device=self._device)[None, None]
-                    codes = self._mimi.encode(chunk)
-                    for c in range(codes.shape[-1]):
-                        ttfb_metric and await self.start_ttfb_metrics()
-                        tokens = self._lm_gen.step(codes[:, :, c: c + 1])
-                        ttfb_metric and await self.stop_ttfb_metrics()
-                        ttfb_metric = False
-                        if tokens is None:
-                            continue
-                        assert tokens.shape[1] == self._lm_gen.lm_model.dep_q + 1
-                        main_pcm = self._mimi.decode(tokens[:, 1:])
-                        main_pcm = main_pcm.cpu()
-                        self._opus_writer.append_pcm(main_pcm[0, 0].numpy())
-                        text_token = tokens[0, 0, 0].item()
-                        if text_token not in (0, 3):
-                            _text = self._text_tokenizer.id_to_piece(text_token)
-                            _text = _text.replace("▁", " ")
-                            logging.info(f"text token '{_text}'")
-                            await self.queue_frame(TextFrame(text=_text))
+
+                    with torch.no_grad():
+                        # chunk numpy ndArray -> chunk torch tensor
+                        chunk = torch.from_numpy(chunk)
+                        chunk = chunk.to(device=self._device)[None, None]
+
+                        # mimi encode speech tensor chunk
+                        codes = self._mimi.encode(chunk)
+
+                        for c in range(codes.shape[-1]):
+                            # lm gen tokens
+                            ttfb_metric and await self.start_ttfb_metrics()
+                            tokens = self._lm_gen.step(codes[:, :, c: c + 1])
+                            ttfb_metric and await self.stop_ttfb_metrics()
+                            ttfb_metric = False
+                            if tokens is None:
+                                continue
+
+                            # mimi decode speech tensor tokens,
+                            # append numpy ndArray tokens to apus writer
+                            assert tokens.shape[1] == self._lm_gen.lm_model.dep_q + 1
+                            main_pcm = self._mimi.decode(tokens[:, 1:])
+                            main_pcm = main_pcm.cpu()
+                            self._opus_writer.append_pcm(main_pcm[0, 0].numpy())
+
+                            # bpe decode text tensor tokens, replace bpe _
+                            # send text frame
+                            text_token = tokens[0, 0, 0].item()
+                            if text_token not in (0, 3):
+                                _text = self._text_tokenizer.id_to_piece(text_token)
+                                _text = _text.replace("▁", " ")
+                                logging.info(f"text token '{_text}'")
+                                await self.push_frame(TextFrame(text=_text))
+
                     logging.info(f"frame handled in {1000 * (time.time() - be):.1f}ms")
+
                 await self.stop_processing_metrics()
             except asyncio.CancelledError:
                 break
@@ -264,8 +281,9 @@ class MoshiVoiceOpusStreamProcessor(MoshiVoiceBaseProcessor):
             try:
                 await asyncio.sleep(0.001)
                 audio_bytes = self._opus_writer.read_bytes()
+                print("___opus_writer.read_bytes____", audio_bytes)
                 if len(audio_bytes) > 0:
-                    await self.queue_frame(AudioRawFrame(
+                    await self.push_frame(AudioRawFrame(
                         audio=audio_bytes,
                         sample_rate=self._mimi.sample_rate,
                         num_channels=self._mimi.channels,

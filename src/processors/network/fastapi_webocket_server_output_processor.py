@@ -4,7 +4,7 @@ import logging
 
 from fastapi import WebSocket
 from fastapi.websockets import WebSocketState
-from apipeline.frames.data_frames import Frame, AudioRawFrame
+from apipeline.frames.data_frames import Frame, AudioRawFrame, TextFrame
 from apipeline.frames.sys_frames import StartInterruptionFrame
 from apipeline.processors.frame_processor import FrameDirection
 
@@ -25,6 +25,9 @@ class FastapiWebsocketServerOutputProcessor(AudioCameraOutputProcessor):
 
         if isinstance(frame, StartInterruptionFrame):
             await self._write_frame(frame)
+
+    async def send_text(self, frame: TextFrame):
+        await self.send_payload(frame)
 
     async def write_raw_audio_frames(self, frames: bytes):
         self._websocket_audio_buffer += frames
@@ -49,20 +52,24 @@ class FastapiWebsocketServerOutputProcessor(AudioCameraOutputProcessor):
                 )
                 frame = wav_frame
 
-            payload = self._params.serializer.serialize(frame)
-            if payload and self._websocket.client_state == WebSocketState.CONNECTED:
-                await self.send_payload(payload)
+            await self.send_payload(frame)
 
             self._websocket_audio_buffer = self._websocket_audio_buffer[
                 self._params.audio_frame_size:
             ]
 
     async def _write_frame(self, frame: Frame):
-        payload = self._params.serializer.serialize(frame)
-        if payload and self._websocket.client_state == WebSocketState.CONNECTED:
-            await self.send_payload(payload)
+        await self.send_payload(frame)
 
-    async def send_payload(self, payload: str | bytes):
+    async def send_payload(self, frame: Frame):
+        payload = self._params.serializer.serialize(frame)
+        if not payload:
+            logging.warning(f"serialize frame: {frame} no payload")
+            return
+        if self._websocket.client_state != WebSocketState.CONNECTED:
+            logging.warning(f"websocket not connected, client_state:{self._websocket.client_state}")
+            return
+
         if isinstance(payload, str):
             await self._websocket.send_text(payload)
         else:
