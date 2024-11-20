@@ -20,11 +20,11 @@ class Task:
         if self.task is None:
             return False
 
-        if isinstance(multiprocessing.Process, self.task):
+        if isinstance(self.task, multiprocessing.Process):
             return self.task.is_alive()
-        if isinstance(threading.Thread, self.task):
+        if isinstance(self.task, threading.Thread):
             return self.task.is_alive()
-        if isinstance(asyncio.Task, self.task):
+        if isinstance(self.task, asyncio.Task):
             return self.task.done()
 
         return False
@@ -56,8 +56,7 @@ class TaskManager(ABC):
     def get_task_num(self, tag: str):
         num = 0
         for val in self._tasks.values():
-            task: Task = val[0]
-            if val.tag == tag and task.is_alive():
+            if val.tag == tag and val.is_alive():
                 num += 1
         return num
 

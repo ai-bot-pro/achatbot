@@ -153,7 +153,7 @@ async def fastapi_create_random_room(
     try:
         res = await create_random_room(exp_time_s)
     except Exception as e:
-        logging.error(f"Exception in create_random_room: {e}")
+        logging.error(f"Exception in create_random_room: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"{e}")
     return JSONResponse(res)
 
@@ -183,7 +183,7 @@ def fastapi_register_bot(bot_name: str = "DummyBot") -> JSONResponse:
     try:
         res = register_bot(bot_name)
     except Exception as e:
-        logging.error(f"Exception in register_bot: {e}")
+        logging.error(f"Exception in register_bot: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"{e}")
     return JSONResponse(res)
 
@@ -473,7 +473,7 @@ async def fastapi_get_status(pid: str) -> JSONResponse:
     try:
         res = await get_status(pid)
     except Exception as e:
-        logging.error(f"Exception in get_status: {e}")
+        logging.error(f"Exception in get_status: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"{e}")
 
     return JSONResponse(res)
@@ -525,7 +525,7 @@ async def fastapi_get_num_bots(room_name: str):
     try:
         res = await get_num_bots(room_name)
     except Exception as e:
-        logging.error(f"Exception in get_num_bots: {e}")
+        logging.error(f"Exception in get_num_bots: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"{e}")
 
     return JSONResponse(res)
@@ -548,7 +548,7 @@ async def fastapi_get_room_bots(room_name: str):
     try:
         res = await get_room_bots(room_name)
     except Exception as e:
-        logging.error(f"Exception in get_room_bots: {e}")
+        logging.error(f"Exception in get_room_bots: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"{e}")
 
     return JSONResponse(res)

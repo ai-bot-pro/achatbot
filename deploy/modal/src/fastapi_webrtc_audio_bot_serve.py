@@ -4,7 +4,7 @@ import os
 
 class ContainerRuntimeConfig:
     images = {
-        "test": (
+        "default": (
             modal.Image.debian_slim(python_version="3.11")
             .apt_install("git", "git-lfs", "ffmpeg")
             .pip_install(
@@ -16,41 +16,21 @@ class ContainerRuntimeConfig:
                     "sense_voice_asr,"
                     "openai_llm_processor,google_llm_processor,litellm_processor,"
                     "tts_edge"
-                    "]==0.0.7.4",
-                    "huggingface_hub[hf_transfer]==0.24.7",
-                ],
-                extra_index_url="https://test.pypi.org/simple/")
-            .env({
-                "HF_HUB_ENABLE_HF_TRANSFER": "1",
-                "ACHATBOT_PKG": "1",
-            })
-        ),
-        "prod": (
-            modal.Image.debian_slim(python_version="3.11")
-            .apt_install("git", "git-lfs", "ffmpeg")
-            .pip_install(
-                [
-                    "achatbot["
-                    "fastapi_bot_server,"
-                    "livekit,livekit-api,daily,"
-                    "silero_vad_analyzer,"
-                    "sense_voice_asr,"
-                    "openai_llm_processor,google_llm_processor,litellm_processor,"
-                    "tts_edge"
-                    "]==0.0.7.4",
+                    "]~=0.0.7.8",
                     "huggingface_hub[hf_transfer]==0.24.7",
                 ],
                 extra_index_url="https://pypi.org/simple/")
             .env({
                 "HF_HUB_ENABLE_HF_TRANSFER": "1",
                 "ACHATBOT_PKG": "1",
+                "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
             })
         ),
     }
 
     @staticmethod
     def get_img(image_name: str = None):
-        image_name = image_name or os.getenv("IMAGE_NAME", "test")
+        image_name = image_name or os.getenv("IMAGE_NAME", "default")
         if image_name not in ContainerRuntimeConfig.images:
             raise Exception(f"image name {image_name} not found")
         print(f"use image:{image_name}")
@@ -58,7 +38,7 @@ class ContainerRuntimeConfig:
 
 
 # ----------------------- app -------------------------------
-app = modal.App("achatbot_fastapi_webrtc_audio_bot_serve")
+app = modal.App("fastapi_webrtc_audio_bot")
 
 
 # 128 MiB of memory and 0.125 CPU cores by default container runtime
@@ -70,7 +50,7 @@ app = modal.App("achatbot_fastapi_webrtc_audio_bot_serve")
     timeout=600,
     allow_concurrent_inputs=100,
 )
-class AchatbotWebrtcAudioBotServer:
+class Srv:
     @modal.build()
     def download_model(self):
         # https://huggingface.co/docs/huggingface_hub/guides/download
@@ -84,7 +64,7 @@ class AchatbotWebrtcAudioBotServer:
             repo_type="model",
             allow_patterns="*",
             local_dir=os.path.join(MODELS_DIR, "FunAudioLLM/SenseVoiceSmall"),
-            local_dir_use_symlinks=False,
+            # local_dir_use_symlinks=False,
         )
         print("download model done")
 
@@ -94,7 +74,7 @@ class AchatbotWebrtcAudioBotServer:
 
     @modal.asgi_app()
     def app(self):
-        from achatbot.cmd.websocket.server.fastapi_ws_bot_serve import app
+        from achatbot.cmd.http.server.fastapi_daily_bot_serve import app
         return app
 
 

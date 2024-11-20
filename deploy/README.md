@@ -61,4 +61,4 @@ provider: AWS, GCP, OCI
 
 
 # references
-- https://daily.dev/blog/top-9-container-registries-2024-how-to-choose
+- 

@@ -194,6 +194,8 @@ class MoshiVoiceOpusStreamProcessor(MoshiVoiceBaseProcessor):
         self._audio_in_task = self.get_event_loop().create_task(self._audio_in_task_handler())
         self._audio_out_task = self.get_event_loop().create_task(self._audio_out_task_handler())
 
+        self._create_push_task()
+
         logging.info("start done")
 
     async def stop(self, frame: EndFrame):
@@ -205,7 +207,6 @@ class MoshiVoiceOpusStreamProcessor(MoshiVoiceBaseProcessor):
             await self._audio_out_task
 
         self._opus_reader.close()
-        self.reset_state()
 
         await super().stop(frame)
         logging.info("stop done")
@@ -417,6 +418,8 @@ class VoiceOpusStreamEchoProcessor(VoiceProcessorBase):
         self._audio_in_task = self.get_event_loop().create_task(self._audio_in_task_handler())
         self._audio_out_task = self.get_event_loop().create_task(self._audio_out_task_handler())
 
+        self._create_push_task()
+
         logging.info("start done")
 
     async def stop(self, frame: EndFrame):
@@ -428,7 +431,6 @@ class VoiceOpusStreamEchoProcessor(VoiceProcessorBase):
             await self._audio_out_task
 
         self._opus_reader.close()
-        self.reset_state()
 
         await super().stop(frame)
         logging.info("stop done")
@@ -471,7 +473,7 @@ class VoiceOpusStreamEchoProcessor(VoiceProcessorBase):
                 audio_bytes = self._opus_writer.read_bytes()
                 if len(audio_bytes) > 0:
                     # print("audio_bytes====>", len(audio_bytes))
-                    await self.push_frame(AudioRawFrame(
+                    await self.queue_frame(AudioRawFrame(
                         audio=audio_bytes,
                         sample_rate=self.sample_rate,
                         num_channels=self.channels,

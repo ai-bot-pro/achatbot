@@ -259,7 +259,7 @@ class AIBot(IBot):
         if not llm:
             llm = self._bot_config.voice_llm
         if llm and llm.tag and "moshi" in llm.tag:
-            from src.processors.voice.moshi_voice_processor import MoshiVoiceOpusStreamProcessor, MoshiVoiceProcessor, VoiceOpusStreamEchoProcessor
+            from src.processors.voice.moshi_voice_processor import MoshiVoiceOpusStreamProcessor, MoshiVoiceProcessor 
             if "moshi_opus" in llm.tag:
                 if llm.args:
                     llm_processor = MoshiVoiceOpusStreamProcessor(**llm.args)
@@ -271,7 +271,7 @@ class AIBot(IBot):
                 else:
                     llm_processor = MoshiVoiceProcessor()
         else:
-            # default VoiceOpusStreamEchoProcessor
+            from src.processors.voice.moshi_voice_processor import VoiceOpusStreamEchoProcessor
             llm_processor = VoiceOpusStreamEchoProcessor()
         return llm_processor
 

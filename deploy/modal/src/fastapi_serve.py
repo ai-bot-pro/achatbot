@@ -4,18 +4,10 @@ import os
 
 class ContainerRuntimeConfig:
     images = {
-        "test": (
+        "default": (
             modal.Image.debian_slim(python_version="3.11")
             .pip_install(
-                "achatbot[fastapi_bot_server]==0.0.7.4",
-                extra_index_url="https://test.pypi.org/simple/"
-            )
-            .apt_install().env({})
-        ),
-        "prod": (
-            modal.Image.debian_slim(python_version="3.11")
-            .pip_install(
-                "achatbot[fastapi_bot_server]==0.0.7.4",
+                "achatbot[fastapi_bot_server]~=0.0.7.8",
                 extra_index_url="https://pypi.org/simple/"
             )
             .apt_install().env({})
@@ -24,7 +16,7 @@ class ContainerRuntimeConfig:
 
     @staticmethod
     def get_img(image_name: str = None):
-        image_name = image_name or os.getenv("IMAGE_NAME", "test")
+        image_name = image_name or os.getenv("IMAGE_NAME", "default")
         if image_name not in ContainerRuntimeConfig.images:
             raise Exception(f"image name {image_name} not found")
         print(f"use image:{image_name}")
@@ -32,7 +24,7 @@ class ContainerRuntimeConfig:
 
 
 # ----------------------- app -------------------------------
-app = modal.App("achatbot_fastapi_serve")
+app = modal.App("fastapi")
 
 
 # 128 MiB of memory and 0.125 CPU cores by default
@@ -43,7 +35,7 @@ app = modal.App("achatbot_fastapi_serve")
     timeout=600,
     allow_concurrent_inputs=1,
 )
-class AchatBotServer:
+class Srv:
     @modal.build()
     def download_model(self):
         print("start downloading model")
@@ -54,7 +46,7 @@ class AchatBotServer:
 
     @modal.asgi_app()
     def app(self):
-        from achatbot.cmd.websocket.server.fastapi_ws_bot_serve import app
+        from achatbot.cmd.http.server.fastapi_daily_bot_serve import app
         return app
 
 
