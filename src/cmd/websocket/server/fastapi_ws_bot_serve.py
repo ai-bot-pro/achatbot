@@ -20,7 +20,7 @@ Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=Tr
 
 @app.websocket("/")
 async def websocket_endpoint(websocket: WebSocket):
-    # run_bot: AIFastapiWebsocketBot = await BotLoader.load_bot(config.f, bot_type="fastapi_ws_bot")
+    run_bot: AIFastapiWebsocketBot = await BotLoader.load_bot(config.f, bot_type="fastapi_ws_bot")
 
     # NOTE: after init, websocket to accept connection, then to run
     await websocket.accept()
@@ -58,8 +58,8 @@ if __name__ == "__main__":
     # run_bot: AIFastapiWebsocketBot = asyncio.get_event_loop().run_until_complete(BotLoader.load_bot(config.f, bot_type="fastapi_ws_bot"))
 
     # use one event loop to run
-    run_bot: AIFastapiWebsocketBot = asyncio.run(
-        BotLoader.load_bot(config.f, bot_type="fastapi_ws_bot"))
+    # run_bot: AIFastapiWebsocketBot = asyncio.run(
+    #    BotLoader.load_bot(config.f, bot_type="fastapi_ws_bot"))
 
     # api docs: http://0.0.0.0:4321/docs
     uvicorn.run(

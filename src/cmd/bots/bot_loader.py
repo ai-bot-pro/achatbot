@@ -3,6 +3,7 @@ import asyncio
 import json
 import logging
 import os
+import pathlib
 from typing import Literal
 
 from src.cmd.bots import import_bots, import_fastapi_websocket_bots, import_websocket_bots
@@ -36,15 +37,19 @@ class BotLoader():
 
     @staticmethod
     async def load_bot(
-        local_file_path: str,
+        local_file_path: str | pathlib.PosixPath,
         is_re_init=False,
         bot_type: Literal['room_bot', 'ws_bot', "fastapi_ws_bot"] = "room_bot",
     ) -> AIBot:
         """
-        load once
+        load once from str or pathlib.PosixPath(for container volume)
         """
-        if not os.path.isfile(local_file_path):
-            logging.error(f"config: {local_file_path} not found")
+        if isinstance(local_file_path, str) and not os.path.isfile(local_file_path):
+            logging.error(f"config_path: {local_file_path} not found")
+            raise FileNotFoundError
+
+        if isinstance(local_file_path, pathlib.PosixPath) and not local_file_path.is_file():
+            logging.error(f"config_path: {local_file_path} not found")
             raise FileNotFoundError
 
         bot_info = await load_bot_config_from_local(file_path=local_file_path)

@@ -132,7 +132,7 @@ deploy it to cloudflare pages, access https://storytelling.pages.dev/
 
 
 ## Server Deploy (CD)
-- [ ] [deploy/modal](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/modal)(KISS) 👍🏻 
+- [x] [deploy/modal](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/modal)(KISS) 👍🏻 
 - [x] [deploy/leptonai](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/leptonai) 👍🏻
 - [x] [deploy/cerebrium/fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/cerebrium/fastapi-daily-chat-bot) :)
 - [x] [deploy/aws/fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/aws/fastapi-daily-chat-bot) :|

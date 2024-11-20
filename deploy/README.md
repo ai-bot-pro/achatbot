@@ -25,6 +25,8 @@ more frontend app
 ### tools
 - gcloud
 
+## Deploy to OCI ☁
+
 ## Deploy to Azure ☁
 
 ## Deploy to Alibaba Cloud ☁
@@ -37,19 +39,26 @@ more frontend app
 ---
 
 ## Deploy to cerebrium (KISS)
-provider: aws
+provider: AWS
 - [fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/cerebrium/fastapi-daily-chat-bot)
 ### tools
 - cerebrium
 
 ## Deploy to leptonai (KISS)
-provider: cloudflare(from ip address)
 - [fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/leptonai/fastapi-daily-chat-bot)
 
 ### tools
 - lep photon `pip install leptonai`
 ---
 
+## Deploy to modal (KISS)
+provider: AWS, GCP, OCI
+- [fastapi_webrtc_audio_bot_serve](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/modal/src/fastapi_webrtc_audio_bot_serve.py)
+
+### tools
+- modal `pip install modal`
+---
+
 
 # references
-- https://daily.dev/blog/top-9-container-registries-2024-how-to-choose
+- 
