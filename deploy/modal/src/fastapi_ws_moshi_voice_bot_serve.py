@@ -14,7 +14,7 @@ class ContainerRuntimeConfig:
                     "websocket_server_transport,"
                     "silero_vad_analyzer,"
                     "moshi_voice_processor"
-                    "]~=0.0.7.8",
+                    "]~=0.0.7.10",
                     "huggingface_hub[hf_transfer]==0.24.7",
                 ],
                 extra_index_url="https://pypi.org/simple/")
@@ -66,7 +66,7 @@ volume = modal.Volume.from_name("bot_config", create_if_missing=True)
     # secrets=[modal.Secret.from_name("achatbot")],
     volumes={"/bots": volume},
     gpu="A10G",
-    container_idle_timeout=300,
+    container_idle_timeout=1200,
     timeout=600,
     allow_concurrent_inputs=1,
 )

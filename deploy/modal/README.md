@@ -24,21 +24,97 @@ modal volume create -e achatbot bot_config
 - use fastapi(ASGI modal app) to run serverless web service
 - web server endpoint: `https://{profile}-{environment}--{app_name}-{class_name}-app-dev.modal.run` (if app_name + class_name is so long, hash tag name to replace)
 ```shell
-# serve
+# just a simple serve, don't to run bot
 modal serve -e achatbot src/fastapi_serve.py
+```
 
+### webrtc_audio_bot
+- run webrtc_audio_bot serve
+```shell
 # bot serve e.g.:
 # webrtc_audio_bot serve on default pip image
 # need create .env.example to modal Secrets
 IMAGE_NAME=default modal serve -e achatbot src/fastapi_webrtc_audio_bot_serve.py
+```
+- curl api to run chat room bot with webrtc (daily/livekit)
+`https://weedge-achatbot--fastapi-webrtc-audio-bot-srv-app-dev.modal.run/docs` see api docs
+```shell
+curl --location 'https://weedge-achatbot--fastapi-webrtc-audio-bot-srv-app-dev.modal.run/bot_join/chat-room/DailyBot' \
+--header 'Authorization: Bearer xxx' \
+--header 'Content-Type: application/json' \
+--data '{
+    "chat_bot_name": "DailyBot",
+    "room_name": "chat-room",
+    "room_url": "",
+    "token": "",
+    "room_manager": {
+        "tag": "daily_room",
+        "args": {
+            "privacy": "public"
+        }
+    },
+    "services": {
+        "pipeline": "achatbot",
+        "vad": "silero",
+        "asr": "sense_voice",
+        "llm": "groq",
+        "tts": "edge"
+    },
+    "config": {
+        "vad": {
+            "tag": "silero_vad_analyzer",
+            "args": {
+                "stop_secs": 0.7
+            }
+        },
+        "asr": {
+            "tag": "sense_voice_asr",
+            "args": {
+                "language": "zn",
+                "model_name_or_path": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall"
+            }
+        },
+        "llm": {
+            "tag": "openai_llm_processor",
+            "base_url": "https://api.together.xyz/v1",
+            "model": "Qwen/Qwen2-72B-Instruct",
+            "language": "zh",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "你是一名叫奥利给的智能助理。保持回答简短和清晰。请用中文回答。"
+                }
+            ]
+        },
+        "tts": {
+            "tag": "tts_edge",
+            "args": {
+                "voice_name": "zh-CN-YunjianNeural",
+                "language": "zh",
+                "gender": "Male"
+            }
+        }
+    },
+    "config_list": []
+}'
+```
 
+
+### ws_moshi_voice_bot
+- run ws_moshi_voice_bot serve
+```shell
 # put local config to modal volume bot_config / dir
 modal volume put -e achatbot bot_config  ../../config/bots/fastapi_websocket_moshi_voice_bot.json / -f
 # ws_moshi_voice_bot serve on default pip image
 IMAGE_NAME=default modal serve -e achatbot src/fastapi_ws_moshi_voice_bot_serve.py
+```
+- run moshi_opus_stream_ws_pb_client to chat with moshi in CLI
+```shell
 # run moshi_opus_stream_ws_pb_client to chat with moshi in CLI
 python -m achatbot.cmd.websocket.moshi_opus_stream_ws_pb_client --endpoint https://weedge-achatbot--fastapi-ws-moshi-voice-bot-srv-app-dev.modal.run/
 ```
+> [!TIPS] process frame(size:1920, 25ms; sample_rate:24000/s, sample_width:2, channels:1) cost: 53.0ms 
+> (opus audio format) speech mimi encoder encode -> gen lm(moshi) -> text|speech tokens -> text BPE tokenizer decode|speech mimi decoder decode -> text|opus audio format with pb serialize
 
 ## modal deploy 
 

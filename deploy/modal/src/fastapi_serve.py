@@ -7,7 +7,7 @@ class ContainerRuntimeConfig:
         "default": (
             modal.Image.debian_slim(python_version="3.11")
             .pip_install(
-                "achatbot[fastapi_bot_server]~=0.0.7.8",
+                "achatbot[fastapi_bot_server]~=0.0.7.10",
                 extra_index_url="https://pypi.org/simple/"
             )
             .apt_install().env({})

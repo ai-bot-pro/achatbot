@@ -16,7 +16,7 @@ class ContainerRuntimeConfig:
                     "sense_voice_asr,"
                     "openai_llm_processor,google_llm_processor,litellm_processor,"
                     "tts_edge"
-                    "]~=0.0.7.8",
+                    "]~=0.0.7.10",
                     "huggingface_hub[hf_transfer]==0.24.7",
                 ],
                 extra_index_url="https://pypi.org/simple/")
