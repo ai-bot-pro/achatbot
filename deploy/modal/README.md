@@ -116,8 +116,18 @@ python -m achatbot.cmd.websocket.moshi_opus_stream_ws_pb_client --endpoint https
 > [!TIPS] process frame(size:1920, 25ms; sample_rate:24000/s, sample_width:2, channels:1) cost: 53.0ms 
 > (opus audio format) speech mimi encoder encode -> gen lm(moshi) -> text|speech tokens -> text BPE tokenizer decode|speech mimi decoder decode -> text|opus audio format with pb serialize
 
-## modal deploy 
+## modal deploy (online)
+- deploy webrtc_audio_bot serve
+```shell
+IMAGE_NAME=default modal deploy -e achatbot src/fastapi_webrtc_audio_bot_serve.py
+```
+endpoint: https://weedge-achatbot--fastapi-webrtc-audio-bot-srv-app.modal.run/
 
+- deploy webrtc_audio_bot serve
+```shell
+IMAGE_NAME=default modal deploy -e achatbot src/fastapi_ws_moshi_voice_bot_serve.py
+```
+endpoint: https://weedge-achatbot--fastapi-ws-moshi-voice-bot-srv-app.modal.run
 
 # references (nice docs) 👍
 - https://modal.com/docs/guide
