@@ -12,11 +12,11 @@ class ContainerRuntimeConfig:
                     "achatbot["
                     "fastapi_bot_server,"
                     "livekit,livekit-api,daily,"
-                    "silero_vad_analyzer,"
-                    "sense_voice_asr,"
+                    "silero_vad_analyzer,daily_langchain_rag_bot,"
+                    "sense_voice_asr,deepgram_asr_processor,"
                     "openai_llm_processor,google_llm_processor,litellm_processor,"
                     "tts_edge"
-                    "]~=0.0.7.10",
+                    "]~=0.0.7.11",
                     "huggingface_hub[hf_transfer]==0.24.7",
                 ],
                 extra_index_url="https://pypi.org/simple/")
@@ -24,6 +24,15 @@ class ContainerRuntimeConfig:
                 "HF_HUB_ENABLE_HF_TRANSFER": "1",
                 "ACHATBOT_PKG": "1",
                 "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
+                "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
+                # asr module engine TAG, default whisper_timestamped_asr
+                "ASR_TAG": "sense_voice_asr",
+                "ASR_LANG": "zn",
+                "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
+                # llm processor model, default:google gemini_flash_latest
+                "GOOGLE_LLM_MODEL": "gemini-1.5-flash-latest",
+                # tts module engine TAG,default tts_edge
+                "TTS_TAG": "tts_edge",
             })
         ),
     }
@@ -36,9 +45,16 @@ class ContainerRuntimeConfig:
         print(f"use image:{image_name}")
         return ContainerRuntimeConfig.images[image_name]
 
+    @staticmethod
+    def get_app_name(image_name: str = None):
+        image_name = image_name or os.getenv("IMAGE_NAME", "default")
+        if image_name != "default":
+            return f"{image_name}_fastapi_webrtc_audio_bot"
+        return "fastapi_webrtc_audio_bot"
+
 
 # ----------------------- app -------------------------------
-app = modal.App("fastapi_webrtc_audio_bot")
+app = modal.App(ContainerRuntimeConfig.get_app_name())
 
 
 # 128 MiB of memory and 0.125 CPU cores by default container runtime

@@ -2,7 +2,8 @@
 the Starter plan with $30.00 included compute credits per month, for development, so nice~
 
 # modal
-> [!NOTE] in deploy/modal dir to run shell
+> [!NOTE] 
+> in deploy/modal dir to run shell
 ```shell
 pip install modal 
 
@@ -113,8 +114,73 @@ IMAGE_NAME=default modal serve -e achatbot src/fastapi_ws_moshi_voice_bot_serve.
 # run moshi_opus_stream_ws_pb_client to chat with moshi in CLI
 python -m achatbot.cmd.websocket.moshi_opus_stream_ws_pb_client --endpoint https://weedge-achatbot--fastapi-ws-moshi-voice-bot-srv-app-dev.modal.run/
 ```
-> [!TIPS] process frame(size:1920, 25ms; sample_rate:24000/s, sample_width:2, channels:1) cost: 53.0ms 
+> [!TIPS] 
+> process frame(size:1920, 25ms; sample_rate:24000/s, sample_width:2, channels:1) cost: 53.0ms 
 > (opus audio format) speech mimi encoder encode -> gen lm(moshi) -> text|speech tokens -> text BPE tokenizer decode|speech mimi decoder decode -> text|opus audio format with pb serialize
+
+### webrtc_vision_bot
+- run webrtc_vision_bot serve with task queue(redis)
+```shell
+# webrtc_vision_bot serve on default pip image
+IMAGE_NAME=default IMAGE_CONCURRENT_CN=100 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+# webrtc_vision_bot serve on qwen vision llm pip image
+IMAGE_NAME=qwen IMAGE_CONCURRENT_CN=1 IMAGE_GPU=T4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+IMAGE_NAME=qwen IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 LLM_MODEL_NAME_OR_PATH=Qwen/Qwen2-VL-7B-Instruct modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+# webrtc_vision_bot serve on llama vision llm pip image
+IMAGE_NAME=llama IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+```
+- curl api to run chat room bot with webrtc (daily/livekit)
+```shell
+curl --location 'https://weedge-achatbot--fastapi-webrtc-vision-qwen-bot-srv-app-dev.modal.run/bot_join/chat-room/DailyDescribeVisionBot' \
+--header 'Content-Type: application/json' \
+--data '{
+  "chat_bot_name": "DailyDescribeVisionBot",
+  "room_name": "chat-bot",
+  "room_url": "",
+  "token": "",
+  "services": {
+    "pipeline": "achatbot",
+    "vad": "silero",
+    "asr": "sense_voice",
+    "llm": "transformers_manual_vision_qwen",
+    "tts": "edge"
+  },
+  "config": {
+    "vad": {
+      "tag": "silero_vad_analyzer",
+      "args": { "stop_secs": 0.7 }
+    },
+    "asr": {
+      "tag": "sense_voice_asr",
+      "args": {
+        "language": "zn",
+        "model_name_or_path": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall"
+      }
+    },
+    "llm": {
+      "tag":"llm_transformers_manual_vision_qwen",
+      "args":{
+        "lm_device":"cuda",
+        "lm_model_name_or_path":"/root/.achatbot/models/Qwen/Qwen2-VL-2B-Instruct",
+        "chat_history_size": 0,
+        "init_chat_prompt":"请用中文交流",
+        "model_type":"chat_completion"
+      },
+      "language": "zh"
+    },
+    "tts": {
+      "tag": "tts_edge",
+      "args": {
+        "voice_name": "zh-CN-YunjianNeural",
+        "language": "zh",
+        "gender": "Male"
+      }
+    }
+  },
+  "config_list": []
+}'
+```
+
 
 ## modal deploy (online)
 - deploy webrtc_audio_bot serve
@@ -123,13 +189,30 @@ IMAGE_NAME=default modal deploy -e achatbot src/fastapi_webrtc_audio_bot_serve.p
 ```
 endpoint: https://weedge-achatbot--fastapi-webrtc-audio-bot-srv-app.modal.run/
 
-- deploy webrtc_audio_bot serve
+- deploy ws_moshi_voice_bot serve
 ```shell
 IMAGE_NAME=default modal deploy -e achatbot src/fastapi_ws_moshi_voice_bot_serve.py
 ```
 endpoint: https://weedge-achatbot--fastapi-ws-moshi-voice-bot-srv-app.modal.run
 
-# references (nice docs) 👍
+- deploy webrtc_vision_bot serve
+```shell
+IMAGE_NAME=default modal deploy -e achatbot src/fastapi_ws_moshi_voice_bot_serve.py
+```
+endpoint: https://weedge-achatbot--fastapi-webrtc-vision-bot-srv-app.modal.run/
+
+```shell
+IMAGE_NAME=qwen IMAGE_CONCURRENT_CN=1 IMAGE_GPU=T4 modal deploy -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+```
+endpoint: https://weedge-achatbot--fastapi-webrtc-vision-qwen-bot-srv-app.modal.run/
+
+```shell
+IMAGE_NAME=llama IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+```
+endpoint: https://weedge-achatbot--fastapi-webrtc-vision-llama-bot-srv-app.modal.run/
+
+
+# references (nice docs) 👍 @modal
 - https://modal.com/docs/guide
 - https://modal.com/docs/guide/gpu
 - https://modal.com/docs/guide/cuda
