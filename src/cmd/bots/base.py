@@ -19,7 +19,7 @@ from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.modules.speech.asr import ASREnvInit
 from src.core.llm import LLMEnvInit
 from src.modules.speech.tts import TTSEnvInit
-from src.types.ai_conf import ASRConfig, LLMConfig, TTSConfig, AIConfig
+from src.types.ai_conf import TOGETHER_LLM_MODEL, TOGETHER_LLM_URL, ASRConfig, LLMConfig, TTSConfig, AIConfig
 from src.common import interface
 from src.common.factory import EngineClass
 from src.common.types import BotRunArgs
@@ -148,13 +148,14 @@ class AIBot(IBot):
         """
         if not llm:
             llm = self._bot_config.llm
-        if llm and llm.tag \
-                and "google" in llm.tag:
+        if llm and llm.tag and "google" in llm.tag:
             llm_processor = self.get_google_llm_processor(llm)
         elif llm and llm.tag and "litellm" in llm.tag:
             llm_processor = self.get_litellm_processor(llm)
-        else:
+        elif llm and llm.tag and "openai" in llm.tag:
             llm_processor = self.get_openai_llm_processor(llm)
+        else:
+            llm_processor = self.get_google_llm_processor(llm)
         return llm_processor
 
     def get_openai_llm_processor(self, llm: LLMConfig | None = None) -> LLMProcessor:
@@ -163,18 +164,24 @@ class AIBot(IBot):
             llm = self._bot_config.llm
         # default use openai llm processor
         api_key = os.environ.get("OPENAI_API_KEY")
-        if "groq" in llm.base_url:
-            # https://console.groq.com/docs/models
-            api_key = os.environ.get("GROQ_API_KEY")
-            llm_processor = OpenAIGroqLLMProcessor(
-                model=llm.model,
-                base_url=llm.base_url,
-                api_key=api_key,
-            )
-            return llm_processor
-        elif "together" in llm.base_url:
-            # https://docs.together.ai/docs/chat-models
-            api_key = os.environ.get("TOGETHER_API_KEY")
+        if llm:
+            if "groq" in llm.base_url:
+                # https://console.groq.com/docs/models
+                api_key = os.environ.get("GROQ_API_KEY")
+                llm_processor = OpenAIGroqLLMProcessor(
+                    model=llm.model,
+                    base_url=llm.base_url,
+                    api_key=api_key,
+                )
+                return llm_processor
+            elif "together" in llm.base_url:
+                # https://docs.together.ai/docs/chat-models
+                api_key = os.environ.get("TOGETHER_API_KEY")
+            else:
+                llm.base_url = TOGETHER_LLM_URL
+                llm.model = TOGETHER_LLM_MODEL
+                api_key = os.environ.get("TOGETHER_API_KEY")
+
         llm_processor = OpenAILLMProcessor(
             model=llm.model,
             base_url=llm.base_url,
@@ -188,8 +195,9 @@ class AIBot(IBot):
         if llm_config and llm_config.args:
             llm_processor = GoogleAILLMProcessor(**llm_config.args)
         else:
+            logging.info(f"use default google llm processor")
             api_key = os.environ.get("GOOGLE_API_KEY")
-            model = os.environ.get("MODEL", "gemini-1.5-flash-latest")
+            model = os.environ.get("GOOGLE_LLM_MODEL", "gemini-1.5-flash-latest")
             llm_processor = GoogleAILLMProcessor(
                 api_key=api_key,
                 model=model,
@@ -259,7 +267,7 @@ class AIBot(IBot):
         if not llm:
             llm = self._bot_config.voice_llm
         if llm and llm.tag and "moshi" in llm.tag:
-            from src.processors.voice.moshi_voice_processor import MoshiVoiceOpusStreamProcessor, MoshiVoiceProcessor 
+            from src.processors.voice.moshi_voice_processor import MoshiVoiceOpusStreamProcessor, MoshiVoiceProcessor
             if "moshi_opus" in llm.tag:
                 if llm.args:
                     llm_processor = MoshiVoiceOpusStreamProcessor(**llm.args)

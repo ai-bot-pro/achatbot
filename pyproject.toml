@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 name = "achatbot"
 #dynamic = ["version"]
 # todo
-version = "0.0.7.10"
+version = "0.0.7.11"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -389,7 +389,7 @@ remote_grpc_tts_server = [
 
 # processor
 asr_processor = [
-    "deepgram-sdk~=3.5.0",
+    "deepgram-sdk~=3.7.7",
     # speech_asr
     "openai-whisper==20231117",
     "whisper-timestamped~=1.14.2",
@@ -437,7 +437,7 @@ tts_processor = [
     "torch~=2.2.2",
 ]
 ai_frameworks_processor = ["langchain~=0.2.13"]
-deepgram_asr_processor = ["deepgram-sdk~=3.5.0"]
+deepgram_asr_processor = ["deepgram-sdk~=3.7.7"]
 cartesia_tts_processor = ["websockets~=12.0"]
 
 

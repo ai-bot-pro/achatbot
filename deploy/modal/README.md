@@ -2,7 +2,8 @@
 the Starter plan with $30.00 included compute credits per month, for development, so nice~
 
 # modal
-> [!NOTE] in deploy/modal dir to run shell
+> [!NOTE] 
+> in deploy/modal dir to run shell
 ```shell
 pip install modal 
 
@@ -113,7 +114,8 @@ IMAGE_NAME=default modal serve -e achatbot src/fastapi_ws_moshi_voice_bot_serve.
 # run moshi_opus_stream_ws_pb_client to chat with moshi in CLI
 python -m achatbot.cmd.websocket.moshi_opus_stream_ws_pb_client --endpoint https://weedge-achatbot--fastapi-ws-moshi-voice-bot-srv-app-dev.modal.run/
 ```
-> [!TIPS] process frame(size:1920, 25ms; sample_rate:24000/s, sample_width:2, channels:1) cost: 53.0ms 
+> [!TIPS] 
+> process frame(size:1920, 25ms; sample_rate:24000/s, sample_width:2, channels:1) cost: 53.0ms 
 > (opus audio format) speech mimi encoder encode -> gen lm(moshi) -> text|speech tokens -> text BPE tokenizer decode|speech mimi decoder decode -> text|opus audio format with pb serialize
 
 ## modal deploy (online)
