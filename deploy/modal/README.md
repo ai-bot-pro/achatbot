@@ -124,7 +124,8 @@ python -m achatbot.cmd.websocket.moshi_opus_stream_ws_pb_client --endpoint https
 # webrtc_vision_bot serve on default pip image
 IMAGE_NAME=default IMAGE_CONCURRENT_CN=100 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
 # webrtc_vision_bot serve on qwen vision llm pip image
-IMAGE_NAME=qwen IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+IMAGE_NAME=qwen IMAGE_CONCURRENT_CN=1 IMAGE_GPU=T4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+IMAGE_NAME=qwen IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 LLM_MODEL_NAME_OR_PATH=Qwen/Qwen2-VL-7B-Instruct modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
 # webrtc_vision_bot serve on llama vision llm pip image
 IMAGE_NAME=llama IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
 ```
@@ -199,6 +200,16 @@ endpoint: https://weedge-achatbot--fastapi-ws-moshi-voice-bot-srv-app.modal.run
 IMAGE_NAME=default modal deploy -e achatbot src/fastapi_ws_moshi_voice_bot_serve.py
 ```
 endpoint: https://weedge-achatbot--fastapi-webrtc-vision-bot-srv-app.modal.run/
+
+```shell
+IMAGE_NAME=qwen IMAGE_CONCURRENT_CN=1 IMAGE_GPU=T4 modal deploy -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+```
+endpoint: https://weedge-achatbot--fastapi-webrtc-vision-qwen-bot-srv-app.modal.run/
+
+```shell
+IMAGE_NAME=llama IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+```
+endpoint: https://weedge-achatbot--fastapi-webrtc-vision-llama-bot-srv-app.modal.run/
 
 
 # references (nice docs) 👍 @modal
