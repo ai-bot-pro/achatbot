@@ -144,7 +144,7 @@ class AIBot(IBot):
 
     def get_remote_llm_processor(self, llm: LLMConfig | None = None) -> LLMProcessor:
         """
-        get remote vision llm
+        get remote llm
         """
         if not llm:
             llm = self._bot_config.llm

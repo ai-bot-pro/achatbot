@@ -118,6 +118,19 @@ python -m achatbot.cmd.websocket.moshi_opus_stream_ws_pb_client --endpoint https
 > process frame(size:1920, 25ms; sample_rate:24000/s, sample_width:2, channels:1) cost: 53.0ms 
 > (opus audio format) speech mimi encoder encode -> gen lm(moshi) -> text|speech tokens -> text BPE tokenizer decode|speech mimi decoder decode -> text|opus audio format with pb serialize
 
+### webrtc_vision_bot
+- run webrtc_vision_bot serve with task queue(redis)
+```shell
+# webrtc_vision_bot serve on default pip image
+IMAGE_NAME=default IMAGE_CONCURRENT_CN=100 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+# webrtc_vision_bot serve on qwen vision llm pip image
+IMAGE_NAME=qwen IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+# webrtc_vision_bot serve on llama vision llm pip image
+IMAGE_NAME=llama IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+```
+- run moshi_opus_stream_ws_pb_client to chat with moshi in CLI
+
+
 ## modal deploy (online)
 - deploy webrtc_audio_bot serve
 ```shell
@@ -125,11 +138,18 @@ IMAGE_NAME=default modal deploy -e achatbot src/fastapi_webrtc_audio_bot_serve.p
 ```
 endpoint: https://weedge-achatbot--fastapi-webrtc-audio-bot-srv-app.modal.run/
 
-- deploy webrtc_audio_bot serve
+- deploy ws_moshi_voice_bot serve
 ```shell
 IMAGE_NAME=default modal deploy -e achatbot src/fastapi_ws_moshi_voice_bot_serve.py
 ```
 endpoint: https://weedge-achatbot--fastapi-ws-moshi-voice-bot-srv-app.modal.run
+
+- deploy webrtc_vision_bot serve
+```shell
+IMAGE_NAME=default modal deploy -e achatbot src/fastapi_ws_moshi_voice_bot_serve.py
+```
+endpoint: https://weedge-achatbot--fastapi-webrtc-vision-bot-srv-app.modal.run/
+
 
 # references (nice docs) 👍
 - https://modal.com/docs/guide
