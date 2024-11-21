@@ -128,7 +128,57 @@ IMAGE_NAME=qwen IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/f
 # webrtc_vision_bot serve on llama vision llm pip image
 IMAGE_NAME=llama IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
 ```
-- run moshi_opus_stream_ws_pb_client to chat with moshi in CLI
+- curl api to run chat room bot with webrtc (daily/livekit)
+```shell
+curl --location 'https://weedge-achatbot--fastapi-webrtc-vision-qwen-bot-srv-app-dev.modal.run/bot_join/chat-room/DailyDescribeVisionBot' \
+--header 'Content-Type: application/json' \
+--data '{
+  "chat_bot_name": "DailyDescribeVisionBot",
+  "room_name": "chat-bot",
+  "room_url": "",
+  "token": "",
+  "services": {
+    "pipeline": "achatbot",
+    "vad": "silero",
+    "asr": "sense_voice",
+    "llm": "transformers_manual_vision_qwen",
+    "tts": "edge"
+  },
+  "config": {
+    "vad": {
+      "tag": "silero_vad_analyzer",
+      "args": { "stop_secs": 0.7 }
+    },
+    "asr": {
+      "tag": "sense_voice_asr",
+      "args": {
+        "language": "zn",
+        "model_name_or_path": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall"
+      }
+    },
+    "llm": {
+      "tag":"llm_transformers_manual_vision_qwen",
+      "args":{
+        "lm_device":"cuda",
+        "lm_model_name_or_path":"/root/.achatbot/models/Qwen/Qwen2-VL-2B-Instruct",
+        "chat_history_size": 0,
+        "init_chat_prompt":"请用中文交流",
+        "model_type":"chat_completion"
+      },
+      "language": "zh"
+    },
+    "tts": {
+      "tag": "tts_edge",
+      "args": {
+        "voice_name": "zh-CN-YunjianNeural",
+        "language": "zh",
+        "gender": "Male"
+      }
+    }
+  },
+  "config_list": []
+}'
+```
 
 
 ## modal deploy (online)
@@ -151,7 +201,7 @@ IMAGE_NAME=default modal deploy -e achatbot src/fastapi_ws_moshi_voice_bot_serve
 endpoint: https://weedge-achatbot--fastapi-webrtc-vision-bot-srv-app.modal.run/
 
 
-# references (nice docs) 👍
+# references (nice docs) 👍 @modal
 - https://modal.com/docs/guide
 - https://modal.com/docs/guide/gpu
 - https://modal.com/docs/guide/cuda
