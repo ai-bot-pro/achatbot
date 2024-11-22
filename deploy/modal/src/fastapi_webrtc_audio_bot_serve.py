@@ -15,9 +15,12 @@ class ContainerRuntimeConfig:
                     "silero_vad_analyzer,daily_langchain_rag_bot,"
                     "sense_voice_asr,deepgram_asr_processor,"
                     "openai_llm_processor,google_llm_processor,litellm_processor,"
-                    "tts_edge"
-                    "]~=0.0.7.11",
+                    "tts_edge,"
+                    "deep_translator,together_ai,"
+                    "queue"
+                    "]~=0.0.7.12",
                     "huggingface_hub[hf_transfer]==0.24.7",
+                    "wget",
                 ],
                 extra_index_url="https://pypi.org/simple/")
             .env({
@@ -68,13 +71,27 @@ app = modal.App(ContainerRuntimeConfig.get_app_name())
 )
 class Srv:
     @modal.build()
-    def download_model(self):
+    def setup(self):
         # https://huggingface.co/docs/huggingface_hub/guides/download
+        import wget
         from huggingface_hub import snapshot_download
-        from achatbot.common.types import MODELS_DIR
+        from achatbot.common.types import MODELS_DIR, ASSETS_DIR
         os.makedirs(MODELS_DIR, exist_ok=True)
-        print(f"start downloading model to dir:{MODELS_DIR}")
+        os.makedirs(ASSETS_DIR, exist_ok=True)
 
+        print(f"start downloading assets to dir:{ASSETS_DIR}")
+        storytelling_assets = [
+            "https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/src/cmd/bots/image/storytelling/assets/book1.png",
+            "https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/src/cmd/bots/image/storytelling/assets/book2.png",
+            "https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/src/cmd/bots/image/storytelling/assets/ding.wav",
+            "https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/src/cmd/bots/image/storytelling/assets/listening.wav",
+            "https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/src/cmd/bots/image/storytelling/assets/talking.wav",
+        ]
+
+        for url in storytelling_assets:
+            wget.download(url, out=ASSETS_DIR)
+
+        print(f"start downloading model to dir:{MODELS_DIR}")
         snapshot_download(
             repo_id="FunAudioLLM/SenseVoiceSmall",
             repo_type="model",
@@ -82,7 +99,7 @@ class Srv:
             local_dir=os.path.join(MODELS_DIR, "FunAudioLLM/SenseVoiceSmall"),
             # local_dir_use_symlinks=False,
         )
-        print("download model done")
+        print("setup done")
 
     @modal.enter()
     def enter(self):
