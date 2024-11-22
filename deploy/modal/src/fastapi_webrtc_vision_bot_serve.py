@@ -17,8 +17,9 @@ class ContainerRuntimeConfig:
                     "sense_voice_asr,deepgram_asr_processor,"
                     "openai_llm_processor,google_llm_processor,litellm_processor,"
                     "tts_edge,"
+                    "deep_translator,together_ai,"
                     "queue"
-                    "]~=0.0.7.11",
+                    "]~=0.0.7.12",
                     "huggingface_hub[hf_transfer]==0.24.7",
                 ],
                 extra_index_url="https://pypi.org/simple/")
@@ -50,6 +51,7 @@ class ContainerRuntimeConfig:
                     "llm_transformers_manual_vision_qwen,"
                     "openai_llm_processor,google_llm_processor,litellm_processor,"
                     "tts_edge,"
+                    "deep_translator,together_ai,"
                     "queue"
                     "]~=0.0.7.11",
                     "huggingface_hub[hf_transfer]==0.24.7",
@@ -84,6 +86,7 @@ class ContainerRuntimeConfig:
                     "llm_transformers_manual_vision_llama,"
                     "openai_llm_processor,google_llm_processor,litellm_processor,"
                     "tts_edge,"
+                    "deep_translator,together_ai,"
                     "queue"
                     "]~=0.0.7.11",
                     "huggingface_hub[hf_transfer]==0.24.7",

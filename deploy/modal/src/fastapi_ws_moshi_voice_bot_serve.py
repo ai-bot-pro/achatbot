@@ -14,7 +14,7 @@ class ContainerRuntimeConfig:
                     "websocket_server_transport,"
                     "silero_vad_analyzer,"
                     "moshi_voice_processor"
-                    "]~=0.0.7.11",
+                    "]~=0.0.7.12",
                     "huggingface_hub[hf_transfer]==0.24.7",
                 ],
                 extra_index_url="https://pypi.org/simple/")

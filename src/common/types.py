@@ -50,6 +50,9 @@ RECORDS_DIR = os.path.normpath(
 VIDEOS_DIR = os.path.normpath(
     os.path.join(DIR_PATH, "videos")
 )
+ASSETS_DIR = os.path.normpath(
+    os.path.join(DIR_PATH, "assets")
+)
 
 TEST_DIR = os.path.normpath(
     os.path.join(SRC_PATH, os.pardir, "test")
