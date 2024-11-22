@@ -116,24 +116,24 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
 # Service Deployment Architecture
 
 ## UI (easy to deploy with github like pages)
-- [vite-react-rtvi-web-voice](https://github.com/ai-bot-pro/vite-react-rtvi-web-voice) rtvi web voice chat bots, diff cctv roles etc, u can diy your own role by change the system prompt with [DailyRTVIGeneralBot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/rtvi/daily_rtvi_general_bot.py)
-deploy it to cloudflare pages, access https://role-chat.pages.dev/
-- [chat-bot-rtvi-web-sandbox](https://github.com/ai-bot-pro/chat-bot-rtvi-client/tree/main/chat-bot-rtvi-web-sandbox)
+- [x] [ui/web-client-ui](https://github.com/ai-bot-pro/web-client-ui)
+deploy it to cloudflare page with vite, access https://chat-client-weedge.pages.dev/
+- [x] [ui/educator-client](https://github.com/ai-bot-pro/educator-client)
+deploy it to cloudflare page with vite, access https://educator-client.pages.dev/
+- [x] [chat-bot-rtvi-web-sandbox](https://github.com/ai-bot-pro/chat-bot-rtvi-client/tree/main/chat-bot-rtvi-web-sandbox)
 use this web sandbox to test config, actions with [DailyRTVIGeneralBot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/rtvi/daily_rtvi_general_bot.py)
-- [ui/educator-client](https://github.com/ai-bot-pro/educator-client)
-deploy it to cloudflare pages, access https://educator-client.pages.dev/
-- [ui/web-client-ui](https://github.com/ai-bot-pro/web-client-ui)
-deploy it to cloudflare pages, access https://chat-client-weedge.pages.dev/
-- [vite-react-web-vision](https://github.com/ai-bot-pro/vite-react-web-vision) 
-deploy it to cloudflare pages, access https://vision-weedge.pages.dev/
-- [nextjs-react-web-storytelling](https://github.com/ai-bot-pro/nextjs-react-web-storytelling) 
-deploy it to cloudflare pages, access https://storytelling.pages.dev/ 
-- [websocket-demo](https://github.com/ai-bot-pro/achatbot/blob/main/ui/websocket/simple-demo): websocket audio chat bot demo
+- [x] [vite-react-rtvi-web-voice](https://github.com/ai-bot-pro/vite-react-rtvi-web-voice) rtvi web voice chat bots, diff cctv roles etc, u can diy your own role by change the system prompt with [DailyRTVIGeneralBot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/rtvi/daily_rtvi_general_bot.py)
+deploy it to cloudflare page with vite, access https://role-chat.pages.dev/
+- [x] [vite-react-web-vision](https://github.com/ai-bot-pro/vite-react-web-vision) 
+deploy it to cloudflare page with vite, access https://vision-weedge.pages.dev/
+- [x] [nextjs-react-web-storytelling](https://github.com/ai-bot-pro/nextjs-react-web-storytelling) 
+deploy it to cloudflare page worker with nextjs, access https://storytelling.pages.dev/ 
+- [x] [websocket-demo](https://github.com/ai-bot-pro/achatbot/blob/main/ui/websocket/simple-demo): websocket audio chat bot demo
 
 
 ## Server Deploy (CD)
 - [x] [deploy/modal](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/modal)(KISS) 👍🏻 
-- [x] [deploy/leptonai](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/leptonai) 👍🏻
+- [x] [deploy/leptonai](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/leptonai)(KISS)👍🏻
 - [x] [deploy/cerebrium/fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/cerebrium/fastapi-daily-chat-bot) :)
 - [x] [deploy/aws/fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/aws/fastapi-daily-chat-bot) :|
 - [x] [deploy/docker/fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/docker) 🏃
