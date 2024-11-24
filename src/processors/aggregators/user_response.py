@@ -152,6 +152,10 @@ class ResponseAggregator(FrameProcessor):
 
 
 class UserResponseAggregator(ResponseAggregator):
+    """
+    user input text frame aggregator, no history, just aggr text str
+    """
+
     def __init__(self):
         super().__init__(
             start_frame=UserStartedSpeakingFrame,
