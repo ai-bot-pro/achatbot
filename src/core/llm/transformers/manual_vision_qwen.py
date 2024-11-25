@@ -39,7 +39,7 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
                 device_map=self.args.lm_device_map,
                 attn_implementation=self.args.lm_attn_impl,
                 trust_remote_code=True,
-            )
+            ).eval()
         else:
             self._model = Qwen2VLForConditionalGeneration.from_pretrained(
                 self.args.lm_model_name_or_path,

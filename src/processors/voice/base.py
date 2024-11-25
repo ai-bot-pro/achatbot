@@ -7,6 +7,7 @@ import wave
 from apipeline.frames import Frame, AudioRawFrame, EndFrame, CancelFrame
 from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
 
+from src.common.types import CHANNELS, RATE
 from src.common.utils.helper import calculate_audio_volume, exp_smoothing
 from src.processors.ai_processor import AsyncAIProcessor
 
@@ -29,7 +30,7 @@ class VoiceProcessorBase(AsyncAIProcessor):
     @property
     def stream_info(self) -> dict:
         """Return dict out stream info"""
-        return {"sample_rate": 16000, "channels": 2}
+        return {"sample_rate": RATE, "channels": CHANNELS}
 
     @abstractmethod
     async def run_voice(self, frame: AudioRawFrame) -> AsyncGenerator[Frame, None]:

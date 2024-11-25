@@ -27,7 +27,7 @@ class FastapiWebsocketMoshiVoiceBot(AIFastapiWebsocketBot):
     def __init__(self, websocket: WebSocket | None = None, **args) -> None:
         super().__init__(websocket, **args)
         self.init_bot_config()
-        self._voice_processor = self.get_voice_processor()
+        self._voice_processor = self.get_moshi_voice_processor()
         self._vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
 
     async def arun(self):

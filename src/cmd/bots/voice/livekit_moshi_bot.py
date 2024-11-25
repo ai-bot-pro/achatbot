@@ -36,7 +36,7 @@ class LivekitMoshiVoiceBot(LivekitRoomBot):
             vad_audio_passthrough=True,
         )
 
-        self._voice_processor = self.get_voice_processor()
+        self._voice_processor = self.get_moshi_voice_processor()
         stream_info = self._voice_processor.stream_info
         self.params.audio_out_sample_rate = stream_info["sample_rate"]
         self.params.audio_out_channels = stream_info["channels"]
