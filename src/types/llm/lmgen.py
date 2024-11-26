@@ -22,15 +22,19 @@ class GLMInferenceArgs:
     max_new_token: int = 2000
 
 
+@dataclass
 class GLMVoiceArgs:
     """GLM Voice defualt arguments"""
     audio_sample_rate: int = RATE
     audio_channels: int = CHANNELS
 
 
+@dataclass
 class GLMVoiceInArgs(GLMVoiceArgs):
     """GLM Voice In defualt arguments"""
 
 
+@dataclass
 class GLMVoiceOutArgs(GLMVoiceArgs):
     """GLM Voice Out defualt arguments"""
+    audio_sample_rate: int = 22050

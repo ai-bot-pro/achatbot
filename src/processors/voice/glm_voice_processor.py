@@ -1,5 +1,6 @@
 import os
 import logging
+import sys
 from typing import AsyncGenerator, Generator
 import uuid
 
@@ -44,17 +45,37 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
                  model_path: str | None = None,  # gen lm and text tokenizer
                  voice_decoder_path: str | None = None,  # audio decoder
                  device: str = "cuda",
+                 torch_dtype: str = "auto",  # auto,float16,bfloat16,float32
+                 bnb_quant_type: str = "int4",
                  session: Session | None = None,
                  **kwargs):
         super().__init__(**kwargs)
 
+        cur_dir = os.path.dirname(__file__)
+        if bool(os.getenv("ACHATBOT_PKG", "")):
+            sys.path.insert(1, os.path.join(cur_dir, '../../GLM4Voice'))
+            sys.path.insert(2, os.path.join(cur_dir, '../../GLM4Voice/third_party/Matcha-TTS'))
+        else:
+            sys.path.insert(1, os.path.join(cur_dir, '../../../deps/GLM4Voice'))
+            sys.path.insert(2, os.path.join(cur_dir,
+                                            '../../../deps/GLM4Voice/third_party/Matcha-TTS'))
+
         self._voice_in_args = voice_in_args
+        if isinstance(voice_in_args, dict):
+            self._voice_in_args = GLMVoiceInArgs(**voice_in_args)
         self._lm_gen_args = lm_gen_args
+        if isinstance(lm_gen_args, dict):
+            self._lm_gen_args = GLMInferenceArgs(**lm_gen_args)
         self._voice_out_args = voice_out_args
+        if isinstance(voice_out_args, dict):
+            self._voice_out_args = GLMVoiceOutArgs(**voice_out_args)
+
         self._sys_prompt = system_prompt or self.DEFAULT_SYS_PROMPT
         self._voice_tokenizer_path = voice_tokenizer_path
         self._model_path = model_path
         self._voice_decoder_path = voice_decoder_path
+        self._torch_dtype = torch_dtype
+        self._bnb_quant_type = bnb_quant_type
         self._device = device
 
         self._session = session or Session(**SessionCtx(uuid.uuid4()).__dict__)
@@ -84,7 +105,7 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
             self._voice_tokenizer_path)
         logging.info("speech whisper vq encoder and feature_extractor model state weight load")
 
-        # Flow & Hift decoder
+        # Flow & Hift decoder with config, fixed sample rate 22050
         flow_config = os.path.join(self._voice_decoder_path, "config.yaml")
         flow_checkpoint = os.path.join(self._voice_decoder_path, 'flow.pt')
         hift_checkpoint = os.path.join(self._voice_decoder_path, 'hift.pt')
@@ -92,7 +113,8 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
             config_path=flow_config,
             flow_ckpt_path=flow_checkpoint,
             hift_ckpt_path=hift_checkpoint,
-            device=self._device)
+            device=self._device,
+        )
         logging.info("speech audio Flow & Hift decoder model state weight load")
 
         # gen lm text tokenizer
@@ -101,12 +123,14 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
         logging.info("gen lm text tokenizer load")
 
         # gen lm
-        self._glm_model = TransformersManualVoicGLM(TransformersLMArgs(
+        self._glm_model = TransformersManualVoicGLM(**TransformersLMArgs(
             lm_gen_temperature=self._lm_gen_args.temperature,
             lm_gen_top_p=self._lm_gen_args.top_p,
             lm_gen_max_new_tokens=self._lm_gen_args.max_new_token,
+            lm_torch_dtype=self._torch_dtype,
+            lm_bnb_quant_type=self._bnb_quant_type,
             lm_device=self._device,
-        ))
+        ).__dict__)
         self._glm_model.warmup()
         logging.info("gen lm model state weight load and warnup")
 
@@ -172,7 +196,7 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
         block_size_idx = 0
         block_size = block_size_list[block_size_idx]
 
-        # default 22050 hz sample rate
+        # default 22050 hz sample rate, match with audio_decoder 22050 hz
         audio_processor = AudioStreamProcessor(sr=self._voice_out_args.audio_sample_rate)
         for token_id in iter_tokens:
             if token_id == end_token_id:

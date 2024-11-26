@@ -26,7 +26,7 @@ class TransformersLMArgs:
     lm_torch_dtype: str = field(
         default="auto",
         metadata={
-            "help": "The PyTorch data type for the model and input tensors. One of `float32` (full-precision), `float16` or `bfloat16` (both half-precision), auto. default auto, int4 for BitsAndBytes"
+            "help": "The PyTorch data type for the model and input tensors. One of `float32` (full-precision), `float16` or `bfloat16` (both half-precision), auto. default auto."
         },
     )
     # https://huggingface.co/docs/transformers/perf_infer_gpu_one
@@ -124,5 +124,11 @@ class TransformersLMArgs:
         default="chat_completion",
         metadata={
             "help": "Model type, generate, chat_completion(chat/instruct). Default is chat_completion"
+        },
+    )
+    lm_bnb_quant_type: str = field(
+        default="int4",
+        metadata={
+            "help": "The BitsAndBytes quantization type, default int4."
         },
     )

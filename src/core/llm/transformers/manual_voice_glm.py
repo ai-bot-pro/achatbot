@@ -72,7 +72,7 @@ class TransformersManualVoicGLM(TransformersBaseLLM):
             bnb_4bit_use_double_quant=True,
             bnb_4bit_quant_type="nf4",
             bnb_4bit_compute_dtype=torch.bfloat16
-        ) if self.args.lm_torch_dtype == "int4" else None
+        ) if self.args.lm_bnb_quant_type == "int4" else None
 
         if self.args.lm_device_map:
             self._model = AutoModel.from_pretrained(

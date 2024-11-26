@@ -71,7 +71,7 @@ Changelog = "https://github.com/ai-bot-pro/chat-bot/blob/main/CHANGELOG.md"
 
 
 [project.optional-dependencies]
-conf = ["omegaconf~=2.3.0"]
+conf = ["omegaconf~=2.3.0", "hydra-core~=1.3.2"]
 # base opt dep
 tensorrt = ["tensorrt~=10.4.0"]
 einops = ["einops~=0.8.0"]
@@ -209,17 +209,6 @@ vision_transformers_got_ocr = [
     "achatbot[llm_transformers_manual_vision,tiktoken,verovio,accelerate]",
 ]
 
-# voice
-llm_transformers_manual_voice = [
-    #"transformers@git+https://github.com/huggingface/transformers",
-    # https://github.com/huggingface/transformers/releases/tag/v4.45.0
-    "transformers~=4.45.0",
-    "torch~=2.2.2",
-    "torchaudio~=2.2.2",
-]
-llm_transformers_manual_voice_glm = ["achatbot[llm_transformers_manual_voice]"]
-moshi_voice_processor = ["moshi~=0.1.0"]
-
 
 # core llms
 core_llm = ["achatbot[llama_cpp,llm_personalai_proxy]"]
@@ -255,6 +244,20 @@ tts_chat = [
 speech_tts = [
     "achatbot[tts_coqui,tts_edge,tts_g,tts_pyttsx3,tts_cosy_voice,tts_chat]",
 ]
+
+# voice
+llm_transformers_manual_voice = [
+    #"transformers@git+https://github.com/huggingface/transformers",
+    # https://github.com/huggingface/transformers/releases/tag/v4.45.0
+    "transformers~=4.45.0",
+    "torch~=2.2.2",
+    "torchaudio~=2.2.2",
+]
+llm_transformers_manual_voice_glm = [
+    "achatbot[llm_transformers_manual_voice,tts_cosy_voice,conf]",
+]
+moshi_voice_processor = ["moshi~=0.1.0"]
+
 
 # player module tag -> pkgs
 stream_player = []
