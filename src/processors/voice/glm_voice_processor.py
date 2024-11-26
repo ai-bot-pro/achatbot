@@ -242,4 +242,17 @@ class GLMTextVoiceProcessor(GLMVoiceBaseProcessor):
     use Text-Tokenizer (GLM-tokenizer) +  GLM4-Voice-9B(text/audio) + Text-Tokenizer (GLM-tokenizer), Voice-Decoder (CosyVoice)
     - T1-T2A2: (text/speech)-to-(tokens) (GLM4(text)/whisper(speech encoder)) -> GLM4(llm) -- text|speech tokens --> GLM4(text decoder)|CosyVoice(speech decoder(mel->waveform)))
     """
-    pass
+
+    async def run_text(self, frame: TextFrame) -> AsyncGenerator[Frame, None]:
+        user_input = frame.text.strip()
+        # history
+        if "<|system|>" not in self._history_tokens:
+            self._history_tokens += f"<|system|>\n{self._syst_prompt}"
+        self._history_tokens += f"<|user|>\n{user_input}<|assistant|>streaming_transcription\n"
+
+        self._session.ctx.state["prompt"] = self._history_tokens
+        iter_tokens = self._glm_model.generate(self._session)
+
+        await self.tokens_decode_out(iter_tokens)
+
+        yield None

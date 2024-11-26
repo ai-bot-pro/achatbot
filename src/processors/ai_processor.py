@@ -73,4 +73,4 @@ class AsyncAIProcessor(AsyncFrameProcessor):
                 if isinstance(f, ErrorFrame):
                     await self.push_error(f)
                 else:
-                    await self.queue_frame(f)
+                    await self.push_frame(f)
