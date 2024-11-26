@@ -1,3 +1,4 @@
+import collections
 import io
 import logging
 from typing import Type
@@ -24,6 +25,9 @@ class AudioResponseAggregator(FrameProcessor):
         self._accumulator_frame = accumulator_frame
         self._interim_accumulator_frame = interim_accumulator_frame
 
+        # ring buffer save latest 10 frames
+        self._audio_buffer = collections.deque(maxlen=10)
+
         # Reset our accumulator state.
         self._reset()
 
@@ -45,6 +49,8 @@ class AudioResponseAggregator(FrameProcessor):
             self._seen_start_frame = True
             self._seen_end_frame = False
             self._seen_interim_results = False
+            for buff_frame in self._audio_buffer:
+                self._aggregation.extend(buff_frame.audio)
             await self.push_frame(frame, direction)
         elif isinstance(frame, self._end_frame):
             self._seen_end_frame = True
@@ -66,6 +72,9 @@ class AudioResponseAggregator(FrameProcessor):
                 # end frame and we were still aggregating, it means we should
                 # send the aggregation.
                 send_aggregation = self._seen_end_frame
+            else:
+                # save frame to ringbuffer
+                self._audio_buffer.append(frame)
 
             # We just got our final result, so let's reset interim results.
             self._seen_interim_results = False

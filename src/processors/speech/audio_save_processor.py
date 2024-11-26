@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 import os
 import logging
 
@@ -8,6 +8,7 @@ from apipeline.processors.frame_processor import FrameProcessor
 
 from src.common.utils.wav import save_audio_to_file
 from src.common.types import RECORDS_DIR
+from src.types.frames.data_frames import PathAudioRawFrame
 
 
 class AudioSaveProcessor(FrameProcessor):
@@ -21,8 +22,17 @@ class AudioSaveProcessor(FrameProcessor):
         await super().process_frame(frame, direction)
 
         if isinstance(frame, AudioRawFrame):
-            await self.save(frame)
-        await self.push_frame(frame, direction)
+            file_path = await self.save(frame)
+            path_frame = PathAudioRawFrame(
+                path=file_path,
+                audio=frame.audio,
+                sample_rate=frame.sample_rate,
+                sample_width=frame.sample_width,
+                num_channels=frame.num_channels,
+            )
+            await self.push_frame(path_frame, direction)
+        else:
+            await self.push_frame(frame, direction)
 
     async def save(self, frame: AudioRawFrame) -> str:
         now = datetime.now()
@@ -31,10 +41,10 @@ class AudioSaveProcessor(FrameProcessor):
         file_path = await save_audio_to_file(
             frame.audio,
             output_file,
-            audio_dir=RECORDS_DIR,
-            channles=frame.channels,
+            audio_dir=self.save_dir,
+            channles=frame.num_channels,
             sample_rate=frame.sample_rate,
             sample_width=frame.sample_width,
         )
-        logging.info(f"save {frame} to {file_path}")
+        logging.debug(f"save frame:{frame} to path:{file_path}")
         return file_path

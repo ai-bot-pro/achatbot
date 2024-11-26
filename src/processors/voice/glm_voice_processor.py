@@ -5,8 +5,8 @@ from typing import AsyncGenerator, Generator
 import uuid
 
 import torch
-from apipeline.frames import *
 from transformers import WhisperFeatureExtractor, AutoTokenizer
+from apipeline.frames import *
 
 from deps.GLM4Voice.speech_tokenizer.modeling_whisper import WhisperVQEncoder
 from deps.GLM4Voice.audio_process import AudioStreamProcessor
@@ -20,6 +20,7 @@ from src.types.llm.transformers import TransformersLMArgs
 from src.common.session import Session
 from src.common.types import SessionCtx
 from src.common.utils.audio_utils import bytes2TorchTensorWith16
+from src.types.frames import *
 
 
 class GLMVoiceBaseProcessor(VoiceProcessorBase):
@@ -152,12 +153,16 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
         logging.info("cancel done")
 
     async def run_voice(self, frame: AudioRawFrame) -> AsyncGenerator[Frame, None]:
-        audio_tensor = bytes2TorchTensorWith16(frame.audio)
+        if isinstance(frame, PathAudioRawFrame):
+            utt = frame.path
+        else:
+            audio_tensor = bytes2TorchTensorWith16(frame.audio)
+            utt = (audio_tensor, self._voice_in_args.audio_sample_rate)
         # default 16khz sample rate encode/extract -> audio tokens
         audio_tokens = extract_speech_token(
             self._whisper_model,
             self._feature_extractor,
-            [(audio_tensor, self._voice_in_args.audio_sample_rate)]
+            [utt]
         )[0]
         if len(audio_tokens) == 0:
             yield ErrorFrame("No audio tokens extracted")
