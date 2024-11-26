@@ -118,7 +118,6 @@ openai = ["openai~=1.54.1"]
 together_ai = ["together~=1.3.3"]
 litellm = ["litellm~=1.52.0"]
 
-
 # rpc
 grpc = ["grpcio>=1.65.1"]
 grpc_tools = ["grpcio-tools>=1.65.1"]
@@ -126,7 +125,7 @@ rpc = ["grpcio>=1.65.1"]
 
 # queue
 redis = ["redis~=5.0.0"]
-queue = ["redis~=5.0.0"]
+queue = ["achatbot[redis]"]
 
 # transports
 livekit_transport = ["achatbot[livekit,livekit-api]"]
@@ -215,10 +214,12 @@ llm_transformers_manual_voice = [
     #"transformers@git+https://github.com/huggingface/transformers",
     # https://github.com/huggingface/transformers/releases/tag/v4.45.0
     "transformers~=4.45.0",
-    "torch~=2.3.0",
-    "torchaudio~=2.3.0",
+    "torch~=2.2.2",
+    "torchaudio~=2.2.2",
 ]
 llm_transformers_manual_voice_glm = ["achatbot[llm_transformers_manual_voice]"]
+moshi_voice_processor = ["moshi~=0.1.0"]
+
 
 # core llms
 core_llm = ["achatbot[llama_cpp,llm_personalai_proxy]"]
@@ -288,10 +289,6 @@ litellm_processor = ["achatbot[openai,litellm]"]
 
 # image processor
 img_processor = ["openai~=1.54.1"]
-
-# moshi voice processor
-moshi_voice_processor = ["moshi~=0.1.0"]
-
 
 # multi asr modules processor
 asr_processor = ["achatbot[deepgram_asr_processor,speech_asr]"]
