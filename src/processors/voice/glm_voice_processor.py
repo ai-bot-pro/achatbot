@@ -92,8 +92,8 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
         }
 
     def reset(self):
-        # input_tokens + completion_tokens
-        self._history_tokens = ""
+        # input_texts + completion_texts (audio tokenid special tag)
+        self._history_texts = ""
 
     def load_models(self):
         logging.info("loading model weights")
@@ -153,7 +153,7 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
 
     async def run_voice(self, frame: AudioRawFrame) -> AsyncGenerator[Frame, None]:
         audio_tensor = bytes2TorchTensorWith16(frame.audio)
-        # default 16khz sample rate encode/extract
+        # default 16khz sample rate encode/extract -> audio tokens
         audio_tokens = extract_speech_token(
             self._whisper_model,
             self._feature_extractor,
@@ -168,11 +168,11 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
         user_input = audio_tokens
 
         # history
-        if "<|system|>" not in self._history_tokens:
-            self._history_tokens += f"<|system|>\n{self._syst_prompt}"
-        self._history_tokens += f"<|user|>\n{user_input}<|assistant|>streaming_transcription\n"
+        if "<|system|>" not in self._history_texts:
+            self._history_texts += f"<|system|>\n{self._sys_prompt}"
+        self._history_texts += f"<|user|>\n{user_input}<|assistant|>streaming_transcription\n"
 
-        self._session.ctx.state["prompt"] = self._history_tokens
+        self._session.ctx.state["prompt"] = self._history_texts
         iter_tokens = self._glm_model.generate(self._session)
 
         await self.tokens_decode_out(iter_tokens)
@@ -250,7 +250,7 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
 
         complete_text = self._glm_tokenizer.decode(
             complete_tokens, spaces_between_special_tokens=False)
-        self._history_tokens += complete_text
+        self._history_texts += complete_text
 
 
 class GLMAudioVoiceProcessor(GLMVoiceBaseProcessor):
@@ -270,11 +270,11 @@ class GLMTextVoiceProcessor(GLMVoiceBaseProcessor):
     async def run_text(self, frame: TextFrame) -> AsyncGenerator[Frame, None]:
         user_input = frame.text.strip()
         # history
-        if "<|system|>" not in self._history_tokens:
-            self._history_tokens += f"<|system|>\n{self._syst_prompt}"
-        self._history_tokens += f"<|user|>\n{user_input}<|assistant|>streaming_transcription\n"
+        if "<|system|>" not in self._history_texts:
+            self._history_texts += f"<|system|>\n{self._sys_prompt}"
+        self._history_texts += f"<|user|>\n{user_input}<|assistant|>streaming_transcription\n"
 
-        self._session.ctx.state["prompt"] = self._history_tokens
+        self._session.ctx.state["prompt"] = self._history_texts
         iter_tokens = self._glm_model.generate(self._session)
 
         await self.tokens_decode_out(iter_tokens)

@@ -80,7 +80,7 @@ class AudioResponseAggregator(FrameProcessor):
     async def _push_aggregation(self):
         if len(self._aggregation) > 0:
             frame = self._cur_audio_frame
-            frame.audio = self._aggregation
+            frame.audio = bytes(self._aggregation)
 
             # Reset the aggregation. Reset it before pushing it down,
             # otherwise if the tasks gets cancelled we won't be able to clear things up.
@@ -101,5 +101,5 @@ class UserAudioResponseAggregator(AudioResponseAggregator):
         super().__init__(
             start_frame=UserStartedSpeakingFrame,
             end_frame=UserStoppedSpeakingFrame,
-            accumulator_frame=UserAudioRawFrame,
+            accumulator_frame=AudioRawFrame,
         )

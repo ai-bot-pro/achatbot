@@ -6,6 +6,7 @@ from apipeline.pipeline.runner import PipelineRunner
 from apipeline.processors.logger import FrameLogger
 from apipeline.frames import AudioRawFrame, TextFrame
 
+from src.processors.aggregators.user_response import UserResponseAggregator
 from src.cmd.bots.base_daily import DailyRoomBot
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.common.types import DailyParams
@@ -45,8 +46,10 @@ class DailyAsrGLMVoiceBot(DailyRoomBot):
         self.params.audio_out_channels = stream_info["channels"]
 
         transport = DailyTransport(
+            self.args.room_url,
             self.args.token,
-            params=self.params,
+            self.args.bot_name,
+            self.params,
         )
 
         messages = []
@@ -57,6 +60,7 @@ class DailyAsrGLMVoiceBot(DailyRoomBot):
             Pipeline([
                 transport.input_processor(),
                 asr_processor,
+                UserResponseAggregator(),
                 FrameLogger(include_frame_types=[TextFrame]),
                 self._voice_processor,
                 FrameLogger(include_frame_types=[AudioRawFrame, TextFrame]),
