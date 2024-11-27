@@ -121,10 +121,13 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
         # gen lm text tokenizer
         self._glm_tokenizer = AutoTokenizer.from_pretrained(
             self._model_path, trust_remote_code=True)
+        self._audio_offset = self._glm_tokenizer.convert_tokens_to_ids('<|audio_0|>')
+        self._end_token_id = self._glm_tokenizer.convert_tokens_to_ids('<|user|>')
         logging.info("gen lm text tokenizer load")
 
         # gen lm
         self._glm_model = TransformersManualVoicGLM(**TransformersLMArgs(
+            lm_model_name_or_path=self._model_path,
             lm_gen_temperature=self._lm_gen_args.temperature,
             lm_gen_top_p=self._lm_gen_args.top_p,
             lm_gen_max_new_tokens=self._lm_gen_args.max_new_token,
@@ -184,19 +187,20 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
 
         yield None
 
+    @torch.no_grad()
     async def tokens_decode_out(self, iter_tokens):
         text_tokens, audio_tokens = [], []
-        audio_offset = self._glm_tokenizer.convert_tokens_to_ids('<|audio_0|>')
-        end_token_id = self._glm_tokenizer.convert_tokens_to_ids('<|user|>')
         complete_tokens = []
+
         prompt_speech_feat = torch.zeros(1, 0, 80).to(self._device)
         flow_prompt_speech_token = torch.zeros(1, 0, dtype=torch.int64).to(self._device)
+
         this_uuid = str(uuid.uuid4())
         tts_speechs = []
         tts_mels = []
         prev_mel = None
-        is_finalize = False
 
+        is_finalize = False
         block_size_list = [25, 50, 100, 150, 200]
         block_size_idx = 0
         block_size = block_size_list[block_size_idx]
@@ -204,7 +208,7 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
         # default 22050 hz sample rate, match with audio_decoder 22050 hz
         audio_processor = AudioStreamProcessor(sr=self._voice_out_args.audio_sample_rate)
         for token_id in iter_tokens:
-            if token_id == end_token_id:
+            if token_id == self._end_token_id:
                 is_finalize = True
             if len(audio_tokens) >= block_size or (is_finalize and audio_tokens):
                 if block_size_idx < len(block_size_list) - 1:
@@ -244,8 +248,8 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
 
             if not is_finalize:
                 complete_tokens.append(token_id)
-                if token_id >= audio_offset:
-                    audio_tokens.append(token_id - audio_offset)
+                if token_id >= self._audio_offset:
+                    audio_tokens.append(token_id - self._audio_offset)
                 else:
                     text = self._glm_tokenizer.decode(
                         token_id, ignore_special_tokens=False)

@@ -44,7 +44,7 @@ class VoiceProcessorBase(AsyncAIProcessor):
         """
         yield frame
 
-    async def process_text_frame(self, frame: AudioRawFrame):
+    async def process_text_frame(self, frame: TextFrame):
         await self.process_generator(self.run_text(frame))
 
     async def process_audio_frame(self, frame: AudioRawFrame):

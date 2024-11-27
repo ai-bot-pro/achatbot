@@ -4,7 +4,7 @@ from queue import Queue
 
 import torch
 try:
-    from transformers import BitsAndBytesConfig, AutoModelForCausalLM, AutoTokenizer
+    from transformers import BitsAndBytesConfig, AutoModelForCausalLM, AutoModel, AutoTokenizer
     from transformers.generation.streamers import BaseStreamer
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
@@ -75,7 +75,7 @@ class TransformersManualVoicGLM(TransformersBaseLLM):
         ) if self.args.lm_bnb_quant_type == "int4" else None
 
         if self.args.lm_device_map:
-            self._model = AutoModelForCausalLM.from_pretrained(
+            self._model = AutoModel.from_pretrained(
                 self.args.lm_model_name_or_path,
                 torch_dtype=self.args.lm_torch_dtype,
                 attn_implementation=self.args.lm_attn_impl,
@@ -86,7 +86,7 @@ class TransformersManualVoicGLM(TransformersBaseLLM):
                 trust_remote_code=True,
             ).eval()
         else:
-            self._model = AutoModelForCausalLM.from_pretrained(
+            self._model = AutoModel.from_pretrained(
                 self.args.lm_model_name_or_path,
                 torch_dtype=self.args.lm_torch_dtype,
                 attn_implementation=self.args.lm_attn_impl,
@@ -137,7 +137,8 @@ class TransformersManualVoicGLM(TransformersBaseLLM):
             temperature=self.args.lm_gen_temperature,
             repetition_penalty=self.args.lm_gen_repetition_penalty,
             min_new_tokens=self.args.lm_gen_min_new_tokens,
-            max_new_tokens=self.args.lm_gen_max_new_tokens)
+            max_new_tokens=self.args.lm_gen_max_new_tokens,
+        )
         thread = Thread(
             target=self._model.generate,
             kwargs=generation_kwargs
