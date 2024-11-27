@@ -34,8 +34,6 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
     - GLM-4-Voice-Decoder: A speech decoder supporting streaming inference, retrained based on CosyVoice, converting discrete speech tokens into continuous speech output. Generation can start with as few as 10 audio tokens, reducing conversation latency.
     """
 
-    DEFAULT_SYS_PROMPT = "User will provide you with a speech instruction. Do it step by step. First, think about the instruction and respond in a interleaved manner, with 13 text token followed by 26 audio tokens. "
-
     def __init__(self,
                  *,
                  voice_in_args: GLMVoiceInArgs | dict = GLMVoiceInArgs(),
@@ -71,7 +69,7 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
         if isinstance(voice_out_args, dict):
             self._voice_out_args = GLMVoiceOutArgs(**voice_out_args)
 
-        self._sys_prompt = system_prompt or self.DEFAULT_SYS_PROMPT
+        self._sys_prompt = system_prompt or TransformersManualVoicGLM.DEFAULT_SYS_PROMPT
         self._voice_tokenizer_path = voice_tokenizer_path
         self._model_path = model_path
         self._voice_decoder_path = voice_decoder_path
@@ -83,6 +81,19 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
 
         self.reset()
         self.load_models()
+
+        # "你好!有什么可以帮你的吗？" text tokens + audio waveform tokens
+        self.test_tokens = [
+            109377, 6313, 101665, 109213, 99215, 99444,
+            99212, 11314, 166648, 164526, 163431, 155030,
+            160561, 167785, 165922, 167515, 163387, 157845,
+            157845, 158729, 159316, 153554, 158936, 160466,
+            157871, 168288, 165890, 152620, 164640, 158589,
+            152703, 154548, 165926, 163830, 166537, 165003,
+            155773, 161696, 158134, 167188, 161032, 157635,
+            164078, 160166, 160014, 160014, 160014, 166768,
+            151336,
+        ]
 
     @property
     def stream_info(self) -> dict:
@@ -123,7 +134,8 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
             self._model_path, trust_remote_code=True)
         self._audio_offset = self._glm_tokenizer.convert_tokens_to_ids('<|audio_0|>')
         self._end_token_id = self._glm_tokenizer.convert_tokens_to_ids('<|user|>')
-        logging.info("gen lm text tokenizer load")
+        logging.info(
+            f"gen lm text tokenizer load,audio_offset:{self._audio_offset} end_token_id:{self._end_token_id}")
 
         # gen lm
         self._glm_model = TransformersManualVoicGLM(**TransformersLMArgs(
@@ -135,7 +147,7 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
             lm_bnb_quant_type=self._bnb_quant_type,
             lm_device=self._device,
         ).__dict__)
-        self._glm_model.warmup()
+        # self._glm_model.warmup()
         logging.info("gen lm model state weight load and warnup")
 
         logging.info("model weights loaded")
@@ -143,7 +155,7 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
     async def start(self, frame: StartFrame):
         await super().start(frame)
 
-        self._create_push_task()
+        # self._create_push_task()
 
         logging.info("start done")
 
@@ -179,10 +191,12 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
         if "<|system|>" not in self._history_texts:
             self._history_texts += f"<|system|>\n{self._sys_prompt}"
         self._history_texts += f"<|user|>\n{user_input}<|assistant|>streaming_transcription\n"
+        # TODO: check token max length
 
         self._session.ctx.state["prompt"] = self._history_texts
+        # await self.tokens_decode_out(self.test_tokens)
+        # u can mock GLM generate for dev
         iter_tokens = self._glm_model.generate(self._session)
-
         await self.tokens_decode_out(iter_tokens)
 
         yield None
@@ -251,8 +265,7 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
                 if token_id >= self._audio_offset:
                     audio_tokens.append(token_id - self._audio_offset)
                 else:
-                    text = self._glm_tokenizer.decode(
-                        token_id, ignore_special_tokens=False)
+                    text = self._glm_tokenizer.decode([token_id], ignore_special_tokens=False)
                     if text:
                         await self.push_frame(TextFrame(text))
                     text_tokens.append(token_id)
@@ -260,6 +273,7 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
         complete_text = self._glm_tokenizer.decode(
             complete_tokens, spaces_between_special_tokens=False)
         self._history_texts += complete_text
+        logging.info(f"history_texts:{self._history_texts}")
 
 
 class GLMAudioVoiceProcessor(GLMVoiceBaseProcessor):
@@ -273,7 +287,7 @@ class GLMAudioVoiceProcessor(GLMVoiceBaseProcessor):
 class GLMTextVoiceProcessor(GLMVoiceBaseProcessor):
     """
     use Text-Tokenizer (GLM-tokenizer) +  GLM4-Voice-9B(text/audio) + Text-Tokenizer (GLM-tokenizer), Voice-Decoder (CosyVoice)
-    - T1-T2A2: (text/speech)-to-(tokens) (GLM4(text)/whisper(speech encoder)) -> GLM4(llm) -- text|speech tokens --> GLM4(text decoder)|CosyVoice(speech decoder(mel->waveform)))
+    - T1/A1-T2A2: (text/speech)-to-(tokens) (GLM4(text)/whisper(speech encoder)) -> GLM4(llm) -- text|speech tokens --> GLM4(text decoder)|CosyVoice(speech decoder(mel->waveform)))
     """
 
     async def run_text(self, frame: TextFrame) -> AsyncGenerator[Frame, None]:

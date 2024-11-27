@@ -36,7 +36,7 @@ class AudioSaveProcessor(FrameProcessor):
 
     async def save(self, frame: AudioRawFrame) -> str:
         now = datetime.now()
-        formatted_time = now.strftime("%Y-%m-%d_%H-%M-%S")
+        formatted_time = now.strftime("%Y-%m-%d_%H-%M-%S.%f")[:-3]
         output_file = os.path.join(self.save_dir, f"{self.prefix_name}_{formatted_time}.wav")
         file_path = await save_audio_to_file(
             frame.audio,

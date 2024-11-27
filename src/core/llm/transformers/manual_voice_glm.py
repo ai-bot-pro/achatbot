@@ -63,9 +63,11 @@ class TransformersManualVoicGLM(TransformersBaseLLM):
     with TransformersLMArgs, if use int4, need to install bitsandbytes
     """
     TAG = "llm_transformers_manual_voice_glm"
+    DEFAULT_SYS_PROMPT = "User will provide you with a speech instruction. Do it step by step. First, think about the instruction and respond in a interleaved manner, with 13 text token followed by 26 audio tokens. "
 
     def __init__(self, **args):
         self.args = TransformersLMArgs(**args)
+        logging.info("TransformersManualVoicGLM args: %s", self.args)
         # https://huggingface.co/docs/transformers/main_classes/quantization#transformers.BitsAndBytesConfig
         self.bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
@@ -102,12 +104,12 @@ class TransformersManualVoicGLM(TransformersBaseLLM):
 
     def warmup(self):
         dummy_input_text = self.args.warnup_prompt.strip()
-        inputs = f"<|user|>\n{dummy_input_text}<|assistant|>streaming_transcription\n"
-        model_inputs = self._tokenizer(
-            [inputs], return_tensors="pt").to(self._model.device)
+        # NOTE: must use system prompt.
+        inputs = f"<|system|>\n{self.DEFAULT_SYS_PROMPT}<|user|>\n{dummy_input_text}<|assistant|>streaming_transcription\n"
+        model_inputs = self._tokenizer([inputs], return_tensors="pt").to(self._model.device)
 
         warmup_gen_kwargs = dict(
-            model_inputs,
+            **model_inputs,
             streamer=self._streamer,
             min_new_tokens=self.args.lm_gen_min_new_tokens,
             max_new_tokens=self.args.lm_gen_max_new_tokens,
@@ -125,9 +127,11 @@ class TransformersManualVoicGLM(TransformersBaseLLM):
     def generate(self, session: Session):
         """
         (text/speech prompt) input text + speech tokens -> glm -> (text/speech) output tokens
+        TODO: parallel+batch generation (text | audio)
         """
         prompt = session.ctx.state['prompt']
         inputs = self._tokenizer([prompt], return_tensors="pt").to(self._model.device)
+        logging.debug(f"prompt:{prompt}, inputs:{inputs}")
         generation_kwargs = dict(
             **inputs,
             streamer=self._streamer,

@@ -9,7 +9,8 @@ from apipeline.pipeline.runner import PipelineRunner
 from apipeline.processors.logger import FrameLogger
 from apipeline.frames import TextFrame, AudioRawFrame, EndFrame
 
-from src.processors.voice.glm_voice_processor import GLMAudioVoiceProcessor
+from src.processors.speech.audio_save_processor import AudioSaveProcessor
+from src.processors.voice.glm_voice_processor import GLMAudioVoiceProcessor, GLMTextVoiceProcessor
 from src.common.types import TEST_DIR
 from src.common.logger import Logger
 from src.types.frames import *
@@ -19,7 +20,8 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 """
-python -m unittest test.integration.processors.test_glm_voice_processor.TestProcessor
+LOG_LEVEL=debug python -m unittest test.integration.processors.test_glm_voice_processor.TestProcessor.test_audio
+LOG_LEVEL=debug GLM_VOICE_TYPE=text python -m unittest test.integration.processors.test_glm_voice_processor.TestProcessor.test_text
 """
 
 
@@ -28,14 +30,9 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
     @classmethod
     def setUpClass(cls):
         Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
+        cls.glm_voice_type = os.getenv("GLM_VOICE_TYPE", "audio")
         cls.test_file = os.path.join(TEST_DIR, "audio_files/hi.wav")
-
-    @classmethod
-    def tearDownClass(cls):
-        pass
-
-    async def asyncSetUp(self):
-        args = {
+        cls.args = {
             "bnb_quant_type": "int4",
             "device": "cuda",
             "lm_gen_args": {
@@ -53,12 +50,22 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             "voice_tokenizer_path": "./models/THUDM/glm-4-voice-tokenizer"
         }
 
-        voice_processor = GLMAudioVoiceProcessor(**args)
+    @classmethod
+    def tearDownClass(cls):
+        pass
+
+    async def asyncSetUp(self):
+        if self.glm_voice_type == "text":
+            voice_processor = GLMTextVoiceProcessor(**self.args)
+        else:
+            voice_processor = GLMAudioVoiceProcessor(**self.args)
 
         pipeline = Pipeline([
-            FrameLogger(include_frame_types=[AudioRawFrame]),
+            FrameLogger(include_frame_types=[AudioRawFrame, TextFrame]),
             voice_processor,  # output TextFrame and AudioRawFrame
             FrameLogger(include_frame_types=[TextFrame, AudioRawFrame]),
+            AudioSaveProcessor(prefix_name="bot_speak"),
+            # FrameLogger(include_frame_types=[TextFrame, AudioRawFrame]),
         ])
 
         self.task = PipelineTask(
@@ -72,7 +79,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self):
         pass
 
-    async def test_run(self):
+    async def test_audio(self):
         runner = PipelineRunner()
 
         with wave.open(self.test_file, 'rb') as wav_file:
@@ -92,6 +99,15 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
 
         await self.task.queue_frames([
             path_frame,
+            # EndFrame(),
+        ])
+        await runner.run(self.task)
+
+    async def test_text(self):
+        runner = PipelineRunner()
+
+        await self.task.queue_frames([
+            TextFrame("你好"),
             # EndFrame(),
         ])
         await runner.run(self.task)

@@ -62,10 +62,11 @@ class DailyGLMVoiceBot(DailyRoomBot):
                 transport.input_processor(),
                 UserAudioResponseAggregator(),
                 FrameLogger(include_frame_types=[AudioRawFrame]),
-                AudioSaveProcessor(),
+                AudioSaveProcessor(prefix_name="user_audio_aggr"),
                 FrameLogger(include_frame_types=[PathAudioRawFrame]),
                 self._voice_processor,
                 FrameLogger(include_frame_types=[AudioRawFrame, TextFrame]),
+                AudioSaveProcessor(prefix_name="bot_speak"),
                 transport.output_processor(),
             ]),
             params=PipelineParams(

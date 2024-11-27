@@ -256,7 +256,6 @@ llm_transformers_manual_voice = [
 llm_transformers_manual_voice_glm = [
     "achatbot[llm_transformers_manual_voice,tts_cosy_voice,conf]",
 ]
-moshi_voice_processor = ["moshi~=0.1.0"]
 
 
 # player module tag -> pkgs
@@ -278,34 +277,38 @@ deep_translator = ["deep_translator~=1.11.4"]
 
 # ai framework
 ai_langchain_framework_processor = ["langchain~=0.2.13"]
+# multi ai framework modules processor
+ai_frameworks_processor = ["achatbot[ai_langchain_framework_processor]"]
+
 
 # asr
 deepgram_asr_processor = ["deepgram-sdk~=3.7.7"]
+# multi asr modules processor
+asr_processor = ["achatbot[deepgram_asr_processor,speech_asr]"]
 
 # tts
 cartesia_tts_processor = ["websockets~=12.0"]
+# multi tts modules processor
+tts_processor = ["achatbot[cartesia_tts_processor,openai,speech_tts]"]
 
 # text llm processor
 openai_llm_processor = ["achatbot[openai]"]
 google_llm_processor = ["achatbot[google_ai,openai]"]
 litellm_processor = ["achatbot[openai,litellm]"]
-
-# image processor
-img_processor = ["openai~=1.54.1"]
-
-# multi asr modules processor
-asr_processor = ["achatbot[deepgram_asr_processor,speech_asr]"]
-
 # multi api text llm modules processor
 llm_processor = [
     "achatbot[openai_llm_processor,google_llm_processor,litellm_processor]",
 ]
 
-# multi tts modules processor
-tts_processor = ["achatbot[cartesia_tts_processor,openai,speech_tts]"]
+# image processor
+img_processor = ["openai~=1.54.1"]
 
-# multi ai framework modules processor
-ai_frameworks_processor = ["achatbot[ai_langchain_framework_processor]"]
+# voice processor
+glm_voice_processor = [
+    "achatbot[llm_transformers_manual_voice_glm,bitsandbytes]",
+]
+moshi_voice_processor = ["moshi~=0.1.0"]
+
 
 #------------------------bot-------------------------
 
