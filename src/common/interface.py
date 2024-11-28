@@ -161,6 +161,11 @@ class IMultimodalLlm(ABC):
 class ILlm(ABC):
     @abstractmethod
     def generate(self, session) -> Iterator[str]:
+        """
+        generate text or tokens with stream iterator
+        - local llm cpu/gpu bind
+        - api llm io bind
+        """
         raise NotImplemented("must be implemented in the child class")
 
     @abstractmethod

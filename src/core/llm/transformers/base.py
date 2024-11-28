@@ -33,7 +33,7 @@ class TransformersBaseLLM(BaseLLM, ILlm):
                 device_map=self.args.lm_device_map,
                 attn_implementation=self.args.lm_attn_impl,
                 trust_remote_code=True,
-            )
+            ).eval()
         else:
             self._model = AutoModelForCausalLM.from_pretrained(
                 self.args.lm_model_name_or_path,
@@ -75,7 +75,11 @@ class TransformersBaseLLM(BaseLLM, ILlm):
         Instead of using model.chat(), we directly use model.generate()
         But you need to use tokenizer.apply_chat_template() to format your inputs as shown below
         !NOTE: session.ctx.state must have 'prompt' field with following format:
-        - 'prompt': str
+        for llm generate no chat template.
+        - 'prompt': str (text+speech-tokens with instructions, no chat tpl)
+
+        for llm chat template format.
+        - 'prompt': str (text)
         - 'prompt': [PIL.Image, str]
         - vision image 'prompt' e.g.: [
                 {
@@ -96,7 +100,6 @@ class TransformersBaseLLM(BaseLLM, ILlm):
         or
         - 'prompt': tuple (str, language_code)
 
-        just for llm chat template format.
         """
         pass
 
@@ -120,7 +123,7 @@ class TransformersBaseLLM(BaseLLM, ILlm):
     def count_tokens(self, text: str | bytes) -> int:
         return len(self._tokenizer.encode(text)) if self._tokenizer else 0
 
-    def _warmup(self, target, args=(), kwargs=None):
+    def _warmup(self, target, args=(), kwargs=None, streamer=None):
         logging.info(f"Warming up {self.__class__.__name__} device: {self._model.device}")
 
         if "cuda" in str(self._model.device):
@@ -135,7 +138,7 @@ class TransformersBaseLLM(BaseLLM, ILlm):
             thread.start()
             times = []
             start_time = time.perf_counter()
-            for _ in self._streamer:
+            for _ in streamer:
                 times.append(time.perf_counter() - start_time)
                 start_time = time.perf_counter()
                 pass

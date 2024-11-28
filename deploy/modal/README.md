@@ -181,6 +181,115 @@ curl --location 'https://weedge-achatbot--fastapi-webrtc-vision-qwen-bot-srv-app
 }'
 ```
 
+### webrtc_glm_voice_bot
+- run webrtc_glm_voice_bot serve with task queue(redis)
+```shell
+# webrtc_audio_bot serve on default pip image
+# need create .env.example to modal Secrets for webrtc key
+IMAGE_NAME=default IMAGE_CONCURRENT_CN=1 IMAGE_GPU=T4 modal serve -e achatbot src/fastapi_webrtc_glm_voice_bot_serve.py
+```
+- curl api to run chat room bot with webrtc (daily/livekit)
+```shell
+curl --location 'https://weedge-achatbot--fastapi-webrtc-glm-voice-bot-srv-app-dev.modal.run/bot_join/chat-room/DailyGLMVoiceBot' \
+--header 'Content-Type: application/json' \
+--data '{
+  "chat_bot_name": "DailyGLMVoiceBot",
+  "room_name": "chat-room",
+  "room_url": "",
+  "token": "",
+  "room_manager": {
+    "tag": "daily_room",
+    "args": {
+      "privacy": "public"
+    }
+  },
+  "services": {
+    "pipeline": "achatbot",
+    "vad": "silero",
+    "voice_llm": "glm"
+  },
+  "config": {
+    "vad": {
+      "tag": "silero_vad_analyzer",
+      "args": { "stop_secs": 0.7 }
+    },
+    "voice_llm": {
+      "tag": "glm_voice_processor",
+      "args": {
+        "lm_gen_args": {
+          "temperature": 0.2,
+          "top_p": 0.8,
+          "max_new_token": 2000
+        },
+        "voice_out_args": {
+          "audio_sample_rate": 22050,
+          "audio_channels": 1
+        },
+        "voice_tokenizer_path": "/root/.achatbot/models/THUDM/glm-4-voice-tokenizer",
+        "model_path": "/root/.achatbot/models/THUDM/glm-4-voice-9b",
+        "voice_decoder_path": "/root/.achatbot/models/THUDM/glm-4-voice-decoder",
+        "torch_dtype": "auto",
+        "bnb_quant_type": "int4",
+        "device": "cuda"
+      }
+    }
+  },
+  "config_list": []
+}'
+
+curl --location 'https://weedge-achatbot--fastapi-webrtc-glm-voice-bot-srv-app-dev.modal.run/bot_join/chat-room/DailyAsrGLMVoiceBot' \
+--header 'Content-Type: application/json' \
+--data '{
+  "chat_bot_name": "DailyAsrGLMVoiceBot",
+  "room_name": "chat-room",
+  "room_url": "",
+  "token": "",
+  "room_manager": {
+    "tag": "daily_room",
+    "args": {
+      "privacy": "public"
+    }
+  },
+  "services": {
+    "pipeline": "achatbot",
+    "vad": "silero",
+    "asr": "sense_voice",
+    "voice_llm": "glm"
+  },
+  "config": {
+    "vad": {
+      "tag": "silero_vad_analyzer",
+      "args": { "stop_secs": 0.7 }
+    },
+    "asr": {
+      "tag": "sense_voice_asr",
+      "args": {
+        "language": "zn",
+        "model_name_or_path": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall"
+      }
+    },
+    "voice_llm": {
+      "tag": "text_glm_voice_processor",
+      "args": {
+        "lm_gen_args": {
+          "temperature": 0.2,
+          "top_p": 0.8,
+          "max_new_token": 2000
+        },
+        "voice_out_args": {
+          "audio_sample_rate": 22050,
+          "audio_channels": 1
+        },
+        "voice_tokenizer_path": "/root/.achatbot/models/THUDM/glm-4-voice-tokenizer",
+        "model_path": "/root/.achatbot/models/THUDM/glm-4-voice-9b",
+        "voice_decoder_path": "/root/.achatbot/models/THUDM/glm-4-voice-decoder",
+        "device": "cuda"
+      }
+    }
+  },
+  "config_list": []
+}'
+```
 
 ## modal deploy (online)
 - deploy webrtc_audio_bot serve
@@ -211,6 +320,11 @@ IMAGE_NAME=llama IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/
 ```
 endpoint: https://weedge-achatbot--fastapi-webrtc-vision-llama-bot-srv-app.modal.run/
 
+- deploy webrtc_glm_voice_bot serve
+```shell
+IMAGE_NAME=default modal deploy -e achatbot src/fastapi_webrtc_glm_voice_bot_serve.py
+```
+endpoint: https://weedge-achatbot--fastapi-webrtc-glm-voice-bot-srv-app.modal.run/
 
 # references (nice docs) 👍 @modal
 - https://modal.com/docs/guide

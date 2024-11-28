@@ -6,6 +6,7 @@ import uuid
 from apipeline.frames.control_frames import EndFrame
 from apipeline.pipeline.task import PipelineTask
 
+from src.processors.voice.base import VoiceProcessorBase
 from src.processors.image.base import ImageGenProcessor
 from src.processors.image import get_image_gen_processor
 from src.modules.vision.ocr import VisionOCREnvInit
@@ -263,7 +264,7 @@ class AIBot(IBot):
         processor = OCRProcessor(ocr=ocr, session=self.session)
         return processor
 
-    def get_voice_processor(self, llm: LLMConfig | None = None) -> LLMProcessor:
+    def get_moshi_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
         if not llm:
             llm = self._bot_config.voice_llm
         if llm and llm.tag and "moshi" in llm.tag:
@@ -282,6 +283,30 @@ class AIBot(IBot):
             from src.processors.voice.moshi_voice_processor import VoiceOpusStreamEchoProcessor
             llm_processor = VoiceOpusStreamEchoProcessor()
         return llm_processor
+
+    def get_text_glm_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
+        from src.processors.voice.glm_voice_processor import GLMTextVoiceProcessor
+        if not llm:
+            llm = self._bot_config.voice_llm
+        if llm.args:
+            llm_processor = GLMTextVoiceProcessor(**llm.args)
+        else:
+            llm_processor = GLMTextVoiceProcessor()
+        return llm_processor
+
+    def get_audio_glm_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
+        from src.processors.voice.glm_voice_processor import GLMAudioVoiceProcessor
+        if not llm:
+            llm = self._bot_config.voice_llm
+        if llm.args:
+            llm_processor = GLMAudioVoiceProcessor(**llm.args)
+        else:
+            llm_processor = GLMAudioVoiceProcessor()
+        return llm_processor
+
+    def get_openai_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
+        # TODO: use openai reatime voice api
+        pass
 
     def get_tts_processor(self) -> TTSProcessorBase:
         tts_processor: TTSProcessorBase | None = None

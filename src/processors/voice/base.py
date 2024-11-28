@@ -4,9 +4,10 @@ import logging
 from typing import AsyncGenerator
 import wave
 
-from apipeline.frames import Frame, AudioRawFrame, EndFrame, CancelFrame
+from apipeline.frames import Frame, AudioRawFrame, EndFrame, CancelFrame, TextFrame
 from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
 
+from src.common.types import CHANNELS, RATE
 from src.common.utils.helper import calculate_audio_volume, exp_smoothing
 from src.processors.ai_processor import AsyncAIProcessor
 
@@ -29,13 +30,22 @@ class VoiceProcessorBase(AsyncAIProcessor):
     @property
     def stream_info(self) -> dict:
         """Return dict out stream info"""
-        return {"sample_rate": 16000, "channels": 2}
+        return {"sample_rate": RATE, "channels": CHANNELS}
 
-    @abstractmethod
     async def run_voice(self, frame: AudioRawFrame) -> AsyncGenerator[Frame, None]:
         """
-        Return AudioRawFrame | AudioRawFrame + TextFrame async generator
+        yield AudioRawFrame | AudioRawFrame + TextFrame async generator or None (internal push/queue frame)
         """
+        yield frame
+
+    async def run_text(self, frame: TextFrame) -> AsyncGenerator[Frame, None]:
+        """
+        yield AudioRawFrame | AudioRawFrame + TextFrame async generator or None (internal push/queue frame)
+        """
+        yield frame
+
+    async def process_text_frame(self, frame: TextFrame):
+        await self.process_generator(self.run_text(frame))
 
     async def process_audio_frame(self, frame: AudioRawFrame):
         await self.process_generator(self.run_voice(frame))
@@ -44,7 +54,9 @@ class VoiceProcessorBase(AsyncAIProcessor):
         """Processes a frame of audio data, either buffering or transcribing it."""
         await super().process_frame(frame, direction)
 
-        if isinstance(frame, AudioRawFrame):
+        if isinstance(frame, TextFrame):
+            await self.process_text_frame(frame)
+        elif isinstance(frame, AudioRawFrame):
             await self.process_audio_frame(frame)
         else:
             await self.push_frame(frame, direction)

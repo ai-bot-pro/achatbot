@@ -77,6 +77,12 @@ def import_bots(bot_name: str = "DummyBot"):
     if "DailyNaturalConversationBot" in bot_name:
         from .nlp import daily_natural_conversation_bot
         return True
+    if "DailyGLMVoiceBot" in bot_name:
+        from .voice import daily_glm_voice_bot
+        return True
+    if "DailyAsrGLMVoiceBot" in bot_name:
+        from .voice import daily_asr_glm_voice_bot
+        return True
     if "LivekitBot" in bot_name:
         from . import livekit_bot
         return True

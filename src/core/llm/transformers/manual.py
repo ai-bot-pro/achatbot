@@ -1,5 +1,7 @@
 from threading import Thread
 
+from transformers import TextIteratorStreamer
+
 from .base import TransformersBaseLLM
 from src.common.session import Session
 from src.types.speech.language import TO_LLM_LANGUAGE
@@ -19,9 +21,11 @@ class TransformersManualLLM(TransformersBaseLLM):
         model_inputs = self._tokenizer(
             [text], return_tensors="pt").to(self._model.device)
 
+        streamer = TextIteratorStreamer(
+            self._tokenizer, skip_prompt=True, skip_special_tokens=True)
         warmup_gen_kwargs = dict(
             model_inputs,
-            streamer=self._streamer,
+            streamer=streamer,
             min_new_tokens=self.args.lm_gen_min_new_tokens,
             max_new_tokens=self.args.lm_gen_max_new_tokens,
             top_k=self.args.lm_gen_top_k,
@@ -31,7 +35,7 @@ class TransformersManualLLM(TransformersBaseLLM):
             repetition_penalty=self.args.lm_gen_repetition_penalty,
         )
 
-        self._warmup(target=self._model.generate, kwargs=warmup_gen_kwargs)
+        self._warmup(target=self._model.generate, kwargs=warmup_gen_kwargs, streamer=streamer)
 
     def generate(self, session: Session):
         prompt = session.ctx.state['prompt']
@@ -48,9 +52,11 @@ class TransformersManualLLM(TransformersBaseLLM):
         )
         model_inputs = self._tokenizer([text], return_tensors="pt").to(self._model.device)
 
+        streamer = TextIteratorStreamer(
+            self._tokenizer, skip_prompt=True, skip_special_tokens=True)
         generation_kwargs = dict(
             model_inputs,
-            streamer=self._streamer,
+            streamer=streamer,
             do_sample=self.args.lm_gen_do_sample,
             temperature=self.args.lm_gen_temperature,
             top_k=self.args.lm_gen_top_k,
@@ -62,7 +68,7 @@ class TransformersManualLLM(TransformersBaseLLM):
         thread.start()
 
         generated_text = ""
-        for new_text in self._streamer:
+        for new_text in streamer:
             generated_text += new_text
             yield new_text
         self._chat_history.append({"role": "assistant", "content": generated_text})

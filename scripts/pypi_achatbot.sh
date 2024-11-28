@@ -19,6 +19,7 @@ mkdir -p pypi_build/app/achatbot
 
 cp -r src/* pypi_build/app/achatbot/
 rm -f deps/CosyVoice/third_party/Matcha-TTS/data
+rm -f deps/GLM4Voice/third_party/Matcha-TTS/data
 cp -r deps/* pypi_build/app/achatbot/
 
 

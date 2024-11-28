@@ -162,6 +162,20 @@ class FunctionCallResultFrame(DataFrame):
 
 
 @dataclass
+class PathAudioRawFrame(AudioRawFrame):
+    """An audio with saved path.
+
+    """
+    path: str = ""
+
+    def __post_init__(self):
+        super().__post_init__()
+
+    def __str__(self):
+        return f"path:{self.path} {super().__str__()}"
+
+
+@dataclass
 class UserAudioRawFrame(AudioRawFrame):
     """An audio associated to a user. Will be shown by the transport if the
     transport's audio is enabled.
