@@ -155,7 +155,7 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
     async def start(self, frame: StartFrame):
         await super().start(frame)
 
-        # self._create_push_task()
+        self._create_push_task()
 
         logging.info("start done")
 

@@ -166,7 +166,7 @@ class Srv:
         print(f"start downloading model to dir:{MODELS_DIR}")
 
         # asr model repo
-        if "sense_voice_asr" in os.getenv("ASR_TAG"):
+        if "sense_voice_asr" in os.getenv("ASR_TAG", "sense_voice_asr"):
             snapshot_download(
                 repo_id="FunAudioLLM/SenseVoiceSmall",
                 repo_type="model",

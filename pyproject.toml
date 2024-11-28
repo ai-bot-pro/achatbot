@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 name = "achatbot"
 #dynamic = ["version"]
 # todo
-version = "0.0.7.12"
+version = "0.0.7.13"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -72,6 +72,8 @@ Changelog = "https://github.com/ai-bot-pro/chat-bot/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 conf = ["omegaconf~=2.3.0", "hydra-core~=1.3.2"]
+gdown = ["gdown==5.1.0"]
+matplotlib = ["matplotlib==3.7.5"]
 # base opt dep
 tensorrt = ["tensorrt~=10.4.0"]
 einops = ["einops~=0.8.0"]
@@ -254,7 +256,7 @@ llm_transformers_manual_voice = [
     "torchaudio~=2.2.2",
 ]
 llm_transformers_manual_voice_glm = [
-    "achatbot[llm_transformers_manual_voice,tts_cosy_voice,conf]",
+    "achatbot[llm_transformers_manual_voice,tts_cosy_voice,gdown,matplotlib,conf]",
 ]
 
 

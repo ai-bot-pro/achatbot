@@ -100,7 +100,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         await self.task.queue_frames([
             audio_frame,
             path_frame,
-            # EndFrame(),
+            EndFrame(),
         ])
         await runner.run(self.task)
 
@@ -110,6 +110,6 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         await self.task.queue_frames([
             TextFrame("你好"),
             TextFrame("你叫什么名字"),
-            # EndFrame(),
+            EndFrame(),
         ])
         await runner.run(self.task)
