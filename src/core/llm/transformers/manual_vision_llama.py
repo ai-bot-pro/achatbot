@@ -58,9 +58,6 @@ class TransformersManualVisionLlamaLLM(TransformersBaseLLM):
             # trust_remote_code=True,
         )
 
-        self._streamer = TextIteratorStreamer(
-            self._tokenizer, skip_prompt=True, skip_special_tokens=True)
-
         self._chat_history = ChatHistory(self.args.chat_history_size)
         if self.args.init_chat_role and self.args.init_chat_prompt:
             self._chat_history.init({
@@ -85,9 +82,12 @@ class TransformersManualVisionLlamaLLM(TransformersBaseLLM):
             return_tensors="pt",
         ).to(self._model.device)
 
+        streamer = TextIteratorStreamer(
+            self._tokenizer, skip_prompt=True, skip_special_tokens=True)
+
         warmup_gen_kwargs = dict(
             model_inputs,
-            streamer=self._streamer,
+            streamer=streamer,
             do_sample=self.args.lm_gen_do_sample,
             top_k=self.args.lm_gen_top_k,
             top_p=self.args.lm_gen_top_p,
@@ -97,7 +97,11 @@ class TransformersManualVisionLlamaLLM(TransformersBaseLLM):
             max_new_tokens=self.args.lm_gen_max_new_tokens,
         )
 
-        self._warmup(target=self._model.generate, kwargs=warmup_gen_kwargs)
+        self._warmup(
+            target=self._model.generate,
+            kwargs=warmup_gen_kwargs,
+            streamer=streamer,
+        )
 
     def generate(self, session: Session):
         prompt = session.ctx.state['prompt']
@@ -126,9 +130,12 @@ class TransformersManualVisionLlamaLLM(TransformersBaseLLM):
             padding=True,
             return_tensors="pt").to(self._model.device)
 
+        streamer = TextIteratorStreamer(
+            self._tokenizer, skip_prompt=True, skip_special_tokens=True)
+
         generation_kwargs = dict(
             model_inputs,
-            streamer=self._streamer,
+            streamer=streamer,
             do_sample=self.args.lm_gen_do_sample,
             top_k=self.args.lm_gen_top_k,
             top_p=self.args.lm_gen_top_p,
@@ -140,7 +147,7 @@ class TransformersManualVisionLlamaLLM(TransformersBaseLLM):
         thread.start()
 
         generated_text = ""
-        for new_text in self._streamer:
+        for new_text in streamer:
             generated_text += new_text
             yield new_text
         self._chat_history.append({"role": "assistant", "content": generated_text})

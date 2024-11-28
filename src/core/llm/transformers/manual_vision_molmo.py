@@ -62,10 +62,6 @@ class TransformersManualVisionMolmoLLM(TransformersBaseLLM):
             trust_remote_code=True,
         )
 
-        self._streamer = TextIteratorStreamer(
-            self._processor.tokenizer,
-            skip_prompt=True, skip_special_tokens=True)
-
         self.warmup()
 
     def warmup(self):
@@ -85,8 +81,12 @@ class TransformersManualVisionMolmoLLM(TransformersBaseLLM):
         # move inputs to the correct device and make a batch of size 1
         model_inputs = {k: v.to(self._model.device).unsqueeze(0) for k, v in inputs.items()}
 
+        streamer = TextIteratorStreamer(
+            self._processor.tokenizer,
+            skip_prompt=True, skip_special_tokens=True)
+
         warmup_gen_kwargs = dict(
-            streamer=self._streamer,
+            streamer=streamer,
             tokenizer=self._processor.tokenizer,
         )
         warmup_gen_args = (
@@ -103,7 +103,9 @@ class TransformersManualVisionMolmoLLM(TransformersBaseLLM):
         self._warmup(
             target=self._model.generate_from_batch,
             args=warmup_gen_args,
-            kwargs=warmup_gen_kwargs)
+            kwargs=warmup_gen_kwargs,
+            streamer=streamer,
+        )
 
     def generate(self, session: Session):
         prompt = session.ctx.state['prompt']
@@ -138,8 +140,12 @@ class TransformersManualVisionMolmoLLM(TransformersBaseLLM):
         # move inputs to the correct device and make a batch of size 1
         model_inputs = {k: v.to(self._model.device).unsqueeze(0) for k, v in inputs.items()}
 
+        streamer = TextIteratorStreamer(
+            self._processor.tokenizer,
+            skip_prompt=True, skip_special_tokens=True)
+
         gen_kwargs = dict(
-            streamer=self._streamer,
+            streamer=streamer,
             tokenizer=self._processor.tokenizer,
         )
         gen_args = (
@@ -159,6 +165,6 @@ class TransformersManualVisionMolmoLLM(TransformersBaseLLM):
         thread.start()
 
         generated_text = ""
-        for new_text in self._streamer:
+        for new_text in streamer:
             generated_text += new_text
             yield new_text

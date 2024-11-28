@@ -24,7 +24,6 @@ class DailyGLMVoiceBot(DailyRoomBot):
     """
     use daily audio stream(bytes) --> GLM voice processor -->text/audio_bytes
     - if use tools, need ft base model GLM-4-9B with audio tokenizer, use tools instruct dataset
-    see finetune: https://github.com/THUDM/GLM-4/tree/main/finetune_demo
     """
 
     def __init__(self, **args) -> None:

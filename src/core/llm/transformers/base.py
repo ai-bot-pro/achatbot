@@ -123,7 +123,7 @@ class TransformersBaseLLM(BaseLLM, ILlm):
     def count_tokens(self, text: str | bytes) -> int:
         return len(self._tokenizer.encode(text)) if self._tokenizer else 0
 
-    def _warmup(self, target, args=(), kwargs=None):
+    def _warmup(self, target, args=(), kwargs=None, streamer=None):
         logging.info(f"Warming up {self.__class__.__name__} device: {self._model.device}")
 
         if "cuda" in str(self._model.device):
@@ -138,7 +138,7 @@ class TransformersBaseLLM(BaseLLM, ILlm):
             thread.start()
             times = []
             start_time = time.perf_counter()
-            for _ in self._streamer:
+            for _ in streamer:
                 times.append(time.perf_counter() - start_time)
                 start_time = time.perf_counter()
                 pass

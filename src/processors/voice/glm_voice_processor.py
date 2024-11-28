@@ -201,7 +201,7 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
 
         yield None
 
-    @torch.no_grad()
+    @ torch.no_grad()
     async def tokens_decode_out(self, iter_tokens):
         text_tokens, audio_tokens = [], []
         complete_tokens = []
