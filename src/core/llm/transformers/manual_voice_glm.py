@@ -62,7 +62,7 @@ class TransformersManualVoicGLM(TransformersBaseLLM):
     with TransformersLMArgs, if use int4, need to install bitsandbytes
     """
     TAG = "llm_transformers_manual_voice_glm"
-    DEFAULT_SYS_PROMPT = "User will provide you with a speech instruction. Do it step by step. First, think about the instruction and respond in a interleaved manner, with 13 text token followed by 26 audio tokens. "
+    DEFAULT_SYS_PROMPT = "User will provide you with a speech or text instruction. Do it step by step. First, think about the instruction and respond in a interleaved manner, with 13 text token followed by 26 audio tokens. "
 
     def __init__(self, **args):
         self.args = TransformersLMArgs(**args)

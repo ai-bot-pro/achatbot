@@ -147,7 +147,7 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
             lm_bnb_quant_type=self._bnb_quant_type,
             lm_device=self._device,
         ).__dict__)
-        # self._glm_model.warmup()
+        self._glm_model.warmup()
         logging.info("gen lm model state weight load and warnup")
 
         logging.info("model weights loaded")
