@@ -1,12 +1,12 @@
-# the first run need download agora sdk core lib(c++)
+# the first run need download agora sdk core lib(c/c++), maybe need rust reconstruct :)
 
 # video call: https://webdemo.agora.io/basicVideoCall/index.html
 # join video channel url:
-# https://webdemo.agora.io/basicVideoCall/index.html?appid={$APP_ID}&channel={$CHANNEL_ID}&token=${TOKEN}&uid={$UID}
+# https://webdemo.agora.io/basicVideoCall/index.html?appid={APP_ID}&channel={CHANNEL_ID}&token={TOKEN}&uid={UID}
 
 # voice call: https://webdemo.agora.io/basicVoiceCall/index.html
 # join voice channel url:
-# https://webdemo.agora.io/basicVoiceCall/index.html?appid={$APP_ID}&channel={$CHANNEL_ID}&token=${TOKEN}&uid={$UID}
+# https://webdemo.agora.io/basicVoiceCall/index.html?appid={APP_ID}&channel={CHANNEL_ID}&token={TOKEN}&uid={UID}
 
 # or use builder to create room and deploy app:  https://appbuilder.agora.io/create
 
@@ -24,6 +24,14 @@ from .utils import PCMWriter
 
 PCM_SAMPLE_RATE = 24000
 PCM_CHANNELS = 1
+
+
+def get_voice_demo_channel_url(
+        app_id: str,
+        channel_name: str,
+        token: str = "",
+        uid: str = "") -> str:
+    return f"https://webdemo.agora.io/basicVoiceCall/index.html?appid={app_id}&channel={channel_name}&token={token}&uid={uid}"
 
 
 def _monitor_queue_size(queue: asyncio.Queue[bytes], queue_name: str, threshold: int = 5) -> None:
@@ -63,12 +71,12 @@ async def bot_process_audio(
 
     try:
         while True:
-            # Get audio frame from rtc
-            audio_frame = await in_audio_queue.get()
-            logging.info(f"bot_process_audio len: {len(audio_frame.data)}")
+            # Get audio frame data(bytes) from rtc
+            frame_data = await in_audio_queue.get()
+            logging.debug(f"bot_process_audio len: {len(frame_data)}")
 
             # Put audio data to out
-            await out_audio_queue.put_nowait(audio_frame.data)
+            await out_audio_queue.put(frame_data)
 
     except asyncio.CancelledError:
         # Write any remaining PCM data before exiting
@@ -94,8 +102,8 @@ async def rtc_to_bot(
             # Process received audio (send to model)
             _monitor_queue_size(out_audio_queue, "out_audio_queue")
 
-            # Bot process audio
-            await bot_process_audio(in_audio_queue, audio_frame.data)
+            # put audio to in queue for Bot process audio
+            await in_audio_queue.put(audio_frame.data)
 
             # Write PCM data if enabled
             await pcm_writer.write(audio_frame.data)
@@ -118,13 +126,13 @@ async def bot_to_rtc(
     try:
         while True:
             # Get audio frame from the model output
-            frame = await out_audio_queue.get()
+            frame_data = await out_audio_queue.get()
 
             # Process sending audio (to RTC)
-            await channel.push_audio_frame(frame)
+            await channel.push_audio_frame(frame_data)
 
             # Write PCM data if enabled
-            await pcm_writer.write(frame)
+            await pcm_writer.write(frame_data)
 
     except asyncio.CancelledError:
         # Write any remaining PCM data before exiting
@@ -132,7 +140,7 @@ async def bot_to_rtc(
         raise  # Re-raise the cancelled exception to properly exit the task
 
 
-async def run(channel: Channel) -> None:
+async def run(channel: Channel, join_url: str) -> None:
     try:
         def log_exception(t: asyncio.Task[Any]) -> None:
             if not t.cancelled() and t.exception():
@@ -147,7 +155,8 @@ async def run(channel: Channel) -> None:
 
         channel.on("stream_message", on_stream_message)
 
-        logging.info("Waiting for remote user to join")
+        logging.info(
+            f"Waiting for remote user to join, u can use demo voice channel url: {join_url}")
         subscribe_user = await wait_for_remote_user(channel)
         logging.info(f"Subscribing to user {subscribe_user}")
         await channel.subscribe_audio(subscribe_user)
@@ -155,7 +164,7 @@ async def run(channel: Channel) -> None:
         async def on_user_left(
             agora_rtc_conn: RTCConnection, user_id: int, reason: int
         ):
-            nonlocal subscribe_user  # 添加这行声明
+            nonlocal subscribe_user
             logging.info(f"User left: {user_id}")
             if subscribe_user == user_id:
                 subscribe_user = None
@@ -227,8 +236,9 @@ async def main():
         enable_pcm_dump=os.environ.get("WRITE_RTC_PCM", "false") == "true"
     )
     channel = engine.create_channel(options)
+    join_url = get_voice_demo_channel_url(app_id, channel_name, token=channel.token)
     await channel.connect()
-    await run(channel)
+    await run(channel, join_url)
     await channel.disconnect()
 
 
