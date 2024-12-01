@@ -1,13 +1,19 @@
 # the first run need download agora sdk core lib(c++)
 
 # video call: https://webdemo.agora.io/basicVideoCall/index.html
+# join video channel url:
+# https://webdemo.agora.io/basicVideoCall/index.html?appid={$APP_ID}&channel={$CHANNEL_ID}&token=${TOKEN}&uid={$UID}
+
 # voice call: https://webdemo.agora.io/basicVoiceCall/index.html
+# join voice channel url:
+# https://webdemo.agora.io/basicVoiceCall/index.html?appid={$APP_ID}&channel={$CHANNEL_ID}&token=${TOKEN}&uid={$UID}
 
 # or use builder to create room and deploy app:  https://appbuilder.agora.io/create
 
 import asyncio
 import logging
 import os
+from signal import SIGINT, SIGTERM, signal, strsignal
 from typing import Any
 from dotenv import load_dotenv
 
@@ -19,13 +25,6 @@ from .utils import PCMWriter
 PCM_SAMPLE_RATE = 24000
 PCM_CHANNELS = 1
 
-load_dotenv(override=True)
-app_id = os.environ.get("AGORA_APP_ID")
-app_cert = os.environ.get("AGORA_APP_CERT")
-
-if not app_id:
-    raise ValueError("AGORA_APP_ID must be set in the environment.")
-
 
 def _monitor_queue_size(queue: asyncio.Queue[bytes], queue_name: str, threshold: int = 5) -> None:
     queue_size = queue.qsize()
@@ -33,7 +32,7 @@ def _monitor_queue_size(queue: asyncio.Queue[bytes], queue_name: str, threshold:
         logging.warning(f"Queue {queue_name} size exceeded {threshold}: current size {queue_size}")
 
 
-async def wait_for_remote_user(channel: Channel) -> int:
+async def wait_for_remote_user(channel: Channel, timeout_s: float | None = None) -> int:
     remote_users = list(channel.remote_users.keys())
     if len(remote_users) > 0:
         return remote_users[0]
@@ -43,8 +42,8 @@ async def wait_for_remote_user(channel: Channel) -> int:
     channel.once("user_joined", lambda conn, user_id: future.set_result(user_id))
 
     try:
-        # Wait for the remote user with a timeout of 30 seconds
-        remote_user = await asyncio.wait_for(future, timeout=15.0)
+        # Wait for the remote user with a timeout_s, timeout_s is None , no wait timeout
+        remote_user = await asyncio.wait_for(future, timeout=timeout_s)
         return remote_user
     except KeyboardInterrupt:
         future.cancel()
@@ -156,6 +155,7 @@ async def run(channel: Channel) -> None:
         async def on_user_left(
             agora_rtc_conn: RTCConnection, user_id: int, reason: int
         ):
+            nonlocal subscribe_user  # 添加这行声明
             logging.info(f"User left: {user_id}")
             if subscribe_user == user_id:
                 subscribe_user = None
@@ -202,12 +202,23 @@ async def run(channel: Channel) -> None:
         raise
 
 
+def handle_agent_proc_signal(signum, frame):
+    logging.info(f"Agent process received signal {strsignal(signum)} {frame}. Exiting...")
+    os._exit(0)
+
+
 async def main():
+    load_dotenv(override=True)
+    app_id = os.environ.get("AGORA_APP_ID")
+    app_cert = os.environ.get("AGORA_APP_CERT")
+
+    if not app_id:
+        raise ValueError("AGORA_APP_ID must be set in the environment.")
+
     engine = RtcEngine(appid=app_id, appcert=app_cert)
-    print(engine)
 
     channel_name = os.environ.get("AGORA_CHANNEL_NAME", "chat-room")
-    uid = os.environ.get("AGORA_UID", "weedge")
+    uid = int(os.environ.get("AGORA_UID", "110"))
     options = RtcOptions(
         channel_name=channel_name,
         uid=uid,
@@ -216,7 +227,6 @@ async def main():
         enable_pcm_dump=os.environ.get("WRITE_RTC_PCM", "false") == "true"
     )
     channel = engine.create_channel(options)
-    print(channel)
     await channel.connect()
     await run(channel)
     await channel.disconnect()
@@ -229,4 +239,8 @@ if __name__ == "__main__":
         handlers=[
             logging.StreamHandler()],
     )
+
+    signal(SIGINT, handle_agent_proc_signal)  # Forward SIGINT
+    signal(SIGTERM, handle_agent_proc_signal)  # Forward SIGTERM
+
     asyncio.run(main())
