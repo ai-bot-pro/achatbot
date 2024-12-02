@@ -63,7 +63,7 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
     - [ ] [autoagen](https://github.com/microsoft/autogen): multi Agents
   - realtime voice inference(RTVI),
   - transport: 
-    - webRTC: 
+    - webRTC: (daily,livekit KISS)
       - [x] **[daily](https://github.com/ai-bot-pro/achatbot/blob/main/src/transports/daily.py)**: audio, video(image)
       - [x] **[livekit](https://github.com/ai-bot-pro/achatbot/blob/main/src/transports/livekit.py)**: audio, video(image)
       - [ ] **[agora-audio](https://github.com/AgoraIO/agora-realtime-ai-api)**
