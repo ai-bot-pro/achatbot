@@ -534,6 +534,21 @@ class LivekitRoomArgs(BaseModel):
     is_common_session: bool = False
 
 
+# --------------- agora -------------------------------
+
+@dataclass
+class AgoraParams(AudioCameraParams):
+    app_id: str = ""
+    app_cert: str = ""
+    channel_name: str = ""
+    bot_id: int = 0
+
+
+@dataclass
+class AgoraChannelArgs(BaseModel):
+    pass
+
+
 # ---------------- Room Bots -------------
 @dataclass
 class GeneralRoomInfo:

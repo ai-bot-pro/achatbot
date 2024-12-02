@@ -108,7 +108,7 @@ class DailyRoom(EngineClass, IRoomManager):
                 f"Failed to get room {room_name} from Daily REST API: {ex}")
             return None
 
-    async def check_vaild_room(self, room_name: str, token: str) -> bool:
+    async def check_valid_room(self, room_name: str, token: str) -> bool:
         if not room_name or not token:
             return False
 
