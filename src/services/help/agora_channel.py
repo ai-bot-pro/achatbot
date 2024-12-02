@@ -73,9 +73,9 @@ class TokenPaser():
         return 'will expire in %d seconds' % remain
 
     @staticmethod
-    def valid_token(token):
+    def valid(token):
         if len(token)<=3:
-            raise ValueError('Invalid token')
+            raise ValueError('Invalid token version')
 
         if token[:3] != '007':
             raise ValueError('Not support, just for parsing token version 007!')
@@ -85,10 +85,14 @@ class TokenPaser():
             access_token.from_string(token)
         except Exception as e:
             raise ValueError(f'Parse token failed! err: {e}')
+        is_expired, _ = TokenPaser.check_expire(
+            access_token._AccessToken__issue_ts + access_token._AccessToken__expire)
+        if is_expired:
+            return False
         
         return True
     @staticmethod
-    def parse_token(token):
+    def parse(token):
         res = '\nToken is %s \n\n' % token
 
         if token[:3] != '007':
@@ -103,23 +107,28 @@ class TokenPaser():
 
         res += 'Parse token success! \n'
         res += 'Token information, %s. \n    - app_id:%s, issue_ts:%d, expire:%d, salt:%d \n' % (
-            TokenPaser.get_expire_msg(access_token._AccessToken__issue_ts + access_token._AccessToken__expire), access_token._AccessToken__app_id.decode(), access_token._AccessToken__issue_ts, access_token._AccessToken__expire, access_token._AccessToken__salt)
+            TokenPaser.get_expire_msg(
+                access_token._AccessToken__issue_ts + access_token._AccessToken__expire), 
+            access_token._AccessToken__app_id.decode(),
+            access_token._AccessToken__issue_ts, 
+            access_token._AccessToken__expire, 
+            access_token._AccessToken__salt)
 
         for _, item in access_token._AccessToken__service.items():
             for key, serviceItem in item.__dict__.items():
                 if key == '_Service__type':
-                    if item._Service__type not in access_token.service:
+                    if item._Service__type not in access_token.kServices:
                         res += 'service type not existed, type:%d \n' % item._Service__type
                         continue
                     res += '- Service information, type:%d (%s) \n' % (
-                        item._Service__type, access_token.service[item._Service__type]['name'])
+                        item._Service__type, access_token.kServices[item._Service__type])
                 elif key == '_Service__privileges':
                     for privilege, privilegeExpire in item._Service__privileges.items():
                         res += '    - privilege:%d(%s), expire:%d (%s) \n' % (
-                            privilege, access_token.service[item._Service__type]['privilege'][privilege]['name'], privilegeExpire,
-                            access_token.get_expire_msg(access_token._AccessToken__issue_ts + privilegeExpire))
+                            privilege, access_token.kServices[item._Service__type], privilegeExpire,
+                            TokenPaser.get_expire_msg(access_token._AccessToken__issue_ts + privilegeExpire))
                 else:
-                    res += '    - {}:{} \n'.format(key.replace('_Service%s__' % access_token.service[item._Service__type]['name'], ''),
+                    res += '    - {}:{} \n'.format(key.replace('_Service%s__' % access_token.kServices[item._Service__type], ''),
                                                    serviceItem.decode() if type(serviceItem) == bytes else serviceItem)
 
         return res
@@ -138,7 +147,6 @@ class AgoraChannel(EngineClass, IRoomManager):
         self.app_cert = os.environ.get("AGORA_APP_CERT")
         if not self.app_id:
             raise ValueError("AGORA_APP_ID must be set in the environment.")
-        engine = RtcEngine(appid=self.app_id, appcert=self.app_cert)
 
     async def close_session(self):
         # no http rest api session, don't do anything
@@ -177,7 +185,7 @@ class AgoraChannel(EngineClass, IRoomManager):
             return False
 
         try:
-            TokenPaser.valid_token(token)
+            TokenPaser.valid(token)
         except Exception as e:
             logging.error(f"check_valid_room error: {e}")
             return False
@@ -187,3 +195,16 @@ class AgoraChannel(EngineClass, IRoomManager):
             return False
 
         return True
+
+
+if __name__ == "__main__":
+    """
+    python -m src.services.help.agora_channel TOKEN
+    """
+    import sys
+    if len(sys.argv) > 1:
+        token = sys.argv[1]
+    else:
+        token = '007eJxTYNi/pqL4zazPf+P2/HDX+9fA/KLX+6oIz5O5Wzw2vzTSPdqtwGBpbuDsaGyakmpmkGxiYmZimpSUmGqRaGRoamBmmGRs/P87S7IAHwOD/mEfBlYGRgYWIAbxmcAkM5hkAZMKDOYp5kbGZqapSZYWxiYWpsaW5qnGqcZplikmZgZJKSmJXAxGFhZGxiaGRubGTEBzICYhi7LARVkZmFBsQlbFDrQX0xV8DEX5+bnxpaWZKfElqcUlfAylxalFCP7//wBAqz0L'
+
+    print(TokenPaser.parse(token))

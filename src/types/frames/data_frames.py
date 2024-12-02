@@ -152,6 +152,11 @@ class LivekitTransportMessageFrame(TransportMessageFrame):
 
 
 @dataclass
+class AgoraTransportMessageFrame(TransportMessageFrame):
+    participant_id: str | None = None
+
+
+@dataclass
 class FunctionCallResultFrame(DataFrame):
     """A frame containing the result of an LLM function (tool) call.
     """
