@@ -540,8 +540,9 @@ class LivekitRoomArgs(BaseModel):
 class AgoraParams(AudioCameraParams):
     app_id: str = ""
     app_cert: str = ""
-    channel_name: str = ""
-    bot_id: int = 0
+    enable_pcm_dump: bool = False
+    demo_voice_url: str = "https://webdemo.agora.io/basicVoiceCall/index.html"
+    demo_video_url: str = "https://webdemo.agora.io/basicVideoCall/index.html"
 
 
 @dataclass

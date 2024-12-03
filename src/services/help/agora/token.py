@@ -54,6 +54,7 @@ class ApaasGrants:
 
 @dataclass
 class TokenClaims:
+    token: str = ""
     app_id: str = ""
     issue_ts: int = 0
     expire: int = 0
@@ -149,12 +150,13 @@ class TokenPaser():
         return is_expired
         
     @staticmethod
-    def parse_claims(token)->TokenClaims:
+    def parse_claims(token) -> TokenClaims:
         try:
             access_token=TokenPaser._access_token(token)
         except Exception as e:
             raise e
         tokenClaims = TokenClaims(
+            token=token,
             app_id=access_token._AccessToken__app_id.decode(),
             issue_ts=access_token._AccessToken__issue_ts,
             expire=access_token._AccessToken__expire,
@@ -212,11 +214,11 @@ class TokenPaser():
                                 tokenClaims.chat_msg.user_id= val
                         case 7:
                             if key_name == "room_uuid":
-                                tokenClaims.apaas_room.room_uuid= True
+                                tokenClaims.apaas_room.room_uuid = val
                             if key_name == "user_uuid":
-                                tokenClaims.apaas_room.user_uuid = True
+                                tokenClaims.apaas_room.user_uuid = val
                             if key_name == "role":
-                                tokenClaims.apaas_room.role = True
+                                tokenClaims.apaas_room.role = val
 
         return tokenClaims
     @staticmethod
