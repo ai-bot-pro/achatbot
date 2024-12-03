@@ -4,15 +4,15 @@ from apipeline.frames.sys_frames import MetricsFrame, CancelFrame
 from apipeline.frames.data_frames import ImageRawFrame
 from apipeline.frames.control_frames import StartFrame, EndFrame
 
-from src.services.livekit_client import LivekitTransportClient
+from src.services.agora_client import AgoraTransportClient
 from src.processors.audio_camera_output_processor import AudioCameraOutputProcessor
-from src.common.types import LivekitParams
-from src.types.frames.data_frames import TransportMessageFrame, LivekitTransportMessageFrame
+from src.common.types import AgoraParams
+from src.types.frames.data_frames import TransportMessageFrame, AgoraTransportMessageFrame
 
 
-class LivekitOutputTransportProcessor(AudioCameraOutputProcessor):
+class AgoraOutputTransportProcessor(AudioCameraOutputProcessor):
 
-    def __init__(self, client: LivekitTransportClient, params: LivekitParams, **kwargs):
+    def __init__(self, client: AgoraTransportClient, params: AgoraParams, **kwargs):
         super().__init__(params, **kwargs)
         self._client = client
 
@@ -56,7 +56,7 @@ class LivekitOutputTransportProcessor(AudioCameraOutputProcessor):
         if frame.characters:
             metrics["characters"] = frame.characters
 
-        message = LivekitTransportMessageFrame(message={
+        message = AgoraTransportMessageFrame(message={
             "type": "chatbot-metrics",
             "metrics": metrics
         })

@@ -195,7 +195,7 @@ class AgoraCallbacks(BaseModel):
     on_connection_state_changed: Callable[[
         rtc.RTCConnection, rtc.RTCConnInfo, str], Awaitable[None]]
     on_connection_failure: Callable[[str], Awaitable[None]]
-    on_disconnected: Callable[[str], Awaitable[None]]
+    on_disconnected: Callable[[rtc.RTCConnection, rtc.RTCConnInfo, str], Awaitable[None]]
     on_error: Callable[[str], Awaitable[None]]
     on_participant_connected: Callable[[rtc.RTCConnection, int], Awaitable[None]]
     on_participant_disconnected: Callable[[rtc.RTCConnection, int, str], Awaitable[None]]
@@ -239,8 +239,6 @@ class AgoraTransportClient:
         self._leaving = False
 
         self._other_participant_has_joined = False
-        self._current_sub_audio_participant_id: str = ""
-        self._current_sub_video_participant_id: str = ""
 
         # audio out
         # local participant audio stream
@@ -406,6 +404,10 @@ class AgoraTransportClient:
             raise
 
     async def send_message(self, frame: TransportMessageFrame):
+        """
+        Send a chat message in the chat 1v1 channel.
+        TODO: send singnal message to remote_participant with rtm
+        """
         if not self._joined:
             return
 
@@ -560,6 +562,16 @@ class AgoraTransportClient:
             num_channels=original_num_channels,
         )
 
+    def capture_participant_audio(
+        self,
+        participant_id: str,
+        callback: Callable[[UserAudioRawFrame], Awaitable[None]],
+        sample_rate=None,
+        num_channels=None,
+    ):
+        # TODO:
+        pass
+
     # Audio out
 
     async def write_raw_audio_frames(self, frame_data: bytes,):
@@ -585,3 +597,26 @@ class AgoraTransportClient:
         frame.number_of_channels = self._params.audio_out_channels
 
         return frame
+
+    # Camera in
+
+    def capture_participant_video(
+        self,
+        participant_id: str,
+        callback: Callable[[UserImageRawFrame], Awaitable[None]],
+        framerate: int = 30,
+        video_source: str = "camera",
+        color_format: str = "RGB"
+    ):
+        # just capture one participant video
+        # TODO
+        pass
+
+    # Camera out
+
+    async def write_frame_to_camera(self, frame: ImageRawFrame):
+        """
+        publish image frame to camera
+        """
+        # TODO
+        pass
