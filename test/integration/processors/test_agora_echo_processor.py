@@ -112,14 +112,14 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             transport: AgoraTransport,
             agora_rtc_conn: rtc.RTCConnection,
             conn_info: rtc.RTCConnInfo,
-            reason: str):
+            reason: int):
         logging.info(
             f"agora_rtc_conn:{agora_rtc_conn} conn_info:{conn_info} reason:{reason}")
 
     async def on_connection_failure(
             self,
             transport: AgoraTransport,
-            reason: str):
+            reason: int):
         logging.info(f"reason:{reason}")
 
     async def on_error(
@@ -140,7 +140,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         )
 
         await transport.send_message(
-            f"hello,你好， 我是机器人。",
+            f"hello,你好，我是机器人。",
             participant_id=user_id,
         )
 
@@ -149,7 +149,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             transport: AgoraTransport,
             agora_rtc_conn: rtc.RTCConnection,
             user_id: int,
-            reason: str):
+            reason: int):
         logging.info(f"Partcipant {user_id} left. reason:{reason}")
         logging.info(f"current remote Partcipants {transport.get_participants()}")
 
@@ -158,7 +158,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             transport: AgoraTransport,
             agora_rtc_conn: rtc.RTCConnection,
             conn_info: rtc.RTCConnInfo,
-            reason: str):
+            reason: int):
         logging.info("disconnected reason %s, Exiting." % reason)
         await self.task.queue_frame(EndFrame())
 
@@ -167,14 +167,14 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             transport: AgoraTransport,
             agora_rtc_conn: rtc.RTCConnection,
             conn_info: rtc.RTCConnInfo,
-            reason: str):
-        logging.info(f"connection info {conn_info} reason:{reason}")
+            reason: int):
+        logging.info(f"connection state {conn_info.state} reason:{reason}")
 
     async def on_audio_subscribe_state_changed(
         self,
         transport: AgoraTransport,
         agora_local_user: rtc.LocalUser,
-        channel: rtc.Channel,
+        channel: str,
         user_id: int,
         old_state: int,
         new_state: int,

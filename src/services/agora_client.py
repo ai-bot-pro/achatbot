@@ -1,8 +1,9 @@
-import asyncio
+import os
 import json
 import logging
-import os
-from typing import Any, AsyncGenerator, Awaitable, Callable, Dict, List
+import asyncio
+from urllib.parse import quote
+from typing import Any, Awaitable, Callable, List
 
 import numpy as np
 from PIL import Image
@@ -45,21 +46,21 @@ class RtcChannelEventObserver(rtc.ChannelEventObserver):
     """
 
     def on_connection_failure(
-        self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: str
+        self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: int
     ):
         super().on_connection_failure(agora_rtc_conn, conn_info, reason)
         # logging.error(f"Connected to RTC: {agora_rtc_conn} {conn_info} {reason}")
         self.emit_event("connection_failure", agora_rtc_conn, conn_info, reason)
 
     def on_connected(
-        self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: str
+        self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: int
     ):
         super().on_connected(agora_rtc_conn, conn_info, reason)
         # logging.info(f"Connected to RTC: {agora_rtc_conn} {conn_info} {reason}")
         self.emit_event("connected", agora_rtc_conn, conn_info, reason)
 
     def on_disconnected(
-        self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: str
+        self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: int
     ):
         super().on_disconnected(agora_rtc_conn, conn_info, reason)
         # logging.info(f"Disconnected to RTC: {agora_rtc_conn} {conn_info} {reason}")
@@ -166,15 +167,15 @@ class RtcChannel(rtc.Channel):
     # Event Callback
 
     def on_connection_state_changed(self, agora_rtc_conn, conn_info, reason):
-        logging.info(f"conn state {conn_info.state}")
+        # logging.debug(f"conn state {conn_info.state}")
         self.connection_state = conn_info.state
 
     def on_user_joined(self, agora_rtc_conn, user_id):
-        logging.info(f"User {user_id} joined")
+        # logging.debug(f"User {user_id} joined")
         self.remote_users[user_id] = True
 
     def on_user_left(self, agora_rtc_conn, user_id, reason):
-        logging.info(f"User {user_id} left")
+        # logging.debug(f"User {user_id} left")
         if user_id in self.remote_users:
             self.remote_users.pop(user_id, None)
         if user_id in self.channel_event_observer.audio_streams:
@@ -184,13 +185,13 @@ class RtcChannel(rtc.Channel):
     def on_audio_subscribe_state_changed(
         self,
         agora_local_user: rtc.LocalUser,
-        channel: rtc.Channel,
+        channel: str,
         user_id: int,
         old_state: int,
         new_state: int,
         elapse_since_last_state: int,
     ):
-        logging.info(f"{agora_local_user} {type(channel)} {user_id} {old_state} {new_state}")
+        # logging.debug(f"{agora_local_user} {channel} {user_id} {old_state} {new_state}")
         if new_state == 3:  # Successfully subscribed
             if user_id not in self.channel_event_observer.audio_streams:
                 self.channel_event_observer.audio_streams[user_id] = rtc.AudioStream()
@@ -198,18 +199,18 @@ class RtcChannel(rtc.Channel):
 
 class AgoraCallbacks(BaseModel):
     """async callback"""
-    on_connected: Callable[[rtc.RTCConnection, rtc.RTCConnInfo, str], Awaitable[None]]
+    on_connected: Callable[[rtc.RTCConnection, rtc.RTCConnInfo, int], Awaitable[None]]
     on_connection_state_changed: Callable[[
-        rtc.RTCConnection, rtc.RTCConnInfo, str], Awaitable[None]]
-    on_connection_failure: Callable[[str], Awaitable[None]]
-    on_disconnected: Callable[[rtc.RTCConnection, rtc.RTCConnInfo, str], Awaitable[None]]
+        rtc.RTCConnection, rtc.RTCConnInfo, int], Awaitable[None]]
+    on_connection_failure: Callable[[int], Awaitable[None]]
+    on_disconnected: Callable[[rtc.RTCConnection, rtc.RTCConnInfo, int], Awaitable[None]]
     on_error: Callable[[str], Awaitable[None]]
     on_participant_connected: Callable[[rtc.RTCConnection, int], Awaitable[None]]
-    on_participant_disconnected: Callable[[rtc.RTCConnection, int, str], Awaitable[None]]
+    on_participant_disconnected: Callable[[rtc.RTCConnection, int, int], Awaitable[None]]
     on_data_received: Callable[[bytes, int], Awaitable[None]]
     on_first_participant_joined: Callable[[rtc.RTCConnection, int], Awaitable[None]]
     on_audio_subscribe_state_changed: Callable[[
-        rtc.LocalUser, rtc.Channel, int, int, int, int], Awaitable[None]]
+        rtc.LocalUser, str, int, int, int, int], Awaitable[None]]
 
 
 class AgoraTransportClient:
@@ -262,7 +263,7 @@ class AgoraTransportClient:
         self._channel.on("stream_message", self.on_data_received)
         self._channel.on("connected", self.on_connected)
         self._channel.on("disconnected", self.on_disconnected)
-        # self._channel.on("connection_state_changed", self.on_connection_state_changed)
+        self._channel.on("connection_state_changed", self.on_connection_state_changed)
         self._channel.on("connection_failure", self.on_connection_failure)
         self._channel.on("audio_subscribe_state_changed", self.on_audio_subscribe_state_changed)
 
@@ -280,6 +281,7 @@ class AgoraTransportClient:
                 and not self._in_audio_task.cancelled():
             self._in_audio_task.cancel()
             await self._in_audio_task
+            # logging.info("Cancelled in_audio_task")
 
     async def _join(self):
         self._joining = True
@@ -336,7 +338,7 @@ class AgoraTransportClient:
 
                 await self._callbacks.on_first_participant_joined(participants[0])
 
-            url = f"{demo_url}?appid={self._app_id}&channel={self._room_name}&token={self._token}&uid={self._token_claims.rtc.uid}"
+            url = f"{demo_url}?appid={quote(self._app_id)}&channel={quote(self._room_name)}&token={quote(self._token)}&uid={quote(str(self._token_claims.rtc.uid))}"
             logging.info(f"u can access url: {url}")
         except asyncio.TimeoutError:
             error_msg = f"Time out joining {self._room_name}"
@@ -367,7 +369,7 @@ class AgoraTransportClient:
 
         # if join and leave quick,and some message is async send message
         # need sleep to disconnect or wait completed event
-        await asyncio.sleep(1)
+        # await asyncio.sleep(1)
 
         try:
             await self._leave()
@@ -446,16 +448,16 @@ class AgoraTransportClient:
             self._other_participant_has_joined = True
             # subscribe audio from the first participant
             self._channel.local_user.subscribe_audio(user_id)
-            self._call_async_callback(
-                self._callbacks.on_first_participant_joined,
-                agora_rtc_conn, user_id)
+            asyncio.create_task(self._callbacks.on_first_participant_joined(
+                agora_rtc_conn, user_id))
+
         asyncio.create_task(self._callbacks.on_participant_connected(
             agora_rtc_conn, user_id))
 
     def on_participant_disconnected(
             self,
             agora_rtc_conn: rtc.RTCConnection,
-            user_id: int, reason: str):
+            user_id: int, reason: int):
         if len(self.get_participant_ids()) == 0:
             self._other_participant_has_joined = False
         asyncio.create_task(self._callbacks.on_participant_disconnected(
@@ -471,23 +473,23 @@ class AgoraTransportClient:
             data, user_id))
 
     def on_connected(
-            self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: str):
+            self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: int):
         asyncio.create_task(self._callbacks.on_connected(
             agora_rtc_conn, conn_info, reason))
 
     def on_connection_state_changed(
-            self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: str):
+            self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: int):
         asyncio.create_task(self._callbacks.on_connection_state_changed(
             agora_rtc_conn, conn_info, reason))
 
     def on_disconnected(
-            self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: str):
+            self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: int):
         self._joined = False
         asyncio.create_task(self._callbacks.on_disconnected(
-            reason))
+            agora_rtc_conn, conn_info, reason))
 
     def on_connection_failure(
-            self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: str):
+            self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: int):
         self._joined = False
         asyncio.create_task(self._callbacks.on_connection_failure(
             reason))
@@ -495,7 +497,7 @@ class AgoraTransportClient:
     def on_audio_subscribe_state_changed(
         self,
         agora_local_user: rtc.LocalUser,
-        channel: rtc.Channel,
+        channel: str,
         user_id: int,
         old_state: int,
         new_state: int,
@@ -509,21 +511,24 @@ class AgoraTransportClient:
     async def in_audio_handle(self) -> None:
         """sub the first participant audio frame """
         logging.debug("start in_audio_handle")
-        subscribe_user = await self.wait_for_remote_user()
-        logging.info(f"subscribe user {subscribe_user}")
-        await self._channel.subscribe_audio(subscribe_user)
-
-        while subscribe_user is None or self._channel.get_audio_frames(subscribe_user) is None:
-            await asyncio.sleep(0.1)
-
-        audio_frames = self._channel.get_audio_frames(subscribe_user)
         try:
+            subscribe_user = await self.wait_for_remote_user()
+            logging.info(f"subscribe user {subscribe_user}")
+            await self._channel.subscribe_audio(subscribe_user)
+
+            # from on_playback_audio_frame_before_mixing callback
+            # to get the audio frame published by the remote user
+            while subscribe_user is None or self._channel.get_audio_frames(subscribe_user) is None:
+                await asyncio.sleep(0.1)
+
+            audio_frames = self._channel.get_audio_frames(subscribe_user)
             async for audio_frame in audio_frames:
                 await self._in_audio_queue.put((audio_frame, subscribe_user))
                 # Yield control to allow other tasks to run
                 await asyncio.sleep(0)
         except asyncio.CancelledError:
-            raise  # Re-raise the exception to propagate cancellation
+            logging.info("Cancelled Audio task")
+            return
 
     async def read_next_audio_frame(self) -> AudioRawFrame | None:
         """get room sub the first participant audio frame from a queue"""

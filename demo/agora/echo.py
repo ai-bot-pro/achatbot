@@ -15,6 +15,7 @@ import logging
 import os
 from signal import SIGINT, SIGTERM, signal, strsignal
 from typing import Any
+from urllib.parse import quote
 from dotenv import load_dotenv
 
 from agora.rtc.rtc_connection import RTCConnection, RTCConnInfo
@@ -31,9 +32,9 @@ def get_voice_demo_channel_url(
         channel_name: str,
         token: str = "",
         uid: str = "") -> str:
-    logging.info(f"appid: {app_id} channel: {channel_name} token: {token} uid: {uid}")
-    return f"https://webdemo.agora.io/basicVoiceCall/index.html"
-    return f"https://webdemo.agora.io/basicVoiceCall/index.html?appid={app_id}&channel={channel_name}&token={token}&uid={uid}"
+    demo_url = "https://webdemo.agora.io/basicVoiceCall/index.html"
+    url = f"{demo_url}?appid={quote(app_id)}&channel={quote(channel_name)}&token={quote(token)}&uid={quote(uid)}"
+    return url
 
 
 def _monitor_queue_size(queue: asyncio.Queue[bytes], queue_name: str, threshold: int = 5) -> None:

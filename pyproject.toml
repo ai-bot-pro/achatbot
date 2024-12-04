@@ -71,6 +71,7 @@ Changelog = "https://github.com/ai-bot-pro/chat-bot/blob/main/CHANGELOG.md"
 
 
 [project.optional-dependencies]
+pyee = ["pyee~=12.0.0"]
 conf = ["omegaconf~=2.3.0", "hydra-core~=1.3.2"]
 gdown = ["gdown==5.1.0"]
 matplotlib = ["matplotlib==3.7.5"]
@@ -109,6 +110,7 @@ ngrok_proxy = ["pyngrok~=7.2.0", "nest-asyncio~=1.6.0"]
 
 
 # webRTC
+agora = ["agora-realtime-ai-api~=1.0.8"]
 daily = ["daily-python~=0.11.0"]
 livekit = ["livekit~=0.17.5"]
 # http api sdk
@@ -133,6 +135,7 @@ queue = ["achatbot[redis]"]
 livekit_transport = ["achatbot[livekit,livekit-api]"]
 daily_transport = ["achatbot[daily]"]
 websocket_server_transport = ["achatbot[websocket]"]
+agora_transport = ["achatbot[agora]"]
 
 # audio_stream module tag -> pkgs
 
