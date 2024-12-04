@@ -4,6 +4,7 @@ import logging
 
 import unittest
 from agora_realtime_ai_api import rtc
+from agora_realtime_ai_api.token_builder import realtimekit_token_builder
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.pipeline.task import PipelineTask, PipelineParams
@@ -32,8 +33,10 @@ ROOM_NAME=bot-room RUN_TIMEOUT=3600 \
 class TestProcessor(unittest.IsolatedAsyncioTestCase):
     @classmethod
     def setUpClass(cls):
-        Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
+        logger = Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
         cls.room_name = os.getenv("ROOM_NAME", "chat-room")
+        rtc.logger = logger
+        realtimekit_token_builder.logger = logger
 
     @classmethod
     def tearDownClass(cls):

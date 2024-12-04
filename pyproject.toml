@@ -111,6 +111,8 @@ ngrok_proxy = ["pyngrok~=7.2.0", "nest-asyncio~=1.6.0"]
 
 # webRTC
 agora = [
+    #need move colorlog
+    "colorlog",
     "agora-realtime-ai-api@git+https://github.com/weedge/agora-realtime-ai-api",
 ]
 daily = ["daily-python~=0.11.0"]

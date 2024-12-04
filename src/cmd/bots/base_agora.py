@@ -1,10 +1,18 @@
 import logging
+import os
 
 from agora_realtime_ai_api import rtc
+from agora_realtime_ai_api.token_builder import realtimekit_token_builder
 from apipeline.frames.control_frames import EndFrame
 
+from src.common.logger import Logger
 from src.cmd.bots.base import AIChannelBot
 from src.transports.agora import AgoraTransport
+
+# Init logger, replace agora_realtime_ai_api use monkey fix :)
+logger = Logger.logger or Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
+rtc.logger = logger
+realtimekit_token_builder.logger = logger
 
 
 class AgoraChannelBot(AIChannelBot):
