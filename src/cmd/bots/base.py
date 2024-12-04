@@ -350,3 +350,8 @@ class AIBot(IBot):
 class AIRoomBot(AIBot):
     def __init__(self, **args) -> None:
         super().__init__(**args)
+
+
+class AIChannelBot(AIBot):
+    def __init__(self, **args) -> None:
+        super().__init__(**args)

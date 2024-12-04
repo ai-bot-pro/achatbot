@@ -1,5 +1,6 @@
 import logging
 
+from agora_realtime_ai_api import rtc
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
@@ -7,9 +8,9 @@ from apipeline.pipeline.runner import PipelineRunner
 from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
 from src.processors.llm.base import LLMProcessor
 from src.processors.speech.tts.tts_processor import TTSProcessor
-from src.common.types import LivekitParams
-from src.transports.livekit import LivekitTransport
-from src.cmd.bots.base_livekit import LivekitRoomBot
+from src.common.types import AgoraParams
+from src.transports.agora import AgoraTransport
+from src.cmd.bots.base_agora import AgoraChannelBot
 from src.cmd.bots import register_ai_room_bots
 from src.types.frames.data_frames import LLMMessagesFrame
 
@@ -18,9 +19,9 @@ load_dotenv(override=True)
 
 
 @register_ai_room_bots.register
-class LivekitBot(LivekitRoomBot):
+class AgoraBot(AgoraChannelBot):
     """
-    audio chat with livekit webRTC room bot
+    audio chat with agora webRTC channel voice calling bot
     """
 
     def __init__(self, **args) -> None:
@@ -29,7 +30,7 @@ class LivekitBot(LivekitRoomBot):
 
     async def arun(self):
         vad_analyzer = self.get_vad_analyzer()
-        params = LivekitParams(
+        params = AgoraParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
             vad_enabled=True,
@@ -44,7 +45,7 @@ class LivekitBot(LivekitRoomBot):
         params.audio_out_sample_rate = stream_info["sample_rate"]
         params.audio_out_channels = stream_info["channels"]
 
-        transport = LivekitTransport(
+        transport = AgoraTransport(
             self.args.token,
             params=params,
         )
@@ -67,7 +68,6 @@ class LivekitBot(LivekitRoomBot):
                 assistant_response,
             ]),
             params=PipelineParams(
-                # TODO: open interruptions some issue when sub remote participant
                 allow_interruptions=False,
                 enable_metrics=True,
                 send_initial_empty_metrics=False,
@@ -80,7 +80,11 @@ class LivekitBot(LivekitRoomBot):
 
         await PipelineRunner().run(self.task)
 
-    async def on_first_participant_say_hi(self, transport: LivekitTransport, participant):
+    async def on_first_participant_say_hi(
+            self,
+            transport: AgoraTransport,
+            agora_rtc_conn: rtc.RTCConnection,
+            user_id: int):
         # joined use tts say "hello" to introduce with llm generate
         if self._bot_config.tts \
                 and self._bot_config.llm \

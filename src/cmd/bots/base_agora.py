@@ -1,72 +1,14 @@
-import asyncio
-import os
 import logging
 
-import unittest
 from agora_realtime_ai_api import rtc
-from apipeline.pipeline.pipeline import Pipeline
-from apipeline.pipeline.runner import PipelineRunner
-from apipeline.pipeline.task import PipelineTask, PipelineParams
 from apipeline.frames.control_frames import EndFrame
-from apipeline.processors.logger import FrameLogger
-from apipeline.frames.data_frames import TextFrame, DataFrame, AudioRawFrame, ImageRawFrame
 
-from src.services.help.agora.channel import AgoraChannel
-from src.services.help import RoomManagerEnvInit
-from src.common.types import AgoraParams
-from src.common.logger import Logger
+from src.cmd.bots.base import AIChannelBot
 from src.transports.agora import AgoraTransport
 
-from dotenv import load_dotenv
-load_dotenv(override=True)
 
-r"""
-ROOM_NAME=bot-room \
-    python -m unittest test.integration.processors.test_agora_echo_processor.TestProcessor
-
-ROOM_NAME=bot-room RUN_TIMEOUT=3600 \
-    python -m unittest test.integration.processors.test_agora_echo_processor.TestProcessor
-"""
-
-
-class TestProcessor(unittest.IsolatedAsyncioTestCase):
-    @classmethod
-    def setUpClass(cls):
-        Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
-        cls.room_name = os.getenv("ROOM_NAME", "chat-room")
-
-    @classmethod
-    def tearDownClass(cls):
-        pass
-
-    async def asyncSetUp(self):
-        self.agora_rtc_channel: AgoraChannel = RoomManagerEnvInit.initEngine("agora_rtc_channel")
-
-    async def asyncTearDown(self):
-        await self.agora_rtc_channel.close_session()
-
-    async def test_tts_daily_output(self):
-        token = await self.agora_rtc_channel.gen_token(self.room_name)
-        self.params = AgoraParams(
-            audio_in_enabled=True,
-            audio_in_sample_rate=16000,
-            audio_in_channels=1,
-            audio_out_enabled=True,
-            audio_out_sample_rate=16000,
-            audio_out_channels=1,
-        )
-        transport = AgoraTransport(token, self.params)
-        self.assertGreater(len(transport.event_names), 0)
-
-        self.task = PipelineTask(
-            Pipeline([
-                transport.input_processor(),
-                # FrameLogger(include_frame_types=[AudioRawFrame]),
-                transport.output_processor(),
-            ]),
-            params=PipelineParams(allow_interruptions=False)
-        )
-
+class AgoraChannelBot(AIChannelBot):
+    def regisiter_room_event(self, transport: AgoraTransport):
         transport.add_event_handler(
             "on_connected",
             self.on_connected)
@@ -99,47 +41,37 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             "on_data_received",
             self.on_data_received)
 
-        runner = PipelineRunner()
-        try:
-            await asyncio.wait_for(runner.run(self.task), int(os.getenv("RUN_TIMEOUT", "60")))
-        except asyncio.TimeoutError:
-            logging.warning(f"Test run timeout. Exiting")
-            await self.task.queue_frame(EndFrame())
-
     async def on_connected(
             self,
             transport: AgoraTransport,
             agora_rtc_conn: rtc.RTCConnection,
             conn_info: rtc.RTCConnInfo,
             reason: int):
-        logging.info(
+        logging.debug(
             f"agora_rtc_conn:{agora_rtc_conn} conn_info:{conn_info} reason:{reason}")
 
     async def on_connection_failure(
             self,
             transport: AgoraTransport,
             reason: int):
-        logging.info(f"reason:{reason}")
+        logging.debug(f"reason:{reason}")
 
     async def on_error(
             self,
             transport: AgoraTransport,
             error_msg: str):
-        logging.info(f"error_msg:{error_msg}")
+        logging.error(f"error_msg:{error_msg}")
 
     async def on_first_participant_joined(
             self,
             transport: AgoraTransport,
             agora_rtc_conn: rtc.RTCConnection,
             user_id: int):
-        logging.info(f"agora_rtc_conn:{agora_rtc_conn} user_id:{user_id}")
+        logging.info(f"fisrt joined user_id:{user_id}")
 
+        # TODO: need know room anchor participant
+        # now just support one by one chat with bot
         transport.capture_participant_audio(
-            participant_id=user_id,
-        )
-
-        await transport.send_message(
-            f"hello,你好，我是机器人。",
             participant_id=user_id,
         )
 
@@ -150,7 +82,6 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             user_id: int,
             reason: int):
         logging.info(f"Partcipant {user_id} left. reason:{reason}")
-        logging.info(f"current remote Partcipants {transport.get_participant_ids()}")
 
     async def on_disconnected(
             self,
@@ -158,7 +89,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             agora_rtc_conn: rtc.RTCConnection,
             conn_info: rtc.RTCConnInfo,
             reason: int):
-        logging.info("disconnected reason %s, Exiting." % reason)
+        logging.info(f"disconnected reason {reason}, Exiting.")
         await self.task.queue_frame(EndFrame())
 
     async def on_connection_state_changed(
@@ -168,6 +99,8 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             conn_info: rtc.RTCConnInfo,
             reason: int):
         logging.info(f"connection state {conn_info.state} reason:{reason}")
+        if conn_info.state == 5:
+            await self.task.queue_frame(EndFrame())
 
     async def on_audio_subscribe_state_changed(
         self,
@@ -187,4 +120,4 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         transport: AgoraTransport,
         data: bytes, user_id: int
     ):
-        logging.info(f"len(data):{len(data)} user_id:{user_id}")
+        logging.info(f"size:{len(data)} from user_id:{user_id}")

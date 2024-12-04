@@ -2,8 +2,10 @@ import os
 import json
 import logging
 import asyncio
+import time
 from urllib.parse import quote
 from typing import Any, Awaitable, Callable, List
+import uuid
 
 import numpy as np
 from PIL import Image
@@ -411,20 +413,33 @@ class AgoraTransportClient:
             logging.error(f"Error waiting for remote user: {e}")
             raise
 
-    async def send_message(self, frame: TransportMessageFrame):
+    async def send_signaling_message(self, frame: TransportMessageFrame):
         """
-        Send a chat message in the chat 1v1 channel.
         TODO: send signaling message to remote_participant with rtm
         """
         if not self._joined:
             return
 
         try:
+            pass
+        except Exception as e:
+            logging.error(f"Error sending data: {e}")
+
+    async def send_message(self, frame: TransportMessageFrame):
+        """
+        Send a chat message in the chat channel.
+        TODO: need use biz msg_id, now just use uuid
+        """
+        if not self._joined:
+            return
+
+        msg_id = uuid.uuid4().hex
+        try:
             await self._channel.chat.send_message(
                 rtc.ChatMessage(
                     message=json.dumps(frame.message),
-                    # need use message id
-                    msg_id=frame.participant_id,
+                    # need use biz message id
+                    msg_id=msg_id,
                 )
             )
         except Exception as e:
@@ -587,6 +602,8 @@ class AgoraTransportClient:
 
         try:
             # audio_frame: rtc.PcmAudioFrame = self._convert_output_audio(frames)
+            # TODO: need fix push_audio_frame,
+            # the sample_rate is not correct, need use output_sample_rate
             await self._channel.push_audio_frame(frame_data)
         except Exception as e:
             logging.error(f"Error publishing audio: {e}", exc_info=True)

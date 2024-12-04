@@ -14,7 +14,7 @@ from src.cmd.bots import register_ai_fastapi_ws_bots, register_ai_room_bots
 
 
 """
-!TODO: load bot config from remote(config center)
+!TODO: load bot config from remote(config center) or flow config UI
 """
 
 
