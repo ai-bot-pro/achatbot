@@ -31,6 +31,8 @@ def get_voice_demo_channel_url(
         channel_name: str,
         token: str = "",
         uid: str = "") -> str:
+    logging.info(f"appid: {app_id} channel: {channel_name} token: {token} uid: {uid}")
+    return f"https://webdemo.agora.io/basicVoiceCall/index.html"
     return f"https://webdemo.agora.io/basicVoiceCall/index.html?appid={app_id}&channel={channel_name}&token={token}&uid={uid}"
 
 
@@ -227,7 +229,7 @@ async def main():
     engine = RtcEngine(appid=app_id, appcert=app_cert)
 
     channel_name = os.environ.get("AGORA_CHANNEL_NAME", "chat-room")
-    uid = int(os.environ.get("AGORA_UID", "110"))
+    uid = int(os.environ.get("AGORA_UID", "0"))
     options = RtcOptions(
         channel_name=channel_name,
         uid=uid,

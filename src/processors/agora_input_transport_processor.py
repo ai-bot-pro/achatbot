@@ -76,7 +76,7 @@ class AgoraInputTransportProcessor(AudioVADInputProcessor):
     # Audio in
     #
     async def _audio_in_task_handler(self):
-        logging.info("Start sub room(channel) in audio stream task")
+        logging.debug("Start sub room(channel) in audio stream task")
         while True:
             try:
                 frame = await self._client.read_next_audio_frame()

@@ -536,7 +536,6 @@ class LivekitRoomArgs(BaseModel):
 
 # --------------- agora -------------------------------
 
-@dataclass
 class AgoraParams(AudioCameraParams):
     app_id: str = ""
     app_cert: str = ""
@@ -545,7 +544,6 @@ class AgoraParams(AudioCameraParams):
     demo_video_url: str = "https://webdemo.agora.io/basicVideoCall/index.html"
 
 
-@dataclass
 class AgoraChannelArgs(BaseModel):
     pass
 

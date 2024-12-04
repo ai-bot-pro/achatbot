@@ -49,7 +49,7 @@ class AgoraChannel(EngineClass, IRoomManager):
 
     async def gen_token(self, room_name: str, exp_time_s: int = ROOM_TOKEN_EXPIRE_TIME) -> str:
         token = RealtimekitTokenBuilder.build_token(
-            self.app_id, self.app_cert, room_name, self.uid, expiration_in_seconds=exp_time_s
+            self.app_id, self.app_cert, room_name, 0, expiration_in_seconds=exp_time_s
         )
         logging.debug(f"token:{token}")
         return token

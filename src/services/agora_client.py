@@ -91,12 +91,16 @@ class RtcChannel(rtc.Channel):
 
         self.options = options
         self.uid = options.uid
+        self.channelId = options.channel_name
         self.enable_pcm_dump = options.enable_pcm_dump
 
-        self._loop = loop
+        self.loop = loop
         self.stream_message_queue = asyncio.Queue()
 
         self._service = service if service else AgoraService.init(token_claims.app_id)
+
+        # chat message
+        self.chat = rtc.Chat(self)
 
         # connect
         self.connection_state = 0
@@ -105,7 +109,7 @@ class RtcChannel(rtc.Channel):
             client_role_type=rtc.ClientRoleType.CLIENT_ROLE_BROADCASTER,
             channel_profile=rtc.ChannelProfileType.CHANNEL_PROFILE_LIVE_BROADCASTING,
         )
-        self.connection = self.rtc.agora_service.create_rtc_connection(conn_config)
+        self.connection = self._service.create_rtc_connection(conn_config)
 
         # Create the event emitter
         self.emitter = rtc.AsyncIOEventEmitter(loop)
@@ -126,11 +130,11 @@ class RtcChannel(rtc.Channel):
         # self.local_user.subscribe_all_audio()
 
         # audio media node factory for out audio track
-        self.media_node_factory = self.rtc.agora_service.create_media_node_factory()
+        self.media_node_factory = self._service.create_media_node_factory()
         self.audio_pcm_data_sender = (
             self.media_node_factory.create_audio_pcm_data_sender()
         )
-        self.audio_track = self.rtc.agora_service.create_custom_audio_track_pcm(
+        self.audio_track = self._service.create_custom_audio_track_pcm(
             self.audio_pcm_data_sender
         )
 
@@ -162,12 +166,15 @@ class RtcChannel(rtc.Channel):
     # Event Callback
 
     def on_connection_state_changed(self, agora_rtc_conn, conn_info, reason):
+        logging.info(f"conn state {conn_info.state}")
         self.connection_state = conn_info.state
 
     def on_user_joined(self, agora_rtc_conn, user_id):
+        logging.info(f"User {user_id} joined")
         self.remote_users[user_id] = True
 
     def on_user_left(self, agora_rtc_conn, user_id, reason):
+        logging.info(f"User {user_id} left")
         if user_id in self.remote_users:
             self.remote_users.pop(user_id, None)
         if user_id in self.channel_event_observer.audio_streams:
@@ -255,7 +262,7 @@ class AgoraTransportClient:
         self._channel.on("stream_message", self.on_data_received)
         self._channel.on("connected", self.on_connected)
         self._channel.on("disconnected", self.on_disconnected)
-        self._channel.on("connection_state_changed", self.on_connection_state_changed)
+        # self._channel.on("connection_state_changed", self.on_connection_state_changed)
         self._channel.on("connection_failure", self.on_connection_failure)
         self._channel.on("audio_subscribe_state_changed", self.on_audio_subscribe_state_changed)
 
@@ -291,7 +298,6 @@ class AgoraTransportClient:
             f"local_participant:{self._channel.uid} joined room(channel): {self._room_name} connection_state: {self._channel.connection_state}")
         self._joining = False
         self._joined = True
-        await self._callbacks.on_connected(self._room)
 
     async def join(self):
         # input and output procssor maybe do join room at the same time
@@ -406,7 +412,7 @@ class AgoraTransportClient:
     async def send_message(self, frame: TransportMessageFrame):
         """
         Send a chat message in the chat 1v1 channel.
-        TODO: send singnal message to remote_participant with rtm
+        TODO: send signaling message to remote_participant with rtm
         """
         if not self._joined:
             return
@@ -436,7 +442,6 @@ class AgoraTransportClient:
 
     def on_participant_connected(
             self, agora_rtc_conn: rtc.RTCConnection, user_id: int):
-        logging.info(f"Participant:{user_id} connected")
         if not self._other_participant_has_joined:
             self._other_participant_has_joined = True
             # subscribe audio from the first participant
@@ -444,18 +449,17 @@ class AgoraTransportClient:
             self._call_async_callback(
                 self._callbacks.on_first_participant_joined,
                 agora_rtc_conn, user_id)
-        self._call_async_callback(self._callbacks.on_participant_connected, agora_rtc_conn, user_id)
+        asyncio.create_task(self._callbacks.on_participant_connected(
+            agora_rtc_conn, user_id))
 
     def on_participant_disconnected(
             self,
             agora_rtc_conn: rtc.RTCConnection,
             user_id: int, reason: str):
-        logging.info(f"Participant:{user_id} disconnected")
         if len(self.get_participant_ids()) == 0:
             self._other_participant_has_joined = False
-        self._call_async_callback(
-            self._callbacks.on_participant_disconnected,
-            agora_rtc_conn, user_id, reason)
+        asyncio.create_task(self._callbacks.on_participant_disconnected(
+            agora_rtc_conn, user_id, reason))
 
     def on_data_received(
             self,
@@ -463,29 +467,30 @@ class AgoraTransportClient:
             user_id: int, stream_id: str, data: bytes, length: int):
         logging.info(
             f"{agora_local_user} Received stream({stream_id}) message from {user_id} with ({type(data)})length: {length}")
-        self._call_async_callback(self._callbacks.on_data_received, data, user_id)
+        asyncio.create_task(self._callbacks.on_data_received(
+            data, user_id))
 
     def on_connected(
             self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: str):
-        self._call_async_callback(self._callbacks.on_connected,
-                                  agora_rtc_conn, conn_info, reason)
+        asyncio.create_task(self._callbacks.on_connected(
+            agora_rtc_conn, conn_info, reason))
 
     def on_connection_state_changed(
             self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: str):
-        self._call_async_callback(self._callbacks.on_connection_state_changed,
-                                  agora_rtc_conn, conn_info, reason)
+        asyncio.create_task(self._callbacks.on_connection_state_changed(
+            agora_rtc_conn, conn_info, reason))
 
     def on_disconnected(
             self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: str):
         self._joined = False
-        logging.info(f"Disconnected from {self._room_name}. Reason: {reason}")
-        self._call_async_callback(self._callbacks.on_disconnected, reason)
+        asyncio.create_task(self._callbacks.on_disconnected(
+            reason))
 
     def on_connection_failure(
             self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: str):
         self._joined = False
-        logging.info(f"connect fail from {self._room_name}. Reason: {reason}")
-        self._call_async_callback(self._callbacks.on_connection_failure, reason)
+        asyncio.create_task(self._callbacks.on_connection_failure(
+            reason))
 
     def on_audio_subscribe_state_changed(
         self,
@@ -496,19 +501,16 @@ class AgoraTransportClient:
         new_state: int,
         elapse_since_last_state: int,
     ):
-        self._call_async_callback(
-            self._callbacks.on_audio_subscribe_state_changed,
-            agora_local_user, channel, user_id, old_state, new_state, elapse_since_last_state)
-
-    def _call_async_callback(self, callback, *args):
-        future = asyncio.run_coroutine_threadsafe(callback(*args), self._loop)
-        future.result()
+        asyncio.create_task(self._callbacks.on_audio_subscribe_state_changed(
+            agora_local_user, channel, user_id, old_state, new_state, elapse_since_last_state))
 
     # Audio in
 
     async def in_audio_handle(self) -> None:
         """sub the first participant audio frame """
+        logging.debug("start in_audio_handle")
         subscribe_user = await self.wait_for_remote_user()
+        logging.info(f"subscribe user {subscribe_user}")
         await self._channel.subscribe_audio(subscribe_user)
 
         while subscribe_user is None or self._channel.get_audio_frames(subscribe_user) is None:

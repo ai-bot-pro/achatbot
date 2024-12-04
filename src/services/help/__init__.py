@@ -5,7 +5,7 @@ import logging
 import os
 
 from src.common import interface
-from src.common.types import DailyRoomArgs, LivekitRoomArgs
+from src.common.types import AgoraChannelArgs, DailyRoomArgs, LivekitRoomArgs
 from src.common.factory import EngineClass, EngineFactory
 
 from dotenv import load_dotenv
@@ -19,6 +19,8 @@ class RoomManagerEnvInit():
             from . import livekit_room
         elif "daily_room" in tag:
             from . import daily_room
+        elif "agora_rtc_channel" in tag:
+            from .agora import channel
 
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         return engine
@@ -48,8 +50,15 @@ class RoomManagerEnvInit():
         ).model_dump()
         return kwargs
 
+    @staticmethod
+    def get_agora_channel_args() -> dict:
+        kwargs = AgoraChannelArgs(
+        ).model_dump()
+        return kwargs
+
     # TAG : config
     map_config_func = {
         'daily_room': get_daily_room_args,
         'livekit_room': get_livekit_room_args,
+        'agora_rtc_channel': get_agora_channel_args
     }
