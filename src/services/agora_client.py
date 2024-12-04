@@ -198,6 +198,20 @@ class RtcChannel(rtc.Channel):
             if user_id not in self.channel_event_observer.audio_streams:
                 self.channel_event_observer.audio_streams[user_id] = rtc.AudioStream()
 
+    # Audio out
+    async def push_pcm_audio_frame(self, pcm_audio_frame: rtc.PcmAudioFrame) -> None:
+        """
+        Pushes an audio frame to the channel.
+
+        Parameters:
+            frame: The pcm audio frame to be pushed.
+        """
+        ret = self.audio_pcm_data_sender.send_audio_pcm_data(pcm_audio_frame)
+        logging.debug(f"Pushed audio frame: {ret}, audio frame length: {len(pcm_audio_frame.data)}")
+        if ret < 0:
+            raise Exception(
+                f"Failed to send audio frame: {ret}, audio frame length: {len(pcm_audio_frame.data)}")
+
 
 class AgoraCallbacks(BaseModel):
     """async callback"""
@@ -596,15 +610,17 @@ class AgoraTransportClient:
 
     # Audio out
 
-    async def write_raw_audio_frames(self, frame_data: bytes,):
+    async def write_raw_audio_frames(self, frame_data: bytes):
         if not self._joined:
             return
 
         try:
-            # audio_frame: rtc.PcmAudioFrame = self._convert_output_audio(frames)
-            # TODO: need fix push_audio_frame,
+            pcm_audio_frame: rtc.PcmAudioFrame = self._convert_output_audio(frame_data)
+            await self._channel.push_pcm_audio_frame(pcm_audio_frame)
+
+            # TODONE: need fix push_audio_frame,
             # the sample_rate is not correct, need use output_sample_rate
-            await self._channel.push_audio_frame(frame_data)
+            # await self._channel.push_audio_frame(frame_data)
         except Exception as e:
             logging.error(f"Error publishing audio: {e}", exc_info=True)
 
@@ -614,7 +630,8 @@ class AgoraTransportClient:
         samples_per_channel = total_samples // self._params.audio_out_channels
 
         frame = rtc.PcmAudioFrame()
-        frame.data = audio_data
+        frame.data = bytearray(audio_data)
+        frame.timestamp = 0
         frame.bytes_per_sample = bytes_per_sample
         frame.samples_per_channel = samples_per_channel
         frame.sample_rate = self._params.audio_out_sample_rate
