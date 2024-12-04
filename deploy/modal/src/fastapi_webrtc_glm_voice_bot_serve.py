@@ -11,12 +11,12 @@ class ContainerRuntimeConfig:
                 [
                     "achatbot["
                     "fastapi_bot_server,"
-                    "daily_room_audio_stream,livekit_room_audio_stream,"
+                    "livekit,livekit-api,daily,agora,"
                     "silero_vad_analyzer,"
                     "sense_voice_asr,deepgram_asr_processor,"
                     "glm_voice_processor,"
                     "queue"
-                    "]~=0.0.7.13",
+                    "]~=0.0.7.15",
                     "gdown==5.1.0",
                     "matplotlib==3.7.5",
                     "huggingface_hub[hf_transfer]==0.24.7",

@@ -11,14 +11,14 @@ class ContainerRuntimeConfig:
                 [
                     "achatbot["
                     "fastapi_bot_server,"
-                    "livekit,livekit-api,daily,"
+                    "livekit,livekit-api,daily,agora,"
                     "silero_vad_analyzer,daily_langchain_rag_bot,"
                     "sense_voice_asr,deepgram_asr_processor,"
                     "openai_llm_processor,google_llm_processor,litellm_processor,"
                     "tts_edge,"
                     "deep_translator,together_ai,"
                     "queue"
-                    "]~=0.0.7.12",
+                    "]~=0.0.7.15",
                     "huggingface_hub[hf_transfer]==0.24.7",
                     "wget",
                 ],

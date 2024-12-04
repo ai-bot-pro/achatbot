@@ -9,7 +9,7 @@ from src.common.logger import Logger
 from src.cmd.bots.base import AIChannelBot
 from src.transports.agora import AgoraTransport
 
-# Init logger, replace agora_realtime_ai_api use monkey fix :)
+# Init logger, use monkey fix to replace agora_realtime_ai_api logger  :)
 logger = Logger.logger or Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
 rtc.logger = logger
 realtimekit_token_builder.logger = logger
