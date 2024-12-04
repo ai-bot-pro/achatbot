@@ -110,7 +110,9 @@ ngrok_proxy = ["pyngrok~=7.2.0", "nest-asyncio~=1.6.0"]
 
 
 # webRTC
-agora = ["agora-realtime-ai-api~=1.0.8"]
+agora = [
+    "agora-realtime-ai-api@git+https://github.com/weedge/agora-realtime-ai-api",
+]
 daily = ["daily-python~=0.11.0"]
 livekit = ["livekit~=0.17.5"]
 # http api sdk
