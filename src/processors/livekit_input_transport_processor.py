@@ -40,7 +40,7 @@ class LivekitInputTransportProcessor(AudioVADInputProcessor):
     async def stop(self):
         # Cancel sub room in audio stream task
         if self._audio_in_task \
-                and not self._audio_in_task.uncancel():
+                and (not self._audio_in_task.cancelled() or not self._audio_in_task.done()):
             self._audio_in_task.cancel()
             await self._audio_in_task
 
