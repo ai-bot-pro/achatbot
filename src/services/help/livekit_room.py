@@ -119,7 +119,7 @@ class LivekitRoom(EngineClass, IRoomManager):
 
         return g_room
 
-    async def check_vaild_room(self, room_name: str, token: str) -> bool:
+    async def check_valid_room(self, room_name: str, token: str) -> bool:
         if not room_name or not token:
             return False
 

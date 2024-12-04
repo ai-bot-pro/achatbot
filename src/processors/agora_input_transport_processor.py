@@ -7,20 +7,20 @@ from apipeline.frames.base import Frame
 from apipeline.frames.control_frames import StartFrame
 from apipeline.processors.frame_processor import FrameDirection
 
-from src.common.types import CHANNELS, RATE, LivekitParams
+from src.common.types import CHANNELS, RATE, AgoraParams
 from src.processors.audio_input_processor import AudioVADInputProcessor
-from src.services.livekit_client import LivekitTransportClient
+from src.services.agora_client import AgoraTransportClient
 from src.types.frames.data_frames import (
     UserAudioRawFrame,
     UserImageRawFrame,
 )
 from src.types.frames.control_frames import UserImageRequestFrame
-from src.types.frames.data_frames import LivekitTransportMessageFrame
+from src.types.frames.data_frames import AgoraTransportMessageFrame
 
 
-class LivekitInputTransportProcessor(AudioVADInputProcessor):
+class AgoraInputTransportProcessor(AudioVADInputProcessor):
 
-    def __init__(self, client: LivekitTransportClient, params: LivekitParams, **kwargs):
+    def __init__(self, client: AgoraTransportClient, params: AgoraParams, **kwargs):
         super().__init__(params, **kwargs)
         self._params = params
         self._client = client
@@ -69,21 +69,21 @@ class LivekitInputTransportProcessor(AudioVADInputProcessor):
     # Frames
     #
     async def push_app_message(self, message: Any, sender: str):
-        frame = LivekitTransportMessageFrame(message=message, participant_id=sender)
+        frame = AgoraTransportMessageFrame(message=message, participant_id=sender)
         await self.queue_frame(frame)
 
     #
     # Audio in
     #
     async def _audio_in_task_handler(self):
-        logging.info("Start sub room in audio stream task")
+        logging.debug("Start sub room(channel) in audio stream task")
         while True:
             try:
                 frame = await self._client.read_next_audio_frame()
                 if frame:
                     await self.push_audio_frame(frame)
             except asyncio.CancelledError:
-                logging.info("Cancelled sub room in audio stream task")
+                logging.info("Cancelled sub room(channel) in audio stream task")
                 break
 
     def capture_participant_audio(

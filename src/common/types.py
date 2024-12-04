@@ -534,6 +534,20 @@ class LivekitRoomArgs(BaseModel):
     is_common_session: bool = False
 
 
+# --------------- agora -------------------------------
+
+class AgoraParams(AudioCameraParams):
+    app_id: str = ""
+    app_cert: str = ""
+    enable_pcm_dump: bool = False
+    demo_voice_url: str = "https://webdemo.agora.io/basicVoiceCall/index.html"
+    demo_video_url: str = "https://webdemo.agora.io/basicVideoCall/index.html"
+
+
+class AgoraChannelArgs(BaseModel):
+    pass
+
+
 # ---------------- Room Bots -------------
 @dataclass
 class GeneralRoomInfo:

@@ -58,7 +58,7 @@ class BotTaskRunner:
             logging.error(f"need init RoomManager!")
             return
 
-        is_valid = await self.room_mgr.check_vaild_room(bot_info.room_name, bot_info.token)
+        is_valid = await self.room_mgr.check_valid_room(bot_info.room_name, bot_info.token)
         if not is_valid:
             room: GeneralRoomInfo = await self.room_mgr.create_room(
                 bot_info.room_name, exp_time_s=ROOM_EXPIRE_TIME)

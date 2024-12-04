@@ -47,6 +47,7 @@ class Logger():
     set root or app logger at once
     """
     inited = False
+    logger = None
 
     @staticmethod
     def init(
@@ -57,8 +58,8 @@ class Logger():
             is_console=True,
             is_root_logger=True,
             is_re_init=False):
-        if Logger.inited and is_re_init is False:
-            return
+        if Logger.inited and is_re_init is False and Logger.logger is not None:
+            return Logger.logger
         os.makedirs(log_dir, exist_ok=True)
         if is_root_logger:
             # get root logger to set, global logger, use logging
@@ -86,5 +87,6 @@ class Logger():
             logger.addHandler(console_handler)
 
         Logger.inited = True
+        Logger.logger = logger
 
         return logger
