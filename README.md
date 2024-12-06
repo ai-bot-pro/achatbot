@@ -141,7 +141,7 @@ deploy it to cloudflare page worker with nextjs, access https://storytelling.pag
 
 # Install
 > [!NOTE]
-> `python --version` >=3.10 with [asyncio-task](https://docs.python.org/3.11/library/asyncio-task.html)
+> `python --version` >=3.10 with [asyncio-task](https://docs.python.org/3.10/library/asyncio-task.html)
 
 > [!TIP]
 > use [uv](https://github.com/astral-sh/uv) + pip to run, install the required dependencies fastly, e.g.:
