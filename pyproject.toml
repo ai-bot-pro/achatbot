@@ -115,6 +115,7 @@ agora = [
     "colorlog",
     "agora-realtime-ai-api~=1.0.8", # python 3.11
     #"agora-realtime-ai-api@git+https://github.com/weedge/agora-realtime-ai-api", # for python 3.10
+    "agora_python_server_sdk~=2.1.5",
 ]
 daily = ["daily-python~=0.11.0"]
 livekit = ["livekit~=0.17.5"]

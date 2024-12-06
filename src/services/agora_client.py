@@ -8,10 +8,8 @@ from typing import Any, AsyncIterator, Awaitable, Callable, List
 import uuid
 
 import PIL.Image
-from PIL import Image
 import numpy as np
 from pydantic import BaseModel
-from agora.rtc.video_frame_observer import VideoFrame
 from apipeline.frames.data_frames import AudioRawFrame, ImageRawFrame
 
 from src.common import const
@@ -23,8 +21,10 @@ from src.services.help.agora.video_utils import *
 
 try:
     from agora_realtime_ai_api import rtc
+    from agora.rtc.video_frame_observer import VideoFrame
     from agora.rtc.video_frame_observer import IVideoFrameObserver, VideoFrame
     from agora.rtc.video_frame_sender import ExternalVideoFrame
+    from agora.rtc.agora_base import *
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
@@ -211,6 +211,15 @@ class RtcChannel(rtc.Channel):
             self.video_track = self._service.create_custom_video_track_frame(
                 self.yuv_data_sender
             )
+            video_config = VideoEncoderConfiguration(
+                frame_rate=params.camera_out_framerate,
+                dimensions=VideoDimensions(
+                    width=params.camera_out_width,
+                    height=params.camera_out_height
+                ),
+                encode_alpha=0
+            )
+            self.video_track.set_video_encoder_configuration(video_config)
 
         # 3. create a data stream for send stream message
         self.stream_id = self.connection.create_data_stream(False, False)
@@ -926,17 +935,18 @@ class AgoraTransportClient:
         target_color_mode from PIL.Image.Image convert method mode param
         """
         match video_frame.type:
-            case const.AGORA_VIDEO_PIXEL_I420:
-                # image = convert_I420_to_RGB(video_frame)
-                image = convert_I420_to_RGB_with_cv(video_frame)
-            case const.AGORA_VIDEO_PIXEL_RGBA:
-                image = convert_RGBA_to_RGB(video_frame)
+            case const.AGORA_VIDEO_PIXEL_I420:  # default use yuv420
+                image = convert_I420_to_RGB(video_frame)
+                # image = convert_I420_to_RGB_with_cv(video_frame)
+            # case const.AGORA_VIDEO_PIXEL_RGBA:
+            # need to check RGBA from video
+            #    image = convert_RGBA_to_RGB(video_frame)
             case const.AGORA_VIDEO_PIXEL_NV21:
                 # image = convert_NV21_to_RGB(video_frame)
                 image = convert_NV21_to_RGB_optimized(video_frame)
             case const.AGORA_VIDEO_PIXEL_I422:
-                # image = convert_I422_to_RGB(video_frame)
-                image = convert_I422_to_RGB_with_cv(video_frame)
+                image = convert_I422_to_RGB(video_frame)
+                # image = convert_I422_to_RGB_with_cv(video_frame)
             case const.AGORA_VIDEO_PIXEL_NV12:
                 # image = convert_NV12_to_RGB(video_frame)
                 image = convert_NV12_to_RGB_optimized(video_frame)
@@ -1007,15 +1017,19 @@ class AgoraTransportClient:
         publish image frame to camera
         !NOTE: (now just support RGBA color_format/mode)
         """
-        image = PIL.Image.frombytes(frame.mode, frame.size, frame.image).convert("RGBA")
+        try:
+            image = PIL.Image.frombytes(
+                frame.mode, frame.size, frame.image).convert("RGBA")
 
-        video_frame = ExternalVideoFrame()
-        video_frame.type = const.AGORA_VIDEO_BUFFER_RAW_DATA
-        video_frame.format = const.AGORA_VIDEO_PIXEL_RGBA
-        video_frame.buffer = image.tobytes()
-        video_frame.stride = image.width
-        video_frame.height = image.height
-        video_frame.timestamp = 0
-        video_frame.metadata = bytearray(b'from achatbot ImageRawFrame')
+            video_frame = ExternalVideoFrame()
+            video_frame.type = const.AGORA_VIDEO_BUFFER_RAW_DATA
+            video_frame.format = const.AGORA_VIDEO_PIXEL_RGBA
+            video_frame.buffer = image.tobytes()
+            video_frame.stride = image.width
+            video_frame.height = image.height
+            video_frame.timestamp = 0
+            video_frame.metadata = bytearray(b'from achatbot ImageRawFrame')
 
-        self._channel.push_yuv_video_frame(video_frame)
+            self._channel.push_yuv_video_frame(video_frame)
+        except Exception as e:
+            logging.error(f"task Error: {e}", exc_info=True)

@@ -1,7 +1,7 @@
 import logging
 
 import numpy as np
-from PIL.Image import Image
+from PIL import Image
 from agora.rtc.video_frame_observer import VideoFrame
 from agora.rtc.video_frame_sender import ExternalVideoFrame
 
@@ -23,7 +23,7 @@ NV21: YYYYYYYY VUVU (V在前,U在后)
 # ------- VideoFrame to PIL.Image Image -------
 
 
-def convert_I420_to_RGB(video_frame: VideoFrame) -> Image:
+def convert_I420_to_RGB(video_frame: VideoFrame) -> Image.Image:
     # YUV420P(I420) to RGB
     # TODO:
     # 使用numba进行JIT编译
@@ -52,7 +52,7 @@ def convert_I420_to_RGB(video_frame: VideoFrame) -> Image:
     return image
 
 
-def convert_I422_to_RGB(video_frame: VideoFrame) -> Image:
+def convert_I422_to_RGB(video_frame: VideoFrame) -> Image.Image:
     # YUV422(I422) to RGB
     width = video_frame.width
     height = video_frame.height
@@ -76,7 +76,7 @@ def convert_I422_to_RGB(video_frame: VideoFrame) -> Image:
     return image
 
 
-def convert_I420_to_RGB_with_cv(video_frame: VideoFrame) -> Image:
+def convert_I420_to_RGB_with_cv(video_frame: VideoFrame) -> Image.Image:
     import cv2
     # 从YUV420P(I420)转换到RGB
     width = video_frame.width
@@ -107,7 +107,7 @@ def convert_I420_to_RGB_with_cv(video_frame: VideoFrame) -> Image:
     return image
 
 
-def convert_I422_to_RGB_with_cv(video_frame: VideoFrame) -> Image:
+def convert_I422_to_RGB_with_cv(video_frame: VideoFrame) -> Image.Image:
     import cv2
     # YUV422(I422) to RGB
     width = video_frame.width
@@ -139,7 +139,7 @@ def convert_I422_to_RGB_with_cv(video_frame: VideoFrame) -> Image:
     return image
 
 
-def convert_RGBA_to_RGB(video_frame: VideoFrame) -> Image:
+def convert_RGBA_to_RGB(video_frame: VideoFrame) -> Image.Image:
     width = video_frame.width
     height = video_frame.height
 
@@ -158,7 +158,7 @@ def convert_RGBA_to_RGB(video_frame: VideoFrame) -> Image:
     return image
 
 
-def convert_NV21_to_RGB(video_frame: VideoFrame) -> Image:
+def convert_NV21_to_RGB(video_frame: VideoFrame) -> Image.Image:
     width = video_frame.width
     height = video_frame.height
     # 从Y缓冲区获取亮度数据
@@ -176,7 +176,7 @@ def convert_NV21_to_RGB(video_frame: VideoFrame) -> Image:
     return image
 
 
-def convert_NV21_to_RGB_optimized(video_frame: VideoFrame) -> Image:
+def convert_NV21_to_RGB_optimized(video_frame: VideoFrame) -> Image.Image:
     width = video_frame.width
     height = video_frame.height
 
@@ -191,7 +191,7 @@ def convert_NV21_to_RGB_optimized(video_frame: VideoFrame) -> Image:
     return image
 
 
-def convert_NV12_to_RGB(video_frame: VideoFrame) -> Image:
+def convert_NV12_to_RGB(video_frame: VideoFrame) -> Image.Image:
     width = video_frame.width
     height = video_frame.height
     # 从Y缓冲区获取亮度数据
@@ -209,7 +209,7 @@ def convert_NV12_to_RGB(video_frame: VideoFrame) -> Image:
     return image
 
 
-def convert_NV12_to_RGB_optimized(video_frame: VideoFrame) -> Image:
+def convert_NV12_to_RGB_optimized(video_frame: VideoFrame) -> Image.Image:
     width = video_frame.width
     height = video_frame.height
 
