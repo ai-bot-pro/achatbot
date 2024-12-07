@@ -37,6 +37,7 @@ class AgoraTransport(BaseTransport):
         self._register_event_handler("on_data_received")
         self._register_event_handler("on_first_participant_joined")
         self._register_event_handler("on_audio_subscribe_state_changed")
+        self._register_event_handler("on_video_subscribe_state_changed")
         logging.info(f"AgoraTransport register event names: {self.event_names}")
         callbacks = AgoraCallbacks(
             on_connected=self._on_connected,

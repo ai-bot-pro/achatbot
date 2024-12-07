@@ -48,7 +48,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self):
         await self.agora_rtc_channel.close_session()
 
-    async def test_tts_daily_output(self):
+    async def test_echo(self):
         token = await self.agora_rtc_channel.gen_token(self.room_name)
         self.params = AgoraParams(
             audio_in_enabled=True,
@@ -57,6 +57,11 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             audio_out_enabled=True,
             audio_out_sample_rate=16000,
             audio_out_channels=1,
+            camera_in_enabled=True,
+            camera_out_enabled=True,
+            camera_out_width=416,
+            camera_out_height=240,
+            camera_out_framerate=30,
         )
         transport = AgoraTransport(token, self.params)
         self.assertGreater(len(transport.event_names), 0)
@@ -65,6 +70,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             Pipeline([
                 transport.input_processor(),
                 # FrameLogger(include_frame_types=[AudioRawFrame]),
+                # FrameLogger(include_frame_types=[ImageRawFrame]),
                 transport.output_processor(),
             ]),
             params=PipelineParams(allow_interruptions=False)
@@ -101,6 +107,9 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         transport.add_event_handler(
             "on_data_received",
             self.on_data_received)
+        transport.add_event_handler(
+            "on_video_subscribe_state_changed",
+            self.on_video_subscribe_state_changed)
 
         runner = PipelineRunner()
         try:
@@ -137,9 +146,15 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             user_id: int):
         logging.info(f"agora_rtc_conn:{agora_rtc_conn} user_id:{user_id}")
 
-        transport.capture_participant_audio(
-            participant_id=user_id,
-        )
+        if self.params.audio_in_enabled:
+            transport.capture_participant_audio(
+                participant_id=user_id,
+            )
+        if self.params.camera_in_enabled:
+            print("----------------------->ok")
+            transport.capture_participant_video(
+                participant_id=user_id,
+            )
 
         await transport.send_message(
             f"hello,你好，我是机器人。",
@@ -191,3 +206,16 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         data: bytes, user_id: int
     ):
         logging.info(f"len(data):{len(data)} user_id:{user_id}")
+
+    async def on_video_subscribe_state_changed(
+        self,
+        transport: AgoraTransport,
+        agora_local_user: rtc.LocalUser,
+        channel: str,
+        user_id: int,
+        old_state: int,
+        new_state: int,
+        elapse_since_last_state: int,
+    ):
+        logging.info(
+            f"agora_local_user:{agora_local_user}, channel:{channel}, user_id:{user_id}, old_state:{old_state}, new_state:{new_state}, elapse_since_last_state:{elapse_since_last_state}")
