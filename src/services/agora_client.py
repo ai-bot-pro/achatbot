@@ -477,6 +477,7 @@ class AgoraTransportClient:
         if not self.verify_token():
             raise Exception(f"token {token} is not valid")
 
+        logging.debug(f"token_claims: {self._token_claims}")
         self._app_id = self._token_claims.app_id
         self._room_name = self._token_claims.rtc.channel_name
         self._join_name = self._token_claims.rtc.uid
@@ -486,7 +487,7 @@ class AgoraTransportClient:
         self._service = service if service else AgoraService.init(self._app_id)
         self._channel = RtcChannel(params, self._token_claims, rtc.RtcOptions(
             channel_name=self._token_claims.rtc.channel_name,
-            uid=self._token_claims.rtc.uid,
+            uid=int(self._token_claims.rtc.uid) if self._token_claims.rtc.uid else 0,
             sample_rate=params.audio_in_sample_rate,
             channels=params.audio_in_channels,
             enable_pcm_dump=params.enable_pcm_dump,

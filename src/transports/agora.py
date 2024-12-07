@@ -49,6 +49,7 @@ class AgoraTransport(BaseTransport):
             on_data_received=self._on_data_received,
             on_first_participant_joined=self._on_first_participant_joined,
             on_audio_subscribe_state_changed=self._on_audio_subscribe_state_changed,
+            on_video_subscribe_state_changed=self._on_video_subscribe_state_changed,
         )
 
         self._params = params
@@ -148,6 +149,19 @@ class AgoraTransport(BaseTransport):
     ):
         await self._call_event_handler(
             "on_audio_subscribe_state_changed",
+            agora_local_user, channel, user_id, old_state, new_state, elapse_since_last_state)
+
+    async def _on_video_subscribe_state_changed(
+        self,
+        agora_local_user: rtc.LocalUser,
+        channel: rtc.Channel,
+        user_id: int,
+        old_state: int,
+        new_state: int,
+        elapse_since_last_state: int,
+    ):
+        await self._call_event_handler(
+            "on_video_subscribe_state_changed",
             agora_local_user, channel, user_id, old_state, new_state, elapse_since_last_state)
 
     async def send_message(self, message: str, participant_id: str | None = None):

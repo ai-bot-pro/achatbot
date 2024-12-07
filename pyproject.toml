@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 name = "achatbot"
 #dynamic = ["version"]
 # todo
-version = "0.0.7.15"
+version = "0.0.7.16"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -113,8 +113,7 @@ ngrok_proxy = ["pyngrok~=7.2.0", "nest-asyncio~=1.6.0"]
 agora = [
     #need move colorlog
     "colorlog",
-    "agora-realtime-ai-api~=1.0.8", # python 3.11
-    #"agora-realtime-ai-api@git+https://github.com/weedge/agora-realtime-ai-api", # for python 3.10
+    "agora-realtime-ai-api-v1~=0.0.1", # python 3.10
     "agora_python_server_sdk~=2.1.5",
 ]
 daily = ["daily-python~=0.11.0"]
