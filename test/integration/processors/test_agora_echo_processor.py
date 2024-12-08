@@ -59,8 +59,8 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             audio_out_channels=1,
             camera_in_enabled=True,
             camera_out_enabled=True,
-            camera_out_width=416,
-            camera_out_height=240,
+            camera_out_width=640,  # from Video Profiles https://webdemo.agora.io/basicVideoCall/index.html
+            camera_out_height=480,
             camera_out_framerate=30,
         )
         transport = AgoraTransport(token, self.params)
@@ -70,7 +70,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             Pipeline([
                 transport.input_processor(),
                 # FrameLogger(include_frame_types=[AudioRawFrame]),
-                # FrameLogger(include_frame_types=[ImageRawFrame]),
+                FrameLogger(include_frame_types=[ImageRawFrame]),
                 transport.output_processor(),
             ]),
             params=PipelineParams(allow_interruptions=False)

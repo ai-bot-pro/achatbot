@@ -36,10 +36,14 @@ except ModuleNotFoundError as e:
 
 class AgoraService:
     @staticmethod
-    def init(app_id: str) -> rtc.AgoraService:
+    def init(params: AgoraParams) -> rtc.AgoraService:
         config = rtc.AgoraServiceConfig()
-        config.audio_scenario = rtc.AudioScenarioType.AUDIO_SCENARIO_CHORUS
-        config.appid = app_id
+        # https://api-ref.agora.io/en/voice-sdk/react-native/4.x/API/enum_audioscenariotype.html
+        config.audio_scenario = rtc.AudioScenarioType.AUDIO_SCENARIO_CHORUS  # default
+        # if params.camera_in_enabled:
+        #    config.audio_scenario = rtc.AudioScenarioType.AUDIO_SCENARIO_CHATROOM
+        config.appid = params.app_id
+        # config.enable_video = int(params.camera_in_enabled)
         config.log_path = os.path.join(LOG_DIR, "agorasdk.log")
 
         agora_service = rtc.AgoraService()
@@ -118,7 +122,8 @@ class RtcChannelEventObserver(IVideoFrameObserver, rtc.ChannelEventObserver):
         )
 
     def on_frame(self, channel_id, remote_uid, video_frame: VideoFrame):
-        logging.info(f"on_video_frame, channel_id={channel_id}, remote_uid={remote_uid}, width={video_frame.width}, height={video_frame.height}, y_stride={video_frame.y_stride}, u_stride={video_frame.u_stride}, v_stride={video_frame.v_stride}, len_y={len(video_frame.y_buffer)}, len_u={len(video_frame.u_buffer)}, len_v={len(video_frame.v_buffer)}, len_alpha_buffer={len(video_frame.alpha_buffer) if video_frame.alpha_buffer else 0}")
+        # on_video_frame, channel_id=room-bot, remote_uid=1867636435, width=640, height=480, y_stride=640, u_stride=320, v_stride=320, len_y=307200, len_u=76800, len_v=76800, len_alpha_buffer=0
+        # logging.info(f"on_video_frame, channel_id={channel_id}, remote_uid={remote_uid}, width={video_frame.width}, height={video_frame.height}, y_stride={video_frame.y_stride}, u_stride={video_frame.u_stride}, v_stride={video_frame.v_stride}, len_y={len(video_frame.y_buffer)}, len_u={len(video_frame.u_buffer)}, len_v={len(video_frame.v_buffer)}, len_alpha_buffer={len(video_frame.alpha_buffer) if video_frame.alpha_buffer else 0}")
 
         self.loop.call_soon_threadsafe(
             self.video_streams[remote_uid].queue.put_nowait, video_frame
@@ -152,7 +157,7 @@ class RtcChannel(rtc.Channel):
 
         self.loop = loop
 
-        self._service = service if service else AgoraService.init(token_claims.app_id)
+        self._service = service if service else AgoraService.init(self._param)
 
         # chat message
         self.chat = rtc.Chat(self)
@@ -385,7 +390,7 @@ class RtcChannel(rtc.Channel):
         self.remote_users[user_id] = True
 
     def on_user_left(self, agora_rtc_conn, user_id, reason):
-        logging.debug(f"User {user_id} left reason: {reason}")
+        logging.info(f"User({type(user_id)}) {user_id} left reason: {reason}")
 
     def destory_when_user_left(self, user_id):
         # NOTE: like class obj destory in C++,
@@ -513,7 +518,7 @@ class AgoraTransportClient:
         self._params = params
         self._callbacks = callbacks
         self._loop = loop
-        self._service = service if service else AgoraService.init(self._app_id)
+        self._service = service if service else AgoraService.init(self._params)
         self._channel = RtcChannel(params, self._token_claims, rtc.RtcOptions(
             channel_name=self._token_claims.rtc.channel_name,
             uid=int(self._token_claims.rtc.uid) if self._token_claims.rtc.uid else 0,
@@ -779,10 +784,13 @@ class AgoraTransportClient:
         try:
             if self._params.audio_in_enabled:
                 await self._channel.unsubscribe_audio(user_id)
+        except Exception as e:
+            logging.error(f"Error unsubscribe_audio user {user_id}: {e}", exc_info=True)
+        try:
             if self._params.camera_in_enabled:
                 await self._channel.unsubscribe_video(user_id)
         except Exception as e:
-            logging.error(f"Error unsubscribing user {user_id}: {e}", exc_info=True)
+            logging.error(f"Error unsubscribe_video user {user_id}: {e}", exc_info=True)
 
     # Event Callback
 
@@ -1121,6 +1129,6 @@ class AgoraTransportClient:
             video_frame.timestamp = 0
             video_frame.metadata = bytearray(b'from achatbot ImageRawFrame')
 
-            self._channel.push_yuv_video_frame(video_frame)
+            await self._channel.push_yuv_video_frame(video_frame)
         except Exception as e:
             logging.error(f"task Error: {e}", exc_info=True)
