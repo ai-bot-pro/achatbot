@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from apipeline.frames.data_frames import AudioRawFrame, ImageRawFrame
 
 from src.common import const
-from src.common.types import SAMPLE_WIDTH, AgoraParams, LOG_DIR
+from src.common.types import SAMPLE_WIDTH, AgoraParams, LOG_DIR, VIDEOS_DIR
 from src.common.utils.audio_utils import resample_audio
 from src.types.frames.data_frames import AgoraTransportMessageFrame, TransportMessageFrame, UserAudioRawFrame, UserImageRawFrame
 from src.services.help.agora.token import TokenClaims, TokenPaser
@@ -43,7 +43,7 @@ class AgoraService:
         # if params.camera_in_enabled:
         #    config.audio_scenario = rtc.AudioScenarioType.AUDIO_SCENARIO_CHATROOM
         config.appid = params.app_id
-        # config.enable_video = int(params.camera_in_enabled)
+        config.enable_video = int(params.camera_in_enabled)
         config.log_path = os.path.join(LOG_DIR, "agorasdk.log")
 
         agora_service = rtc.AgoraService()
@@ -122,13 +122,23 @@ class RtcChannelEventObserver(IVideoFrameObserver, rtc.ChannelEventObserver):
         )
 
     def on_frame(self, channel_id, remote_uid, video_frame: VideoFrame):
-        # on_video_frame, channel_id=room-bot, remote_uid=1867636435, width=640, height=480, y_stride=640, u_stride=320, v_stride=320, len_y=307200, len_u=76800, len_v=76800, len_alpha_buffer=0
-        # logging.info(f"on_video_frame, channel_id={channel_id}, remote_uid={remote_uid}, width={video_frame.width}, height={video_frame.height}, y_stride={video_frame.y_stride}, u_stride={video_frame.u_stride}, v_stride={video_frame.v_stride}, len_y={len(video_frame.y_buffer)}, len_u={len(video_frame.u_buffer)}, len_v={len(video_frame.v_buffer)}, len_alpha_buffer={len(video_frame.alpha_buffer) if video_frame.alpha_buffer else 0}")
+        # on_video_frame, channel_id=room-bot, remote_uid=1867636435, width=640,
+        # height=480, y_stride=640, u_stride=320, v_stride=320, len_y=307200,
+        # len_u=76800, len_v=76800, len_alpha_buffer=0
+        if remote_uid == '0':
+            logging.info(
+                f"on_video_frame, channel_id={channel_id},"
+                f"remote_uid={remote_uid}, width={video_frame.width},"
+                f"height={video_frame.height}, y_stride={video_frame.y_stride},"
+                f"u_stride={video_frame.u_stride}, v_stride={video_frame.v_stride},"
+                f"len_y={len(video_frame.y_buffer)}, len_u={len(video_frame.u_buffer)},"
+                f"len_v={len(video_frame.v_buffer)},"
+                f"len_alpha_buffer={len(video_frame.alpha_buffer) if video_frame.alpha_buffer else 0}")
+            return 1
 
         self.loop.call_soon_threadsafe(
             self.video_streams[remote_uid].queue.put_nowait, video_frame
         )
-
         return 1
 
 
@@ -1079,7 +1089,7 @@ class AgoraTransportClient:
             logging.error(f"participant_id {participant_id} no video stream")
             return
 
-        self._on_participant_video_frame_task = asyncio.create_task(
+        self._on_participant_video_frame_task = self._loop.create_task(
             self._async_on_participant_video_frame(
                 participant_id, callback, video_stream, color_format))
 
@@ -1119,11 +1129,17 @@ class AgoraTransportClient:
         try:
             image = PIL.Image.frombytes(
                 frame.mode, frame.size, frame.image).convert("RGBA")
+            # image.save(os.path.join(VIDEOS_DIR, "temp.png"))
+
+            frame_buffer = bytearray(image.tobytes())
+            logging.debug(
+                f"width:{image.width}, height:{image.height}"
+                f" rgba_len:{image.width * image.height * 4}, len:{len(frame_buffer)}")
 
             video_frame = ExternalVideoFrame()
             video_frame.type = const.AGORA_VIDEO_BUFFER_RAW_DATA
             video_frame.format = const.AGORA_VIDEO_PIXEL_RGBA
-            video_frame.buffer = image.tobytes()
+            video_frame.buffer = frame_buffer
             video_frame.stride = image.width
             video_frame.height = image.height
             video_frame.timestamp = 0
