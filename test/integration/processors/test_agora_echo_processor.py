@@ -58,7 +58,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             audio_out_sample_rate=16000,
             audio_out_channels=1,
             camera_in_enabled=True,
-            camera_out_enabled=False,
+            camera_out_enabled=True,
             camera_out_width=640,  # from Video Profiles https://webdemo.agora.io/basicVideoCall/index.html
             camera_out_height=480,
             camera_out_framerate=30,

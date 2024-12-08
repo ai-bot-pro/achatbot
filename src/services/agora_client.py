@@ -130,7 +130,7 @@ class RtcChannelEventObserver(IVideoFrameObserver, rtc.ChannelEventObserver):
         # on_video_frame, channel_id=room-bot, remote_uid=1867636435, type=1, width=640,
         # height=480, y_stride=640, u_stride=320, v_stride=320, len_y=307200,
         # len_u=76800, len_v=76800, len_alpha_buffer=0
-        if remote_uid == '0':
+        if remote_uid == '0':  # TODO: check why why why?
             logging.info(
                 f"on_video_frame, channel_id={channel_id},"
                 f"remote_uid={remote_uid}, type={video_frame.type}, width={video_frame.width},"
@@ -1053,11 +1053,17 @@ class AgoraTransportClient:
             target_color_mode: str = "RGB") -> UserImageRawFrame | None:
         """Convert input video frame to image
         target_color_mode from PIL.Image.Image convert method mode param
+
+        cpu/gpu binding optimization:)
+        - now just use opencv to optimize the performance, when use cpu (c/c++)
+        - SIMD Vectorization
+        - GPU Acceleration
+        - use Numba jit to run fast
         """
         match video_frame.type:
             case const.AGORA_VIDEO_PIXEL_I420:  # default use yuv420
                 # too slow use python lib 64 ms with cpu, need use GPU optimized
-                # image = convert_I420_to_RGB(video_frame) 
+                # image = convert_I420_to_RGB(video_frame)
                 image = convert_I420_to_RGB_with_cv(video_frame)  # cv use c/c++ lib 2 ms with cpu
             # case const.AGORA_VIDEO_PIXEL_RGBA:
             # need to check RGBA from video
@@ -1066,7 +1072,7 @@ class AgoraTransportClient:
                 # image = convert_NV21_to_RGB(video_frame)
                 image = convert_NV21_to_RGB_optimized(video_frame)
             case const.AGORA_VIDEO_PIXEL_I422:
-                #image = convert_I422_to_RGB(video_frame)
+                # image = convert_I422_to_RGB(video_frame)
                 image = convert_I422_to_RGB_with_cv(video_frame)
             case const.AGORA_VIDEO_PIXEL_NV12:
                 # image = convert_NV12_to_RGB(video_frame)
@@ -1121,14 +1127,14 @@ class AgoraTransportClient:
                     participant_id, video_frame,
                     target_color_mode=color_format,
                 )
-                logging.info(f"convert_input_video_image time: {time.time()*1000 - start} ms")
+                logging.debug(f"convert_input_video_image time: {time.time()*1000 - start} ms")
 
                 start = time.time() * 1000
                 if asyncio.iscoroutinefunction(callback):
                     await callback(image_frame)
                 else:
                     callback(image_frame)
-                logging.info(f"callback time: {time.time()*1000 - start} ms")
+                logging.debug(f"callback time: {time.time()*1000 - start} ms")
             except asyncio.CancelledError:
                 logging.info("task cancelled")
                 break
