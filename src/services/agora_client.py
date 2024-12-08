@@ -106,6 +106,11 @@ class RtcChannelEventObserver(IVideoFrameObserver, rtc.ChannelEventObserver):
         vad_result_state: int, vad_result_bytearray: bytearray  # TODO: vad
     ):
         logging.debug(f"push AudioStream from channel:{channelId} uid:{uid} rtc.AudioFrame:{frame}")
+
+        # fix: when use had joined, the audio_streams no uid audio stream
+        if self.audio_streams.get(uid) is None:
+            return 0
+
         return super().on_playback_audio_frame_before_mixing(
             agora_local_user, channelId, uid, frame)
 
@@ -122,18 +127,22 @@ class RtcChannelEventObserver(IVideoFrameObserver, rtc.ChannelEventObserver):
         )
 
     def on_frame(self, channel_id, remote_uid, video_frame: VideoFrame):
-        # on_video_frame, channel_id=room-bot, remote_uid=1867636435, width=640,
+        # on_video_frame, channel_id=room-bot, remote_uid=1867636435, type=1, width=640,
         # height=480, y_stride=640, u_stride=320, v_stride=320, len_y=307200,
         # len_u=76800, len_v=76800, len_alpha_buffer=0
         if remote_uid == '0':
             logging.info(
                 f"on_video_frame, channel_id={channel_id},"
-                f"remote_uid={remote_uid}, width={video_frame.width},"
+                f"remote_uid={remote_uid}, type={video_frame.type}, width={video_frame.width},"
                 f"height={video_frame.height}, y_stride={video_frame.y_stride},"
                 f"u_stride={video_frame.u_stride}, v_stride={video_frame.v_stride},"
                 f"len_y={len(video_frame.y_buffer)}, len_u={len(video_frame.u_buffer)},"
                 f"len_v={len(video_frame.v_buffer)},"
                 f"len_alpha_buffer={len(video_frame.alpha_buffer) if video_frame.alpha_buffer else 0}")
+            return 1
+
+        # fix: when use had joined, the video_streams no uid video stream
+        if self.video_streams.get(remote_uid) is None:
             return 1
 
         self.loop.call_soon_threadsafe(
