@@ -22,6 +22,7 @@ from src.services.help.agora.video_utils import *
 
 try:
     from agora_realtime_ai_api import rtc
+    from agora.rtc.voice_detection import AudioVadV2, AudioVadConfigV2
     from agora.rtc.video_frame_observer import VideoFrame
     from agora.rtc.video_frame_observer import IVideoFrameObserver, VideoFrame
     from agora.rtc.video_frame_sender import ExternalVideoFrame
@@ -62,7 +63,7 @@ class VideoStream:
         return item
 
 
-class RtcChannelEventObserver(rtc.ChannelEventObserver, IVideoFrameObserver):
+class RtcChannelEventObserver(IVideoFrameObserver, rtc.ChannelEventObserver):
     """
     if rtc.ChannelEventObserver no register event name,
     - need add for custom event to run
@@ -73,7 +74,7 @@ class RtcChannelEventObserver(rtc.ChannelEventObserver, IVideoFrameObserver):
 
     def __init__(self, event_emitter: rtc.AsyncIOEventEmitter, options: rtc.RtcOptions) -> None:
         super().__init__(event_emitter, options)
-        self.video_streams = dict[int, VideoStream]()
+        self.video_streams = dict[str, VideoStream]()
 
     def on_connection_failure(
         self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: int
@@ -97,7 +98,8 @@ class RtcChannelEventObserver(rtc.ChannelEventObserver, IVideoFrameObserver):
         self.emit_event("disconnected", agora_rtc_conn, conn_info, reason)
 
     def on_playback_audio_frame_before_mixing(
-        self, agora_local_user: rtc.LocalUser, channelId, uid, frame: rtc.AudioFrame
+        self, agora_local_user: rtc.LocalUser, channelId, uid, frame: rtc.AudioFrame,
+        vad_result_state: int, vad_result_bytearray: bytearray  # TODO: vad
     ):
         logging.debug(f"push AudioStream from channel:{channelId} uid:{uid} rtc.AudioFrame:{frame}")
         return super().on_playback_audio_frame_before_mixing(
@@ -115,11 +117,11 @@ class RtcChannelEventObserver(rtc.ChannelEventObserver, IVideoFrameObserver):
             elapse_since_last_state,
         )
 
-    def on_frame(self, agora_handle, channel_id, user_id, video_frame: VideoFrame):
-        logging.info(f"on_video_frame, channel_id={channel_id}, remote_uid={user_id}, width={video_frame.width}, height={video_frame.height}, y_stride={video_frame.y_stride}, u_stride={video_frame.u_stride}, v_stride={video_frame.v_stride}, len_y={len(video_frame.y_buffer)}, len_u={len(video_frame.u_buffer)}, len_v={len(video_frame.v_buffer)}, len_alpha_buffer={len(video_frame.alpha_buffer) if video_frame.alpha_buffer else 0}")
+    def on_frame(self, channel_id, remote_uid, video_frame: VideoFrame):
+        logging.info(f"on_video_frame, channel_id={channel_id}, remote_uid={remote_uid}, width={video_frame.width}, height={video_frame.height}, y_stride={video_frame.y_stride}, u_stride={video_frame.u_stride}, v_stride={video_frame.v_stride}, len_y={len(video_frame.y_buffer)}, len_u={len(video_frame.u_buffer)}, len_v={len(video_frame.v_buffer)}, len_alpha_buffer={len(video_frame.alpha_buffer) if video_frame.alpha_buffer else 0}")
 
         self.loop.call_soon_threadsafe(
-            self.video_streams[user_id].queue.put_nowait, video_frame
+            self.video_streams[remote_uid].queue.put_nowait, video_frame
         )
 
         return 1
@@ -137,6 +139,7 @@ class RtcChannel(rtc.Channel):
         options: rtc.RtcOptions,
         loop: asyncio.AbstractEventLoop,
         service: rtc.AgoraService = None,
+        vad_conf: AudioVadConfigV2 = None,  # TODO:vad
     ) -> None:
         self._param = params
         self._token_claims = token_claims
@@ -161,10 +164,12 @@ class RtcChannel(rtc.Channel):
             client_role_type=rtc.ClientRoleType.CLIENT_ROLE_BROADCASTER,
             channel_profile=rtc.ChannelProfileType.CHANNEL_PROFILE_LIVE_BROADCASTING,
         )
+        # NOTE: use subscribe_audio don't to set auto_subscribe_audio
         # if params.audio_in_enabled:
         #    conn_config.auto_subscribe_audio = 1
-        if params.camera_in_enabled:
-            conn_config.auto_subscribe_video = 1
+        # NOTE: use subscribe_video don't to set auto_subscribe_video
+        # if params.camera_in_enabled:
+        #     conn_config.auto_subscribe_video = 1
         self.connection = self._service.create_rtc_connection(conn_config)
 
         # Create the event emitter for observer
@@ -187,7 +192,10 @@ class RtcChannel(rtc.Channel):
             self.local_user.set_playback_audio_frame_before_mixing_parameters(
                 options.channels, options.sample_rate
             )
-            ret = self.local_user.register_audio_frame_observer(self.channel_event_observer)
+            enable_vad = int(params.vad_enabled)  # TODO: vad
+            ret = self.local_user.register_audio_frame_observer(
+                self.channel_event_observer, enable_vad, vad_conf)
+
             if ret < 0:
                 raise Exception(f"register_audio_frame_observer failed")
             # self.local_user.subscribe_all_audio()
@@ -395,7 +403,7 @@ class RtcChannel(rtc.Channel):
         self,
         agora_local_user: rtc.LocalUser,
         channel: str,
-        user_id: int,
+        user_id: str,
         old_state: int,
         new_state: int,
         elapse_since_last_state: int,
@@ -404,12 +412,14 @@ class RtcChannel(rtc.Channel):
         if new_state == 3:  # Successfully subscribed
             if user_id not in self.channel_event_observer.audio_streams:
                 self.channel_event_observer.audio_streams[user_id] = rtc.AudioStream()
+                logging.info(
+                    f"{channel} {user_id} new AudioStream in audio_streams:{self.channel_event_observer.audio_streams}")
 
     def on_video_subscribe_state_changed(
         self,
         agora_local_user: rtc.LocalUser,
         channel: str,
-        user_id: int,
+        user_id: str,
         old_state: int,
         new_state: int,
         elapse_since_last_state: int,
@@ -437,15 +447,15 @@ class RtcChannel(rtc.Channel):
                 f"Failed to send audio frame: {ret}, audio frame length: {len(pcm_audio_frame.data) if pcm_audio_frame.data else 0}")
 
     # Video in
-    def get_video_frames(self, uid: int) -> VideoStream | None:
+    def get_video_frames(self, uid: str) -> VideoStream | None:
         """
         Returns the video frames from the channel.
 
         Returns:
             AudioStream: The video stream.
         """
-        return None if self.channel_event_observer.video_streams.get(
-            uid) is None else self.channel_event_observer.video_streams.get(uid)
+        return None if self.channel_event_observer.video_streams.get(uid) is None \
+            else self.channel_event_observer.video_streams.get(uid)
 
     # Video out
     async def push_yuv_video_frame(self, video_frame: ExternalVideoFrame) -> None:
@@ -472,14 +482,14 @@ class AgoraCallbacks(BaseModel):
     on_connection_failure: Callable[[int], Awaitable[None]]
     on_disconnected: Callable[[rtc.RTCConnection, rtc.RTCConnInfo, int], Awaitable[None]]
     on_error: Callable[[str], Awaitable[None]]
-    on_participant_connected: Callable[[rtc.RTCConnection, int], Awaitable[None]]
-    on_participant_disconnected: Callable[[rtc.RTCConnection, int, int], Awaitable[None]]
-    on_data_received: Callable[[bytes, int], Awaitable[None]]
-    on_first_participant_joined: Callable[[rtc.RTCConnection, int], Awaitable[None]]
+    on_participant_connected: Callable[[rtc.RTCConnection, str], Awaitable[None]]
+    on_participant_disconnected: Callable[[rtc.RTCConnection, str, int], Awaitable[None]]
+    on_data_received: Callable[[bytes, str], Awaitable[None]]
+    on_first_participant_joined: Callable[[str], Awaitable[None]]
     on_audio_subscribe_state_changed: Callable[[
-        rtc.LocalUser, str, int, int, int, int], Awaitable[None]]
+        rtc.LocalUser, str, str, int, int, int], Awaitable[None]]
     on_video_subscribe_state_changed: Callable[[
-        rtc.LocalUser, str, int, int, int, int], Awaitable[None]]
+        rtc.LocalUser, str, str, int, int, int], Awaitable[None]]
 
 
 class AgoraTransportClient:
@@ -518,18 +528,29 @@ class AgoraTransportClient:
 
         self._other_participant_has_joined = False
 
+        # wait to sub then notify task
+        self._in_task: asyncio.Task = self._loop.create_task(self.in_handle())
+        self._curr_subscribe_user: int | None = None
+
         # audio out
         # local participant audio stream
 
         # TODO: switch room anchor participant, need know room anchor
         # audio in
+        # passive sub
+        # self._on_participant_audio_frame_task: asyncio.Task | None = None
+        # active sub
         self._in_audio_queue = asyncio.Queue[bytes]()
         self._in_audio_task: asyncio.Task = self._loop.create_task(
             self.in_audio_handle()) if params.audio_in_enabled else None
 
         # video in
-        # passive sub the participant audio frame
+        # passive sub the participant video frame
         self._on_participant_video_frame_task: asyncio.Task | None = None
+        # active sub
+        # self._in_video_queue = asyncio.Queue[bytes]()
+        # self._in_video_task: asyncio.Task = self._loop.create_task(
+        #    self.in_video_handle()) if params.video_in_enabled else None
 
         # Set up channel event handlers to call register handlers
         # NOTE: those event at last will be called for customized callback
@@ -553,6 +574,12 @@ class AgoraTransportClient:
         return True
 
     async def cleanup(self):
+        if self._in_task\
+                and not self._in_task.cancelled():
+            self._in_task.cancel()
+            await self._in_task
+            # logging.info("Cancelled in_task")
+
         if self._in_audio_task\
                 and not self._in_audio_task.cancelled():
             self._in_audio_task.cancel()
@@ -682,8 +709,6 @@ class AgoraTransportClient:
         try:
             # Wait for the remote user with a timeout_s, timeout_s is None , no wait timeout
             remote_user = await asyncio.wait_for(future, timeout=timeout_s)
-            logging.info(f"Subscribing from remote_user {remote_user}")
-            self._other_participant_has_joined = True
             return remote_user
         except asyncio.TimeoutError:
             future.cancel()
@@ -725,7 +750,7 @@ class AgoraTransportClient:
         except Exception as e:
             logging.error(f"Error sending data: {e}")
 
-    def get_participant_ids(self) -> List[int]:
+    def get_participant_ids(self) -> List[str]:
         return list(self._channel.remote_users.keys())
 
     async def get_participant_metadata(self, participant_id: str) -> dict:
@@ -735,7 +760,7 @@ class AgoraTransportClient:
             return {}
         return {}
 
-    async def subscribe(self, user_id: int):
+    async def subscribe(self, user_id: str):
         """subscribe audio/video
         Idempotent subscribe
         """
@@ -747,7 +772,7 @@ class AgoraTransportClient:
         except Exception as e:
             logging.error(f"Error subscribing user {user_id}: {e}", exc_info=True)
 
-    async def unsubscribe(self, user_id: int):
+    async def unsubscribe(self, user_id: str):
         """unsubscribe audio/video
         Idempotent unsubscribe, but have some error log
         """
@@ -762,14 +787,8 @@ class AgoraTransportClient:
     # Event Callback
 
     def on_participant_connected(
-            self, agora_rtc_conn: rtc.RTCConnection, user_id: int):
+            self, agora_rtc_conn: rtc.RTCConnection, user_id: str):
         async def participant_connected():
-            if not self._other_participant_has_joined:
-                self._other_participant_has_joined = True
-                await self.subscribe(user_id)
-                await self._callbacks.on_first_participant_joined(
-                    agora_rtc_conn, user_id)
-
             await self._callbacks.on_participant_connected(
                 agora_rtc_conn, user_id)
 
@@ -781,7 +800,7 @@ class AgoraTransportClient:
     def on_participant_disconnected(
             self,
             agora_rtc_conn: rtc.RTCConnection,
-            user_id: int, reason: int):
+            user_id: str, reason: int):
         async def participant_disconnected():
             # befor destory
             participant_ids = self.get_participant_ids()
@@ -802,7 +821,7 @@ class AgoraTransportClient:
     def on_data_received(
             self,
             agora_local_user: rtc.LocalUser,
-            user_id: int, stream_id: str, data: bytes, length: int):
+            user_id: str, stream_id: str, data: bytes, length: int):
         logging.info(
             f"{agora_local_user} Received stream({stream_id}) message from {user_id} with ({type(data)})length: {length}")
         self._loop.create_task(self._callbacks.on_data_received(
@@ -834,7 +853,7 @@ class AgoraTransportClient:
         self,
         agora_local_user: rtc.LocalUser,
         channel: str,
-        user_id: int,
+        user_id: str,
         old_state: int,
         new_state: int,
         elapse_since_last_state: int,
@@ -846,7 +865,7 @@ class AgoraTransportClient:
         self,
         agora_local_user: rtc.LocalUser,
         channel: str,
-        user_id: int,
+        user_id: str,
         old_state: int,
         new_state: int,
         elapse_since_last_state: int,
@@ -854,25 +873,42 @@ class AgoraTransportClient:
         self._loop.create_task(self._callbacks.on_video_subscribe_state_changed(
             agora_local_user, channel, user_id, old_state, new_state, elapse_since_last_state))
 
+    async def in_handle(self) -> None:
+        """
+        wait remote user to subscirbe, when no participant join;
+        then notify the in audio/video handle to get audio/video stream
+        """
+        logging.debug("start in_handle")
+        try:
+            self._curr_subscribe_user = await self.wait_for_remote_user()
+            logging.info(
+                f"current subscribe user {self._curr_subscribe_user} other_participant_has_joined: {self._other_participant_has_joined}")
+            await self.subscribe(self._curr_subscribe_user)
+            if not self._other_participant_has_joined:
+                self._other_participant_has_joined = True
+                await self._callbacks.on_first_participant_joined(self._curr_subscribe_user)
+        except asyncio.CancelledError:
+            logging.info("Cancelled Audio task")
+        except Exception as e:
+            logging.error(f"in_handle error:{e}", exc_info=True)
+            return
+
     # Audio in
 
     async def in_audio_handle(self) -> None:
         """active sub the first participant audio frame """
-        logging.debug("start in_audio_handle")
+        logging.info("start in_audio_handle")
         try:
-            subscribe_user = await self.wait_for_remote_user()
-            logging.info(f"subscribe user {subscribe_user}")
-            # await self.subscribe(subscribe_user)
-            await self._channel.subscribe_audio(subscribe_user)
-
             # from on_playback_audio_frame_before_mixing callback
             # to get the audio frame published by the remote user
-            while subscribe_user is None or self._channel.get_audio_frames(subscribe_user) is None:
+            while self._curr_subscribe_user is None or self._channel.get_audio_frames(
+                    self._curr_subscribe_user) is None:
                 await asyncio.sleep(0.1)
 
-            audio_frames = self._channel.get_audio_frames(subscribe_user)
+            audio_frames = self._channel.get_audio_frames(self._curr_subscribe_user)
+            logging.info(f"start get_audio_frames({self._curr_subscribe_user}): {audio_frames}")
             async for audio_frame in audio_frames:
-                await self._in_audio_queue.put((audio_frame, subscribe_user))
+                await self._in_audio_queue.put((audio_frame, self._curr_subscribe_user))
                 # Yield control to allow other tasks to run
                 await asyncio.sleep(0)
         except asyncio.CancelledError:
@@ -962,6 +998,26 @@ class AgoraTransportClient:
 
     # Camera in
 
+    async def in_video_handle(self) -> None:
+        """active sub the first participant video frame """
+        logging.info("start in_video_handle")
+        try:
+            # from on_frame callback
+            # to get the video frame published by the remote user
+            while self._curr_subscribe_user is None or self._channel.get_video_frames(
+                    self._curr_subscribe_user) is None:
+                await asyncio.sleep(0.1)
+
+            video_frames = self._channel.get_video_frames(self._curr_subscribe_user)
+            logging.info(f"start get_video_frames({self._curr_subscribe_user}): {video_frames}")
+            async for video_frame in video_frames:
+                await self._in_video_queue.put((video_frame, self._curr_subscribe_user))
+                # Yield control to allow other tasks to run
+                await asyncio.sleep(0)
+        except asyncio.CancelledError:
+            logging.info("Cancelled video task")
+            return
+
     def _convert_input_video_image(
             self,
             participant_id: str,
@@ -1010,7 +1066,7 @@ class AgoraTransportClient:
         color_format: str = "RGB"
     ):
         """passive sub the participant video frame"""
-        video_stream = self._channel.get_video_frames(int(participant_id))
+        video_stream = self._channel.get_video_frames(participant_id)
         if not video_stream:
             logging.error(f"participant_id {participant_id} no video stream")
             return

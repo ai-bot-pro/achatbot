@@ -113,8 +113,8 @@ ngrok_proxy = ["pyngrok~=7.2.0", "nest-asyncio~=1.6.0"]
 agora = [
     #need move colorlog
     "colorlog",
-    "agora-realtime-ai-api-v1~=0.0.1", # python 3.10
-    "agora_python_server_sdk~=2.1.5",
+    "agora-realtime-ai-api-v1~=0.0.2",
+    "agora_python_server_sdk_v1~=0.0.1",
 ]
 daily = ["daily-python~=0.11.0"]
 livekit = ["livekit~=0.17.5"]

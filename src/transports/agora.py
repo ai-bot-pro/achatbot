@@ -96,9 +96,8 @@ class AgoraTransport(BaseTransport):
 
     async def _on_first_participant_joined(
             self,
-            agora_rtc_conn: rtc.RTCConnection,
             user_id: int):
-        await self._call_event_handler("on_first_participant_joined", agora_rtc_conn, user_id)
+        await self._call_event_handler("on_first_participant_joined", user_id)
 
     async def _on_error(self, error_msg: str):
         await self._call_event_handler("on_error", error_msg)

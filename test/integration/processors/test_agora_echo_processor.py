@@ -142,19 +142,13 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
     async def on_first_participant_joined(
             self,
             transport: AgoraTransport,
-            agora_rtc_conn: rtc.RTCConnection,
-            user_id: int):
-        logging.info(f"agora_rtc_conn:{agora_rtc_conn} user_id:{user_id}")
+            user_id: str):
+        logging.info(f"user_id:{user_id}")
 
         if self.params.audio_in_enabled:
-            transport.capture_participant_audio(
-                participant_id=user_id,
-            )
+            transport.capture_participant_audio(user_id)
         if self.params.camera_in_enabled:
-            print("----------------------->ok")
-            transport.capture_participant_video(
-                participant_id=user_id,
-            )
+            transport.capture_participant_video(user_id)
 
         await transport.send_message(
             f"hello,你好，我是机器人。",
@@ -165,7 +159,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             self,
             transport: AgoraTransport,
             agora_rtc_conn: rtc.RTCConnection,
-            user_id: int,
+            user_id: str,
             reason: int):
         logging.info(f"Partcipant {user_id} left. reason:{reason}")
         logging.info(f"current remote Partcipants {transport.get_participant_ids()}")
@@ -192,7 +186,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         transport: AgoraTransport,
         agora_local_user: rtc.LocalUser,
         channel: str,
-        user_id: int,
+        user_id: str,
         old_state: int,
         new_state: int,
         elapse_since_last_state: int,
@@ -203,7 +197,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
     async def on_data_received(
         self,
         transport: AgoraTransport,
-        data: bytes, user_id: int
+        data: bytes, user_id: str
     ):
         logging.info(f"len(data):{len(data)} user_id:{user_id}")
 
@@ -212,7 +206,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         transport: AgoraTransport,
         agora_local_user: rtc.LocalUser,
         channel: str,
-        user_id: int,
+        user_id: str,
         old_state: int,
         new_state: int,
         elapse_since_last_state: int,

@@ -48,6 +48,9 @@ class AgoraChannelBot(AIChannelBot):
         transport.add_event_handler(
             "on_data_received",
             self.on_data_received)
+        transport.add_event_handler(
+            "on_video_subscribe_state_changed",
+            self.on_video_subscribe_state_changed)
 
     async def on_connected(
             self,
@@ -73,8 +76,7 @@ class AgoraChannelBot(AIChannelBot):
     async def on_first_participant_joined(
             self,
             transport: AgoraTransport,
-            agora_rtc_conn: rtc.RTCConnection,
-            user_id: int):
+            user_id: str):
         logging.info(f"fisrt joined user_id:{user_id}")
 
         # TODO: need know room anchor participant
@@ -87,7 +89,7 @@ class AgoraChannelBot(AIChannelBot):
             self,
             transport: AgoraTransport,
             agora_rtc_conn: rtc.RTCConnection,
-            user_id: int,
+            user_id: str,
             reason: int):
         logging.info(f"Partcipant {user_id} left. reason:{reason}")
 
@@ -115,7 +117,7 @@ class AgoraChannelBot(AIChannelBot):
         transport: AgoraTransport,
         agora_local_user: rtc.LocalUser,
         channel: str,
-        user_id: int,
+        user_id: str,
         old_state: int,
         new_state: int,
         elapse_since_last_state: int,
@@ -126,6 +128,19 @@ class AgoraChannelBot(AIChannelBot):
     async def on_data_received(
         self,
         transport: AgoraTransport,
-        data: bytes, user_id: int
+        data: bytes, user_id: str
     ):
         logging.info(f"size:{len(data)} from user_id:{user_id}")
+
+    async def on_video_subscribe_state_changed(
+        self,
+        transport: AgoraTransport,
+        agora_local_user: rtc.LocalUser,
+        channel: str,
+        user_id: str,
+        old_state: int,
+        new_state: int,
+        elapse_since_last_state: int,
+    ):
+        logging.info(
+            f"agora_local_user:{agora_local_user}, channel:{channel}, user_id:{user_id}, old_state:{old_state}, new_state:{new_state}, elapse_since_last_state:{elapse_since_last_state}")
