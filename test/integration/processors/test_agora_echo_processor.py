@@ -57,8 +57,8 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             audio_out_enabled=True,
             audio_out_sample_rate=16000,
             audio_out_channels=1,
-            camera_in_enabled=False,
-            camera_out_enabled=True,
+            camera_in_enabled=True,
+            camera_out_enabled=False,
             camera_out_width=640,  # from Video Profiles https://webdemo.agora.io/basicVideoCall/index.html
             camera_out_height=480,
             camera_out_framerate=30,
@@ -148,6 +148,9 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         if self.params.audio_in_enabled:
             transport.capture_participant_audio(user_id)
         if self.params.camera_in_enabled:
+            # passive capture one image
+            # transport.capture_participant_video(user_id, framerate=0)
+            # active to capture
             transport.capture_participant_video(user_id)
 
         await transport.send_message(

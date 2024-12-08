@@ -645,7 +645,6 @@ class AgoraTransportClient:
 
             # TODO: transcription_enabled to start
 
-            demo_url = self._params.demo_voice_url
             # Set up audio source and track
             # - for pub/write out to local_participant microphone
             if self._params.audio_out_enabled:
@@ -657,7 +656,6 @@ class AgoraTransportClient:
             if self._params.camera_out_enabled:
                 self._channel.set_local_user_video_track()
                 logging.info(f"local user video track enabled")
-                demo_url = self._params.demo_video_url
 
             # Check if there are already participants in the room
             participants = self.get_participant_ids()
@@ -669,6 +667,9 @@ class AgoraTransportClient:
                 # or callback params use room to broadcast
                 await self._callbacks.on_first_participant_joined(participants[0])
 
+            demo_url = self._params.demo_voice_url
+            if self._params.camera_in_enabled or self._params.camera_out_enabled:
+                demo_url = self._params.demo_video_url
             url = f"{demo_url}?appid={quote(self._app_id)}&channel={quote(self._room_name)}&token={quote(self._token)}&uid={quote(str(self._token_claims.rtc.uid))}"
             logging.info(f"u can access url: {url}")
         except asyncio.TimeoutError:
@@ -1055,8 +1056,9 @@ class AgoraTransportClient:
         """
         match video_frame.type:
             case const.AGORA_VIDEO_PIXEL_I420:  # default use yuv420
-                image = convert_I420_to_RGB(video_frame)
-                # image = convert_I420_to_RGB_with_cv(video_frame)
+                # too slow use python lib 64 ms with cpu, need use GPU optimized
+                # image = convert_I420_to_RGB(video_frame) 
+                image = convert_I420_to_RGB_with_cv(video_frame)  # cv use c/c++ lib 2 ms with cpu
             # case const.AGORA_VIDEO_PIXEL_RGBA:
             # need to check RGBA from video
             #    image = convert_RGBA_to_RGB(video_frame)
@@ -1064,8 +1066,8 @@ class AgoraTransportClient:
                 # image = convert_NV21_to_RGB(video_frame)
                 image = convert_NV21_to_RGB_optimized(video_frame)
             case const.AGORA_VIDEO_PIXEL_I422:
-                image = convert_I422_to_RGB(video_frame)
-                # image = convert_I422_to_RGB_with_cv(video_frame)
+                #image = convert_I422_to_RGB(video_frame)
+                image = convert_I422_to_RGB_with_cv(video_frame)
             case const.AGORA_VIDEO_PIXEL_NV12:
                 # image = convert_NV12_to_RGB(video_frame)
                 image = convert_NV12_to_RGB_optimized(video_frame)
@@ -1098,7 +1100,7 @@ class AgoraTransportClient:
             logging.error(f"participant_id {participant_id} no video stream")
             return
 
-        self._on_participant_video_frame_task = self._loop.create_task(
+        self._on_participant_video_frame_task = asyncio.create_task(
             self._async_on_participant_video_frame(
                 participant_id, callback, video_stream, color_format))
 
@@ -1113,15 +1115,20 @@ class AgoraTransportClient:
             f"Started capture participant_id:{participant_id} from video stream {video_stream}")
         async for video_frame in video_stream:
             try:
+                start = time.time() * 1000
                 # covert video yuv frame to image (yuv->rgb)
                 image_frame = self._convert_input_video_image(
                     participant_id, video_frame,
                     target_color_mode=color_format,
                 )
+                logging.info(f"convert_input_video_image time: {time.time()*1000 - start} ms")
+
+                start = time.time() * 1000
                 if asyncio.iscoroutinefunction(callback):
                     await callback(image_frame)
                 else:
                     callback(image_frame)
+                logging.info(f"callback time: {time.time()*1000 - start} ms")
             except asyncio.CancelledError:
                 logging.info("task cancelled")
                 break
