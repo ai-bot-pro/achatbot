@@ -45,7 +45,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self):
         await self.livekit_room.close_session()
 
-    async def test_tts_daily_output(self):
+    async def test_echo(self):
         token = await self.livekit_room.gen_token(self.room_name)
         self.params = LivekitParams(
             audio_in_enabled=True,

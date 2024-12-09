@@ -83,7 +83,6 @@ class AgoraBot(AgoraChannelBot):
     async def on_first_participant_say_hi(
             self,
             transport: AgoraTransport,
-            agora_rtc_conn: rtc.RTCConnection,
             user_id: int):
         # joined use tts say "hello" to introduce with llm generate
         if self._bot_config.tts \

@@ -288,6 +288,7 @@ class IVisionDetector(ABC):
     @abstractmethod
     def detect(self, session) -> bool:
         """
+        cpu/gpu binding, need optimize to 10ms<
         input: session.ctx.state["detect_img"]
         detect object with confidence should be above threshold
         return bool
@@ -297,6 +298,7 @@ class IVisionDetector(ABC):
     @abstractmethod
     def annotate(self, session) -> Generator[Any, None, None]:
         """
+        cpu/gpu binding, need optimize to 10ms<
         input: session.ctx.state["detect_img"]
         annotate object from dectections,
         return Generator

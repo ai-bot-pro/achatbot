@@ -221,6 +221,7 @@ class TokenPaser():
                                 tokenClaims.apaas_room.role = val
 
         return tokenClaims
+
     @staticmethod
     def parse_detail(token):
         res = '\nToken is %s \n\n' % token

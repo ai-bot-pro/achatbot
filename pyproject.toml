@@ -18,13 +18,13 @@ build-backend = "setuptools.build_meta"
 name = "achatbot"
 #dynamic = ["version"]
 # todo
-version = "0.0.7.15"
+version = "0.0.8.1"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
 readme = "README.md"
 license = { file = "LICENSE" }
-keywords = ["ai", "chat bot", "audio", "speech"]
+keywords = ["ai", "chat bot", "audio", "speech", "video", "image"]
 # https://pypi.org/classifiers/
 classifiers = [
     # How mature is this project? Common values are
@@ -113,8 +113,8 @@ ngrok_proxy = ["pyngrok~=7.2.0", "nest-asyncio~=1.6.0"]
 agora = [
     #need move colorlog
     "colorlog",
-    "agora-realtime-ai-api~=1.0.8", # python 3.11
-    #"agora-realtime-ai-api@git+https://github.com/weedge/agora-realtime-ai-api", # for python 3.10
+    "agora-realtime-ai-api-v1~=0.0.3",   # dep agora_python_server_sdk_v1
+    "agora_python_server_sdk_v1~=0.0.2",
 ]
 daily = ["daily-python~=0.11.0"]
 livekit = ["livekit~=0.17.5"]

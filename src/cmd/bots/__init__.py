@@ -119,6 +119,33 @@ def import_bots(bot_name: str = "DummyBot"):
     if "AgoraBot" in bot_name:
         from . import agora_bot
         return True
+    if "AgoraEchoVisionBot" in bot_name:
+        from .vision import agora_echo_vision_bot
+        return True
+    if "AgoraMockVisionBot" in bot_name:
+        from .vision import agora_mock_vision_bot
+        return True
+    if "AgoraAnnotateVisionBot" in bot_name:
+        from .vision import agora_annotate_vision_bot
+        return True
+    if "AgoraChatToolsVisionBot" in bot_name:
+        from .vision import agora_chat_tools_vision_bot
+        return True
+    if "AgoraChatVisionBot" in bot_name:
+        from .vision import agora_chat_vision_bot
+        return True
+    if "AgoraDescribeVisionBot" in bot_name:
+        from .vision import agora_describe_vision_bot
+        return True
+    if "AgoraDescribeVisionToolsBot" in bot_name:
+        from .vision import agora_describe_vision_tools_bot
+        return True
+    if "AgoraDetectVisionBot" in bot_name:
+        from .vision import agora_detect_vision_bot
+        return True
+    if "AgoraOCRVisionBot" in bot_name:
+        from .vision import agora_ocr_vision_bot
+        return True
 
     return False
 

@@ -37,6 +37,7 @@ class AgoraTransport(BaseTransport):
         self._register_event_handler("on_data_received")
         self._register_event_handler("on_first_participant_joined")
         self._register_event_handler("on_audio_subscribe_state_changed")
+        self._register_event_handler("on_video_subscribe_state_changed")
         logging.info(f"AgoraTransport register event names: {self.event_names}")
         callbacks = AgoraCallbacks(
             on_connected=self._on_connected,
@@ -49,6 +50,7 @@ class AgoraTransport(BaseTransport):
             on_data_received=self._on_data_received,
             on_first_participant_joined=self._on_first_participant_joined,
             on_audio_subscribe_state_changed=self._on_audio_subscribe_state_changed,
+            on_video_subscribe_state_changed=self._on_video_subscribe_state_changed,
         )
 
         self._params = params
@@ -94,9 +96,8 @@ class AgoraTransport(BaseTransport):
 
     async def _on_first_participant_joined(
             self,
-            agora_rtc_conn: rtc.RTCConnection,
             user_id: int):
-        await self._call_event_handler("on_first_participant_joined", agora_rtc_conn, user_id)
+        await self._call_event_handler("on_first_participant_joined", user_id)
 
     async def _on_error(self, error_msg: str):
         await self._call_event_handler("on_error", error_msg)
@@ -148,6 +149,19 @@ class AgoraTransport(BaseTransport):
     ):
         await self._call_event_handler(
             "on_audio_subscribe_state_changed",
+            agora_local_user, channel, user_id, old_state, new_state, elapse_since_last_state)
+
+    async def _on_video_subscribe_state_changed(
+        self,
+        agora_local_user: rtc.LocalUser,
+        channel: rtc.Channel,
+        user_id: int,
+        old_state: int,
+        new_state: int,
+        elapse_since_last_state: int,
+    ):
+        await self._call_event_handler(
+            "on_video_subscribe_state_changed",
             agora_local_user, channel, user_id, old_state, new_state, elapse_since_last_state)
 
     async def send_message(self, message: str, participant_id: str | None = None):
