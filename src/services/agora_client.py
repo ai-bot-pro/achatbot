@@ -26,7 +26,7 @@ try:
     from agora.rtc.video_frame_observer import VideoFrame
     from agora.rtc.video_frame_observer import IVideoFrameObserver, VideoFrame
     from agora.rtc.video_frame_sender import ExternalVideoFrame
-    from agora.rtc.agora_base import *
+    from agora.rtc.agora_base import VideoEncoderConfiguration, VideoDimensions, VideoSubscriptionOptions
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
