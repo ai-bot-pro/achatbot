@@ -53,7 +53,7 @@ class ContainerRuntimeConfig:
                     "tts_edge,"
                     "deep_translator,together_ai,"
                     "queue"
-                    "]~=0.0.7.11",
+                    "]~=0.0.8.1",
                     "huggingface_hub[hf_transfer]==0.24.7",
                 ],
                 extra_index_url="https://pypi.org/simple/")
@@ -88,7 +88,7 @@ class ContainerRuntimeConfig:
                     "tts_edge,"
                     "deep_translator,together_ai,"
                     "queue"
-                    "]~=0.0.7.11",
+                    "]~=0.0.8.1",
                     "huggingface_hub[hf_transfer]==0.24.7",
                 ],
                 extra_index_url="https://pypi.org/simple/")
