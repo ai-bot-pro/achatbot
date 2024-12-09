@@ -11,13 +11,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
+from src.services.help import RoomManagerEnvInit
+from src.common.interface import IRoomManager
 from src.common.task_manager import TaskManagerFactory
 from src.common.const import *
 from src.common.logger import Logger
 from src.common.types import GeneralRoomInfo
-from src.services.help.daily_room import DailyRoom
 from src.cmd.bots import import_bots, import_websocket_bots, register_ai_room_bots
-from src.cmd.bots.run import BotTaskRunnerFE, RunBotInfo
+from src.cmd.bots.run import BotTaskRunnerFE, EngineClassInfo, RunBotInfo
 
 
 from dotenv import load_dotenv
@@ -129,11 +130,11 @@ async def metrics():
 
 
 @app.get("/create_room/{name}")
-async def create_room(name):
+async def create_room(name, tag: str = "daily_room"):
     """create room then redirect to room url"""
     try:
-        daily_room_obj = DailyRoom()
-        room: GeneralRoomInfo = await daily_room_obj.create_room(
+        room_obj = getRoomMgr(RunBotInfo(room_manager=EngineClassInfo(tag=tag)))
+        room: GeneralRoomInfo = await room_obj.create_room(
             name, exp_time_s=ROOM_EXPIRE_TIME)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"{e}")
@@ -149,26 +150,27 @@ curl -XPOST "http://0.0.0.0:4321/create_random_room" \
 
 @app.post("/create_random_room")
 async def fastapi_create_random_room(
-        exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME) -> JSONResponse:
+        exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME, tag: str = "daily_room") -> JSONResponse:
     try:
-        res = await create_random_room(exp_time_s)
+        res = await create_random_room(exp_time_s, tag)
     except Exception as e:
         logging.error(f"Exception in create_random_room: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"{e}")
     return JSONResponse(res)
 
 
-async def create_random_room(exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME) -> dict[str, Any]:
+async def create_random_room(exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME,
+                             tag: str = "daily_room") -> dict[str, Any]:
     """create random room and token return"""
     if exp_time_s > MAX_RANDOM_ROOM_EXPIRE_TIME:
         raise HTTPException(
             status_code=400,
             detail=f"exp_time_s must be less than {MAX_RANDOM_ROOM_EXPIRE_TIME} s")
-    daily_room_obj = DailyRoom()
-    room: GeneralRoomInfo = await daily_room_obj.create_room(exp_time_s=exp_time_s)
+    room_obj = getRoomMgr(RunBotInfo(room_manager=EngineClassInfo(tag=tag)))
+    room: GeneralRoomInfo = await room_obj.create_room(exp_time_s=exp_time_s)
 
     # Give the agent a token to join the session
-    bot_token = await daily_room_obj.gen_token(room.name, exp_time_s=exp_time_s)
+    bot_token = await room_obj.gen_token(room.name, exp_time_s=exp_time_s)
 
     if not room or not bot_token:
         detail = f"Failed to get token for room: {room.name}"
@@ -318,10 +320,10 @@ async def bot_join(chat_bot_name: str,
     if chat_bot_name == "DailyLangchainRAGBot":
         exp += DAILYLANGCHAINRAGBOT_EXPIRE_TIME
 
-    daily_room_obj = DailyRoom()
-    room = await daily_room_obj.create_room(exp_time_s=exp)
+    room_obj = getRoomMgr(info)
+    room = await room_obj.create_room(exp_time_s=exp)
     # Give the agent a token to join the session
-    bot_token = await daily_room_obj.gen_token(room.name, exp)
+    bot_token = await room_obj.gen_token(room.name, exp)
     if not room or not bot_token:
         detail = f"Failed to get token for room: {room.name}"
         return APIResponse(error_code=ERROR_CODE_BOT_FAIL_TOKEN, error_detail=detail).model_dump()
@@ -339,7 +341,7 @@ async def bot_join(chat_bot_name: str,
         raise Exception(detail)
 
     # Grab a token for the user to join with
-    user_token = await daily_room_obj.gen_token(room.name, exp)
+    user_token = await room_obj.gen_token(room.name, exp)
 
     data = {
         "room_name": room.name,
@@ -429,10 +431,10 @@ async def bot_join_room(room_name: str, chat_bot_name: str, info: RunBotInfo | d
         detail = f"bot {chat_bot_name} don't exist"
         return APIResponse(error_code=ERROR_CODE_BOT_UN_REGISTER, error_detail=detail).model_dump()
 
-    daily_room_obj = DailyRoom()
-    room = await daily_room_obj.create_room(room_name)
+    room_obj = getRoomMgr(info)
+    room = await room_obj.create_room(room_name)
     # Give the agent a token to join the session
-    bot_token = await daily_room_obj.gen_token(room.name, ROOM_EXPIRE_TIME)
+    bot_token = await room_obj.gen_token(room.name, ROOM_EXPIRE_TIME)
     if not room or not bot_token:
         detail = f"Failed to get token for room: {room.name}"
         return APIResponse(error_code=ERROR_CODE_BOT_FAIL_TOKEN, error_detail=detail).model_dump()
@@ -450,7 +452,7 @@ async def bot_join_room(room_name: str, chat_bot_name: str, info: RunBotInfo | d
         raise Exception(detail)
 
     # Grab a token for the user to join with
-    user_token = await daily_room_obj.gen_token(room.name, ROOM_EXPIRE_TIME)
+    user_token = await room_obj.gen_token(room.name, ROOM_EXPIRE_TIME)
 
     data = {
         "room_name": room.name,
@@ -499,12 +501,20 @@ async def get_status(pid: str) -> dict[str, Any]:
 
     try:
         room_name = val.tag
-        daily_room_obj = DailyRoom()
-        room = await daily_room_obj.get_room(room_name)
+        tag = "daily_room"
+        if "agora" == val.name.lower()[:5]:
+            tag = "agora_rtc_channel"
+        elif "livekit" == val.name.lower()[:7]:
+            tag = "livekit_room"
+
+        room_obj = getRoomMgr(RunBotInfo(room_manager=EngineClassInfo(tag=tag)))
+        room = await room_obj.get_room(room_name)
+        if room is None:
+            raise Exception(f"Room {room_name} not found")
     except Exception as ex:
         return APIResponse(
             error_code=ERROR_CODE_NO_ROOM,
-            error_detail=f"Failed to get room {room_name} from Daily REST API: {ex}",
+            error_detail=f"Failed to get room {room_name} : {ex}",
         ).model_dump()
 
     data = {
@@ -544,9 +554,9 @@ curl -XGET "http://0.0.0.0:4321/room/bots/chat-bot" | jq .
 
 
 @app.get("/room/bots/{room_name}")
-async def fastapi_get_room_bots(room_name: str):
+async def fastapi_get_room_bots(room_name: str, tag: str = "daily_room"):
     try:
-        res = await get_room_bots(room_name)
+        res = await get_room_bots(room_name, tag)
     except Exception as e:
         logging.error(f"Exception in get_room_bots: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"{e}")
@@ -554,11 +564,11 @@ async def fastapi_get_room_bots(room_name: str):
     return JSONResponse(res)
 
 
-async def get_room_bots(room_name: str) -> dict[str, Any]:
+async def get_room_bots(room_name: str, tag: str = "daily_room") -> dict[str, Any]:
     procs = []
     room = None
     for val in bot_task_mgr.tasks.values():
-        if val.tag == room_name:
+        if val.tag == room_name and tag.split("_")[0] in val.name.lower():
             procs.append({
                 "pid": val.tid,
                 "name": val.name,
@@ -566,12 +576,14 @@ async def get_room_bots(room_name: str) -> dict[str, Any]:
             })
 
     try:
-        daily_room_obj = DailyRoom()
-        room = await daily_room_obj.get_room(room_name)
+        room_obj = getRoomMgr(RunBotInfo(room_manager=EngineClassInfo(tag=tag)))
+        room = await room_obj.get_room(room_name)
+        if room is None:
+            raise Exception(f"Room {room_name} not found")
     except Exception as ex:
         return APIResponse(
             error_code=ERROR_CODE_NO_ROOM,
-            error_detail=f"Failed to get room {room_name} from Daily REST API: {ex}",
+            error_detail=f"Failed to get room {room_name} : {ex}",
         ).model_dump()
 
     response = APIResponse(data={
@@ -580,6 +592,17 @@ async def get_room_bots(room_name: str) -> dict[str, Any]:
     })
 
     return response.model_dump()
+
+
+def getRoomMgr(run_bot_info: RunBotInfo = None) -> IRoomManager:
+    room_mgr: IRoomManager = None
+    if run_bot_info and run_bot_info.room_manager:
+        room_mgr = RoomManagerEnvInit.initEngine(
+            run_bot_info.room_manager.tag,
+            run_bot_info.room_manager.args)
+    else:
+        room_mgr = RoomManagerEnvInit.initEngine()
+    return room_mgr
 
 
 def ngrok_proxy(port):
@@ -593,6 +616,9 @@ def ngrok_proxy(port):
 
 if __name__ == "__main__":
     """
+    support:
+    - daily/livekit room bot, agora channel bot, websocket bot, default use daily room bot
+
     ACHATBOT_TASK_TYPE=multiprocessing python -m src.cmd.http.server.fastapi_daily_bot_serve
     ACHATBOT_TASK_TYPE=threading python -m src.cmd.http.server.fastapi_daily_bot_serve
     ACHATBOT_TASK_TYPE=asyncio python -m src.cmd.http.server.fastapi_daily_bot_serve

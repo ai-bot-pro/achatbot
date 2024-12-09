@@ -16,7 +16,7 @@ class ContainerRuntimeConfig:
                     "sense_voice_asr,deepgram_asr_processor,"
                     "glm_voice_processor,"
                     "queue"
-                    "]~=0.0.8.1",
+                    "]~=0.0.8.3",
                     "gdown==5.1.0",
                     "matplotlib==3.7.5",
                     "huggingface_hub[hf_transfer]==0.24.7",

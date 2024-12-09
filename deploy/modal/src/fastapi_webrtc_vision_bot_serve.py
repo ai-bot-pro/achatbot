@@ -19,7 +19,7 @@ class ContainerRuntimeConfig:
                     "tts_edge,"
                     "deep_translator,together_ai,"
                     "queue"
-                    "]~=0.0.8.1",
+                    "]~=0.0.8.3",
                     "huggingface_hub[hf_transfer]==0.24.7",
                 ],
                 extra_index_url="https://pypi.org/simple/")
@@ -45,7 +45,7 @@ class ContainerRuntimeConfig:
                 [
                     "achatbot["
                     "fastapi_bot_server,"
-                    "livekit,livekit-api,daily,"
+                    "livekit,livekit-api,daily,agora,"
                     "silero_vad_analyzer,daily_langchain_rag_bot,"
                     "sense_voice_asr,deepgram_asr_processor,"
                     "llm_transformers_manual_vision_qwen,"
@@ -53,7 +53,7 @@ class ContainerRuntimeConfig:
                     "tts_edge,"
                     "deep_translator,together_ai,"
                     "queue"
-                    "]~=0.0.8.1",
+                    "]~=0.0.8.3",
                     "huggingface_hub[hf_transfer]==0.24.7",
                 ],
                 extra_index_url="https://pypi.org/simple/")
@@ -80,7 +80,7 @@ class ContainerRuntimeConfig:
                 [
                     "achatbot["
                     "fastapi_bot_server,"
-                    "livekit,livekit-api,daily,"
+                    "livekit,livekit-api,daily,agora,"
                     "silero_vad_analyzer,daily_langchain_rag_bot,"
                     "sense_voice_asr,deepgram_asr_processor,"
                     "llm_transformers_manual_vision_llama,"
@@ -88,7 +88,7 @@ class ContainerRuntimeConfig:
                     "tts_edge,"
                     "deep_translator,together_ai,"
                     "queue"
-                    "]~=0.0.8.1",
+                    "]~=0.0.8.3",
                     "huggingface_hub[hf_transfer]==0.24.7",
                 ],
                 extra_index_url="https://pypi.org/simple/")

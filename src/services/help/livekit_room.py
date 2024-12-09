@@ -63,7 +63,7 @@ class LivekitRoom(EngineClass, IRoomManager):
             sid=room.sid,
             name=room.name,
             ttl_s=room.empty_timeout,
-            creation_time=room.creation_time,
+            creation_time=str(room.creation_time),
             # NOTE: room.__dict__, python3.10 don't ok,python.3.11 ok
             extra_data={
                 "enabled_codecs": room.enabled_codecs,
@@ -113,7 +113,7 @@ class LivekitRoom(EngineClass, IRoomManager):
         g_room = GeneralRoomInfo(
             sid=room.sid,
             name=room.name,
-            creation_time=room.creation_time,
+            creation_time=str(room.creation_time),
             extra_data=room.__dict__,
         )
 
