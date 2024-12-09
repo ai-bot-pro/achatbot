@@ -24,7 +24,7 @@ maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
 readme = "README.md"
 license = { file = "LICENSE" }
-keywords = ["ai", "chat bot", "audio", "speech"]
+keywords = ["ai", "chat bot", "audio", "speech", "video", "image"]
 # https://pypi.org/classifiers/
 classifiers = [
     # How mature is this project? Common values are

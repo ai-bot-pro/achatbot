@@ -81,9 +81,9 @@ class AgoraChannelBot(AIChannelBot):
 
         # TODO: need know room anchor participant
         # now just support one by one chat with bot
-        transport.capture_participant_audio(
-            participant_id=user_id,
-        )
+        # transport.capture_participant_audio(
+        #    participant_id=user_id,
+        # )
 
     async def on_participant_disconnected(
             self,

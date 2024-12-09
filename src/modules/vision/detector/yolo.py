@@ -57,6 +57,9 @@ class VisionYoloDetector(EngineClass, IVisionDetector):
         return self._class_names
 
     def detect(self, session) -> bool:
+        """
+        TODO: cpu/gpu binding, need optimize to 10ms< with gpu acceleration
+        """
         if "detect_img" not in session.ctx.state:
             logging.warning("No detect_img in session ctx state")
             return False
@@ -114,6 +117,9 @@ class VisionYoloDetector(EngineClass, IVisionDetector):
         self._detected_filter = hanlder
 
     def annotate(self, session):
+        """
+        TODO: need optimize to 10ms< with gpu acceleration
+        """
         if "detect_img" not in session.ctx.state:
             logging.warning("No detect_img in session ctx state")
             yield None

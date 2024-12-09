@@ -130,8 +130,8 @@ class RtcChannelEventObserver(IVideoFrameObserver, rtc.ChannelEventObserver):
         # on_video_frame, channel_id=room-bot, remote_uid=1867636435, type=1, width=640,
         # height=480, y_stride=640, u_stride=320, v_stride=320, len_y=307200,
         # len_u=76800, len_v=76800, len_alpha_buffer=0
-        if remote_uid == '0':  # TODO: check why why why?
-            logging.info(
+        if remote_uid == '0':  # TODO: check
+            logging.debug(
                 f"on_video_frame, channel_id={channel_id},"
                 f"remote_uid={remote_uid}, type={video_frame.type}, width={video_frame.width},"
                 f"height={video_frame.height}, y_stride={video_frame.y_stride},"
@@ -216,7 +216,8 @@ class RtcChannel(rtc.Channel):
             self.local_user.set_playback_audio_frame_before_mixing_parameters(
                 options.channels, options.sample_rate
             )
-            enable_vad = int(params.vad_enabled)  # TODO: vad
+            # enable_vad = int(params.vad_enabled)  # TODO: vad
+            enable_vad = 0
             ret = self.local_user.register_audio_frame_observer(
                 self.channel_event_observer, enable_vad, vad_conf)
 
@@ -1149,8 +1150,7 @@ class AgoraTransportClient:
         !NOTE: (now just support RGBA color_format/mode)
         """
         try:
-            image = PIL.Image.frombytes(
-                frame.mode, frame.size, frame.image).convert("RGBA")
+            image = PIL.Image.frombytes(frame.mode, frame.size, frame.image).convert("RGBA")
             # image.save(os.path.join(VIDEOS_DIR, "temp.png"))
 
             frame_buffer = bytearray(image.tobytes())
