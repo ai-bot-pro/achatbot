@@ -36,6 +36,9 @@ class AgoraChannel(EngineClass, IRoomManager):
             self,
             room_name: str | None = None,
             exp_time_s: int = ROOM_EXPIRE_TIME) -> GeneralRoomInfo:
+        if not room_name:
+            return await self.create_random_room(exp_time_s=exp_time_s)
+
         return GeneralRoomInfo(
             name=room_name,
         )

@@ -549,14 +549,13 @@ class AgoraChannelArgs(BaseModel):
 
 
 # ---------------- Room Bots -------------
-@dataclass
-class GeneralRoomInfo:
+class GeneralRoomInfo(BaseModel):
     """general room info for diff webRTC room info to align"""
     sid: str = ""
     name: str = ""
     url: str = ""
     ttl_s: int | None = None
-    creation_time: int | None = None
+    creation_time: str | None = None
     extra_data: dict = field(default_factory=dict)
 
 

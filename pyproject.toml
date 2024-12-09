@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 name = "achatbot"
 #dynamic = ["version"]
 # todo
-version = "0.0.8.1"
+version = "0.0.8.3"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -83,6 +83,7 @@ flash-attn = ["flash-attn==2.5.6"]
 tiktoken = ["tiktoken~=0.7.0"]
 verovio = ["verovio~=4.3.1"]
 accelerate = ["accelerate~=0.28.0"]
+opencv = ["opencv-python~=4.10.0.84"]
 
 # diffusers DiT with quantizing model
 diffusers = [
@@ -115,6 +116,7 @@ agora = [
     "colorlog",
     "agora-realtime-ai-api-v1~=0.0.3",   # dep agora_python_server_sdk_v1
     "agora_python_server_sdk_v1~=0.0.2",
+    "achatbot[opencv]",
 ]
 daily = ["daily-python~=0.11.0"]
 livekit = ["livekit~=0.17.5"]
