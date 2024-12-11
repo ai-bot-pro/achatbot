@@ -65,14 +65,16 @@ class VoiceProcessorBase(AsyncAIProcessor):
 class SegmentedVoiceProcessor(VoiceProcessorBase):
     """SegmentedVoiceProcessor is a segement audio voice class for speech-to-speech processors."""
 
-    def __init__(self,
-                 *,
-                 min_volume: float = 0.6,
-                 max_silence_secs: float = 0.3,
-                 max_buffer_secs: float = 1.5,
-                 sample_rate: int = 16000,
-                 num_channels: int = 1,
-                 **kwargs):
+    def __init__(
+        self,
+        *,
+        min_volume: float = 0.6,
+        max_silence_secs: float = 0.3,
+        max_buffer_secs: float = 1.5,
+        sample_rate: int = 16000,
+        num_channels: int = 1,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self._min_volume = min_volume
         self._max_silence_secs = max_silence_secs
@@ -124,16 +126,21 @@ class SegmentedVoiceProcessor(VoiceProcessorBase):
         silence_secs = self._silence_num_frames / self._sample_rate
         buffer_secs = self._wave.getnframes() / self._sample_rate
         if self._content.tell() > 0 and (
-                buffer_secs > self._max_buffer_secs or silence_secs > self._max_silence_secs):
+            buffer_secs > self._max_buffer_secs or silence_secs > self._max_silence_secs
+        ):
             self._silence_num_frames = 0
             self._wave.close()
             self._content.seek(0)
             await self.start_processing_metrics()
-            await self.process_generator(self.run_voice(AudioRawFrame(
-                audio=self._content.read(),
-                sample_rate=self._sample_rate,
-                num_channels=self._num_channels,
-                sample_width=2,
-            )))
+            await self.process_generator(
+                self.run_voice(
+                    AudioRawFrame(
+                        audio=self._content.read(),
+                        sample_rate=self._sample_rate,
+                        num_channels=self._num_channels,
+                        sample_width=2,
+                    )
+                )
+            )
             await self.stop_processing_metrics()
             (self._content, self._wave) = self._new_wave()

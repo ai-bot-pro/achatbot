@@ -8,9 +8,17 @@ from apipeline.frames.data_frames import TextFrame, ImageRawFrame, AudioRawFrame
 from apipeline.frames.sys_frames import StopTaskFrame
 from apipeline.processors.logger import FrameLogger
 
-from src.processors.app_message_processor import AppMessageControllProcessor, BotLLMTextProcessor, BotTTSTextProcessor, UserTranscriptionProcessor
+from src.processors.app_message_processor import (
+    AppMessageControllProcessor,
+    BotLLMTextProcessor,
+    BotTTSTextProcessor,
+    UserTranscriptionProcessor,
+)
 from src.processors.tranlate.google_translate_processor import GoogleTranslateProcessor
-from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
+from src.processors.aggregators.llm_response import (
+    LLMAssistantResponseAggregator,
+    LLMUserResponseAggregator,
+)
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.cmd.bots.base_daily import DailyRoomBot
@@ -68,7 +76,9 @@ class DailyStoryTellingBot(DailyRoomBot):
             image_gen_processor.set_gen_image_frame(StoryImageFrame)
 
             transport = DailyTransport(
-                self.args.room_url, self.args.token, self.args.bot_name,
+                self.args.room_url,
+                self.args.token,
+                self.args.bot_name,
                 self.daily_params,
             )
             transport.add_event_handlers(
@@ -76,24 +86,22 @@ class DailyStoryTellingBot(DailyRoomBot):
                 [
                     self.on_first_participant_joined,
                     self.on_first_participant_say_hi,
-                ]
+                ],
             )
-            transport.add_event_handler(
-                "on_participant_left",
-                self.on_participant_left)
-            transport.add_event_handler(
-                "on_call_state_updated",
-                self.on_call_state_updated)
+            transport.add_event_handler("on_participant_left", self.on_participant_left)
+            transport.add_event_handler("on_call_state_updated", self.on_call_state_updated)
 
             self.intro_task = PipelineTask(
-                Pipeline([
-                    llm_processor,
-                    # FrameLogger(include_frame_types=[TextFrame]),
-                    tts_processor,
-                    AppMessageControllProcessor(),
-                    BotTTSTextProcessor(),
-                    transport.output_processor(),
-                ]),
+                Pipeline(
+                    [
+                        llm_processor,
+                        # FrameLogger(include_frame_types=[TextFrame]),
+                        tts_processor,
+                        AppMessageControllProcessor(),
+                        BotTTSTextProcessor(),
+                        transport.output_processor(),
+                    ]
+                ),
             )
             self.runner = PipelineRunner()
             # run the intro pipeline, task will exit after StopTaskFrame is processed.
@@ -109,33 +117,35 @@ class DailyStoryTellingBot(DailyRoomBot):
             assistant_response = LLMAssistantResponseAggregator(self._bot_config.llm.messages)
 
             self.task = PipelineTask(
-                Pipeline([
-                    transport.input_processor(),
-                    asr_processor,
-                    AppMessageControllProcessor(),
-                    UserTranscriptionProcessor(),
-                    user_response,
-                    llm_processor,
-                    # BotLLMTextProcessor(),
-                    # FrameLogger(include_frame_types=[TextFrame]),
-                    story_processor,
-                    # FrameLogger(
-                    #    include_frame_types=[
-                    #        StoryImageFrame,
-                    #        StoryPageFrame,
-                    #        StoryPromptFrame,
-                    #    ]
-                    # ),
-                    translate_processor,
-                    FrameLogger(include_frame_types=[StoryImageFrame]),
-                    image_gen_processor,
-                    tts_processor,
-                    # FrameLogger(include_frame_types=[ImageRawFrame, AudioRawFrame]),
-                    AppMessageControllProcessor(),
-                    BotTTSTextProcessor(),
-                    transport.output_processor(),
-                    assistant_response,
-                ]),
+                Pipeline(
+                    [
+                        transport.input_processor(),
+                        asr_processor,
+                        AppMessageControllProcessor(),
+                        UserTranscriptionProcessor(),
+                        user_response,
+                        llm_processor,
+                        # BotLLMTextProcessor(),
+                        # FrameLogger(include_frame_types=[TextFrame]),
+                        story_processor,
+                        # FrameLogger(
+                        #    include_frame_types=[
+                        #        StoryImageFrame,
+                        #        StoryPageFrame,
+                        #        StoryPromptFrame,
+                        #    ]
+                        # ),
+                        translate_processor,
+                        FrameLogger(include_frame_types=[StoryImageFrame]),
+                        image_gen_processor,
+                        tts_processor,
+                        # FrameLogger(include_frame_types=[ImageRawFrame, AudioRawFrame]),
+                        AppMessageControllProcessor(),
+                        BotTTSTextProcessor(),
+                        transport.output_processor(),
+                        assistant_response,
+                    ]
+                ),
                 params=PipelineParams(
                     allow_interruptions=False,
                     enable_metrics=True,
@@ -155,16 +165,20 @@ class DailyStoryTellingBot(DailyRoomBot):
         content = LLM_INTRO_PROMPT["content"] % TO_LLM_LANGUAGE[language]
         self._bot_config.llm.messages[0]["content"] = content
 
-        await self.intro_task.queue_frames([
-            images["book1"],
-            LLMMessagesFrame(copy.deepcopy(self._bot_config.llm.messages)),
-            DailyTransportMessageFrame(CUE_USER_TURN),
-            sounds["listening"],
-            images["book2"],
-            StopTaskFrame(),
-        ])
+        await self.intro_task.queue_frames(
+            [
+                images["book1"],
+                LLMMessagesFrame(copy.deepcopy(self._bot_config.llm.messages)),
+                DailyTransportMessageFrame(CUE_USER_TURN),
+                sounds["listening"],
+                images["book2"],
+                StopTaskFrame(),
+            ]
+        )
 
         self._bot_config.llm.messages = [LLM_BASE_PROMPT]
         content = LLM_BASE_PROMPT["content"] % (
-            TO_LLM_LANGUAGE[language], TO_LLM_LANGUAGE[language])
+            TO_LLM_LANGUAGE[language],
+            TO_LLM_LANGUAGE[language],
+        )
         self._bot_config.llm.messages[0]["content"] = content

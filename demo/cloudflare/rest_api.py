@@ -6,13 +6,14 @@ from typing import List
 
 import typer
 from dotenv import load_dotenv
+
 # Load environment variables from .env file
 load_dotenv(override=True)
 
 app = typer.Typer()
 
 
-@app.command('d1_table_query')
+@app.command("d1_table_query")
 def d1_table_query(db_id: str, sql: str, sql_params: List[str] = []) -> dict:
     """
     https://developers.cloudflare.com/api/operations/cloudflare-d1-query-database
@@ -26,8 +27,8 @@ def d1_table_query(db_id: str, sql: str, sql_params: List[str] = []) -> dict:
     }
     body = json.dumps(payload)
     headers = {
-        'Authorization': f"Bearer {api_key}",
-        'Content-Type': "application/json",
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
     }
 
     conn = http.client.HTTPSConnection("api.cloudflare.com")
@@ -45,7 +46,7 @@ def d1_table_query(db_id: str, sql: str, sql_params: List[str] = []) -> dict:
     return json_data
 
 
-@app.command('d1_db')
+@app.command("d1_db")
 def d1_db(db_id: str) -> dict:
     """
     https://developers.cloudflare.com/api/operations/cloudflare-d1-get-database
@@ -55,8 +56,8 @@ def d1_db(db_id: str) -> dict:
 
     conn = http.client.HTTPSConnection("api.cloudflare.com")
     headers = {
-        'Authorization': f"Bearer {api_key}",
-        'Content-Type': "application/json",
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
     }
 
     conn.request(
@@ -85,8 +86,7 @@ python -m demo.cloudflare.rest_api d1_table_query \
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s',
-        handlers=[
-            logging.StreamHandler()],
+        format="%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s",
+        handlers=[logging.StreamHandler()],
     )
     app()

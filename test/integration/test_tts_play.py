@@ -12,7 +12,8 @@ from src.common.session import Session
 from src.common.types import SessionCtx
 from src.common import interface
 from src.common.factory import EngineClass
-if os.getenv("INIT_TYPE", 'env') == 'yaml_config':
+
+if os.getenv("INIT_TYPE", "env") == "yaml_config":
     from src.cmd.init import YamlConfig as init
 else:
     from src.cmd.init import Env as init
@@ -38,7 +39,8 @@ class TestTTSPlay(unittest.TestCase):
 
     def on_play_chunk(self, session: Session, sub_chunk: bytes):
         logging.info(
-            f"play chunk with session.ctx.state {session.ctx.state} sub_chunk_len {len(sub_chunk)}")
+            f"play chunk with session.ctx.state {session.ctx.state} sub_chunk_len {len(sub_chunk)}"
+        )
 
     def setUp(self):
         self.sid = str(uuid.uuid4())
@@ -46,10 +48,9 @@ class TestTTSPlay(unittest.TestCase):
         self.tts: interface.ITts | EngineClass = init.initTTSEngine()
         self.conn = RedisQueueConnector(
             send_key=os.getenv("SEND_KEY", "SEND"),
-            host=os.getenv(
-                "REDIS_HOST",
-                "redis-12259.c240.us-east-1-3.ec2.redns.redis-cloud.com"),
-            port=os.getenv("REDIS_PORT", "12259"))
+            host=os.getenv("REDIS_HOST", "redis-12259.c240.us-east-1-3.ec2.redns.redis-cloud.com"),
+            port=os.getenv("REDIS_PORT", "12259"),
+        )
 
         self.player = init.initPlayerEngine()
         self.player.set_args(on_play_end=self.on_play_end)
@@ -73,9 +74,9 @@ class TestTTSPlay(unittest.TestCase):
             # {"text": "祝您好运！"},
         ]
         for item in test_case:
-            res = self.tts.filter_special_chars(item['text'])
+            res = self.tts.filter_special_chars(item["text"])
             print(f"res:{res}")
-            self.assertEqual(res, item['expect'])
+            self.assertEqual(res, item["expect"])
 
     def test_tts(self):
         play_t = threading.Thread(target=self.loop_recv)
@@ -102,14 +103,14 @@ class TestTTSPlay(unittest.TestCase):
             for i, chunk in enumerate(audio_iter):
                 logging.info(f"synthesize audio {i} chunk {len(chunk)}")
                 if len(chunk) > 0:
-                    self.conn.send(("PLAY_FRAMES", chunk, self.session), 'be')
-        self.conn.send(("PLAY_FRAMES_DONE", "", self.session), 'be')
+                    self.conn.send(("PLAY_FRAMES", chunk, self.session), "be")
+        self.conn.send(("PLAY_FRAMES_DONE", "", self.session), "be")
 
     def loop_recv(self):
         logging.info(f"start loop_recv with {self.player.TAG} ...")
         while True:
             try:
-                res = self.conn.recv('fe')
+                res = self.conn.recv("fe")
                 if res is None:
                     continue
 

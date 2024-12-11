@@ -55,7 +55,7 @@ class FastapiWebsocketServerOutputProcessor(AudioCameraOutputProcessor):
             await self.send_payload(frame)
 
             self._websocket_audio_buffer = self._websocket_audio_buffer[
-                self._params.audio_frame_size:
+                self._params.audio_frame_size :
             ]
 
     async def _write_frame(self, frame: Frame):
@@ -69,7 +69,8 @@ class FastapiWebsocketServerOutputProcessor(AudioCameraOutputProcessor):
                 return
             if self._websocket.client_state != WebSocketState.CONNECTED:
                 logging.warning(
-                    f"websocket not connected, client_state:{self._websocket.client_state}")
+                    f"websocket not connected, client_state:{self._websocket.client_state}"
+                )
                 return
 
             if isinstance(payload, str):

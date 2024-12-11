@@ -4,7 +4,6 @@ from typing import Dict
 
 
 class EventHandlerManager:
-
     def __init__(self):
         self._event_handlers: Dict[str, list] = {}
 
@@ -16,6 +15,7 @@ class EventHandlerManager:
         def decorator(handler):
             self.add_event_handler(event_name, handler)
             return handler
+
         return decorator
 
     def _register_event_handler(self, event_name: str):

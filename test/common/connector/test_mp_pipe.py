@@ -1,5 +1,6 @@
 import logging
 
+import os
 import unittest
 
 from src.common.connector.multiprocessing_pipe import MultiprocessingPipeConnector
@@ -26,10 +27,10 @@ class TestMultiprocessingPipeConnector(unittest.TestCase):
         self.connector.close()
 
     def test_send_recv(self):
-        print('be send')
-        self.connector.send((1, 2, 3), 'be')
-        print('fe recv')
-        v1, v2, v3 = self.connector.recv('fe')
+        print("be send")
+        self.connector.send((1, 2, 3), "be")
+        print("fe recv")
+        v1, v2, v3 = self.connector.recv("fe")
         print(v1, v2, v3)
         self.assertEqual(v1, 1)
         self.assertEqual(v2, 2)

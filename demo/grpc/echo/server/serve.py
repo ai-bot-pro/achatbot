@@ -15,8 +15,7 @@ def serve() -> None:
     logging.basicConfig()
     token = "oligei"
     authenticator = AuthenticationInterceptor(
-        'authorization', token,
-        grpc.StatusCode.UNAUTHENTICATED, 'Access denied!'
+        "authorization", token, grpc.StatusCode.UNAUTHENTICATED, "Access denied!"
     )
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=10),

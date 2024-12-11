@@ -7,6 +7,7 @@ from google.generativeai.types import content_types
 import typer
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 app = typer.Typer()
@@ -25,10 +26,7 @@ def set_light_values(brightness, color_temp):
     Returns:
         A dictionary containing the set brightness and color temperature.
     """
-    return {
-        "brightness": brightness,
-        "colorTemperature": color_temp
-    }
+    return {"brightness": brightness, "colorTemperature": color_temp}
 
 
 def add(a: float, b: float):
@@ -58,11 +56,7 @@ def run_auto_function_calling():
     """
     model = genai.GenerativeModel(
         model_name="gemini-1.5-flash-latest",
-        tools=[
-            add,
-            subtract,
-            multiply,
-            divide],
+        tools=[add, subtract, multiply, divide],
         system_instruction="You are a helpful assistant who converses with a user and answers questions. Respond concisely to general questions. ",
     )
     print(model._generation_config)
@@ -122,19 +116,17 @@ def call_function(function_call, functions):
 @app.command()
 def run_manual_function_calling(stream: bool = True):
     """
-    run manual function calling, no chat session, no history message
-    For more control, you can process [`genai.protos.FunctionCall`](https://ai.google.dev/api/python/google/generativeai/protos/FunctionCall) requests from the model yourself. This would be the case if:
-- You use a `ChatSession` with the default `enable_automatic_function_calling=False`.
-- You use `GenerativeModel.generate_content` (and manage the chat history yourself).
+        run manual function calling, no chat session, no history message
+        For more control, you can process [`genai.protos.FunctionCall`](https://ai.google.dev/api/python/google/generativeai/protos/FunctionCall) requests from the model yourself. This would be the case if:
+    - You use a `ChatSession` with the default `enable_automatic_function_calling=False`.
+    - You use `GenerativeModel.generate_content` (and manage the chat history yourself).
     """
     functions = {
         "find_movies": find_movies,
         "find_theaters": find_theaters,
         "get_showtimes": get_showtimes,
     }
-    model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash-latest",
-        tools=functions.values())
+    model = genai.GenerativeModel(model_name="gemini-1.5-flash-latest", tools=functions.values())
     # 1. llm --gen--> function call
     response = model.generate_content(
         "Which theaters in Mountain View show the Barbie movie?",
@@ -158,18 +150,14 @@ def run_manual_function_calling(stream: bool = True):
     s.update({"result": result})
     # Update this after https://github.com/google/generative-ai-python/issues/243
     function_response = genai.protos.Part(
-        function_response=genai.protos.FunctionResponse(
-            name="find_theaters", response=s)
+        function_response=genai.protos.FunctionResponse(name="find_theaters", response=s)
     )
     # Build the message history
     messages = [
         # fmt: off
-        {"role": "user",
-         "parts": ["Which theaters in Mountain View show the Barbie movie?."]},
-        {"role": "model",
-         "parts": response.candidates[0].content.parts},
-        {"role": "user",
-         "parts": [function_response]},
+        {"role": "user", "parts": ["Which theaters in Mountain View show the Barbie movie?."]},
+        {"role": "model", "parts": response.candidates[0].content.parts},
+        {"role": "user", "parts": [function_response]},
         # fmt: on
     ]
     print("messages-->", messages)
@@ -191,9 +179,7 @@ def run_function_calling_chain():
         "find_theaters": find_theaters,
         "get_showtimes": get_showtimes,
     }
-    model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash-latest",
-        tools=functions.values())
+    model = genai.GenerativeModel(model_name="gemini-1.5-flash-latest", tools=functions.values())
     chat = model.start_chat(enable_automatic_function_calling=True)
     response = chat.send_message(
         "Which comedy movies are shown tonight in Mountain view and at what time?",
@@ -249,9 +235,7 @@ def run_parallel_function_calls():
     # Set the model up with tools.
     house_fns = [power_disco_ball, start_music, dim_lights]
     # Try this out with Pro and Flash...
-    model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash-latest",
-        tools=house_fns)
+    model = genai.GenerativeModel(model_name="gemini-1.5-flash-latest", tools=house_fns)
 
     # Call the API.
     # chat = model.start_chat(enable_automatic_function_calling=True) # chat complete
@@ -308,18 +292,14 @@ def run_auto_function_calling_with_config():
     instruction = "You are a helpful lighting system bot. You can turn lights on and off, and you can set the color. Do not perform any other tasks."
 
     model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash-latest",
-        tools=light_controls,
-        system_instruction=instruction
+        model_name="gemini-1.5-flash-latest", tools=light_controls, system_instruction=instruction
     )
 
     chat = model.start_chat()
 
     print("-------none function call-----------")
     tool_config = tool_config_from_mode("none")
-    response = chat.send_message(
-        "Hello light-bot, what can you do?", tool_config=tool_config
-    )
+    response = chat.send_message("Hello light-bot, what can you do?", tool_config=tool_config)
     print(response.text)
     for content in chat.history:
         print(content.role, "->", [type(part).to_dict(part) for part in content.parts])
@@ -359,5 +339,5 @@ def run_auto_function_calling_with_config():
         print("-" * 80)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app()

@@ -17,7 +17,11 @@ class LivekitOCRVisionBot(LivekitRoomBot):
     def __init__(self, **args) -> None:
         super().__init__(**args)
         self.init_bot_config()
-        self._trigger_texts = self._bot_config.vision_ocr.trigger_texts if self._bot_config.vision_ocr.trigger_texts else "识别内容。"
+        self._trigger_texts = (
+            self._bot_config.vision_ocr.trigger_texts
+            if self._bot_config.vision_ocr.trigger_texts
+            else "识别内容。"
+        )
 
     async def arun(self):
         vad_analyzer = self.get_vad_analyzer()
@@ -42,15 +46,12 @@ class LivekitOCRVisionBot(LivekitRoomBot):
         livekit_params.audio_out_sample_rate = stream_info["sample_rate"]
         livekit_params.audio_out_channels = stream_info["channels"]
 
-        transport = LivekitTransport(
-            self.args.token,
-            params=livekit_params
-        )
+        transport = LivekitTransport(self.args.token, params=livekit_params)
 
         @transport.event_handler("on_first_participant_joined")
         async def on_first_participant_joined(
-                transport: LivekitTransport,
-                participant: rtc.RemoteParticipant,
+            transport: LivekitTransport,
+            participant: rtc.RemoteParticipant,
         ):
             # subscribed the first participant
             transport.capture_participant_video(participant.sid, framerate=0)
@@ -61,22 +62,25 @@ class LivekitOCRVisionBot(LivekitRoomBot):
                 f"你好,{participant_name}。"
                 f"这是一个图像OCR demo。"
                 f"对视频中识别的物体请说配置项vision ocr, trigger texts中的识别内容词。"
-                f"默认：'识别内容'。")
+                f"默认：'识别内容'。"
+            )
 
         @transport.event_handler("on_video_track_subscribed")
         async def on_video_track_subscribed(
-                transport: LivekitTransport,
-                participant: rtc.RemoteParticipant,
+            transport: LivekitTransport,
+            participant: rtc.RemoteParticipant,
         ):
             transport.capture_participant_video(participant.sid, framerate=0)
 
-        pipeline = Pipeline([
-            transport.input_processor(),
-            asr_processor,
-            image_requester,
-            ocr_processor,
-            tts_processor,
-            transport.output_processor(),
-        ])
+        pipeline = Pipeline(
+            [
+                transport.input_processor(),
+                asr_processor,
+                image_requester,
+                ocr_processor,
+                tts_processor,
+                transport.output_processor(),
+            ]
+        )
         self.task = PipelineTask(pipeline)
         await PipelineRunner().run(self.task)

@@ -16,7 +16,11 @@ class AgoraOCRVisionBot(AgoraChannelBot):
     def __init__(self, **args) -> None:
         super().__init__(**args)
         self.init_bot_config()
-        self._trigger_texts = self._bot_config.vision_ocr.trigger_texts if self._bot_config.vision_ocr.trigger_texts else "识别内容。"
+        self._trigger_texts = (
+            self._bot_config.vision_ocr.trigger_texts
+            if self._bot_config.vision_ocr.trigger_texts
+            else "识别内容。"
+        )
 
     async def arun(self):
         vad_analyzer = self.get_vad_analyzer()
@@ -41,10 +45,7 @@ class AgoraOCRVisionBot(AgoraChannelBot):
         agora_params.audio_out_sample_rate = stream_info["sample_rate"]
         agora_params.audio_out_channels = stream_info["channels"]
 
-        transport = AgoraTransport(
-            self.args.token,
-            params=agora_params
-        )
+        transport = AgoraTransport(self.args.token, params=agora_params)
 
         @transport.event_handler("on_first_participant_joined")
         async def on_first_participant_joined(
@@ -60,15 +61,18 @@ class AgoraOCRVisionBot(AgoraChannelBot):
                 f"你好,{participant_name}。"
                 f"这是一个图像OCR demo。"
                 f"对视频中识别的物体请说配置项vision ocr, trigger texts中的识别内容词。"
-                f"默认：'识别内容'。")
+                f"默认：'识别内容'。"
+            )
 
-        pipeline = Pipeline([
-            transport.input_processor(),
-            asr_processor,
-            image_requester,
-            ocr_processor,
-            tts_processor,
-            transport.output_processor(),
-        ])
+        pipeline = Pipeline(
+            [
+                transport.input_processor(),
+                asr_processor,
+                image_requester,
+                ocr_processor,
+                tts_processor,
+                transport.output_processor(),
+            ]
+        )
         self.task = PipelineTask(pipeline)
         await PipelineRunner().run(self.task)

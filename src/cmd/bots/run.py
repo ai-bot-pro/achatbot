@@ -35,14 +35,14 @@ class BotTaskRunner:
         self.task_connector: IConnector = None
         if self.run_bot_info.task_connector:
             self.task_connector = ConnectorInit.getEngine(
-                self.run_bot_info.task_connector.tag,
-                **self.run_bot_info.task_connector.args)
+                self.run_bot_info.task_connector.tag, **self.run_bot_info.task_connector.args
+            )
 
         self.room_mgr: IRoomManager = None
         if self.run_bot_info.room_manager:
             self.room_mgr = RoomManagerEnvInit.initEngine(
-                self.run_bot_info.room_manager.tag,
-                self.run_bot_info.room_manager.args)
+                self.run_bot_info.room_manager.tag, self.run_bot_info.room_manager.args
+            )
         else:
             self.room_mgr = RoomManagerEnvInit.initEngine()
 
@@ -55,13 +55,14 @@ class BotTaskRunner:
         room_url = bot_info.room_url
         bot_token = bot_info.token
         if not self.room_mgr:
-            logging.error(f"need init RoomManager!")
+            logging.error("need init RoomManager!")
             return
 
         is_valid = await self.room_mgr.check_valid_room(bot_info.room_name, bot_info.token)
         if not is_valid:
             room: GeneralRoomInfo = await self.room_mgr.create_room(
-                bot_info.room_name, exp_time_s=ROOM_EXPIRE_TIME)
+                bot_info.room_name, exp_time_s=ROOM_EXPIRE_TIME
+            )
             bot_token = await self.room_mgr.gen_token(room.name, ROOM_EXPIRE_TIME)
             await self.room_mgr.close_session()
             room_url = room.url
@@ -79,7 +80,8 @@ class BotTaskRunner:
         self._bot_obj = register_ai_room_bots[bot_info.chat_bot_name](**kwargs)
 
         self._pid = await self.task_mgr.run_task(
-            self._bot_obj.run, bot_info.chat_bot_name, bot_info.room_name)
+            self._bot_obj.run, bot_info.chat_bot_name, bot_info.room_name
+        )
 
     async def _run_websocket_bot(self, bot_info: BotInfo):
         kwargs = BotRunArgs(
@@ -92,18 +94,18 @@ class BotTaskRunner:
         ).__dict__
         self._bot_obj = register_ai_room_bots[bot_info.chat_bot_name](**kwargs)
         self._pid = await self.task_mgr.run_task(
-            self._bot_obj.run, bot_info.chat_bot_name, bot_info.room_name)
+            self._bot_obj.run, bot_info.chat_bot_name, bot_info.room_name
+        )
 
-    @ property
+    @property
     def bot_config(self):
         return self._bot_obj.bot_config() if self._bot_obj else {}
 
-    @ property
+    @property
     def pid(self):
         return self._pid if self._pid else None
 
     async def run_bot(self, bot_info: BotInfo):
-
         if bot_info.transport_type == "websocket":
             if import_websocket_bots(bot_info.chat_bot_name) is False:
                 detail = f"un import bot: {bot_info.chat_bot_name}"
@@ -128,7 +130,7 @@ class BotTaskRunnerFE(BotTaskRunner):
             await self.run_bot(self.run_bot_info)
             return
 
-        self.task_connector.send(("RUN_BOT_TASK", self.run_bot_info, self.session), 'fe')
+        self.task_connector.send(("RUN_BOT_TASK", self.run_bot_info, self.session), "fe")
 
 
 class BotTaskRunnerBE(BotTaskRunner):
@@ -142,7 +144,7 @@ class BotTaskRunnerBE(BotTaskRunner):
         # just a easy recv, no done for consumed msg
         # or Idempotent retry with task status
         while True:
-            res = self.task_connector.recv('be')
+            res = self.task_connector.recv("be")
             if res is None:
                 continue
 

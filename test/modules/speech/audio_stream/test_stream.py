@@ -1,4 +1,3 @@
-
 import logging
 import os
 import time
@@ -43,9 +42,9 @@ class TestAudioInStream(unittest.TestCase):
         self.assertEqual(frame_count, self.stream_info.in_frames_per_buffer)
         self.assertEqual(
             len(in_data),
-            self.stream_info.in_sample_width *
-            self.stream_info.in_channels *
-            self.stream_info.in_frames_per_buffer
+            self.stream_info.in_sample_width
+            * self.stream_info.in_channels
+            * self.stream_info.in_frames_per_buffer,
         )
         self.buffer_queue and self.buffer_queue.put_nowait(in_data)
         play_data = chr(0) * len(in_data)
@@ -65,11 +64,12 @@ class TestAudioInStream(unittest.TestCase):
         pass
 
     def setUp(self):
-        self.is_callback = bool(os.getenv('IS_CALLBACK', ""))
-        self.audio_in_stream: IAudioStream | EngineClass = AudioStreamEnvInit.initAudioInStreamEngine()
+        self.is_callback = bool(os.getenv("IS_CALLBACK", ""))
+        self.audio_in_stream: IAudioStream | EngineClass = (
+            AudioStreamEnvInit.initAudioInStreamEngine()
+        )
         self.stream_info: AudioStreamInfo = self.audio_in_stream.get_stream_info()
-        self.session = Session(**SessionCtx(
-            "test_client_id").__dict__)
+        self.session = Session(**SessionCtx("test_client_id").__dict__)
         if self.is_callback:
             self.audio_in_stream.set_args(stream_callback=self.stream_callback)
 
@@ -119,8 +119,8 @@ AUDIO_OUT_STREAM_TAG=daily_room_audio_out_stream \
 class TestAudioOutStream(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        audio_file = os.path.join(TEST_DIR, f"audio_files", f"vad_test.wav")
-        cls.audio_file = os.getenv('AUDIO_FILE', audio_file)
+        audio_file = os.path.join(TEST_DIR, "audio_files", "vad_test.wav")
+        cls.audio_file = os.getenv("AUDIO_FILE", audio_file)
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
@@ -253,8 +253,9 @@ class TestAudioInOutStream(unittest.TestCase):
             data = self.in_stream_test.get_record_buf(num_frames)
             print(len(data))
             if self.in_stream_test.is_callback is False:
-                self.assertEqual(len(data), num_frames *
-                                 self.in_stream_test.stream_info.in_sample_width)
+                self.assertEqual(
+                    len(data), num_frames * self.in_stream_test.stream_info.in_sample_width
+                )
             if len(data) > 0:
                 self.audio_out_stream.write_stream(data)
             read_cn -= 1

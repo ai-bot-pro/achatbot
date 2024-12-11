@@ -59,8 +59,8 @@ class AgoraMockVisionBot(AgoraChannelBot):
 
         @transport.event_handler("on_first_participant_joined")
         async def on_first_participant_joined(
-                transport: AgoraTransport,
-                user_id: str,
+            transport: AgoraTransport,
+            user_id: str,
         ):
             # subscribed the first participant
             transport.capture_participant_video(user_id, framerate=0)
@@ -70,21 +70,25 @@ class AgoraMockVisionBot(AgoraChannelBot):
                 f"hello,你好，{participant_name}, 我是机器人。",
                 participant_id=user_id,
             )
-            await tts_processor.say(f"你好，{participant_name}, 欢迎使用 Vision Bot. 我是一名虚拟助手，可以结合视频进行提问。")
+            await tts_processor.say(
+                f"你好，{participant_name}, 欢迎使用 Vision Bot. 我是一名虚拟助手，可以结合视频进行提问。"
+            )
 
-        pipeline = Pipeline([
-            transport.input_processor(),
-            FrameLogger(include_frame_types=[UserImageRawFrame]),
-            asr_processor,
-            # llm_in_aggr,
-            in_aggr,
-            image_requester,
-            FrameLogger(include_frame_types=[TextFrame]),
-            vision_aggregator,
-            llm_processor,
-            tts_processor,
-            transport.output_processor(),
-            # llm_out_aggr,
-        ])
+        pipeline = Pipeline(
+            [
+                transport.input_processor(),
+                FrameLogger(include_frame_types=[UserImageRawFrame]),
+                asr_processor,
+                # llm_in_aggr,
+                in_aggr,
+                image_requester,
+                FrameLogger(include_frame_types=[TextFrame]),
+                vision_aggregator,
+                llm_processor,
+                tts_processor,
+                transport.output_processor(),
+                # llm_out_aggr,
+            ]
+        )
         self.task = PipelineTask(pipeline, params=PipelineParams())
         await PipelineRunner().run(self.task)

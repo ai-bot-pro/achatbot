@@ -15,11 +15,12 @@ from src.types.vision.ocr.transformers_got import TransformersGoTOCRArgs
 try:
     from qwen_vl_utils import fetch_image
     from transformers import AutoModel, AutoTokenizer, TextIteratorStreamer
+
     cur_dir = os.path.dirname(__file__)
     if bool(os.getenv("ACHATBOT_PKG", "")):
-        sys.path.insert(1, os.path.join(cur_dir, '../../../GOTOCR2'))
+        sys.path.insert(1, os.path.join(cur_dir, "../../../GOTOCR2"))
     else:
-        sys.path.insert(1, os.path.join(cur_dir, '../../../../deps/GOTOCR2'))
+        sys.path.insert(1, os.path.join(cur_dir, "../../../../deps/GOTOCR2"))
     from deps.GOTOCR2.GOT.utils.utils import disable_torch_init, KeywordsStoppingCriteria
     from deps.GOTOCR2.GOT.utils.conversation import conv_templates, SeparatorStyle
     from deps.GOTOCR2.GOT.model.plug.blip_process import BlipImageEvalProcessor
@@ -27,15 +28,16 @@ try:
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        f"In order to use GOT OCR2.0 language models, you need to `pip install achatbot[vision_transformers_got_ocr]`,"
-        f"use awq model need to `pip install achatbot[vision_transformers_got_ocr]`")
+        "In order to use GOT OCR2.0 language models, you need to `pip install achatbot[vision_transformers_got_ocr]`,"
+        "use awq model need to `pip install achatbot[vision_transformers_got_ocr]`"
+    )
     raise Exception(f"Missing module: {e}")
 
 DEFAULT_IMAGE_TOKEN = "<image>"
-DEFAULT_IMAGE_PATCH_TOKEN = '<imgpad>'
+DEFAULT_IMAGE_PATCH_TOKEN = "<imgpad>"
 
-DEFAULT_IM_START_TOKEN = '<img>'
-DEFAULT_IM_END_TOKEN = '</img>'
+DEFAULT_IM_START_TOKEN = "<img>"
+DEFAULT_IM_END_TOKEN = "</img>"
 
 
 class TransformersGOTOCRLM(BaseLLM, IVisionOCR):
@@ -45,10 +47,10 @@ class TransformersGOTOCRLM(BaseLLM, IVisionOCR):
     https://github.com/facebookresearch/detectron2/blob/main/detectron2/modeling/backbone/vit.py
 
     """
+
     TAG = "vision_transformers_got_ocr"
 
     def __init__(self, **args) -> None:
-
         self.args = TransformersGoTOCRArgs(**args)
 
         if hasattr(torch, self.args.lm_torch_dtype):
@@ -59,7 +61,8 @@ class TransformersGOTOCRLM(BaseLLM, IVisionOCR):
         disable_torch_init()
 
         self._tokenizer = AutoTokenizer.from_pretrained(
-            self.args.lm_model_name_or_path, trust_remote_code=True)
+            self.args.lm_model_name_or_path, trust_remote_code=True
+        )
 
         if self.args.lm_device_map:
             # self._model = AutoModel.from_pretrained(
@@ -76,18 +79,23 @@ class TransformersGOTOCRLM(BaseLLM, IVisionOCR):
             ).eval()
         else:
             # self._model = AutoModel.from_pretrained(
-            self._model = GOTQwenForCausalLM.from_pretrained(
-                self.args.lm_model_name_or_path,
-                torch_dtype=self.torch_dtype,
-                attn_implementation=self.args.lm_attn_impl,
-                use_safetensors=True,
-                pad_token_id=self._tokenizer.eos_token_id,
-                trust_remote_code=True,
-            ).eval().to(self.args.lm_device)
+            self._model = (
+                GOTQwenForCausalLM.from_pretrained(
+                    self.args.lm_model_name_or_path,
+                    torch_dtype=self.torch_dtype,
+                    attn_implementation=self.args.lm_attn_impl,
+                    use_safetensors=True,
+                    pad_token_id=self._tokenizer.eos_token_id,
+                    trust_remote_code=True,
+                )
+                .eval()
+                .to(self.args.lm_device)
+            )
         logging.debug(f"GOT model:{self._model}, device: {self._model.device}")
 
         self._streamer = TextIteratorStreamer(
-            self._tokenizer, skip_prompt=True, skip_special_tokens=True)
+            self._tokenizer, skip_prompt=True, skip_special_tokens=True
+        )
         self._image: Image.Image = None
 
         self.warmup()
@@ -99,21 +107,21 @@ class TransformersGOTOCRLM(BaseLLM, IVisionOCR):
         pass
 
     def set_image(self, session: Session):
-        if 'ocr_img' not in session.ctx.state:
-            logging.warning(f"no ocr_img in session.ctx.state")
+        if "ocr_img" not in session.ctx.state:
+            logging.warning("no ocr_img in session.ctx.state")
             return False
 
-        ocr_image = session.ctx.state['ocr_img']
-        if isinstance(ocr_image, dict) \
-            and all(
-                isinstance(k, str)
-                and isinstance(v, (str, Image.Image)) for k, v in ocr_image.items()):
+        ocr_image = session.ctx.state["ocr_img"]
+        if isinstance(ocr_image, dict) and all(
+            isinstance(k, str) and isinstance(v, (str, Image.Image)) for k, v in ocr_image.items()
+        ):
             self._image = fetch_image(ocr_image)
         elif isinstance(ocr_image, Image.Image):
             self._image = ocr_image
         else:
             raise ValueError(
-                f"Unrecognized image input: PIL.Image or dict key:image/image_url, val:support local path, http url, base64 and PIL.Image, got {ocr_image}")
+                f"Unrecognized image input: PIL.Image or dict key:image/image_url, val:support local path, http url, base64 and PIL.Image, got {ocr_image}"
+            )
 
         logging.debug(f"ocr image: {self._image}")
         return True
@@ -135,9 +143,8 @@ class TransformersGOTOCRLM(BaseLLM, IVisionOCR):
             streamer=self._streamer,
         )
         thread = Thread(
-            target=self._model.chat,
-            args=(self._tokenizer, self._image),
-            kwargs=generation_kwargs)
+            target=self._model.chat, args=(self._tokenizer, self._image), kwargs=generation_kwargs
+        )
         thread.start()
 
         for new_text in self._streamer:
@@ -158,8 +165,8 @@ class TransformersGOTOCRLM(BaseLLM, IVisionOCR):
                 res += text
                 pos = self._have_special_char(res)
                 if pos > -1:
-                    yield res[:pos + 1]
-                    res = res[pos + 1:]
+                    yield res[: pos + 1]
+                    res = res[pos + 1 :]
         if len(res) > 0:
             yield res + "."
 
@@ -171,10 +178,10 @@ class TransformersGOTOCRLM(BaseLLM, IVisionOCR):
             yield None
             return
 
-        if self.args.ocr_type == 'format':
-            qs = 'OCR with format: '
+        if self.args.ocr_type == "format":
+            qs = "OCR with format: "
         else:
-            qs = 'OCR: '
+            qs = "OCR: "
 
         w, h = self._image.size
         if self.args.ocr_box:
@@ -187,24 +194,29 @@ class TransformersGOTOCRLM(BaseLLM, IVisionOCR):
                 bbox[1] = int(bbox[1] / h * 1000)
                 bbox[2] = int(bbox[2] / w * 1000)
                 bbox[3] = int(bbox[3] / h * 1000)
-            if self.args.ocr_type == 'format':
-                qs = str(bbox) + ' ' + 'OCR with format: '
+            if self.args.ocr_type == "format":
+                qs = str(bbox) + " " + "OCR with format: "
             else:
-                qs = str(bbox) + ' ' + 'OCR: '
+                qs = str(bbox) + " " + "OCR: "
 
         if self.args.ocr_color:
-            if self.args.ocr_type == 'format':
-                qs = '[' + self.args.ocr_color + ']' + ' ' + 'OCR with format: '
+            if self.args.ocr_type == "format":
+                qs = "[" + self.args.ocr_color + "]" + " " + "OCR with format: "
             else:
-                qs = '[' + self.args.ocr_color + ']' + ' ' + 'OCR: '
+                qs = "[" + self.args.ocr_color + "]" + " " + "OCR: "
 
         use_im_start_end = True
         image_token_len = 256
         if use_im_start_end:
-            qs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_PATCH_TOKEN * \
-                image_token_len + DEFAULT_IM_END_TOKEN + '\n' + qs
+            qs = (
+                DEFAULT_IM_START_TOKEN
+                + DEFAULT_IMAGE_PATCH_TOKEN * image_token_len
+                + DEFAULT_IM_END_TOKEN
+                + "\n"
+                + qs
+            )
         else:
-            qs = DEFAULT_IMAGE_TOKEN + '\n' + qs
+            qs = DEFAULT_IMAGE_TOKEN + "\n" + qs
 
         #!TODO: need config system prompt
         # self.args.conv_mode = "mpt"
@@ -229,7 +241,8 @@ class TransformersGOTOCRLM(BaseLLM, IVisionOCR):
 
         device_type = "cuda" if "cuda" in str(self._model.device) else "cpu"
         logging.debug(
-            f"inference device_type: {device_type}, image shape:{image.shape}, image dtype:{image.dtype}")
+            f"inference device_type: {device_type}, image shape:{image.shape}, image dtype:{image.dtype}"
+        )
 
         def run():
             with torch.autocast(device_type, dtype=self.torch_dtype):
@@ -241,7 +254,9 @@ class TransformersGOTOCRLM(BaseLLM, IVisionOCR):
                     no_repeat_ngram_size=20,
                     streamer=self._streamer,
                     max_new_tokens=4096,
-                    stopping_criteria=[stopping_criteria])
+                    stopping_criteria=[stopping_criteria],
+                )
+
         thread = Thread(target=run)
         thread.start()
 

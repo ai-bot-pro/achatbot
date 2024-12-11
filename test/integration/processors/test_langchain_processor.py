@@ -1,4 +1,3 @@
-
 import unittest
 
 from langchain.prompts import ChatPromptTemplate
@@ -13,10 +12,13 @@ from src.types.frames.control_frames import (
     LLMFullResponseEndFrame,
     LLMFullResponseStartFrame,
     UserStartedSpeakingFrame,
-    UserStoppedSpeakingFrame)
-from src.types.frames.data_frames import (TextFrame, TranscriptionFrame)
+    UserStoppedSpeakingFrame,
+)
+from src.types.frames.data_frames import TextFrame, TranscriptionFrame
 from src.processors.aggregators.llm_response import (
-    LLMAssistantResponseAggregator, LLMUserResponseAggregator)
+    LLMAssistantResponseAggregator,
+    LLMUserResponseAggregator,
+)
 from src.processors.ai_frameworks.langchain_processor import LangchainProcessor
 
 
@@ -54,7 +56,6 @@ class TestLangchainProcessor(unittest.IsolatedAsyncioTestCase):
         pass
 
     async def test_langchain(self):
-
         messages = [("system", "Say hello to {name}"), ("human", "{input}")]
         prompt = ChatPromptTemplate.from_messages(messages).partial(name="Thomas")
         chain = prompt | self.fake_llm

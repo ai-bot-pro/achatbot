@@ -13,6 +13,7 @@ from src.cmd.bots.base_livekit import LivekitRoomBot
 from src.cmd.bots import register_ai_room_bots
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 
@@ -46,18 +47,20 @@ class LivekitMoshiVoiceBot(LivekitRoomBot):
             params=self.params,
         )
 
-        messages = []
-        if self._bot_config.llm.messages:
-            messages = self._bot_config.llm.messages
+        # messages = []
+        # if self._bot_config.llm.messages:
+        #    messages = self._bot_config.llm.messages
 
         self.task = PipelineTask(
-            Pipeline([
-                transport.input_processor(),
-                FrameLogger(include_frame_types=[AudioRawFrame]),
-                self._voice_processor,
-                FrameLogger(include_frame_types=[AudioRawFrame, TextFrame]),
-                transport.output_processor(),
-            ]),
+            Pipeline(
+                [
+                    transport.input_processor(),
+                    FrameLogger(include_frame_types=[AudioRawFrame]),
+                    self._voice_processor,
+                    FrameLogger(include_frame_types=[AudioRawFrame, TextFrame]),
+                    transport.output_processor(),
+                ]
+            ),
             params=PipelineParams(
                 allow_interruptions=False,
                 enable_metrics=True,
@@ -67,8 +70,8 @@ class LivekitMoshiVoiceBot(LivekitRoomBot):
         self.regisiter_room_event(transport)
 
         transport.add_event_handlers(
-            "on_first_participant_joined",
-            [self.on_first_participant_say_hi])
+            "on_first_participant_joined", [self.on_first_participant_say_hi]
+        )
 
         await PipelineRunner().run(self.task)
 

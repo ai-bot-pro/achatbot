@@ -22,21 +22,24 @@ class ContainerRuntimeConfig:
                     "]~=0.0.8.3",
                     "huggingface_hub[hf_transfer]==0.24.7",
                 ],
-                extra_index_url="https://pypi.org/simple/")
-            .env({
-                "HF_HUB_ENABLE_HF_TRANSFER": "1",
-                "ACHATBOT_PKG": "1",
-                "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
-                "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
-                # asr module engine TAG, default whisper_timestamped_asr
-                "ASR_TAG": "sense_voice_asr",
-                "ASR_LANG": "zn",
-                "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
-                # llm processor model, default:google gemini_flash_latest
-                "GOOGLE_LLM_MODEL": "gemini-1.5-flash-latest",
-                # tts module engine TAG,default tts_edge
-                "TTS_TAG": "tts_edge",
-            })
+                extra_index_url="https://pypi.org/simple/",
+            )
+            .env(
+                {
+                    "HF_HUB_ENABLE_HF_TRANSFER": "1",
+                    "ACHATBOT_PKG": "1",
+                    "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
+                    "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
+                    # asr module engine TAG, default whisper_timestamped_asr
+                    "ASR_TAG": "sense_voice_asr",
+                    "ASR_LANG": "zn",
+                    "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
+                    # llm processor model, default:google gemini_flash_latest
+                    "GOOGLE_LLM_MODEL": "gemini-1.5-flash-latest",
+                    # tts module engine TAG,default tts_edge
+                    "TTS_TAG": "tts_edge",
+                }
+            )
         ),
         "qwen": (
             modal.Image.debian_slim(python_version="3.11")
@@ -56,22 +59,25 @@ class ContainerRuntimeConfig:
                     "]~=0.0.8.3",
                     "huggingface_hub[hf_transfer]==0.24.7",
                 ],
-                extra_index_url="https://pypi.org/simple/")
-            .env({
-                "HF_HUB_ENABLE_HF_TRANSFER": "1",
-                "ACHATBOT_PKG": "1",
-                "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
-                "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
-                # asr module engine TAG, default whisper_timestamped_asr
-                "ASR_TAG": "sense_voice_asr",
-                "ASR_LANG": "zn",
-                "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
-                # llm processor model, default:google gemini_flash_latest
-                "GOOGLE_LLM_MODEL": "gemini-1.5-flash-latest",
-                "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "Qwen/Qwen2-VL-2B-Instruct")}',
-                # tts module engine TAG,default tts_edge
-                "TTS_TAG": "tts_edge",
-            })
+                extra_index_url="https://pypi.org/simple/",
+            )
+            .env(
+                {
+                    "HF_HUB_ENABLE_HF_TRANSFER": "1",
+                    "ACHATBOT_PKG": "1",
+                    "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
+                    "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
+                    # asr module engine TAG, default whisper_timestamped_asr
+                    "ASR_TAG": "sense_voice_asr",
+                    "ASR_LANG": "zn",
+                    "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
+                    # llm processor model, default:google gemini_flash_latest
+                    "GOOGLE_LLM_MODEL": "gemini-1.5-flash-latest",
+                    "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "Qwen/Qwen2-VL-2B-Instruct")}',
+                    # tts module engine TAG,default tts_edge
+                    "TTS_TAG": "tts_edge",
+                }
+            )
         ),
         "llama": (
             modal.Image.debian_slim(python_version="3.11")
@@ -91,22 +97,25 @@ class ContainerRuntimeConfig:
                     "]~=0.0.8.3",
                     "huggingface_hub[hf_transfer]==0.24.7",
                 ],
-                extra_index_url="https://pypi.org/simple/")
-            .env({
-                "HF_HUB_ENABLE_HF_TRANSFER": "1",
-                "ACHATBOT_PKG": "1",
-                "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
-                "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
-                # asr module engine TAG, default whisper_timestamped_asr
-                "ASR_TAG": "sense_voice_asr",
-                "ASR_LANG": "zn",
-                "ASR_MODEL_NAME_OR_PATH": "FunAudioLLM/SenseVoiceSmall",
-                # llm processor model, default:google gemini_flash_latest
-                "GOOGLE_LLM_MODEL": "gemini-1.5-flash-latest",
-                "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "unsloth/Llama-3.2-11B-Vision-Instruct")}',
-                # tts module engine TAG,default tts_edge
-                "TTS_TAG": "tts_edge",
-            })
+                extra_index_url="https://pypi.org/simple/",
+            )
+            .env(
+                {
+                    "HF_HUB_ENABLE_HF_TRANSFER": "1",
+                    "ACHATBOT_PKG": "1",
+                    "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
+                    "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
+                    # asr module engine TAG, default whisper_timestamped_asr
+                    "ASR_TAG": "sense_voice_asr",
+                    "ASR_LANG": "zn",
+                    "ASR_MODEL_NAME_OR_PATH": "FunAudioLLM/SenseVoiceSmall",
+                    # llm processor model, default:google gemini_flash_latest
+                    "GOOGLE_LLM_MODEL": "gemini-1.5-flash-latest",
+                    "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "unsloth/Llama-3.2-11B-Vision-Instruct")}',
+                    # tts module engine TAG,default tts_edge
+                    "TTS_TAG": "tts_edge",
+                }
+            )
         ),
     }
 
@@ -162,6 +171,7 @@ class Srv:
         # https://huggingface.co/docs/huggingface_hub/guides/download
         from huggingface_hub import snapshot_download
         from achatbot.common.types import MODELS_DIR
+
         os.makedirs(MODELS_DIR, exist_ok=True)
         print(f"start downloading model to dir:{MODELS_DIR}")
 
@@ -194,6 +204,7 @@ class Srv:
     @modal.asgi_app()
     def app(self):
         from achatbot.cmd.http.server.fastapi_daily_bot_serve import app
+
         return app
 
 

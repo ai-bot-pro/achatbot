@@ -72,14 +72,12 @@ class StreamPlayer(AudioPlayer, IPlayer):
         self.audio.start_stream()
 
         if not self.playback_thread or not self.playback_thread.is_alive():
-            self.playback_thread = threading.Thread(
-                target=self._process_buffer, args=(session,))
+            self.playback_thread = threading.Thread(target=self._process_buffer, args=(session,))
             self.playback_thread.start()
 
     def _process_buffer(self, session: Session):
         logging.info(f"{self.TAG} start process buffer thread")
-        while (self.playback_active
-               or not self.buffer_manager.empty()):
+        while self.playback_active or not self.buffer_manager.empty():
             try:
                 if self.audio.is_stream_active() is False:
                     break
@@ -87,8 +85,7 @@ class StreamPlayer(AudioPlayer, IPlayer):
                 chunk and self._play_chunk(session, chunk)
 
                 if self.immediate_stop_event.is_set():
-                    logging.info(
-                        f"Immediate stop requested, aborting {self.TAG}")
+                    logging.info(f"Immediate stop requested, aborting {self.TAG}")
                     break
             except queue.Empty:
                 continue
@@ -106,10 +103,13 @@ class StreamPlayer(AudioPlayer, IPlayer):
             segment = AudioSegment.from_mp3(io.BytesIO(chunk))
             chunk = segment.raw_data
 
-        sub_chunk_len = self.stream_info.out_frames_per_buffer * \
-            self.stream_info.out_channels * self.stream_info.out_sample_width
+        sub_chunk_len = (
+            self.stream_info.out_frames_per_buffer
+            * self.stream_info.out_channels
+            * self.stream_info.out_sample_width
+        )
         for i in range(0, len(chunk), sub_chunk_len):
-            sub_chunk = chunk[i:i + sub_chunk_len]
+            sub_chunk = chunk[i : i + sub_chunk_len]
 
             if not self.first_chunk_played and self.args.on_play_start:
                 self.on_play_start(session, sub_chunk)
@@ -167,56 +167,58 @@ class StreamPlayer(AudioPlayer, IPlayer):
         self.pause_event.clear()
 
 
-class PlayStreamInit():
+class PlayStreamInit:
     # TTS_TAG : stream_info, read_only dict
-    map_tts_player_stream_info = MappingProxyType({
-        'tts_coqui': {
-            "format": PYAUDIO_PAFLOAT32,
-            "channels": 1,
-            "rate": 24000,
-            "sample_width": 4,
-        },
-        'tts_chat': {
-            "format": PYAUDIO_PAINT16,
-            "channels": 1,
-            "rate": 24000,
-            "sample_width": 2,
-        },
-        'tts_edge': {
-            "format": PYAUDIO_PAINT16,
-            "channels": 1,
-            "rate": 22050,
-            "sample_width": 2,
-        },
-        'tts_g': {
-            "format": PYAUDIO_PAINT16,
-            "channels": 1,
-            "rate": 22050,
-            "sample_width": 2,
-        },
-        'tts_cosy_voice': {
-            "format": PYAUDIO_PAINT16,
-            "channels": 1,
-            "rate": 22050,
-            "sample_width": 2,
-        },
-        'tts_daily_speaker': {
-            "format": PYAUDIO_PAINT16,
-            "channels": 1,
-            "rate": 16000,
-            "sample_width": 2,
-        },
-        'tts_16k_speaker': {
-            "format": PYAUDIO_PAINT16,
-            "channels": 1,
-            "rate": 16000,
-            "sample_width": 2,
-        },
-    })
+    map_tts_player_stream_info = MappingProxyType(
+        {
+            "tts_coqui": {
+                "format": PYAUDIO_PAFLOAT32,
+                "channels": 1,
+                "rate": 24000,
+                "sample_width": 4,
+            },
+            "tts_chat": {
+                "format": PYAUDIO_PAINT16,
+                "channels": 1,
+                "rate": 24000,
+                "sample_width": 2,
+            },
+            "tts_edge": {
+                "format": PYAUDIO_PAINT16,
+                "channels": 1,
+                "rate": 22050,
+                "sample_width": 2,
+            },
+            "tts_g": {
+                "format": PYAUDIO_PAINT16,
+                "channels": 1,
+                "rate": 22050,
+                "sample_width": 2,
+            },
+            "tts_cosy_voice": {
+                "format": PYAUDIO_PAINT16,
+                "channels": 1,
+                "rate": 22050,
+                "sample_width": 2,
+            },
+            "tts_daily_speaker": {
+                "format": PYAUDIO_PAINT16,
+                "channels": 1,
+                "rate": 16000,
+                "sample_width": 2,
+            },
+            "tts_16k_speaker": {
+                "format": PYAUDIO_PAINT16,
+                "channels": 1,
+                "rate": 16000,
+                "sample_width": 2,
+            },
+        }
+    )
 
     @staticmethod
     def get_stream_info() -> dict:
-        tts_tag = os.getenv('TTS_TAG', "tts_edge")
+        tts_tag = os.getenv("TTS_TAG", "tts_edge")
         if tts_tag in PlayStreamInit.map_tts_player_stream_info:
             # !NOTE: return map_tts_player_stream_info is ref can change it,
             # so don't change it, just read only map (use MappingProxyType)

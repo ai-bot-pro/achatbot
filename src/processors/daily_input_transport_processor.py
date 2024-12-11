@@ -12,7 +12,7 @@ from src.services.daily_client import DailyTransportClient
 from src.types.frames.data_frames import (
     InterimTranscriptionFrame,
     TranscriptionFrame,
-    UserImageRawFrame
+    UserImageRawFrame,
 )
 from src.types.frames.control_frames import UserImageRequestFrame
 from src.common.types import DailyParams
@@ -21,7 +21,6 @@ from src.modules.speech.vad_analyzer.daily_webrtc import DailyWebRTCVADAnalyzer
 
 
 class DailyInputTransportProcessor(AudioVADInputProcessor):
-
     def __init__(self, client: DailyTransportClient, params: DailyParams, **kwargs):
         super().__init__(params, **kwargs)
 
@@ -29,7 +28,8 @@ class DailyInputTransportProcessor(AudioVADInputProcessor):
             # Default use DailyWebRTCVADAnalyzer
             self._vad_analyzer = DailyWebRTCVADAnalyzer(
                 sample_rate=self._params.audio_in_sample_rate,
-                num_channels=self._params.audio_in_channels)
+                num_channels=self._params.audio_in_channels,
+            )
 
         self._client = client
         self._video_renderers = {}
@@ -98,11 +98,12 @@ class DailyInputTransportProcessor(AudioVADInputProcessor):
     #
 
     def capture_participant_video(
-            self,
-            participant_id: str,
-            framerate: int = 30,
-            video_source: str = "camera",
-            color_format: str = "RGB"):
+        self,
+        participant_id: str,
+        framerate: int = 30,
+        video_source: str = "camera",
+        color_format: str = "RGB",
+    ):
         self._video_renderers[participant_id] = {
             "framerate": framerate,
             "timestamp": 0,
@@ -110,11 +111,7 @@ class DailyInputTransportProcessor(AudioVADInputProcessor):
         }
 
         self._client.capture_participant_video(
-            participant_id,
-            self._on_participant_video_frame,
-            framerate,
-            video_source,
-            color_format
+            participant_id, self._on_participant_video_frame, framerate, video_source, color_format
         )
 
     def request_participant_image(self, participant_id: str):

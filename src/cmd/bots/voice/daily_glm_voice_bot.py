@@ -16,6 +16,7 @@ from src.cmd.bots import register_ai_room_bots
 from src.types.frames import *
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 
@@ -52,22 +53,24 @@ class DailyGLMVoiceBot(DailyRoomBot):
             self.params,
         )
 
-        messages = []
-        if self._bot_config.llm.messages:
-            messages = self._bot_config.llm.messages
+        # messages = []
+        # if self._bot_config.llm.messages:
+        #     messages = self._bot_config.llm.messages
 
         self.task = PipelineTask(
-            Pipeline([
-                transport.input_processor(),
-                UserAudioResponseAggregator(),
-                FrameLogger(include_frame_types=[AudioRawFrame]),
-                AudioSaveProcessor(prefix_name="user_audio_aggr"),
-                FrameLogger(include_frame_types=[PathAudioRawFrame]),
-                self._voice_processor,
-                FrameLogger(include_frame_types=[AudioRawFrame, TextFrame]),
-                AudioSaveProcessor(prefix_name="bot_speak"),
-                transport.output_processor(),
-            ]),
+            Pipeline(
+                [
+                    transport.input_processor(),
+                    UserAudioResponseAggregator(),
+                    FrameLogger(include_frame_types=[AudioRawFrame]),
+                    AudioSaveProcessor(prefix_name="user_audio_aggr"),
+                    FrameLogger(include_frame_types=[PathAudioRawFrame]),
+                    self._voice_processor,
+                    FrameLogger(include_frame_types=[AudioRawFrame, TextFrame]),
+                    AudioSaveProcessor(prefix_name="bot_speak"),
+                    transport.output_processor(),
+                ]
+            ),
             params=PipelineParams(
                 allow_interruptions=False,
                 enable_metrics=True,
@@ -77,13 +80,10 @@ class DailyGLMVoiceBot(DailyRoomBot):
 
         transport.add_event_handlers(
             "on_first_participant_joined",
-            [self.on_first_participant_joined, self.on_first_participant_say_hi])
-        transport.add_event_handler(
-            "on_participant_left",
-            self.on_participant_left)
-        transport.add_event_handler(
-            "on_call_state_updated",
-            self.on_call_state_updated)
+            [self.on_first_participant_joined, self.on_first_participant_say_hi],
+        )
+        transport.add_event_handler("on_participant_left", self.on_participant_left)
+        transport.add_event_handler("on_call_state_updated", self.on_call_state_updated)
 
         await PipelineRunner().run(self.task)
 

@@ -17,15 +17,19 @@ class ContainerRuntimeConfig:
                     "]~=0.0.8.3",
                     "huggingface_hub[hf_transfer]==0.24.7",
                 ],
-                extra_index_url="https://pypi.org/simple/")
-            .env({
-                "HF_HUB_ENABLE_HF_TRANSFER": "1",
-                "ACHATBOT_PKG": "1",
-                "BOT_CONFIG_NAME": os.getenv("BOT_CONFIG_NAME",
-                                             "fastapi_websocket_moshi_voice_bot"),
-                "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
-                "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
-            })
+                extra_index_url="https://pypi.org/simple/",
+            )
+            .env(
+                {
+                    "HF_HUB_ENABLE_HF_TRANSFER": "1",
+                    "ACHATBOT_PKG": "1",
+                    "BOT_CONFIG_NAME": os.getenv(
+                        "BOT_CONFIG_NAME", "fastapi_websocket_moshi_voice_bot"
+                    ),
+                    "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
+                    "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
+                }
+            )
         ),
     }
 
@@ -95,11 +99,11 @@ class Srv:
 
     @modal.asgi_app()
     def app(self):
-
         @fastapi_app.websocket("/")
         async def websocket_endpoint(websocket: WebSocket):
             self.run_bot: AIFastapiWebsocketBot = await BotLoader.load_bot(  # type: ignore
-                self.config_path, bot_type="fastapi_ws_bot")
+                self.config_path, bot_type="fastapi_ws_bot"
+            )
 
             # NOTE: after init, websocket to accept connection, then to run
             await websocket.accept()

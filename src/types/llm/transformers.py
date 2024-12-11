@@ -6,10 +6,12 @@ class TransformersLMArgs:
     r"""
     HF transformers language model args (tiny,small,large,huge)
     """
+
     lm_model_name_or_path: str = field(
         default="HuggingFaceTB/SmolLM-360M-Instruct",
         metadata={
-            "help": "The pretrained language model to use. Default is 'HuggingFaceTB/SmolLM-360M-Instruct'."},
+            "help": "The pretrained language model to use. Default is 'HuggingFaceTB/SmolLM-360M-Instruct'."
+        },
     )
     lm_device_map: str | dict | None = field(
         default=None,
@@ -38,32 +40,25 @@ class TransformersLMArgs:
     )
     user_role: str = field(
         default="user",
-        metadata={
-            "help": "Role assigned to the user in the chat context. Default is 'user'."
-        },
+        metadata={"help": "Role assigned to the user in the chat context. Default is 'user'."},
     )
     warnup_prompt: str = field(
         default="Repeat the word 'weedge niu bi'.",
-        metadata={
-            "help": "warnup llm generate prompt. Default is 'weedge niu bi'."
-        },
+        metadata={"help": "warnup llm generate prompt. Default is 'weedge niu bi'."},
     )
     warnup_steps: int = field(
         default=2,
-        metadata={
-            "help": "The number of steps to run the warmup prompt. Default is 2."
-        },
+        metadata={"help": "The number of steps to run the warmup prompt. Default is 2."},
     )
     init_chat_role: str = field(
         default="system",
-        metadata={
-            "help": "Initial role for setting up the chat context. Default is 'system'."
-        },
+        metadata={"help": "Initial role for setting up the chat context. Default is 'system'."},
     )
     init_chat_prompt: str = field(
         default="You are a helpful and friendly AI assistant. You are polite, respectful, and aim to provide concise responses of less than 20 words.",
         metadata={
-            "help": "The initial chat prompt to establish context for the language model. Default is 'You are a helpful AI assistant.'"},
+            "help": "The initial chat prompt to establish context for the language model. Default is 'You are a helpful AI assistant.'"
+        },
     )
     lm_gen_max_new_tokens: int = field(
         default=1024,
@@ -93,7 +88,6 @@ class TransformersLMArgs:
         default=1,
         metadata={
             "help": "Changing the top - k parameter sets the size of the shortlist the model samples from as it outputs each token. Setting top - k to 1 gives us greedy decoding. Default is 1"
-
         },
     )
     lm_gen_top_p: float = field(
@@ -128,7 +122,5 @@ class TransformersLMArgs:
     )
     lm_bnb_quant_type: str = field(
         default="int4",
-        metadata={
-            "help": "The BitsAndBytes quantization type, default int4."
-        },
+        metadata={"help": "The BitsAndBytes quantization type, default int4."},
     )

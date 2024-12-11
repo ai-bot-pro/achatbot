@@ -16,12 +16,14 @@ class LLMFullResponseStartFrame(ControlFrame):
     """Used to indicate the beginning of a full LLM response. Following
     LLMResponseStartFrame, TextFrame and LLMResponseEndFrame for each sentence
     until a LLMFullResponseEndFrame."""
+
     pass
 
 
 @dataclass
 class LLMFullResponseEndFrame(ControlFrame):
     """Indicates the end of a full LLM response."""
+
     pass
 
 
@@ -29,12 +31,14 @@ class LLMFullResponseEndFrame(ControlFrame):
 class LLMResponseStartFrame(ControlFrame):
     """Used to indicate the beginning of an LLM response. Following TextFrames
     are part of the LLM response until an LLMResponseEndFrame"""
+
     pass
 
 
 @dataclass
 class LLMResponseEndFrame(ControlFrame):
     """Indicates the end of an LLM response."""
+
     pass
 
 
@@ -46,12 +50,14 @@ class UserStartedSpeakingFrame(ControlFrame):
     with a TranscriptionFrame)
 
     """
+
     pass
 
 
 @dataclass
 class UserStoppedSpeakingFrame(ControlFrame):
     """Emitted by the VAD to indicate that a user stopped speaking."""
+
     pass
 
 
@@ -64,20 +70,23 @@ class TTSStartedFrame(ControlFrame):
     the TTS service.
 
     """
+
     pass
 
 
 @dataclass
 class TTSStoppedFrame(ControlFrame):
     """Indicates the end of a TTS response."""
+
     pass
 
 
 @dataclass
 class UserImageRequestFrame(ControlFrame):
     """A frame user to request an image from the given user."""
+
     user_id: str
-    context: Optional[Any] = None # for openai llm context
+    context: Optional[Any] = None  # for openai llm context
 
     def __str__(self):
         return f"{self.name}, user: {self.user_id}"
@@ -85,17 +94,15 @@ class UserImageRequestFrame(ControlFrame):
 
 @dataclass
 class BotStartedSpeakingFrame(ControlFrame):
-    """Emitted upstream by transport outputs to indicate the bot started speaking.
+    """Emitted upstream by transport outputs to indicate the bot started speaking."""
 
-    """
     pass
 
 
 @dataclass
 class BotStoppedSpeakingFrame(ControlFrame):
-    """Emitted upstream by transport outputs to indicate the bot stopped speaking.
+    """Emitted upstream by transport outputs to indicate the bot stopped speaking."""
 
-    """
     pass
 
 
@@ -107,20 +114,21 @@ class BotSpeakingFrame(ControlFrame):
     be listening.
 
     """
+
     pass
 
 
 @dataclass
 class LLMModelUpdateFrame(ControlFrame):
-    """A control frame containing a request to update to a new LLM model.
-    """
+    """A control frame containing a request to update to a new LLM model."""
+
     model: str
 
 
 @dataclass
 class TTSVoiceUpdateFrame(ControlFrame):
-    """A control frame containing a request to update to a new TTS voice.
-    """
+    """A control frame containing a request to update to a new TTS voice."""
+
     voice: str
 
 
@@ -129,6 +137,7 @@ class VADParamsUpdateFrame(ControlFrame):
     """A control frame containing a request to update VAD params. Intended
     to be pushed upstream from RTVI processor.
     """
+
     params: VADAnalyzerArgs
 
 
@@ -137,20 +146,21 @@ class ASRModelUpdateFrame(ControlFrame):
     """A control frame containing a request to update the ASR model and optional
     language.
     """
+
     model: str
 
 
 @dataclass
 class ASRLanguageUpdateFrame(ControlFrame):
-    """A control frame containing a request to update to ASR language.
-    """
+    """A control frame containing a request to update to ASR language."""
+
     language: Language
 
 
 @dataclass
 class ASRArgsUpdateFrame(ControlFrame):
-    """A control frame containing a request to update to ASR args.
-    """
+    """A control frame containing a request to update to ASR args."""
+
     args: dict
 
 
@@ -159,11 +169,12 @@ class TTSLanguageUpdateFrame(ControlFrame):
     """A control frame containing a request to update to a new TTS language and
     optional voice.
     """
+
     language: Language
 
 
 @dataclass
 class TTSArgsUpdateFrame(ControlFrame):
-    """A control frame containing a request to update to TTS args.
-    """
+    """A control frame containing a request to update to TTS args."""
+
     args: dict

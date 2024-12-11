@@ -18,6 +18,7 @@ from src.common.logger import Logger
 from apipeline.processors.logger import FrameLogger
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 
@@ -47,13 +48,11 @@ class SaveImageProcessor(FrameProcessor):
         await super().process_frame(frame, direction)
         if isinstance(frame, ImageRawFrame):
             print("save-->", frame, self.save_file)
-            img = Image.frombytes(
-                mode=frame.mode, size=frame.size, data=frame.image)
+            img = Image.frombytes(mode=frame.mode, size=frame.size, data=frame.image)
             img.save(self.save_file, frame.format)
 
 
 class TestProcessor(unittest.IsolatedAsyncioTestCase):
-
     @classmethod
     def setUpClass(cls):
         Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
@@ -99,6 +98,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
     def get_image_gen_processor(self):
         if self.processor == "HFApiInferenceImageGenProcessor":
             from src.processors.image.hf_img_gen_processor import HFApiInferenceImageGenProcessor
+
             self.client_session = aiohttp.ClientSession()
             return HFApiInferenceImageGenProcessor(
                 aiohttp_session=self.client_session,
@@ -106,6 +106,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             )
         if self.processor == "OpenAIImageGenProcessor":
             from src.processors.image.openai_img_gen_processor import OpenAIImageGenProcessor
+
             self.client_session = aiohttp.ClientSession()
             return OpenAIImageGenProcessor(
                 image_size="1024x1024",
@@ -114,6 +115,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             )
         if self.processor == "TogetherImageGenProcessor":
             from src.processors.image.together_img_gen_processor import TogetherImageGenProcessor
+
             return TogetherImageGenProcessor(
                 width=512,
                 height=512,
@@ -121,16 +123,15 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             )
 
     async def asyncSetUp(self):
-        pipeline = Pipeline([
-            self.get_image_gen_processor_by_tag(),
-            FrameLogger(include_frame_types=[ImageRawFrame]),
-            SaveImageProcessor(save_file=self.save_img_file),
-        ])
-
-        self.task = PipelineTask(
-            pipeline,
-            PipelineParams()
+        pipeline = Pipeline(
+            [
+                self.get_image_gen_processor_by_tag(),
+                FrameLogger(include_frame_types=[ImageRawFrame]),
+                SaveImageProcessor(save_file=self.save_img_file),
+            ]
         )
+
+        self.task = PipelineTask(pipeline, PipelineParams())
 
     async def asyncTearDown(self):
         self.client_session and await self.client_session.close()
@@ -138,10 +139,12 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
 
     async def test_run(self):
         runner = PipelineRunner()
-        await self.task.queue_frames([
-            TextFrame(
-                text="A capybara holding a sign that reads Hello.",
-            ),
-        ])
+        await self.task.queue_frames(
+            [
+                TextFrame(
+                    text="A capybara holding a sign that reads Hello.",
+                ),
+            ]
+        )
         await self.task.stop_when_done()
         await runner.run(self.task)

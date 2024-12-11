@@ -14,7 +14,7 @@ class Session:
             "config": self.config,
             "chat_round": self.chat_round,
             "chat_history": self.chat_history,
-            "ctx": self.ctx
+            "ctx": self.ctx,
         }
 
     def __setstate__(self, state):
@@ -28,7 +28,7 @@ class Session:
             "config": self.config,
             "chat_round": self.chat_round,
             "chat_history": self.chat_history,
-            "ctx": self.ctx
+            "ctx": self.ctx,
         }
         s = f"session: {d}"
         return s

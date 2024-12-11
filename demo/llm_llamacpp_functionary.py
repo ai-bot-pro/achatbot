@@ -18,10 +18,7 @@ def get_current_weather(location, unit="fahrenheit"):
 
 
 def web_search(query: str):
-    info = {
-        "query": query,
-        "result": "search dumpy result"
-    }
+    info = {"query": query, "result": "search dumpy result"}
 
     return json.dumps(info)
 
@@ -41,17 +38,16 @@ llm = Llama.from_pretrained(
     chat_format="functionary-v2",
     local_dir="./models",
     tokenizer=LlamaHFTokenizer.from_pretrained("meetkai/functionary-small-v2.4-GGUF"),
-    n_gpu_layers=0
+    n_gpu_layers=0,
 )
 
 messages = [
     {
         "role": "system",
-        "content": "你是一个中国人,请用中文回答。回答限制在1-5句话内。要友好、乐于助人且简明扼要。默认使用公制单位。保持对话简短而甜蜜。只用纯文本回答，不要包含链接或其他附加内容。不要回复计算机代码，例如不要返回用户的经度。"
-
+        "content": "你是一个中国人,请用中文回答。回答限制在1-5句话内。要友好、乐于助人且简明扼要。默认使用公制单位。保持对话简短而甜蜜。只用纯文本回答，不要包含链接或其他附加内容。不要回复计算机代码，例如不要返回用户的经度。",
     },
     # {"role": "user", "content": "what's the weather like in Hanoi?"}
-    {"role": "user", "content": "你好"}
+    {"role": "user", "content": "你好"},
 ]
 tools = [  # For functionary-7b-v2 we use "tools"; for functionary-7b-v1.4 we use "functions" = [{"name": "get_current_weather", "description":..., "parameters": ....}]
     {
@@ -64,12 +60,12 @@ tools = [  # For functionary-7b-v2 we use "tools"; for functionary-7b-v1.4 we us
                 "properties": {
                     "location": {
                         "type": "string",
-                        "description": "The city and state, e.g., San Francisco, CA"
+                        "description": "The city and state, e.g., San Francisco, CA",
                     }
                 },
-                "required": ["location"]
-            }
-        }
+                "required": ["location"],
+            },
+        },
     }
 ]
 

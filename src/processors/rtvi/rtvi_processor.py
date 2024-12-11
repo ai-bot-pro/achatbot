@@ -36,6 +36,7 @@ from src.types.frames.data_frames import (
 from src.processors.aggregators.openai_llm_context import OpenAILLMContext
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 
@@ -47,8 +48,9 @@ ActionResult = Union[bool, int, float, str, list, dict]
 class RTVIServiceOption(BaseModel):
     name: str
     type: Literal["bool", "number", "string", "array", "object", "dict", "list"]
-    handler: Callable[["RTVIProcessor", str, "RTVIServiceOptionConfig"],
-                      Awaitable[None]] = Field(exclude=True)
+    handler: Callable[["RTVIProcessor", str, "RTVIServiceOptionConfig"], Awaitable[None]] = Field(
+        exclude=True
+    )
 
 
 class RTVIService(BaseModel):
@@ -76,8 +78,9 @@ class RTVIActionArgument(BaseModel):
 class RTVIAction(BaseModel):
     service: str
     action: str
-    handler: Callable[["RTVIProcessor", str, Dict[str, Any]],
-                      Awaitable[ActionResult]] = Field(exclude=True)
+    handler: Callable[["RTVIProcessor", str, Dict[str, Any]], Awaitable[ActionResult]] = Field(
+        exclude=True
+    )
 
 
 #
@@ -125,6 +128,7 @@ class RTVIMessage(BaseModel):
     type: str
     id: str
     data: Optional[Dict[str, Any]] = None
+
 
 #
 # achatbot -> Client responses and messages.
@@ -272,11 +276,12 @@ class RTVIProcessorParams(BaseModel):
 
 
 class RTVIProcessor(FrameProcessor):
-
-    def __init__(self,
-                 *,
-                 config: RTVIConfig = RTVIConfig(config_list=[]),
-                 params: RTVIProcessorParams = RTVIProcessorParams()):
+    def __init__(
+        self,
+        *,
+        config: RTVIConfig = RTVIConfig(config_list=[]),
+        params: RTVIProcessorParams = RTVIProcessorParams(),
+    ):
         super().__init__()
         self._config = config
         self._params = params
@@ -330,25 +335,23 @@ class RTVIProcessor(FrameProcessor):
             await self._maybe_send_bot_ready()
 
     async def handle_function_call(
-            self,
-            function_name: str,
-            tool_call_id: str,
-            arguments: dict,
-            llm: FrameProcessor,
-            context: OpenAILLMContext,
-            result_callback):
+        self,
+        function_name: str,
+        tool_call_id: str,
+        arguments: dict,
+        llm: FrameProcessor,
+        context: OpenAILLMContext,
+        result_callback,
+    ):
         fn = RTVILLMFunctionCallMessageData(
-            function_name=function_name,
-            tool_call_id=tool_call_id,
-            args=arguments)
+            function_name=function_name, tool_call_id=tool_call_id, args=arguments
+        )
         message = RTVILLMFunctionCallMessage(data=fn)
         await self._push_transport_message(message, exclude_none=False)
 
     async def handle_function_call_start(
-            self,
-            function_name: str,
-            llm: FrameProcessor,
-            context: OpenAILLMContext):
+        self, function_name: str, llm: FrameProcessor, context: OpenAILLMContext
+    ):
         fn = RTVILLMFunctionCallStartMessageData(function_name=function_name)
         message = RTVILLMFunctionCallStartMessage(data=fn)
         await self._push_transport_message(message, exclude_none=False)
@@ -382,10 +385,14 @@ class RTVIProcessor(FrameProcessor):
             # finish and the task finishes when EndFrame is processed.
             await self.push_frame(frame, direction)
             await self._stop(frame)
-        elif isinstance(frame, UserStartedSpeakingFrame) or isinstance(frame, UserStoppedSpeakingFrame):
+        elif isinstance(frame, UserStartedSpeakingFrame) or isinstance(
+            frame, UserStoppedSpeakingFrame
+        ):
             await self._handle_interruptions(frame)
             await self.push_frame(frame, direction)
-        elif isinstance(frame, BotStartedSpeakingFrame) or isinstance(frame, BotStoppedSpeakingFrame):
+        elif isinstance(frame, BotStartedSpeakingFrame) or isinstance(
+            frame, BotStoppedSpeakingFrame
+        ):
             await self._handle_bot_speaking(frame)
             await self.push_frame(frame, direction)
         # Data frames
@@ -420,9 +427,8 @@ class RTVIProcessor(FrameProcessor):
         await self._push_frame_task
 
     async def _internal_push_frame(
-            self,
-            frame: Frame | None,
-            direction: FrameDirection | None = FrameDirection.DOWNSTREAM):
+        self, frame: Frame | None, direction: FrameDirection | None = FrameDirection.DOWNSTREAM
+    ):
         await self._push_queue.put((frame, direction))
 
     async def _push_frame_task_handler(self):
@@ -438,8 +444,8 @@ class RTVIProcessor(FrameProcessor):
 
     async def _push_transport_message(self, model: BaseModel, exclude_none: bool = True):
         frame = TransportMessageFrame(
-            message=model.model_dump(exclude_none=exclude_none),
-            urgent=True)
+            message=model.model_dump(exclude_none=exclude_none), urgent=True
+        )
         await self.push_frame(frame)
 
     async def _handle_transcriptions(self, frame: Frame):
@@ -447,17 +453,15 @@ class RTVIProcessor(FrameProcessor):
         if isinstance(frame, TranscriptionFrame):
             message = RTVITranscriptionMessage(
                 data=RTVITranscriptionMessageData(
-                    text=frame.text,
-                    user_id=frame.user_id,
-                    timestamp=frame.timestamp,
-                    final=True))
+                    text=frame.text, user_id=frame.user_id, timestamp=frame.timestamp, final=True
+                )
+            )
         elif isinstance(frame, InterimTranscriptionFrame):
             message = RTVITranscriptionMessage(
                 data=RTVITranscriptionMessageData(
-                    text=frame.text,
-                    user_id=frame.user_id,
-                    timestamp=frame.timestamp,
-                    final=False))
+                    text=frame.text, user_id=frame.user_id, timestamp=frame.timestamp, final=False
+                )
+            )
 
         if message:
             await self._push_transport_message(message)
@@ -592,7 +596,8 @@ class RTVIProcessor(FrameProcessor):
             function_name=data.function_name,
             tool_call_id=data.tool_call_id,
             arguments=data.arguments,
-            result=data.result)
+            result=data.result,
+        )
         await self.push_frame(frame)
 
     async def _handle_action(self, request_id: str, data: RTVIActionRun):
@@ -620,9 +625,8 @@ class RTVIProcessor(FrameProcessor):
 
         message = RTVIBotReady(
             id=self._client_ready_id,
-            data=RTVIBotReadyData(
-                version=RTVI_PROTOCOL_VERSION,
-                config=self._config.config_list))
+            data=RTVIBotReadyData(version=RTVI_PROTOCOL_VERSION, config=self._config.config_list),
+        )
         await self._push_transport_message(message)
 
     async def _send_error_frame(self, frame: ErrorFrame):

@@ -7,8 +7,8 @@ try:
     from diffusers import StableDiffusion3Pipeline, BitsAndBytesConfig, SD3Transformer2DModel
 except ModuleNotFoundError as e:
     logging.error(
-        f"In order to use diffusers, you need to `pip install achatbot[diffusers,bitsandbytes]`."
-        f"Also, set `HF_API_KEY` environment variable."
+        "In order to use diffusers, you need to `pip install achatbot[diffusers,bitsandbytes]`."
+        "Also, set `HF_API_KEY` environment variable."
     )
     raise Exception(f"Missing module: {e}")
 
@@ -21,8 +21,8 @@ from src.processors.image.base import ImageGenProcessor
 
 # https://huggingface.co/docs/api-inference/tasks/text-to-image
 
-class HFStableDiffusionImageGenProcessor(ImageGenProcessor):
 
+class HFStableDiffusionImageGenProcessor(ImageGenProcessor):
     def __init__(
         self,
         *,
@@ -43,16 +43,14 @@ class HFStableDiffusionImageGenProcessor(ImageGenProcessor):
         self._negative_prompt = negative_prompt
         if is_quantizing:
             nf4_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=torch.bfloat16
+                load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.bfloat16
             )
             model_nf4 = SD3Transformer2DModel.from_pretrained(
                 model,
                 subfolder="transformer",
                 quantization_config=nf4_config,
                 token=os.environ.get("HF_API_KEY"),
-                torch_dtype=torch.bfloat16
+                torch_dtype=torch.bfloat16,
             )
             self._pipe = StableDiffusion3Pipeline.from_pretrained(
                 model,
@@ -84,9 +82,10 @@ class HFStableDiffusionImageGenProcessor(ImageGenProcessor):
             prompt,
             num_inference_steps=self._steps,
             guidance_scale=self._guidance_scale,
-            height=self._height, width=self._width,
+            height=self._height,
+            width=self._width,
             negative_prompt=self._negative_prompt,
-            generator=torch.Generator(device=self._pipe.device).manual_seed(2)
+            generator=torch.Generator(device=self._pipe.device).manual_seed(2),
         ).images[0]
 
         if not image:

@@ -9,6 +9,7 @@ import google.generativeai as genai
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
@@ -35,8 +36,7 @@ class TranscriptSegment(BaseModel):
 
 
 def get_transcript_with_timing(
-    video_id: str,
-    languages=('en', 'zh-CN')
+    video_id: str, languages=("en", "zh-CN")
 ) -> Generator[TranscriptSegment, None, None]:
     """
     Fetches the transcript of a YouTube video along with the start and end times for each text segment,
@@ -50,17 +50,14 @@ def get_transcript_with_timing(
     """
     transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=languages)
     for ii, segment in enumerate(transcript):
-        yield TranscriptSegment(
-            source_id=ii, start=segment["start"], text=segment["text"]
-        )
+        yield TranscriptSegment(source_id=ii, start=segment["start"], text=segment["text"])
 
 
 class YoutubeClip(BaseModel):
-    title: str = Field(
-        description="Specific and informative title for the individual clip."
-    )
+    title: str = Field(description="Specific and informative title for the individual clip.")
     description: str = Field(
-        description="A detailed description of the clip, including any notable quotes or phrases. should be a summary of sorts.")
+        description="A detailed description of the clip, including any notable quotes or phrases. should be a summary of sorts."
+    )
     start: float
     end: float
     source_ids: list[int] = Field(exclude=True)

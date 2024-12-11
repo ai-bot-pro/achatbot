@@ -18,16 +18,14 @@ from src.common.factory import EngineClass
 
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 
 class LivekitRoom(EngineClass, IRoomManager):
     TAG = "livekit_room"
 
-    def __init__(
-        self,
-        **kwargs
-    ) -> None:
+    def __init__(self, **kwargs) -> None:
         self.args = LivekitRoomArgs(**kwargs)
         # live kit http api with pb(protobuf) serialize data
         self._http_api = api.LiveKitAPI() if self.args.is_common_session else None
@@ -37,13 +35,12 @@ class LivekitRoom(EngineClass, IRoomManager):
             await self._http_api.aclose()
 
     async def create_room(
-            self,
-            room_name: str | None = None,
-            exp_time_s: int = ROOM_EXPIRE_TIME) -> GeneralRoomInfo:
+        self, room_name: str | None = None, exp_time_s: int = ROOM_EXPIRE_TIME
+    ) -> GeneralRoomInfo:
         name = room_name
         empty_time_s = exp_time_s if exp_time_s else ROOM_EXPIRE_TIME
         if not room_name:
-            name = f"room_" + str(uuid.uuid4())
+            name = "room_" + str(uuid.uuid4())
             if not exp_time_s:
                 empty_time_s = RANDOM_ROOM_EXPIRE_TIME
 
@@ -99,8 +96,7 @@ class LivekitRoom(EngineClass, IRoomManager):
 
     async def get_room(self, room_name: str) -> GeneralRoomInfo:
         http_api = self._http_api if self._http_api else api.LiveKitAPI()
-        result = await http_api.room.list_rooms(
-            api.ListRoomsRequest(names=[room_name]))
+        result = await http_api.room.list_rooms(api.ListRoomsRequest(names=[room_name]))
 
         logging.debug(f"list_rooms:{result.rooms}")
         if len(result.rooms) == 0:

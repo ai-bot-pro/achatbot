@@ -86,7 +86,7 @@ async def draw_cube(source: rtc.VideoSource):
                     for dy in [-1, 0, 1]:
                         if 0 <= x + dx < WIDTH and 0 <= y + dy < HEIGHT:
                             idx = (y + dy) * WIDTH * 4 + (x + dx) * 4
-                            arr[idx: idx + 4] = [255, 255, 255, 255]
+                            arr[idx : idx + 4] = [255, 255, 255, 255]
 
         f = rtc.VideoFrame(WIDTH, HEIGHT, rtc.VideoBufferType.ARGB, arr)
         source.capture_frame(f)
@@ -98,10 +98,9 @@ async def draw_cube(source: rtc.VideoSource):
 
 async def main(room: rtc.Room):
     @room.on("e2ee_state_changed")
-    def on_e2ee_state_changed(
-        participant: rtc.Participant, state: rtc.EncryptionState
-    ) -> None:
+    def on_e2ee_state_changed(participant: rtc.Participant, state: rtc.EncryptionState) -> None:
         logging.info("e2ee state changed: %s %s", participant.identity, state)
+
     url = os.getenv("LIVEKIT_URL")
     logging.info("connecting to %s", url)
     # ensure LIVEKIT_URL, LIVEKIT_API_KEY, and LIVEKIT_API_SECRET are set
@@ -123,10 +122,12 @@ async def main(room: rtc.Room):
         e2ee_options.key_provider_options.shared_key = SHARED_KEY
 
         await room.connect(
-            url, token, options=rtc.RoomOptions(
+            url,
+            token,
+            options=rtc.RoomOptions(
                 auto_subscribe=True,
                 e2ee=e2ee_options,
-            )
+            ),
         )
 
         logging.info("connected to room %s with e2ee %s", room.name, e2ee_options)

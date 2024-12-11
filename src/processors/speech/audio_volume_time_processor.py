@@ -22,12 +22,16 @@ class AudioVolumeTimeProcessor(FrameProcessor):
         if isinstance(frame, AudioRawFrame):
             volume = self.calculate_volume(frame)
             logging.debug(f"Audio volume: {volume:.2f} dB")
-            if (volume >= self._speech_volume_threshold and
-                    self._prev_volume < self._speech_volume_threshold):
+            if (
+                volume >= self._speech_volume_threshold
+                and self._prev_volume < self._speech_volume_threshold
+            ):
                 logging.debug("transition above speech volume threshold")
                 self.last_transition_ts = time.time()
-            elif (volume < self._speech_volume_threshold and
-                    self._prev_volume >= self._speech_volume_threshold):
+            elif (
+                volume < self._speech_volume_threshold
+                and self._prev_volume >= self._speech_volume_threshold
+            ):
                 logging.debug("transition below non-speech volume threshold")
                 self.last_transition_ts = time.time()
             self._prev_volume = volume

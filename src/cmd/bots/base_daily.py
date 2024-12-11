@@ -13,7 +13,7 @@ class DailyRoomBot(AIRoomBot):
         transport: DailyTransport,
         participant: Mapping[str, Any],
     ):
-        self.session.set_client_id(participant['id'])
+        self.session.set_client_id(participant["id"])
         logging.info(f"First participant {participant['id']} joined")
 
     async def on_participant_left(

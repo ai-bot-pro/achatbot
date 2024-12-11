@@ -21,16 +21,16 @@ STREAM=1 python -m unittest test.modules.speech.tts.test_coqui.TestCoquiTTS.test
 class TestCoquiTTS(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tts_tag = os.getenv('TTS_TAG', "tts_coqui")
-        cls.tts_text = os.getenv(
-            'TTS_TEXT', "你好！")
-        cls.stream = os.getenv('STREAM', "")
+        cls.tts_tag = os.getenv("TTS_TAG", "tts_coqui")
+        cls.tts_text = os.getenv("TTS_TEXT", "你好！")
+        cls.stream = os.getenv("STREAM", "")
         cls.conf_file = os.getenv(
-            'CONF_FILE', os.path.join(MODELS_DIR, "coqui/XTTS-v2/config.json"))
-        cls.model_path = os.getenv('MODEL_PATH', os.path.join(
-            MODELS_DIR, "coqui/XTTS-v2"))
-        cls.reference_audio_path = os.getenv('REFERENCE_AUDIO_PATH', os.path.join(
-            RECORDS_DIR, "tmp.wav"))
+            "CONF_FILE", os.path.join(MODELS_DIR, "coqui/XTTS-v2/config.json")
+        )
+        cls.model_path = os.getenv("MODEL_PATH", os.path.join(MODELS_DIR, "coqui/XTTS-v2"))
+        cls.reference_audio_path = os.getenv(
+            "REFERENCE_AUDIO_PATH", os.path.join(RECORDS_DIR, "tmp.wav")
+        )
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
@@ -42,8 +42,7 @@ class TestCoquiTTS(unittest.TestCase):
         kwargs["model_path"] = self.model_path
         kwargs["conf_file"] = self.conf_file
         kwargs["reference_audio_path"] = self.reference_audio_path
-        self.tts: CoquiTTS = EngineFactory.get_engine_by_tag(
-            EngineClass, self.tts_tag, **kwargs)
+        self.tts: CoquiTTS = EngineFactory.get_engine_by_tag(EngineClass, self.tts_tag, **kwargs)
         self.session = Session(**SessionCtx("test_tts_client_id").__dict__)
         self.pyaudio_instance = None
         self.audio_stream = None
@@ -62,17 +61,20 @@ class TestCoquiTTS(unittest.TestCase):
         for i, chunk in enumerate(iter):
             print(i, len(chunk))
             res.extend(chunk)
-        path = asyncio.run(save_audio_to_file(
-            res,
-            f"test_{self.tts.TAG}.wav",
-            sample_rate=stream_info["rate"],
-            sample_width=stream_info["sample_width"],
-            channles=stream_info["channels"],
-        ))
+        path = asyncio.run(
+            save_audio_to_file(
+                res,
+                f"test_{self.tts.TAG}.wav",
+                sample_rate=stream_info["rate"],
+                sample_width=stream_info["sample_width"],
+                channles=stream_info["channels"],
+            )
+        )
         print(path)
 
     def test_synthesize_speak(self):
         import pyaudio
+
         stream_info = self.tts.get_stream_info()
         self.pyaudio_instance = pyaudio.PyAudio()
         self.audio_stream = self.pyaudio_instance.open(
@@ -80,7 +82,8 @@ class TestCoquiTTS(unittest.TestCase):
             channels=stream_info["channels"],
             rate=stream_info["rate"],
             output_device_index=None,
-            output=True)
+            output=True,
+        )
 
         self.session.ctx.state["tts_text"] = self.tts_text
         print(self.session.ctx)
@@ -93,7 +96,7 @@ class TestCoquiTTS(unittest.TestCase):
                 self.audio_stream.write(chunk)
                 continue
             for i in range(0, len(chunk), sub_chunk_size):
-                sub_chunk = chunk[i:i + sub_chunk_size]
+                sub_chunk = chunk[i : i + sub_chunk_size]
                 self.audio_stream.write(sub_chunk)
 
     def test_get_voices(self):

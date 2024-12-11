@@ -8,16 +8,12 @@ from deep_translator import GoogleTranslator
 
 
 class GoogleTranslateProcessor(FrameProcessor):
-    def __init__(self,
-                 src: str = "en", target: str = "zh-CN",
-                 is_keep_original=False):
+    def __init__(self, src: str = "en", target: str = "zh-CN", is_keep_original=False):
         super().__init__()
         self._src = src
         self._target = target
         self._is_keep_original = is_keep_original
-        self.translator = GoogleTranslator(
-            source=src, target=target
-        )
+        self.translator = GoogleTranslator(source=src, target=target)
         self._translate_frame = TextFrame
 
     def set_translate_frame(self, frame: TextFrame):

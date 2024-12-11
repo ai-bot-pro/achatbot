@@ -34,10 +34,7 @@ class AgoraAnnotateVisionBot(AgoraChannelBot):
         stream_info = tts_processor.get_stream_info()
         agora_params.audio_out_sample_rate = stream_info["sample_rate"]
         agora_params.audio_out_channels = stream_info["channels"]
-        transport = AgoraTransport(
-            self.args.token,
-            params=agora_params
-        )
+        transport = AgoraTransport(self.args.token, params=agora_params)
 
         @transport.event_handler("on_first_participant_joined")
         async def on_first_participant_joined(
@@ -48,17 +45,18 @@ class AgoraAnnotateVisionBot(AgoraChannelBot):
             transport.capture_participant_video(user_id)
 
             participant_name = user_id
-            await tts_processor.say(f"你好,{participant_name}。"
-                                    f"这是一个图像检测注释demo。")
+            await tts_processor.say(f"你好,{participant_name}。" f"这是一个图像检测注释demo。")
 
-        pipeline = Pipeline([
-            transport.input_processor(),
-            ParallelPipeline(
-                [annotate_processor],
-                [tts_processor],
-            ),
-            # FrameLogger(include_frame_types=[UserImageRawFrame]),
-            transport.output_processor(),
-        ])
+        pipeline = Pipeline(
+            [
+                transport.input_processor(),
+                ParallelPipeline(
+                    [annotate_processor],
+                    [tts_processor],
+                ),
+                # FrameLogger(include_frame_types=[UserImageRawFrame]),
+                transport.output_processor(),
+            ]
+        )
         self.task = PipelineTask(pipeline)
         await PipelineRunner().run(self.task)

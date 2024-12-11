@@ -10,10 +10,14 @@ from src.common.grpc.idl.connector_pb2_grpc import ConnectorStub
 from src.common.grpc.interceptors.authentication_client import add_authentication
 
 
-class StreamClient():
-    def __init__(self, in_q: queue.Queue, out_q: queue.Queue,
-                 token="chat-bot-connenctor",
-                 target="localhost:50052") -> None:
+class StreamClient:
+    def __init__(
+        self,
+        in_q: queue.Queue,
+        out_q: queue.Queue,
+        token="chat-bot-connenctor",
+        target="localhost:50052",
+    ) -> None:
         self.in_q = in_q
         self.out_q = out_q
         self.token = token
@@ -31,7 +35,7 @@ class StreamClient():
             logging.info("stream client thread stop")
 
     def _connect(self):
-        authentication = add_authentication('authorization', self.token)
+        authentication = add_authentication("authorization", self.token)
         channel = grpc.insecure_channel(self.target)
         channel = grpc.intercept_channel(channel, authentication)
         stub = ConnectorStub(channel)
@@ -44,6 +48,7 @@ class StreamClient():
                     break
                 logging.debug(f"fe in_q get <---- len(frame):{len(frame)}")
                 yield ConnectStreamRequest(frame=frame)
+
         try:
             response_iter = stub.ConnectStream(iterator())
             for response in response_iter:

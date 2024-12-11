@@ -24,10 +24,10 @@ CHECK_FRAMES_MODE=2 python -m unittest test.modules.speech.detector.test_webrtc_
 class TestWebRTCVADDetector(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tag = os.getenv('DETECTOR_TAG', "webrtc_vad")
-        audio_file = os.path.join(TEST_DIR, f"audio_files", f"vad_test.wav")
-        cls.audio_file = os.getenv('AUDIO_FILE', audio_file)
-        cls.check_frames_mode = int(os.getenv('CHECK_FRAMES_MODE', "1"))
+        cls.tag = os.getenv("DETECTOR_TAG", "webrtc_vad")
+        audio_file = os.path.join(TEST_DIR, "audio_files", "vad_test.wav")
+        cls.audio_file = os.getenv("AUDIO_FILE", audio_file)
+        cls.check_frames_mode = int(os.getenv("CHECK_FRAMES_MODE", "1"))
 
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
@@ -42,19 +42,21 @@ class TestWebRTCVADDetector(unittest.TestCase):
         ).__dict__
         print(kwargs)
         self.detector: IDetector | EngineClass = EngineFactory.get_engine_by_tag(
-            EngineClass, self.tag, **kwargs)
-        self.session = Session(**SessionCtx(
-            "test_webrtc_vad_client_id", 16000, 2).__dict__)
+            EngineClass, self.tag, **kwargs
+        )
+        self.session = Session(**SessionCtx("test_webrtc_vad_client_id", 16000, 2).__dict__)
 
     def tearDown(self):
         self.detector.close()
 
     def test_convert_sampling_rate_to_16k(self):
-        convert_sampling_rate_to_16k(self.audio_file, os.path.join(
-            RECORDS_DIR, "test_convert_sampling_rate_to_16k.wav"))
+        convert_sampling_rate_to_16k(
+            self.audio_file, os.path.join(RECORDS_DIR, "test_convert_sampling_rate_to_16k.wav")
+        )
 
     def test_is_speech(self):
         import webrtcvad
+
         frame = asyncio.run(read_audio_file(self.audio_file))
         vad = webrtcvad.Vad(1)
         is_speech = vad.is_speech(frame, 16000)
@@ -68,9 +70,13 @@ class TestWebRTCVADDetector(unittest.TestCase):
         self.assertEqual(self.detector.args.sample_rate, audio_segment.frame_rate)
         self.detector.set_audio_data(audio_segment.raw_data)
         if hasattr(self.detector, "audio_buffer"):
-            file_path = asyncio.run(save_audio_to_file(
-                self.detector.audio_buffer, self.session.get_record_audio_name(),
-                audio_dir=RECORDS_DIR))
+            file_path = asyncio.run(
+                save_audio_to_file(
+                    self.detector.audio_buffer,
+                    self.session.get_record_audio_name(),
+                    audio_dir=RECORDS_DIR,
+                )
+            )
             print(file_path)
         res = asyncio.run(self.detector.detect(self.session))
         logging.debug(res)
@@ -81,11 +87,12 @@ class TestWebRTCVADDetector(unittest.TestCase):
 
     def test_record_detect(self):
         import pyaudio
+
         rate, frame_len = self.detector.get_sample_info()
         paud = pyaudio.PyAudio()
-        audio_stream = paud.open(rate=rate, channels=1,
-                                 format=pyaudio.paInt16, input=True,
-                                 frames_per_buffer=1024)
+        audio_stream = paud.open(
+            rate=rate, channels=1, format=pyaudio.paInt16, input=True, frames_per_buffer=1024
+        )
 
         audio_stream.start_stream()
         logging.debug("start recording")

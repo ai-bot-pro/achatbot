@@ -12,6 +12,7 @@ from src.cmd.bots.run import BotTaskRunnerBE, RunBotInfo
 from src.common.task_manager import TaskManagerFactory
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 
@@ -28,7 +29,7 @@ if __name__ == "__main__":
     python -m src.cmd.bots.main -f config/bots/dummy_bot.json --task_type threading
     """
     if os.getenv("ACHATBOT_WORKER_MULTIPROC_METHOD", "fork") == "spawn":
-        multiprocessing.set_start_method('spawn')
+        multiprocessing.set_start_method("spawn")
 
     parser = argparse.ArgumentParser(description="Chat Bot")
     parser.add_argument("--task_type", type=str, default="multiprocessing", help="task type")
@@ -38,22 +39,24 @@ if __name__ == "__main__":
     parser.add_argument("-wsp", type=int, default=0, help="WebSocket Port")
     parser.add_argument("-wsh", type=str, default="", help="WebSocket Host")
     parser.add_argument(
-        "-f", type=str,
+        "-f",
+        type=str,
         default=os.path.join(CONFIG_DIR, "bots/dummy_bot.json"),
-        help="Bot configuration json file")
+        help="Bot configuration json file",
+    )
     args = parser.parse_args()
 
     TaskManagerFactory.loop = asyncio.get_event_loop()
     # Bot task dict for status reporting and concurrency control
     bot_task_mgr = TaskManagerFactory.task_manager(
         type=os.getenv("ACHATBOT_TASK_TYPE") or args.task_type,
-        task_done_timeout=int(
-            os.getenv("ACHATBOT_TASK_DONE_TIMEOUT") or 0) or args.task_done_timeout,
+        task_done_timeout=int(os.getenv("ACHATBOT_TASK_DONE_TIMEOUT") or 0)
+        or args.task_done_timeout,
     )
     atexit.register(lambda: TaskManagerFactory.cleanup(bot_task_mgr.cleanup))
 
     bot_config = {}
-    with open(args.f, 'r') as f:
+    with open(args.f, "r") as f:
         bot_config = json.load(f)
         print(json.dumps(bot_config, indent=4, sort_keys=True))
     bot_info = RunBotInfo(**bot_config)

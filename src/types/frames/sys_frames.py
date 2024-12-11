@@ -11,13 +11,14 @@ class BotInterruptionFrame(SystemFrame):
     UserStartedSpeakingFrame and UserStoppedSpeakingFrame won't be generated.
 
     """
+
     pass
 
 
 @dataclass
 class FunctionCallInProgressFrame(SystemFrame):
-    """A frame signaling that a function call is in progress.
-    """
+    """A frame signaling that a function call is in progress."""
+
     function_name: str
     tool_call_id: str
     arguments: str

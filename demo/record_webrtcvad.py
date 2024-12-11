@@ -14,19 +14,17 @@ FRAME_SIZE = int(RATE * FRAME_DURATION / 1000)
 
 audio = pyaudio.PyAudio()
 # for audio recording
-stream = audio.open(format=FORMAT,
-                    channels=CHANNELS,
-                    rate=RATE,
-                    input=True,
-                    frames_per_buffer=CHUNK)
+stream = audio.open(
+    format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK
+)
 
 
 def export_wav(data, filename):
-    wf = wave.open(filename, 'wb')
+    wf = wave.open(filename, "wb")
     wf.setnchannels(CHANNELS)
     wf.setsampwidth(audio.get_sample_size(FORMAT))
     wf.setframerate(RATE)
-    wf.writeframes(b''.join(data))
+    wf.writeframes(b"".join(data))
     wf.close()
 
 
@@ -60,9 +58,9 @@ def record_audio():
             print(f"num_unvoiced {num_voiced}")
             if num_unvoiced > silent_ratio * frames.maxlen:
                 print("stop recording...")
-                export_wav(tmp, './records/tmp_webrtcvad.wav')
+                export_wav(tmp, "./records/tmp_webrtcvad.wav")
                 break
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     record_audio()

@@ -7,20 +7,20 @@ from src.common.factory import EngineClass, EngineFactory
 from src.common.types import VADAnalyzerArgs
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 
-class VADAnalyzerEnvInit():
-
+class VADAnalyzerEnvInit:
     @staticmethod
     def get_vad_analyzer_args() -> dict:
         return VADAnalyzerArgs(
-            sample_rate=int(os.getenv('SAMPLE_RATE', "16000")),
-            num_channels=int(os.getenv('NUM_CHANNELS', "1")),
-            confidence=float(os.getenv('CONFIDENCE', "0.7")),
-            start_secs=float(os.getenv('START_SECS', "0.2")),
-            stop_secs=float(os.getenv('STOP_SECS', "0.8")),
-            min_volume=float(os.getenv('MIN_VOLUME', "0.6")),
+            sample_rate=int(os.getenv("SAMPLE_RATE", "16000")),
+            num_channels=int(os.getenv("NUM_CHANNELS", "1")),
+            confidence=float(os.getenv("CONFIDENCE", "0.7")),
+            start_secs=float(os.getenv("START_SECS", "0.2")),
+            stop_secs=float(os.getenv("STOP_SECS", "0.8")),
+            min_volume=float(os.getenv("MIN_VOLUME", "0.6")),
         ).__dict__
 
     @staticmethod
@@ -32,8 +32,8 @@ class VADAnalyzerEnvInit():
         return VADAnalyzerEnvInit.get_vad_analyzer_args()
 
     map_config_func = {
-        'silero_vad_analyzer': get_silero_vad_analyzer_args,
-        'daily_webrtc_vad_analyzer': get_daily_webrtc_vad_analyzer_args,
+        "silero_vad_analyzer": get_silero_vad_analyzer_args,
+        "daily_webrtc_vad_analyzer": get_daily_webrtc_vad_analyzer_args,
     }
 
     @staticmethod
@@ -48,13 +48,12 @@ class VADAnalyzerEnvInit():
 
     @staticmethod
     def initVADAnalyzerEngine(
-        tag: str | None = None,
-        kwargs: dict | None = None
+        tag: str | None = None, kwargs: dict | None = None
     ) -> interface.IVADAnalyzer | EngineClass:
         # vad Analyzer
         # daily_webrtc_vad_analyzer for english, chinese vad don't ok~ :)
         # tag = tag or os.getenv('VAD_ANALYZER_TAG', "daily_webrtc_vad_analyzer")
-        tag = tag or os.getenv('VAD_ANALYZER_TAG', "silero_vad_analyzer")
+        tag = tag or os.getenv("VAD_ANALYZER_TAG", "silero_vad_analyzer")
         kwargs = kwargs or VADAnalyzerEnvInit.map_config_func[tag]()
         engine = VADAnalyzerEnvInit.getEngine(tag, **kwargs)
         logging.info(f"initVADEngine: {tag}, {engine}")

@@ -4,6 +4,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 
@@ -11,7 +12,8 @@ DEFAULT_LLM_SYS_MESSAGES = [
     {
         "role": "system",
         "content": os.getenv("LLM_CHAT_SYSTEM", ""),
-    }]
+    }
+]
 
 # https://console.groq.com/docs/models
 GROQ_LLM_URL = "https://api.groq.com/openai/v1"

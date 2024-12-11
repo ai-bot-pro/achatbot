@@ -15,8 +15,7 @@ import torch
 
 from sentence_transformers import SentenceTransformer, util
 
-embedder = SentenceTransformer(
-    "./models/sentence-transformers/all-MiniLM-L6-v2")
+embedder = SentenceTransformer("./models/sentence-transformers/all-MiniLM-L6-v2")
 print(embedder)
 
 # Corpus with example sentences
@@ -47,8 +46,7 @@ for query in queries:
     query_embedding = embedder.encode(query, convert_to_tensor=True)
 
     # We use cosine-similarity and torch.topk to find the highest 5 scores
-    similarity_scores = embedder.similarity(
-        query_embedding, corpus_embeddings)[0]
+    similarity_scores = embedder.similarity(query_embedding, corpus_embeddings)[0]
     scores, indices = torch.topk(similarity_scores, k=top_k)
 
     print("\nQuery:", query)
@@ -61,4 +59,4 @@ for query in queries:
     hits = util.semantic_search(query_embedding, corpus_embeddings, top_k=5)
     hits = hits[0]  # Get the hits for the first query
     for hit in hits:
-        print(corpus[hit['corpus_id']], "(Score: {:.4f})".format(hit['score']))
+        print(corpus[hit["corpus_id"]], "(Score: {:.4f})".format(hit["score"]))

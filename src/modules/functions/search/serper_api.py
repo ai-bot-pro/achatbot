@@ -2,15 +2,13 @@ import requests
 import json
 import os
 
-import requests
 import logging
-import json
-import os
 
 from src.common.types import SerperApiArgs
 from .api import SearchBaseApi
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 
@@ -41,7 +39,7 @@ class SerperApi(SearchBaseApi):
             response = self.requests.post(url, headers=headers, json=payload)
             response.raise_for_status()  # Raises for HTTP errors
             data = response.json()
-            snippets = [item['snippet'] for item in data['organic']]
+            snippets = [item["snippet"] for item in data["organic"]]
             return json.dumps(snippets)
         except requests.exceptions.HTTPError as http_err:
             print(f"HTTP error occurred: {http_err}")

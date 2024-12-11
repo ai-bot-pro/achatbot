@@ -7,10 +7,10 @@ class ContainerRuntimeConfig:
         "default": (
             modal.Image.debian_slim(python_version="3.11")
             .pip_install(
-                "achatbot[fastapi_bot_server]~=0.0.7.10",
-                extra_index_url="https://pypi.org/simple/"
+                "achatbot[fastapi_bot_server]~=0.0.7.10", extra_index_url="https://pypi.org/simple/"
             )
-            .apt_install().env({})
+            .apt_install()
+            .env({})
         ),
     }
 
@@ -47,6 +47,7 @@ class Srv:
     @modal.asgi_app()
     def app(self):
         from achatbot.cmd.http.server.fastapi_daily_bot_serve import app
+
         return app
 
 

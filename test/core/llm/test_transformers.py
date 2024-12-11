@@ -34,8 +34,8 @@ LLM_TAG=llm_transformers_pipeline \
 class TestTransformers(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.llm_tag = os.getenv('LLM_TAG', "llm_transformers_manual")
-        cls.prompt = os.getenv('LLM_PROMPT', "what's your name?")
+        cls.llm_tag = os.getenv("LLM_TAG", "llm_transformers_manual")
+        cls.prompt = os.getenv("LLM_PROMPT", "what's your name?")
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
@@ -72,10 +72,12 @@ class TestTransformers(unittest.TestCase):
 
     def test_chat_completion_zh(self):
         self.engine.args.init_chat_prompt = "你叫马里奥，一名中文助理，请用中文简短回答，回答限制在1-5句话内。要友好、乐于助人且简明扼要。保持对话简短而甜蜜。只用纯文本回答，不要包含链接或其他附加内容。不要回复计算机代码以及数学公式。"
-        self.engine.chat_history.init({
-            "role": self.engine.args.init_chat_role,
-            "content": self.engine.args.init_chat_prompt,
-        })
+        self.engine.chat_history.init(
+            {
+                "role": self.engine.args.init_chat_role,
+                "content": self.engine.args.init_chat_prompt,
+            }
+        )
         self.session.ctx.state["prompt"] = "你叫什么名字？"
         logging.debug(self.session.ctx)
         logging.debug(self.engine.args)
@@ -96,8 +98,8 @@ class TestTransformers(unittest.TestCase):
     def test_chat_completion_prompts(self):
         prompt_cases = [
             self.prompt,
-            (self.prompt, 'en'),
-            (self.prompt, 'zh'),
+            (self.prompt, "en"),
+            (self.prompt, "zh"),
         ]
         for prompt in prompt_cases:
             print("\n--------test prompt: ", prompt, "--------\n")

@@ -18,6 +18,7 @@ from src.common.logger import Logger
 from src.transports.livekit import LivekitTransport
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 r"""
@@ -60,70 +61,45 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         self.assertGreater(len(transport.event_names), 0)
 
         self.task = PipelineTask(
-            Pipeline([
-                transport.input_processor(),
-                # FrameLogger(include_frame_types=[AudioRawFrame]),
-                transport.output_processor(),
-            ]),
-            params=PipelineParams(allow_interruptions=True)
+            Pipeline(
+                [
+                    transport.input_processor(),
+                    # FrameLogger(include_frame_types=[AudioRawFrame]),
+                    transport.output_processor(),
+                ]
+            ),
+            params=PipelineParams(allow_interruptions=True),
         )
 
-        transport.add_event_handler(
-            "on_connected",
-            self.on_connected)
-        transport.add_event_handler(
-            "on_error",
-            self.on_error)
-        transport.add_event_handler(
-            "on_first_participant_joined",
-            self.on_first_participant_joined)
-        transport.add_event_handler(
-            "on_participant_disconnected",
-            self.on_participant_disconnected)
-        transport.add_event_handler(
-            "on_disconnected",
-            self.on_disconnected)
+        transport.add_event_handler("on_connected", self.on_connected)
+        transport.add_event_handler("on_error", self.on_error)
+        transport.add_event_handler("on_first_participant_joined", self.on_first_participant_joined)
+        transport.add_event_handler("on_participant_disconnected", self.on_participant_disconnected)
+        transport.add_event_handler("on_disconnected", self.on_disconnected)
         # sometime don't get on_connection_state_changed when disconnected
-        transport.add_event_handler(
-            "on_connection_state_changed",
-            self.on_connection_state_changed)
+        transport.add_event_handler("on_connection_state_changed", self.on_connection_state_changed)
 
-        transport.add_event_handler(
-            "on_audio_track_subscribed",
-            self.on_audio_track_subscribed)
-        transport.add_event_handler(
-            "on_audio_track_unsubscribed",
-            self.on_audio_track_unsubscribed)
-        transport.add_event_handler(
-            "on_video_track_subscribed",
-            self.on_video_track_subscribed)
-        transport.add_event_handler(
-            "on_video_track_unsubscribed",
-            self.on_video_track_unsubscribed)
+        transport.add_event_handler("on_audio_track_subscribed", self.on_audio_track_subscribed)
+        transport.add_event_handler("on_audio_track_unsubscribed", self.on_audio_track_unsubscribed)
+        transport.add_event_handler("on_video_track_subscribed", self.on_video_track_subscribed)
+        transport.add_event_handler("on_video_track_unsubscribed", self.on_video_track_unsubscribed)
 
         runner = PipelineRunner()
         try:
             await asyncio.wait_for(runner.run(self.task), int(os.getenv("RUN_TIMEOUT", "60")))
         except asyncio.TimeoutError:
-            logging.warning(f"Test run timeout. Exiting")
+            logging.warning("Test run timeout. Exiting")
             await self.task.queue_frame(EndFrame())
 
-    async def on_connected(
-            self,
-            transport: LivekitTransport,
-            room: rtc.Room):
+    async def on_connected(self, transport: LivekitTransport, room: rtc.Room):
         print("room--->", room)
 
-    async def on_error(
-            self,
-            transport: LivekitTransport,
-            error_msg: str):
+    async def on_error(self, transport: LivekitTransport, error_msg: str):
         print("error_msg--->", error_msg)
 
     async def on_first_participant_joined(
-            self,
-            transport: LivekitTransport,
-            participant: rtc.RemoteParticipant):
+        self, transport: LivekitTransport, participant: rtc.RemoteParticipant
+    ):
         print(f"on_first_participant_joined---->{participant}")
 
         # TODO: need know room anchor participant
@@ -140,47 +116,38 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         )
 
     async def on_participant_disconnected(
-            self,
-            transport: LivekitTransport,
-            participant: rtc.RemoteParticipant):
+        self, transport: LivekitTransport, participant: rtc.RemoteParticipant
+    ):
         logging.info(f"Partcipant {participant} left.")
         logging.info(f"current remote Partcipants {transport.get_participants()}")
 
-    async def on_disconnected(
-            self,
-            transport: LivekitTransport,
-            reason: str):
+    async def on_disconnected(self, transport: LivekitTransport, reason: str):
         logging.info("disconnected reason %s, Exiting." % reason)
         await self.task.queue_frame(EndFrame())
 
     async def on_connection_state_changed(
-            self,
-            transport: LivekitTransport,
-            state: rtc.ConnectionState):
+        self, transport: LivekitTransport, state: rtc.ConnectionState
+    ):
         logging.info("connection state %s " % state)
         if state == rtc.ConnectionState.CONN_DISCONNECTED:
             await self.task.queue_frame(EndFrame())
 
     async def on_audio_track_subscribed(
-            self,
-            transport: LivekitTransport,
-            participant: rtc.RemoteParticipant):
+        self, transport: LivekitTransport, participant: rtc.RemoteParticipant
+    ):
         print(f"on_audio_track_subscribed---->{participant}")
 
     async def on_audio_track_unsubscribed(
-            self,
-            transport: LivekitTransport,
-            participant: rtc.RemoteParticipant):
+        self, transport: LivekitTransport, participant: rtc.RemoteParticipant
+    ):
         print(f"on_audio_track_unsubscribed---->{participant}")
 
     async def on_video_track_subscribed(
-            self,
-            transport: LivekitTransport,
-            participant: rtc.RemoteParticipant):
+        self, transport: LivekitTransport, participant: rtc.RemoteParticipant
+    ):
         print(f"on_video_track_subscribed---->{participant}")
 
     async def on_video_track_unsubscribed(
-            self,
-            transport: LivekitTransport,
-            participant: rtc.RemoteParticipant):
+        self, transport: LivekitTransport, participant: rtc.RemoteParticipant
+    ):
         print(f"on_video_track_unsubscribed---->{participant}")

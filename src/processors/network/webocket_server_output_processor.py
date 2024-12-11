@@ -57,5 +57,5 @@ class WebsocketServerOutputProcessor(AudioCameraOutputProcessor):
                 await self._websocket.send(proto)
 
             self._websocket_audio_buffer = self._websocket_audio_buffer[
-                self._params.audio_frame_size:
+                self._params.audio_frame_size :
             ]

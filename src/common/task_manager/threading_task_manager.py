@@ -5,10 +5,8 @@ from src.common.task_manager.base import Task, TaskManager
 
 
 class ThreadingTaskManager(TaskManager):
-
     async def run_task(self, target, name: str, tag: str, **kwargs):
-        thread = threading.Thread(
-            target=target, name=name, kwargs=kwargs)
+        thread = threading.Thread(target=target, name=name, kwargs=kwargs)
         thread.daemon = True  # 使得主线程结束时，所有子线程也会结束
         thread.start()
         tid = str(thread.ident)

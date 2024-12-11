@@ -27,6 +27,7 @@ class CoquiTTS(BaseTTS, ITts):
         from TTS.tts.configs.xtts_config import XttsConfig
         from TTS.tts.models.xtts import Xtts
         from TTS.tts.layers.xtts.xtts_manager import SpeakerManager
+
         self.args = CoquiTTSArgs(**args)
         logging.debug(f"{self.TAG} args: {self.args}")
         info = CUDAInfo()
@@ -46,8 +47,7 @@ class CoquiTTS(BaseTTS, ITts):
             model.cuda()
         self.model = model
         self.config = config
-        speaker_file_path = os.path.join(
-            self.args.model_path, "speakers_xtts.pth")
+        speaker_file_path = os.path.join(self.args.model_path, "speakers_xtts.pth")
         self.speaker_manager = SpeakerManager(speaker_file_path)
 
         self.set_reference_audio(self.args.reference_audio_path)
@@ -57,15 +57,17 @@ class CoquiTTS(BaseTTS, ITts):
         if not os.path.exists(reference_audio_path):
             voices = self.get_voices()
             voice = random.choice(voices)
-            self.gpt_cond_latent, self.speaker_embedding = \
-                self.speaker_manager.speakers[voice].values()
+            self.gpt_cond_latent, self.speaker_embedding = self.speaker_manager.speakers[
+                voice
+            ].values()
             logging.debug(
-                f"reference_audio_path {reference_audio_path} don't exist; use speaker {voice}")
+                f"reference_audio_path {reference_audio_path} don't exist; use speaker {voice}"
+            )
             return
 
         self.gpt_cond_latent, self.speaker_embedding = self.model.get_conditioning_latents(
-            audio_path=[reference_audio_path],
-            gpt_cond_len=30, max_ref_length=60)
+            audio_path=[reference_audio_path], gpt_cond_len=30, max_ref_length=60
+        )
 
     def get_stream_info(self) -> dict:
         return {
@@ -94,7 +96,8 @@ class CoquiTTS(BaseTTS, ITts):
 
             tensor_wave = torch.tensor(out["wav"]).unsqueeze(0).cpu()
             logging.debug(
-                f"{self.TAG} inference out tensor {torch.tensor(out['wav']).shape}, tensor_wave: {tensor_wave.shape}")
+                f"{self.TAG} inference out tensor {torch.tensor(out['wav']).shape}, tensor_wave: {tensor_wave.shape}"
+            )
             # torchaudio.save("records/tts_coqui_infer_zh_test.wav", tensor_wave, 24000)
 
             res = postprocess_tts_wave(tensor_wave)
@@ -115,39 +118,41 @@ class CoquiTTS(BaseTTS, ITts):
                 speed=self.args.tts_speed,
                 stream_chunk_size=self.args.tts_stream_chunk_size,
                 overlap_wav_len=self.args.tts_overlap_wav_len,
-                enable_text_splitting=self.args.tts_enable_text_splitting
+                enable_text_splitting=self.args.tts_enable_text_splitting,
             )
             seconds_to_first_chunk = 0.0
             full_generated_seconds = 0.0
             raw_inference_start = 0.0
             first_chunk_length_seconds = 0.0
             for i, chunk in enumerate(chunks):
-                logging.debug(
-                    f"Received chunk {i} of audio length {chunk.shape[-1]}")
+                logging.debug(f"Received chunk {i} of audio length {chunk.shape[-1]}")
                 chunk = postprocess_tts_wave(chunk)
                 yield chunk
                 # 4 bytes per sample, 24000 Hz
-                chunk_duration = len(chunk) / \
-                    (4 * self.config.audio.output_sample_rate)
+                chunk_duration = len(chunk) / (4 * self.config.audio.output_sample_rate)
                 full_generated_seconds += chunk_duration
                 if i == 0:
                     first_chunk_length_seconds = chunk_duration
                     raw_inference_start = time.time()
                     seconds_to_first_chunk = raw_inference_start - time_start
-            self._print_synthesized_info(time_start, full_generated_seconds,
-                                         first_chunk_length_seconds,
-                                         seconds_to_first_chunk)
+            self._print_synthesized_info(
+                time_start,
+                full_generated_seconds,
+                first_chunk_length_seconds,
+                seconds_to_first_chunk,
+            )
 
-    def _print_synthesized_info(self, time_start, full_generated_seconds,
-                                first_chunk_length_seconds, seconds_to_first_chunk):
+    def _print_synthesized_info(
+        self, time_start, full_generated_seconds, first_chunk_length_seconds, seconds_to_first_chunk
+    ):
         time_end = time.time()
         seconds = time_end - time_start
-        if full_generated_seconds > 0 \
-                and (full_generated_seconds - first_chunk_length_seconds) > 0:
+        if full_generated_seconds > 0 and (full_generated_seconds - first_chunk_length_seconds) > 0:
             realtime_factor = seconds / full_generated_seconds
             raw_inference_time = seconds - seconds_to_first_chunk
-            raw_inference_factor = raw_inference_time / \
-                (full_generated_seconds - first_chunk_length_seconds)
+            raw_inference_factor = raw_inference_time / (
+                full_generated_seconds - first_chunk_length_seconds
+            )
 
             logging.debug(
                 f"XTTS synthesized {full_generated_seconds:.2f}s"

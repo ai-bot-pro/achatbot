@@ -57,18 +57,15 @@ class TestTTSProcessor(unittest.IsolatedAsyncioTestCase):
             params=LivekitParams(
                 audio_out_enabled=True,
                 audio_out_sample_rate=self.stream_info["rate"],
-            )
+            ),
         )
         self.assertGreater(len(transport.event_names), 0)
         tts_processor = TTSProcessor(tts=self.tts)
         await tts_processor.set_voice("zh-CN-XiaoxiaoNeural")
 
         task = PipelineTask(
-            Pipeline([
-                tts_processor,
-                transport.output_processor()
-            ]),
-            params=PipelineParams(allow_interruptions=True)
+            Pipeline([tts_processor, transport.output_processor()]),
+            params=PipelineParams(allow_interruptions=True),
         )
 
         # Register an event handler so we can play the audio
@@ -76,8 +73,8 @@ class TestTTSProcessor(unittest.IsolatedAsyncioTestCase):
         # @transport.event_handler("on_participant_connected")
         @transport.event_handler("on_first_participant_joined")
         async def on_new_participant_joined(
-                transport: LivekitTransport,
-                participant: rtc.RemoteParticipant):
+            transport: LivekitTransport, participant: rtc.RemoteParticipant
+        ):
             print("transport---->", transport)
             print("participant---->", participant)
             participant_name = participant.name if participant.name else participant.identity
@@ -85,11 +82,13 @@ class TestTTSProcessor(unittest.IsolatedAsyncioTestCase):
                 f"hello,你好，{participant_name}, 我是机器人。",
                 participant_id=participant.identity,
             )
-            await task.queue_frames([
-                TextFrame(f"你好，Hello there. {participant_name},"),
-                TextFrame(f"你是一个中国人。"),
-                EndFrame(),
-            ])
+            await task.queue_frames(
+                [
+                    TextFrame(f"你好，Hello there. {participant_name},"),
+                    TextFrame("你是一个中国人。"),
+                    EndFrame(),
+                ]
+            )
 
         runner = PipelineRunner()
         await runner.run(task)

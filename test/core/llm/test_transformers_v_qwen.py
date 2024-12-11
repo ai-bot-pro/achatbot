@@ -22,9 +22,9 @@ LLM_MODEL_NAME_OR_PATH=./models/Qwen/Qwen2-VL-2B-Instruct \
 class TestTransformersVQwen(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.llm_tag = os.getenv('LLM_TAG', "llm_transformers_manual_vision_qwen")
-        cls.prompt = os.getenv('LLM_PROMPT', "what's your name?")
-        cls.video_file = os.getenv('VIDEO_FILE', os.path.join(os.getcwd(), "videos/cv/test.mp4"))
+        cls.llm_tag = os.getenv("LLM_TAG", "llm_transformers_manual_vision_qwen")
+        cls.prompt = os.getenv("LLM_PROMPT", "what's your name?")
+        cls.video_file = os.getenv("VIDEO_FILE", os.path.join(os.getcwd(), "videos/cv/test.mp4"))
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
@@ -44,40 +44,50 @@ class TestTransformersVQwen(unittest.TestCase):
     def test_chat_completion_prompts(self):
         prompt_cases = [
             self.prompt,
-            (self.prompt, 'en'),
-            (self.prompt, 'zh'),
-            [{"type": "image",
-              "image": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
-              },
-             {"type": "text",
-              "text": "Describe this video. Please reply to my message in chinese",
-              }],
-            [{"type": "video",
-              "video": ["https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
-                        "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
-                        "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
-                        "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
-                        ],
-              "fps": 1.0,
-              },
-             {"type": "text",
-              "text": "Describe this video. Please reply to my message in chinese",
-              },
-             ],
-        ]
-        if os.path.isfile(self.video_file):
-            prompt_cases.append([
+            (self.prompt, "en"),
+            (self.prompt, "zh"),
+            [
+                {
+                    "type": "image",
+                    "image": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
+                },
+                {
+                    "type": "text",
+                    "text": "Describe this video. Please reply to my message in chinese",
+                },
+            ],
+            [
                 {
                     "type": "video",
-                    "video": self.video_file,
-                    "max_pixels": 360 * 420,
+                    "video": [
+                        "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
+                        "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
+                        "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
+                        "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
+                    ],
                     "fps": 1.0,
                 },
                 {
                     "type": "text",
                     "text": "Describe this video. Please reply to my message in chinese",
                 },
-            ])
+            ],
+        ]
+        if os.path.isfile(self.video_file):
+            prompt_cases.append(
+                [
+                    {
+                        "type": "video",
+                        "video": self.video_file,
+                        "max_pixels": 360 * 420,
+                        "fps": 1.0,
+                    },
+                    {
+                        "type": "text",
+                        "text": "Describe this video. Please reply to my message in chinese",
+                    },
+                ]
+            )
 
         for prompt in prompt_cases:
             print("\n--------test prompt: ", prompt, "--------\n")

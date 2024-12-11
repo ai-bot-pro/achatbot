@@ -24,29 +24,31 @@ class LivekitEchoVisionBot(LivekitRoomBot):
                 camera_out_is_live=True,
                 camera_out_width=1280,
                 camera_out_height=720,
-            )
+            ),
         )
 
         self.regisiter_room_event(transport)
 
         @transport.event_handler("on_first_participant_joined")
         async def on_first_participant_joined(
-                transport: LivekitTransport,
-                participant: rtc.RemoteParticipant,
+            transport: LivekitTransport,
+            participant: rtc.RemoteParticipant,
         ):
             transport.capture_participant_video(participant.sid)
 
         @transport.event_handler("on_video_track_subscribed")
         async def on_video_track_subscribed(
-                transport: LivekitTransport,
-                participant: rtc.RemoteParticipant,
+            transport: LivekitTransport,
+            participant: rtc.RemoteParticipant,
         ):
             transport.capture_participant_video(participant.sid)
 
-        pipeline = Pipeline([
-            transport.input_processor(),
-            # FrameLogger(include_frame_types=[UserImageRawFrame]),
-            transport.output_processor(),
-        ])
+        pipeline = Pipeline(
+            [
+                transport.input_processor(),
+                # FrameLogger(include_frame_types=[UserImageRawFrame]),
+                transport.output_processor(),
+            ]
+        )
         self.task = PipelineTask(pipeline)
         await PipelineRunner().run(self.task)

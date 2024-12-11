@@ -13,8 +13,7 @@ class UnhandledFunctionException(Exception):
 
 class LLMProcessorMetrics(FrameProcessorMetrics):
     async def start_llm_usage_metrics(self, tokens: dict):
-        logging.debug(
-            f"{self._name} tokens: {tokens}")
+        logging.debug(f"{self._name} tokens: {tokens}")
         return MetricsFrame(tokens=[tokens])
 
 
@@ -39,7 +38,6 @@ class LLMProcessor(AIProcessor):
 
     # !TODO: use callback function type @weedge
     def register_function(self, function_name: str | None, callback, start_callback=None):
-
         # Registering a function with the function_name set to None will run that callback
         # for all functions
         self._callbacks[function_name] = callback
@@ -59,8 +57,8 @@ class LLMProcessor(AIProcessor):
 
     async def request_image_frame(self, user_id: str, *, text_content: str | None = None):
         await self.push_frame(
-            UserImageRequestFrame(user_id=user_id, context=text_content),
-            FrameDirection.UPSTREAM)
+            UserImageRequestFrame(user_id=user_id, context=text_content), FrameDirection.UPSTREAM
+        )
 
     async def start_llm_usage_metrics(self, tokens: dict):
         if self.can_generate_metrics() and self.usage_metrics_enabled:

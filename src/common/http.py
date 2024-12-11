@@ -3,7 +3,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 
-class HTTPRequest():
+class HTTPRequest:
     def __init__(self, max_retries=3, backoff_factor=0.5, backoff_jitter=0.0) -> None:
         retry_strategy = Retry(
             total=max_retries,
@@ -11,7 +11,7 @@ class HTTPRequest():
             backoff_factor=backoff_factor,  # s
             backoff_jitter=backoff_jitter,
             allowed_methods=["HEAD", "GET", "PUT", "DELETE", "OPTIONS", "TRACE"],
-            respect_retry_after_header=True  # add Retry-After in header
+            respect_retry_after_header=True,  # add Retry-After in header
         )
 
         adapter = HTTPAdapter(max_retries=retry_strategy)

@@ -4,9 +4,7 @@ import logging
 from src.common.utils.audio_utils import convertSampleRateTo16khz
 from src.common.session import Session
 from src.common.interface import IDetector
-from src.common.types import (
-    RATE, CHUNK
-)
+from src.common.types import RATE, CHUNK
 from src.common.factory import EngineClass
 
 
@@ -25,7 +23,8 @@ class BaseVAD(EngineClass, IDetector):
             if self.args.sample_rate != 16000:
                 audio_data_16 = convertSampleRateTo16khz(audio_data, self.args.sample_rate)
                 logging.debug(
-                    f"rate {self.args.sample_rate} convertSampleRateTo16khz len(audio_data):{len(audio_data)} -> len(audio_data_16):{len(audio_data_16)}")
+                    f"rate {self.args.sample_rate} convertSampleRateTo16khz len(audio_data):{len(audio_data)} -> len(audio_data_16):{len(audio_data_16)}"
+                )
                 self.audio_buffer = audio_data_16
 
     def close(self):

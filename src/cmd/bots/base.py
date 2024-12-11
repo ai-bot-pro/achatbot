@@ -20,7 +20,14 @@ from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.modules.speech.asr import ASREnvInit
 from src.core.llm import LLMEnvInit
 from src.modules.speech.tts import TTSEnvInit
-from src.types.ai_conf import TOGETHER_LLM_MODEL, TOGETHER_LLM_URL, ASRConfig, LLMConfig, TTSConfig, AIConfig
+from src.types.ai_conf import (
+    TOGETHER_LLM_MODEL,
+    TOGETHER_LLM_URL,
+    ASRConfig,
+    LLMConfig,
+    TTSConfig,
+    AIConfig,
+)
 from src.common import interface
 from src.common.factory import EngineClass
 from src.common.types import BotRunArgs
@@ -59,13 +66,13 @@ class AIBot(IBot):
 
     def init_bot_config(self):
         try:
-            logging.debug(f'args.bot_config: {self.args.bot_config}')
+            logging.debug(f"args.bot_config: {self.args.bot_config}")
             self._bot_config: AIConfig = AIConfig(**self.args.bot_config)
             if self._bot_config.llm is None:
                 self._bot_config.llm = LLMConfig()
         except Exception as e:
             raise Exception(f"Failed to parse bot configuration: {e}")
-        logging.info(f'ai bot_config: {self._bot_config}')
+        logging.info(f"ai bot_config: {self._bot_config}")
 
     def bot_config(self):
         return self._bot_config
@@ -92,40 +99,44 @@ class AIBot(IBot):
 
     def get_vad_analyzer(self) -> interface.IVADAnalyzer | EngineClass:
         vad_analyzer: interface.IVADAnalyzer | EngineClass = None
-        if self._bot_config.vad and self._bot_config.vad.tag \
-                and len(self._bot_config.vad.tag) > 0  \
-                and self._bot_config.vad.args:
+        if (
+            self._bot_config.vad
+            and self._bot_config.vad.tag
+            and len(self._bot_config.vad.tag) > 0
+            and self._bot_config.vad.args
+        ):
             vad_analyzer = VADAnalyzerEnvInit.getEngine(
-                self._bot_config.vad.tag, **self._bot_config.vad.args)
+                self._bot_config.vad.tag, **self._bot_config.vad.args
+            )
         else:
             vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
         return vad_analyzer
 
     def get_asr_processor(self) -> ASRProcessorBase:
         asr_processor: ASRProcessorBase | None = None
-        if self._bot_config.asr and self._bot_config.asr.tag \
-                and self._bot_config.asr.tag == "deepgram_asr_processor" \
-                and self._bot_config.asr.args:
+        if (
+            self._bot_config.asr
+            and self._bot_config.asr.tag
+            and self._bot_config.asr.tag == "deepgram_asr_processor"
+            and self._bot_config.asr.args
+        ):
             from src.processors.speech.asr.deepgram_asr_processor import DeepgramAsrProcessor
+
             asr_processor = DeepgramAsrProcessor(
-                api_key=os.getenv("DEEPGRAM_API_KEY"),
-                **self._bot_config.asr.args)
+                api_key=os.getenv("DEEPGRAM_API_KEY"), **self._bot_config.asr.args
+            )
         else:
             # use asr engine processor
             from src.processors.speech.asr.asr_processor import ASRProcessor
+
             asr: interface.IAsr | EngineClass | None = None
-            if self._bot_config.asr and self._bot_config.asr.tag \
-                    and self._bot_config.asr.args:
-                asr = ASREnvInit.getEngine(
-                    self._bot_config.asr.tag, **self._bot_config.asr.args)
+            if self._bot_config.asr and self._bot_config.asr.tag and self._bot_config.asr.args:
+                asr = ASREnvInit.getEngine(self._bot_config.asr.tag, **self._bot_config.asr.args)
             else:
-                logging.info(f"use default asr engine processor")
+                logging.info("use default asr engine processor")
                 asr = ASREnvInit.initASREngine()
                 self._bot_config.asr = ASRConfig(tag=asr.SELECTED_TAG, args=asr.get_args_dict())
-            asr_processor = ASRProcessor(
-                asr=asr,
-                session=self.session
-            )
+            asr_processor = ASRProcessor(asr=asr, session=self.session)
         return asr_processor
 
     def get_vision_llm_processor(self, llm_config: LLMConfig | None = None) -> LLMProcessor:
@@ -133,6 +144,7 @@ class AIBot(IBot):
         get local vision llm
         """
         from src.processors.vision.vision_processor import VisionProcessor
+
         if not llm_config:
             llm_config = self._bot_config.vision_llm
         if "mock" in llm_config.tag:
@@ -160,7 +172,11 @@ class AIBot(IBot):
         return llm_processor
 
     def get_openai_llm_processor(self, llm: LLMConfig | None = None) -> LLMProcessor:
-        from src.processors.llm.openai_llm_processor import OpenAILLMProcessor, OpenAIGroqLLMProcessor
+        from src.processors.llm.openai_llm_processor import (
+            OpenAILLMProcessor,
+            OpenAIGroqLLMProcessor,
+        )
+
         if not llm:
             llm = self._bot_config.llm
         # default use openai llm processor
@@ -192,11 +208,12 @@ class AIBot(IBot):
 
     def get_google_llm_processor(self, llm: LLMConfig) -> LLMProcessor:
         from src.processors.llm.google_llm_processor import GoogleAILLMProcessor
+
         llm_config = llm
         if llm_config and llm_config.args:
             llm_processor = GoogleAILLMProcessor(**llm_config.args)
         else:
-            logging.info(f"use default google llm processor")
+            logging.info("use default google llm processor")
             api_key = os.environ.get("GOOGLE_API_KEY")
             model = os.environ.get("GOOGLE_LLM_MODEL", "gemini-1.5-flash-latest")
             llm_processor = GoogleAILLMProcessor(
@@ -208,6 +225,7 @@ class AIBot(IBot):
 
     def get_litellm_processor(self, llm: LLMConfig) -> LLMProcessor:
         from src.processors.llm.litellm_processor import LiteLLMProcessor
+
         llm_processor = LiteLLMProcessor(model=llm.model, set_verbose=False)
         return llm_processor
 
@@ -224,17 +242,19 @@ class AIBot(IBot):
 
     def get_vision_annotate_processor(self) -> AIProcessor:
         from src.processors.vision.annotate_processor import AnnotateProcessor
+
         detector: IVisionDetector | EngineClass = VisionDetectorEnvInit.initVisionDetectorEngine(
-            self._bot_config.vision_detector.tag,
-            self._bot_config.vision_detector.args)
+            self._bot_config.vision_detector.tag, self._bot_config.vision_detector.args
+        )
         processor = AnnotateProcessor(detector, self.session)
         return processor
 
     def get_vision_detect_processor(self) -> AIProcessor:
         from src.processors.vision.detect_processor import DetectProcessor
+
         detector = VisionDetectorEnvInit.initVisionDetectorEngine(
-            self._bot_config.vision_detector.tag,
-            self._bot_config.vision_detector.args)
+            self._bot_config.vision_detector.tag, self._bot_config.vision_detector.args
+        )
 
         desc, out_desc = "", ""
         if "desc" in self._bot_config.vision_detector.args:
@@ -242,15 +262,18 @@ class AIBot(IBot):
         if "out_desc" in self._bot_config.vision_detector.args:
             out_desc = self._bot_config.vision_detector.args["out_desc"]
         if desc and out_desc:
-            processor = DetectProcessor(detected_text=desc,
-                                        out_detected_text=out_desc,
-                                        detector=detector, session=self.session)
+            processor = DetectProcessor(
+                detected_text=desc,
+                out_detected_text=out_desc,
+                detector=detector,
+                session=self.session,
+            )
         elif desc:
-            processor = DetectProcessor(detected_text=desc,
-                                        detector=detector, session=self.session)
+            processor = DetectProcessor(detected_text=desc, detector=detector, session=self.session)
         elif out_desc:
-            processor = DetectProcessor(out_detected_text=out_desc,
-                                        detector=detector, session=self.session)
+            processor = DetectProcessor(
+                out_detected_text=out_desc, detector=detector, session=self.session
+            )
         else:
             processor = DetectProcessor(detector=detector, session=self.session)
 
@@ -258,9 +281,10 @@ class AIBot(IBot):
 
     def get_vision_ocr_processor(self) -> AIProcessor:
         from src.processors.vision.ocr_processor import OCRProcessor
+
         ocr = VisionOCREnvInit.initVisionOCREngine(
-            self._bot_config.vision_ocr.tag,
-            self._bot_config.vision_ocr.args)
+            self._bot_config.vision_ocr.tag, self._bot_config.vision_ocr.args
+        )
         processor = OCRProcessor(ocr=ocr, session=self.session)
         return processor
 
@@ -268,7 +292,11 @@ class AIBot(IBot):
         if not llm:
             llm = self._bot_config.voice_llm
         if llm and llm.tag and "moshi" in llm.tag:
-            from src.processors.voice.moshi_voice_processor import MoshiVoiceOpusStreamProcessor, MoshiVoiceProcessor
+            from src.processors.voice.moshi_voice_processor import (
+                MoshiVoiceOpusStreamProcessor,
+                MoshiVoiceProcessor,
+            )
+
             if "moshi_opus" in llm.tag:
                 if llm.args:
                     llm_processor = MoshiVoiceOpusStreamProcessor(**llm.args)
@@ -281,11 +309,13 @@ class AIBot(IBot):
                     llm_processor = MoshiVoiceProcessor()
         else:
             from src.processors.voice.moshi_voice_processor import VoiceOpusStreamEchoProcessor
+
             llm_processor = VoiceOpusStreamEchoProcessor()
         return llm_processor
 
     def get_text_glm_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
         from src.processors.voice.glm_voice_processor import GLMTextVoiceProcessor
+
         if not llm:
             llm = self._bot_config.voice_llm
         if llm.args:
@@ -296,6 +326,7 @@ class AIBot(IBot):
 
     def get_audio_glm_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
         from src.processors.voice.glm_voice_processor import GLMAudioVoiceProcessor
+
         if not llm:
             llm = self._bot_config.voice_llm
         if llm.args:
@@ -312,23 +343,28 @@ class AIBot(IBot):
         tts_processor: TTSProcessorBase | None = None
         if self._bot_config.tts and self._bot_config.tts.tag and self._bot_config.tts.args:
             if self._bot_config.tts.tag == "elevenlabs_tts_processor":
-                from src.processors.speech.tts.elevenlabs_tts_processor import ElevenLabsTTSProcessor
+                from src.processors.speech.tts.elevenlabs_tts_processor import (
+                    ElevenLabsTTSProcessor,
+                )
+
                 tts_processor = ElevenLabsTTSProcessor(**self._bot_config.tts.args)
             elif self._bot_config.tts.tag == "cartesia_tts_processor":
                 from src.processors.speech.tts.cartesia_tts_processor import CartesiaTTSProcessor
+
                 tts_processor = CartesiaTTSProcessor(**self._bot_config.tts.args)
             else:
                 # use tts engine processor
                 from src.processors.speech.tts.tts_processor import TTSProcessor
-                tts = TTSEnvInit.getEngine(
-                    self._bot_config.tts.tag, **self._bot_config.tts.args)
-                self._bot_config.tts.tag = tts.SELECTED_TAG,
+
+                tts = TTSEnvInit.getEngine(self._bot_config.tts.tag, **self._bot_config.tts.args)
+                self._bot_config.tts.tag = (tts.SELECTED_TAG,)
                 self._bot_config.tts.args = tts.get_args_dict()
                 tts_processor = TTSProcessor(tts=tts, session=self.session)
         else:
             # default tts engine processor
             from src.processors.speech.tts.tts_processor import TTSProcessor
-            logging.info(f"use default tts engine processor")
+
+            logging.info("use default tts engine processor")
             tag = None
             if self._bot_config.tts and self._bot_config.tts.tag:
                 tag = self._bot_config.tts.tag
@@ -339,12 +375,11 @@ class AIBot(IBot):
         return tts_processor
 
     def get_image_gen_processor(self) -> ImageGenProcessor:
-        if not self._bot_config.img_gen \
-                or not self._bot_config.img_gen.args:
+        if not self._bot_config.img_gen or not self._bot_config.img_gen.args:
             raise Exception("need img_gen args params")
         return get_image_gen_processor(
-            self._bot_config.img_gen.tag,
-            **self._bot_config.img_gen.args)
+            self._bot_config.img_gen.tag, **self._bot_config.img_gen.args
+        )
 
 
 class AIRoomBot(AIBot):

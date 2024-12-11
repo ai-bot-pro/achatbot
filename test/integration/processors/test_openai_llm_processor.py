@@ -48,7 +48,6 @@ BASE_URL=https://api.together.xyz/v1 MODEL=meta-llama/Meta-Llama-3.1-70B-Instruc
 
 
 class TestProcessor(unittest.IsolatedAsyncioTestCase):
-
     @classmethod
     def setUpClass(cls):
         Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
@@ -57,7 +56,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             {
                 "role": "system",
                 # "content": "You are a weather assistant. Use the get_weather function to retrieve weather information for a given location."
-                "content": "You are a helpful assistant who converses with a user and answers questions. Respond concisely to general questions.  Your response will be turned into speech so use only simple words and punctuation.\n  You have access to two tools: get_weather and describe_image.  You can respond to questions about the weather using the get_weather tool.\n  You can answer questions about the user's video stream using the describe_image tool.\n Some examples of phrases that indicate you should use the describe_image tool are: \n - What do you see?  \n - What's in the video? \n - Can you describe the video?\n - Tell me about what you see.\n  - Tell me something interesting about what you see.\n  - What's happening in the video?\n  If you need to use a tool, simply use the tool. Do not tell the user the tool you are using. Be brief and concise.\n Please communicate in Chinese"
+                "content": "You are a helpful assistant who converses with a user and answers questions. Respond concisely to general questions.  Your response will be turned into speech so use only simple words and punctuation.\n  You have access to two tools: get_weather and describe_image.  You can respond to questions about the weather using the get_weather tool.\n  You can answer questions about the user's video stream using the describe_image tool.\n Some examples of phrases that indicate you should use the describe_image tool are: \n - What do you see?  \n - What's in the video? \n - Can you describe the video?\n - Tell me about what you see.\n  - Tell me something interesting about what you see.\n  - What's happening in the video?\n  If you need to use a tool, simply use the tool. Do not tell the user the tool you are using. Be brief and concise.\n Please communicate in Chinese",
             }
         ]
         cls.tools = [
@@ -66,17 +65,17 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
                     "description": "Get the current weather in a given location",
                     "name": "get_weather",
                     "parameters": {
-                            "properties": {
-                                "location": {
-                                    "description": "The city and state, e.g. San Francisco, CA",
-                                    "type": "string"
-                                }
-                            },
+                        "properties": {
+                            "location": {
+                                "description": "The city and state, e.g. San Francisco, CA",
+                                "type": "string",
+                            }
+                        },
                         "required": ["location"],
-                        "type": "object"
-                    }
+                        "type": "object",
+                    },
                 },
-                "type": "function"
+                "type": "function",
             },
         ]
 
@@ -85,17 +84,19 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         pass
 
     async def get_weather(
-            self,
-            function_name: str,
-            tool_call_id: str,
-            arguments: Any,
-            llm: LLMProcessor,
-            context: OpenAILLMContext,
-            result_callback: Callable[[Any], Awaitable[None]]):
+        self,
+        function_name: str,
+        tool_call_id: str,
+        arguments: Any,
+        llm: LLMProcessor,
+        context: OpenAILLMContext,
+        result_callback: Callable[[Any], Awaitable[None]],
+    ):
         location = arguments["location"]
         logging.info(
             f"function_name:{function_name}, tool_call_id:{tool_call_id},"
-            f"arguments:{arguments}, llm:{llm}, context:{context}")
+            f"arguments:{arguments}, llm:{llm}, context:{context}"
+        )
         # just a mock response
         # add result to assistant context
         self.get_weather_call_cn += 1
@@ -147,12 +148,14 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         llm_processor.register_function("get_weather", self.get_weather)
         self.get_weather_call_cn = 0
 
-        pipeline = Pipeline([
-            llm_user_ctx_aggr,
-            llm_processor,
-            llm_assistant_ctx_aggr,
-            FrameLogger(include_frame_types=[MetricsFrame]),
-        ])
+        pipeline = Pipeline(
+            [
+                llm_user_ctx_aggr,
+                llm_processor,
+                llm_assistant_ctx_aggr,
+                FrameLogger(include_frame_types=[MetricsFrame]),
+            ]
+        )
         self.task = PipelineTask(
             pipeline,
             params=PipelineParams(enable_metrics=True),
@@ -163,16 +166,16 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
 
     async def test_run(self):
         runner = PipelineRunner()
-        await self.task.queue_frames([
-            UserStartedSpeakingFrame(),
-            TranscriptionFrame(
-                "What's the weather like in New York today? ",
-                "",
-                time_now_iso8601(),
-                "en"),
-            UserStoppedSpeakingFrame(),
-            EndFrame(),
-        ])
+        await self.task.queue_frames(
+            [
+                UserStartedSpeakingFrame(),
+                TranscriptionFrame(
+                    "What's the weather like in New York today? ", "", time_now_iso8601(), "en"
+                ),
+                UserStoppedSpeakingFrame(),
+                EndFrame(),
+            ]
+        )
         await runner.run(self.task)
         msgs = self.llm_context.get_messages()
         print(msgs)
@@ -180,12 +183,12 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         self.assertLess(self.get_weather_call_cn, self.max_function_call_cn)
         self.assertEqual(len(msgs) % 2, 1)
         if len(msgs) == 3:
-            self.assertEqual(msgs[0]['role'], "system")
-            self.assertEqual(msgs[1]['role'], "user")
-            self.assertEqual(msgs[2]['role'], "assistant")
+            self.assertEqual(msgs[0]["role"], "system")
+            self.assertEqual(msgs[1]["role"], "user")
+            self.assertEqual(msgs[2]["role"], "assistant")
         if len(msgs) == 5:
-            self.assertEqual(msgs[0]['role'], "system")
-            self.assertEqual(msgs[1]['role'], "user")
-            self.assertEqual(msgs[2]['role'], "assistant")
-            self.assertEqual(msgs[3]['role'], "tool")
-            self.assertEqual(msgs[4]['role'], "assistant")
+            self.assertEqual(msgs[0]["role"], "system")
+            self.assertEqual(msgs[1]["role"], "user")
+            self.assertEqual(msgs[2]["role"], "assistant")
+            self.assertEqual(msgs[3]["role"], "tool")
+            self.assertEqual(msgs[4]["role"], "assistant")

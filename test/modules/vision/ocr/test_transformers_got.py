@@ -23,7 +23,7 @@ LLM_MODEL_NAME_OR_PATH=./models/stepfun-ai/GOT-OCR2_0 \
 class TestTransformersGOTOCR(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tag = os.getenv('VISION_OCR_TAG', "vision_transformers_got_ocr")
+        cls.tag = os.getenv("VISION_OCR_TAG", "vision_transformers_got_ocr")
         Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
 
     @classmethod

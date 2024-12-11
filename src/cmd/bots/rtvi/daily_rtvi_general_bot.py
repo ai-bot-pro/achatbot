@@ -69,33 +69,34 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         """
         RTVI config options list can transfer to ai bot config
         """
-        logging.debug(f'args.bot_config_list: {self.args.bot_config_list}')
+        logging.debug(f"args.bot_config_list: {self.args.bot_config_list}")
         try:
             self.rtvi_config = RTVIConfig(config_list=self.args.bot_config_list)
             self._bot_config = AIConfig(**self.rtvi_config._arguments_dict)
             if "pipeline" in self.rtvi_config._arguments_dict:
                 self._pipeline_params = PipelineParams(
-                    **self.rtvi_config._arguments_dict["pipeline"])
+                    **self.rtvi_config._arguments_dict["pipeline"]
+                )
             if "daily_room_stream" in self.rtvi_config._arguments_dict:
                 self.daily_params = DailyParams(
-                    **self.rtvi_config._arguments_dict["daily_room_stream"])
+                    **self.rtvi_config._arguments_dict["daily_room_stream"]
+                )
             if self._bot_config.llm is None:
                 self._bot_config.llm = LLMConfig()
         except Exception as e:
             raise Exception(f"Failed to parse bot configuration: {e}")
         logging.info(
-            f'daily_params: {self.daily_params},'
-            f'pipeline_params: {self._pipeline_params},'
-            f'ai bot_config: {self._bot_config}, '
-            f'rtvi_config:{self.rtvi_config}')
+            f"daily_params: {self.daily_params},"
+            f"pipeline_params: {self._pipeline_params},"
+            f"ai bot_config: {self._bot_config}, "
+            f"rtvi_config:{self.rtvi_config}"
+        )
         if self._bot_config.llm.messages:
             self.llm_context.set_messages(self._bot_config.llm.messages)
 
     async def vad_service_option_change_cb_handler(
-            self,
-            processor: RTVIProcessor,
-            service_name: str,
-            option: RTVIServiceOptionConfig):
+        self, processor: RTVIProcessor, service_name: str, option: RTVIServiceOptionConfig
+    ):
         logging.info(f"service_name: {service_name} option: {option}")
         try:
             match option.name:
@@ -108,10 +109,8 @@ class DailyRTVIGeneralBot(DailyRoomBot):
             logging.warning(f"Exception handle option cb: {e}")
 
     async def asr_service_option_change_cb_handler(
-            self,
-            processor: RTVIProcessor,
-            service_name: str,
-            option: RTVIServiceOptionConfig):
+        self, processor: RTVIProcessor, service_name: str, option: RTVIServiceOptionConfig
+    ):
         logging.info(f"service_name: {service_name} option: {option}")
         try:
             match option.name:
@@ -124,10 +123,8 @@ class DailyRTVIGeneralBot(DailyRoomBot):
             logging.warning(f"Exception handle option cb: {e}")
 
     async def llm_service_option_change_cb_handler(
-            self,
-            processor: RTVIProcessor,
-            service_name: str,
-            option: RTVIServiceOptionConfig):
+        self, processor: RTVIProcessor, service_name: str, option: RTVIServiceOptionConfig
+    ):
         logging.info(f"service_name: {service_name} option: {option}")
         try:
             match option.name:
@@ -145,10 +142,8 @@ class DailyRTVIGeneralBot(DailyRoomBot):
             logging.warning(f"Exception handle option cb: {e}")
 
     async def tts_service_option_change_cb_handler(
-            self,
-            processor: RTVIProcessor,
-            service_name: str,
-            option: RTVIServiceOptionConfig):
+        self, processor: RTVIProcessor, service_name: str, option: RTVIServiceOptionConfig
+    ):
         logging.info(f"service_name: {service_name} option: {option}")
         try:
             match option.name:
@@ -157,8 +152,13 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                 case "args":
                     if isinstance(option.value, dict):
                         await self.tts_processor.set_tts_args(**option.value)
-                        if "voice_name" in option.value and processor.curr_rtvi_meesage.type == "update-config":
-                            await self.task.queue_frames([LLMMessagesFrame(self.llm_context.messages)])
+                        if (
+                            "voice_name" in option.value
+                            and processor.curr_rtvi_meesage.type == "update-config"
+                        ):
+                            await self.task.queue_frames(
+                                [LLMMessagesFrame(self.llm_context.messages)]
+                            )
                 case "voice":
                     await self.tts_processor.set_voice(option.value)
                     if processor.curr_rtvi_meesage.type == "update-config":
@@ -168,19 +168,15 @@ class DailyRTVIGeneralBot(DailyRoomBot):
             logging.warning(f"Exception handle option cb: {e}")
 
     async def llm_get_ctx_action_cb_handler(
-            self,
-            processor: RTVIProcessor,
-            service_name: str,
-            arguments: Dict[str, Any]) -> ActionResult:
+        self, processor: RTVIProcessor, service_name: str, arguments: Dict[str, Any]
+    ) -> ActionResult:
         logging.info(f"service_name: {service_name} arguments: {arguments}")
 
         return self.llm_context.get_messages_json()
 
     async def llm_set_ctx_action_cb_handler(
-            self,
-            processor: RTVIProcessor,
-            service_name: str,
-            arguments: Dict[str, Any]) -> ActionResult:
+        self, processor: RTVIProcessor, service_name: str, arguments: Dict[str, Any]
+    ) -> ActionResult:
         logging.info(f"service_name: {service_name} arguments: {arguments}")
         if "interrupt" in arguments and arguments["interrupt"] is True:
             await processor.interrupt_bot()
@@ -194,10 +190,8 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         return True
 
     async def llm_append_to_messages_action_cb_handler(
-            self,
-            processor: RTVIProcessor,
-            service_name: str,
-            arguments: Dict[str, Any]) -> ActionResult:
+        self, processor: RTVIProcessor, service_name: str, arguments: Dict[str, Any]
+    ) -> ActionResult:
         logging.info(f"service_name: {service_name} arguments: {arguments}")
         if "interrupt" in arguments and arguments["interrupt"] is True:
             await processor.interrupt_bot()
@@ -208,10 +202,8 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         return True
 
     async def llm_run_action_cb_handler(
-            self,
-            processor: RTVIProcessor,
-            service_name: str,
-            arguments: Dict[str, Any]) -> ActionResult:
+        self, processor: RTVIProcessor, service_name: str, arguments: Dict[str, Any]
+    ) -> ActionResult:
         logging.info(f"service_name: {service_name} arguments: {arguments}")
         if "interrupt" in arguments and arguments["interrupt"] is True:
             await processor.interrupt_bot()
@@ -219,10 +211,8 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         return True
 
     async def tts_say_action_cb_handler(
-            self,
-            processor: RTVIProcessor,
-            service_name: str,
-            arguments: Dict[str, Any]) -> ActionResult:
+        self, processor: RTVIProcessor, service_name: str, arguments: Dict[str, Any]
+    ) -> ActionResult:
         logging.info(f"service_name: {service_name} arguments: {arguments}")
         if "interrupt" in arguments and arguments["interrupt"] is True:
             await processor.interrupt_bot()
@@ -232,10 +222,8 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         return True
 
     async def tts_interrupt_action_cb_handler(
-            self,
-            processor: RTVIProcessor,
-            service_name: str,
-            arguments: Dict[str, Any]) -> ActionResult:
+        self, processor: RTVIProcessor, service_name: str, arguments: Dict[str, Any]
+    ) -> ActionResult:
         logging.info(f"service_name: {service_name} arguments: {arguments}")
         await processor.interrupt_bot()
         return True
@@ -245,104 +233,119 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         self.daily_params.vad_analyzer = vad_analyzer
 
         rtvi = RTVIProcessor(config=self.rtvi_config)
-        rtvi.register_services([
-            RTVIService(
-                name="vad",
-                options=[
-                    RTVIServiceOption(
-                        name="tag", type="string",
-                        handler=self.vad_service_option_change_cb_handler
-                    ),
-                    RTVIServiceOption(
-                        name="args", type="dict",
-                        handler=self.vad_service_option_change_cb_handler
-                    ),
-                ]
-            ),
-            RTVIService(
-                name="asr",
-                options=[
-                    RTVIServiceOption(
-                        name="tag", type="string",
-                        handler=self.asr_service_option_change_cb_handler
-                    ),
-                    RTVIServiceOption(
-                        name="args", type="dict",
-                        handler=self.asr_service_option_change_cb_handler
-                    ),
-                ]
-            ),
-            RTVIService(
-                name="llm",
-                options=[
-                    RTVIServiceOption(
-                        name="tag", type="string",
-                        handler=self.llm_service_option_change_cb_handler
-                    ),
-                    RTVIServiceOption(
-                        name="model", type="string",
-                        handler=self.llm_service_option_change_cb_handler
-                    ),
-                    RTVIServiceOption(
-                        name="messages", type="list",
-                        handler=self.llm_service_option_change_cb_handler
-                    ),
-                    RTVIServiceOption(
-                        name="args", type="dict",
-                        handler=self.llm_service_option_change_cb_handler
-                    ),
-                ]
-            ),
-            RTVIService(
-                name="tts",
-                options=[
-                    RTVIServiceOption(
-                        name="tag", type="string",
-                        handler=self.tts_service_option_change_cb_handler
-                    ),
-                    RTVIServiceOption(
-                        name="voice", type="string",
-                        handler=self.tts_service_option_change_cb_handler
-                    ),
-                    RTVIServiceOption(
-                        name="args", type="dict",
-                        handler=self.tts_service_option_change_cb_handler
-                    ),
-                ]
-            ),
-        ])
-        rtvi.register_actions([
-            RTVIAction(
-                service="llm",
-                action="get_context",
-                handler=self.llm_get_ctx_action_cb_handler,
-            ),
-            RTVIAction(
-                service="llm",
-                action="set_context",
-                handler=self.llm_set_ctx_action_cb_handler,
-            ),
-            RTVIAction(
-                service="llm",
-                action="append_to_messages",
-                handler=self.llm_append_to_messages_action_cb_handler,
-            ),
-            RTVIAction(
-                service="llm",
-                action="run",
-                handler=self.llm_run_action_cb_handler,
-            ),
-            RTVIAction(
-                service="tts",
-                action="say",
-                handler=self.tts_say_action_cb_handler,
-            ),
-            RTVIAction(
-                service="tts",
-                action="interrupt",
-                handler=self.tts_interrupt_action_cb_handler,
-            ),
-        ])
+        rtvi.register_services(
+            [
+                RTVIService(
+                    name="vad",
+                    options=[
+                        RTVIServiceOption(
+                            name="tag",
+                            type="string",
+                            handler=self.vad_service_option_change_cb_handler,
+                        ),
+                        RTVIServiceOption(
+                            name="args",
+                            type="dict",
+                            handler=self.vad_service_option_change_cb_handler,
+                        ),
+                    ],
+                ),
+                RTVIService(
+                    name="asr",
+                    options=[
+                        RTVIServiceOption(
+                            name="tag",
+                            type="string",
+                            handler=self.asr_service_option_change_cb_handler,
+                        ),
+                        RTVIServiceOption(
+                            name="args",
+                            type="dict",
+                            handler=self.asr_service_option_change_cb_handler,
+                        ),
+                    ],
+                ),
+                RTVIService(
+                    name="llm",
+                    options=[
+                        RTVIServiceOption(
+                            name="tag",
+                            type="string",
+                            handler=self.llm_service_option_change_cb_handler,
+                        ),
+                        RTVIServiceOption(
+                            name="model",
+                            type="string",
+                            handler=self.llm_service_option_change_cb_handler,
+                        ),
+                        RTVIServiceOption(
+                            name="messages",
+                            type="list",
+                            handler=self.llm_service_option_change_cb_handler,
+                        ),
+                        RTVIServiceOption(
+                            name="args",
+                            type="dict",
+                            handler=self.llm_service_option_change_cb_handler,
+                        ),
+                    ],
+                ),
+                RTVIService(
+                    name="tts",
+                    options=[
+                        RTVIServiceOption(
+                            name="tag",
+                            type="string",
+                            handler=self.tts_service_option_change_cb_handler,
+                        ),
+                        RTVIServiceOption(
+                            name="voice",
+                            type="string",
+                            handler=self.tts_service_option_change_cb_handler,
+                        ),
+                        RTVIServiceOption(
+                            name="args",
+                            type="dict",
+                            handler=self.tts_service_option_change_cb_handler,
+                        ),
+                    ],
+                ),
+            ]
+        )
+        rtvi.register_actions(
+            [
+                RTVIAction(
+                    service="llm",
+                    action="get_context",
+                    handler=self.llm_get_ctx_action_cb_handler,
+                ),
+                RTVIAction(
+                    service="llm",
+                    action="set_context",
+                    handler=self.llm_set_ctx_action_cb_handler,
+                ),
+                RTVIAction(
+                    service="llm",
+                    action="append_to_messages",
+                    handler=self.llm_append_to_messages_action_cb_handler,
+                ),
+                RTVIAction(
+                    service="llm",
+                    action="run",
+                    handler=self.llm_run_action_cb_handler,
+                ),
+                RTVIAction(
+                    service="tts",
+                    action="say",
+                    handler=self.tts_say_action_cb_handler,
+                ),
+                RTVIAction(
+                    service="tts",
+                    action="interrupt",
+                    handler=self.tts_interrupt_action_cb_handler,
+                ),
+            ]
+        )
 
         if self._bot_config.llm:
             llm_user_ctx_aggr = OpenAIUserContextAggregator(self.llm_context)
@@ -352,7 +355,7 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         try:
             for service_conf in self.rtvi_config.config_list:
                 # TODO: maybe list all supported processor
-                match  service_conf.service:
+                match service_conf.service:
                     case "asr":
                         self.daily_params.transcription_enabled = False
                         self.daily_params.vad_audio_passthrough = True
@@ -361,8 +364,7 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                         processors.append(rtvi)
                     case "llm":
                         if self._bot_config.llm:
-                            if self._bot_config.llm.tag and \
-                                    "vision" in self._bot_config.llm.tag:
+                            if self._bot_config.llm.tag and "vision" in self._bot_config.llm.tag:
                                 self.image_requester = UserImageRequestProcessor()
                                 processors.append(self.image_requester)
                                 vision_aggregator = VisionImageFrameAggregator()
@@ -396,22 +398,17 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         processors.append(self.transport.output_processor())
         # print(processors)
         if self._bot_config.llm:
-            if self._bot_config.llm.tag and \
-                    "vision" in self._bot_config.llm.tag:
+            if self._bot_config.llm.tag and "vision" in self._bot_config.llm.tag:
                 pass
             else:
                 processors.append(llm_assistant_ctx_aggr)
         self.task = PipelineTask(Pipeline(processors), params=self._pipeline_params)
 
         self.transport.add_event_handler(
-            "on_first_participant_joined",
-            self.on_first_participant_joined)
-        self.transport.add_event_handler(
-            "on_participant_left",
-            self.on_participant_left)
-        self.transport.add_event_handler(
-            "on_call_state_updated",
-            self.on_call_state_updated)
+            "on_first_participant_joined", self.on_first_participant_joined
+        )
+        self.transport.add_event_handler("on_participant_left", self.on_participant_left)
+        self.transport.add_event_handler("on_call_state_updated", self.on_call_state_updated)
 
         runner = PipelineRunner()
         await runner.run(self.task)
@@ -419,28 +416,35 @@ class DailyRTVIGeneralBot(DailyRoomBot):
     async def on_first_participant_joined(self, transport: DailyTransport, participant):
         if self.daily_params.transcription_enabled:
             transport.capture_participant_transcription(participant["id"])
-        if self._bot_config.llm \
-                and self._bot_config.llm.tag \
-                and "vision" in self._bot_config.llm.tag:
+        if (
+            self._bot_config.llm
+            and self._bot_config.llm.tag
+            and "vision" in self._bot_config.llm.tag
+        ):
             transport.capture_participant_video(participant["id"], framerate=0)
             self.image_requester and self.image_requester.set_participant_id(participant["id"])
 
         # joined use tts say "hello" to introduce with llm generate
-        if self._bot_config.tts \
-                and self._bot_config.llm \
-                and self._bot_config.llm.messages \
-                and len(self._bot_config.llm.messages) > 0:
+        if (
+            self._bot_config.tts
+            and self._bot_config.llm
+            and self._bot_config.llm.messages
+            and len(self._bot_config.llm.messages) > 0
+        ):
             messages = self._bot_config.llm.messages
-            messages[0]["content"] = self._bot_config.llm.messages[0]["content"] + \
-                " Please introduce yourself first."
+            messages[0]["content"] = (
+                self._bot_config.llm.messages[0]["content"] + " Please introduce yourself first."
+            )
             await self.task.queue_frames([LLMMessagesFrame(messages)])
-        elif self._bot_config.tts \
-                and self._bot_config.llm \
-                and self._bot_config.llm.tag \
-                and "vision" in self._bot_config.llm.tag:
-            hi = f"[HI_TEXT] Hello, welcome to use Vision Bot, I am your virtual assistant. u can ask me with video. [/HI_TEXT]"
+        elif (
+            self._bot_config.tts
+            and self._bot_config.llm
+            and self._bot_config.llm.tag
+            and "vision" in self._bot_config.llm.tag
+        ):
+            hi = "[HI_TEXT] Hello, welcome to use Vision Bot, I am your virtual assistant. u can ask me with video. [/HI_TEXT]"
             match self._bot_config.tts.language:
                 case "zh":
-                    hi = f"[HI_TEXT] 你好，欢迎使用 Vision Bot. 我是一名虚拟助手，可以结合视频进行提问。[/HI_TEXT]"
+                    hi = "[HI_TEXT] 你好，欢迎使用 Vision Bot. 我是一名虚拟助手，可以结合视频进行提问。[/HI_TEXT]"
             await self.task.queue_frame(TextFrame(text=hi))
         logging.info("First participant joined")

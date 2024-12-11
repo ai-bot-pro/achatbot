@@ -16,6 +16,7 @@ from src.processors.speech.tts.cartesia_tts_processor import CartesiaTTSProcesso
 from src.transports.daily import DailyTransport
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 r"""
@@ -53,8 +54,8 @@ class TestCartesiaTTSProcessor(unittest.IsolatedAsyncioTestCase):
     async def test_tts_daily_output(self):
         bot_name = "my test bot"
         transport = DailyTransport(
-            self.room_url, None, bot_name,
-            DailyParams(audio_out_enabled=True))
+            self.room_url, None, bot_name, DailyParams(audio_out_enabled=True)
+        )
 
         # https://docs.cartesia.ai/getting-started/available-models
         # !NOTE: Timestamps are not supported for language 'zh'
@@ -67,8 +68,10 @@ class TestCartesiaTTSProcessor(unittest.IsolatedAsyncioTestCase):
             sync_order_send=True,  # for send EndFrame in the end to test
         )
 
-        task = PipelineTask(Pipeline([tts, transport.output_processor()]),
-                            params=PipelineParams(allow_interruptions=True))
+        task = PipelineTask(
+            Pipeline([tts, transport.output_processor()]),
+            params=PipelineParams(allow_interruptions=True),
+        )
 
         # Register an event handler so we can play the audio when the
         # participant joins.
@@ -77,13 +80,17 @@ class TestCartesiaTTSProcessor(unittest.IsolatedAsyncioTestCase):
             participant_name = bot_name
             if "userName" in participant["info"]:
                 participant_name = participant["info"]["userName"]
-            await task.queue_frames([
-                TextFrame(f"你好，Hello there. {participant_name}"),
-                TextFrame(f"你是一个中国人。"),
-                TextFrame(f"一名中文助理，请用中文简短回答，回答限制在5句话内。"),
-                TextFrame(f"我是Andrej Karpathy，我在YouTube上发布关于机器学习和深度学习的视频。如果你有任何关于这些视频的疑问或需要帮助，请告诉我！"),
-                EndFrame(),
-            ])
+            await task.queue_frames(
+                [
+                    TextFrame(f"你好，Hello there. {participant_name}"),
+                    TextFrame("你是一个中国人。"),
+                    TextFrame("一名中文助理，请用中文简短回答，回答限制在5句话内。"),
+                    TextFrame(
+                        "我是Andrej Karpathy，我在YouTube上发布关于机器学习和深度学习的视频。如果你有任何关于这些视频的疑问或需要帮助，请告诉我！"
+                    ),
+                    EndFrame(),
+                ]
+            )
 
         runner = PipelineRunner()
         await runner.run(task)

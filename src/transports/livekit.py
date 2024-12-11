@@ -61,7 +61,10 @@ class LivekitTransport(BaseTransport):
         self._params.api_key = params.api_key or os.getenv("LIVEKIT_API_KEY")
         self._params.api_secret = params.api_secret or os.getenv("LIVEKIT_API_SECRET")
         self._client = LivekitTransportClient(
-            token, self._params, callbacks, self._loop,
+            token,
+            self._params,
+            callbacks,
+            self._loop,
         )
         logging.debug(f"LivekitTransport params:{self._params}")
 
@@ -71,7 +74,8 @@ class LivekitTransport(BaseTransport):
     def input_processor(self) -> LivekitInputTransportProcessor:
         if not self._input:
             self._input = LivekitInputTransportProcessor(
-                self._client, self._params, name=self._input_name)
+                self._client, self._params, name=self._input_name
+            )
         return self._input
 
     def output_processor(self) -> LivekitOutputTransportProcessor:
@@ -185,8 +189,7 @@ class LivekitTransport(BaseTransport):
         num_channels=None,
     ):
         if self._input:
-            self._input.capture_participant_audio(
-                participant_id, sample_rate, num_channels)
+            self._input.capture_participant_audio(participant_id, sample_rate, num_channels)
 
     def capture_participant_video(
         self,
@@ -205,4 +208,5 @@ class LivekitTransport(BaseTransport):
         """
         if self._input:
             self._input.capture_participant_video(
-                participant_id, framerate, video_source, color_format)
+                participant_id, framerate, video_source, color_format
+            )

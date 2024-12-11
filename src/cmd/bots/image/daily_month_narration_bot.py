@@ -63,7 +63,7 @@ class DailyMonthNarrationBot(DailyRoomBot):
                 audio_out_enabled=True,
                 camera_out_enabled=True,
                 camera_out_width=1280,
-                camera_out_height=720
+                camera_out_height=720,
             )
 
             tts_processor: TTSProcessor = self.get_tts_processor()
@@ -72,18 +72,16 @@ class DailyMonthNarrationBot(DailyRoomBot):
             daily_params.audio_out_channels = stream_info["channels"]
 
             transport = DailyTransport(
-                self.args.room_url, self.args.token, self.args.bot_name,
+                self.args.room_url,
+                self.args.token,
+                self.args.bot_name,
                 daily_params,
             )
             transport.add_event_handler(
-                "on_first_participant_joined",
-                self.on_first_participant_joined)
-            transport.add_event_handler(
-                "on_participant_left",
-                self.on_participant_left)
-            transport.add_event_handler(
-                "on_call_state_updated",
-                self.on_call_state_updated)
+                "on_first_participant_joined", self.on_first_participant_joined
+            )
+            transport.add_event_handler("on_participant_left", self.on_participant_left)
+            transport.add_event_handler("on_call_state_updated", self.on_call_state_updated)
 
             llm_processor = self.get_llm_processor()
             sentence_aggregator = SentenceAggregator()

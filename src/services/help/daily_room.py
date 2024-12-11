@@ -6,10 +6,16 @@ from src.common.const import *
 from src.common.types import DailyRoomArgs, GeneralRoomInfo
 from src.common.interface import IRoomManager
 from src.common.factory import EngineClass
-from src.services.help.daily_rest import DailyRESTHelper, DailyRoomObject, DailyRoomParams, DailyRoomProperties
+from src.services.help.daily_rest import (
+    DailyRESTHelper,
+    DailyRoomObject,
+    DailyRoomParams,
+    DailyRoomProperties,
+)
 
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 
@@ -20,17 +26,16 @@ class DailyRoom(EngineClass, IRoomManager):
         self.args = DailyRoomArgs(**kwargs)
         # Create a Daily rest helper
         self.daily_rest_helper = DailyRESTHelper(
-            os.getenv("DAILY_API_KEY", ""),
-            os.getenv("DAILY_API_URL", "https://api.daily.co/v1"))
+            os.getenv("DAILY_API_KEY", ""), os.getenv("DAILY_API_URL", "https://api.daily.co/v1")
+        )
 
     async def close_session(self):
         # http rest api shot session, don't do anything
         pass
 
     async def create_room(
-            self,
-            room_name: str | None = None,
-            exp_time_s: int = ROOM_EXPIRE_TIME) -> GeneralRoomInfo:
+        self, room_name: str | None = None, exp_time_s: int = ROOM_EXPIRE_TIME
+    ) -> GeneralRoomInfo:
         room: DailyRoomObject | None = None
         if not room_name:
             return await self.create_random_room(exp_time_s=exp_time_s)
@@ -38,7 +43,8 @@ class DailyRoom(EngineClass, IRoomManager):
             room = self.daily_rest_helper.get_room_from_name(room_name)
         except Exception as ex:
             logging.info(
-                f"Failed to get room {room_name} from Daily REST API: {ex}, to new a room: {room_name}")
+                f"Failed to get room {room_name} from Daily REST API: {ex}, to new a room: {room_name}"
+            )
             # Create a new room
             try:
                 params = DailyRoomParams(
@@ -62,8 +68,8 @@ class DailyRoom(EngineClass, IRoomManager):
         )
 
     async def create_random_room(
-            self,
-            exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME) -> GeneralRoomInfo:
+        self, exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME
+    ) -> GeneralRoomInfo:
         # Create a new random name room
         room: DailyRoomObject | None = None
         try:
@@ -104,8 +110,7 @@ class DailyRoom(EngineClass, IRoomManager):
             )
             return g_room
         except Exception as ex:
-            logging.warning(
-                f"Failed to get room {room_name} from Daily REST API: {ex}")
+            logging.warning(f"Failed to get room {room_name} from Daily REST API: {ex}")
             return None
 
     async def check_valid_room(self, room_name: str, token: str) -> bool:

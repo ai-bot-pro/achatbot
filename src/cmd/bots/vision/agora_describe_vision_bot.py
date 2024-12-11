@@ -65,17 +65,19 @@ class AgoraDescribeVisionBot(AgoraChannelBot):
                 f"欢迎使用 Vision Bot. 我是一名虚拟助手，可以结合视频进行提问。"
             )
 
-        pipeline = Pipeline([
-            transport.input_processor(),
-            asr_processor,
-            # llm_in_aggr,
-            in_aggr,
-            image_requester,
-            vision_aggregator,
-            llm_processor,
-            tts_processor,
-            transport.output_processor(),
-            # llm_out_aggr,
-        ])
+        pipeline = Pipeline(
+            [
+                transport.input_processor(),
+                asr_processor,
+                # llm_in_aggr,
+                in_aggr,
+                image_requester,
+                vision_aggregator,
+                llm_processor,
+                tts_processor,
+                transport.output_processor(),
+                # llm_out_aggr,
+            ]
+        )
         self.task = PipelineTask(pipeline, params=PipelineParams())
         await PipelineRunner().run(self.task)

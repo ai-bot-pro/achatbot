@@ -24,7 +24,7 @@ class RMSRecorder(AudioRecorder, IRecorder):
         ints = struct.unpack(format, data)
 
         # Calculate RMS
-        sum_squares = sum(i ** 2 for i in ints)
+        sum_squares = sum(i**2 for i in ints)
         rms = (sum_squares / len(ints)) ** 0.5
         return rms
 
@@ -40,17 +40,16 @@ class RMSRecorder(AudioRecorder, IRecorder):
             yield item
 
     async def _record_audio_generator(self, session: Session) -> AsyncGenerator[bytes, None]:
-
         if self.stream_info.in_sample_rate != RATE:
-            raise Exception(
-                f"rms recorder's sampling rate of the audio just support 16000Hz at now")
+            raise Exception("rms recorder's sampling rate of the audio just support 16000Hz at now")
         silent_chunks = 0
         audio_started = False
         silence_timeout = 0
         if "silence_timeout_s" in session.ctx.state:
             logging.info(
-                f"rms recording with silence_timeout {session.ctx.state['silence_timeout_s']} s")
-            silence_timeout = int(session.ctx.state['silence_timeout_s'])
+                f"rms recording with silence_timeout {session.ctx.state['silence_timeout_s']} s"
+            )
+            silence_timeout = int(session.ctx.state["silence_timeout_s"])
 
         self.audio.start_stream()
         logging.debug(f"start {self.TAG} recording")
@@ -76,9 +75,8 @@ class RMSRecorder(AudioRecorder, IRecorder):
                 yield data
                 audio_started = True
             else:
-                if silence_timeout > 0 \
-                        and time.time() - start_time > silence_timeout:
-                    logging.warning(f"rms recording silence timeout")
+                if silence_timeout > 0 and time.time() - start_time > silence_timeout:
+                    logging.warning("rms recording silence timeout")
                     break
 
         self.audio.stop_stream()
@@ -98,13 +96,13 @@ class WakeWordsRMSRecorder(RMSRecorder):
 
         # ring buffer
         pre_recording_buffer_duration = 3.0
-        maxlen = int((sample_rate // frame_length) *
-                     pre_recording_buffer_duration)
+        maxlen = int((sample_rate // frame_length) * pre_recording_buffer_duration)
         self.audio_buffer = RingBuffer(maxlen)
 
         self.audio.start_stream()
         logging.info(
-            f"start {self.TAG} recording; audio sample_rate: {self.sample_rate},frame_length:{self.frame_length}, audio buffer maxlen: {maxlen}")
+            f"start {self.TAG} recording; audio sample_rate: {self.sample_rate},frame_length:{self.frame_length}, audio buffer maxlen: {maxlen}"
+        )
 
         if self.args.is_stream_callback is False:
             self.set_args(num_frames=self.frame_length)
@@ -129,8 +127,7 @@ class WakeWordsRMSRecorder(RMSRecorder):
 
     async def record_audio(self, session: Session) -> list[bytes | None]:
         if session.ctx.waker is None:
-            logging.warning(
-                f"{self.TAG} no waker instance in session ctx, use {super().TAG}")
+            logging.warning(f"{self.TAG} no waker instance in session ctx, use {super().TAG}")
             return await super().record_audio(session)
 
         await self._record_audio(session)
@@ -138,8 +135,7 @@ class WakeWordsRMSRecorder(RMSRecorder):
 
     async def record_audio_generator(self, session: Session) -> AsyncGenerator[bytes, None]:
         if session.ctx.waker is None:
-            logging.warning(
-                f"{self.TAG} no waker instance in session ctx, use {super().TAG}")
+            logging.warning(f"{self.TAG} no waker instance in session ctx, use {super().TAG}")
             async for item in super().record_audio_generator(session):
                 yield item
 

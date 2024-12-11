@@ -34,30 +34,33 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
     - GLM-4-Voice-Decoder: A speech decoder supporting streaming inference, retrained based on CosyVoice, converting discrete speech tokens into continuous speech output. Generation can start with as few as 10 audio tokens, reducing conversation latency.
     """
 
-    def __init__(self,
-                 *,
-                 voice_in_args: GLMVoiceInArgs | dict = GLMVoiceInArgs(),
-                 lm_gen_args: GLMInferenceArgs | dict = GLMInferenceArgs(),
-                 voice_out_args: GLMVoiceOutArgs | dict = GLMVoiceOutArgs(),
-                 system_prompt: str = "",
-                 voice_tokenizer_path: str | None = None,  # audio encoder/ft extractor
-                 model_path: str | None = None,  # gen lm and text tokenizer
-                 voice_decoder_path: str | None = None,  # audio decoder
-                 device: str = "cuda",
-                 torch_dtype: str = "auto",  # auto,float16,bfloat16,float32
-                 bnb_quant_type: str = "int4",
-                 session: Session | None = None,
-                 **kwargs):
+    def __init__(
+        self,
+        *,
+        voice_in_args: GLMVoiceInArgs | dict = GLMVoiceInArgs(),
+        lm_gen_args: GLMInferenceArgs | dict = GLMInferenceArgs(),
+        voice_out_args: GLMVoiceOutArgs | dict = GLMVoiceOutArgs(),
+        system_prompt: str = "",
+        voice_tokenizer_path: str | None = None,  # audio encoder/ft extractor
+        model_path: str | None = None,  # gen lm and text tokenizer
+        voice_decoder_path: str | None = None,  # audio decoder
+        device: str = "cuda",
+        torch_dtype: str = "auto",  # auto,float16,bfloat16,float32
+        bnb_quant_type: str = "int4",
+        session: Session | None = None,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
 
         cur_dir = os.path.dirname(__file__)
         if bool(os.getenv("ACHATBOT_PKG", "")):
-            sys.path.insert(1, os.path.join(cur_dir, '../../GLM4Voice'))
-            sys.path.insert(2, os.path.join(cur_dir, '../../GLM4Voice/third_party/Matcha-TTS'))
+            sys.path.insert(1, os.path.join(cur_dir, "../../GLM4Voice"))
+            sys.path.insert(2, os.path.join(cur_dir, "../../GLM4Voice/third_party/Matcha-TTS"))
         else:
-            sys.path.insert(1, os.path.join(cur_dir, '../../../deps/GLM4Voice'))
-            sys.path.insert(2, os.path.join(cur_dir,
-                                            '../../../deps/GLM4Voice/third_party/Matcha-TTS'))
+            sys.path.insert(1, os.path.join(cur_dir, "../../../deps/GLM4Voice"))
+            sys.path.insert(
+                2, os.path.join(cur_dir, "../../../deps/GLM4Voice/third_party/Matcha-TTS")
+            )
 
         self._voice_in_args = voice_in_args
         if isinstance(voice_in_args, dict):
@@ -84,14 +87,54 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
 
         # "你好!有什么可以帮你的吗？" text tokens + audio waveform tokens
         self.test_tokens = [
-            109377, 6313, 101665, 109213, 99215, 99444,
-            99212, 11314, 166648, 164526, 163431, 155030,
-            160561, 167785, 165922, 167515, 163387, 157845,
-            157845, 158729, 159316, 153554, 158936, 160466,
-            157871, 168288, 165890, 152620, 164640, 158589,
-            152703, 154548, 165926, 163830, 166537, 165003,
-            155773, 161696, 158134, 167188, 161032, 157635,
-            164078, 160166, 160014, 160014, 160014, 166768,
+            109377,
+            6313,
+            101665,
+            109213,
+            99215,
+            99444,
+            99212,
+            11314,
+            166648,
+            164526,
+            163431,
+            155030,
+            160561,
+            167785,
+            165922,
+            167515,
+            163387,
+            157845,
+            157845,
+            158729,
+            159316,
+            153554,
+            158936,
+            160466,
+            157871,
+            168288,
+            165890,
+            152620,
+            164640,
+            158589,
+            152703,
+            154548,
+            165926,
+            163830,
+            166537,
+            165003,
+            155773,
+            161696,
+            158134,
+            167188,
+            161032,
+            157635,
+            164078,
+            160166,
+            160014,
+            160014,
+            160014,
+            166768,
             151336,
         ]
 
@@ -111,16 +154,18 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
         logging.info("loading model weights")
 
         # Speech tokenizer(whisper vq encoder)/feature_extractor
-        self._whisper_model = WhisperVQEncoder.from_pretrained(
-            self._voice_tokenizer_path).eval().to(self._device)
+        self._whisper_model = (
+            WhisperVQEncoder.from_pretrained(self._voice_tokenizer_path).eval().to(self._device)
+        )
         self._feature_extractor = WhisperFeatureExtractor.from_pretrained(
-            self._voice_tokenizer_path)
+            self._voice_tokenizer_path
+        )
         logging.info("speech whisper vq encoder and feature_extractor model state weight load")
 
         # Flow & Hift decoder with config, fixed sample rate 22050
         flow_config = os.path.join(self._voice_decoder_path, "config.yaml")
-        flow_checkpoint = os.path.join(self._voice_decoder_path, 'flow.pt')
-        hift_checkpoint = os.path.join(self._voice_decoder_path, 'hift.pt')
+        flow_checkpoint = os.path.join(self._voice_decoder_path, "flow.pt")
+        hift_checkpoint = os.path.join(self._voice_decoder_path, "hift.pt")
         self._audio_decoder = AudioDecoder(
             config_path=flow_config,
             flow_ckpt_path=flow_checkpoint,
@@ -131,22 +176,26 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
 
         # gen lm text tokenizer
         self._glm_tokenizer = AutoTokenizer.from_pretrained(
-            self._model_path, trust_remote_code=True)
-        self._audio_offset = self._glm_tokenizer.convert_tokens_to_ids('<|audio_0|>')
-        self._end_token_id = self._glm_tokenizer.convert_tokens_to_ids('<|user|>')
+            self._model_path, trust_remote_code=True
+        )
+        self._audio_offset = self._glm_tokenizer.convert_tokens_to_ids("<|audio_0|>")
+        self._end_token_id = self._glm_tokenizer.convert_tokens_to_ids("<|user|>")
         logging.info(
-            f"gen lm text tokenizer load,audio_offset:{self._audio_offset} end_token_id:{self._end_token_id}")
+            f"gen lm text tokenizer load,audio_offset:{self._audio_offset} end_token_id:{self._end_token_id}"
+        )
 
         # gen lm
-        self._glm_model = TransformersManualVoicGLM(**TransformersLMArgs(
-            lm_model_name_or_path=self._model_path,
-            lm_gen_temperature=self._lm_gen_args.temperature,
-            lm_gen_top_p=self._lm_gen_args.top_p,
-            lm_gen_max_new_tokens=self._lm_gen_args.max_new_token,
-            lm_torch_dtype=self._torch_dtype,
-            lm_bnb_quant_type=self._bnb_quant_type,
-            lm_device=self._device,
-        ).__dict__)
+        self._glm_model = TransformersManualVoicGLM(
+            **TransformersLMArgs(
+                lm_model_name_or_path=self._model_path,
+                lm_gen_temperature=self._lm_gen_args.temperature,
+                lm_gen_top_p=self._lm_gen_args.top_p,
+                lm_gen_max_new_tokens=self._lm_gen_args.max_new_token,
+                lm_torch_dtype=self._torch_dtype,
+                lm_bnb_quant_type=self._bnb_quant_type,
+                lm_device=self._device,
+            ).__dict__
+        )
         self._glm_model.warmup()
         logging.info("gen lm model state weight load and warnup")
 
@@ -174,11 +223,7 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
             audio_tensor = bytes2TorchTensorWith16(frame.audio)
             utt = (audio_tensor, self._voice_in_args.audio_sample_rate)
         # default 16khz sample rate encode/extract -> audio tokens
-        audio_tokens = extract_speech_token(
-            self._whisper_model,
-            self._feature_extractor,
-            [utt]
-        )[0]
+        audio_tokens = extract_speech_token(self._whisper_model, self._feature_extractor, [utt])[0]
         if len(audio_tokens) == 0:
             yield ErrorFrame("No audio tokens extracted")
             return
@@ -201,7 +246,7 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
 
         yield None
 
-    @ torch.no_grad()
+    @torch.no_grad()
     async def tokens_decode_out(self, iter_tokens):
         text_tokens, audio_tokens = [], []
         complete_tokens = []
@@ -245,19 +290,21 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
 
                 # waveform tensor write to audio bytes
                 audio_bytes = audio_processor.process(
-                    tts_speech.clone().cpu().numpy()[0], last=is_finalize)
+                    tts_speech.clone().cpu().numpy()[0], last=is_finalize
+                )
 
                 tts_speechs.append(tts_speech.squeeze())
                 tts_mels.append(tts_mel)
                 if audio_bytes:
                     # print("audio_bytes====>", len(audio_bytes))
-                    await self.queue_frame(AudioRawFrame(
-                        audio=audio_bytes,
-                        sample_rate=self._voice_out_args.audio_sample_rate,
-                        num_channels=self._voice_out_args.audio_channels,
-                    ))
-                flow_prompt_speech_token = torch.cat(
-                    (flow_prompt_speech_token, tts_token), dim=-1)
+                    await self.queue_frame(
+                        AudioRawFrame(
+                            audio=audio_bytes,
+                            sample_rate=self._voice_out_args.audio_sample_rate,
+                            num_channels=self._voice_out_args.audio_channels,
+                        )
+                    )
+                flow_prompt_speech_token = torch.cat((flow_prompt_speech_token, tts_token), dim=-1)
                 audio_tokens = []
 
             if not is_finalize:
@@ -271,7 +318,8 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
                     text_tokens.append(token_id)
 
         complete_text = self._glm_tokenizer.decode(
-            complete_tokens, spaces_between_special_tokens=False)
+            complete_tokens, spaces_between_special_tokens=False
+        )
         self._history_texts += complete_text
         logging.info(f"history_texts:{self._history_texts}")
 
@@ -281,6 +329,7 @@ class GLMAudioVoiceProcessor(GLMVoiceBaseProcessor):
     use Voice-Tokenizer (whisper) +  GLM4-Voice-9B(text/audio) + Text-Tokenizer (GLM-tokenizer), Voice-Decoder (CosyVoice)
     - A1-T2A2: (text/speech)-to-(tokens) (GLM4(text)/whisper(speech encoder)) -> GLM4(llm) -- text|speech tokens --> GLM4(text decoder)|CosyVoice(speech decoder(mel->waveform)))
     """
+
     pass
 
 

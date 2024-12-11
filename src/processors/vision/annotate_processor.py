@@ -25,7 +25,7 @@ class AnnotateProcessor(AIProcessor):
         self,
         detector: IVisionDetector | EngineClass | None = None,
         session: Session | None = None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self._detector = detector

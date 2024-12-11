@@ -7,7 +7,10 @@ from apipeline.frames.control_frames import StartFrame, EndFrame
 from apipeline.frames.sys_frames import CancelFrame
 
 from src.processors.audio_input_processor import AudioVADInputProcessor
-from src.types.network.fastapi_websocket import FastapiWebsocketServerCallbacks, FastapiWebsocketServerParams
+from src.types.network.fastapi_websocket import (
+    FastapiWebsocketServerCallbacks,
+    FastapiWebsocketServerParams,
+)
 
 
 class FastapiWebsocketServerInputProcessor(AudioVADInputProcessor):

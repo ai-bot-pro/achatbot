@@ -19,6 +19,7 @@ from apipeline.processors.logger import FrameLogger
 from src.types.frames.data_frames import VisionImageRawFrame
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 
@@ -53,13 +54,12 @@ LLM_TAG=llm_transformers_manual_vision_molmo \
 
 
 class TestVisionProcessor(unittest.IsolatedAsyncioTestCase):
-
     @classmethod
     def setUpClass(cls):
         Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
 
         img_file = os.path.join(TEST_DIR, "img_files", "03-Confusing-Pictures.jpg")
-        img_file = os.getenv('IMG_FILE', img_file)
+        img_file = os.getenv("IMG_FILE", img_file)
         cls.img = Image.open(img_file)
 
     @classmethod
@@ -70,44 +70,47 @@ class TestVisionProcessor(unittest.IsolatedAsyncioTestCase):
         session = Session(**SessionCtx(uuid.uuid4()).__dict__)
         llm = LLMEnvInit.initLLMEngine()
         llm_processor = VisionProcessor(llm, session)
-        pipeline = Pipeline([
-            FrameLogger(),
-            llm_processor,
-            FrameLogger(),
-        ])
-
-        self.task = PipelineTask(
-            pipeline,
-            PipelineParams()
+        pipeline = Pipeline(
+            [
+                FrameLogger(),
+                llm_processor,
+                FrameLogger(),
+            ]
         )
+
+        self.task = PipelineTask(pipeline, PipelineParams())
 
     async def asyncTearDown(self):
         pass
 
     async def test_run(self):
         runner = PipelineRunner()
-        await self.task.queue_frames([
-            VisionImageRawFrame(
-                image=self.img.tobytes(),
-                size=self.img.size,
-                format=self.img.format,
-                mode=self.img.mode,
-                text="请描述下图片",
-            ),
-            StopTaskFrame(),
-        ])
+        await self.task.queue_frames(
+            [
+                VisionImageRawFrame(
+                    image=self.img.tobytes(),
+                    size=self.img.size,
+                    format=self.img.format,
+                    mode=self.img.mode,
+                    text="请描述下图片",
+                ),
+                StopTaskFrame(),
+            ]
+        )
         await runner.run(self.task)
 
     async def test_run_text(self):
         runner = PipelineRunner()
-        await self.task.queue_frames([
-            VisionImageRawFrame(
-                text="你好",
-                image=bytes([]),
-                size=(0, 0),
-                format=None,
-                mode=None,
-            ),
-            StopTaskFrame(),
-        ])
+        await self.task.queue_frames(
+            [
+                VisionImageRawFrame(
+                    text="你好",
+                    image=bytes([]),
+                    size=(0, 0),
+                    format=None,
+                    mode=None,
+                ),
+                StopTaskFrame(),
+            ]
+        )
         await runner.run(self.task)

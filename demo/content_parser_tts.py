@@ -17,7 +17,7 @@ app = typer.Typer()
 
 
 async def edge_tts_conversion(text_chunk: str, output_file: str, voice: str):
-    webvtt_file = ".".join(output_file.split('.')[:-1]) + ".vtt"
+    webvtt_file = ".".join(output_file.split(".")[:-1]) + ".vtt"
     communicate = edge_tts.Communicate(text_chunk, voice, rate="+15%")
     submaker = edge_tts.SubMaker()
     with open(output_file, "wb") as file:
@@ -26,8 +26,7 @@ async def edge_tts_conversion(text_chunk: str, output_file: str, voice: str):
                 file.write(chunk["data"])
             elif chunk["type"] == "WordBoundary":
                 # print(chunk)
-                submaker.create_sub(
-                    (chunk["offset"], chunk["duration"]), chunk["text"])
+                submaker.create_sub((chunk["offset"], chunk["duration"]), chunk["text"])
 
     with open(webvtt_file, "w", encoding="utf-8") as file:
         file.write(submaker.generate_subs())
@@ -85,7 +84,7 @@ async def gen_podcast_tts_audios(
             role_index = 0
 
         # print(pre_cn, extraction.roles, extraction.roles[pre_cn - 1:])
-        for role in extraction.roles[pre_cn - 1:]:
+        for role in extraction.roles[pre_cn - 1 :]:
             if not role.content:
                 continue
             if pre_role == role.name:
@@ -101,17 +100,16 @@ async def gen_podcast_tts_audios(
     return extraction
 
 
-@app.command('merge_audio_files')
+@app.command("merge_audio_files")
 def merge_audio_files(input_dir: str, output_file: str) -> None:
     try:
         # Function to sort filenames naturally
         def natural_sort_key(filename: str) -> List[Union[int, str]]:
-            return [int(text) if text.isdigit() else text for text in re.split(r'(\d+)', filename)]
+            return [int(text) if text.isdigit() else text for text in re.split(r"(\d+)", filename)]
 
         combined = AudioSegment.empty()
         audio_files = sorted(
-            [f for f in os.listdir(input_dir) if f.endswith(f".mp3")],
-            key=natural_sort_key
+            [f for f in os.listdir(input_dir) if f.endswith(".mp3")], key=natural_sort_key
         )
         logging.info(f"sorted audio_files: {audio_files}")
         for file in audio_files:
@@ -130,7 +128,7 @@ def instruct_role_tts(
     content: str,
     tmp_dir: str,
     role_tts_voices: List[str] = ["en-US-JennyNeural", "en-US-EricNeural"],
-    language: str = 'en',
+    language: str = "en",
 ):
     data_models = podcast.extract_role_models_iterable(content, language=language)
     return asyncio.run(gen_role_tts_audios(data_models, tmp_dir, role_tts_voices))
@@ -141,7 +139,7 @@ def instruct_podcast_tts(
     content: str,
     tmp_dir: str,
     role_tts_voices: List[str] = ["en-US-JennyNeural", "en-US-EricNeural"],
-    language: str = 'en',
+    language: str = "en",
 ):
     if os.path.exists(tmp_dir):
         shutil.rmtree(tmp_dir)
@@ -151,10 +149,10 @@ def instruct_podcast_tts(
 
 @app.command()
 def instruct_content_tts(
-        sources: List[str],
-        role_tts_voices: List[str] = ["en-US-JennyNeural", "en-US-EricNeural"],
-        language: str = 'en',
-        save_dir: str = "./audios/podcast",
+    sources: List[str],
+    role_tts_voices: List[str] = ["en-US-JennyNeural", "en-US-EricNeural"],
+    language: str = "en",
+    save_dir: str = "./audios/podcast",
 ) -> list:
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
@@ -195,7 +193,7 @@ python -m demo.content_parser_tts merge_audio_files \
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s',
+        format="%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s",
         handlers=[
             # logging.FileHandler("content_parser_tts.log"),
             logging.StreamHandler()

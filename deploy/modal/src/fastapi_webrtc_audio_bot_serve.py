@@ -22,21 +22,24 @@ class ContainerRuntimeConfig:
                     "huggingface_hub[hf_transfer]==0.24.7",
                     "wget",
                 ],
-                extra_index_url="https://pypi.org/simple/")
-            .env({
-                "HF_HUB_ENABLE_HF_TRANSFER": "1",
-                "ACHATBOT_PKG": "1",
-                "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
-                "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
-                # asr module engine TAG, default whisper_timestamped_asr
-                "ASR_TAG": "sense_voice_asr",
-                "ASR_LANG": "zn",
-                "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
-                # llm processor model, default:google gemini_flash_latest
-                "GOOGLE_LLM_MODEL": "gemini-1.5-flash-latest",
-                # tts module engine TAG,default tts_edge
-                "TTS_TAG": "tts_edge",
-            })
+                extra_index_url="https://pypi.org/simple/",
+            )
+            .env(
+                {
+                    "HF_HUB_ENABLE_HF_TRANSFER": "1",
+                    "ACHATBOT_PKG": "1",
+                    "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
+                    "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
+                    # asr module engine TAG, default whisper_timestamped_asr
+                    "ASR_TAG": "sense_voice_asr",
+                    "ASR_LANG": "zn",
+                    "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
+                    # llm processor model, default:google gemini_flash_latest
+                    "GOOGLE_LLM_MODEL": "gemini-1.5-flash-latest",
+                    # tts module engine TAG,default tts_edge
+                    "TTS_TAG": "tts_edge",
+                }
+            )
         ),
     }
 
@@ -76,6 +79,7 @@ class Srv:
         import wget
         from huggingface_hub import snapshot_download
         from achatbot.common.types import MODELS_DIR, ASSETS_DIR
+
         os.makedirs(MODELS_DIR, exist_ok=True)
         os.makedirs(ASSETS_DIR, exist_ok=True)
 
@@ -108,6 +112,7 @@ class Srv:
     @modal.asgi_app()
     def app(self):
         from achatbot.cmd.http.server.fastapi_daily_bot_serve import app
+
         return app
 
 

@@ -44,9 +44,7 @@ def compose_prompt(num_images: int):
 
 
 def compose_prompt_params(
-    image_file_paths: List[str],
-    image_path_keys: List[str],
-    input_texts: str
+    image_file_paths: List[str], image_path_keys: List[str], input_texts: str
 ):
     prompt_params = {
         "input_text": input_texts,

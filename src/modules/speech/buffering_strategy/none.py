@@ -11,6 +11,7 @@ class NoneBuffering(IBuffering, EngineClass):
     no buffering, just trust the client vad audio data
     client(audio recoder)<--pipe-->serve(NLG)
     """
+
     TAG = "buffering_none"
 
     def __init__(self, **args) -> None:
@@ -23,8 +24,7 @@ class NoneBuffering(IBuffering, EngineClass):
         self.buffer.clear()
 
     def is_voice_active(self, session) -> bool:
-        if "vad_res" not in session.ctx.state \
-                or len(session.ctx.state["vad_res"]) == 0:
+        if "vad_res" not in session.ctx.state or len(session.ctx.state["vad_res"]) == 0:
             return False
         return True
 
@@ -41,7 +41,7 @@ class NoneBuffering(IBuffering, EngineClass):
         if self.is_voice_active(session):
             session.ctx.asr_audio = self.buffer
             transcription = await session.ctx.asr.transcribe(session)
-            if transcription['text'] != '':
+            if transcription["text"] != "":
                 end = time.time()
-                transcription['processing_time'] = end - start
+                transcription["processing_time"] = end - start
             session.ctx.state["transcribe_res"] = transcription

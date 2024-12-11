@@ -47,7 +47,7 @@ class WebsocketServerInputProcessor(AudioVADInputProcessor):
 
     async def _server_task_handler(self):
         logging.info(f"Starting websocket server on {self._host}:{self._port}")
-        async with websockets.serve(self._client_handler, self._host, self._port) as server:
+        async with websockets.serve(self._client_handler, self._host, self._port):
             await self._stop_server_event.wait()
 
     async def _client_handler(self, websocket: websockets.WebSocketServerProtocol, path):

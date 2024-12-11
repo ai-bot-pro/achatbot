@@ -11,7 +11,8 @@ try:
     from together import AsyncTogether
 except ModuleNotFoundError as e:
     logging.error(
-        "In order to use together ai, you need to `pip install achatbot[together_ai]`. Also, set `TOGETHER_API_KEY` environment variable.")
+        "In order to use together ai, you need to `pip install achatbot[together_ai]`. Also, set `TOGETHER_API_KEY` environment variable."
+    )
     raise Exception(f"Missing module: {e}")
 from PIL import Image
 from apipeline.frames.data_frames import Frame, ImageRawFrame
@@ -21,7 +22,6 @@ from src.processors.image.base import ImageGenProcessor
 
 
 class TogetherImageGenProcessor(ImageGenProcessor):
-
     def __init__(
         self,
         *,

@@ -21,7 +21,6 @@ class RTVITTSTextMessage(BaseModel):
 
 
 class RTVITTSTextProcessor(FrameProcessor):
-
     def __init__(self):
         super().__init__()
 
@@ -30,6 +29,8 @@ class RTVITTSTextProcessor(FrameProcessor):
 
         if isinstance(frame, TextFrame):
             message = RTVITTSTextMessage(data=RTVITTSTextMessageData(text=frame.text))
-            await self.push_frame(TransportMessageFrame(message=message.model_dump(exclude_none=True)))
+            await self.push_frame(
+                TransportMessageFrame(message=message.model_dump(exclude_none=True))
+            )
 
         await self.push_frame(frame, direction)

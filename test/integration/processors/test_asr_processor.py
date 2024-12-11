@@ -20,6 +20,7 @@ from src.common.session import Session
 from src.common.types import SessionCtx
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 """
@@ -52,7 +53,6 @@ ASR_TAG="whisper_groq_asr" \
 
 
 class TranscriptionLogger(FrameProcessor):
-
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
 
@@ -61,7 +61,6 @@ class TranscriptionLogger(FrameProcessor):
 
 
 class TestASRProcessor(unittest.IsolatedAsyncioTestCase):
-
     @classmethod
     def setUpClass(cls):
         Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
@@ -95,17 +94,14 @@ class TestASRProcessor(unittest.IsolatedAsyncioTestCase):
 
         tl_porcessor = TranscriptionLogger()
 
-        pipeline = Pipeline([
-            transport.input_processor(),
-            asr_processor,
-            tl_porcessor])
+        pipeline = Pipeline([transport.input_processor(), asr_processor, tl_porcessor])
 
         self.task = PipelineTask(
             pipeline,
             PipelineParams(
                 allow_interruptions=True,
                 enable_metrics=True,
-            )
+            ),
         )
 
     async def asyncTearDown(self):

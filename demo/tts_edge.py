@@ -27,8 +27,7 @@ async def amain() -> None:
                 file.write(chunk["data"])
             elif chunk["type"] == "WordBoundary":
                 print(chunk)
-                submaker.create_sub(
-                    (chunk["offset"], chunk["duration"]), chunk["text"])
+                submaker.create_sub((chunk["offset"], chunk["duration"]), chunk["text"])
 
     with open(WEBVTT_FILE, "w", encoding="utf-8") as file:
         file.write(submaker.generate_subs())

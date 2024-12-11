@@ -12,7 +12,8 @@ try:
     import websockets
 except ModuleNotFoundError as e:
     logging.error(
-        "In order to use Cartesia, you need to `pip install websockets`. Also, set `CARTESIA_API_KEY` environment variable.")
+        "In order to use Cartesia, you need to `pip install websockets`. Also, set `CARTESIA_API_KEY` environment variable."
+    )
     raise Exception(f"Missing module: {e}")
 from apipeline.pipeline.pipeline import FrameDirection
 from apipeline.frames.data_frames import TextFrame, Frame, AudioRawFrame
@@ -30,16 +31,17 @@ class CartesiaTTSProcessor(TTSProcessorBase):
     TAG = "cartesia_tts_processor"
 
     def __init__(
-            self,
-            voice_id: str = "2ee87190-8f84-4925-97da-e52547f9462c",
-            api_key: str = "",
-            cartesia_version: str = "2024-06-10",
-            url: str = "wss://api.cartesia.ai/tts/websocket",
-            model_id: str = "sonic-multilingual",
-            encoding: str = "pcm_s16le",
-            sample_rate: int = 16000,
-            language: str = "en",
-            **kwargs):
+        self,
+        voice_id: str = "2ee87190-8f84-4925-97da-e52547f9462c",
+        api_key: str = "",
+        cartesia_version: str = "2024-06-10",
+        url: str = "wss://api.cartesia.ai/tts/websocket",
+        model_id: str = "sonic-multilingual",
+        encoding: str = "pcm_s16le",
+        sample_rate: int = 16000,
+        language: str = "en",
+        **kwargs,
+    ):
         super().__init__(**kwargs)
 
         # Aggregating sentences still gives cleaner-sounding results and fewer
@@ -99,7 +101,9 @@ class CartesiaTTSProcessor(TTSProcessorBase):
             uri = f"{self._url}?api_key={self._api_key}&cartesia_version={self._cartesia_version}"
             self._websocket = await websockets.connect(uri)
             self._receive_task = self.get_event_loop().create_task(self._receive_task_handler())
-            self._context_appending_task = self.get_event_loop().create_task(self._context_appending_task_handler())
+            self._context_appending_task = self.get_event_loop().create_task(
+                self._context_appending_task_handler()
+            )
         except Exception as e:
             logging.exception(f"{self} initialization error: {e}")
             self._websocket = None
@@ -157,8 +161,9 @@ class CartesiaTTSProcessor(TTSProcessorBase):
                     elif msg["type"] == "timestamps":
                         # logging.debug(f"TIMESTAMPS: {msg}")
                         self._timestamped_words_buffer.extend(
-                            list(zip(msg["word_timestamps"]["words"],
-                                 msg["word_timestamps"]["end"]))
+                            list(
+                                zip(msg["word_timestamps"]["words"], msg["word_timestamps"]["end"])
+                            )
                         )
                     elif msg["type"] == "chunk":
                         await self.stop_ttfb_metrics()
@@ -167,7 +172,7 @@ class CartesiaTTSProcessor(TTSProcessorBase):
                         frame = AudioRawFrame(
                             audio=base64.b64decode(msg["data"]),
                             sample_rate=self._output_format["sample_rate"],
-                            num_channels=1
+                            num_channels=1,
                         )
                         await self.push_frame(frame)
         except asyncio.CancelledError:
@@ -185,8 +190,10 @@ class CartesiaTTSProcessor(TTSProcessorBase):
                 elapsed_seconds = time.time() - self._context_id_start_timestamp
                 # pop all words from self._timestamped_words_buffer that are older than the
                 # elapsed time and print a message about them to the console
-                while self._timestamped_words_buffer and self._timestamped_words_buffer[
-                        0][1] <= elapsed_seconds:
+                while (
+                    self._timestamped_words_buffer
+                    and self._timestamped_words_buffer[0][1] <= elapsed_seconds
+                ):
                     word, timestamp = self._timestamped_words_buffer.pop(0)
                     if word == "LLMFullResponseEndFrame" and timestamp == 0:
                         await self.push_frame(LLMFullResponseEndFrame())
@@ -219,7 +226,7 @@ class CartesiaTTSProcessor(TTSProcessorBase):
                     "id": self._voice_id,
                     "__experimental_controls": {
                         "speed": "normal",
-                    }
+                    },
                 },
                 "output_format": self._output_format,
                 "language": self._language,

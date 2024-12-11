@@ -1,7 +1,10 @@
 from dataclasses import dataclass
 
 from src.common.types import (
-    CHANNELS, CHUNK, SAMPLE_WIDTH, RATE,
+    CHANNELS,
+    CHUNK,
+    SAMPLE_WIDTH,
+    RATE,
     PYAUDIO_PAINT16,
     AudioStreamArgs,
 )

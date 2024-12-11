@@ -11,6 +11,7 @@ class URLImageRawFrame(ImageRawFrame):
     transport's camera is enabled.
 
     """
+
     url: str | None
 
     def __str__(self):
@@ -23,6 +24,7 @@ class VisionImageRawFrame(ImageRawFrame):
     shown by the transport if the transport's camera is enabled.
 
     """
+
     text: str | None
 
     def __str__(self):
@@ -35,6 +37,7 @@ class UserImageRawFrame(ImageRawFrame):
     transport's camera is enabled.
 
     """
+
     user_id: str
 
     def __str__(self):
@@ -48,6 +51,7 @@ class SpriteFrame(Frame):
     `fps` constructor parameter.
 
     """
+
     images: List[ImageRawFrame]
 
     def __str__(self):
@@ -60,6 +64,7 @@ class TranscriptionFrame(TextFrame):
     transport's receive queue when a participant speaks.
 
     """
+
     user_id: str
     timestamp: str
     language: str | None = None
@@ -72,6 +77,7 @@ class TranscriptionFrame(TextFrame):
 class InterimTranscriptionFrame(TextFrame):
     """A text frame with interim transcription-specific data. Will be placed in
     the transport's receive queue when a participant speaks."""
+
     user_id: str
     timestamp: str
     language: str
@@ -89,6 +95,7 @@ class LLMMessagesFrame(DataFrame):
     processors.
 
     """
+
     messages: List[dict]
 
     def __str__(self):
@@ -110,6 +117,7 @@ class LLMMessagesAppendFrame(DataFrame):
     current context.
 
     """
+
     messages: List[dict]
 
 
@@ -120,6 +128,7 @@ class LLMMessagesUpdateFrame(DataFrame):
     LLMMessagesFrame.
 
     """
+
     messages: List[dict]
 
 
@@ -129,6 +138,7 @@ class LLMSetToolsFrame(DataFrame):
     The specific format depends on the LLM being used, but it should typically
     contain JSON Schema objects.
     """
+
     tools: List[dict]
 
 
@@ -138,6 +148,7 @@ class TTSSpeakFrame(DataFrame):
     pipeline (if any).
 
     """
+
     text: str
 
 
@@ -158,8 +169,8 @@ class AgoraTransportMessageFrame(TransportMessageFrame):
 
 @dataclass
 class FunctionCallResultFrame(DataFrame):
-    """A frame containing the result of an LLM function (tool) call.
-    """
+    """A frame containing the result of an LLM function (tool) call."""
+
     function_name: str
     tool_call_id: str
     arguments: dict
@@ -168,9 +179,8 @@ class FunctionCallResultFrame(DataFrame):
 
 @dataclass
 class PathAudioRawFrame(AudioRawFrame):
-    """An audio with saved path.
+    """An audio with saved path."""
 
-    """
     path: str = ""
 
     def __post_init__(self):
@@ -186,6 +196,7 @@ class UserAudioRawFrame(AudioRawFrame):
     transport's audio is enabled.
 
     """
+
     user_id: str = ""
 
     def __post_init__(self):
@@ -200,6 +211,7 @@ class UserVoiceRawFrame(UserAudioRawFrame):
     """
     An user audio associated to llm response text.
     """
+
     text: str = ""
 
     def __post_init__(self):

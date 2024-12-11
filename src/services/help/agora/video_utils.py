@@ -34,12 +34,9 @@ def convert_I420_to_RGB(video_frame: VideoFrame) -> Image.Image:
     height = video_frame.height
 
     # Extract YUV planes
-    y_plane = np.frombuffer(
-        video_frame.y_buffer, dtype=np.uint8).reshape(height, width)
-    u_plane = np.frombuffer(
-        video_frame.u_buffer, dtype=np.uint8).reshape(height // 2, width // 2)
-    v_plane = np.frombuffer(
-        video_frame.v_buffer, dtype=np.uint8).reshape(height // 2, width // 2)
+    y_plane = np.frombuffer(video_frame.y_buffer, dtype=np.uint8).reshape(height, width)
+    u_plane = np.frombuffer(video_frame.u_buffer, dtype=np.uint8).reshape(height // 2, width // 2)
+    v_plane = np.frombuffer(video_frame.v_buffer, dtype=np.uint8).reshape(height // 2, width // 2)
 
     # Resize U and V planes
     u_resized = resize_plane(u_plane, (height, width))
@@ -58,12 +55,9 @@ def convert_I422_to_RGB(video_frame: VideoFrame) -> Image.Image:
     height = video_frame.height
 
     # Extract YUV planes
-    y_plane = np.frombuffer(
-        video_frame.y_buffer, dtype=np.uint8).reshape(height, width)
-    u_plane = np.frombuffer(
-        video_frame.u_buffer, dtype=np.uint8).reshape(height, width // 2)
-    v_plane = np.frombuffer(
-        video_frame.v_buffer, dtype=np.uint8).reshape(height, width // 2)
+    y_plane = np.frombuffer(video_frame.y_buffer, dtype=np.uint8).reshape(height, width)
+    u_plane = np.frombuffer(video_frame.u_buffer, dtype=np.uint8).reshape(height, width // 2)
+    v_plane = np.frombuffer(video_frame.v_buffer, dtype=np.uint8).reshape(height, width // 2)
 
     # Resize U and V planes (only width needs to be doubled)
     u_resized = resize_plane(u_plane, (height, width))
@@ -78,20 +72,18 @@ def convert_I422_to_RGB(video_frame: VideoFrame) -> Image.Image:
 
 def convert_I420_to_RGB_with_cv(video_frame: VideoFrame) -> Image.Image:
     import cv2
+
     # 从YUV420P(I420)转换到RGB
     width = video_frame.width
     height = video_frame.height
 
     # 从YUV缓冲区提取Y、U、V平面
-    y_size = width * height
-    u_size = (width * height) // 4
+    # y_size = width * height
+    # u_size = (width * height) // 4
 
-    y_plane = np.frombuffer(
-        video_frame.y_buffer, dtype=np.uint8).reshape(height, width)
-    u_plane = np.frombuffer(
-        video_frame.u_buffer, dtype=np.uint8).reshape(height // 2, width // 2)
-    v_plane = np.frombuffer(
-        video_frame.v_buffer, dtype=np.uint8).reshape(height // 2, width // 2)
+    y_plane = np.frombuffer(video_frame.y_buffer, dtype=np.uint8).reshape(height, width)
+    u_plane = np.frombuffer(video_frame.u_buffer, dtype=np.uint8).reshape(height // 2, width // 2)
+    v_plane = np.frombuffer(video_frame.v_buffer, dtype=np.uint8).reshape(height // 2, width // 2)
 
     # 将U和V平面放大到与Y相同的尺寸
     u_resized = cv2.resize(u_plane, (width, height), interpolation=cv2.INTER_LINEAR)
@@ -109,21 +101,19 @@ def convert_I420_to_RGB_with_cv(video_frame: VideoFrame) -> Image.Image:
 
 def convert_I422_to_RGB_with_cv(video_frame: VideoFrame) -> Image.Image:
     import cv2
+
     # YUV422(I422) to RGB
     width = video_frame.width
     height = video_frame.height
 
-    y_size = width * height
+    # y_size = width * height
     # U和V平面在I422中是Y平面的一半宽度,但高度相同
-    uv_size = (width * height) // 2
+    # uv_size = (width * height) // 2
 
     # 从缓冲区提取Y、U、V平面
-    y_plane = np.frombuffer(
-        video_frame.y_buffer, dtype=np.uint8).reshape(height, width)
-    u_plane = np.frombuffer(
-        video_frame.u_buffer, dtype=np.uint8).reshape(height, width // 2)
-    v_plane = np.frombuffer(
-        video_frame.v_buffer, dtype=np.uint8).reshape(height, width // 2)
+    y_plane = np.frombuffer(video_frame.y_buffer, dtype=np.uint8).reshape(height, width)
+    u_plane = np.frombuffer(video_frame.u_buffer, dtype=np.uint8).reshape(height, width // 2)
+    v_plane = np.frombuffer(video_frame.v_buffer, dtype=np.uint8).reshape(height, width // 2)
 
     # 将U和V平面放大到与Y相同的宽度
     u_resized = cv2.resize(u_plane, (width, height), interpolation=cv2.INTER_LINEAR)
@@ -153,7 +143,7 @@ def convert_RGBA_to_RGB(video_frame: VideoFrame) -> Image.Image:
     # 直接重塑并切片,避免额外的内存分配
     rgb_array = rgba_array.reshape(height, width, 4)[:, :, :3]
 
-    image = Image.fromarray(rgb_array, mode='RGB')
+    image = Image.fromarray(rgb_array, mode="RGB")
 
     return image
 
@@ -171,7 +161,7 @@ def convert_NV21_to_RGB(video_frame: VideoFrame) -> Image.Image:
     # 转换为RGB
     rgb_array = nv21_to_rgb(y_array, vu_array, width, height)
 
-    image = Image.fromarray(rgb_array, mode='RGB')
+    image = Image.fromarray(rgb_array, mode="RGB")
 
     return image
 
@@ -184,9 +174,9 @@ def convert_NV21_to_RGB_optimized(video_frame: VideoFrame) -> Image.Image:
         video_frame.y_buffer,
         video_frame.u_buffer,  # NV21中u_buffer存储VU数据
         width,
-        height
+        height,
     )
-    image = Image.fromarray(rgb_array, mode='RGB')
+    image = Image.fromarray(rgb_array, mode="RGB")
 
     return image
 
@@ -204,7 +194,7 @@ def convert_NV12_to_RGB(video_frame: VideoFrame) -> Image.Image:
     # 转换为RGB
     rgb_array = nv12_to_rgb(y_array, uv_array, width, height)
 
-    image = Image.fromarray(rgb_array, mode='RGB')
+    image = Image.fromarray(rgb_array, mode="RGB")
 
     return image
 
@@ -217,9 +207,9 @@ def convert_NV12_to_RGB_optimized(video_frame: VideoFrame) -> Image.Image:
         video_frame.y_buffer,
         video_frame.u_buffer,  # NV12中u_buffer存储VU数据
         width,
-        height
+        height,
     )
-    image = Image.fromarray(rgb_array, mode='RGB')
+    image = Image.fromarray(rgb_array, mode="RGB")
 
     return image
 

@@ -5,9 +5,7 @@ from src.common.http import HTTPRequest
 from src.common.factory import EngineClass, EngineFactory
 from src.common import interface
 from src.modules.functions.function import FunctionManager
-from src.common.types import (
-    SearchApiArgs, Search1ApiArgs, SerperApiArgs
-)
+from src.common.types import SearchApiArgs, Search1ApiArgs, SerperApiArgs
 import src.modules.functions.search
 
 
@@ -23,15 +21,10 @@ class SearchBaseApi(EngineClass, interface.IFunction):
                 "description": "web search by query",
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "web search query"
-                        }
-                    },
-                    "required": ["query"]
-                }
-            }
+                    "properties": {"query": {"type": "string", "description": "web search query"}},
+                    "required": ["query"],
+                },
+            },
         }
 
     def execute(self, session, **args):
@@ -49,7 +42,7 @@ class SearchFuncEnvInit:
         if SearchFuncEnvInit.engine is not None:
             logging.info(f"SearchFuncEnvInit.engine already initialized {SearchFuncEnvInit.engine}")
             return SearchFuncEnvInit.engine
-        tag = os.getenv('FUNC_SEARCH_TAG', "search_api")
+        tag = os.getenv("FUNC_SEARCH_TAG", "search_api")
         kwargs = SearchFuncEnvInit.map_config_func[tag]()
         SearchFuncEnvInit.engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         logging.info(f"initSearchEngine: {tag}, {SearchFuncEnvInit.engine}")
@@ -85,13 +78,13 @@ class SearchFuncEnvInit:
 
     # TAG : config
     map_config_func = {
-        'search_api': get_search_api_args,
-        'search1_api': get_search1_api_args,
-        'serper_api': get_serper_api_args,
+        "search_api": get_search_api_args,
+        "search1_api": get_search1_api_args,
+        "serper_api": get_serper_api_args,
     }
 
 
-@FunctionManager.functions.register('web_search')
+@FunctionManager.functions.register("web_search")
 class SearchFunc:
     @staticmethod
     def get_tool_call():

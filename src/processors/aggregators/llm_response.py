@@ -31,7 +31,6 @@ from src.types.frames.sys_frames import FunctionCallInProgressFrame
 
 
 class LLMResponseAggregator(FrameProcessor):
-
     def __init__(
         self,
         *,
@@ -41,7 +40,7 @@ class LLMResponseAggregator(FrameProcessor):
         end_frame,
         accumulator_frame: TextFrame,
         interim_accumulator_frame: TextFrame | None = None,
-        handle_interruptions: bool = False
+        handle_interruptions: bool = False,
     ):
         super().__init__()
 
@@ -177,7 +176,7 @@ class LLMAssistantResponseAggregator(LLMResponseAggregator):
             start_frame=LLMFullResponseStartFrame,
             end_frame=LLMFullResponseEndFrame,
             accumulator_frame=TextFrame,
-            handle_interruptions=True
+            handle_interruptions=True,
         )
 
 
@@ -189,7 +188,7 @@ class LLMUserResponseAggregator(LLMResponseAggregator):
             start_frame=UserStartedSpeakingFrame,
             end_frame=UserStoppedSpeakingFrame,
             accumulator_frame=TranscriptionFrame,
-            interim_accumulator_frame=InterimTranscriptionFrame
+            interim_accumulator_frame=InterimTranscriptionFrame,
         )
 
 

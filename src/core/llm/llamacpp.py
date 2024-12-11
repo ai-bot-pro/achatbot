@@ -12,30 +12,28 @@ from src.modules.functions.function import FunctionManager
 from .base import BaseLLM
 
 
-class PromptInit():
+class PromptInit:
     """
     Note: for generate model
     """
+
     @staticmethod
-    def create_phi3_prompt(history: list[str], system_prompt: str,
-                           init_message: str = None):
-        prompt = f'<|system|>\n{system_prompt}</s>\n'
+    def create_phi3_prompt(history: list[str], system_prompt: str, init_message: str = None):
+        prompt = f"<|system|>\n{system_prompt}</s>\n"
         if init_message:
             prompt += f"<|assistant|>\n{init_message}</s>\n"
 
         return prompt + "".join(history) + "<|assistant|>\n"
 
-    def create_qwen_prompt(history: list[str], system_prompt: str,
-                           init_message: str = None):
-        prompt = f'<|system|>\n{system_prompt}<|end|>\n'
+    def create_qwen_prompt(history: list[str], system_prompt: str, init_message: str = None):
+        prompt = f"<|system|>\n{system_prompt}<|end|>\n"
         if init_message:
             prompt += f"<|assistant|>\n{init_message}<|end|>\n"
 
         return prompt + "".join(history) + "<|assistant|>\n"
 
     @staticmethod
-    def create_prompt(name: str, history: list[str],
-                      init_message: str = None):
+    def create_prompt(name: str, history: list[str], init_message: str = None):
         system_prompt = os.getenv("LLM_CHAT_SYSTEM", DEFAULT_SYSTEM_PROMPT)
         if "phi-3" == name:
             return PromptInit.create_phi3_prompt(history, system_prompt, init_message)
@@ -47,17 +45,17 @@ class PromptInit():
     @staticmethod
     def get_user_prompt(name: str, text: str):
         if "phi-3" == name:
-            return (f"<|user|>\n{text}</s>\n")
+            return f"<|user|>\n{text}</s>\n"
         if "qwen-2" == name:
-            return (f"<|start|>user\n{text}<|end|>\n")
+            return f"<|start|>user\n{text}<|end|>\n"
         return None
 
     @staticmethod
     def get_assistant_prompt(name: str, text: str):
         if "phi-3" == name:
-            return (f"<|assistant|>\n{text}</s>\n")
+            return f"<|assistant|>\n{text}</s>\n"
         if "qwen-2" == name:
-            return (f"<|assistant|>\n{text}<|end|>\n")
+            return f"<|assistant|>\n{text}<|end|>\n"
         return None
 
 
@@ -72,21 +70,27 @@ class LLamacppLLM(BaseLLM, ILlm):
         match self.args.chat_format:
             case "minicpm-v-2.6":
                 from llama_cpp.llama_chat_format import MiniCPMv26ChatHandler
+
                 return MiniCPMv26ChatHandler(clip_model_path=self.args.clip_model_path)
             case "llava-1-5":
                 from llama_cpp.llama_chat_format import Llava15ChatHandler
+
                 return Llava15ChatHandler(clip_model_path=self.args.clip_model_path)
             case "llava-1-6":
                 from llama_cpp.llama_chat_format import Llava16ChatHandler
+
                 return Llava16ChatHandler(clip_model_path=self.args.clip_model_path)
             case "moondream2":
                 from llama_cpp.llama_chat_format import MoondreamChatHandler
+
                 return MoondreamChatHandler(clip_model_path=self.args.clip_model_path)
             case "nanollava":
                 from llama_cpp.llama_chat_format import NanoLlavaChatHandler
+
                 return NanoLlavaChatHandler(clip_model_path=self.args.clip_model_path)
             case "llama-3-vision-alpha":
                 from llama_cpp.llama_chat_format import Llama3VisionAlphaChatHandler
+
                 return Llama3VisionAlphaChatHandler(clip_model_path=self.args.clip_model_path)
             case _:
                 return None
@@ -145,16 +149,16 @@ class LLamacppLLM(BaseLLM, ILlm):
         res = ""
         if self.args.llm_stream:
             for item in output:
-                content = item['choices'][0]['text']
+                content = item["choices"][0]["text"]
                 res += content
                 pos = self._have_special_char(res)
                 if pos > -1:
-                    yield res[:pos + 1]
-                    res = res[pos + 1:]
+                    yield res[: pos + 1]
+                    res = res[pos + 1 :]
             if len(res) > 0:
                 yield res
         else:
-            yield output['choices'][0]['text']
+            yield output["choices"][0]["text"]
 
     def chat_completion(self, session: Session):
         if self.args.model_type not in ["chat", "chat-func"]:
@@ -162,7 +166,8 @@ class LLamacppLLM(BaseLLM, ILlm):
             return
         query = session.ctx.state["prompt"]
         self.args.save_chat_history and session.chat_history.append(
-            {"role": "user", "content": query})
+            {"role": "user", "content": query}
+        )
         res = ""
         if self.args.model_type == "chat":
             for item in self._chat_completion(session):
@@ -173,7 +178,8 @@ class LLamacppLLM(BaseLLM, ILlm):
                 res += item
                 yield item
         self.args.save_chat_history and session.chat_history.append(
-            {"role": "assistant", "content": res})
+            {"role": "assistant", "content": res}
+        )
         logging.debug(f"chat_history:{session.chat_history}")
 
     def _chat_completion(self, session: Session):
@@ -184,7 +190,7 @@ class LLamacppLLM(BaseLLM, ILlm):
                     "role": "system",
                     "content": self.args.llm_chat_system,
                 },
-                *session.chat_history
+                *session.chat_history,
             ],
             # response_format={"type": "json_object"},
             max_tokens=self.args.llm_max_tokens,
@@ -197,19 +203,23 @@ class LLamacppLLM(BaseLLM, ILlm):
         res = ""
         if self.args.llm_stream:
             for item in output:
-                if 'content' in item['choices'][0]['delta']:
-                    content = item['choices'][0]['delta']['content']
+                if "content" in item["choices"][0]["delta"]:
+                    content = item["choices"][0]["delta"]["content"]
                     if content is None:
                         continue
                     res += content
                     pos = self._have_special_char(res)
                     if pos > -1:
-                        yield res[:pos + 1]
-                        res = res[pos + 1:]
+                        yield res[: pos + 1]
+                        res = res[pos + 1 :]
             if len(res) > 0:
                 yield res
         else:
-            res = output['choices'][0]['message']['content'] if 'content' in output['choices'][0]['message'] else ""
+            res = (
+                output["choices"][0]["message"]["content"]
+                if "content" in output["choices"][0]["message"]
+                else ""
+            )
             if res is not None:
                 yield res
 
@@ -246,31 +256,33 @@ class LLamacppLLM(BaseLLM, ILlm):
             finish_reason = ""
             if self.args.llm_stream:
                 for item in output:
-                    if "finish_reason" in item['choices'][0]:
-                        finish_reason = item['choices'][0]["finish_reason"]
-                    if 'tool_calls' in item['choices'][0]['delta']:
+                    if "finish_reason" in item["choices"][0]:
+                        finish_reason = item["choices"][0]["finish_reason"]
+                    if "tool_calls" in item["choices"][0]["delta"]:
                         is_tool_call = True
-                        if item['choices'][0]['delta']['tool_calls'] is None or len(
-                                item['choices'][0]['delta']['tool_calls']) == 0:
+                        if (
+                            item["choices"][0]["delta"]["tool_calls"] is None
+                            or len(item["choices"][0]["delta"]["tool_calls"]) == 0
+                        ):
                             continue
-                        tool_calls = item['choices'][0]['delta']['tool_calls']
+                        tool_calls = item["choices"][0]["delta"]["tool_calls"]
                         for i in range(len(tool_calls)):
                             args_strs.append("")
                             function_names.append("")
                         for i, tool in enumerate(tool_calls):
                             args_strs[i] += tool["function"]["arguments"]
-                            if tool["function"]['name'] is not None:
-                                function_names[i] = tool["function"]['name']
+                            if tool["function"]["name"] is not None:
+                                function_names[i] = tool["function"]["name"]
                     else:
-                        if 'content' in item['choices'][0]['delta']:
-                            content = item['choices'][0]['delta']['content']
+                        if "content" in item["choices"][0]["delta"]:
+                            content = item["choices"][0]["delta"]["content"]
                             if content is None:
                                 continue
                             res += content
                             pos = self._have_special_char(res)
                             if pos > -1:
-                                yield res[:pos + 1]
-                                res = res[pos + 1:]
+                                yield res[: pos + 1]
+                                res = res[pos + 1 :]
                 if len(res) > 0:
                     yield res
                 if is_tool_call is True:
@@ -278,22 +290,28 @@ class LLamacppLLM(BaseLLM, ILlm):
                         tool_calls[i]["function"]["name"] = function_names[i]
                         tool_calls[i]["function"]["arguments"] = args_strs[i]
             else:
-                if "finish_reason" in output['choices'][0]:
-                    finish_reason = output['choices'][0]["finish_reason"]
-                if 'tool_calls' in output['choices'][0]['message']:
+                if "finish_reason" in output["choices"][0]:
+                    finish_reason = output["choices"][0]["finish_reason"]
+                if "tool_calls" in output["choices"][0]["message"]:
                     is_tool_call = True
-                    tool_calls = output['choices'][0]['message']['tool_calls']
+                    tool_calls = output["choices"][0]["message"]["tool_calls"]
                 else:
-                    res = output['choices'][0]['message']['content'] if 'content' in output['choices'][0]['message'] else ""
+                    res = (
+                        output["choices"][0]["message"]["content"]
+                        if "content" in output["choices"][0]["message"]
+                        else ""
+                    )
                     if res is not None:
                         yield res
 
             if is_tool_call is True:
-                self.args.save_chat_history and session.chat_history.append({
-                    "role": "assistant",
-                    "content": None,
-                    "tool_calls": tool_calls,
-                })
+                self.args.save_chat_history and session.chat_history.append(
+                    {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": tool_calls,
+                    }
+                )
 
                 # @TODO: threading pool execute task
                 for tool in tool_calls:
@@ -302,13 +320,15 @@ class LLamacppLLM(BaseLLM, ILlm):
                     func_res = FunctionManager.execute(function_name, session, **args)
                     logging.debug(f"tool calling: {function_name} {args} -> {func_res}")
                     # https://github.com/abetlen/llama-cpp-python/issues/1405
-                    self.args.save_chat_history and session.chat_history.append({
-                        # "role": "tool",
-                        "role": "function",
-                        "tool_call_id": tool["id"],
-                        "name": function_name,
-                        "content": func_res,
-                    })
+                    self.args.save_chat_history and session.chat_history.append(
+                        {
+                            # "role": "tool",
+                            "role": "function",
+                            "tool_call_id": tool["id"],
+                            "name": function_name,
+                            "content": func_res,
+                        }
+                    )
 
             if finish_reason == "stop":
                 break

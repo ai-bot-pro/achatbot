@@ -31,7 +31,7 @@ AUDIO_OUT_STREAM_TAG=daily_room_audio_out_stream \
 class TestStreamPlayer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tag = os.getenv('PLAYER_TAG', "stream_player")
+        cls.tag = os.getenv("PLAYER_TAG", "stream_player")
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
@@ -41,12 +41,12 @@ class TestStreamPlayer(unittest.TestCase):
     def setUp(self):
         self.player: StreamPlayer = PlayerEnvInit.initPlayerEngine()
         print(self.player.args.__dict__)
-        self.audio_out_stream: IAudioStream | EngineClass = AudioStreamEnvInit.initAudioOutStreamEngine()
+        self.audio_out_stream: IAudioStream | EngineClass = (
+            AudioStreamEnvInit.initAudioOutStreamEngine()
+        )
         self.player.set_out_stream(self.audio_out_stream)
-        self.annotations_path = os.path.join(
-            TEST_DIR, "audio_files/annotations.json")
-        self.session = Session(**SessionCtx(
-            "test_client_id").__dict__)
+        self.annotations_path = os.path.join(TEST_DIR, "audio_files/annotations.json")
+        self.session = Session(**SessionCtx("test_client_id").__dict__)
         self.out_stream_info: AudioStreamInfo = self.audio_out_stream.get_stream_info()
 
     def tearDown(self):
@@ -56,25 +56,18 @@ class TestStreamPlayer(unittest.TestCase):
         self.player.open()
         annotations = asyncio.run(helper.load_json(self.annotations_path))
         for audio_file, data in annotations.items():
-            audio_file_path = os.path.join(
-                TEST_DIR, f"audio_files/{audio_file}")
+            audio_file_path = os.path.join(TEST_DIR, f"audio_files/{audio_file}")
             for segment in data["segments"]:
                 self.player.start(self.session)
-                audio_segment = asyncio.run(helper.get_audio_segment(
-                    audio_file_path,
-                    segment["start"],
-                    segment["end"]))
+                audio_segment = asyncio.run(
+                    helper.get_audio_segment(audio_file_path, segment["start"], segment["end"])
+                )
                 print(
-                    f"channels:{audio_segment.channels},sample_width:{audio_segment.sample_width},frame_rate:{audio_segment.frame_rate},frame_width:{audio_segment.frame_width}")
-                self.assertEqual(
-                    audio_segment.frame_rate,
-                    self.out_stream_info.out_sample_rate)
-                self.assertEqual(
-                    audio_segment.channels,
-                    self.out_stream_info.out_channels)
-                self.assertEqual(
-                    audio_segment.sample_width,
-                    self.out_stream_info.out_sample_width)
+                    f"channels:{audio_segment.channels},sample_width:{audio_segment.sample_width},frame_rate:{audio_segment.frame_rate},frame_width:{audio_segment.frame_width}"
+                )
+                self.assertEqual(audio_segment.frame_rate, self.out_stream_info.out_sample_rate)
+                self.assertEqual(audio_segment.channels, self.out_stream_info.out_channels)
+                self.assertEqual(audio_segment.sample_width, self.out_stream_info.out_sample_width)
                 self.session.ctx.state["tts_chunk"] = audio_segment.raw_data
                 logging.debug(f"chunk size: {len(audio_segment.raw_data)}")
                 self.player.play_audio(self.session)

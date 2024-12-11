@@ -8,7 +8,8 @@ try:
     from openai import AsyncOpenAI
 except ModuleNotFoundError as e:
     logging.error(
-        "In order to use OpenAI, you need to `pip install openai`. Also, set `OPENAI_API_KEY` environment variable.")
+        "In order to use OpenAI, you need to `pip install openai`. Also, set `OPENAI_API_KEY` environment variable."
+    )
     raise Exception(f"Missing module: {e}")
 import aiohttp
 from PIL import Image
@@ -20,7 +21,6 @@ from src.types.frames.data_frames import URLImageRawFrame
 
 
 class OpenAIImageGenProcessor(ImageGenProcessor):
-
     def __init__(
         self,
         *,
@@ -42,10 +42,7 @@ class OpenAIImageGenProcessor(ImageGenProcessor):
         logging.debug(f"Generating image from prompt: {prompt}")
 
         image = await self._client.images.generate(
-            prompt=prompt,
-            model=self._model,
-            n=1,
-            size=self._image_size
+            prompt=prompt, model=self._model, n=1, size=self._image_size
         )
 
         image_url = image.data[0].url if len(image.data) > 0 else None

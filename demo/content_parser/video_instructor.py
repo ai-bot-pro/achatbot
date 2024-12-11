@@ -83,7 +83,7 @@ def extract_models(file: str, language: str = "en"):
 
 
 @app.command()
-def instruct_content(files: List[str], language: str = 'en') -> None:
+def instruct_content(files: List[str], language: str = "en") -> None:
     console = Console()
     for file in files:
         try:
@@ -110,7 +110,7 @@ python -m demo.content_parser.video_instructor instruct-content \
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s',
+        format="%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s",
         handlers=[
             # logging.FileHandler("extractor.log"),
             logging.StreamHandler()

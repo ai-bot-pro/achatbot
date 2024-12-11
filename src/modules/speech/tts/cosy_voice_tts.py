@@ -19,6 +19,7 @@ class CosyVoiceTTS(BaseTTS, ITts):
     r"""
     https://arxiv.org/abs/2407.05407v2
     """
+
     TAG = "tts_cosy_voice"
 
     @classmethod
@@ -28,14 +29,16 @@ class CosyVoiceTTS(BaseTTS, ITts):
     def __init__(self, **args) -> None:
         cur_dir = os.path.dirname(__file__)
         if bool(os.getenv("ACHATBOT_PKG", "")):
-            sys.path.insert(1, os.path.join(cur_dir, '../../../CosyVoice'))
-            sys.path.insert(2, os.path.join(cur_dir, '../../../CosyVoice/third_party/Matcha-TTS'))
+            sys.path.insert(1, os.path.join(cur_dir, "../../../CosyVoice"))
+            sys.path.insert(2, os.path.join(cur_dir, "../../../CosyVoice/third_party/Matcha-TTS"))
         else:
-            sys.path.insert(1, os.path.join(cur_dir, '../../../../deps/CosyVoice'))
-            sys.path.insert(2, os.path.join(cur_dir,
-                                            '../../../../deps/CosyVoice/third_party/Matcha-TTS'))
+            sys.path.insert(1, os.path.join(cur_dir, "../../../../deps/CosyVoice"))
+            sys.path.insert(
+                2, os.path.join(cur_dir, "../../../../deps/CosyVoice/third_party/Matcha-TTS")
+            )
         from deps.CosyVoice.cosyvoice.cli.cosyvoice import CosyVoice
         from deps.CosyVoice.cosyvoice.utils.file_utils import load_wav
+
         self.args = CosyVoiceTTSArgs(**args)
         self.model = CosyVoice(self.args.model_dir)
         voices = self.get_voices()
@@ -74,15 +77,17 @@ class CosyVoiceTTS(BaseTTS, ITts):
                 output = self.model.inference_sft(text, self.args.spk_id)
             else:
                 output = self.model.inference_instruct(
-                    text, self.args.spk_id, self.args.instruct_text)
+                    text, self.args.spk_id, self.args.instruct_text
+                )
         else:
             if len(self.args.instruct_text.strip()) == 0:
                 output = self.model.inference_cross_lingual(text, self.reference_audio)
             else:
                 output = self.model.inference_zero_shot(
-                    text, self.args.instruct_text, self.reference_audio)
-        if 'tts_speech' in output:
+                    text, self.args.instruct_text, self.reference_audio
+                )
+        if "tts_speech" in output:
             # torchaudio.save(os.path.join(RECORDS_DIR, f'{self.TAG}_speech.wav'),
             #                output['tts_speech'], 22050)
-            res = postprocess_tts_wave_int16(output['tts_speech'])
+            res = postprocess_tts_wave_int16(output["tts_speech"])
             yield res

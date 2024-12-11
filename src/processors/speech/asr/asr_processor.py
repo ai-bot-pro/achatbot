@@ -15,23 +15,25 @@ from src.types.speech.language import Language
 
 class ASRProcessor(SegmentedASRProcessor):
     def __init__(
-            self,
-            *,
-            min_volume: float = 0.6,
-            max_silence_secs: float = 0.3,
-            max_buffer_secs: float = 1.5,
-            sample_rate: int = 16000,
-            num_channels: int = 1,
-            asr: IAsr | EngineClass | None = None,
-            session: Session | None = None,
-            **kwargs):
+        self,
+        *,
+        min_volume: float = 0.6,
+        max_silence_secs: float = 0.3,
+        max_buffer_secs: float = 1.5,
+        sample_rate: int = 16000,
+        num_channels: int = 1,
+        asr: IAsr | EngineClass | None = None,
+        session: Session | None = None,
+        **kwargs,
+    ):
         super().__init__(
             min_volume=min_volume,
             max_silence_secs=max_silence_secs,
             max_buffer_secs=max_buffer_secs,
             sample_rate=sample_rate,
             num_channels=num_channels,
-            **kwargs)
+            **kwargs,
+        )
         self._asr = asr
         self._session = session
 

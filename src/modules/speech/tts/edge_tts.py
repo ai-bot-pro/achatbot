@@ -30,11 +30,9 @@ class EdgeTTS(BaseTTS, ITts):
             voices = await self.get_voices(ShortName=self.args.voice_name)
             logging.debug(f"{self.TAG} voices: {voices}")
             if len(voices) == 0:
-                raise Exception(
-                    f"{self.TAG} voice:{self.args.voice_name} don't support")
+                raise Exception(f"{self.TAG} voice:{self.args.voice_name} don't support")
         else:
-            voices = self.get_voices(
-                Gender=self.args.gender, Language=self.args.language)
+            voices = self.get_voices(Gender=self.args.gender, Language=self.args.language)
             self.args.voice_name = random.choice(voices)["Name"]
 
         communicate: edge_tts.Communicate = edge_tts.Communicate(
@@ -50,22 +48,22 @@ class EdgeTTS(BaseTTS, ITts):
         with io.BytesIO() as f:
             async for chunk in communicate.stream():
                 if chunk["type"] == "audio":
-                    f.write(chunk['data'])
+                    f.write(chunk["data"])
                 elif chunk["type"] == "WordBoundary":
                     # logging.info( f"{self.TAG} type:{chunk['type']} chunk: {chunk}")
-                    self.submaker.create_sub(
-                        (chunk["offset"], chunk["duration"]), chunk["text"])
+                    self.submaker.create_sub((chunk["offset"], chunk["duration"]), chunk["text"])
 
             f.seek(0)
             audio: AudioSegment = AudioSegment.from_mp3(f)
-            audio_resampled = audio.set_frame_rate(
-                22050).set_channels(
-                1).set_sample_width(2)  # 16bit sample_width 16/8=2
+            audio_resampled = (
+                audio.set_frame_rate(22050).set_channels(1).set_sample_width(2)
+            )  # 16bit sample_width 16/8=2
             audio_data = audio_resampled.raw_data
             yield audio_data
 
     async def get_voices(self, **kwargs):
         from edge_tts import VoicesManager
+
         voice_mg: VoicesManager = await VoicesManager.create()
         return voice_mg.find(**kwargs)
 

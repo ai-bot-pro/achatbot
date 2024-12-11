@@ -9,14 +9,13 @@ from src.types.frames import *
 
 
 class AudioResponseAggregator(FrameProcessor):
-
     def __init__(
         self,
         *,
         start_frame: Type[Frame],
         end_frame: Type[Frame],
         accumulator_frame: Type[AudioRawFrame],
-        interim_accumulator_frame: Type[AudioRawFrame] | None = None
+        interim_accumulator_frame: Type[AudioRawFrame] | None = None,
     ):
         super().__init__()
 

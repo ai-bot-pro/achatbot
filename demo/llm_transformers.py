@@ -8,9 +8,7 @@ model_name_or_path = "./models/Qwen/Qwen2-0.5B-Instruct"
 def manual():
     # Now you do not need to add "trust_remote_code=True"
     model = AutoModelForCausalLM.from_pretrained(
-        model_name_or_path,
-        torch_dtype="auto",
-        device_map="auto"
+        model_name_or_path, torch_dtype="auto", device_map="auto"
     )
     tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
 
@@ -20,7 +18,7 @@ def manual():
     prompt = "Give me a short introduction to large language model."
     messages = [
         {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": prompt}
+        {"role": "user", "content": prompt},
     ]
     text = tokenizer.apply_chat_template(
         messages,
@@ -35,8 +33,10 @@ def manual():
         **model_inputs,
         max_new_tokens=512,
     )
-    generated_ids = [output_ids[len(input_ids):] for input_ids,
-                     output_ids in zip(model_inputs.input_ids, generated_ids)]
+    generated_ids = [
+        output_ids[len(input_ids) :]
+        for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
+    ]
 
     response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
     print(response)
@@ -61,24 +61,23 @@ def manual():
         **model_inputs,
         max_new_tokens=512,
     )
-    generated_ids = [output_ids[len(input_ids):] for input_ids,
-                     output_ids in zip(model_inputs.input_ids, generated_ids)]
+    generated_ids = [
+        output_ids[len(input_ids) :]
+        for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
+    ]
 
     response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
     print(response)
 
 
 def pipe_line():
-    pipe = pipeline(
-        "text-generation",
-        model_name_or_path,
-        torch_dtype="auto",
-        device_map="auto"
-    )
+    pipe = pipeline("text-generation", model_name_or_path, torch_dtype="auto", device_map="auto")
 
     print("-------round 1------")
     # the default system message will be used
-    messages = [{"role": "user", "content": "Give me a short introduction to large language model."}]
+    messages = [
+        {"role": "user", "content": "Give me a short introduction to large language model."}
+    ]
 
     response_message = pipe(messages, max_new_tokens=512)[0]["generated_text"][-1]
     print(response_message)
@@ -94,12 +93,7 @@ def pipe_line():
 
 
 def pipeline_batch():
-    pipe = pipeline(
-        "text-generation",
-        model_name_or_path,
-        torch_dtype="auto",
-        device_map="auto"
-    )
+    pipe = pipeline("text-generation", model_name_or_path, torch_dtype="auto", device_map="auto")
 
     pipe.tokenizer.padding_side = "left"
 
@@ -117,31 +111,26 @@ def pipeline_text_streamer():
     """
     print the stream of text from the pipeline to stdout
     """
-    pipe = pipeline(
-        "text-generation",
-        model_name_or_path,
-        torch_dtype="auto",
-        device_map="auto"
-    )
+    pipe = pipeline("text-generation", model_name_or_path, torch_dtype="auto", device_map="auto")
 
     streamer = TextStreamer(pipe.tokenizer, skip_prompt=True, skip_special_tokens=True)
 
-    messages = [{"role": "user", "content": "Give me a short introduction to large language model."}]
+    messages = [
+        {"role": "user", "content": "Give me a short introduction to large language model."}
+    ]
 
-    response_message = pipe(messages, max_new_tokens=512, streamer=streamer)[
-        0]["generated_text"][-1]
+    response_message = pipe(messages, max_new_tokens=512, streamer=streamer)[0]["generated_text"][
+        -1
+    ]
     print(response_message)
 
 
 def pipeline_text_iter_streamer():
-    pipe = pipeline(
-        "text-generation",
-        model_name_or_path,
-        torch_dtype="auto",
-        device_map="auto"
-    )
+    pipe = pipeline("text-generation", model_name_or_path, torch_dtype="auto", device_map="auto")
 
-    messages = [{"role": "user", "content": "Give me a short introduction to large language model."}]
+    messages = [
+        {"role": "user", "content": "Give me a short introduction to large language model."}
+    ]
 
     streamer = TextIteratorStreamer(pipe.tokenizer, skip_prompt=True, skip_special_tokens=True)
 

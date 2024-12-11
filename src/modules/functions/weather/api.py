@@ -50,9 +50,10 @@ class WeatherFuncEnvInit:
     def initWeatherEngine() -> interface.IFunction | EngineClass:
         if WeatherFuncEnvInit.engine is not None:
             logging.info(
-                f"WeatherFuncEnvInit.engine already initialized {WeatherFuncEnvInit.engine}")
+                f"WeatherFuncEnvInit.engine already initialized {WeatherFuncEnvInit.engine}"
+            )
             return WeatherFuncEnvInit.engine
-        tag = os.getenv('FUNC_WEATHER_TAG', "openweathermap_api")
+        tag = os.getenv("FUNC_WEATHER_TAG", "openweathermap_api")
         kwargs = WeatherFuncEnvInit.map_config_func[tag]()
         WeatherFuncEnvInit.engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         logging.info(f"initWeatherEngine: {tag}, {WeatherFuncEnvInit.engine}")
@@ -67,11 +68,11 @@ class WeatherFuncEnvInit:
 
     # TAG : config
     map_config_func = {
-        'openweathermap_api': get_openweathermap_weather_args,
+        "openweathermap_api": get_openweathermap_weather_args,
     }
 
 
-@FunctionManager.functions.register('get_weather')
+@FunctionManager.functions.register("get_weather")
 class WeatherFunc:
     @staticmethod
     def get_tool_call():

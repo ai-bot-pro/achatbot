@@ -17,9 +17,9 @@ python -m unittest test.modules.speech.tts.test_pyttsx3.TestPyttsx3TTS.test_synt
 class TestPyttsx3TTS(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tts_tag = os.getenv('LLM_TAG', "tts_pyttsx3")
-        cls.tts_text = os.getenv('TTS_TEXT', "你好，我是机器人")
-        cls.voice_name = os.getenv('VOICE_NAME', "Tingting")
+        cls.tts_tag = os.getenv("LLM_TAG", "tts_pyttsx3")
+        cls.tts_text = os.getenv("TTS_TEXT", "你好，我是机器人")
+        cls.voice_name = os.getenv("VOICE_NAME", "Tingting")
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
@@ -29,8 +29,7 @@ class TestPyttsx3TTS(unittest.TestCase):
     def setUp(self):
         kwargs = {}
         kwargs["voice_name"] = self.voice_name
-        self.tts: Pyttsx3TTS = EngineFactory.get_engine_by_tag(
-            EngineClass, self.tts_tag, **kwargs)
+        self.tts: Pyttsx3TTS = EngineFactory.get_engine_by_tag(EngineClass, self.tts_tag, **kwargs)
         self.session = Session(**SessionCtx("test_tts_client_id").__dict__)
 
     def tearDown(self):
@@ -43,6 +42,7 @@ class TestPyttsx3TTS(unittest.TestCase):
 
     def test_synthesize(self):
         import pyaudio
+
         stream_info = self.tts.get_stream_info()
         self.pyaudio_instance = pyaudio.PyAudio()
         self.audio_stream = self.pyaudio_instance.open(
@@ -50,7 +50,8 @@ class TestPyttsx3TTS(unittest.TestCase):
             channels=stream_info["channels"],
             rate=stream_info["rate"],
             output_device_index=None,
-            output=True)
+            output=True,
+        )
 
         self.session.ctx.state["tts_text"] = self.tts_text
         print(self.session.ctx)
@@ -63,7 +64,7 @@ class TestPyttsx3TTS(unittest.TestCase):
                 self.audio_stream.write(chunk)
                 continue
             for i in range(0, len(chunk), sub_chunk_size):
-                sub_chunk = chunk[i:i + sub_chunk_size]
+                sub_chunk = chunk[i : i + sub_chunk_size]
                 self.audio_stream.write(sub_chunk)
 
         self.audio_stream.stop_stream()

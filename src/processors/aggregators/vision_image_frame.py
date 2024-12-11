@@ -33,7 +33,7 @@ class VisionImageFrameAggregator(FrameProcessor):
 
         if isinstance(frame, TextFrame):
             # maybe use HiTextFrame
-            match = re.search(r'\[HI_TEXT\](.*?)\[/HI_TEXT\]', frame.text)
+            match = re.search(r"\[HI_TEXT\](.*?)\[/HI_TEXT\]", frame.text)
             if match:
                 frame.text = match.group(1).strip()
                 await self.push_frame(frame, direction)

@@ -19,8 +19,8 @@ app = typer.Typer()
 def is_url(source: str) -> bool:
     try:
         # If the source doesn't start with a scheme, add 'https://'
-        if not source.startswith(('http://', 'https://')):
-            source = 'https://' + source
+        if not source.startswith(("http://", "https://")):
+            source = "https://" + source
 
         result = urlparse(source)
         return all([result.scheme, result.netloc])
@@ -32,11 +32,11 @@ def is_file(source: str) -> bool:
     return os.path.isfile(source)
 
 
-@app.command('get_source_type')
+@app.command("get_source_type")
 def get_source_type(source: str):
     src_type = ""
-    is_url = is_url(source)
-    if is_url:
+    isUrl = is_url(source)
+    if isUrl:
         if any(pattern in source for pattern in ["youtube.com", "youtu.be"]):
             src_type = "youtube"
         else:
@@ -48,11 +48,11 @@ def get_source_type(source: str):
     return src_type
 
 
-@app.command('run')
+@app.command("run")
 def run(
     sources: List[str],
     role_tts_voices: List[str] = ["en-US-JennyNeural", "en-US-EricNeural"],
-    language: str = 'en',
+    language: str = "en",
     save_dir: str = "./audios/podcast",
     category: int = 0,
     is_published: bool = False,
@@ -106,8 +106,7 @@ python -m demo.gen_podcast run \
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s',
-        handlers=[
-            logging.StreamHandler()],
+        format="%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s",
+        handlers=[logging.StreamHandler()],
     )
     app()

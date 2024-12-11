@@ -25,6 +25,7 @@ from src.types.frames.data_frames import UserImageRawFrame
 from src.types.vision.detector.yolo import CustomConfidence, VisionDetectorArgs
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 
@@ -36,15 +37,14 @@ python -m unittest test.integration.processors.test_vision_ocr_processor.TestPro
 
 
 class TestProcessor(unittest.IsolatedAsyncioTestCase):
-
     @classmethod
     def setUpClass(cls):
         Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
 
-        img_file = os.path.join(TEST_DIR, f"img_files", f"ocr.jpg")
-        img_file = os.getenv('IMG_FILE', img_file)
+        img_file = os.path.join(TEST_DIR, "img_files", "ocr.jpg")
+        img_file = os.getenv("IMG_FILE", img_file)
         cls.img = Image.open(img_file)
-        cls.tag = os.getenv('VISION_OCR_TAG', "vision_transformers_got_ocr")
+        cls.tag = os.getenv("VISION_OCR_TAG", "vision_transformers_got_ocr")
 
     @classmethod
     def tearDownClass(cls):
@@ -61,10 +61,12 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(frame, TextFrame)
 
     async def asyncSetUp(self):
-        pipeline = Pipeline([
-            self.get_vision_ocr_processor(),
-            OutputFrameProcessor(cb=self.out_cb),
-        ])
+        pipeline = Pipeline(
+            [
+                self.get_vision_ocr_processor(),
+                OutputFrameProcessor(cb=self.out_cb),
+            ]
+        )
         self.vision_task = PipelineTask(
             pipeline,
             params=PipelineParams(),
@@ -75,28 +77,32 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
 
     async def test_run(self):
         runner = PipelineRunner()
-        await self.vision_task.queue_frames([
-            UserImageRawFrame(
-                image=self.img.tobytes(),
-                size=self.img.size,
-                format=self.img.format,
-                mode=self.img.mode,
-                user_id="110",
-            ),
-            EndFrame(),
-        ])
+        await self.vision_task.queue_frames(
+            [
+                UserImageRawFrame(
+                    image=self.img.tobytes(),
+                    size=self.img.size,
+                    format=self.img.format,
+                    mode=self.img.mode,
+                    user_id="110",
+                ),
+                EndFrame(),
+            ]
+        )
         await runner.run(self.vision_task)
 
     async def test_run_empty(self):
         runner = PipelineRunner()
-        await self.vision_task.queue_frames([
-            UserImageRawFrame(
-                image=bytes([]),
-                size=(0, 0),
-                format=None,
-                mode=None,
-                user_id="110",
-            ),
-            EndFrame(),
-        ])
+        await self.vision_task.queue_frames(
+            [
+                UserImageRawFrame(
+                    image=bytes([]),
+                    size=(0, 0),
+                    format=None,
+                    mode=None,
+                    user_id="110",
+                ),
+                EndFrame(),
+            ]
+        )
         await runner.run(self.vision_task)

@@ -13,8 +13,10 @@ from src.modules.speech.audio_stream import AudioStreamEnvInit
 from src.modules.speech.player import PlayerEnvInit
 from src.modules.speech.tts import TTSEnvInit
 from src.common.grpc.idl.tts_pb2 import (
-    LoadModelRequest, LoadModelResponse,
-    SynthesizeRequest, SynthesizeResponse,
+    LoadModelRequest,
+    LoadModelResponse,
+    SynthesizeRequest,
+    SynthesizeResponse,
 )
 from src.common.grpc.idl.tts_pb2_grpc import TTSStub
 from src.common.grpc.interceptors.authentication_client import add_authentication
@@ -23,13 +25,15 @@ from src.common.types import SessionCtx
 from src.common.session import Session
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 Logger.init(
     os.getenv("LOG_LEVEL", "debug").upper(),
     app_name="chat-bot-tts-client",
     is_file=False,
-    is_console=True)
+    is_console=True,
+)
 
 
 def load_model(channel):
@@ -66,9 +70,9 @@ if __name__ == "__main__":
         session = Session(**SessionCtx(client_id).__dict__)
         # todo: up to the rpc gateway to auth
         token = "oligei-tts"
-        authentication = add_authentication('authorization', token)
-        port = os.getenv('PORT', "50052")
-        channel = grpc.insecure_channel(f'localhost:{port}')
+        authentication = add_authentication("authorization", token)
+        port = os.getenv("PORT", "50052")
+        channel = grpc.insecure_channel(f"localhost:{port}")
         channel = grpc.intercept_channel(channel, authentication)
 
         load_model(channel)

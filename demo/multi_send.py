@@ -4,7 +4,7 @@ import multiprocessing
 import multiprocessing.process
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     be, fe = multiprocessing.Pipe()
 
     def recv():

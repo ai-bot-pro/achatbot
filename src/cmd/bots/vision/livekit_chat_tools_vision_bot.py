@@ -27,11 +27,16 @@ from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.common.types import LivekitParams
 from src.cmd.bots.base_livekit import LivekitRoomBot
 from src.transports.livekit import LivekitTransport
-from src.types.frames.data_frames import FunctionCallResultFrame, LLMMessagesFrame, UserImageRawFrame, VisionImageRawFrame
+from src.types.frames.data_frames import (
+    FunctionCallResultFrame,
+    LLMMessagesFrame,
+    UserImageRawFrame,
+    VisionImageRawFrame,
+)
 from src.common.register import Register
 from .. import register_ai_room_bots
 
-register_tool_funtions = Register('livekit-chat-vision-tool-functions')
+register_tool_funtions = Register("livekit-chat-vision-tool-functions")
 
 
 @register_ai_room_bots.register
@@ -72,17 +77,19 @@ class LivekitChatToolsVisionBot(LivekitRoomBot):
 
     @register_tool_funtions.register
     async def get_weather(
-            self,
-            function_name: str,
-            tool_call_id: str,
-            arguments: Any,
-            llm: LLMProcessor,
-            context: OpenAILLMContext,
-            result_callback: Callable[[Any], Awaitable[None]]):
+        self,
+        function_name: str,
+        tool_call_id: str,
+        arguments: Any,
+        llm: LLMProcessor,
+        context: OpenAILLMContext,
+        result_callback: Callable[[Any], Awaitable[None]],
+    ):
         location = arguments["location"]
         logging.info(
             f"function_name:{function_name}, tool_call_id:{tool_call_id},"
-            f"arguments:{arguments}, llm:{llm}, context:{context}")
+            f"arguments:{arguments}, llm:{llm}, context:{context}"
+        )
         # just a mock response
         # add result to assistant context
         self.get_weather_call_cn += 1
@@ -93,22 +100,24 @@ class LivekitChatToolsVisionBot(LivekitRoomBot):
 
     @register_tool_funtions.register
     async def describe_image(
-            self,
-            function_name: str,
-            tool_call_id: str,
-            arguments: Any,
-            llm: LLMProcessor,
-            context: OpenAILLMContext,
-            result_callback: Callable[[Any], Awaitable[None]]):
+        self,
+        function_name: str,
+        tool_call_id: str,
+        arguments: Any,
+        llm: LLMProcessor,
+        context: OpenAILLMContext,
+        result_callback: Callable[[Any], Awaitable[None]],
+    ):
         logging.info(
             f"function_name:{function_name}, tool_call_id:{tool_call_id},"
-            f"arguments:{arguments}, llm:{llm}, context:{context}")
+            f"arguments:{arguments}, llm:{llm}, context:{context}"
+        )
         if "question" not in arguments:
             arguments["question"] = "describe image."
         images = self.image_capture_processor.capture_imgs.get(cls=list)
         if len(images) == 0:
             # no described image, so return tips
-            await result_callback(f"no described image, please try again.")
+            await result_callback("no described image, please try again.")
             return
 
         image: UserImageRawFrame = images[0]
@@ -119,17 +128,23 @@ class LivekitChatToolsVisionBot(LivekitRoomBot):
             format=image.format,
             mode=image.mode,
         )
-        vision_task = PipelineTask(Pipeline([
-            # SentenceAggregator(),
-            # UserImageRequestProcessor(),
-            # VisionImageFrameAggregator(),
-            self.vision_llm_processor,
-            OutputFrameProcessor(cb=self.sink_out_cb),
-        ]))
-        await vision_task.queue_frames([
-            frame,
-            EndFrame(),
-        ])
+        vision_task = PipelineTask(
+            Pipeline(
+                [
+                    # SentenceAggregator(),
+                    # UserImageRequestProcessor(),
+                    # VisionImageFrameAggregator(),
+                    self.vision_llm_processor,
+                    OutputFrameProcessor(cb=self.sink_out_cb),
+                ]
+            )
+        )
+        await vision_task.queue_frames(
+            [
+                frame,
+                EndFrame(),
+            ]
+        )
         await PipelineRunner().run(vision_task)
         # return describe image tool result
         await result_callback(self.vision_result)
@@ -160,14 +175,12 @@ class LivekitChatToolsVisionBot(LivekitRoomBot):
             params=self.livekit_params,
         )
 
-        transport.add_event_handler(
-            "on_first_participant_joined",
-            self.on_first_participant_joined)
+        transport.add_event_handler("on_first_participant_joined", self.on_first_participant_joined)
 
         @transport.event_handler("on_video_track_subscribed")
         async def on_video_track_subscribed(
-                transport: LivekitTransport,
-                participant: rtc.RemoteParticipant,
+            transport: LivekitTransport,
+            participant: rtc.RemoteParticipant,
         ):
             transport.capture_participant_video(participant.sid)
 
@@ -186,39 +199,45 @@ class LivekitChatToolsVisionBot(LivekitRoomBot):
         llm_processor.register_function("describe_image", self.describe_image)
         self.describe_image_call_cn = 0
 
-        pipeline = Pipeline([
-            transport.input_processor(),
-            # FrameLogger(include_frame_types=[UserImageRawFrame]),
-            self.image_capture_processor,
-            asr_processor,
-            llm_user_ctx_aggr,
-            llm_processor,
-            tts_processor,
-            transport.output_processor(),
-            # FrameLogger(include_frame_types=[FunctionCallResultFrame]),
-            llm_assistant_ctx_aggr,
-        ])
+        pipeline = Pipeline(
+            [
+                transport.input_processor(),
+                # FrameLogger(include_frame_types=[UserImageRawFrame]),
+                self.image_capture_processor,
+                asr_processor,
+                llm_user_ctx_aggr,
+                llm_processor,
+                tts_processor,
+                transport.output_processor(),
+                # FrameLogger(include_frame_types=[FunctionCallResultFrame]),
+                llm_assistant_ctx_aggr,
+            ]
+        )
         self.task = PipelineTask(pipeline, params=PipelineParams(enable_metrics=False))
         await PipelineRunner().run(self.task)
 
     async def on_first_participant_joined(
-        self, transport: LivekitTransport,
+        self,
+        transport: LivekitTransport,
         participant: rtc.RemoteParticipant,
     ):
         self.participant_uid = participant.sid
         transport.capture_participant_video(participant.sid)
 
         # joined use tts say "hello" to introduce with llm generate
-        if self._bot_config.tts \
-                and self._bot_config.llm \
-                and self._bot_config.llm.messages \
-                and len(self._bot_config.llm.messages) == 1:
+        if (
+            self._bot_config.tts
+            and self._bot_config.llm
+            and self._bot_config.llm.messages
+            and len(self._bot_config.llm.messages) == 1
+        ):
             hi_text = "Please introduce yourself first."
-            if self._bot_config.llm.language \
-                    and self._bot_config.llm.language == "zh":
+            if self._bot_config.llm.language and self._bot_config.llm.language == "zh":
                 hi_text = "请用中文介绍下自己。"
-            self._bot_config.llm.messages.append({
-                "role": "user",
-                "content": hi_text,
-            })
+            self._bot_config.llm.messages.append(
+                {
+                    "role": "user",
+                    "content": hi_text,
+                }
+            )
             await self.task.queue_frames([LLMMessagesFrame(self._bot_config.llm.messages)])

@@ -41,11 +41,13 @@ class SileroVAD(BaseVAD):
         logging.debug(f"{self.TAG} have {model_million_params}M parameters")
         logging.debug(self.model)
 
-        (self.get_speech_timestamps,
-         self.save_audio,
-         self.read_audio,
-         VADIterator,
-         self.collect_chunks) = utils
+        (
+            self.get_speech_timestamps,
+            self.save_audio,
+            self.read_audio,
+            VADIterator,
+            self.collect_chunks,
+        ) = utils
         self.vad_iterator = VADIterator(self.model, sampling_rate=self.args.sample_rate)
 
     def set_audio_data(self, audio_data):
@@ -60,17 +62,20 @@ class SileroVAD(BaseVAD):
         window_size_samples = self.map_rate_num_samples[self.args.sample_rate]
         num_frames = math.ceil(len(self.audio_buff) / window_size_samples)
         for i in range(0, len(self.audio_buff), window_size_samples):
-            chunk = self.audio_buff[i: i + window_size_samples]
+            chunk = self.audio_buff[i : i + window_size_samples]
             if await self.detect_chunk(chunk, session):
                 speech_frames += 1
                 if self.args.check_frames_mode == VAD_CHECK_PER_FRAMES:
-                    logging.debug(f"{self.TAG} Speech detected in frame offset {i}"
-                                  f" of {len(self.audio_buff)}, {num_frames} frames")
+                    logging.debug(
+                        f"{self.TAG} Speech detected in frame offset {i}"
+                        f" of {len(self.audio_buff)}, {num_frames} frames"
+                    )
                     return True
         if self.args.check_frames_mode == VAD_CHECK_ALL_FRAMES:
             if speech_frames == num_frames:
-                logging.debug(f"{self.TAG} Speech detected in {speech_frames} of "
-                              f"{num_frames} frames")
+                logging.debug(
+                    f"{self.TAG} Speech detected in {speech_frames} of " f"{num_frames} frames"
+                )
             else:
                 logging.debug(f"{self.TAG} Speech not detected in all {num_frames} frames")
             return speech_frames == num_frames
@@ -86,7 +91,8 @@ class SileroVAD(BaseVAD):
 
     def get_speech_timestamps(self):
         speech_timestamps = self.get_speech_timestamps(
-            self.audio_buff, self.model, sampling_rate=self.args.sample_rate)
+            self.audio_buff, self.model, sampling_rate=self.args.sample_rate
+        )
         logging.debug(f"speech_timestamps:{speech_timestamps}")
         return speech_timestamps
 
@@ -94,23 +100,23 @@ class SileroVAD(BaseVAD):
         # merge all speech chunks to one audio
         self.save_audio(
             saved_file_path,
-            self.collect_chunks(
-                self.get_speech_timestamps(),
-                self.audio_buff),
-            sampling_rate=self.args.sample_rate
+            self.collect_chunks(self.get_speech_timestamps(), self.audio_buff),
+            sampling_rate=self.args.sample_rate,
         )
 
     def vad_iterator(self):
         window_size_samples = self.map_rate_num_samples[self.args.sample_rate]
         for i in range(0, len(self.audio_buff), window_size_samples):
-            audio_chunk = self.audio_buff[i: i + window_size_samples]
+            audio_chunk = self.audio_buff[i : i + window_size_samples]
             if len(audio_chunk) < window_size_samples:
                 if self.args.is_pad_tensor is False:
                     logging.debug(
-                        f"len(audio_chunk):{len(audio_chunk)} dont't pad to {self.map_rate_num_samples[self.args.sample_rate]} return False")
+                        f"len(audio_chunk):{len(audio_chunk)} dont't pad to {self.map_rate_num_samples[self.args.sample_rate]} return False"
+                    )
                     continue
                 logging.debug(
-                    f"len(audio_chunk):{len(audio_chunk)} pad to {self.map_rate_num_samples[self.args.sample_rate]} ")
+                    f"len(audio_chunk):{len(audio_chunk)} pad to {self.map_rate_num_samples[self.args.sample_rate]} "
+                )
                 audio_chunk = torch.nn.functional.pad(
                     audio_chunk,
                     (0, self.map_rate_num_samples[self.args.sample_rate] - len(audio_chunk)),
@@ -134,7 +140,8 @@ class SileroVAD(BaseVAD):
         if len(audio_chunk) != self.map_rate_num_samples[self.args.sample_rate]:
             if self.args.is_pad_tensor is False:
                 raise Exception(
-                    f"len(audio_chunk):{len(audio_chunk)} dont't pad to {self.map_rate_num_samples[self.args.sample_rate]} return False")
+                    f"len(audio_chunk):{len(audio_chunk)} dont't pad to {self.map_rate_num_samples[self.args.sample_rate]} return False"
+                )
             # logging.debug( f"len(audio_chunk):{len(audio_chunk)} pad to {self.map_rate_num_samples[self.args.sample_rate]} ")
             audio_chunk = torch.nn.functional.pad(
                 audio_chunk,

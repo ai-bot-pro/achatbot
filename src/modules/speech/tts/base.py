@@ -32,8 +32,9 @@ class BaseTTS(EngineClass):
             chunk_length_seconds = 3
             if hasattr(self.args, "chunk_length_seconds"):
                 chunk_length_seconds = self.args.chunk_length_seconds
-            chunk_length_in_bytes = chunk_length_seconds * \
-                stream_info["rate"] * stream_info["sample_width"]
+            chunk_length_in_bytes = (
+                chunk_length_seconds * stream_info["rate"] * stream_info["sample_width"]
+            )
 
         queue: Queue = Queue()
         with ThreadPoolExecutor() as executor:
@@ -54,7 +55,8 @@ class BaseTTS(EngineClass):
                         break
                     if len(buff) > chunk_length_in_bytes:
                         logging.debug(
-                            f"len(buff) {len(buff)} > chunk_length_in_bytes {chunk_length_in_bytes} to yield")
+                            f"len(buff) {len(buff)} > chunk_length_in_bytes {chunk_length_in_bytes} to yield"
+                        )
                         scratch_buff = buff
                         yield bytes(scratch_buff)
                         buff.clear()
@@ -84,16 +86,17 @@ class BaseTTS(EngineClass):
 
     async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
         raise NotImplementedError(
-            "The _inference method must be implemented by the derived subclass.")
+            "The _inference method must be implemented by the derived subclass."
+        )
 
     def _get_end_silence_chunk(self, session: Session, text: str) -> bytes:
         # Send silent audio
         info = self.get_stream_info()
         sample_rate = info["rate"]
-        np_dtype = info['np_dtype']
+        np_dtype = info["np_dtype"]
 
         end_sentence_delimeters = ".。!！?？…。¡¿"
-        mid_sentence_delimeters = ";；:：,，\n（()）【[]】「{}」-“”„\"—/|《》"
+        mid_sentence_delimeters = ';；:：,，\n（()）【[]】「{}」-“”„"—/|《》'
 
         silence_duration = 0.3
         if text[-1] in end_sentence_delimeters:
@@ -127,20 +130,21 @@ class BaseTTS(EngineClass):
         return self._filter_special_chars(special_chars, text)
 
     def remove_trailing_special_chars(self, special_chars: str, s: str) -> str:
-        pattern = rf'(.*?)([{special_chars}])[{special_chars}]*$'
-        return re.sub(pattern, r'\1\2', s)
+        pattern = rf"(.*?)([{special_chars}])[{special_chars}]*$"
+        return re.sub(pattern, r"\1\2", s)
 
     def _filter_special_chars(self, special_chars: str, text: str) -> str:
-        pattern = rf'[{special_chars}]'
+        pattern = rf"[{special_chars}]"
         match = re.search(pattern, text)
         res = text
         if match:
             first_special_index = match.start()
-            res = text[:first_special_index + 1] + \
-                re.sub(rf'[{special_chars}]+$', '', text[first_special_index + 1:])
+            res = text[: first_special_index + 1] + re.sub(
+                rf"[{special_chars}]+$", "", text[first_special_index + 1 :]
+            )
             if len(res) == 1:  # have a special char, return empty
                 res = ""
-        res = res.strip('\n')
+        res = res.strip("\n")
         logging.debug(f"text:{text} --filter--> res:{res} with match:{match}")
         return res
 

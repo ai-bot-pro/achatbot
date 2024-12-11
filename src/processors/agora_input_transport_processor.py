@@ -19,7 +19,6 @@ from src.types.frames.data_frames import AgoraTransportMessageFrame
 
 
 class AgoraInputTransportProcessor(AudioVADInputProcessor):
-
     def __init__(self, client: AgoraTransportClient, params: AgoraParams, **kwargs):
         super().__init__(params, **kwargs)
         self._params = params
@@ -33,14 +32,14 @@ class AgoraInputTransportProcessor(AudioVADInputProcessor):
         # Join the room.
         await self._client.join()
         # Start sub room in audio stream task
-        if not self._audio_in_task \
-                and (self._params.audio_in_enabled or self._params.vad_enabled):
+        if not self._audio_in_task and (self._params.audio_in_enabled or self._params.vad_enabled):
             self._audio_in_task = asyncio.create_task(self._audio_in_task_handler())
 
     async def stop(self):
         # Cancel sub room in audio stream task
-        if self._audio_in_task \
-                and (not self._audio_in_task.cancelled() or not self._audio_in_task.done()):
+        if self._audio_in_task and (
+            not self._audio_in_task.cancelled() or not self._audio_in_task.done()
+        ):
             self._audio_in_task.cancel()
             await self._audio_in_task
 
@@ -125,11 +124,7 @@ class AgoraInputTransportProcessor(AudioVADInputProcessor):
         }
 
         self._client.capture_participant_video(
-            participant_id,
-            self._on_participant_video_frame,
-            framerate,
-            video_source,
-            color_format
+            participant_id, self._on_participant_video_frame, framerate, video_source, color_format
         )
 
     def request_participant_image(self, participant_id: str):

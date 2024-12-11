@@ -22,7 +22,7 @@ class PDFExtractor:
             doc.close()
 
             # Normalize the text to handle special characters and remove accents
-            normalized_content = unicodedata.normalize('NFKD', content)
+            normalized_content = unicodedata.normalize("NFKD", content)
 
             return normalized_content
         except Exception as e:
@@ -31,7 +31,7 @@ class PDFExtractor:
 
 
 def get_pdf_file_name(file: str):
-    pattern = r'([^/]+\.pdf)$'
+    pattern = r"([^/]+\.pdf)$"
     match = re.search(pattern, file)
     if match:
         pdf_file_name = match.group(1)
@@ -43,7 +43,7 @@ def get_pdf_file_name(file: str):
 @app.command()
 def extract_content(
     pdf_files: List[str],
-    output_dir: str = 'videos/transcripts/',
+    output_dir: str = "videos/transcripts/",
 ) -> None:
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -57,14 +57,14 @@ def extract_content(
             print(content[:500] + "..." if len(content) > 500 else content)
             # Save transcript to file
             output_file = os.path.join(output_dir, f"{pdf_name}.txt")
-            with open(output_file, 'w') as file:
+            with open(output_file, "w") as file:
                 file.write(content)
         except Exception as e:
             print(f"An error occurred: {str(e)}")
 
 
 @app.command()
-def instruct_content(test_urls: List[str], language: str = 'en') -> None:
+def instruct_content(test_urls: List[str], language: str = "en") -> None:
     console = Console()
     extractor = PDFExtractor()
     for url in test_urls:
@@ -102,7 +102,7 @@ python -m demo.content_parser.pdf_extractor_instructor instruct-content \
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s',
+        format="%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s",
         handlers=[
             # logging.FileHandler("extractor.log"),
             logging.StreamHandler()

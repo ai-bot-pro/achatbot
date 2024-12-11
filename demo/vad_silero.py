@@ -29,12 +29,9 @@ def stop():
 
 
 def start_recording():
-
-    stream = audio.open(format=FORMAT,
-                        channels=CHANNELS,
-                        rate=SAMPLE_RATE,
-                        input=True,
-                        frames_per_buffer=CHUNK)
+    stream = audio.open(
+        format=FORMAT, channels=CHANNELS, rate=SAMPLE_RATE, input=True, frames_per_buffer=CHUNK
+    )
 
     data = []
     voiced_confidences = []
@@ -43,15 +40,13 @@ def start_recording():
     continue_recording = True
 
     pp = ProgressPlot(
-        plot_names=["Silero VAD"],
-        line_names=["speech probabilities"],
-        x_label="audio chunks")
+        plot_names=["Silero VAD"], line_names=["speech probabilities"], x_label="audio chunks"
+    )
 
     stop_listener = threading.Thread(target=stop)
     stop_listener.start()
 
     while continue_recording:
-
         audio_chunk = stream.read(num_samples)
 
         # in case you want to save the audio later
@@ -71,8 +66,7 @@ def start_recording():
 
 
 # Taken from utils_vad.py
-def validate(model,
-             inputs: torch.Tensor):
+def validate(model, inputs: torch.Tensor):
     with torch.no_grad():
         outs = model(inputs)
     return outs
@@ -80,7 +74,7 @@ def validate(model,
 
 def int2float(sound):
     abs_max = np.abs(sound).max()
-    sound = sound.astype('float32')
+    sound = sound.astype("float32")
     if abs_max > 0:
         sound *= 1 / 32768
     sound = sound.squeeze()  # depends on the use case
@@ -91,33 +85,26 @@ if __name__ == "__main__":
     torch.set_num_threads(1)
     torchaudio.set_audio_backend("soundfile")
 
-    model, utils = torch.hub.load(repo_or_dir='snakers4/silero-vad',
-                                  model='silero_vad',
-                                  force_reload=False)
+    model, utils = torch.hub.load(
+        repo_or_dir="snakers4/silero-vad", model="silero_vad", force_reload=False
+    )
     print(utils, model)
 
-    (get_speech_timestamps,
-     save_audio,
-     read_audio,
-     VADIterator,
-     collect_chunks) = utils
+    (get_speech_timestamps, save_audio, read_audio, VADIterator, collect_chunks) = utils
 
     audio = pyaudio.PyAudio()
 
     # num_samples = 1536
     num_samples = 512
-    stream = audio.open(format=FORMAT,
-                        channels=CHANNELS,
-                        rate=SAMPLE_RATE,
-                        input=True,
-                        frames_per_buffer=CHUNK)
+    stream = audio.open(
+        format=FORMAT, channels=CHANNELS, rate=SAMPLE_RATE, input=True, frames_per_buffer=CHUNK
+    )
     data = []
     voiced_confidences = []
     frames_to_record = 100
 
     print("Started Recording")
     for i in range(0, frames_to_record):
-
         audio_chunk = stream.read(num_samples)
 
         # in case you want to save the audio later

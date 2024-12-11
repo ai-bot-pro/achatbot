@@ -27,8 +27,8 @@ class ContentExtractor:
     def is_url(self, source: str) -> bool:
         try:
             # If the source doesn't start with a scheme, add 'https://'
-            if not source.startswith(('http://', 'https://')):
-                source = 'https://' + source
+            if not source.startswith(("http://", "https://")):
+                source = "https://" + source
 
             result = urlparse(source)
             return all([result.scheme, result.netloc])
@@ -39,7 +39,7 @@ class ContentExtractor:
         res = self._extract_content(source)
         if self._is_save:
             output_file = os.path.join(self._save_dir, f"{self._file_name}.txt")
-            with open(output_file, 'w') as file:
+            with open(output_file, "w") as file:
                 file.write(res)
                 logging.info(f"save to file: {output_file}")
         return res
@@ -51,10 +51,11 @@ class ContentExtractor:
                     self._file_name = source.split("v=")[-1]
                     return self.youtube_transcriber.extract_transcript(self._file_name)
                 else:
-                    self._file_name = source.split("/")[-1] \
-                        if source.split("/")[-1] else source.split("/")[-2]
+                    self._file_name = (
+                        source.split("/")[-1] if source.split("/")[-1] else source.split("/")[-2]
+                    )
                     return self.website_extractor.extract_content(source)
-            elif source.lower().endswith('.pdf'):
+            elif source.lower().endswith(".pdf"):
                 self._file_name = get_pdf_file_name(source)
                 return self.pdf_extractor.extract_content(source)
             else:
@@ -72,7 +73,7 @@ class ContentExtractor:
 def extract_content(
     sources: List[str],
     is_save: bool = False,
-    save_dir: str = 'videos/transcripts/',
+    save_dir: str = "videos/transcripts/",
 ) -> None:
     extractor = ContentExtractor(is_save=is_save, save_dir=save_dir)
 
@@ -91,10 +92,11 @@ def extract_content(
 @app.command()
 def instruct_content(
     sources: List[str],
-    language: str = 'en',
-    mode: str = 'text',
+    language: str = "en",
+    mode: str = "text",
 ) -> None:
     from .table import table
+
     console = Console()
     extractor = ContentExtractor()
     for source in sources:
@@ -132,7 +134,7 @@ python -m demo.content_parser.content_extractor_instructor instruct-content \
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s',
+        format="%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s",
         handlers=[
             # logging.FileHandler("extractor.log"),
             logging.StreamHandler()

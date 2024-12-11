@@ -12,17 +12,24 @@ from apipeline.processors.frame_processor import FrameDirection
 from apipeline.processors.output_processor import OutputProcessor
 
 from src.common.types import AudioCameraParams
-from src.types.frames.control_frames import BotSpeakingFrame, TTSStartedFrame, TTSStoppedFrame, BotStartedSpeakingFrame, BotStoppedSpeakingFrame
+from src.types.frames.control_frames import (
+    BotSpeakingFrame,
+    TTSStartedFrame,
+    TTSStoppedFrame,
+    BotStartedSpeakingFrame,
+    BotStoppedSpeakingFrame,
+)
 from src.types.frames.data_frames import SpriteFrame, TransportMessageFrame
 
 
 class AudioCameraOutputProcessor(OutputProcessor):
     def __init__(
-            self,
-            params: AudioCameraParams,
-            name: str | None = None,
-            loop: asyncio.AbstractEventLoop | None = None,
-            **kwargs):
+        self,
+        params: AudioCameraParams,
+        name: str | None = None,
+        loop: asyncio.AbstractEventLoop | None = None,
+        **kwargs,
+    ):
         super().__init__(name=name, loop=loop, **kwargs)
         self._params = params
 
@@ -32,8 +39,9 @@ class AudioCameraOutputProcessor(OutputProcessor):
 
         # We will write 20ms audio at a time. If we receive long audio frames we
         # will chunk them. This will help with interruption handling.
-        audio_bytes_10ms = int(self._params.audio_out_sample_rate / 100) * \
-            self._params.audio_out_channels * 2
+        audio_bytes_10ms = (
+            int(self._params.audio_out_sample_rate / 100) * self._params.audio_out_channels * 2
+        )
         self._audio_chunk_size = audio_bytes_10ms * 2
         # Audio accumlation buffer for 16-bit samples to write out stream device
         self._audio_out_buff = bytearray()
@@ -48,7 +56,9 @@ class AudioCameraOutputProcessor(OutputProcessor):
         # Create media threads queues and task
         if self._params.camera_out_enabled:
             self._camera_out_queue = asyncio.Queue()
-            self._camera_out_task = self.get_event_loop().create_task(self._camera_out_task_handler())
+            self._camera_out_task = self.get_event_loop().create_task(
+                self._camera_out_task_handler()
+            )
 
     async def stop(self, frame: EndFrame):
         await super().stop(frame)
@@ -136,7 +146,7 @@ class AudioCameraOutputProcessor(OutputProcessor):
         # if len(audio) >= self._audio_chunk_size:
         # print( f"len audio_out_buff:{len(self._audio_out_buff)}, audio_chunk_size{self._audio_chunk_size}")
         for i in range(0, len(audio), self._audio_chunk_size):
-            chunk = audio[i: i + self._audio_chunk_size]
+            chunk = audio[i : i + self._audio_chunk_size]
             # if len(chunk) % 2 != 0: don't do that, need subclass to do
             #    chunk = chunk[:len(chunk) - 1]
             await self.write_raw_audio_frames(chunk)
@@ -183,8 +193,7 @@ class AudioCameraOutputProcessor(OutputProcessor):
         if frame.size != desired_size:
             image = Image.frombytes(frame.mode, frame.size, frame.image)
             resized_image = image.resize(desired_size)
-            logging.warning(
-                f"{frame} does not have the expected size {desired_size}, resizing")
+            logging.warning(f"{frame} does not have the expected size {desired_size}, resizing")
             frame = ImageRawFrame(
                 image=resized_image.tobytes(),
                 size=resized_image.size,

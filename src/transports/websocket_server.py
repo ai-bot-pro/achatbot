@@ -46,14 +46,15 @@ class WebsocketServerTransport(BaseTransport):
     def input_processor(self) -> WebsocketServerInputProcessor:
         if not self._input_processor:
             self._input_processor = WebsocketServerInputProcessor(
-                self._host, self._port, self._params, self._callbacks,
-                name=self._input_name
+                self._host, self._port, self._params, self._callbacks, name=self._input_name
             )
         return self._input_processor
 
     def output_processor(self) -> WebsocketServerOutputProcessor:
         if not self._output_processor:
-            self._output_processor = WebsocketServerOutputProcessor(self._params, name=self._output_name)
+            self._output_processor = WebsocketServerOutputProcessor(
+                self._params, name=self._output_name
+            )
         return self._output_processor
 
     async def _on_client_connected(self, websocket):

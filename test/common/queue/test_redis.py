@@ -17,7 +17,8 @@ class TestRedisQueue(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.REDIS_HOST = os.getenv(
-            "REDIS_HOST", "redis-12259.c240.us-east-1-3.ec2.redns.redis-cloud.com")
+            "REDIS_HOST", "redis-12259.c240.us-east-1-3.ec2.redns.redis-cloud.com"
+        )
         cls.REDIS_PORT = os.getenv("REDIS_PORT", "12259")
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 

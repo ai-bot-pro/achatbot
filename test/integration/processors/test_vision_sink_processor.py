@@ -26,6 +26,7 @@ from apipeline.processors.logger import FrameLogger
 from src.types.frames.data_frames import VisionImageRawFrame
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 
@@ -42,16 +43,15 @@ VISION_PROCESSOR_TAG=vision_processor \
 
 
 class TestVisionProcessor(unittest.IsolatedAsyncioTestCase):
-
     @classmethod
     def setUpClass(cls):
         Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
 
         img_file = os.path.join(TEST_DIR, "img_files", "03-Confusing-Pictures.jpg")
-        img_file = os.getenv('IMG_FILE', img_file)
+        img_file = os.getenv("IMG_FILE", img_file)
         cls.img = Image.open(img_file)
-        cls.vision_tag = os.getenv('VISION_PROCESSOR_TAG', "mock_vision_processor")
-        cls.mock_text = os.getenv('MOCK_TEXT', "你他娘的是个人才。")
+        cls.vision_tag = os.getenv("VISION_PROCESSOR_TAG", "mock_vision_processor")
+        cls.mock_text = os.getenv("MOCK_TEXT", "你他娘的是个人才。")
 
     @classmethod
     def tearDownClass(cls):
@@ -73,13 +73,15 @@ class TestVisionProcessor(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(frame.text, self.mock_text)
 
     async def asyncSetUp(self):
-        pipeline = Pipeline([
-            # SentenceAggregator(),
-            # UserImageRequestProcessor(),
-            # VisionImageFrameAggregator(),
-            self.get_vision_llm_processor(),
-            OutputFrameProcessor(cb=self.out_cb),
-        ])
+        pipeline = Pipeline(
+            [
+                # SentenceAggregator(),
+                # UserImageRequestProcessor(),
+                # VisionImageFrameAggregator(),
+                self.get_vision_llm_processor(),
+                OutputFrameProcessor(cb=self.out_cb),
+            ]
+        )
         self.vision_task = PipelineTask(
             pipeline,
             params=PipelineParams(),
@@ -90,28 +92,32 @@ class TestVisionProcessor(unittest.IsolatedAsyncioTestCase):
 
     async def test_run(self):
         runner = PipelineRunner()
-        await self.vision_task.queue_frames([
-            VisionImageRawFrame(
-                image=self.img.tobytes(),
-                size=self.img.size,
-                format=self.img.format,
-                mode=self.img.mode,
-                text="请描述下图片",
-            ),
-            EndFrame(),
-        ])
+        await self.vision_task.queue_frames(
+            [
+                VisionImageRawFrame(
+                    image=self.img.tobytes(),
+                    size=self.img.size,
+                    format=self.img.format,
+                    mode=self.img.mode,
+                    text="请描述下图片",
+                ),
+                EndFrame(),
+            ]
+        )
         await runner.run(self.vision_task)
 
     async def test_run_text(self):
         runner = PipelineRunner()
-        await self.vision_task.queue_frames([
-            VisionImageRawFrame(
-                text="你好",
-                image=bytes([]),
-                size=(0, 0),
-                format=None,
-                mode=None,
-            ),
-            EndFrame(),
-        ])
+        await self.vision_task.queue_frames(
+            [
+                VisionImageRawFrame(
+                    text="你好",
+                    image=bytes([]),
+                    size=(0, 0),
+                    format=None,
+                    mode=None,
+                ),
+                EndFrame(),
+            ]
+        )
         await runner.run(self.vision_task)

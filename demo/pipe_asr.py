@@ -32,14 +32,20 @@ def compute_rms(data):
     ints = struct.unpack(format, data)
 
     # Calculate RMS
-    sum_squares = sum(i ** 2 for i in ints)
+    sum_squares = sum(i**2 for i in ints)
     rms = (sum_squares / len(ints)) ** 0.5
     return rms
 
 
 audio = pyaudio.PyAudio()
-stream = audio.open(format=FORMAT, channels=CHANNELS, rate=RATE,
-                    input=True, input_device_index=MIC_IDX, frames_per_buffer=CHUNK)
+stream = audio.open(
+    format=FORMAT,
+    channels=CHANNELS,
+    rate=RATE,
+    input=True,
+    input_device_index=MIC_IDX,
+    frames_per_buffer=CHUNK,
+)
 
 
 def record_audio(conn):
@@ -67,17 +73,16 @@ def record_audio(conn):
     stream.stop_stream()
 
     conn.send(("record frames", frames))
-    save_file('records/tmp.wav',
-              audio.get_sample_size(FORMAT), frames)
+    save_file("records/tmp.wav", audio.get_sample_size(FORMAT), frames)
 
 
 def save_file(path, sample_width, data: list[bytes]):
     # save audio to a WAV file
-    with wave.open(path, 'wb') as wf:
+    with wave.open(path, "wb") as wf:
         wf.setnchannels(CHANNELS)
         wf.setsampwidth(sample_width)
         wf.setframerate(RATE)
-        wf.writeframes(b''.join(data))
+        wf.writeframes(b"".join(data))
         print(f"save to {path}")
 
 
@@ -93,13 +98,12 @@ def loop_asr(conn, q: multiprocessing.Queue, download_root, model_size="base", t
         msg, frames = conn.recv()
         if msg is None or msg == "stop":
             break
-        print(f'Received: {msg}')
+        print(f"Received: {msg}")
         # Convert the buffer frames to a NumPy array
-        audio_array = np.frombuffer(b''.join(frames), dtype=np.int16)
+        audio_array = np.frombuffer(b"".join(frames), dtype=np.int16)
         # Normalize the array to a [-1, 1] range
         audio = audio_array.astype(np.float32) / INT16_MAX_ABS_VALUE
-        text = faster_whisper_transcribe(
-            audio, download_root, model_size, target_lang)
+        text = faster_whisper_transcribe(audio, download_root, model_size, target_lang)
         if len(text) > 0:
             q.put_nowait(text)
 
@@ -114,17 +118,20 @@ def loop_llm_generate(model_path, q: multiprocessing.Queue, e: Event):
             e.set()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_path', "-m", type=str,
-                        default="./models", help='model root path')
-    parser.add_argument('--model_size', "-s", type=str,
-                        default="base", help='model size')
-    parser.add_argument('--lang', "-l", type=str,
-                        default="zh", help='target language')
-    parser.add_argument('--llm_model_path', "-lm", type=str,
-                        default="./models/qwen2-1_5b-instruct-q8_0.gguf", help='llm model path')
+    parser.add_argument("--model_path", "-m", type=str, default="./models", help="model root path")
+    parser.add_argument("--model_size", "-s", type=str, default="base", help="model size")
+    parser.add_argument("--lang", "-l", type=str, default="zh", help="target language")
+    parser.add_argument(
+        "--llm_model_path",
+        "-lm",
+        type=str,
+        default="./models/qwen2-1_5b-instruct-q8_0.gguf",
+        help="llm model path",
+    )
     args = parser.parse_args()
 
     mp_queue = multiprocessing.Queue()
@@ -132,12 +139,13 @@ if __name__ == '__main__':
     parent_conn, child_conn = multiprocessing.Pipe()
 
     # p = multiprocessing.Process(target=record_audio, args=(child_conn,))
-    p = multiprocessing.Process(
-        target=loop_record, args=(child_conn, start_record_event))
-    c = multiprocessing.Process(target=loop_asr, args=(
-        parent_conn, mp_queue, args.model_path, args.model_size, args.lang))
-    t = threading.Thread(target=loop_llm_generate,
-                         args=(args.llm_model_path, mp_queue, start_record_event))
+    p = multiprocessing.Process(target=loop_record, args=(child_conn, start_record_event))
+    c = multiprocessing.Process(
+        target=loop_asr, args=(parent_conn, mp_queue, args.model_path, args.model_size, args.lang)
+    )
+    t = threading.Thread(
+        target=loop_llm_generate, args=(args.llm_model_path, mp_queue, start_record_event)
+    )
     p.start()
     c.start()
     t.start()

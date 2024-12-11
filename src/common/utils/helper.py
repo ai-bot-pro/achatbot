@@ -5,17 +5,18 @@ import numpy as np
 
 
 async def load_json(path):
-    with open(path, 'r') as file:
+    with open(path, "r") as file:
         return json.load(file)
 
 
 async def get_audio_segment(file_path, start=None, end=None):
     from pydub import AudioSegment
-    with open(file_path, 'rb') as file:
+
+    with open(file_path, "rb") as file:
         audio = AudioSegment.from_file(file, format="wav")
     if start is not None and end is not None:
         # pydub works in milliseconds
-        return audio[start * 1000:end * 1000]
+        return audio[start * 1000 : end * 1000]
     return audio
 
 
@@ -36,6 +37,7 @@ def calculate_audio_volume(audio: bytes, sample_rate: int) -> float:
     loudness = normalize_value(loudness, -20, 80)
 
     return loudness
+
 
 def normalize_value(value, min_value, max_value):
     normalized = (value - min_value) / (max_value - min_value)

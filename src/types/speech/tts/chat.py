@@ -5,9 +5,9 @@ import deps.ChatTTS.ChatTTS as ChatTTS
 
 @dataclass
 class ChatTTSArgs:
-    source: str = 'huggingface'  # "huggingface", "local", "custom"
+    source: str = "huggingface"  # "huggingface", "local", "custom"
     force_redownload: bool = False
-    local_path: str = ''
+    local_path: str = ""
     compile: bool = True
     device: str = None
     use_flash_attn: bool = False

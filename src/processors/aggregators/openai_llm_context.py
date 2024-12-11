@@ -11,17 +11,17 @@ import json
 import logging
 
 from PIL import Image
+
 try:
     from openai._types import NOT_GIVEN, NotGiven
     from openai.types.chat import (
         ChatCompletionToolParam,
         ChatCompletionToolChoiceOptionParam,
-        ChatCompletionMessageParam
+        ChatCompletionMessageParam,
     )
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
-    logging.error(
-        "In order to use OpenAI types, you need to `pip install achatbot[openai]`. ")
+    logging.error("In order to use OpenAI types, you need to `pip install achatbot[openai]`. ")
     raise Exception(f"Missing module: {e}")
 from apipeline.processors.frame_processor import FrameProcessor
 from apipeline.frames.sys_frames import StartInterruptionFrame
@@ -52,20 +52,18 @@ class CustomEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, io.BytesIO):
             # Convert the first 8 bytes to an ASCII hex string
-            return (f"{obj.getbuffer()[0:8].hex()}...")
+            return f"{obj.getbuffer()[0:8].hex()}..."
         return super().default(obj)
 
 
 class OpenAILLMContext:
-
     def __init__(
         self,
         messages: List[ChatCompletionMessageParam] | None = None,
         tools: List[ChatCompletionToolParam] | NotGiven = NOT_GIVEN,
-        tool_choice: ChatCompletionToolChoiceOptionParam | NotGiven = NOT_GIVEN
+        tool_choice: ChatCompletionToolChoiceOptionParam | NotGiven = NOT_GIVEN,
     ):
-        self._messages: List[ChatCompletionMessageParam] = messages if messages else [
-        ]
+        self._messages: List[ChatCompletionMessageParam] = messages if messages else []
         self._tool_choice: ChatCompletionToolChoiceOptionParam | NotGiven = tool_choice
         self._tools: List[ChatCompletionToolParam] | NotGiven = tools
 
@@ -92,19 +90,15 @@ class OpenAILLMContext:
         """
         context = OpenAILLMContext()
         buffer = io.BytesIO()
-        Image.frombytes(
-            frame.mode,
-            frame.size,
-            frame.image
-        ).save(
-            buffer,
-            format=frame.format)
-        context.add_message({
-            "content": frame.text,
-            "role": "user",
-            "data": buffer,
-            "mime_type": f"image/{frame.format.lower()}"
-        })
+        Image.frombytes(frame.mode, frame.size, frame.image).save(buffer, format=frame.format)
+        context.add_message(
+            {
+                "content": frame.text,
+                "role": "user",
+                "data": buffer,
+                "mime_type": f"image/{frame.format.lower()}",
+            }
+        )
         return context
 
     @property
@@ -134,9 +128,7 @@ class OpenAILLMContext:
     def get_messages_json(self) -> str:
         return json.dumps(self._messages, cls=CustomEncoder)
 
-    def set_tool_choice(
-        self, tool_choice: ChatCompletionToolChoiceOptionParam | NotGiven
-    ):
+    def set_tool_choice(self, tool_choice: ChatCompletionToolChoiceOptionParam | NotGiven):
         self._tool_choice = tool_choice
 
     def set_tools(self, tools: List[ChatCompletionToolParam] | NotGiven = NOT_GIVEN):
@@ -145,37 +137,39 @@ class OpenAILLMContext:
         self._tools = tools
 
     async def call_function(
-            self,
-            f: Callable[[str,
-                         str,
-                         Any,
-                         FrameProcessor,
-                         'OpenAILLMContext',
-                         Callable[[Any],
-                                  Awaitable[None]]],
-                        Awaitable[None]],
-            *,
-            function_name: str,
-            tool_call_id: str,
-            arguments: dict,
-            llm: FrameProcessor) -> None:
-
+        self,
+        f: Callable[
+            [str, str, Any, FrameProcessor, "OpenAILLMContext", Callable[[Any], Awaitable[None]]],
+            Awaitable[None],
+        ],
+        *,
+        function_name: str,
+        tool_call_id: str,
+        arguments: dict,
+        llm: FrameProcessor,
+    ) -> None:
         # Push a SystemFrame downstream. This frame will let our assistant context aggregator
         # know that we are in the middle of a function call. Some contexts/aggregators may
         # not need this. But some definitely do (Anthropic, for example).
-        await llm.push_frame(FunctionCallInProgressFrame(
-            function_name=function_name,
-            tool_call_id=tool_call_id,
-            arguments=arguments,
-        ))
-
-        # Define a callback function that pushes a FunctionCallResultFrame downstream.
-        async def function_call_result_callback(result):
-            await llm.push_frame(FunctionCallResultFrame(
+        await llm.push_frame(
+            FunctionCallInProgressFrame(
                 function_name=function_name,
                 tool_call_id=tool_call_id,
                 arguments=arguments,
-                result=result))
+            )
+        )
+
+        # Define a callback function that pushes a FunctionCallResultFrame downstream.
+        async def function_call_result_callback(result):
+            await llm.push_frame(
+                FunctionCallResultFrame(
+                    function_name=function_name,
+                    tool_call_id=tool_call_id,
+                    arguments=arguments,
+                    result=result,
+                )
+            )
+
         await f(function_name, tool_call_id, arguments, llm, self, function_call_result_callback)
 
 
@@ -186,6 +180,7 @@ class OpenAILLMContextFrame(Frame):
     OpenAIContextAggregator frame processor.
 
     """
+
     context: OpenAILLMContext
 
     def __str__(self):
@@ -194,7 +189,6 @@ class OpenAILLMContextFrame(Frame):
 
 class LLMContextAggregator(LLMResponseAggregator):
     def __init__(self, *, context: OpenAILLMContext, **kwargs):
-
         self._context = context
         super().__init__(**kwargs)
 
@@ -242,7 +236,7 @@ class LLMUserContextAggregator(LLMContextAggregator):
             start_frame=UserStartedSpeakingFrame,
             end_frame=UserStoppedSpeakingFrame,
             accumulator_frame=TranscriptionFrame,
-            interim_accumulator_frame=InterimTranscriptionFrame
+            interim_accumulator_frame=InterimTranscriptionFrame,
         )
 
 
@@ -255,7 +249,7 @@ class LLMAssistantContextAggregator(LLMContextAggregator):
             start_frame=LLMFullResponseStartFrame,
             end_frame=LLMFullResponseEndFrame,
             accumulator_frame=TextFrame,
-            handle_interruptions=True
+            handle_interruptions=True,
         )
 
 
@@ -280,13 +274,17 @@ class OpenAIAssistantContextAggregator(LLMAssistantContextAggregator):
         elif isinstance(frame, FunctionCallInProgressFrame):
             self._function_call_in_progress = frame
         elif isinstance(frame, FunctionCallResultFrame):
-            if self._function_call_in_progress and self._function_call_in_progress.tool_call_id == frame.tool_call_id:
+            if (
+                self._function_call_in_progress
+                and self._function_call_in_progress.tool_call_id == frame.tool_call_id
+            ):
                 self._function_call_in_progress = None
                 self._function_call_result = frame
                 await self._push_aggregation()
             else:
                 logging.warning(
-                    f"FunctionCallResultFrame tool_call_id does not match FunctionCallInProgressFrame tool_call_id")
+                    "FunctionCallResultFrame tool_call_id does not match FunctionCallInProgressFrame tool_call_id"
+                )
                 self._function_call_in_progress = None
                 self._function_call_result = None
 
@@ -304,24 +302,28 @@ class OpenAIAssistantContextAggregator(LLMAssistantContextAggregator):
                 frame = self._function_call_result
                 self._function_call_result = None
                 if frame.result:
-                    self._context.add_message({
-                        "role": "assistant",
-                        "tool_calls": [
-                            {
-                                "id": frame.tool_call_id,
-                                "function": {
-                                    "name": frame.function_name,
-                                    "arguments": json.dumps(frame.arguments)
-                                },
-                                "type": "function"
-                            }
-                        ]
-                    })
-                    self._context.add_message({
-                        "role": "tool",
-                        "content": json.dumps(frame.result),
-                        "tool_call_id": frame.tool_call_id
-                    })
+                    self._context.add_message(
+                        {
+                            "role": "assistant",
+                            "tool_calls": [
+                                {
+                                    "id": frame.tool_call_id,
+                                    "function": {
+                                        "name": frame.function_name,
+                                        "arguments": json.dumps(frame.arguments),
+                                    },
+                                    "type": "function",
+                                }
+                            ],
+                        }
+                    )
+                    self._context.add_message(
+                        {
+                            "role": "tool",
+                            "content": json.dumps(frame.result),
+                            "tool_call_id": frame.tool_call_id,
+                        }
+                    )
                     run_llm = True
             else:
                 self._context.add_message({"role": "assistant", "content": aggregation})

@@ -1,6 +1,7 @@
 """
 room manager api for admin dashboard or init to run with http api service
 """
+
 import logging
 import os
 
@@ -9,10 +10,11 @@ from src.common.types import AgoraChannelArgs, DailyRoomArgs, LivekitRoomArgs
 from src.common.factory import EngineClass, EngineFactory
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 
-class RoomManagerEnvInit():
+class RoomManagerEnvInit:
     @staticmethod
     def getEngine(tag, **kwargs) -> interface.IRoomManager | EngineClass:
         if "livekit_room" in tag:
@@ -27,8 +29,8 @@ class RoomManagerEnvInit():
 
     @staticmethod
     def initEngine(
-            tag: str | None = None,
-            kwargs: dict | None = None) -> interface.IRoomManager | EngineClass:
+        tag: str | None = None, kwargs: dict | None = None
+    ) -> interface.IRoomManager | EngineClass:
         tag = tag or os.getenv("ROOM_TAG", "daily_room")
         kwargs = kwargs or RoomManagerEnvInit.map_config_func[tag]()
         engine = RoomManagerEnvInit.getEngine(tag, **kwargs)
@@ -52,13 +54,12 @@ class RoomManagerEnvInit():
 
     @staticmethod
     def get_agora_channel_args() -> dict:
-        kwargs = AgoraChannelArgs(
-        ).model_dump()
+        kwargs = AgoraChannelArgs().model_dump()
         return kwargs
 
     # TAG : config
     map_config_func = {
-        'daily_room': get_daily_room_args,
-        'livekit_room': get_livekit_room_args,
-        'agora_rtc_channel': get_agora_channel_args
+        "daily_room": get_daily_room_args,
+        "livekit_room": get_livekit_room_args,
+        "agora_rtc_channel": get_agora_channel_args,
     }

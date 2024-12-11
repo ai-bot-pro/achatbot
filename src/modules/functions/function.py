@@ -8,7 +8,7 @@ class FunctionManager:
     FunctionManager just as a namespace to use static methods.
     """
 
-    functions = Register('llm_function_calling')
+    functions = Register("llm_function_calling")
 
     def __init__(self):
         raise RuntimeError("FunctionManager is not intended to be instantiated")

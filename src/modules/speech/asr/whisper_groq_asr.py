@@ -14,6 +14,7 @@ class WhisperGroqAsr(ASRBase):
 
     def __init__(self, **args) -> None:
         from groq import Groq
+
         self.args = WhisperGroqASRArgs(**args)
         self.asr_audio = None
         self.client = Groq()
@@ -26,9 +27,7 @@ class WhisperGroqAsr(ASRBase):
 
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
         if isinstance(self.asr_audio, bytes):
-            file_path = await save_audio_to_file(
-                self.asr_audio, "tmp.wav",
-                audio_dir=RECORDS_DIR)
+            file_path = await save_audio_to_file(self.asr_audio, "tmp.wav", audio_dir=RECORDS_DIR)
             self.asr_audio = Path(file_path)
         transcription = self.client.audio.transcriptions.create(
             file=self.asr_audio,
@@ -43,9 +42,7 @@ class WhisperGroqAsr(ASRBase):
 
     async def transcribe(self, session: Session) -> dict:
         if isinstance(self.asr_audio, bytes):
-            file_path = await save_audio_to_file(
-                self.asr_audio, "tmp.wav",
-                audio_dir=RECORDS_DIR)
+            file_path = await save_audio_to_file(self.asr_audio, "tmp.wav", audio_dir=RECORDS_DIR)
             self.asr_audio = Path(file_path)
 
         transcription = self.client.audio.transcriptions.create(

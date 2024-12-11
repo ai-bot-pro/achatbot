@@ -2,6 +2,7 @@ r"""
 mkdir -p records && python -m demo.tts_chat
 mkdir -p records && STEAM=1 python -m demo.tts_chat
 """
+
 import logging
 import os
 
@@ -43,9 +44,7 @@ if __name__ == "__main__":
     chat = ChatTTS.Chat()
     load_normalizer(chat)
 
-    chat.load(compile=True,
-              source="custom",
-              custom_path="./models/2Noise/ChatTTS")
+    chat.load(compile=True, source="custom", custom_path="./models/2Noise/ChatTTS")
 
     texts = ["你好，我是机器人", "我是机器人"]
     ###################################
@@ -55,7 +54,7 @@ if __name__ == "__main__":
         spk_emb=rand_spk,  # add sampled speaker
         top_P=0.7,  # top P decode
         top_K=20,  # top K decode
-        temperature=.3,  # using custom temperature
+        temperature=0.3,  # using custom temperature
     )
 
     ###################################
@@ -64,7 +63,7 @@ if __name__ == "__main__":
     # use oral_(0-9), laugh_(0-2), break_(0-7)
     # to generate special token in text to synthesize.
     params_refine_text = Chat.RefineTextParams(
-        prompt='[oral_2][laugh_0][break_6]',
+        prompt="[oral_2][laugh_0][break_6]",
     )
 
     if is_stream is False:
@@ -88,9 +87,10 @@ if __name__ == "__main__":
 
         ###################################
         # For word level manual control.
-        text = 'What is [uv_break]your favorite english food.[laugh][lbreak]'
+        text = "What is [uv_break]your favorite english food.[laugh][lbreak]"
         wav = chat.infer(
-            text, skip_refine_text=True,
+            text,
+            skip_refine_text=True,
             params_refine_text=params_refine_text,
             params_infer_code=params_infer_code,
             do_text_normalization=False,

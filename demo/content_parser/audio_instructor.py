@@ -45,9 +45,10 @@ def describe_audio(audio_file: str, language: str = "en"):
     resp = client.create(
         response_model=Description,
         messages=[
-            {"role": "user",
-             "content": content,
-             }
+            {
+                "role": "user",
+                "content": content,
+            }
         ],
     )
 
@@ -75,7 +76,7 @@ def extract_chapters(audio_file: str, language: str = "en"):
 
 
 @app.command()
-def instruct_content(audio_files: List[str], language: str = 'en') -> None:
+def instruct_content(audio_files: List[str], language: str = "en") -> None:
     console = Console()
     for audio_file in audio_files:
         try:
@@ -104,7 +105,7 @@ python -m demo.content_parser.audio_instructor instruct-content \
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s',
+        format="%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s",
         handlers=[
             # logging.FileHandler("extractor.log"),
             logging.StreamHandler()

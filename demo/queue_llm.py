@@ -9,7 +9,7 @@ g_text_deque = deque(maxlen=100)
 async def send_text():
     for i in range(1):
         print(f"case {i}")
-        g_text_deque.appendleft(f"你好")
+        g_text_deque.appendleft("你好")
 
 
 async def llm_generate(model_path):
@@ -21,9 +21,15 @@ async def llm_generate(model_path):
 
 def main():
     import argparse
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--llm_model_path', "-lm", type=str,
-                        default="./models/qwen2-1_5b-instruct-q8_0.gguf", help='llm model path')
+    parser.add_argument(
+        "--llm_model_path",
+        "-lm",
+        type=str,
+        default="./models/qwen2-1_5b-instruct-q8_0.gguf",
+        help="llm model path",
+    )
     args = parser.parse_args()
 
     loop = asyncio.get_event_loop()

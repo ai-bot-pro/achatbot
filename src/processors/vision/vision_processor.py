@@ -55,15 +55,17 @@ class VisionProcessor(VisionProcessorBase):
             with BytesIO() as buffered:
                 image.save(buffered, format=frame.format)
                 img_base64_str = image_bytes_to_base64_data_uri(
-                    buffered.getvalue(), frame.format.lower())
+                    buffered.getvalue(), frame.format.lower()
+                )
 
-            if "llm_transformers" in self._llm.SELECTED_TAG and \
-                    "vision" in self._llm.SELECTED_TAG:  # transformers vision
-                self._session.ctx.state["prompt"].append(
-                    {"type": "image", "image": img_base64_str})
+            if (
+                "llm_transformers" in self._llm.SELECTED_TAG and "vision" in self._llm.SELECTED_TAG
+            ):  # transformers vision
+                self._session.ctx.state["prompt"].append({"type": "image", "image": img_base64_str})
             else:  # llamacpp vision
                 self._session.ctx.state["prompt"].append(
-                    {"type": "image_url", "image_url": {"url": img_base64_str}})
+                    {"type": "image_url", "image_url": {"url": img_base64_str}}
+                )
 
         iter = self._llm.chat_completion(self._session)
         for item in iter:
@@ -77,10 +79,9 @@ class MockVisionProcessor(VisionProcessorBase):
 
     def __init__(
         self,
-        mock_text: str =
-            f"你好！niubility。"
-            f"你他娘的是个人才。"
-            f"请访问 github achatbot 进行把玩, 可以在colab中部署免费把玩。",
+        mock_text: str = "你好！niubility。"
+        "你他娘的是个人才。"
+        "请访问 github achatbot 进行把玩, 可以在colab中部署免费把玩。",
     ):
         super().__init__()
         self._mock_text = mock_text
@@ -93,7 +94,8 @@ class MockVisionProcessor(VisionProcessorBase):
             with BytesIO() as buffered:
                 image.save(buffered, format=frame.format)
                 img_base64_str = image_bytes_to_base64_data_uri(
-                    buffered.getvalue(), frame.format.lower())
+                    buffered.getvalue(), frame.format.lower()
+                )
 
             logging.info(f"Mock len(img_base64_str)+text: {len(img_base64_str)} {frame.text}")
 

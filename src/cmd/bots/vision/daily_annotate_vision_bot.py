@@ -24,7 +24,7 @@ class DailyAnnotateVisionBot(DailyRoomBot):
             camera_out_enabled=True,
             camera_out_is_live=True,
             camera_out_width=1280,
-            camera_out_height=720
+            camera_out_height=720,
         )
         self.annotate_processor: AnnotateProcessor = self.get_vision_annotate_processor()
         self.tts_processor: TTSProcessor = self.get_tts_processor()
@@ -33,29 +33,24 @@ class DailyAnnotateVisionBot(DailyRoomBot):
         daily_params.audio_out_sample_rate = stream_info["sample_rate"]
         daily_params.audio_out_channels = stream_info["channels"]
         transport = DailyTransport(
-            self.args.room_url, self.args.token, self.args.bot_name,
-            daily_params
+            self.args.room_url, self.args.token, self.args.bot_name, daily_params
         )
 
-        transport.add_event_handler(
-            "on_first_participant_joined",
-            self.on_first_participant_joined)
-        transport.add_event_handler(
-            "on_participant_left",
-            self.on_participant_left)
-        transport.add_event_handler(
-            "on_call_state_updated",
-            self.on_call_state_updated)
+        transport.add_event_handler("on_first_participant_joined", self.on_first_participant_joined)
+        transport.add_event_handler("on_participant_left", self.on_participant_left)
+        transport.add_event_handler("on_call_state_updated", self.on_call_state_updated)
 
-        pipeline = Pipeline([
-            transport.input_processor(),
-            ParallelPipeline(
-                [self.annotate_processor],
-                [self.tts_processor],
-            ),
-            # FrameLogger(include_frame_types=[UserImageRawFrame]),
-            transport.output_processor(),
-        ])
+        pipeline = Pipeline(
+            [
+                transport.input_processor(),
+                ParallelPipeline(
+                    [self.annotate_processor],
+                    [self.tts_processor],
+                ),
+                # FrameLogger(include_frame_types=[UserImageRawFrame]),
+                transport.output_processor(),
+            ]
+        )
         self.task = PipelineTask(pipeline)
         await PipelineRunner().run(self.task)
 

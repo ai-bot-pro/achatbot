@@ -3,8 +3,23 @@ from pydantic import BaseModel
 
 from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
 
-from src.types.frames.data_frames import Frame, TextFrame, InterimTranscriptionFrame, TranscriptionFrame, TransportMessageFrame
-from src.types.frames.control_frames import BotStartedSpeakingFrame, BotStoppedSpeakingFrame, LLMFullResponseEndFrame, LLMFullResponseStartFrame, TTSStartedFrame, TTSStoppedFrame, UserStartedSpeakingFrame, UserStoppedSpeakingFrame
+from src.types.frames.data_frames import (
+    Frame,
+    TextFrame,
+    InterimTranscriptionFrame,
+    TranscriptionFrame,
+    TransportMessageFrame,
+)
+from src.types.frames.control_frames import (
+    BotStartedSpeakingFrame,
+    BotStoppedSpeakingFrame,
+    LLMFullResponseEndFrame,
+    LLMFullResponseStartFrame,
+    TTSStartedFrame,
+    TTSStoppedFrame,
+    UserStartedSpeakingFrame,
+    UserStoppedSpeakingFrame,
+)
 
 
 class TextMessageData(BaseModel):
@@ -112,6 +127,7 @@ class BotTTSTextProcessor(AppMessageProcessor):
             data=TextMessageData(text=frame.text),
         )
         await self._push_transport_message(message)
+
 
 # ------------controller message types---------------------
 

@@ -16,14 +16,15 @@ class EngineClass(object):
         return kwargs
 
     def set_args(self, **args):
-        if self.args is not None \
-                and hasattr(self.args, '__dict__') \
-                and hasattr(self.args, '__class__'):
+        if (
+            self.args is not None
+            and hasattr(self.args, "__dict__")
+            and hasattr(self.args, "__class__")
+        ):
             self.args = self.args.__class__(**{**self.args.__dict__, **args})
 
     def get_args_dict(self) -> dict:
-        if self.args is not None \
-                and hasattr(self.args, '__dict__'):
+        if self.args is not None and hasattr(self.args, "__dict__"):
             return self.args.__dict__
         return {}
 
@@ -42,7 +43,7 @@ class EngineFactory:
     @staticmethod
     def get_engine_by_tag(cls, tag: str, **kwargs):
         if not tag or (type(tag) is not str and type(tag) is not list):
-            raise TypeError(f"empty tag")
+            raise TypeError("empty tag")
 
         def filter_tag(engine):
             if hasattr(engine, "TAG") is False:
@@ -78,10 +79,7 @@ class EngineFactory:
                 subclasses.update(get_subclasses(subclass))
             return subclasses
 
-        return [
-            engine
-            for engine in list(get_subclasses(cls))
-        ]
+        return [engine for engine in list(get_subclasses(cls))]
 
     @staticmethod
     def get_init_engines(object) -> dict:

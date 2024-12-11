@@ -4,14 +4,21 @@ from threading import Thread
 
 from PIL import Image
 import torch
+
 try:
     from qwen_vl_utils import process_vision_info
-    from transformers import AutoModelForCausalLM, AutoProcessor, TextIteratorStreamer, GenerationConfig
+    from transformers import (
+        AutoModelForCausalLM,
+        AutoProcessor,
+        TextIteratorStreamer,
+        GenerationConfig,
+    )
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        f"In order to use Molmo multimodal language models., you need to `pip install achatbot[llm_transformers_manual_vision_molmo]`,"
-        f"use awq model need to `pip install achatbot[llm_transformers_manual_vision_molmo,autoawq]`")
+        "In order to use Molmo multimodal language models., you need to `pip install achatbot[llm_transformers_manual_vision_molmo]`,"
+        "use awq model need to `pip install achatbot[llm_transformers_manual_vision_molmo,autoawq]`"
+    )
     raise Exception(f"Missing module: {e}")
 
 
@@ -25,6 +32,7 @@ class TransformersManualVisionMolmoLLM(TransformersBaseLLM):
     r"""
     no chat template, no chat history, just image with text prompt
     """
+
     TAG = "llm_transformers_manual_vision_molmo"
 
     def __init__(self, **args) -> None:
@@ -45,12 +53,16 @@ class TransformersManualVisionMolmoLLM(TransformersBaseLLM):
                 trust_remote_code=True,
             )
         else:
-            self._model = AutoModelForCausalLM.from_pretrained(
-                self.args.lm_model_name_or_path,
-                torch_dtype=self.args.lm_torch_dtype,
-                attn_implementation=self.args.lm_attn_impl,
-                trust_remote_code=True,
-            ).eval().to(self.args.lm_device)
+            self._model = (
+                AutoModelForCausalLM.from_pretrained(
+                    self.args.lm_model_name_or_path,
+                    torch_dtype=self.args.lm_torch_dtype,
+                    attn_implementation=self.args.lm_attn_impl,
+                    trust_remote_code=True,
+                )
+                .eval()
+                .to(self.args.lm_device)
+            )
 
         # The default range for the number of visual tokens per image in the model is 4-16384.
         # You can set min_pixels and max_pixels according to your needs, such as a
@@ -82,8 +94,8 @@ class TransformersManualVisionMolmoLLM(TransformersBaseLLM):
         model_inputs = {k: v.to(self._model.device).unsqueeze(0) for k, v in inputs.items()}
 
         streamer = TextIteratorStreamer(
-            self._processor.tokenizer,
-            skip_prompt=True, skip_special_tokens=True)
+            self._processor.tokenizer, skip_prompt=True, skip_special_tokens=True
+        )
 
         warmup_gen_kwargs = dict(
             streamer=streamer,
@@ -99,7 +111,9 @@ class TransformersManualVisionMolmoLLM(TransformersBaseLLM):
                 repetition_penalty=self.args.lm_gen_repetition_penalty,
                 min_new_tokens=self.args.lm_gen_min_new_tokens,
                 max_new_tokens=self.args.lm_gen_max_new_tokens,
-                stop_strings="<|endoftext|>"))
+                stop_strings="<|endoftext|>",
+            ),
+        )
         self._warmup(
             target=self._model.generate_from_batch,
             args=warmup_gen_args,
@@ -108,7 +122,7 @@ class TransformersManualVisionMolmoLLM(TransformersBaseLLM):
         )
 
     def generate(self, session: Session):
-        prompt = session.ctx.state['prompt']
+        prompt = session.ctx.state["prompt"]
         text = ""
         image_inputs = None
 
@@ -117,15 +131,18 @@ class TransformersManualVisionMolmoLLM(TransformersBaseLLM):
         elif isinstance(prompt, tuple):
             prompt, language_code = prompt
             if isinstance(prompt, str):
-                if TO_LLM_LANGUAGE[language_code] == 'zh':
-                    prompt = f"请用中文回复。" + prompt
+                if TO_LLM_LANGUAGE[language_code] == "zh":
+                    prompt = "请用中文回复。" + prompt
                 else:
-                    prompt = f"Please reply to my message in {TO_LLM_LANGUAGE[language_code]}. " + prompt
+                    prompt = (
+                        f"Please reply to my message in {TO_LLM_LANGUAGE[language_code]}. " + prompt
+                    )
             text = prompt
         elif isinstance(prompt, list):
             # no chat template so get image with textpromt
             image_inputs, _ = process_vision_info(
-                [{"role": self.args.user_role, "content": prompt}])
+                [{"role": self.args.user_role, "content": prompt}]
+            )
             for item in prompt:
                 if "type" in item and item["type"] == "text":
                     text += item["text"]
@@ -141,8 +158,8 @@ class TransformersManualVisionMolmoLLM(TransformersBaseLLM):
         model_inputs = {k: v.to(self._model.device).unsqueeze(0) for k, v in inputs.items()}
 
         streamer = TextIteratorStreamer(
-            self._processor.tokenizer,
-            skip_prompt=True, skip_special_tokens=True)
+            self._processor.tokenizer, skip_prompt=True, skip_special_tokens=True
+        )
 
         gen_kwargs = dict(
             streamer=streamer,
@@ -158,10 +175,10 @@ class TransformersManualVisionMolmoLLM(TransformersBaseLLM):
                 repetition_penalty=self.args.lm_gen_repetition_penalty,
                 min_new_tokens=self.args.lm_gen_min_new_tokens,
                 max_new_tokens=self.args.lm_gen_max_new_tokens,
-                stop_strings="<|endoftext|>"))
-        thread = Thread(
-            target=self._model.generate_from_batch,
-            args=gen_args, kwargs=gen_kwargs)
+                stop_strings="<|endoftext|>",
+            ),
+        )
+        thread = Thread(target=self._model.generate_from_batch, args=gen_args, kwargs=gen_kwargs)
         thread.start()
 
         generated_text = ""

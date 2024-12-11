@@ -2,14 +2,16 @@ import logging
 from threading import Thread
 
 import torch
+
 try:
     from qwen_vl_utils import process_vision_info
     from transformers import Qwen2VLForConditionalGeneration, AutoProcessor, TextIteratorStreamer
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        f"In order to use Qwen2-VL, you need to `pip install achatbot[llm_transformers_manual_vision_qwen]`,"
-        f"use awq model need to `pip install achatbot[llm_transformers_manual_vision_qwen,autoawq]`")
+        "In order to use Qwen2-VL, you need to `pip install achatbot[llm_transformers_manual_vision_qwen]`,"
+        "use awq model need to `pip install achatbot[llm_transformers_manual_vision_qwen,autoawq]`"
+    )
     raise Exception(f"Missing module: {e}")
 
 
@@ -41,12 +43,16 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
                 trust_remote_code=True,
             ).eval()
         else:
-            self._model = Qwen2VLForConditionalGeneration.from_pretrained(
-                self.args.lm_model_name_or_path,
-                torch_dtype=self.args.lm_torch_dtype,
-                attn_implementation=self.args.lm_attn_impl,
-                trust_remote_code=True,
-            ).eval().to(self.args.lm_device)
+            self._model = (
+                Qwen2VLForConditionalGeneration.from_pretrained(
+                    self.args.lm_model_name_or_path,
+                    torch_dtype=self.args.lm_torch_dtype,
+                    attn_implementation=self.args.lm_attn_impl,
+                    trust_remote_code=True,
+                )
+                .eval()
+                .to(self.args.lm_device)
+            )
 
         # The default range for the number of visual tokens per image in the model is 4-16384.
         # You can set min_pixels and max_pixels according to your needs, such as a
@@ -60,10 +66,12 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
 
         self._chat_history = ChatHistory(self.args.chat_history_size)
         if self.args.init_chat_role and self.args.init_chat_prompt:
-            self._chat_history.init({
-                "role": self.args.init_chat_role,
-                "content": self.args.init_chat_prompt,
-            })
+            self._chat_history.init(
+                {
+                    "role": self.args.init_chat_role,
+                    "content": self.args.init_chat_prompt,
+                }
+            )
 
         self.warmup()
 
@@ -84,8 +92,7 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
             return_tensors="pt",
         ).to(self._model.device)
 
-        streamer = TextIteratorStreamer(
-            self._tokenizer, skip_prompt=True, skip_special_tokens=True)
+        streamer = TextIteratorStreamer(self._tokenizer, skip_prompt=True, skip_special_tokens=True)
 
         warmup_gen_kwargs = dict(
             model_inputs,
@@ -102,13 +109,15 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
         self._warmup(target=self._model.generate, kwargs=warmup_gen_kwargs)
 
     def generate(self, session: Session):
-        prompt = session.ctx.state['prompt']
+        prompt = session.ctx.state["prompt"]
         if isinstance(prompt, tuple):
             prompt, language_code = prompt
             if isinstance(prompt, str):
-                prompt = f"Please reply to my message in {TO_LLM_LANGUAGE[language_code]}. " + prompt
+                prompt = (
+                    f"Please reply to my message in {TO_LLM_LANGUAGE[language_code]}. " + prompt
+                )
 
-        message = {'role': self.args.user_role, 'content': prompt}
+        message = {"role": self.args.user_role, "content": prompt}
         self._chat_history.append(message)
         chat_history = self._chat_history.to_list()
         logging.debug(f"chat_history:{chat_history}")
@@ -121,14 +130,10 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
         logging.debug(f"image_inputs:{image_inputs},video_inputs:{video_inputs}")
         # https://github.com/huggingface/transformers/blob/8bd2b1e8c23234cd607ca8d63f53c1edfea27462/src/transformers/models/qwen2_vl/processing_qwen2_vl.py#L53
         model_inputs = self._tokenizer(
-            images=image_inputs,
-            text=[text],
-            videos=video_inputs,
-            padding=True,
-            return_tensors="pt").to(self._model.device)
+            images=image_inputs, text=[text], videos=video_inputs, padding=True, return_tensors="pt"
+        ).to(self._model.device)
 
-        streamer = TextIteratorStreamer(
-            self._tokenizer, skip_prompt=True, skip_special_tokens=True)
+        streamer = TextIteratorStreamer(self._tokenizer, skip_prompt=True, skip_special_tokens=True)
 
         generation_kwargs = dict(
             model_inputs,
@@ -139,7 +144,8 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
             temperature=self.args.lm_gen_temperature,
             repetition_penalty=self.args.lm_gen_repetition_penalty,
             min_new_tokens=self.args.lm_gen_min_new_tokens,
-            max_new_tokens=self.args.lm_gen_max_new_tokens)
+            max_new_tokens=self.args.lm_gen_max_new_tokens,
+        )
         thread = Thread(target=self._model.generate, kwargs=generation_kwargs)
         thread.start()
 

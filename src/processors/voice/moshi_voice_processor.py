@@ -4,12 +4,24 @@ import random
 import time
 from typing import AsyncGenerator
 
-from apipeline.frames import Frame, ErrorFrame, StartFrame, EndFrame, CancelFrame, AudioRawFrame, TextFrame
+from apipeline.frames import (
+    Frame,
+    ErrorFrame,
+    StartFrame,
+    EndFrame,
+    CancelFrame,
+    AudioRawFrame,
+    TextFrame,
+)
 from moshi.models.loaders import DEFAULT_REPO
 import numpy as np
 import torch
 
-from src.common.utils.audio_utils import bytes2NpArrayWith16, postprocess_tts_wave_int16, resample_audio
+from src.common.utils.audio_utils import (
+    bytes2NpArrayWith16,
+    postprocess_tts_wave_int16,
+    resample_audio,
+)
 from src.processors.voice.base import VoiceProcessorBase
 from src.types.llm.lmgen import LMGenArgs
 
@@ -21,7 +33,8 @@ try:
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        "In order to use moshi, you need to `pip install achatbot[moshi_voice_processor]`")
+        "In order to use moshi, you need to `pip install achatbot[moshi_voice_processor]`"
+    )
     raise Exception(f"Missing module: {e}")
 
 
@@ -45,15 +58,17 @@ class MoshiVoiceBaseProcessor(VoiceProcessorBase):
     - moshi genative lm no system prompt and funciton call.
     """
 
-    def __init__(self,
-                 *,
-                 lm_gen_args: LMGenArgs | dict = LMGenArgs(),
-                 model_name: str = loaders.DEFAULT_REPO,
-                 mimi_weight_file: str | None = None,
-                 text_tokenizer_file: str | None = None,
-                 moshi_weight_file: str | None = None,
-                 device: str = "cuda",
-                 **kwargs):
+    def __init__(
+        self,
+        *,
+        lm_gen_args: LMGenArgs | dict = LMGenArgs(),
+        model_name: str = loaders.DEFAULT_REPO,
+        mimi_weight_file: str | None = None,
+        text_tokenizer_file: str | None = None,
+        moshi_weight_file: str | None = None,
+        device: str = "cuda",
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         seed_all(12345678)
         self._lm_gen_args = lm_gen_args
@@ -101,7 +116,8 @@ class MoshiVoiceBaseProcessor(VoiceProcessorBase):
         logging.info("loading text tokenizer")
         if self._text_tokenizer_file is None:
             self._text_tokenizer_file = hf_hub_download(
-                self._model_name, loaders.TEXT_TOKENIZER_NAME)
+                self._model_name, loaders.TEXT_TOKENIZER_NAME
+            )
         self._text_tokenizer = SentencePieceProcessor(self._text_tokenizer_file)
         logging.info("loaded text tokenizer")
 
@@ -122,7 +138,7 @@ class MoshiVoiceBaseProcessor(VoiceProcessorBase):
             chunk = torch.zeros(1, 1, self._frame_size, dtype=torch.float32, device=self._device)
             codes = self._mimi.encode(chunk)
             for c in range(codes.shape[-1]):
-                tokens = self._lm_gen.step(codes[:, :, c: c + 1])
+                tokens = self._lm_gen.step(codes[:, :, c : c + 1])
                 if tokens is None:
                     continue
                 _ = self._mimi.decode(tokens[:, 1:])
@@ -142,15 +158,16 @@ class MoshiVoiceOpusStreamProcessor(MoshiVoiceBaseProcessor):
     """
 
     def __init__(
-            self,
-            *,
-            lm_gen_args: LMGenArgs | dict = LMGenArgs(),
-            model_name: str = loaders.DEFAULT_REPO,
-            mimi_weight_file: str | None = None,
-            text_tokenizer_file: str | None = None,
-            moshi_weight_file: str | None = None,
-            device: str = "cuda",
-            **kwargs):
+        self,
+        *,
+        lm_gen_args: LMGenArgs | dict = LMGenArgs(),
+        model_name: str = loaders.DEFAULT_REPO,
+        mimi_weight_file: str | None = None,
+        text_tokenizer_file: str | None = None,
+        moshi_weight_file: str | None = None,
+        device: str = "cuda",
+        **kwargs,
+    ):
         super().__init__(
             lm_gen_args=lm_gen_args,
             model_name=model_name,
@@ -158,7 +175,8 @@ class MoshiVoiceOpusStreamProcessor(MoshiVoiceBaseProcessor):
             text_tokenizer_file=text_tokenizer_file,
             moshi_weight_file=moshi_weight_file,
             device=device,
-            **kwargs)
+            **kwargs,
+        )
 
         self._opus_writer: OpusStreamWriter = None
         self._opus_reader: OpusStreamReader = None
@@ -236,7 +254,7 @@ class MoshiVoiceOpusStreamProcessor(MoshiVoiceBaseProcessor):
                     be = time.time()
 
                     chunk = self._all_pcm_data[: self._frame_size]
-                    self._all_pcm_data = self._all_pcm_data[self._frame_size:]
+                    self._all_pcm_data = self._all_pcm_data[self._frame_size :]
 
                     with torch.no_grad():
                         # chunk numpy ndArray -> chunk torch tensor
@@ -249,7 +267,7 @@ class MoshiVoiceOpusStreamProcessor(MoshiVoiceBaseProcessor):
                         for c in range(codes.shape[-1]):
                             # lm gen tokens
                             ttfb_metric and await self.start_ttfb_metrics()
-                            tokens = self._lm_gen.step(codes[:, :, c: c + 1])
+                            tokens = self._lm_gen.step(codes[:, :, c : c + 1])
                             ttfb_metric and await self.stop_ttfb_metrics()
                             ttfb_metric = False
                             if tokens is None:
@@ -288,11 +306,13 @@ class MoshiVoiceOpusStreamProcessor(MoshiVoiceBaseProcessor):
                     await asyncio.sleep(0.001)
                     continue
 
-                await self.queue_frame(AudioRawFrame(
-                    audio=audio_bytes,
-                    sample_rate=self._mimi.sample_rate,
-                    num_channels=self._mimi.channels,
-                ))
+                await self.queue_frame(
+                    AudioRawFrame(
+                        audio=audio_bytes,
+                        sample_rate=self._mimi.sample_rate,
+                        num_channels=self._mimi.channels,
+                    )
+                )
             except asyncio.CancelledError:
                 break
 
@@ -307,7 +327,6 @@ class MoshiVoiceOpusStreamProcessor(MoshiVoiceBaseProcessor):
 
 
 class MoshiVoiceProcessor(MoshiVoiceBaseProcessor):
-
     async def run_voice(self, frame: AudioRawFrame) -> AsyncGenerator[Frame, None]:
         """
         StreamReader sample_rate: 48000, 24000
@@ -329,13 +348,13 @@ class MoshiVoiceProcessor(MoshiVoiceBaseProcessor):
         while self._all_pcm_data.shape[-1] >= self._frame_size:
             be = time.time()
             chunk = self._all_pcm_data[: self._frame_size]
-            self._all_pcm_data = self._all_pcm_data[self._frame_size:]
+            self._all_pcm_data = self._all_pcm_data[self._frame_size :]
             chunk = torch.from_numpy(chunk)
             chunk = chunk.to(device=self._device)[None, None]
             codes = self._mimi.encode(chunk)
             for c in range(codes.shape[-1]):
                 ttfb_metric and await self.start_ttfb_metrics()
-                tokens = self._lm_gen.step(codes[:, :, c: c + 1])
+                tokens = self._lm_gen.step(codes[:, :, c : c + 1])
                 ttfb_metric and await self.stop_ttfb_metrics()
                 ttfb_metric = False
                 if tokens is None:
@@ -458,7 +477,7 @@ class VoiceOpusStreamEchoProcessor(VoiceProcessorBase):
                 while self._all_pcm_data.shape[-1] >= self._frame_size:
                     be = time.time()
                     chunk = self._all_pcm_data[: self._frame_size]
-                    self._all_pcm_data = self._all_pcm_data[self._frame_size:]
+                    self._all_pcm_data = self._all_pcm_data[self._frame_size :]
                     # print("1", chunk, type(chunk), chunk.shape)
                     self._opus_writer.append_pcm(chunk)
                     logging.debug(f"frame handled in {1000 * (time.time() - be):.1f}ms")
@@ -473,11 +492,13 @@ class VoiceOpusStreamEchoProcessor(VoiceProcessorBase):
                 audio_bytes = self._opus_writer.read_bytes()
                 if len(audio_bytes) > 0:
                     # print("audio_bytes====>", len(audio_bytes))
-                    await self.queue_frame(AudioRawFrame(
-                        audio=audio_bytes,
-                        sample_rate=self.sample_rate,
-                        num_channels=self.channels,
-                    ))
+                    await self.queue_frame(
+                        AudioRawFrame(
+                            audio=audio_bytes,
+                            sample_rate=self.sample_rate,
+                            num_channels=self.channels,
+                        )
+                    )
             except asyncio.CancelledError:
                 break
 

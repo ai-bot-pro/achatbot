@@ -8,6 +8,7 @@ from src.common.types import SearchApiArgs
 from .api import SearchBaseApi
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 
@@ -20,7 +21,7 @@ class SearchApi(SearchBaseApi):
         self.args = SearchApiArgs(**args)
 
     def _web_search(self, session, query: str) -> str:
-        api_key = os.getenv('SEARCH_API_KEY', "")
+        api_key = os.getenv("SEARCH_API_KEY", "")
         params = {
             "engine": self.args.engine,
             "api_key": api_key,
@@ -35,7 +36,7 @@ class SearchApi(SearchBaseApi):
             response = self.requests.get(self.BASE_URL, params=params)
             response.raise_for_status()  # Raises for HTTP errors
             data = response.json()
-            snippets = [item['snippet'] for item in data['organic_results']]
+            snippets = [item["snippet"] for item in data["organic_results"]]
             return f"{json.dumps(snippets)}"
         except requests.exceptions.HTTPError as http_err:
             print(f"HTTP error occurred: {http_err}")

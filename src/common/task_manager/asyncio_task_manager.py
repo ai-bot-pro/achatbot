@@ -1,4 +1,3 @@
-
 import asyncio
 import logging
 import uuid
@@ -14,9 +13,8 @@ class AsyncioTaskManager(TaskManager):
     """
 
     def __init__(
-            self,
-            task_done_timeout: int = 5,
-            loop: asyncio.AbstractEventLoop | None = None) -> None:
+        self, task_done_timeout: int = 5, loop: asyncio.AbstractEventLoop | None = None
+    ) -> None:
         super().__init__(task_done_timeout=task_done_timeout)
         self._loop = loop or asyncio.get_event_loop()
 

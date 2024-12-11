@@ -21,14 +21,14 @@ class Pyttsx3TTS(BaseTTS, ITts):
 
     def __init__(self, **args) -> None:
         import pyttsx3
+
         self.args = Pyttsx3TTSArgs(**args)
         self.engine = pyttsx3.init()
         self.set_voice(self.args.voice_name)
         self.file_path = os.path.join(RECORDS_DIR, PYTTSX3_SYNTHESIS_FILE)
 
     async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
-        logging.debug(
-            f"{self.TAG} synthesis: {text} save to file: {self.file_path}")
+        logging.debug(f"{self.TAG} synthesis: {text} save to file: {self.file_path}")
         self.engine.save_to_file(text, self.file_path)
         self.engine.runAndWait()
 
@@ -37,7 +37,7 @@ class Pyttsx3TTS(BaseTTS, ITts):
         logging.debug(f"{self.file_path} media info: {info}")
 
         # Check if the file format is AIFF and convert to WAV if necessary
-        if info['format_name'] == 'aiff':
+        if info["format_name"] == "aiff":
             audio = AudioSegment.from_(self.file_path, format="aiff")
             audio.export(self.file_path, format="wav")
 
@@ -46,7 +46,7 @@ class Pyttsx3TTS(BaseTTS, ITts):
 
     def get_voices(self):
         voice_objects = []
-        voices = self.engine.getProperty('voices')
+        voices = self.engine.getProperty("voices")
         for voice in voices:
             voice_object = TTSVoice(voice.name, voice.id)
             voice_objects.append(voice_object)
@@ -54,15 +54,16 @@ class Pyttsx3TTS(BaseTTS, ITts):
 
     def set_voice(self, voice: Union[str, TTSVoice]):
         if isinstance(voice, TTSVoice):
-            self.engine.setProperty('voice', voice.id)
+            self.engine.setProperty("voice", voice.id)
         else:
-            installed_voices = self.engine.getProperty('voices')
+            installed_voices = self.engine.getProperty("voices")
             if voice is not None:
                 for installed_voice in installed_voices:
                     if voice in installed_voice.name:
                         logging.debug(
-                            f"{self.TAG} set voice: {voice} voice_id: {installed_voice.id}")
-                        self.engine.setProperty('voice', installed_voice.id)
+                            f"{self.TAG} set voice: {voice} voice_id: {installed_voice.id}"
+                        )
+                        self.engine.setProperty("voice", installed_voice.id)
                         return
 
     def set_voice_parameters(self, **voice_parameters):

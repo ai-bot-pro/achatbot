@@ -1,8 +1,8 @@
 import logging
 from typing import Union
 
-from src.types.frames.control_frames import (LLMFullResponseEndFrame, LLMFullResponseStartFrame)
-from src.types.frames.data_frames import (Frame, LLMMessagesFrame, TextFrame)
+from src.types.frames.control_frames import LLMFullResponseEndFrame, LLMFullResponseStartFrame
+from src.types.frames.data_frames import Frame, LLMMessagesFrame, TextFrame
 from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
 
 
@@ -10,9 +10,7 @@ try:
     from langchain_core.messages import AIMessageChunk
     from langchain_core.runnables import Runnable
 except ModuleNotFoundError as e:
-    logging.exception(
-        "In order to use Langchain, you need to `pip install langchain`. "
-    )
+    logging.exception("In order to use Langchain, you need to `pip install langchain`. ")
     raise Exception(f"Missing module: {e}")
 
 
@@ -45,8 +43,8 @@ class LangchainProcessor(FrameProcessor):
                 return text
             case AIMessageChunk():
                 return text.content
-            case dict() as d if 'answer' in d:
-                return d['answer']
+            case dict() as d if "answer" in d:
+                return d["answer"]
             case _:
                 return ""
 

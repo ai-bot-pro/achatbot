@@ -11,7 +11,6 @@ from src.types.frames.data_frames import TransportMessageFrame, DailyTransportMe
 
 
 class DailyOutputTransportProcessor(AudioCameraOutputProcessor):
-
     def __init__(self, client: DailyTransportClient, params: DailyParams, **kwargs):
         super().__init__(params, **kwargs)
 
@@ -53,10 +52,9 @@ class DailyOutputTransportProcessor(AudioCameraOutputProcessor):
         if frame.characters:
             metrics["characters"] = frame.characters
 
-        message = DailyTransportMessageFrame(message={
-            "type": "chatbot-metrics",
-            "metrics": metrics
-        })
+        message = DailyTransportMessageFrame(
+            message={"type": "chatbot-metrics", "metrics": metrics}
+        )
         await self._client.send_message(message)
 
     async def write_raw_audio_frames(self, frames: bytes):

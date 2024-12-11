@@ -13,6 +13,7 @@ from .table import chapter
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
@@ -24,12 +25,10 @@ client = instructor.from_gemini(
 )
 
 
-def get_youtube_transcript(video_id: str, languages=('en', 'zh-CN')) -> str:
+def get_youtube_transcript(video_id: str, languages=("en", "zh-CN")) -> str:
     try:
         transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=languages)
-        return " ".join(
-            [f"ts={entry['start']} - {entry['text']}" for entry in transcript]
-        )
+        return " ".join([f"ts={entry['start']} - {entry['text']}" for entry in transcript])
     except Exception as e:
         print(f"Error fetching transcript: {e}")
         return ""

@@ -19,6 +19,7 @@ from src.common.logger import Logger
 from src.transports.agora import AgoraTransport
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 r"""
@@ -67,82 +68,57 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         self.assertGreater(len(transport.event_names), 0)
 
         self.task = PipelineTask(
-            Pipeline([
-                transport.input_processor(),
-                # FrameLogger(include_frame_types=[AudioRawFrame]),
-                # FrameLogger(include_frame_types=[ImageRawFrame]),
-                transport.output_processor(),
-            ]),
-            params=PipelineParams(allow_interruptions=False)
+            Pipeline(
+                [
+                    transport.input_processor(),
+                    # FrameLogger(include_frame_types=[AudioRawFrame]),
+                    # FrameLogger(include_frame_types=[ImageRawFrame]),
+                    transport.output_processor(),
+                ]
+            ),
+            params=PipelineParams(allow_interruptions=False),
         )
 
-        transport.add_event_handler(
-            "on_connected",
-            self.on_connected)
-        transport.add_event_handler(
-            "on_connection_state_changed",
-            self.on_connection_state_changed)
-        transport.add_event_handler(
-            "on_connection_failure",
-            self.on_connection_failure)
-        transport.add_event_handler(
-            "on_disconnected",
-            self.on_disconnected)
-        transport.add_event_handler(
-            "on_error",
-            self.on_error)
-        transport.add_event_handler(
-            "on_first_participant_joined",
-            self.on_first_participant_joined)
-        transport.add_event_handler(
-            "on_participant_disconnected",
-            self.on_participant_disconnected)
+        transport.add_event_handler("on_connected", self.on_connected)
+        transport.add_event_handler("on_connection_state_changed", self.on_connection_state_changed)
+        transport.add_event_handler("on_connection_failure", self.on_connection_failure)
+        transport.add_event_handler("on_disconnected", self.on_disconnected)
+        transport.add_event_handler("on_error", self.on_error)
+        transport.add_event_handler("on_first_participant_joined", self.on_first_participant_joined)
+        transport.add_event_handler("on_participant_disconnected", self.on_participant_disconnected)
         # sometime don't get on_connection_state_changed when disconnected
+        transport.add_event_handler("on_connection_state_changed", self.on_connection_state_changed)
         transport.add_event_handler(
-            "on_connection_state_changed",
-            self.on_connection_state_changed)
+            "on_audio_subscribe_state_changed", self.on_audio_subscribe_state_changed
+        )
+        transport.add_event_handler("on_data_received", self.on_data_received)
         transport.add_event_handler(
-            "on_audio_subscribe_state_changed",
-            self.on_audio_subscribe_state_changed)
-        transport.add_event_handler(
-            "on_data_received",
-            self.on_data_received)
-        transport.add_event_handler(
-            "on_video_subscribe_state_changed",
-            self.on_video_subscribe_state_changed)
+            "on_video_subscribe_state_changed", self.on_video_subscribe_state_changed
+        )
 
         runner = PipelineRunner()
         try:
             await asyncio.wait_for(runner.run(self.task), int(os.getenv("RUN_TIMEOUT", "60")))
         except asyncio.TimeoutError:
-            logging.warning(f"Test run timeout. Exiting")
+            logging.warning("Test run timeout. Exiting")
             await self.task.queue_frame(EndFrame())
 
     async def on_connected(
-            self,
-            transport: AgoraTransport,
-            agora_rtc_conn: rtc.RTCConnection,
-            conn_info: rtc.RTCConnInfo,
-            reason: int):
-        logging.info(
-            f"agora_rtc_conn:{agora_rtc_conn} conn_info:{conn_info} reason:{reason}")
+        self,
+        transport: AgoraTransport,
+        agora_rtc_conn: rtc.RTCConnection,
+        conn_info: rtc.RTCConnInfo,
+        reason: int,
+    ):
+        logging.info(f"agora_rtc_conn:{agora_rtc_conn} conn_info:{conn_info} reason:{reason}")
 
-    async def on_connection_failure(
-            self,
-            transport: AgoraTransport,
-            reason: int):
+    async def on_connection_failure(self, transport: AgoraTransport, reason: int):
         logging.info(f"reason:{reason}")
 
-    async def on_error(
-            self,
-            transport: AgoraTransport,
-            error_msg: str):
+    async def on_error(self, transport: AgoraTransport, error_msg: str):
         logging.info(f"error_msg:{error_msg}")
 
-    async def on_first_participant_joined(
-            self,
-            transport: AgoraTransport,
-            user_id: str):
+    async def on_first_participant_joined(self, transport: AgoraTransport, user_id: str):
         logging.info(f"user_id:{user_id}")
 
         if self.params.audio_in_enabled:
@@ -154,34 +130,37 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             transport.capture_participant_video(user_id)
 
         await transport.send_message(
-            f"hello,你好，我是机器人。",
+            "hello,你好，我是机器人。",
             participant_id=user_id,
         )
 
     async def on_participant_disconnected(
-            self,
-            transport: AgoraTransport,
-            agora_rtc_conn: rtc.RTCConnection,
-            user_id: str,
-            reason: int):
+        self,
+        transport: AgoraTransport,
+        agora_rtc_conn: rtc.RTCConnection,
+        user_id: str,
+        reason: int,
+    ):
         logging.info(f"Partcipant {user_id} left. reason:{reason}")
         logging.info(f"current remote Partcipants {transport.get_participant_ids()}")
 
     async def on_disconnected(
-            self,
-            transport: AgoraTransport,
-            agora_rtc_conn: rtc.RTCConnection,
-            conn_info: rtc.RTCConnInfo,
-            reason: int):
+        self,
+        transport: AgoraTransport,
+        agora_rtc_conn: rtc.RTCConnection,
+        conn_info: rtc.RTCConnInfo,
+        reason: int,
+    ):
         logging.info("disconnected reason %s, Exiting." % reason)
         await self.task.queue_frame(EndFrame())
 
     async def on_connection_state_changed(
-            self,
-            transport: AgoraTransport,
-            agora_rtc_conn: rtc.RTCConnection,
-            conn_info: rtc.RTCConnInfo,
-            reason: int):
+        self,
+        transport: AgoraTransport,
+        agora_rtc_conn: rtc.RTCConnection,
+        conn_info: rtc.RTCConnInfo,
+        reason: int,
+    ):
         logging.info(f"connection state {conn_info.state} reason:{reason}")
 
     async def on_audio_subscribe_state_changed(
@@ -195,13 +174,10 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         elapse_since_last_state: int,
     ):
         logging.info(
-            f"agora_local_user:{agora_local_user}, channel:{channel}, user_id:{user_id}, old_state:{old_state}, new_state:{new_state}, elapse_since_last_state:{elapse_since_last_state}")
+            f"agora_local_user:{agora_local_user}, channel:{channel}, user_id:{user_id}, old_state:{old_state}, new_state:{new_state}, elapse_since_last_state:{elapse_since_last_state}"
+        )
 
-    async def on_data_received(
-        self,
-        transport: AgoraTransport,
-        data: bytes, user_id: str
-    ):
+    async def on_data_received(self, transport: AgoraTransport, data: bytes, user_id: str):
         logging.info(f"len(data):{len(data)} user_id:{user_id}")
 
     async def on_video_subscribe_state_changed(
@@ -215,4 +191,5 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         elapse_since_last_state: int,
     ):
         logging.info(
-            f"agora_local_user:{agora_local_user}, channel:{channel}, user_id:{user_id}, old_state:{old_state}, new_state:{new_state}, elapse_since_last_state:{elapse_since_last_state}")
+            f"agora_local_user:{agora_local_user}, channel:{channel}, user_id:{user_id}, old_state:{old_state}, new_state:{new_state}, elapse_since_last_state:{elapse_since_last_state}"
+        )

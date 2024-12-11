@@ -52,8 +52,8 @@ API_URL=https://personal-ai-ts.weedge.workers.dev/ \
 class TestPersonalAIProxy(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.llm_tag = os.getenv('LLM_TAG', "llm_personalai_proxy")
-        cls.prompt = os.getenv('LLM_PROMPT', "你好")
+        cls.llm_tag = os.getenv("LLM_TAG", "llm_personalai_proxy")
+        cls.prompt = os.getenv("LLM_PROMPT", "你好")
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod

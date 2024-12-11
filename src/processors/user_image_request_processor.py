@@ -1,4 +1,3 @@
-
 from apipeline.pipeline.pipeline import FrameProcessor
 from apipeline.pipeline.task import FrameDirection
 from apipeline.frames.data_frames import Frame, TextFrame
@@ -9,10 +8,10 @@ from src.types.frames.data_frames import UserImageRawFrame
 
 class UserImageBaseProcessor(FrameProcessor):
     def __init__(
-            self,
-            participant_id: str | None = None,
-            init_user_prompts: str | list = "show me the money :)",
-            desc_img_prompt: str = "Describe the image in a short sentence.",
+        self,
+        participant_id: str | None = None,
+        init_user_prompts: str | list = "show me the money :)",
+        desc_img_prompt: str = "Describe the image in a short sentence.",
     ):
         super().__init__()
         self._participant_id = participant_id
@@ -34,7 +33,9 @@ class UserImageRequestProcessor(UserImageBaseProcessor):
         await super().process_frame(frame, direction)
 
         if self._participant_id and isinstance(frame, TextFrame):
-            await self.push_frame(UserImageRequestFrame(self._participant_id), FrameDirection.UPSTREAM)
+            await self.push_frame(
+                UserImageRequestFrame(self._participant_id), FrameDirection.UPSTREAM
+            )
         await self.push_frame(frame, direction)
 
 
@@ -49,7 +50,9 @@ class UserImageTextRequestProcessor(UserImageBaseProcessor):
         await super().process_frame(frame, direction)
         if self._participant_id and isinstance(frame, TextFrame):
             if frame.text in self._init_user_prompts:
-                await self.push_frame(UserImageRequestFrame(self._participant_id), FrameDirection.UPSTREAM)
+                await self.push_frame(
+                    UserImageRequestFrame(self._participant_id), FrameDirection.UPSTREAM
+                )
                 if self._desc_img_prompt:
                     await self.push_frame(TextFrame(self._desc_img_prompt))
         elif isinstance(frame, UserImageRawFrame):
@@ -67,9 +70,8 @@ class UserImageOrTextRequestProcessor(UserImageBaseProcessor):
         await super().process_frame(frame, direction)
 
         if self._participant_id and isinstance(frame, TextFrame):
-            if self._init_user_prompts \
-                    and frame.text in self._init_user_prompts:
+            if self._init_user_prompts and frame.text in self._init_user_prompts:
                 await self.push_frame(
-                    UserImageRequestFrame(self._participant_id),
-                    FrameDirection.UPSTREAM)
+                    UserImageRequestFrame(self._participant_id), FrameDirection.UPSTREAM
+                )
         await self.push_frame(frame, direction)

@@ -1,5 +1,6 @@
 from scipy import signal
 from scipy.io.wavfile import read, write
+
 # import pyloudnorm as pyln
 import numpy as np
 import torch
@@ -47,7 +48,7 @@ def postprocess_tts_wave_int16(chunk: torch.Tensor | list) -> bytes:
     if isinstance(chunk, list):
         chunk = torch.cat(chunk, dim=0)
     chunk = chunk.clone().detach().cpu().numpy()
-    chunk = chunk * (2 ** 15)
+    chunk = chunk * (2**15)
     chunk = chunk.astype(np.int16)
     return chunk.tobytes()
 
@@ -76,8 +77,7 @@ def convertSampleRateTo16khz(audio_data: bytes | bytearray, original_sample_rate
     return audio_data
 
 
-def resample_audio(pcm_data: np.ndarray,
-                   original_rate: int, target_rate: int) -> np.ndarray:
+def resample_audio(pcm_data: np.ndarray, original_rate: int, target_rate: int) -> np.ndarray:
     num_samples = int(len(pcm_data) * target_rate / original_rate)
     resampled_audio = signal.resample(pcm_data, num_samples)
     # resampled_audio = signal.resample_poly(pcm_data, target_rate, original_rate)

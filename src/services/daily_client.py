@@ -17,7 +17,8 @@ try:
         EventHandler,
         VirtualCameraDevice,
         VirtualMicrophoneDevice,
-        VirtualSpeakerDevice)
+        VirtualSpeakerDevice,
+    )
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error("In order to use daily, you need to `pip install achatbot[daily]`.")
@@ -45,11 +46,11 @@ def completion_callback(future):
     def _callback(*args):
         if not future.cancelled():
             future.get_loop().call_soon_threadsafe(future.set_result, *args)
+
     return _callback
 
 
 class DailyTransportClient(EventHandler):
-
     _daily_initialized: bool = False
 
     # This is necessary to override EventHandler's __new__ method.
@@ -57,13 +58,14 @@ class DailyTransportClient(EventHandler):
         return super().__new__(cls)
 
     def __init__(
-            self,
-            room_url: str,
-            token: str | None,
-            bot_name: str,
-            params: DailyParams,
-            callbacks: DailyCallbacks,
-            loop: asyncio.AbstractEventLoop):
+        self,
+        room_url: str,
+        token: str | None,
+        bot_name: str,
+        params: DailyParams,
+        callbacks: DailyCallbacks,
+        loop: asyncio.AbstractEventLoop,
+    ):
         super().__init__()
 
         if not self._daily_initialized:
@@ -92,19 +94,22 @@ class DailyTransportClient(EventHandler):
             "camera",
             width=self._params.camera_out_width,
             height=self._params.camera_out_height,
-            color_format=self._params.camera_out_color_format)
+            color_format=self._params.camera_out_color_format,
+        )
 
         self._mic: VirtualMicrophoneDevice = Daily.create_microphone_device(
             "mic",
             sample_rate=self._params.audio_out_sample_rate,
             channels=self._params.audio_out_channels,
-            non_blocking=True)
+            non_blocking=True,
+        )
 
         self._speaker: VirtualSpeakerDevice = Daily.create_speaker_device(
             "speaker",
             sample_rate=self._params.audio_in_sample_rate,
             channels=self._params.audio_in_channels,
-            non_blocking=True)
+            non_blocking=True,
+        )
         Daily.select_speaker_device("speaker")
 
     @property
@@ -125,9 +130,8 @@ class DailyTransportClient(EventHandler):
         future = self._loop.create_future()
         logging.info(f"daily send message:{frame.message}, participant_id:{participant_id}")
         self._client.send_app_message(
-            frame.message,
-            participant_id,
-            completion=completion_callback(future))
+            frame.message, participant_id, completion=completion_callback(future)
+        )
         await future
 
     async def read_next_audio_frame(self) -> AudioRawFrame | None:
@@ -173,12 +177,9 @@ class DailyTransportClient(EventHandler):
 
         # For performance reasons, never subscribe to video streams (unless a
         # video renderer is registered).
-        self._client.update_subscription_profiles({
-            "base": {
-                "camera": "unsubscribed",
-                "screenVideo": "unsubscribed"
-            }
-        })
+        self._client.update_subscription_profiles(
+            {"base": {"camera": "unsubscribed", "screenVideo": "unsubscribed"}}
+        )
 
         self._client.set_user_name(self._bot_name)
 
@@ -193,9 +194,11 @@ class DailyTransportClient(EventHandler):
 
                 if self._token and self._params.transcription_enabled:
                     logging.info(
-                        f"Enabling transcription with settings {self._params.transcription_settings}")
+                        f"Enabling transcription with settings {self._params.transcription_settings}"
+                    )
                     self._client.start_transcription(
-                        self._params.transcription_settings.model_dump())
+                        self._params.transcription_settings.model_dump()
+                    )
 
                 await self._callbacks.on_joined(data)
             else:
@@ -251,7 +254,8 @@ class DailyTransportClient(EventHandler):
                         }
                     }
                 },
-            })
+            },
+        )
 
         return await asyncio.wait_for(future, timeout=10)
 
@@ -327,18 +331,17 @@ class DailyTransportClient(EventHandler):
         self._transcription_renderers[participant_id] = callback
 
     def capture_participant_video(
-            self,
-            participant_id: str,
-            callback: Callable,
-            framerate: int = 30,
-            video_source: str = "camera",
-            color_format: str = "RGB"):
+        self,
+        participant_id: str,
+        callback: Callable,
+        framerate: int = 30,
+        video_source: str = "camera",
+        color_format: str = "RGB",
+    ):
         # Only enable camera subscription on this participant
-        self._client.update_subscriptions(participant_settings={
-            participant_id: {
-                "media": "subscribed"
-            }
-        })
+        self._client.update_subscriptions(
+            participant_settings={participant_id: {"media": "subscribed"}}
+        )
 
         self._video_renderers[participant_id] = callback
 
@@ -346,7 +349,8 @@ class DailyTransportClient(EventHandler):
             participant_id,
             self._video_frame_received,
             video_source=video_source,
-            color_format=color_format)
+            color_format=color_format,
+        )
 
     #
     #
@@ -421,9 +425,9 @@ class DailyTransportClient(EventHandler):
             callback,
             participant_id,
             video_frame.buffer,
-            (video_frame.width,
-             video_frame.height),
-            video_frame.color_format)
+            (video_frame.width, video_frame.height),
+            video_frame.color_format,
+        )
 
     def _call_async_callback(self, callback, *args):
         future = asyncio.run_coroutine_threadsafe(callback(*args), self._loop)

@@ -5,14 +5,20 @@ try:
     from fastapi import WebSocket
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
-    logging.error(
-        "In order to use fastapi websocket, you need to `pip install achatbot[fastapi]`.")
+    logging.error("In order to use fastapi websocket, you need to `pip install achatbot[fastapi]`.")
     raise Exception(f"Missing module: {e}")
 
-from src.processors.network.fastapi_webocket_server_input_processor import FastapiWebsocketServerInputProcessor
-from src.processors.network.fastapi_webocket_server_output_processor import FastapiWebsocketServerOutputProcessor
+from src.processors.network.fastapi_webocket_server_input_processor import (
+    FastapiWebsocketServerInputProcessor,
+)
+from src.processors.network.fastapi_webocket_server_output_processor import (
+    FastapiWebsocketServerOutputProcessor,
+)
 from src.transports.base import BaseTransport
-from src.types.network.fastapi_websocket import FastapiWebsocketServerCallbacks, FastapiWebsocketServerParams
+from src.types.network.fastapi_websocket import (
+    FastapiWebsocketServerCallbacks,
+    FastapiWebsocketServerParams,
+)
 
 
 class FastapiWebsocketTransport(BaseTransport):

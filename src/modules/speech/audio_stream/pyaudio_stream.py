@@ -20,11 +20,11 @@ class PyAudioStream(EngineClass, IAudioStream):
         self.pyaudio_instance = pyaudio.PyAudio()
         if self.args.input is True and self.args.input_device_index is None:
             default_device = self.pyaudio_instance.get_default_input_device_info()
-            self.args.input_device_index = default_device['index']
+            self.args.input_device_index = default_device["index"]
             # self.args.rate = int(default_device['defaultSampleRate'])
         if self.args.output is True and self.args.input_device_index is None:
             default_device = self.pyaudio_instance.get_default_output_device_info()
-            self.args.output_device_index = default_device['index']
+            self.args.output_device_index = default_device["index"]
 
         logging.info(f"PyAudioStreamArgs: {self.args}")
 
@@ -39,9 +39,11 @@ class PyAudioStream(EngineClass, IAudioStream):
         # check for mpeg format
         if pyFormat == pyaudio.paCustomFormat:
             pyFormat = self.pyaudio_instance.get_format_from_width(2)
-        logging.debug("Opening stream for wave audio chunks, "
-                      f"pyFormat: {pyFormat}, pyChannels: {pyChannels}, "
-                      f"pySampleRate: {pySampleRate}")
+        logging.debug(
+            "Opening stream for wave audio chunks, "
+            f"pyFormat: {pyFormat}, pyChannels: {pyChannels}, "
+            f"pySampleRate: {pySampleRate}"
+        )
         try:
             self.stream = self.pyaudio_instance.open(
                 format=int(pyFormat),

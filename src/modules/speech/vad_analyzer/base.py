@@ -5,7 +5,6 @@ from src.common.factory import EngineClass
 
 
 class BaseVADAnalyzer(IVADAnalyzer, EngineClass):
-
     def __init__(self, **args):
         self._args = VADAnalyzerArgs(**args)
         self._vad_frames = self.num_frames_required()

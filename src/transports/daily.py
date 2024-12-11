@@ -21,21 +21,17 @@ from src.types.speech.language import Language
 
 
 class DailyTransport(BaseTransport):
-
     def __init__(
-            self,
-            room_url: str,
-            token: str | None,
-            bot_name: str,
-            params: DailyParams,
-            input_name: str | None = None,
-            output_name: str | None = None,
-            loop: asyncio.AbstractEventLoop | None = None):
-        super().__init__(
-            input_name=input_name,
-            output_name=output_name,
-            loop=loop
-        )
+        self,
+        room_url: str,
+        token: str | None,
+        bot_name: str,
+        params: DailyParams,
+        input_name: str | None = None,
+        output_name: str | None = None,
+        loop: asyncio.AbstractEventLoop | None = None,
+    ):
+        super().__init__(input_name=input_name, output_name=output_name, loop=loop)
 
         # Register supported handlers.
         # User will only be able to register these handlers.
@@ -75,7 +71,8 @@ class DailyTransport(BaseTransport):
         self._params = params
         self._params.api_key = os.getenv("DAILY_API_KEY")
         self._client = DailyTransportClient(
-            room_url, token, bot_name, self._params, callbacks, self._loop)
+            room_url, token, bot_name, self._params, callbacks, self._loop
+        )
 
         self._input: DailyInputTransportProcessor | None = None
         self._output: DailyOutputTransportProcessor | None = None
@@ -87,28 +84,30 @@ class DailyTransport(BaseTransport):
     def input_processor(self) -> FrameProcessor:
         if not self._input:
             self._input = DailyInputTransportProcessor(
-                self._client, self._params, name=self._input_name)
+                self._client, self._params, name=self._input_name
+            )
         return self._input
 
     def output_processor(self) -> FrameProcessor:
         if not self._output:
             self._output = DailyOutputTransportProcessor(
-                self._client, self._params, name=self._output_name)
+                self._client, self._params, name=self._output_name
+            )
         return self._output
 
     #
     # DailyTransport
     #
 
-    @ property
+    @property
     def participant_id(self) -> str:
         return self._client.participant_id
 
-    @ property
+    @property
     def client(self) -> str:
         return self._client
 
-    @ property
+    @property
     def params(self) -> str:
         return self._params
 
@@ -140,19 +139,20 @@ class DailyTransport(BaseTransport):
 
     def capture_participant_transcription(self, participant_id: str):
         self._client.capture_participant_transcription(
-            participant_id,
-            self._on_transcription_message
+            participant_id, self._on_transcription_message
         )
 
     def capture_participant_video(
-            self,
-            participant_id: str,
-            framerate: int = 30,
-            video_source: str = "camera",
-            color_format: str = "RGB"):
+        self,
+        participant_id: str,
+        framerate: int = 30,
+        video_source: str = "camera",
+        color_format: str = "RGB",
+    ):
         if self._input:
             self._input.capture_participant_video(
-                participant_id, framerate, video_source, color_format)
+                participant_id, framerate, video_source, color_format
+            )
 
     async def _on_joined(self, data):
         await self._call_event_handler("on_joined", data)
@@ -180,12 +180,12 @@ class DailyTransport(BaseTransport):
         async with aiohttp.ClientSession() as session:
             headers = {
                 "Authorization": f"Bearer {self._params.api_key}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
             }
             data = {
                 "callId": self._params.dialin_settings.call_id,
                 "callDomain": self._params.dialin_settings.call_domain,
-                "sipUri": sip_endpoint
+                "sipUri": sip_endpoint,
             }
 
             url = f"{self._params.api_url}/dialin/pinlessCallUpdate"
@@ -195,7 +195,8 @@ class DailyTransport(BaseTransport):
                     if r.status != 200:
                         text = await r.text()
                         logging.error(
-                            f"Unable to handle dialin-ready event (status: {r.status}, error: {text})")
+                            f"Unable to handle dialin-ready event (status: {r.status}, error: {text})"
+                        )
                         return
 
                     logging.debug("Event dialin-ready was handled successfully")

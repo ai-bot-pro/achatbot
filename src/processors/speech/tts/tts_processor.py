@@ -24,11 +24,8 @@ class TTSProcessor(TTSProcessorBase):
     """
 
     def __init__(
-            self,
-            *,
-            tts: ITts | EngineClass | None = None,
-            session: Session | None = None,
-            **kwargs):
+        self, *, tts: ITts | EngineClass | None = None, session: Session | None = None, **kwargs
+    ):
         super().__init__(**kwargs)
         if tts is None:
             tts = TTSEnvInit.initTTSEngine()
@@ -53,7 +50,7 @@ class TTSProcessor(TTSProcessorBase):
     async def run_tts(self, text: str) -> AsyncGenerator[Frame, None]:
         logging.info(f"Generating TTS: [{text}]")
 
-        self._session.ctx.state['tts_text'] = text
+        self._session.ctx.state["tts_text"] = text
         try:
             stream_info = self._tts.get_stream_info()
             await self.start_ttfb_metrics()
@@ -65,7 +62,8 @@ class TTSProcessor(TTSProcessorBase):
                         audio=chunk,
                         sample_rate=stream_info["rate"],
                         num_channels=stream_info["channels"],
-                        sample_width=stream_info["sample_width"])
+                        sample_width=stream_info["sample_width"],
+                    )
                     yield frame
         except Exception as e:
             logging.exception(f"{self} error generating TTS: {e}")

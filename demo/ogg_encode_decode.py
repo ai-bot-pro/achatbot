@@ -72,11 +72,8 @@ if __name__ == "__main__":
             # We haven't read a full frame from the wav file, so this
             # is most likely a final partial frame before the end of
             # the file.  We'll pad the end of this frame with silence.
-            pcm += (
-                b"\x00"
-                * ((desired_frame_size - effective_frame_size)
-                   * bytes_per_sample
-                   * channels)
+            pcm += b"\x00" * (
+                (desired_frame_size - effective_frame_size) * bytes_per_sample * channels
             )
 
         # Encode the PCM data

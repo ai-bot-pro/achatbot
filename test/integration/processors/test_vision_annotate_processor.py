@@ -26,6 +26,7 @@ from src.types.frames.data_frames import UserImageRawFrame
 from src.types.vision.detector.yolo import CustomConfidence, VisionDetectorArgs
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 
@@ -37,20 +38,19 @@ python -m unittest test.integration.processors.test_vision_annotate_processor.Te
 
 
 class TestAnnotateProcessor(unittest.IsolatedAsyncioTestCase):
-
     @classmethod
     def setUpClass(cls):
         Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
 
-        img_file = os.path.join(TEST_DIR, f"img_files", f"dog.jpeg")
-        img_file = os.getenv('IMG_FILE', img_file)
+        img_file = os.path.join(TEST_DIR, "img_files", "dog.jpeg")
+        img_file = os.getenv("IMG_FILE", img_file)
         cls.img = Image.open(img_file)
-        cls.tag = os.getenv('DETECTOR_TAG', "vision_yolo_detector")
-        cls.model = os.getenv('YOLO_MODEL', os.path.join(MODELS_DIR, "yolov8n.pt"))
-        cls.stream = bool(os.getenv('YOLO_STREAM', "0"))
-        cls.classes = os.getenv(
-            'YOLO_WD_CLASSES',
-            "person,backpack,dog,eye,nose,ear,tongue").split(",")
+        cls.tag = os.getenv("DETECTOR_TAG", "vision_yolo_detector")
+        cls.model = os.getenv("YOLO_MODEL", os.path.join(MODELS_DIR, "yolov8n.pt"))
+        cls.stream = bool(os.getenv("YOLO_STREAM", "0"))
+        cls.classes = os.getenv("YOLO_WD_CLASSES", "person,backpack,dog,eye,nose,ear,tongue").split(
+            ","
+        )
 
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
@@ -66,28 +66,16 @@ class TestAnnotateProcessor(unittest.IsolatedAsyncioTestCase):
             custom_classes=self.classes,
             custom_confidences=[
                 CustomConfidence(
-                    boolean_op="and",
-                    class_name="person",
-                    d_confidence=0.3,
-                    d_min_cn=1
+                    boolean_op="and", class_name="person", d_confidence=0.3, d_min_cn=1
                 ),
-                CustomConfidence(
-                    boolean_op="and",
-                    class_name="dog",
-                    d_confidence=0.5,
-                    d_min_cn=1
-                ),
-                CustomConfidence(
-                    boolean_op="or",
-                    class_name="car",
-                    d_confidence=0.3,
-                    d_min_cn=1
-                ),
-            ]
+                CustomConfidence(boolean_op="and", class_name="dog", d_confidence=0.5, d_min_cn=1),
+                CustomConfidence(boolean_op="or", class_name="car", d_confidence=0.3, d_min_cn=1),
+            ],
         ).__dict__
         print(kwargs)
         self.detector: IVisionDetector | EngineClass = VisionDetectorEnvInit.getEngine(
-            self.tag, **kwargs)
+            self.tag, **kwargs
+        )
         self.session = Session(**SessionCtx(f"{__class__}").__dict__)
         return AnnotateProcessor(detector=self.detector, session=self.session)
 
@@ -97,10 +85,12 @@ class TestAnnotateProcessor(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(frame, ImageRawFrame)
 
     async def asyncSetUp(self):
-        pipeline = Pipeline([
-            self.get_vision_processor(),
-            OutputFrameProcessor(cb=self.out_cb),
-        ])
+        pipeline = Pipeline(
+            [
+                self.get_vision_processor(),
+                OutputFrameProcessor(cb=self.out_cb),
+            ]
+        )
         self.vision_task = PipelineTask(
             pipeline,
             params=PipelineParams(),
@@ -111,28 +101,32 @@ class TestAnnotateProcessor(unittest.IsolatedAsyncioTestCase):
 
     async def test_run(self):
         runner = PipelineRunner()
-        await self.vision_task.queue_frames([
-            UserImageRawFrame(
-                image=self.img.tobytes(),
-                size=self.img.size,
-                format=self.img.format,
-                mode=self.img.mode,
-                user_id="110",
-            ),
-            EndFrame(),
-        ])
+        await self.vision_task.queue_frames(
+            [
+                UserImageRawFrame(
+                    image=self.img.tobytes(),
+                    size=self.img.size,
+                    format=self.img.format,
+                    mode=self.img.mode,
+                    user_id="110",
+                ),
+                EndFrame(),
+            ]
+        )
         await runner.run(self.vision_task)
 
     async def test_run_empty(self):
         runner = PipelineRunner()
-        await self.vision_task.queue_frames([
-            UserImageRawFrame(
-                image=bytes([]),
-                size=(0, 0),
-                format=None,
-                mode=None,
-                user_id="110",
-            ),
-            EndFrame(),
-        ])
+        await self.vision_task.queue_frames(
+            [
+                UserImageRawFrame(
+                    image=bytes([]),
+                    size=(0, 0),
+                    format=None,
+                    mode=None,
+                    user_id="110",
+                ),
+                EndFrame(),
+            ]
+        )
         await runner.run(self.vision_task)

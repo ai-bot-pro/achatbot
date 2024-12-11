@@ -1,4 +1,3 @@
-
 from dataclasses import dataclass
 from typing import Optional, Union
 
@@ -8,7 +7,6 @@ from src.types.speech.asr.base import ASRArgs
 @dataclass
 class WhisperTimestampedASRArgs(ASRArgs):
     pass
-
 
 
 @dataclass

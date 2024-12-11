@@ -53,18 +53,20 @@ class FastapiWebsocketMoshiVoiceBot(AIFastapiWebsocketBot):
             params=self.params,
         )
 
-        messages = []
-        if self._bot_config.llm.messages:
-            messages = self._bot_config.llm.messages
+        # messages = []
+        # if self._bot_config.llm.messages:
+        #    messages = self._bot_config.llm.messages
 
         self.task = PipelineTask(
-            Pipeline([
-                transport.input_processor(),
-                # FrameLogger(include_frame_types=[AudioRawFrame]),
-                self._voice_processor,
-                FrameLogger(include_frame_types=[AudioRawFrame, TextFrame]),
-                transport.output_processor(),
-            ]),
+            Pipeline(
+                [
+                    transport.input_processor(),
+                    # FrameLogger(include_frame_types=[AudioRawFrame]),
+                    self._voice_processor,
+                    FrameLogger(include_frame_types=[AudioRawFrame, TextFrame]),
+                    transport.output_processor(),
+                ]
+            ),
             params=PipelineParams(
                 allow_interruptions=False,
                 enable_metrics=True,
@@ -72,11 +74,7 @@ class FastapiWebsocketMoshiVoiceBot(AIFastapiWebsocketBot):
             ),
         )
 
-        transport.add_event_handler(
-            "on_client_connected",
-            self.on_client_connected)
-        transport.add_event_handler(
-            "on_client_disconnected",
-            self.on_client_disconnected)
+        transport.add_event_handler("on_client_connected", self.on_client_connected)
+        transport.add_event_handler("on_client_disconnected", self.on_client_disconnected)
 
         await PipelineRunner(handle_sigint=self._handle_sigint).run(self.task)

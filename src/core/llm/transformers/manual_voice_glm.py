@@ -3,14 +3,16 @@ from threading import Thread
 from queue import Queue
 
 import torch
+
 try:
     from transformers import BitsAndBytesConfig, AutoModel, AutoTokenizer
     from transformers.generation.streamers import BaseStreamer
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        f"In order to use GLM-Voice, you need to `pip install achatbot[llm_transformers_manual_voice_glm]`,"
-        f"use Int4 precision with 4-bit quantization, need to `pip install achatbot[llm_transformers_manual_voice_glm,bitsandbytes]`")
+        "In order to use GLM-Voice, you need to `pip install achatbot[llm_transformers_manual_voice_glm]`,"
+        "use Int4 precision with 4-bit quantization, need to `pip install achatbot[llm_transformers_manual_voice_glm,bitsandbytes]`"
+    )
     raise Exception(f"Missing module: {e}")
 
 
@@ -61,6 +63,7 @@ class TransformersManualVoicGLM(TransformersBaseLLM):
     text / speech-tokens prompt -> glm -> (text/speech) output tokens
     with TransformersLMArgs, if use int4, need to install bitsandbytes
     """
+
     TAG = "llm_transformers_manual_voice_glm"
     DEFAULT_SYS_PROMPT = "User will provide you with a speech or text instruction. Do it step by step. First, think about the instruction and respond in a interleaved manner, with 13 text token followed by 26 audio tokens. "
 
@@ -68,14 +71,18 @@ class TransformersManualVoicGLM(TransformersBaseLLM):
         self.args = TransformersLMArgs(**args)
         logging.info("TransformersManualVoicGLM args: %s", self.args)
         # https://huggingface.co/docs/transformers/main_classes/quantization#transformers.BitsAndBytesConfig
-        self.bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4",
-            # load bfloat16 tensor to int-4bit tensor,
-            #  torch_dtype see: config.json
-            bnb_4bit_compute_dtype=torch.bfloat16,
-        ) if self.args.lm_bnb_quant_type == "int4" else None
+        self.bnb_config = (
+            BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4",
+                # load bfloat16 tensor to int-4bit tensor,
+                #  torch_dtype see: config.json
+                bnb_4bit_compute_dtype=torch.bfloat16,
+            )
+            if self.args.lm_bnb_quant_type == "int4"
+            else None
+        )
 
         if self.args.lm_device_map:
             self._model = AutoModel.from_pretrained(
@@ -89,16 +96,21 @@ class TransformersManualVoicGLM(TransformersBaseLLM):
                 trust_remote_code=True,
             ).eval()
         else:
-            self._model = AutoModel.from_pretrained(
-                self.args.lm_model_name_or_path,
-                torch_dtype=self.args.lm_torch_dtype,
-                attn_implementation=self.args.lm_attn_impl,
-                quantization_config=self.bnb_config if self.bnb_config else None,
-                trust_remote_code=True,
-            ).eval().to(self.args.lm_device)
+            self._model = (
+                AutoModel.from_pretrained(
+                    self.args.lm_model_name_or_path,
+                    torch_dtype=self.args.lm_torch_dtype,
+                    attn_implementation=self.args.lm_attn_impl,
+                    quantization_config=self.bnb_config if self.bnb_config else None,
+                    trust_remote_code=True,
+                )
+                .eval()
+                .to(self.args.lm_device)
+            )
 
         self._tokenizer = AutoTokenizer.from_pretrained(
-            self.args.lm_model_name_or_path, trust_remote_code=True)
+            self.args.lm_model_name_or_path, trust_remote_code=True
+        )
 
         # self.warmup()
 
@@ -135,7 +147,7 @@ class TransformersManualVoicGLM(TransformersBaseLLM):
         (text/speech prompt) input text + speech tokens -> glm -> (text/speech) output tokens
         TODO: parallel+batch generation (text | audio)
         """
-        prompt = session.ctx.state['prompt']
+        prompt = session.ctx.state["prompt"]
         inputs = self._tokenizer([prompt], return_tensors="pt").to(self._model.device)
         # print(prompt, inputs)
         # inference token streamer
@@ -151,10 +163,7 @@ class TransformersManualVoicGLM(TransformersBaseLLM):
             min_new_tokens=self.args.lm_gen_min_new_tokens,
             max_new_tokens=self.args.lm_gen_max_new_tokens,
         )
-        thread = Thread(
-            target=self._model.generate,
-            kwargs=generation_kwargs
-        )
+        thread = Thread(target=self._model.generate, kwargs=generation_kwargs)
         thread.start()
 
         for token_id in streamer:

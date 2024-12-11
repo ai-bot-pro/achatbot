@@ -1,6 +1,7 @@
 r"""
 use SOTA LLM like chatGPT to generate config file(json,yaml,toml) from dataclass type
 """
+
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import (
@@ -19,44 +20,32 @@ from pydantic.main import BaseModel
 from pydantic import ConfigDict
 
 from .interface import (
-    IBuffering, IDetector, IAsr,
-    ILlm, ITts, IVADAnalyzer,
+    IBuffering,
+    IDetector,
+    IAsr,
+    ILlm,
+    ITts,
+    IVADAnalyzer,
 )
 from .factory import EngineClass
 
 load_dotenv(override=True)
 
 
-SRC_PATH = os.path.normpath(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir)
-)
+SRC_PATH = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir))
 DIR_PATH = os.path.join(SRC_PATH, os.pardir)
 if bool(os.getenv("ACHATBOT_PKG", "")):
     home_dir = Path.home()
     DIR_PATH = os.path.join(home_dir, ".achatbot")
 
-LOG_DIR = os.path.normpath(
-    os.path.join(DIR_PATH, "log")
-)
-CONFIG_DIR = os.path.normpath(
-    os.path.join(DIR_PATH, "config")
-)
-MODELS_DIR = os.path.normpath(
-    os.path.join(DIR_PATH, "models")
-)
-RECORDS_DIR = os.path.normpath(
-    os.path.join(DIR_PATH, "records")
-)
-VIDEOS_DIR = os.path.normpath(
-    os.path.join(DIR_PATH, "videos")
-)
-ASSETS_DIR = os.path.normpath(
-    os.path.join(DIR_PATH, "assets")
-)
+LOG_DIR = os.path.normpath(os.path.join(DIR_PATH, "log"))
+CONFIG_DIR = os.path.normpath(os.path.join(DIR_PATH, "config"))
+MODELS_DIR = os.path.normpath(os.path.join(DIR_PATH, "models"))
+RECORDS_DIR = os.path.normpath(os.path.join(DIR_PATH, "records"))
+VIDEOS_DIR = os.path.normpath(os.path.join(DIR_PATH, "videos"))
+ASSETS_DIR = os.path.normpath(os.path.join(DIR_PATH, "assets"))
 
-TEST_DIR = os.path.normpath(
-    os.path.join(SRC_PATH, os.pardir, "test")
-)
+TEST_DIR = os.path.normpath(os.path.join(SRC_PATH, os.pardir, "test"))
 
 # audio stream default configuration
 CHUNK = 1600  # 100ms 16k rate num_frames
@@ -93,8 +82,8 @@ class SessionCtx:
             "state": self.state,
         }
         if "tts_chunk" in self.state:
-            d['state']["tts_chunk_len"] = len(self.state['tts_chunk'])
-            d['state'].pop("tts_chunk")
+            d["state"]["tts_chunk_len"] = len(self.state["tts_chunk"])
+            d["state"].pop("tts_chunk")
 
         res = f"session ctx: {d}"
         return res
@@ -154,7 +143,7 @@ PYAUDIO_PACUSTOMFORMAT = 65536
 
 PYAUDIO_PACONTINUE = 0  #: There is more audio data to come
 PYAUDIO_PACOMPLETE = 1  #: This was the last block of audio data
-PYAUDIO_PAABORT = 2   #: An error ocurred, stop playback/recording
+PYAUDIO_PAABORT = 2  #: An error ocurred, stop playback/recording
 
 
 @dataclass
@@ -170,6 +159,7 @@ class DailyAudioStreamArgs(AudioStreamArgs):
     """
     in live room,one joined client instance need diff in/out stream sample rate
     """
+
     meeting_room_url: str = ""
     bot_name: str = "chat-bot"
     meeting_room_token: str = ""
@@ -339,7 +329,7 @@ class CoquiTTSArgs:
     tts_use_deepspeed: bool = False
 
 
-PYTTSX3_SYNTHESIS_FILE = 'pyttsx3_synthesis.wav'
+PYTTSX3_SYNTHESIS_FILE = "pyttsx3_synthesis.wav"
 
 
 @dataclass
@@ -347,7 +337,7 @@ class Pyttsx3TTSArgs:
     voice_name: str = "Tingting"
 
 
-GTTS_SYNTHESIS_FILE = 'gtts_synthesis.wav'
+GTTS_SYNTHESIS_FILE = "gtts_synthesis.wav"
 
 
 @dataclass
@@ -360,7 +350,7 @@ class GTTSArgs:
     crossfade_lenght: int = 10
 
 
-EDGE_TTS_SYNTHESIS_FILE = 'edge_tts_synthesis.wav'
+EDGE_TTS_SYNTHESIS_FILE = "edge_tts_synthesis.wav"
 
 
 @dataclass
@@ -380,6 +370,7 @@ class CosyVoiceTTSArgs:
     For sft inference, please use CosyVoice-300M-SFT model.
     For instruct inference, please use CosyVoice-300M-Instruct model.
     """
+
     model_dir: str = os.path.join(MODELS_DIR, "CosyVoice-300M-SFT")  # sft model
     reference_audio_path: str = ""  # 16k sample rate audio file for base pt model
     instruct_text: str = ""  # use with instruct model
@@ -447,6 +438,7 @@ class VADAnalyzerArgs:
 class SileroVADAnalyzerArgs(SileroVADArgs, VADAnalyzerArgs):
     pass
 
+
 # --------------- in/out audio camera(video) params -------------------
 
 
@@ -485,6 +477,7 @@ class AudioCameraParams(CameraParams, AudioVADParams):
 
 # --------------- daily -------------------------------
 
+
 class DailyDialinSettings(BaseModel):
     call_id: str = ""
     call_domain: str = ""
@@ -500,9 +493,7 @@ class DailyTranscriptionSettings(BaseModel):
     endpointing: bool = True
     punctuate: bool = True
     includeRawResponse: bool = True
-    extra: Mapping[str, Any] = {
-        "interim_results": True
-    }
+    extra: Mapping[str, Any] = {"interim_results": True}
 
 
 class DailyParams(AudioCameraParams):
@@ -514,10 +505,11 @@ class DailyParams(AudioCameraParams):
 
 
 class DailyRoomArgs(BaseModel):
-    privacy: Literal['private', 'public'] = "public"
+    privacy: Literal["private", "public"] = "public"
 
 
 # --------------- livekit -------------------------------
+
 
 class LivekitParams(AudioCameraParams):
     # audio_in_sample_rate: int = 48000  # livekit audio in stream default sample rate 48000
@@ -536,6 +528,7 @@ class LivekitRoomArgs(BaseModel):
 
 # --------------- agora -------------------------------
 
+
 class AgoraParams(AudioCameraParams):
     app_id: str = ""
     app_cert: str = ""
@@ -551,6 +544,7 @@ class AgoraChannelArgs(BaseModel):
 # ---------------- Room Bots -------------
 class GeneralRoomInfo(BaseModel):
     """general room info for diff webRTC room info to align"""
+
     sid: str = ""
     name: str = ""
     url: str = ""

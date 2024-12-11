@@ -204,6 +204,7 @@ TQDM_DISABLE=True TOKENIZERS_PARALLELISM=false \
 INIT_TYPE=yaml_config TQDM_DISABLE=True \
     python -m src.cmd.local-terminal-chat.generate_audio2audio > ./log/std_out.log
 """
+
 import multiprocessing
 import logging
 import os
@@ -223,8 +224,7 @@ def main():
 
     # BE
     be_init_event = multiprocessing.Event()
-    c = multiprocessing.Process(
-        target=ChatWorker().run, args=(mp_conn, be_init_event), daemon=True)
+    c = multiprocessing.Process(target=ChatWorker().run, args=(mp_conn, be_init_event), daemon=True)
     c.start()
     be_init_event.wait()
 
@@ -236,7 +236,7 @@ def main():
         c.join()
         c.terminate()
         c.close()
-        logging.info(f"process Exited!")
+        logging.info("process Exited!")
 
     mp_conn.close()
 

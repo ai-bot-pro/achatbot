@@ -23,23 +23,25 @@ class AgoraEchoVisionBot(AgoraChannelBot):
                 camera_out_is_live=True,
                 camera_out_width=640,
                 camera_out_height=480,
-            )
+            ),
         )
 
         self.regisiter_room_event(transport)
 
         @transport.event_handler("on_first_participant_joined")
         async def on_first_participant_joined(
-                transport: AgoraTransport,
-                user_id: str,
+            transport: AgoraTransport,
+            user_id: str,
         ):
             logging.info(f"fisrt joined user_id:{user_id}")
             transport.capture_participant_video(user_id)
 
-        pipeline = Pipeline([
-            transport.input_processor(),
-            # FrameLogger(include_frame_types=[UserImageRawFrame]),
-            transport.output_processor(),
-        ])
+        pipeline = Pipeline(
+            [
+                transport.input_processor(),
+                # FrameLogger(include_frame_types=[UserImageRawFrame]),
+                transport.output_processor(),
+            ]
+        )
         self.task = PipelineTask(pipeline)
         await PipelineRunner().run(self.task)

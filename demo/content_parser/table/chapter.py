@@ -23,15 +23,18 @@ client = instructor.from_gemini(
         # "top_p": 0.1,
         # "top_k": 40,
         # "response_mime_type": "text/plain",
-    }
+    },
 )
 
 
 def extract_models(content: str, mode="text", **kwargs):
     match mode:
-        case "partial": return extract_models_partial(content, **kwargs)
-        case "iterable": return extract_models_iterable(content, **kwargs)
-        case _: return extract_models_text(content, **kwargs)
+        case "partial":
+            return extract_models_partial(content, **kwargs)
+        case "iterable":
+            return extract_models_iterable(content, **kwargs)
+        case _:
+            return extract_models_text(content, **kwargs)
 
 
 def extract_models_partial(content: str, **kwargs):
@@ -80,7 +83,7 @@ def extract_models_text(content: str, **kwargs):
 
 
 class ChapterSystemPromptArgs(BaseModel):
-    language: str = 'en'
+    language: str = "en"
 
 
 def get_system_prompt(**kwargs) -> str:
@@ -100,9 +103,7 @@ class Chapter(BaseModel):
         ...,
         description="The end timestamp indicating when the chapter ends in the video.",
     )
-    title: str = Field(
-        ..., description="A concise and descriptive title for the chapter."
-    )
+    title: str = Field(..., description="A concise and descriptive title for the chapter.")
     summary: str = Field(
         ...,
         description="A brief summary of the chapter's content, don't use words like 'the speaker'",

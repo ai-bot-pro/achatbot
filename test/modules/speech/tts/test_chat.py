@@ -30,16 +30,12 @@ r"""
 class TestChatTTS(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tts_tag = os.getenv('LLM_TAG', "tts_chat")
-        cls.tts_text = os.getenv(
-            'TTS_TEXT',
-            "你好，我是机器人"
-        )
-        cls.stream = os.getenv('STREAM', "")
-        cls.compile = os.getenv('COMPILE', "")
-        cls.source = os.getenv('SOURCE', "custom")
-        cls.local_path = os.getenv('LOCAL_PATH', os.path.join(
-            MODELS_DIR, "2Noise/ChatTTS"))
+        cls.tts_tag = os.getenv("LLM_TAG", "tts_chat")
+        cls.tts_text = os.getenv("TTS_TEXT", "你好，我是机器人")
+        cls.stream = os.getenv("STREAM", "")
+        cls.compile = os.getenv("COMPILE", "")
+        cls.source = os.getenv("SOURCE", "custom")
+        cls.local_path = os.getenv("LOCAL_PATH", os.path.join(MODELS_DIR, "2Noise/ChatTTS"))
         Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
 
     @classmethod
@@ -51,8 +47,7 @@ class TestChatTTS(unittest.TestCase):
         kwargs["local_path"] = self.local_path
         kwargs["source"] = self.source
         kwargs["compile"] = bool(self.compile)
-        self.tts: ChatTTS = EngineFactory.get_engine_by_tag(
-            EngineClass, self.tts_tag, **kwargs)
+        self.tts: ChatTTS = EngineFactory.get_engine_by_tag(EngineClass, self.tts_tag, **kwargs)
         self.session = Session(**SessionCtx("test_tts_client_id").__dict__)
 
     def tearDown(self):
@@ -68,25 +63,29 @@ class TestChatTTS(unittest.TestCase):
         for i, chunk in enumerate(iter):
             print(i, len(chunk))
             res.extend(chunk)
-        path = asyncio.run(save_audio_to_file(
-            res,
-            f"test_{self.tts.TAG}.wav",
-            sample_rate=stream_info["rate"],
-            sample_width=stream_info["sample_width"],
-            channles=stream_info["channels"],
-        ))
+        path = asyncio.run(
+            save_audio_to_file(
+                res,
+                f"test_{self.tts.TAG}.wav",
+                sample_rate=stream_info["rate"],
+                sample_width=stream_info["sample_width"],
+                channles=stream_info["channels"],
+            )
+        )
         print(path)
 
     def test_synthesize_speak(self):
         import pyaudio
+
         info = self.tts.get_stream_info()
         self.pyaudio_instance = pyaudio.PyAudio()
         self.audio_stream = self.pyaudio_instance.open(
-            format=info['format'],
-            channels=info['channels'],
-            rate=info['rate'],
+            format=info["format"],
+            channels=info["channels"],
+            rate=info["rate"],
             output_device_index=None,
-            output=True)
+            output=True,
+        )
 
         self.session.ctx.state["tts_text"] = self.tts_text
         print(self.session.ctx)
@@ -101,7 +100,7 @@ class TestChatTTS(unittest.TestCase):
                 self.audio_stream.write(chunk)
                 continue
             for i in range(0, len(chunk), sub_chunk_size):
-                sub_chunk = chunk[i:i + sub_chunk_size]
+                sub_chunk = chunk[i : i + sub_chunk_size]
                 self.audio_stream.write(sub_chunk)
 
         self.audio_stream.stop_stream()

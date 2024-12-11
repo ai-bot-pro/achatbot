@@ -43,12 +43,12 @@ class DailyRoomProperties(BaseModel, extra="allow"):
         if not self.sip_uri:
             return ""
         else:
-            return "sip:%s" % self.sip_uri['endpoint']
+            return "sip:%s" % self.sip_uri["endpoint"]
 
 
 class DailyRoomParams(BaseModel):
     name: Optional[str] = None
-    privacy: Literal['private', 'public'] = "public"
+    privacy: Literal["private", "public"] = "public"
     properties: DailyRoomProperties = DailyRoomProperties()
 
 
@@ -84,7 +84,7 @@ class DailyRESTHelper:
         res = requests.post(
             f"{self.daily_api_url}/rooms",
             headers={"Authorization": f"Bearer {self.daily_api_key}"},
-            json={**params.model_dump(exclude_none=True)}
+            json={**params.model_dump(exclude_none=True)},
         )
 
         if res.status_code != 200:
@@ -102,7 +102,7 @@ class DailyRESTHelper:
     def get_room_from_name(self, room_name: str) -> DailyRoomObject:
         res: requests.Response = requests.get(
             f"{self.daily_api_url}/rooms/{room_name}",
-            headers={"Authorization": f"Bearer {self.daily_api_key}"}
+            headers={"Authorization": f"Bearer {self.daily_api_key}"},
         )
 
         if res.status_code != 200:
@@ -117,45 +117,37 @@ class DailyRESTHelper:
 
         return room
 
-    def get_room_from_url(self, room_url: str,) -> DailyRoomObject:
+    def get_room_from_url(
+        self,
+        room_url: str,
+    ) -> DailyRoomObject:
         room_name = DailyRESTHelper.get_name_from_url(room_url)
         return self.get_room_from_name(room_name)
 
     def get_token_by_url(
-            self,
-            room_url: str,
-            expiry_time: float = 60 * 60,
-            owner: bool = True) -> str:
+        self, room_url: str, expiry_time: float = 60 * 60, owner: bool = True
+    ) -> str:
         if not room_url:
             raise Exception(
-                "No Daily room specified. You must specify a Daily room in order a token to be generated.")
+                "No Daily room specified. You must specify a Daily room in order a token to be generated."
+            )
 
         room_name = DailyRESTHelper.get_name_from_url(room_url)
 
-        return self.get_token_by_name(room_name,
-                                      expiry_time=expiry_time, owner=owner)
+        return self.get_token_by_name(room_name, expiry_time=expiry_time, owner=owner)
 
     def get_token_by_name(
-            self,
-            room_name: str,
-            expiry_time: float = 60 * 60,
-            owner: bool = True) -> str:
+        self, room_name: str, expiry_time: float = 60 * 60, owner: bool = True
+    ) -> str:
         expiration: float = time.time() + expiry_time
         res: requests.Response = requests.post(
             f"{self.daily_api_url}/meeting-tokens",
-            headers={
-                "Authorization": f"Bearer {self.daily_api_key}"},
-            json={
-                "properties": {
-                    "room_name": room_name,
-                    "is_owner": owner,
-                    "exp": expiration
-                }},
+            headers={"Authorization": f"Bearer {self.daily_api_key}"},
+            json={"properties": {"room_name": room_name, "is_owner": owner, "exp": expiration}},
         )
 
         if res.status_code != 200:
-            raise Exception(
-                f"Failed to create meeting token: {res.status_code} {res.text}")
+            raise Exception(f"Failed to create meeting token: {res.status_code} {res.text}")
 
         token: str = res.json()["token"]
 
@@ -167,7 +159,7 @@ class DailyRESTHelper:
 
         res: requests.Response = requests.get(
             f"{self.daily_api_url}/meeting-tokens/{token}",
-            headers={"Authorization": f"Bearer {self.daily_api_key}"}
+            headers={"Authorization": f"Bearer {self.daily_api_key}"},
         )
 
         if res.status_code != 200:

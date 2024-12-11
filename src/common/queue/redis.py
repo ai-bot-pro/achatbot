@@ -34,13 +34,14 @@ class RedisQueue(EngineClass):
 
     def __init__(self, **kwargs) -> None:
         import redis
+
         self._args = RedisInfoArgs(**kwargs)
-        redis_host = self._args.host if self._args.host else os.getenv(
-            "REDIS_HOST", "localhost")
+        redis_host = self._args.host if self._args.host else os.getenv("REDIS_HOST", "localhost")
         redis_port = self._args.port if self._args.port else os.getenv("REDIS_PORT", "6379")
         redis_password = os.getenv("REDIS_PASSWORD", "")
         self.client = redis.Redis(
-            host=redis_host, port=redis_port, password=redis_password, db=self._args.db)
+            host=redis_host, port=redis_port, password=redis_password, db=self._args.db
+        )
         if self.client.ping():
             logging.debug(f"connect redis:{redis_host}:{redis_port} success")
         else:

@@ -34,10 +34,12 @@ from src.types.frames.data_frames import (
     TransportMessageFrame,
 )
 from src.types.frames.control_frames import (
-    LLMFullResponseEndFrame, LLMFullResponseStartFrame,
+    LLMFullResponseEndFrame,
+    LLMFullResponseStartFrame,
 )
 from src.processors.aggregators.llm_response import (
-    LLMAssistantResponseAggregator, LLMUserResponseAggregator,
+    LLMAssistantResponseAggregator,
+    LLMUserResponseAggregator,
 )
 from src.processors.aggregators.openai_llm_context import OpenAILLMContext
 from src.transports.base import BaseTransport
@@ -138,7 +140,6 @@ class RTVIJSONCompletion(BaseModel):
 
 
 class FunctionCallProcessor(FrameProcessor):
-
     def __init__(self, context):
         super().__init__()
         self._checking = False
@@ -222,12 +223,13 @@ class FunctionCallProcessor(FrameProcessor):
 
 class RTVIProcessor(FrameProcessor):
     def __init__(
-            self,
-            *,
-            transport: BaseTransport,
-            setup: RTVISetup | None = None,
-            llm_processor: FrameProcessor | None = None,
-            tts_processor: FrameProcessor | None = None):
+        self,
+        *,
+        transport: BaseTransport,
+        setup: RTVISetup | None = None,
+        llm_processor: FrameProcessor | None = None,
+        tts_processor: FrameProcessor | None = None,
+    ):
         if llm_processor is None or tts_processor is None:
             raise ValueError("llm_processor and tts_processor must be provided")
 
@@ -244,8 +246,8 @@ class RTVIProcessor(FrameProcessor):
         # Register transport event so we can send a `bot-ready` event (and maybe
         # others) when the participant joins.
         transport.add_event_handler(
-            "on_first_participant_joined",
-            self._on_first_participant_joined)
+            "on_first_participant_joined", self._on_first_participant_joined
+        )
 
         self._frame_handler_task = self.get_event_loop().create_task(self._frame_handler())
         self._frame_queue = asyncio.Queue()
@@ -287,7 +289,9 @@ class RTVIProcessor(FrameProcessor):
 
         if isinstance(frame, TranscriptionFrame) or isinstance(frame, InterimTranscriptionFrame):
             await self._handle_transcriptions(frame)
-        elif isinstance(frame, UserStartedSpeakingFrame) or isinstance(frame, UserStoppedSpeakingFrame):
+        elif isinstance(frame, UserStartedSpeakingFrame) or isinstance(
+            frame, UserStoppedSpeakingFrame
+        ):
             await self._handle_interruptions(frame)
 
     async def _handle_transcriptions(self, frame: Frame):
@@ -299,17 +303,15 @@ class RTVIProcessor(FrameProcessor):
         if isinstance(frame, TranscriptionFrame):
             message = RTVITranscriptionMessage(
                 data=RTVITranscriptionMessageData(
-                    text=frame.text,
-                    user_id=frame.user_id,
-                    timestamp=frame.timestamp,
-                    final=True))
+                    text=frame.text, user_id=frame.user_id, timestamp=frame.timestamp, final=True
+                )
+            )
         elif isinstance(frame, InterimTranscriptionFrame):
             message = RTVITranscriptionMessage(
                 data=RTVITranscriptionMessageData(
-                    text=frame.text,
-                    user_id=frame.user_id,
-                    timestamp=frame.timestamp,
-                    final=False))
+                    text=frame.text, user_id=frame.user_id, timestamp=frame.timestamp, final=False
+                )
+            )
 
         if message:
             frame = TransportMessageFrame(message=message.model_dump(exclude_none=True))
@@ -377,15 +379,17 @@ class RTVIProcessor(FrameProcessor):
 
         self._tts_text = RTVITTSTextProcessor()
 
-        pipeline = Pipeline([
-            self._tma_in,
-            self._llm_processor,
-            self._fc,
-            self._tts_processor,
-            self._tts_text,
-            self._tma_out,
-            self._transport.output_processor(),
-        ])
+        pipeline = Pipeline(
+            [
+                self._tma_in,
+                self._llm_processor,
+                self._fc,
+                self._tts_processor,
+                self._tts_text,
+                self._tma_out,
+                self._transport.output_processor(),
+            ]
+        )
 
         parent_pipeline: Pipeline = self.get_parent_pipeline()
         if parent_pipeline and self._start_frame:

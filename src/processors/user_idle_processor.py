@@ -19,11 +19,12 @@ class UserIdleProcessor(UserIdleProcessor):
     """
 
     def __init__(
-            self,
-            *,
-            callback: Callable[["UserIdleProcessor"], Awaitable[None]],
-            timeout: float,
-            **kwargs):
+        self,
+        *,
+        callback: Callable[["UserIdleProcessor"], Awaitable[None]],
+        timeout: float,
+        **kwargs,
+    ):
         super().__init__(callback=callback, timeout=timeout, **kwargs)
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):

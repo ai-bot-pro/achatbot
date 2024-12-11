@@ -12,14 +12,12 @@ app = typer.Typer()
 
 
 class YouTubeTranscriber:
-
-    def extract_transcript(self, video_id: str, languages=('en', 'zh-CN')) -> str:
+    def extract_transcript(self, video_id: str, languages=("en", "zh-CN")) -> str:
         try:
             transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=languages)
-            cleaned_transcript = " ".join([
-                entry['text'] for entry in transcript
-                if entry['text'].lower() not in ["[music]"]
-            ])
+            cleaned_transcript = " ".join(
+                [entry["text"] for entry in transcript if entry["text"].lower() not in ["[music]"]]
+            )
             return cleaned_transcript
         except Exception as e:
             logging.error(f"Error extracting YouTube transcript: {str(e)}")
@@ -29,7 +27,7 @@ class YouTubeTranscriber:
 @app.command()
 def extract_content(
     urls: List[str],
-    output_dir: str = 'videos/transcripts/',
+    output_dir: str = "videos/transcripts/",
 ) -> None:
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -43,7 +41,7 @@ def extract_content(
 
             # Save transcript to file
             output_file = os.path.join(output_dir, f"{video_id}.txt")
-            with open(output_file, 'w') as file:
+            with open(output_file, "w") as file:
                 file.write(transcript)
 
             print(f"Transcript saved to {output_file}")
@@ -54,7 +52,7 @@ def extract_content(
 
 
 @app.command()
-def instruct_content(youtube_urls: List[str], language: str = 'en') -> None:
+def instruct_content(youtube_urls: List[str], language: str = "en") -> None:
     console = Console()
     extractor = YouTubeTranscriber()
     for url in youtube_urls:
@@ -91,7 +89,7 @@ python -m demo.content_parser.youtube_transcriber_instructor instruct-content \
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s',
+        format="%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s",
         handlers=[
             # logging.FileHandler("extractor.log"),
             logging.StreamHandler()

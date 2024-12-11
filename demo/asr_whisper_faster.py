@@ -47,7 +47,8 @@ def faster_whisper_transcribe(audio_path, download_root, model_size="base", targ
             model_size,
             device="cuda",
             compute_type="float16" if info.compute_capability_major >= 7 else "float32",
-            download_root=download_root)
+            download_root=download_root,
+        )
 
         # or run on GPU with INT8
         # tested: the transcripts were different, probably worse than with FP16, and it was slightly (appx 20%) slower
@@ -57,34 +58,39 @@ def faster_whisper_transcribe(audio_path, download_root, model_size="base", targ
         # tested: works, but slow, appx 10-times than cuda FP16
         # model = WhisperModel(modelsize, device="cpu", compute_type="int8") #,
         # download_root="faster-disk-cache-dir/")
-        model = WhisperModel(model_size, device="cpu",
-                             compute_type="float32", download_root=download_root)
+        model = WhisperModel(
+            model_size, device="cpu", compute_type="float32", download_root=download_root
+        )
 
     segmentsIter, transcriptionInfo = model.transcribe(
-        audio_path, language=target_lang, beam_size=5, word_timestamps=True, condition_on_previous_text=True)
+        audio_path,
+        language=target_lang,
+        beam_size=5,
+        word_timestamps=True,
+        condition_on_previous_text=True,
+    )
     print(transcriptionInfo)
     for segment in segmentsIter:
         print(segment)
-        print("[%.2fs -> %.2fs] %s" %
-              (segment.start, segment.end, segment.text))
+        print("[%.2fs -> %.2fs] %s" % (segment.start, segment.end, segment.text))
         text.append(segment.text)
 
     return " ".join(text)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--audio_path', "-a", type=str,
-                        default="./records/tmp.wav", help='audio path')
-    parser.add_argument('--model_size_or_path', "-s", type=str,
-                        default="base", help='model size')
-    parser.add_argument('--download_path', "-m", type=str,
-                        default="./models", help='model download path')
-    parser.add_argument('--lang', "-l", type=str,
-                        default="zh", help='target language')
+    parser.add_argument(
+        "--audio_path", "-a", type=str, default="./records/tmp.wav", help="audio path"
+    )
+    parser.add_argument("--model_size_or_path", "-s", type=str, default="base", help="model size")
+    parser.add_argument(
+        "--download_path", "-m", type=str, default="./models", help="model download path"
+    )
+    parser.add_argument("--lang", "-l", type=str, default="zh", help="target language")
     args = parser.parse_args()
 
-    text = faster_whisper_transcribe(args.audio_path, args.model_path,
-                                     args.model_size, args.lang)
+    text = faster_whisper_transcribe(args.audio_path, args.model_path, args.model_size, args.lang)
     print(text)

@@ -15,6 +15,7 @@ from src.common.logger import Logger
 from src.transports.daily import DailyTransport
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 r"""
@@ -36,7 +37,7 @@ class TestDailyTranscriptionProcessor(unittest.IsolatedAsyncioTestCase):
         Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
         cls.room_url = os.getenv("DAILY_ROOM_URL", "https://weedge.daily.co/chat-bot")
         cls.room_token = os.getenv("DAILY_ROOM_TOKEN", None)
-        cls.language = os.getenv("DAILY_TRANSCRIPTION_LANG", 'en')
+        cls.language = os.getenv("DAILY_TRANSCRIPTION_LANG", "en")
 
     @classmethod
     def tearDownClass(cls):
@@ -56,7 +57,9 @@ class TestDailyTranscriptionProcessor(unittest.IsolatedAsyncioTestCase):
             )
 
         transport = DailyTransport(
-            self.room_url, self.room_token, bot_name,
+            self.room_url,
+            self.room_token,
+            bot_name,
             DailyParams(
                 audio_in_enabled=True,
                 vad_enabled=True,
@@ -70,19 +73,11 @@ class TestDailyTranscriptionProcessor(unittest.IsolatedAsyncioTestCase):
         out_processor = OutputFrameProcessor(cb=self.sink_callback)
 
         pipeline = Pipeline([transport.input_processor(), out_processor])
-        self.task = PipelineTask(
-            pipeline,
-            PipelineParams(allow_interruptions=True))
+        self.task = PipelineTask(pipeline, PipelineParams(allow_interruptions=True))
 
-        transport.add_event_handler(
-            "on_first_participant_joined",
-            self.on_first_participant_joined)
-        transport.add_event_handler(
-            "on_participant_left",
-            self.on_participant_left)
-        transport.add_event_handler(
-            "on_call_state_updated",
-            self.on_call_state_updated)
+        transport.add_event_handler("on_first_participant_joined", self.on_first_participant_joined)
+        transport.add_event_handler("on_participant_left", self.on_participant_left)
+        transport.add_event_handler("on_call_state_updated", self.on_call_state_updated)
 
     async def asyncTearDown(self):
         pass
@@ -94,7 +89,7 @@ class TestDailyTranscriptionProcessor(unittest.IsolatedAsyncioTestCase):
 
         self.texts.append(frame.text)
         if len(self.texts) == 2:  # asr 2 times (speech to text)
-            print(f"sink_callback ----> send end frame")
+            print("sink_callback ----> send end frame")
             await self.task.queue_frame(EndFrame())
             return
 

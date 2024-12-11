@@ -67,17 +67,12 @@ class DailyRTVIBot(DailyRoomBot):
                 allow_interruptions=True,
                 enable_metrics=True,
                 send_initial_empty_metrics=False,
-            ))
+            ),
+        )
 
-        transport.add_event_handler(
-            "on_first_participant_joined",
-            self.on_first_participant_joined)
-        transport.add_event_handler(
-            "on_participant_left",
-            self.on_participant_left)
-        transport.add_event_handler(
-            "on_call_state_updated",
-            self.on_call_state_updated)
+        transport.add_event_handler("on_first_participant_joined", self.on_first_participant_joined)
+        transport.add_event_handler("on_participant_left", self.on_participant_left)
+        transport.add_event_handler("on_call_state_updated", self.on_call_state_updated)
 
         await PipelineRunner().run(self.task)
 

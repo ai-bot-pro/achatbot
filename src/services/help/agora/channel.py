@@ -11,6 +11,7 @@ from src.services.help.agora.token import TokenPaser
 from agora_realtime_ai_api.token_builder.realtimekit_token_builder import RealtimekitTokenBuilder
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 
@@ -19,6 +20,7 @@ class AgoraChannel(EngineClass, IRoomManager):
     type: Rtc (base)
     no room, just use channel name as room name
     """
+
     TAG = "agora_rtc_channel"
 
     def __init__(self, **kwargs) -> None:
@@ -33,9 +35,8 @@ class AgoraChannel(EngineClass, IRoomManager):
         pass
 
     async def create_room(
-            self,
-            room_name: str | None = None,
-            exp_time_s: int = ROOM_EXPIRE_TIME) -> GeneralRoomInfo:
+        self, room_name: str | None = None, exp_time_s: int = ROOM_EXPIRE_TIME
+    ) -> GeneralRoomInfo:
         if not room_name:
             return await self.create_random_room(exp_time_s=exp_time_s)
 
@@ -44,8 +45,8 @@ class AgoraChannel(EngineClass, IRoomManager):
         )
 
     async def create_random_room(
-            self,
-            exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME) -> GeneralRoomInfo:
+        self, exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME
+    ) -> GeneralRoomInfo:
         return GeneralRoomInfo(
             name=str(uuid.uuid4()),
         )

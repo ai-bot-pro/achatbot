@@ -10,7 +10,8 @@ try:
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        f"In order to use yolo model, you need to `pip install achatbot[vision_yolo_detector]`")
+        "In order to use yolo model, you need to `pip install achatbot[vision_yolo_detector]`"
+    )
     raise Exception(f"Missing module: {e}")
 
 from src.common.device_cuda import CUDAInfo
@@ -26,6 +27,7 @@ class VisionYoloDetector(EngineClass, IVisionDetector):
     - https://docs.ultralytics.com/models/
     - https://supervision.roboflow.com/develop/how_to/detect_and_annotate/
     """
+
     TAG = "vision_yolo_detector"
 
     def __init__(self, **args) -> None:
@@ -38,9 +40,9 @@ class VisionYoloDetector(EngineClass, IVisionDetector):
             info = CUDAInfo()
             if info.is_cuda:
                 device = "cuda"
-        self._model = YOLO(self.args.model,
-                           task=self.args.task,
-                           verbose=self.args.verbose).to(device)
+        self._model = YOLO(self.args.model, task=self.args.task, verbose=self.args.verbose).to(
+            device
+        )
         if hasattr(self._model, "set_classes"):
             # for yolo-world
             if len(self.args.custom_classes) > 0:
@@ -66,8 +68,9 @@ class VisionYoloDetector(EngineClass, IVisionDetector):
 
         kwargs = {}
         if self.args.selected_classes:
-            selected_ind = [self._class_names.index(option)
-                            for option in self.args.selected_classes]
+            selected_ind = [
+                self._class_names.index(option) for option in self.args.selected_classes
+            ]
             if not isinstance(selected_ind, list):
                 selected_ind = list(selected_ind)
             kwargs["classes"] = selected_ind
@@ -77,7 +80,7 @@ class VisionYoloDetector(EngineClass, IVisionDetector):
             kwargs["iou"] = self.args.iou
         # print("kwargs--->:", kwargs)
         results = self._model.predict(
-            session.ctx.state['detect_img'],
+            session.ctx.state["detect_img"],
             stream=self.args.stream,
             **kwargs,
         )
@@ -85,13 +88,14 @@ class VisionYoloDetector(EngineClass, IVisionDetector):
         for item in results:
             detections = sv.Detections.from_ultralytics(item)
             cf_dict = {}
-            for name in detections.data['class_name']:
+            for name in detections.data["class_name"]:
                 cf_dict[name] = {"d_cn": 0, "d_cf": []}
             for t in zip(
-                    detections.xyxy,
-                    detections.confidence,
-                    detections.class_id,
-                    detections.data['class_name']):
+                detections.xyxy,
+                detections.confidence,
+                detections.class_id,
+                detections.data["class_name"],
+            ):
                 cf_dict[t[3]]["d_cn"] += 1
                 cf_dict[t[3]]["d_cf"].append(t[1])
 
@@ -99,8 +103,10 @@ class VisionYoloDetector(EngineClass, IVisionDetector):
             for item in self.args.custom_confidences:  # order to check
                 if item.class_name in cf_dict:
                     op = item.boolean_op.lower()
-                    is_detected = max(cf_dict[item.class_name]["d_cf"]) > item.d_confidence \
+                    is_detected = (
+                        max(cf_dict[item.class_name]["d_cf"]) > item.d_confidence
                         and cf_dict[item.class_name]["d_cn"] >= item.d_min_cn
+                    )
                     logging.debug(f"item:{item}, cf_dict:{cf_dict}, is_detcted:{is_detected}")
                     if op == "or":
                         eval_str = f"{eval_str} or {is_detected}"
@@ -125,7 +131,7 @@ class VisionYoloDetector(EngineClass, IVisionDetector):
             yield None
             return
 
-        img = session.ctx.state['detect_img']
+        img = session.ctx.state["detect_img"]
         results = self._model(img, stream=self.args.stream)
         for item in results:
             detections = sv.Detections.from_ultralytics(item)
@@ -144,14 +150,13 @@ class VisionYoloDetector(EngineClass, IVisionDetector):
             label_annotator = sv.LabelAnnotator(text_position=sv.Position.TOP_LEFT)
             labels = [
                 f"{class_name} {confidence:.2f}"
-                for class_name, confidence
-                in zip(detections['class_name'], detections.confidence)
+                for class_name, confidence in zip(detections["class_name"], detections.confidence)
             ]
 
-            annotated_img = annotator.annotate(
-                scene=img, detections=detections)
+            annotated_img = annotator.annotate(scene=img, detections=detections)
             annotated_img = label_annotator.annotate(
-                scene=annotated_img, detections=detections, labels=labels)
+                scene=annotated_img, detections=detections, labels=labels
+            )
             if isinstance(annotated_img, np.ndarray):
                 annotated_img = Image.fromarray(annotated_img)
 

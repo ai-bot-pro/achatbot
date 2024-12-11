@@ -6,7 +6,7 @@ from .types import LOG_DIR
 
 def getDefaultFormatter():
     # set log formatter
-    log_format = '%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s'
+    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s"
     formatter = logging.Formatter(log_format)
     return formatter
 
@@ -42,22 +42,24 @@ def addLoggingLevel(levelName, levelNum, methodName=None):
 addLoggingLevel("TRACE", logging.DEBUG - 5)
 
 
-class Logger():
+class Logger:
     """
     set root or app logger at once
     """
+
     inited = False
     logger = None
 
     @staticmethod
     def init(
-            level: int | str = logging.INFO,
-            app_name="chat-bot",
-            log_dir=LOG_DIR,
-            is_file=True,
-            is_console=True,
-            is_root_logger=True,
-            is_re_init=False):
+        level: int | str = logging.INFO,
+        app_name="chat-bot",
+        log_dir=LOG_DIR,
+        is_file=True,
+        is_console=True,
+        is_root_logger=True,
+        is_re_init=False,
+    ):
         if Logger.inited and is_re_init is False and Logger.logger is not None:
             return Logger.logger
         os.makedirs(log_dir, exist_ok=True)

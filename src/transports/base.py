@@ -7,10 +7,12 @@ from src.common.event import EventHandlerManager
 
 
 class BaseTransport(EventHandlerManager, ABC):
-    def __init__(self,
-                 input_name: str | None = None,
-                 output_name: str | None = None,
-                 loop: asyncio.AbstractEventLoop | None = None):
+    def __init__(
+        self,
+        input_name: str | None = None,
+        output_name: str | None = None,
+        loop: asyncio.AbstractEventLoop | None = None,
+    ):
         super().__init__()
         self._input_name = input_name
         self._output_name = output_name

@@ -64,11 +64,13 @@ class DailyAsrRTVIBot(DailyRoomBot):
         )
 
         self.task = PipelineTask(
-            Pipeline([
-                transport.input_processor(),
-                asr_processor,
-                rtai,
-            ]),
+            Pipeline(
+                [
+                    transport.input_processor(),
+                    asr_processor,
+                    rtai,
+                ]
+            ),
             params=PipelineParams(
                 allow_interruptions=True,
                 enable_metrics=True,
@@ -76,15 +78,9 @@ class DailyAsrRTVIBot(DailyRoomBot):
             ),
         )
 
-        transport.add_event_handler(
-            "on_first_participant_joined",
-            self.on_first_participant_joined)
-        transport.add_event_handler(
-            "on_participant_left",
-            self.on_participant_left)
-        transport.add_event_handler(
-            "on_call_state_updated",
-            self.on_call_state_updated)
+        transport.add_event_handler("on_first_participant_joined", self.on_first_participant_joined)
+        transport.add_event_handler("on_participant_left", self.on_participant_left)
+        transport.add_event_handler("on_call_state_updated", self.on_call_state_updated)
 
         await PipelineRunner().run(self.task)
 

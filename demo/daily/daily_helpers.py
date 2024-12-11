@@ -1,4 +1,3 @@
-
 import urllib.parse
 import os
 import time
@@ -6,6 +5,7 @@ import urllib
 import requests
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 
@@ -31,11 +31,9 @@ def create_room(name: str | None = None) -> tuple[str, str]:
         "eject_at_room_exp": True,
         "enable_prejoin_ui": False,  # Important for the bot to be able to join headlessly
     }
-    json_data = {
-        "properties": room_props
-    }
+    json_data = {"properties": room_props}
     if name is not None:
-        json_data["name"] = name    
+        json_data["name"] = name
     res = requests.post(
         f"https://{daily_api_path}/rooms",
         headers={"Authorization": f"Bearer {daily_api_key}"},
@@ -83,29 +81,31 @@ def get_token(room_url: str) -> str:
     """
     if not room_url:
         raise Exception(
-            "No Daily room specified. You must specify a Daily room in order a token to be generated.")
+            "No Daily room specified. You must specify a Daily room in order a token to be generated."
+        )
 
     if not daily_api_key:
         raise Exception(
-            "No Daily API key specified. set DAILY_API_KEY in your environment to specify a Daily API key, available from https://dashboard.daily.co/developers.")
+            "No Daily API key specified. set DAILY_API_KEY in your environment to specify a Daily API key, available from https://dashboard.daily.co/developers."
+        )
 
     expiration: float = time.time() + 60 * 60
     room_name = get_name_from_url(room_url)
 
     res: requests.Response = requests.post(
         f"https://{daily_api_path}/meeting-tokens",
-        headers={
-            "Authorization": f"Bearer {daily_api_key}"},
+        headers={"Authorization": f"Bearer {daily_api_key}"},
         json={
             "properties": {
                 "room_name": room_name,
                 "is_owner": True,  # Owner tokens required for transcription
-                "exp": expiration}},
+                "exp": expiration,
+            }
+        },
     )
 
     if res.status_code != 200:
-        raise Exception(
-            f"Failed to create meeting token: {res.status_code} {res.text}")
+        raise Exception(f"Failed to create meeting token: {res.status_code} {res.text}")
 
     token: str = res.json()["token"]
 

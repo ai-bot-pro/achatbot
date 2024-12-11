@@ -3,10 +3,7 @@ import logging
 import queue
 import sys
 
-from daily import (
-    CallClient,
-    Daily
-)
+from daily import CallClient, Daily
 
 from src.common.interface import IAudioStream
 from src.common.factory import EngineClass
@@ -14,7 +11,7 @@ from src.common.types import DailyAudioStreamArgs
 from src.types.speech.audio_stream import AudioStreamInfo
 
 
-class JoinedClients():
+class JoinedClients:
     room_joined_clients = {}
 
     @staticmethod
@@ -44,8 +41,9 @@ class JoinedClients():
 
     @staticmethod
     def remove_room_client(url, name):
-        if JoinedClients.room_joined_clients.get(url) and \
-                JoinedClients.room_joined_clients.get(url).get(name):
+        if JoinedClients.room_joined_clients.get(url) and JoinedClients.room_joined_clients.get(
+            url
+        ).get(name):
             JoinedClients.room_joined_clients[url].pop(name)
 
 
@@ -53,6 +51,7 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
     """
     !NOTE: need create daily room
     """
+
     TAG = [
         "daily_room_audio_stream",
         "daily_room_audio_in_stream",
@@ -99,13 +98,15 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
 
     def _join(self):
         logging.info(f"{self.args.bot_name} joining")
-        self._client.update_subscription_profiles({
-            "base": {
-                "screenVideo": "unsubscribed",
-                "camera": "unsubscribed",
-                "microphone": "subscribed"
+        self._client.update_subscription_profiles(
+            {
+                "base": {
+                    "screenVideo": "unsubscribed",
+                    "camera": "unsubscribed",
+                    "microphone": "subscribed",
+                }
             }
-        })
+        )
         self._client.set_user_name(self.args.bot_name)
         self._client.join(
             self.args.meeting_room_url,
@@ -115,10 +116,8 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
                     "camera": False,
                     "microphone": {
                         "isEnabled": self.args.output,
-                        "settings": {
-                            "deviceId": "my-mic"
-                        }
-                    }
+                        "settings": {"deviceId": "my-mic"},
+                    },
                 }
             },
             completion=self.on_joined,
@@ -131,20 +130,18 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
             self._app_error = error
         else:
             JoinedClients.add_room_client(
-                self.args.meeting_room_url,
-                self.args.bot_name,
-                self._client
+                self.args.meeting_room_url, self.args.bot_name, self._client
             )
             logging.info(f"join ok, joined meeting data: {data}")
 
         self._join_event.set()
 
     def open_stream(self):
-        client = JoinedClients.get_room_client(
-            self.args.meeting_room_url, self.args.bot_name)
+        client = JoinedClients.get_room_client(self.args.meeting_room_url, self.args.bot_name)
         if client is not None:
             logging.info(
-                f"{self.args.meeting_room_url} {self.args.bot_name} get joined client {client}")
+                f"{self.args.meeting_room_url} {self.args.bot_name} get joined client {client}"
+            )
             self._client = client
             self._join_event.set()
             return
@@ -157,7 +154,7 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
     def start_stream(self):
         self._join_event.wait()
         if self._app_error:
-            logging.error(f"Unable to receive audio!")
+            logging.error("Unable to receive audio!")
             return
         self._stream_quit = False
         if self.args.input and self._in_thread is None:
@@ -175,26 +172,22 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
         if self._in_thread and self._in_thread.is_alive():
             self._in_thread.join()
             self._in_thread = None
-            logging.info(f"in thread stoped")
+            logging.info("in thread stoped")
         if self._out_thread and self._out_thread.is_alive():
             self._out_thread.join()
             self._out_thread = None
-            logging.info(f"out thread stoped")
+            logging.info("out thread stoped")
 
     def close_stream(self):
-        client = JoinedClients.get_room_client(
-            self.args.meeting_room_url, self.args.bot_name)
+        client = JoinedClients.get_room_client(self.args.meeting_room_url, self.args.bot_name)
         if client is None:
-            logging.info(f"client leave, stream already closed")
+            logging.info("client leave, stream already closed")
             return
         self.stop_stream()
         self._join_event.clear()
         self._client.leave()
-        JoinedClients.remove_room_client(
-            self.args.meeting_room_url,
-            self.args.bot_name
-        )
-        logging.info(f"stream closed")
+        JoinedClients.remove_room_client(self.args.meeting_room_url, self.args.bot_name)
+        logging.info("stream closed")
 
     def is_stream_active(self) -> bool:
         if self._join_event.is_set() is False:
@@ -212,37 +205,34 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
 
     def close(self) -> None:
         if DailyRoomAudioStream.is_client_released:
-            logging.info(f"client already released")
+            logging.info("client already released")
             return
 
         self.close_stream()
         self._client.release()
         DailyRoomAudioStream.is_client_released = True
-        logging.info(f"client released")
+        logging.info("client released")
 
     def _receive_audio(self):
         self._join_event.wait()
 
         if self._app_error:
-            logging.error(f"Unable to receive audio!")
+            logging.error("Unable to receive audio!")
             return
-        logging.info(f"start run receive audio!")
+        logging.info("start run receive audio!")
 
         while not self._stream_quit:
             buffer = self._speaker_device.read_frames(self.args.frames_per_buffer)
             if len(buffer) > 0:
                 if self.args.stream_callback:
-                    self.args.stream_callback(
-                        buffer,
-                        self.args.frames_per_buffer
-                    )
+                    self.args.stream_callback(buffer, self.args.frames_per_buffer)
                     continue
                 if self.args.input:  # put to queue
                     self._in_queue.put(buffer)
                 else:  # write to stdout pipe stream
                     sys.stdout.buffer.write(buffer)
 
-        logging.info(f"stop run receive audio!")
+        logging.info("stop run receive audio!")
 
     def get_stream_info(self) -> AudioStreamInfo:
         return AudioStreamInfo(
@@ -261,9 +251,7 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
         if self.args.stream_callback:
             return b""
         if self.args.input and self._in_queue:
-            num_read_bytes = num_frames * \
-                self.args.in_channels * \
-                self.args.in_sample_width
+            num_read_bytes = num_frames * self.args.in_channels * self.args.in_sample_width
             while len(self._read_bytes) < num_read_bytes:
                 read_bytes = self._in_queue.get(block=True)
                 self._read_bytes.extend(read_bytes)
@@ -287,23 +275,22 @@ class DailyRoomAudioStream(EngineClass, IAudioStream):
         self._join_event.wait()
 
         if self._app_error:
-            logging.error(f"Unable to send audio!")
+            logging.error("Unable to send audio!")
             return
-        logging.info(f"start run send audio!")
+        logging.info("start run send audio!")
 
         while not self._stream_quit:
             if self.args.output:  # from queue which write_stream put buffer
                 try:
-                    buffer = self._out_queue.get(block=True,
-                                                 timeout=self.args.out_queue_timeout_s)
+                    buffer = self._out_queue.get(block=True, timeout=self.args.out_queue_timeout_s)
                 except queue.Empty:
                     logging.debug(
-                        f"tts_synthesize's consumption queue is empty after block {self.args.out_queue_timeout_s}s")
+                        f"tts_synthesize's consumption queue is empty after block {self.args.out_queue_timeout_s}s"
+                    )
                     continue
             else:  # from stdin pipe stream
-                num_bytes = self.args.frames_per_buffer * \
-                    self.args.out_channels * 2
+                num_bytes = self.args.frames_per_buffer * self.args.out_channels * 2
                 buffer = sys.stdin.buffer.read(num_bytes)
             buffer and self._mic_device.write_frames(buffer)
 
-        logging.info(f"stop run send audio!")
+        logging.info("stop run send audio!")

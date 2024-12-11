@@ -14,15 +14,11 @@ from livekit import api, rtc, protocol
 async def main(room: rtc.Room) -> None:
     @room.on("participant_connected")
     def on_participant_connected(participant: rtc.RemoteParticipant) -> None:
-        logging.info(
-            "participant connected: %s %s", participant.sid, participant.identity
-        )
+        logging.info("participant connected: %s %s", participant.sid, participant.identity)
 
     @room.on("participant_disconnected")
     def on_participant_disconnected(participant: rtc.RemoteParticipant):
-        logging.info(
-            "participant disconnected: %s %s", participant.sid, participant.identity
-        )
+        logging.info("participant disconnected: %s %s", participant.sid, participant.identity)
 
     @room.on("local_track_published")
     def on_local_track_published(
@@ -81,9 +77,7 @@ async def main(room: rtc.Room) -> None:
         logging.info("track unsubscribed: %s", publication.sid)
 
     @room.on("track_muted")
-    def on_track_muted(
-        publication: rtc.RemoteTrackPublication, participant: rtc.RemoteParticipant
-    ):
+    def on_track_muted(publication: rtc.RemoteTrackPublication, participant: rtc.RemoteParticipant):
         logging.info("track muted: %s", publication.sid)
 
     @room.on("track_unmuted")
@@ -97,9 +91,7 @@ async def main(room: rtc.Room) -> None:
         logging.info("received data from %s: %s", data.participant.identity, data.data)
 
     @room.on("connection_quality_changed")
-    def on_connection_quality_changed(
-        participant: rtc.Participant, quality: rtc.ConnectionQuality
-    ):
+    def on_connection_quality_changed(participant: rtc.Participant, quality: rtc.ConnectionQuality):
         logging.info("connection quality changed for %s", participant.identity)
 
     @room.on("track_subscription_failed")
@@ -133,12 +125,7 @@ async def main(room: rtc.Room) -> None:
         api.AccessToken()
         .with_identity("python-bot")
         .with_name("Python Bot")
-        .with_grants(
-            api.VideoGrants(
-                room_join=True,
-                room=os.getenv("ROOM_NAME", "chat-room")
-            )
-        )
+        .with_grants(api.VideoGrants(room_join=True, room=os.getenv("ROOM_NAME", "chat-room")))
         .with_ttl(datetime.timedelta(hours=1))
         .to_jwt()
     )
@@ -150,7 +137,9 @@ async def main(room: rtc.Room) -> None:
     logging.info("participants: %s", room.remote_participants)
 
     # pub data
-    await room.local_participant.publish_data("hello world", destination_identities=[p.sid for p in room.remote_participants.values()])
+    await room.local_participant.publish_data(
+        "hello world", destination_identities=[p.sid for p in room.remote_participants.values()]
+    )
 
     # chat
     chat = rtc.ChatManager(room)
@@ -159,6 +148,7 @@ async def main(room: rtc.Room) -> None:
     @chat.on("message_received")
     def on_message_received(msg: rtc.ChatMessage):
         print(f"message received: {msg.participant.identity}: {msg.message}")
+
     # send msg
     await chat.send_message("hello world msg")
 
@@ -170,12 +160,13 @@ async def main(room: rtc.Room) -> None:
 
     logging.info(f"room isconnected:{room.isconnected()}")
 
+
 if __name__ == "__main__":
     # golang style
 
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s',
+        format="%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s",
         handlers=[
             # logging.FileHandler("room_rtc_events.log"),
             logging.StreamHandler()

@@ -4,7 +4,12 @@ from concurrent.futures import ThreadPoolExecutor
 
 from apipeline.frames.base import Frame
 from apipeline.frames.control_frames import StartFrame
-from apipeline.frames.sys_frames import StartInterruptionFrame, StopInterruptionFrame, SystemFrame, CancelFrame
+from apipeline.frames.sys_frames import (
+    StartInterruptionFrame,
+    StopInterruptionFrame,
+    SystemFrame,
+    CancelFrame,
+)
 from apipeline.frames.data_frames import AudioRawFrame
 from apipeline.processors.frame_processor import FrameDirection
 from apipeline.processors.input_processor import InputProcessor
@@ -17,11 +22,12 @@ from src.types.frames.sys_frames import BotInterruptionFrame
 
 class AudioVADInputProcessor(InputProcessor):
     def __init__(
-            self,
-            params: AudioVADParams,
-            name: str | None = None,
-            loop: asyncio.AbstractEventLoop | None = None,
-            **kwargs):
+        self,
+        params: AudioVADParams,
+        name: str | None = None,
+        loop: asyncio.AbstractEventLoop | None = None,
+        **kwargs,
+    ):
         super().__init__(name=name, loop=loop, **kwargs)
         self._params = params
         self._executor = ThreadPoolExecutor(max_workers=3)
@@ -102,12 +108,17 @@ class AudioVADInputProcessor(InputProcessor):
         state = VADState.QUIET
         if self.vad_analyzer:
             state = await self.get_event_loop().run_in_executor(
-                self._executor, self.vad_analyzer.analyze_audio, audio_frames)
+                self._executor, self.vad_analyzer.analyze_audio, audio_frames
+            )
         return state
 
     async def _handle_vad(self, audio_frames: bytes, vad_state: VADState):
         new_vad_state = await self._vad_analyze(audio_frames)
-        if new_vad_state != vad_state and new_vad_state != VADState.STARTING and new_vad_state != VADState.STOPPING:
+        if (
+            new_vad_state != vad_state
+            and new_vad_state != VADState.STARTING
+            and new_vad_state != VADState.STOPPING
+        ):
             frame = None
             if new_vad_state == VADState.SPEAKING:
                 frame = UserStartedSpeakingFrame()
@@ -152,6 +163,7 @@ class AudioVADInputProcessor(InputProcessor):
 
         if push_frame:
             await self.queue_frame(frame)
+
     #
     # Process frame
     #

@@ -9,7 +9,6 @@ from src.types.frames.data_frames import Frame, TextFrame
 
 
 class ImageGenProcessor(AIProcessor):
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._aiohttp_session = None

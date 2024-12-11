@@ -11,12 +11,13 @@ try:
         ChatCompletionChunk,
         ChatCompletionFunctionMessageParam,
         ChatCompletionMessageParam,
-        ChatCompletionToolParam
+        ChatCompletionToolParam,
     )
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        "In order to use OpenAI, you need to `pip install achatbot[openai_llm_processor]`. Also, set `OPENAI_API_KEY` environment variable.")
+        "In order to use OpenAI, you need to `pip install achatbot[openai_llm_processor]`. Also, set `OPENAI_API_KEY` environment variable."
+    )
     raise Exception(f"Missing module: {e}")
 import httpx
 from apipeline.frames.data_frames import TextFrame, Frame
@@ -24,7 +25,11 @@ from apipeline.pipeline.pipeline import FrameDirection
 
 from src.processors.aggregators.openai_llm_context import OpenAILLMContext, OpenAILLMContextFrame
 from src.processors.llm.base import LLMProcessor, UnhandledFunctionException
-from src.types.frames.control_frames import LLMFullResponseEndFrame, LLMFullResponseStartFrame, LLMModelUpdateFrame
+from src.types.frames.control_frames import (
+    LLMFullResponseEndFrame,
+    LLMFullResponseStartFrame,
+    LLMModelUpdateFrame,
+)
 from src.types.frames.data_frames import LLMMessagesFrame, VisionImageRawFrame
 
 
@@ -38,13 +43,7 @@ class BaseOpenAILLMProcessor(LLMProcessor):
     calls from the LLM.
     """
 
-    def __init__(
-            self,
-            *,
-            model: str,
-            api_key="",
-            base_url="",
-            **kwargs):
+    def __init__(self, *, model: str, api_key="", base_url="", **kwargs):
         super().__init__(**kwargs)
         # api_key = os.environ.get("OPENAI_API_KEY", api_key)
         self._model: str = model
@@ -57,16 +56,12 @@ class BaseOpenAILLMProcessor(LLMProcessor):
                     max_connections=1000,
                     keepalive_expiry=None,
                 )
-            )
+            ),
         )
 
     async def call_function(
-            self,
-            *,
-            context: OpenAILLMContext,
-            tool_call_id: str,
-            function_name: str,
-            arguments: dict) -> None:
+        self, *, context: OpenAILLMContext, tool_call_id: str, function_name: str, arguments: dict
+    ) -> None:
         f = None
         if function_name in self._callbacks.keys():
             f = self._callbacks[function_name]
@@ -75,11 +70,8 @@ class BaseOpenAILLMProcessor(LLMProcessor):
         else:
             return None
         await context.call_function(
-            f,
-            function_name=function_name,
-            tool_call_id=tool_call_id,
-            arguments=arguments,
-            llm=self)
+            f, function_name=function_name, tool_call_id=tool_call_id, arguments=arguments, llm=self
+        )
 
     # QUESTION FOR CB: maybe this isn't needed anymore?
     async def call_start_function(self, context: OpenAILLMContext, function_name: str):
@@ -89,9 +81,8 @@ class BaseOpenAILLMProcessor(LLMProcessor):
             return await self._start_callbacks[None](function_name, self, context)
 
     async def get_chat_completions(
-            self,
-            context: OpenAILLMContext,
-            messages: List[ChatCompletionMessageParam]) -> AsyncStream[ChatCompletionChunk]:
+        self, context: OpenAILLMContext, messages: List[ChatCompletionMessageParam]
+    ) -> AsyncStream[ChatCompletionChunk]:
         chunks = await self._client.chat.completions.create(
             model=self._model,
             stream=True,
@@ -104,7 +95,8 @@ class BaseOpenAILLMProcessor(LLMProcessor):
         return chunks
 
     async def _stream_chat_completions(
-            self, context: OpenAILLMContext) -> AsyncStream[ChatCompletionChunk]:
+        self, context: OpenAILLMContext
+    ) -> AsyncStream[ChatCompletionChunk]:
         logging.info(f"Generating chat context messages: {context.get_messages_json()}")
 
         messages: List[ChatCompletionMessageParam] = context.get_messages()
@@ -116,7 +108,10 @@ class BaseOpenAILLMProcessor(LLMProcessor):
                 text = message["content"]
                 message["content"] = [
                     {"type": "text", "text": text},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"}}
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"},
+                    },
                 ]
                 del message["data"]
                 del message["mime_type"]
@@ -143,8 +138,8 @@ class BaseOpenAILLMProcessor(LLMProcessor):
 
         await self.start_ttfb_metrics()
 
-        chunk_stream: AsyncStream[ChatCompletionChunk] = (
-            await self._stream_chat_completions(context)
+        chunk_stream: AsyncStream[ChatCompletionChunk] = await self._stream_chat_completions(
+            context
         )
 
         async for chunk in chunk_stream:
@@ -187,14 +182,11 @@ class BaseOpenAILLMProcessor(LLMProcessor):
                 await self._handle_function_call(context, tool_call_id, function_name, arguments)
             else:
                 raise UnhandledFunctionException(
-                    f"The LLM tried to call a function named '{function_name}', but there isn't a callback registered for that function.")
+                    f"The LLM tried to call a function named '{function_name}', but there isn't a callback registered for that function."
+                )
 
     async def _handle_function_call(
-            self,
-            context: OpenAILLMContext,
-            tool_call_id: str,
-            function_name: str,
-            arguments: str
+        self, context: OpenAILLMContext, tool_call_id: str, function_name: str, arguments: str
     ):
         arguments = json.loads(arguments)
         await self.call_function(
@@ -232,6 +224,7 @@ class OpenAILLMProcessor(BaseOpenAILLMProcessor):
     """
     use OpenAI's client lib
     """
+
     TAG = "openai_llm_processor"
 
     def __init__(self, model: str = "gpt-4o", **kwargs):
@@ -243,6 +236,7 @@ class OpenAIGroqLLMProcessor(BaseOpenAILLMProcessor):
     Groq API to be mostly compatible with OpenAI's client lib
     detail see: https://console.groq.com/docs/openai
     """
+
     TAG = "openai_groq_llm_processor"
 
     def __init__(self, model: str = "llama-3.2-11b-text-preview", **kwargs):

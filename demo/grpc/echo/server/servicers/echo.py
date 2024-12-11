@@ -10,13 +10,13 @@ from demo.grpc.idl.echo_pb2 import EchoRequest, EchoResponse
 
 class Echo(EchoServicer):
     def EchoUU(self, request: EchoRequest, context: grpc.ServicerContext) -> EchoResponse:
-        return EchoResponse(echo='Hello %s!' % request.name)
+        return EchoResponse(echo="Hello %s!" % request.name)
 
     def EchoSU(self, request_iterator, context: grpc.ServicerContext):
         names = []
         for request in request_iterator:
             names.append(request.name)
-        return EchoResponse(echo='Hello %s!' % ', '.join(names))
+        return EchoResponse(echo="Hello %s!" % ", ".join(names))
 
     def EchoUS(self, request, context: grpc.ServicerContext):
         yield EchoResponse(echo=f"stream response: {request.name}!")
@@ -28,7 +28,13 @@ class Echo(EchoServicer):
             for request in request_iterator:
                 q.put(request.name)
 
-        in_thread = threading.Thread(target=in_yield, args=(request_iterator, q,))
+        in_thread = threading.Thread(
+            target=in_yield,
+            args=(
+                request_iterator,
+                q,
+            ),
+        )
         in_thread.start()
 
         cn = 1

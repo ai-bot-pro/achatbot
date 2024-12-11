@@ -2,6 +2,7 @@
 this is pytube monkey fix, just adapter youtube js change
 [!TIPS]: u can chat with chatGPT to fix it, use js code and bug info
 """
+
 import logging
 import re
 from typing import List
@@ -33,9 +34,8 @@ def get_throttling_function_name(js: str) -> str:
     function_patterns = [
         r'a\.[a-zA-Z]\s*&&\s*\([a-z]\s*=\s*a\.get\("n"\)\)\s*&&.*?\|\|\s*([a-z]+)',
         r'a\.[a-zA-Z]\s*&&\s*\([a-z]\s*=\s*a\.get\("n"\)\)\s*&&\s*'
-        r'\([a-z]\s*=\s*([a-zA-Z0-9$]+)(\[\d+\])?\([a-z]\)',
-        r'\([a-z]\s*=\s*([a-zA-Z0-9$]+)(\[\d+\])\([a-z]\)',
-
+        r"\([a-z]\s*=\s*([a-zA-Z0-9$]+)(\[\d+\])?\([a-z]\)",
+        r"\([a-z]\s*=\s*([a-zA-Z0-9$]+)(\[\d+\])\([a-z]\)",
     ]
     # logging.debug('Finding throttling function name')
     for pattern in function_patterns:
@@ -49,18 +49,17 @@ def get_throttling_function_name(js: str) -> str:
             if idx:
                 idx = idx.strip("[]")
                 array = re.search(
-                    r'var {nfunc}\s*=\s*(\[.+?\]);'.format(
-                        nfunc=re.escape(function_match.group(1))),
-                    js
+                    r"var {nfunc}\s*=\s*(\[.+?\]);".format(
+                        nfunc=re.escape(function_match.group(1))
+                    ),
+                    js,
                 )
                 if array:
                     array = array.group(1).strip("[]").split(",")
                     array = [x.strip() for x in array]
                     return array[int(idx)]
 
-    raise RegexMatchError(
-        caller="get_throttling_function_name", pattern="multiple"
-    )
+    raise RegexMatchError(caller="get_throttling_function_name", pattern="multiple")
 
 
 cipher.get_throttling_function_name = get_throttling_function_name
@@ -89,7 +88,9 @@ def get_transform_plan(js: str) -> List[str]:
     """
     name = re.escape(cipher.get_initial_function_name(js))
     # pattern = r"%s=function\(\w\){[a-z=\.\(\"\)]*;(.*);(?:.+)}" % name
-    pattern = r"%s=function\(\w\){[a-z=\.\(\"\)]*;((\w+\.\w+\([\w\"\'\[\]\(\)\.\,\s]*\);)+)(?:.+)}" % name
+    pattern = (
+        r"%s=function\(\w\){[a-z=\.\(\"\)]*;((\w+\.\w+\([\w\"\'\[\]\(\)\.\,\s]*\);)+)(?:.+)}" % name
+    )
     logging.debug("getting transform plan")
     return cipher.regex_search(pattern, js, group=1).split(";")
 

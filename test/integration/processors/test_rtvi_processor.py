@@ -23,11 +23,17 @@ from src.processors.aggregators.openai_llm_context import (
 )
 from src.common.logger import Logger
 from src.types.frames.data_frames import TranscriptionFrame
-from src.types.frames.control_frames import LLMFullResponseEndFrame, LLMFullResponseStartFrame, UserStartedSpeakingFrame, UserStoppedSpeakingFrame
+from src.types.frames.control_frames import (
+    LLMFullResponseEndFrame,
+    LLMFullResponseStartFrame,
+    UserStartedSpeakingFrame,
+    UserStoppedSpeakingFrame,
+)
 from src.common.utils.time import time_now_iso8601
 from apipeline.processors.logger import FrameLogger
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 """
@@ -61,7 +67,6 @@ class MockProcessor(FrameProcessor):
 
 
 class TestRTVIProcessor(unittest.IsolatedAsyncioTestCase):
-
     @classmethod
     def setUpClass(cls):
         Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
@@ -88,45 +93,46 @@ class TestRTVIProcessor(unittest.IsolatedAsyncioTestCase):
         tts = TTSEnvInit.initTTSEngine()
         tts_processor = TTSProcessor(tts=tts, session=self.session)
 
-        pipeline = Pipeline([
-            FrameLogger(),
-            RTVIProcessor(),
-            FrameLogger(),
-            # accumulate TranscriptionFrame,InterimTranscriptionFrame
-            # UserStartedSpeakingFrame, UserStoppedSpeakingFrame,
-            llm_user_ctx_aggr,
-            FrameLogger(),
-            llm_processor,  # OpenAILLMContextFrame, LLMMessagesFrame
-            FrameLogger(),
-            self.mock_processor,  # TextFrame
-            FrameLogger(),
-            # TextFrame match_endofsentence to say
-            tts_processor,
-            FrameLogger(),
-            # accumulate TextFrame
-            # LLMFullResponseStartFrame, LLMFullResponseEndFrame
-            # FunctionCallInProgressFrame, FunctionCallResultFrame,
-            # to check run llm again with llm_user_ctx_aggr
-            llm_assistant_ctx_aggr,
-            FrameLogger(),
-        ])
-
-        self.task = PipelineTask(
-            pipeline,
-            PipelineParams()
+        pipeline = Pipeline(
+            [
+                FrameLogger(),
+                RTVIProcessor(),
+                FrameLogger(),
+                # accumulate TranscriptionFrame,InterimTranscriptionFrame
+                # UserStartedSpeakingFrame, UserStoppedSpeakingFrame,
+                llm_user_ctx_aggr,
+                FrameLogger(),
+                llm_processor,  # OpenAILLMContextFrame, LLMMessagesFrame
+                FrameLogger(),
+                self.mock_processor,  # TextFrame
+                FrameLogger(),
+                # TextFrame match_endofsentence to say
+                tts_processor,
+                FrameLogger(),
+                # accumulate TextFrame
+                # LLMFullResponseStartFrame, LLMFullResponseEndFrame
+                # FunctionCallInProgressFrame, FunctionCallResultFrame,
+                # to check run llm again with llm_user_ctx_aggr
+                llm_assistant_ctx_aggr,
+                FrameLogger(),
+            ]
         )
+
+        self.task = PipelineTask(pipeline, PipelineParams())
 
     async def asyncTearDown(self):
         pass
 
     async def test_run(self):
         runner = PipelineRunner()
-        await self.task.queue_frames([
-            UserStartedSpeakingFrame(),
-            TranscriptionFrame("你好", "", time_now_iso8601(), "zh"),
-            UserStoppedSpeakingFrame(),
-            # StopTaskFrame(),
-        ])
+        await self.task.queue_frames(
+            [
+                UserStartedSpeakingFrame(),
+                TranscriptionFrame("你好", "", time_now_iso8601(), "zh"),
+                UserStoppedSpeakingFrame(),
+                # StopTaskFrame(),
+            ]
+        )
         await runner.run(self.task)
 
         logging.info(f"answer: {self.mock_processor.answer}")

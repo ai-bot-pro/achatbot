@@ -9,7 +9,7 @@ from demo.grpc.interceptors.authentication_client import add_authentication
 
 
 def echo_uu(channel):
-    print('What is your name?')
+    print("What is your name?")
     name = input()
     echo_stub = EchoStub(channel)
     request_data = EchoRequest(name=name)
@@ -19,12 +19,7 @@ def echo_uu(channel):
 
 def echo_su(channel):
     echo_stub = EchoStub(channel)
-    request_iterator = iter(
-        [
-            EchoRequest(name="xiaohei"),
-            EchoRequest(name="xiaowu")
-        ]
-    )
+    request_iterator = iter([EchoRequest(name="xiaohei"), EchoRequest(name="xiaowu")])
     response = echo_stub.EchoSU(request_iterator)
     print(response.echo)
 
@@ -59,8 +54,8 @@ if __name__ == "__main__":
     try:
         # todo: up to the rpc gateway to auth
         token = "oligei"
-        authentication = add_authentication('authorization', token)
-        channel = grpc.insecure_channel('localhost:50051')
+        authentication = add_authentication("authorization", token)
+        channel = grpc.insecure_channel("localhost:50051")
         channel = grpc.intercept_channel(channel, authentication)
         for op in [echo_uu, echo_su, echo_us, echo_ss]:
             print(f"--{op}--")

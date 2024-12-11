@@ -42,6 +42,7 @@ tts --model_path models/coqui/XTTS-v2 --config_path models/coqui/XTTS-v2/config.
 
 🐸🐸🐸🐸🐸🐸🐸🐸🐸🐸🐸🐸🐸🐸🐸🐸🐸🐸🐸🐸🐸🐸🐸🐸🐸🐸🐸🐸🐸🐸
 """
+
 import os
 import time
 import torch
@@ -64,22 +65,35 @@ def list_models():
 
 def xtts_speaker(model_name, model_path, conf_file, reference_audio_path="records/tmp.wav"):
     # Init TTS
-    tts = TTS(model_name=model_name, model_path=model_path,
-              config_path=conf_file).to(device)
+    tts = TTS(model_name=model_name, model_path=model_path, config_path=conf_file).to(device)
 
     # Run TTS
-    tts.tts_to_file(text="Hello world!", language="en", speaker="Ana Florence",
-                    file_path="records/tts_coqui_en.wav")
-    tts.tts_to_file(text="你好!", language="zh", speaker="Claribel Dervla",
-                    file_path="records/tts_coqui_zh.wav")
+    tts.tts_to_file(
+        text="Hello world!",
+        language="en",
+        speaker="Ana Florence",
+        file_path="records/tts_coqui_en.wav",
+    )
+    tts.tts_to_file(
+        text="你好!", language="zh", speaker="Claribel Dervla", file_path="records/tts_coqui_zh.wav"
+    )
     # ❗ Since this model is multi-lingual voice cloning model, we must set the target speaker_wav and language
     # Text to speech list of amplitude values as output
     # wav = tts.tts(text="Hello world!", speaker_wav="records/my_voice.wav", language="en")
     # Text to speech to a file
-    tts.tts_to_file(text="Hello world!", speaker_wav=reference_audio_path,
-                    language="en", file_path="records/tts_coqui_clone_en.wav")
-    tts.tts_to_file(text="你好!", speaker_wav=reference_audio_path, split_sentences=False,
-                    language="zh", file_path="records/tts_coqui_clone_zh.wav")
+    tts.tts_to_file(
+        text="Hello world!",
+        speaker_wav=reference_audio_path,
+        language="en",
+        file_path="records/tts_coqui_clone_en.wav",
+    )
+    tts.tts_to_file(
+        text="你好!",
+        speaker_wav=reference_audio_path,
+        split_sentences=False,
+        language="zh",
+        file_path="records/tts_coqui_clone_zh.wav",
+    )
 
 
 def inference(model_path, conf_file, reference_audio_path="records/tmp.wav"):
@@ -89,8 +103,7 @@ def inference(model_path, conf_file, reference_audio_path="records/tmp.wav"):
     config = XttsConfig()
     config.load_json(conf_file)
     model = Xtts.init_from_config(config)
-    model.load_checkpoint(config, checkpoint_dir=model_path,
-                          use_deepspeed=info.is_cuda)
+    model.load_checkpoint(config, checkpoint_dir=model_path, use_deepspeed=info.is_cuda)
     print(model)
     model_million_params = sum(p.numel() for p in model.parameters()) / 1e6
     print(f"{model_million_params}M parameters")
@@ -100,7 +113,8 @@ def inference(model_path, conf_file, reference_audio_path="records/tmp.wav"):
 
     print("Computing speaker latents...")
     gpt_cond_latent, speaker_embedding = model.get_conditioning_latents(
-        audio_path=[reference_audio_path])
+        audio_path=[reference_audio_path]
+    )
 
     print("Inference...")
     out = model.inference(
@@ -110,8 +124,9 @@ def inference(model_path, conf_file, reference_audio_path="records/tmp.wav"):
         speaker_embedding,
         temperature=0.7,  # Add custom parameters here
     )
-    torchaudio.save("records/tts_coqui_infer_clone_en.wav",
-                    torch.tensor(out["wav"]).unsqueeze(0), 24000)
+    torchaudio.save(
+        "records/tts_coqui_infer_clone_en.wav", torch.tensor(out["wav"]).unsqueeze(0), 24000
+    )
 
     out = model.inference(
         "我花了很长时间才形成自己的声音，现在我有了声音，我不会保持沉默。",
@@ -120,8 +135,9 @@ def inference(model_path, conf_file, reference_audio_path="records/tmp.wav"):
         speaker_embedding,
         temperature=0.7,  # Add custom parameters here
     )
-    torchaudio.save("records/tts_coqui_infer_clone_zh.wav",
-                    torch.tensor(out["wav"]).unsqueeze(0), 24000)
+    torchaudio.save(
+        "records/tts_coqui_infer_clone_zh.wav", torch.tensor(out["wav"]).unsqueeze(0), 24000
+    )
 
 
 def inference_streaming(model_path, conf_file, reference_audio_path="records/tmp.wav"):
@@ -131,8 +147,7 @@ def inference_streaming(model_path, conf_file, reference_audio_path="records/tmp
     config = XttsConfig()
     config.load_json(conf_file)
     model = Xtts.init_from_config(config)
-    model.load_checkpoint(config, checkpoint_dir=model_path,
-                          use_deepspeed=info.is_cuda)
+    model.load_checkpoint(config, checkpoint_dir=model_path, use_deepspeed=info.is_cuda)
     print(model)
     model_million_params = sum(p.numel() for p in model.parameters()) / 1e6
     print(f"{model_million_params}M parameters")
@@ -142,7 +157,8 @@ def inference_streaming(model_path, conf_file, reference_audio_path="records/tmp
 
     print("Computing speaker latents...")
     gpt_cond_latent, speaker_embedding = model.get_conditioning_latents(
-        audio_path=[reference_audio_path])
+        audio_path=[reference_audio_path]
+    )
 
     print("Inference...")
     t0 = time.time()
@@ -150,37 +166,38 @@ def inference_streaming(model_path, conf_file, reference_audio_path="records/tmp
         "It took me quite a long time to develop a voice and now that I have it I am not going to be silent.",
         "en",
         gpt_cond_latent,
-        speaker_embedding)
-
-    wav_chuncks = []
-    for i, chunk in enumerate(chunks):
-        if i == 0:
-            print(f"Time to first chunck: {time.time() - t0}")
-        print(
-            f"Received chunk {i} of audio length {chunk.shape[-1]}", chunk.shape)
-        wav_chuncks.append(chunk)
-    wav = torch.cat(wav_chuncks, dim=0)
-    torchaudio.save("records/tts_coqui_infer_stream_clone_en.wav",
-                    wav.squeeze().unsqueeze(0).cpu(), 24000)
-
-    t0 = time.time()
-    chunks = model.inference_stream(
-        "我花了很长时间才形成自己的声音，现在我有了声音，我不会保持沉默。",
-        "zh",
-        gpt_cond_latent,
-        speaker_embedding
+        speaker_embedding,
     )
 
     wav_chuncks = []
     for i, chunk in enumerate(chunks):
         if i == 0:
             print(f"Time to first chunck: {time.time() - t0}")
-        print(
-            f"Received chunk {i} of audio length {chunk.shape[-1]}", chunk.shape)
+        print(f"Received chunk {i} of audio length {chunk.shape[-1]}", chunk.shape)
         wav_chuncks.append(chunk)
     wav = torch.cat(wav_chuncks, dim=0)
-    torchaudio.save("records/tts_coqui_infer_stream_clone_zh.wav",
-                    wav.squeeze().unsqueeze(0).cpu(), 24000)
+    torchaudio.save(
+        "records/tts_coqui_infer_stream_clone_en.wav", wav.squeeze().unsqueeze(0).cpu(), 24000
+    )
+
+    t0 = time.time()
+    chunks = model.inference_stream(
+        "我花了很长时间才形成自己的声音，现在我有了声音，我不会保持沉默。",
+        "zh",
+        gpt_cond_latent,
+        speaker_embedding,
+    )
+
+    wav_chuncks = []
+    for i, chunk in enumerate(chunks):
+        if i == 0:
+            print(f"Time to first chunck: {time.time() - t0}")
+        print(f"Received chunk {i} of audio length {chunk.shape[-1]}", chunk.shape)
+        wav_chuncks.append(chunk)
+    wav = torch.cat(wav_chuncks, dim=0)
+    torchaudio.save(
+        "records/tts_coqui_infer_stream_clone_zh.wav", wav.squeeze().unsqueeze(0).cpu(), 24000
+    )
 
 
 if __name__ == "__main__":
@@ -190,15 +207,22 @@ if __name__ == "__main__":
     python demo/tts_coqui.py -o inference_streaming -m models/coqui/XTTS-v2 -c models/coqui/XTTS-v2/config.json
     """
     import argparse
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--op', "-o", type=str,
-                        default="xtts_speaker", help='op method')
-    parser.add_argument('--model_name', "-n", type=str,
-                        default="", help='firstly choose model_name')
-    parser.add_argument('--model_path', "-m", type=str,
-                        default="models/coqui/XTTS-v2", help='model path')
-    parser.add_argument('--config_file', "-c", type=str,
-                        default="models/coqui/XTTS-v2/config.json", help='config file')
+    parser.add_argument("--op", "-o", type=str, default="xtts_speaker", help="op method")
+    parser.add_argument(
+        "--model_name", "-n", type=str, default="", help="firstly choose model_name"
+    )
+    parser.add_argument(
+        "--model_path", "-m", type=str, default="models/coqui/XTTS-v2", help="model path"
+    )
+    parser.add_argument(
+        "--config_file",
+        "-c",
+        type=str,
+        default="models/coqui/XTTS-v2/config.json",
+        help="config file",
+    )
     args = parser.parse_args()
     if args.op == "inference":
         inference(args.model_path, args.config_file)

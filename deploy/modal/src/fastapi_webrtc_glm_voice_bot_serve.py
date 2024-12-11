@@ -21,13 +21,16 @@ class ContainerRuntimeConfig:
                     "matplotlib==3.7.5",
                     "huggingface_hub[hf_transfer]==0.24.7",
                 ],
-                extra_index_url="https://pypi.org/simple/")
-            .env({
-                "HF_HUB_ENABLE_HF_TRANSFER": "1",
-                "ACHATBOT_PKG": "1",
-                "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
-                "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
-            })
+                extra_index_url="https://pypi.org/simple/",
+            )
+            .env(
+                {
+                    "HF_HUB_ENABLE_HF_TRANSFER": "1",
+                    "ACHATBOT_PKG": "1",
+                    "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
+                    "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
+                }
+            )
         ),
     }
 
@@ -94,6 +97,7 @@ class Srv:
         # https://huggingface.co/docs/huggingface_hub/guides/download
         from huggingface_hub import snapshot_download
         from achatbot.common.types import MODELS_DIR
+
         os.makedirs(MODELS_DIR, exist_ok=True)
         logging.info(f"start downloading model to dir:{MODELS_DIR}")
 

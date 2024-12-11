@@ -8,18 +8,19 @@ from src.common.task_manager.asyncio_task_manager import AsyncioTaskManager
 from src.common.task_manager.threading_task_manager import ThreadingTaskManager
 
 
-class TaskManagerFactory():
+class TaskManagerFactory:
     loop: asyncio.AbstractEventLoop | None = None
 
     @staticmethod
     def task_manager(
-            type: Literal['multiprocessing', 'threading', 'asyncio'] = "multiprocessing",
-            task_done_timeout=5,
+        type: Literal["multiprocessing", "threading", "asyncio"] = "multiprocessing",
+        task_done_timeout=5,
     ) -> TaskManager:
         match type:
             case "asyncio":
                 return AsyncioTaskManager(
-                    task_done_timeout=task_done_timeout, loop=TaskManagerFactory.loop)
+                    task_done_timeout=task_done_timeout, loop=TaskManagerFactory.loop
+                )
             case "threading":
                 return ThreadingTaskManager(task_done_timeout=task_done_timeout)
             case "multiprocessing":

@@ -3,17 +3,14 @@ from functools import lru_cache
 import numpy as np
 
 
-def image_bytes_to_base64_data_uri(img_bytes: bytes,
-                                   format: str = "jpeg", encoding="utf-8"):
+def image_bytes_to_base64_data_uri(img_bytes: bytes, format: str = "jpeg", encoding="utf-8"):
     base64_data = base64.b64encode(img_bytes).decode(encoding)
     return f"data:image/{format};base64,{base64_data}"
 
 
-def image_to_base64_data_uri(file_path: str,
-                             format: str = "jpeg", encoding="utf-8"):
+def image_to_base64_data_uri(file_path: str, format: str = "jpeg", encoding="utf-8"):
     with open(file_path, "rb") as img_file:
-        return image_bytes_to_base64_data_uri(
-            img_file.read(), format=format, encoding=encoding)
+        return image_bytes_to_base64_data_uri(img_file.read(), format=format, encoding=encoding)
 
 
 def yuv_to_rgb(y: np.ndarray, u: np.ndarray, v: np.ndarray) -> np.ndarray:
@@ -61,17 +58,12 @@ def resize_plane(plane: np.ndarray, target_shape: tuple) -> np.ndarray:
     v11 = plane[y1, x1]
 
     # Interpolate
-    result = (v00 * (1 - wx) * (1 - wy) +
-              v01 * wx * (1 - wy) +
-              v10 * (1 - wx) * wy +
-              v11 * wx * wy)
+    result = v00 * (1 - wx) * (1 - wy) + v01 * wx * (1 - wy) + v10 * (1 - wx) * wy + v11 * wx * wy
 
     return result.astype(np.uint8)
 
 
-def nv21_to_rgb(
-        y_data: np.ndarray, vu_data: np.ndarray,
-        width: int, height: int) -> np.ndarray:
+def nv21_to_rgb(y_data: np.ndarray, vu_data: np.ndarray, width: int, height: int) -> np.ndarray:
     """Convert NV21 to RGB using numpy operations
     NV21格式: YYYYYYYY VUVU (V和U交错排列)
     Y: 亮度平面
@@ -112,8 +104,8 @@ def _get_conversion_matrices(height: int, width: int) -> tuple:
 
 
 def nv21_to_rgb_optimized(
-        y_data: np.ndarray, vu_data: np.ndarray,
-        width: int, height: int) -> np.ndarray:
+    y_data: np.ndarray, vu_data: np.ndarray, width: int, height: int
+) -> np.ndarray:
     """优化的NV21到RGB转换"""
     # 使用缓存的转换矩阵
     y_indices, vu_indices = _get_conversion_matrices(height, width)
@@ -133,16 +125,14 @@ def nv21_to_rgb_optimized(
 
     # 使用向量化操作进行颜色转换
     rgb = np.empty((height, width, 3), dtype=np.uint8)
-    rgb[..., 0] = np.clip(y + 1.370 * v, 0, 255)               # R
-    rgb[..., 1] = np.clip(y - 0.698 * v - 0.336 * u, 0, 255)   # G
-    rgb[..., 2] = np.clip(y + 1.732 * u, 0, 255)               # B
+    rgb[..., 0] = np.clip(y + 1.370 * v, 0, 255)  # R
+    rgb[..., 1] = np.clip(y - 0.698 * v - 0.336 * u, 0, 255)  # G
+    rgb[..., 2] = np.clip(y + 1.732 * u, 0, 255)  # B
 
     return rgb
 
 
-def nv12_to_rgb(
-        y_data: np.ndarray, uv_data: np.ndarray,
-        width: int, height: int) -> np.ndarray:
+def nv12_to_rgb(y_data: np.ndarray, uv_data: np.ndarray, width: int, height: int) -> np.ndarray:
     """Convert NV12 to RGB using numpy operations
     NV12格式: YYYYYYYY UVUV (U和V交错排列)
     Y: 亮度平面
@@ -174,8 +164,8 @@ def nv12_to_rgb(
 
 
 def nv12_to_rgb_optimized(
-        y_data: np.ndarray, uv_data: np.ndarray,
-        width: int, height: int) -> np.ndarray:
+    y_data: np.ndarray, uv_data: np.ndarray, width: int, height: int
+) -> np.ndarray:
     """优化的NV12到RGB转换"""
     # 使用缓存的转换矩阵
     y_indices, uv_indices = _get_conversion_matrices(height, width)
@@ -195,8 +185,8 @@ def nv12_to_rgb_optimized(
 
     # 使用向量化操作进行颜色转换并预分配输出数组
     rgb = np.empty((height, width, 3), dtype=np.uint8)
-    rgb[..., 0] = np.clip(y + 1.370 * v, 0, 255)               # R
-    rgb[..., 1] = np.clip(y - 0.698 * v - 0.336 * u, 0, 255)   # G
-    rgb[..., 2] = np.clip(y + 1.732 * u, 0, 255)               # B
+    rgb[..., 0] = np.clip(y + 1.370 * v, 0, 255)  # R
+    rgb[..., 1] = np.clip(y - 0.698 * v - 0.336 * u, 0, 255)  # G
+    rgb[..., 2] = np.clip(y + 1.732 * u, 0, 255)  # B
 
     return rgb

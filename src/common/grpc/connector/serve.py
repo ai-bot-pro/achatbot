@@ -6,7 +6,8 @@ import queue
 import grpc
 
 from src.common.grpc.idl.connector_pb2_grpc import (
-    ConnectorServicer, add_ConnectorServicer_to_server
+    ConnectorServicer,
+    add_ConnectorServicer_to_server,
 )
 from src.common.grpc.idl.connector_pb2 import ConnectStreamResponse
 from src.common.grpc.interceptors.authentication_server import AuthenticationInterceptor
@@ -35,8 +36,7 @@ class Connector(ConnectorServicer):
                 logging.error(f"ConnectStream api recv_to_queue error:{e}")
 
         # if self.recv_thread is None or self.recv_thread.is_alive() is False:
-        self.recv_thread = threading.Thread(
-            target=recv_to_queue, args=(request_iterator,))
+        self.recv_thread = threading.Thread(target=recv_to_queue, args=(request_iterator,))
         self.recv_thread.start()
         self.is_active = True
 
@@ -56,10 +56,15 @@ class Connector(ConnectorServicer):
             self.recv_thread.join()
 
 
-class StreamServe():
-    def __init__(self, in_q: queue.Queue, out_q: queue.Queue,
-                 token="chat-bot-connenctor",
-                 port="50052", max_workers=10) -> None:
+class StreamServe:
+    def __init__(
+        self,
+        in_q: queue.Queue,
+        out_q: queue.Queue,
+        token="chat-bot-connenctor",
+        port="50052",
+        max_workers=10,
+    ) -> None:
         self.token = token
         self.port = port
         self.max_workers = max_workers
@@ -68,8 +73,7 @@ class StreamServe():
 
         logging.info(f"serve port: {self.port} max_workers: {self.max_workers}")
         authenticator = AuthenticationInterceptor(
-            'authorization', self.token,
-            grpc.StatusCode.UNAUTHENTICATED, 'Access denied!'
+            "authorization", self.token, grpc.StatusCode.UNAUTHENTICATED, "Access denied!"
         )
         server = grpc.server(
             futures.ThreadPoolExecutor(max_workers=self.max_workers),

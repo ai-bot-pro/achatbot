@@ -20,12 +20,13 @@ python -m unittest test.modules.speech.tts.test_cosy_voice.TestCosyVoiceTTS.test
 class TestCosyVoiceTTS(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tts_tag = os.getenv('TTS_TAG', "tts_cosy_voice")
+        cls.tts_tag = os.getenv("TTS_TAG", "tts_cosy_voice")
         cls.tts_text = os.getenv(
-            'TTS_TEXT',
-            "你好，我是机器人, hello, test.modules.speech.tts.test_gtts.TestGTTS.test_synthesize")
+            "TTS_TEXT",
+            "你好，我是机器人, hello, test.modules.speech.tts.test_gtts.TestGTTS.test_synthesize",
+        )
         model_dir = os.path.join(MODELS_DIR, "CosyVoice-300M-SFT")
-        cls.model_dir = os.getenv('MODELS_DIR', model_dir)
+        cls.model_dir = os.getenv("MODELS_DIR", model_dir)
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
@@ -35,12 +36,13 @@ class TestCosyVoiceTTS(unittest.TestCase):
     def setUp(self):
         kwargs = CosyVoiceTTSArgs(
             model_dir=self.model_dir,
-            reference_audio_path=os.getenv('REFERENCE_AUDIO_PATH', ''),
-            instruct_text=os.getenv('INSTRUCT_TEXT', ''),
-            spk_id=os.getenv('SPK_ID', ""),
+            reference_audio_path=os.getenv("REFERENCE_AUDIO_PATH", ""),
+            instruct_text=os.getenv("INSTRUCT_TEXT", ""),
+            spk_id=os.getenv("SPK_ID", ""),
         ).__dict__
         self.tts: CosyVoiceTTS = EngineFactory.get_engine_by_tag(
-            EngineClass, self.tts_tag, **kwargs)
+            EngineClass, self.tts_tag, **kwargs
+        )
         self.session = Session(**SessionCtx("test_tts_client_id").__dict__)
         self.pyaudio_instance = None
         self.audio_stream = None
@@ -64,17 +66,20 @@ class TestCosyVoiceTTS(unittest.TestCase):
         for i, chunk in enumerate(iter):
             print(i, len(chunk))
             res.extend(chunk)
-        path = asyncio.run(save_audio_to_file(
-            res,
-            f"test_{self.tts.TAG}.wav",
-            sample_rate=stream_info["rate"],
-            sample_width=stream_info["sample_width"],
-            channles=stream_info["channels"],
-        ))
+        path = asyncio.run(
+            save_audio_to_file(
+                res,
+                f"test_{self.tts.TAG}.wav",
+                sample_rate=stream_info["rate"],
+                sample_width=stream_info["sample_width"],
+                channles=stream_info["channels"],
+            )
+        )
         print(path)
 
     def test_synthesize_speak(self):
         import pyaudio
+
         stream_info = self.tts.get_stream_info()
         self.pyaudio_instance = pyaudio.PyAudio()
         self.audio_stream = self.pyaudio_instance.open(
@@ -82,7 +87,8 @@ class TestCosyVoiceTTS(unittest.TestCase):
             channels=stream_info["channels"],
             rate=stream_info["rate"],
             output_device_index=None,
-            output=True)
+            output=True,
+        )
 
         self.session.ctx.state["tts_text"] = self.tts_text
         print(self.session.ctx)
@@ -95,5 +101,5 @@ class TestCosyVoiceTTS(unittest.TestCase):
                 self.audio_stream.write(chunk)
                 continue
             for i in range(0, len(chunk), sub_chunk_size):
-                sub_chunk = chunk[i:i + sub_chunk_size]
+                sub_chunk = chunk[i : i + sub_chunk_size]
                 self.audio_stream.write(sub_chunk)

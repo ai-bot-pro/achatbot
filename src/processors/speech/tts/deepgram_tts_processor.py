@@ -10,17 +10,17 @@ from types.frames.control_frames import TTSStartedFrame
 
 
 class DeepgramTTSProcessor(TTSProcessorBase):
-
     def __init__(
-            self,
-            *,
-            api_key: str,
-            voice: str = "aura-helios-en",
-            base_url: str = "https://api.deepgram.com/v1/speak",
-            sample_rate: int = 16000,
-            encoding: str = "linear16",
-            aiohttp_session: aiohttp.ClientSession | None = None,
-            **kwargs):
+        self,
+        *,
+        api_key: str,
+        voice: str = "aura-helios-en",
+        base_url: str = "https://api.deepgram.com/v1/speak",
+        sample_rate: int = 16000,
+        encoding: str = "linear16",
+        aiohttp_session: aiohttp.ClientSession | None = None,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
 
         self._voice = voice
@@ -64,8 +64,11 @@ class DeepgramTTSProcessor(TTSProcessorBase):
                         return
 
                     logging.error(
-                        f"{self} error getting audio (status: {r.status}, error: {response_text})")
-                    yield ErrorFrame(f"Error getting audio (status: {r.status}, error: {response_text})")
+                        f"{self} error getting audio (status: {r.status}, error: {response_text})"
+                    )
+                    yield ErrorFrame(
+                        f"Error getting audio (status: {r.status}, error: {response_text})"
+                    )
                     return
 
                 await self.start_tts_usage_metrics(text)

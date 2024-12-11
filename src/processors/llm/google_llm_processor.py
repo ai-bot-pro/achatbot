@@ -23,7 +23,11 @@ except ModuleNotFoundError as e:
 
 from src.processors.aggregators.openai_llm_context import OpenAILLMContext, OpenAILLMContextFrame
 from src.processors.llm.base import LLMProcessor, UnhandledFunctionException
-from src.types.frames.control_frames import LLMFullResponseEndFrame, LLMFullResponseStartFrame, LLMModelUpdateFrame
+from src.types.frames.control_frames import (
+    LLMFullResponseEndFrame,
+    LLMFullResponseStartFrame,
+    LLMModelUpdateFrame,
+)
 from src.types.frames.data_frames import LLMMessagesFrame, VisionImageRawFrame
 
 
@@ -39,14 +43,17 @@ class GoogleAILLMProcessor(LLMProcessor):
     @TODO: parallel_function_calls
     """
 
-    def __init__(self, *,
-                 api_key: str = "",
-                 model: str = "gemini-1.5-flash-latest",
-                 tools: content_types.FunctionLibraryType | None = None,
-                 tools_mode: Literal["none", "auto", "any"] = "auto",
-                 mode: Literal["auto", "manual"] = "manual",
-                 generation_config: generation_types.GenerationConfigType | None = None,
-                 **kwargs):
+    def __init__(
+        self,
+        *,
+        api_key: str = "",
+        model: str = "gemini-1.5-flash-latest",
+        tools: content_types.FunctionLibraryType | None = None,
+        tools_mode: Literal["none", "auto", "any"] = "auto",
+        mode: Literal["auto", "manual"] = "manual",
+        generation_config: generation_types.GenerationConfigType | None = None,
+        **kwargs,
+    ):
         r"""
         > !NOTE:
         mode:
@@ -81,13 +88,15 @@ class GoogleAILLMProcessor(LLMProcessor):
         )
         if self._mode == "auto":
             self._chat = self._client.start_chat(
-                enable_automatic_function_calling=self._tools_mode != "none")
+                enable_automatic_function_calling=self._tools_mode != "none"
+            )
 
     def set_tools(self, tools: content_types.FunctionLibraryType | None):
         self._tools = tools
 
     def _get_tools_from_openai_context(
-            self, context: OpenAILLMContext,
+        self,
+        context: OpenAILLMContext,
     ) -> content_types.FunctionLibraryType | None:
         if not context.tools:
             return None
@@ -99,7 +108,7 @@ class GoogleAILLMProcessor(LLMProcessor):
         return google_tools
 
     def _get_messages_from_openai_context(self, context: OpenAILLMContext) -> List[glm.Content]:
-        r""" openai context history message
+        r"""openai context history message
         [
           {
             "role": "system",
@@ -165,12 +174,14 @@ class GoogleAILLMProcessor(LLMProcessor):
                     parts = []
                     for tool_call in message["tool_calls"]:
                         args = json.loads(tool_call["function"]["arguments"])
-                        parts.append(glm.Part(
-                            function_call=glm.FunctionCall(
-                                name=tool_call["function"]["name"],
-                                args=args,
+                        parts.append(
+                            glm.Part(
+                                function_call=glm.FunctionCall(
+                                    name=tool_call["function"]["name"],
+                                    args=args,
+                                )
                             )
-                        ))
+                        )
 
                     google_messages.append({"role": role, "parts": parts})
 
@@ -181,7 +192,8 @@ class GoogleAILLMProcessor(LLMProcessor):
                     s.update({"result": message["content"]})
                     function_response = glm.Part(
                         function_response=glm.FunctionResponse(
-                            name=message["tool_call_id"], response=s)
+                            name=message["tool_call_id"], response=s
+                        )
                     )
                     parts = [function_response]
                     google_messages.append({"role": role, "parts": parts})
@@ -216,10 +228,10 @@ class GoogleAILLMProcessor(LLMProcessor):
             await self.start_llm_usage_metrics(tokens)
 
     async def infer(
-            self,
-            messages: content_types.ContentType,
-            tools: content_types.FunctionLibraryType | None = None,
-            stream: bool = False,
+        self,
+        messages: content_types.ContentType,
+        tools: content_types.FunctionLibraryType | None = None,
+        stream: bool = False,
     ) -> generation_types.AsyncGenerateContentResponse:
         """
         https://ai.google.dev/api/generate-content
@@ -229,13 +241,15 @@ class GoogleAILLMProcessor(LLMProcessor):
             # send_message with stream now just support text, no function tools
             stream = stream if self._tools_mode == "none" else False
             response = await self._chat.send_message_async(
-                messages, stream=stream,
+                messages,
+                stream=stream,
                 tools=tools,
                 tool_config=self.tool_config_from_mode(self._tools_mode),
             )
         else:
             response = await self._client.generate_content_async(
-                messages, stream=stream,
+                messages,
+                stream=stream,
                 tools=tools,
                 tool_config=self.tool_config_from_mode(self._tools_mode),
             )
@@ -258,8 +272,8 @@ class GoogleAILLMProcessor(LLMProcessor):
                 # Google LLMs seem to flag safety issues a lot!
                 if chunk.candidates[0].finish_reason == 3:
                     logging.warning(
-                        f"LLM refused to generate content"
-                        f" for safety reasons - {messages}.")
+                        f"LLM refused to generate content" f" for safety reasons - {messages}."
+                    )
                     continue
 
                 if text := chunk.parts[0].text:
@@ -281,18 +295,15 @@ class GoogleAILLMProcessor(LLMProcessor):
                     else:
                         raise UnhandledFunctionException(
                             f"The LLM tried to call a function named '{func_call.name}', "
-                            f"but there isn't a callback registered for that function.")
+                            f"but there isn't a callback registered for that function."
+                        )
 
         except Exception as e:
             logging.exception(f"{self} exception: {e}")
 
     async def call_function(
-            self,
-            *,
-            context: OpenAILLMContext,
-            tool_call_id: str,
-            function_name: str,
-            arguments: dict) -> None:
+        self, *, context: OpenAILLMContext, tool_call_id: str, function_name: str, arguments: dict
+    ) -> None:
         f = None
         if function_name in self._callbacks.keys():
             f = self._callbacks[function_name]
@@ -301,11 +312,8 @@ class GoogleAILLMProcessor(LLMProcessor):
         else:
             return None
         await context.call_function(
-            f,
-            function_name=function_name,
-            tool_call_id=tool_call_id,
-            arguments=arguments,
-            llm=self)
+            f, function_name=function_name, tool_call_id=tool_call_id, arguments=arguments, llm=self
+        )
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)

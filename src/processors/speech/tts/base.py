@@ -4,13 +4,17 @@ from abc import abstractmethod
 from typing import AsyncGenerator
 
 from apipeline.processors.frame_processor import FrameDirection, FrameProcessorMetrics
-from apipeline.pipeline.pipeline import FrameDirection
 from apipeline.frames.control_frames import EndFrame
 from apipeline.frames.sys_frames import Frame, MetricsFrame, StartInterruptionFrame
 from apipeline.utils.string import match_endofsentence
 
 from src.processors.ai_processor import AIProcessor
-from src.types.frames.control_frames import LLMFullResponseEndFrame, TTSStartedFrame, TTSStoppedFrame, TTSVoiceUpdateFrame
+from src.types.frames.control_frames import (
+    LLMFullResponseEndFrame,
+    TTSStartedFrame,
+    TTSStoppedFrame,
+    TTSVoiceUpdateFrame,
+)
 from src.types.frames.data_frames import TTSSpeakFrame, TextFrame
 
 
@@ -26,13 +30,14 @@ class TTSProcessorMetrics(FrameProcessorMetrics):
 
 class TTSProcessorBase(AIProcessor):
     def __init__(
-            self,
-            *,
-            aggregate_sentences: bool = True,
-            # if True, subclass is responsible for pushing TextFrames and LLMFullResponseEndFrames
-            push_text_frames: bool = True,
-            sync_order_send: bool = False,
-            **kwargs):
+        self,
+        *,
+        aggregate_sentences: bool = True,
+        # if True, subclass is responsible for pushing TextFrames and LLMFullResponseEndFrames
+        push_text_frames: bool = True,
+        sync_order_send: bool = False,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self._metrics = TTSProcessorMetrics(name=self.name)
 

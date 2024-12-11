@@ -8,10 +8,15 @@ class FastapiDailyChatBot(Photon):
     """
 
     cmd = [
-        "bash", "-c", (f"apt update && apt install -y ffmpeg net-tools "
-                       f"&& pip install -U 'achatbot[fastapi_bot_server, daily_rtvi_bot, daily_langchain_rag_bot, speech_vad_analyzer, asr_processor, tts_processor]' "
-                       f"&& python -m achatbot.cmd.http.server.fastapi_daily_bot_serve "
-                       f"--host 0.0.0.0 --port 8080"), ]
+        "bash",
+        "-c",
+        (
+            "apt update && apt install -y ffmpeg net-tools "
+            "&& pip install -U 'achatbot[fastapi_bot_server, daily_rtvi_bot, daily_langchain_rag_bot, speech_vad_analyzer, asr_processor, tts_processor]' "
+            "&& python -m achatbot.cmd.http.server.fastapi_daily_bot_serve "
+            "--host 0.0.0.0 --port 8080"
+        ),
+    ]
     deployment_template = {
         "resource_shape": "cpu.small",  # use cpu for api model
         # "resource_shape": "gpu.t4",  # use gpu for local model

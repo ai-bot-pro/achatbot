@@ -12,8 +12,8 @@ def capture_img():
         k = cv2.waitKey(1)
         if k & 0xFF == 27:  # esc
             break
-        elif k == ord('s'):
-            cv2.imwrite('./images/cv_capture' + str(i) + '.jpg', frame)
+        elif k == ord("s"):
+            cv2.imwrite("./images/cv_capture" + str(i) + ".jpg", frame)
             i += 1
         cv2.imshow("capture", frame)
     cap.release()
@@ -53,7 +53,7 @@ def change_res(cap, width, height):
     cap.set(4, height)
 
 
-def get_dims(cap, res='1080p'):
+def get_dims(cap, res="1080p"):
     # grab resolution dimensions and set video capture to it.
     width, height = STD_DIMENSIONS["480p"]
     if res in STD_DIMENSIONS:
@@ -67,10 +67,10 @@ def get_dims(cap, res='1080p'):
 # Video Encoding, might require additional installs
 # Types of Codes: http://www.fourcc.org/codecs.php
 VIDEO_TYPE = {
-    '.avi': cv2.VideoWriter_fourcc(*'xvid'),
+    ".avi": cv2.VideoWriter_fourcc(*"xvid"),
     # '.mp4': cv2.VideoWriter_fourcc(*'xvid'),
     # '.mp4': cv2.VideoWriter_fourcc(*'h264'),
-    '.mp4': cv2.VideoWriter_fourcc(*'mp4v'),
+    ".mp4": cv2.VideoWriter_fourcc(*"mp4v"),
 }
 
 
@@ -78,7 +78,7 @@ def get_video_type(filename):
     filename, ext = os.path.splitext(filename)
     if ext in VIDEO_TYPE:
         return VIDEO_TYPE[ext]
-    return VIDEO_TYPE['.mp4']
+    return VIDEO_TYPE[".mp4"]
 
 
 def capture_video():
@@ -86,11 +86,15 @@ def capture_video():
     if not os.path.exists(filename_dir):
         os.makedirs(filename_dir)
 
-    filename = filename_dir + "/video_capture_" + \
-        datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".mp4"
+    filename = (
+        filename_dir
+        + "/video_capture_"
+        + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        + ".mp4"
+    )
     frames_per_second = 20.0
-    res = '720p'
-    res = '480p'
+    res = "720p"
+    res = "480p"
 
     cap = cv2.VideoCapture(0)
     out = cv2.VideoWriter(
@@ -103,8 +107,8 @@ def capture_video():
     while True:
         ret, frame = cap.read()
         out.write(frame)
-        cv2.imshow('frame', frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        cv2.imshow("frame", frame)
+        if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
     cap.release()
@@ -116,8 +120,8 @@ def capture_videos():
     # 打开本地摄像头
     cap = cv2.VideoCapture(0)
 
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    # width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    # height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     res = "480p"
 
     # Video Encoding, might require additional installs
@@ -143,14 +147,18 @@ def capture_videos():
     video_number = 1
 
     # 持续捕获并保存视频帧
-    while (True):
+    while True:
         # 检查是否需要开始一个新的视频文件
         if frame_count == 0:
             # 创建输出视频文件
-            filename = filename_prefix + str(video_number) + "_" + \
-                datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".mp4"
-            out = cv2.VideoWriter(
-                filename, fourcc, fps, get_dims(cap, res))
+            filename = (
+                filename_prefix
+                + str(video_number)
+                + "_"
+                + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                + ".mp4"
+            )
+            out = cv2.VideoWriter(filename, fourcc, fps, get_dims(cap, res))
             print("Start recording " + filename)
 
         # 读取视频帧
@@ -174,10 +182,10 @@ def capture_videos():
             out.write(frame)
 
             # 显示帧
-            cv2.imshow('frame', frame)
+            cv2.imshow("frame", frame)
 
             # 按 'q' 键退出循环
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
 
             # 更新计数器
@@ -188,8 +196,9 @@ def capture_videos():
     cv2.destroyAllWindows()
 
 
-def list_file(file_suffix: str = ".mp4", data_dir='./videos/cv'):
+def list_file(file_suffix: str = ".mp4", data_dir="./videos/cv"):
     import glob
+
     filenames = sorted(glob.glob(os.path.join(data_dir, f"*{file_suffix}")))
     print(filenames)
     return filenames

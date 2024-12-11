@@ -28,38 +28,39 @@ class LivekitDetectVisionBot(LivekitRoomBot):
         stream_info = tts_processor.get_stream_info()
         livekit_params.audio_out_sample_rate = stream_info["sample_rate"]
         livekit_params.audio_out_channels = stream_info["channels"]
-        transport = LivekitTransport(
-            self.args.token,
-            params=livekit_params
-        )
+        transport = LivekitTransport(self.args.token, params=livekit_params)
 
         @transport.event_handler("on_first_participant_joined")
         async def on_first_participant_joined(
-                transport: LivekitTransport,
-                participant: rtc.RemoteParticipant,
+            transport: LivekitTransport,
+            participant: rtc.RemoteParticipant,
         ):
             # subscribed the first participant
             transport.capture_participant_video(participant.sid)
 
             participant_name = participant.name if participant.name else participant.identity
-            await tts_processor.say(f"你好,{participant_name}。"
-                                    f"这是一个图像检测hello demo。"
-                                    f"当检测到条件对象时，说欢迎词。"
-                                    f"当未检测到条件对象时，说离开词。")
+            await tts_processor.say(
+                f"你好,{participant_name}。"
+                f"这是一个图像检测hello demo。"
+                f"当检测到条件对象时，说欢迎词。"
+                f"当未检测到条件对象时，说离开词。"
+            )
 
         @transport.event_handler("on_video_track_subscribed")
         async def on_video_track_subscribed(
-                transport: LivekitTransport,
-                participant: rtc.RemoteParticipant,
+            transport: LivekitTransport,
+            participant: rtc.RemoteParticipant,
         ):
             transport.capture_participant_video(participant.sid)
 
-        pipeline = Pipeline([
-            transport.input_processor(),
-            detect_processor,
-            tts_processor,
-            # FrameLogger(include_frame_types=[UserImageRawFrame]),
-            transport.output_processor(),
-        ])
+        pipeline = Pipeline(
+            [
+                transport.input_processor(),
+                detect_processor,
+                tts_processor,
+                # FrameLogger(include_frame_types=[UserImageRawFrame]),
+                transport.output_processor(),
+            ]
+        )
         self.task = PipelineTask(pipeline)
         await PipelineRunner().run(self.task)

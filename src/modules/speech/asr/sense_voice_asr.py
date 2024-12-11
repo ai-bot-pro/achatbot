@@ -13,6 +13,7 @@ class SenseVoiceAsr(ASRBase):
 
     def __init__(self, **args) -> None:
         from deps.SenseVoice.model import SenseVoiceSmall
+
         super().__init__(**args)
         device = "cpu"
         if self.args.device:
@@ -23,7 +24,8 @@ class SenseVoiceAsr(ASRBase):
                 device = "cuda:0"
         self.model: SenseVoiceSmall = None
         self.model, self.kwargs = SenseVoiceSmall.from_pretrained(
-            model=self.args.model_name_or_path, device=device)
+            model=self.args.model_name_or_path, device=device
+        )
         self.model.eval()
 
     def set_audio_data(self, audio_data):
@@ -42,7 +44,7 @@ class SenseVoiceAsr(ASRBase):
             **self.kwargs,
         )
         for item in transcription:
-            clean_text = re.sub(r'<\|.*?\|>', '', item["text"])
+            clean_text = re.sub(r"<\|.*?\|>", "", item["text"])
             yield clean_text
 
     async def transcribe(self, session: Session) -> dict:
@@ -54,7 +56,7 @@ class SenseVoiceAsr(ASRBase):
             ban_emo_unk=False,
             **self.kwargs,
         )
-        clean_text = re.sub(r'<\|.*?\|>', '', transcription[0]["text"])
+        clean_text = re.sub(r"<\|.*?\|>", "", transcription[0]["text"])
         res = {
             "language": self.args.language,
             "language_probability": None,

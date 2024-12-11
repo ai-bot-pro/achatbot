@@ -8,7 +8,8 @@ from src.common.types import (
     SILERO_MODEL_RESET_STATES_TIME,
     SileroVADArgs,
     VADAnalyzerArgs,
-    SileroVADAnalyzerArgs)
+    SileroVADAnalyzerArgs,
+)
 
 
 # NOTE: MRO: Method Resolution Order to init, and member name
@@ -17,26 +18,30 @@ class SileroVADAnalyzer(BaseVADAnalyzer):
 
     def __init__(self, **args):
         self.args = SileroVADAnalyzerArgs(**args)
-        self._vad = SileroVAD(**SileroVADArgs(
-            sample_rate=self.args.sample_rate,
-            repo_or_dir=self.args.repo_or_dir,
-            model=self.args.model,
-            source=self.args.source,
-            force_reload=self.args.force_reload,
-            verbose=self.args.verbose,
-            onnx=self.args.onnx,
-            silero_sensitivity=self.args.silero_sensitivity,
-            is_pad_tensor=self.args.is_pad_tensor,
-            check_frames_mode=self.args.check_frames_mode,
-        ).__dict__)
-        super().__init__(**VADAnalyzerArgs(
-            sample_rate=self.args.sample_rate,
-            num_channels=self.args.num_channels,
-            confidence=self.args.confidence,
-            start_secs=self.args.start_secs,
-            stop_secs=self.args.stop_secs,
-            min_volume=self.args.min_volume,
-        ).__dict__)
+        self._vad = SileroVAD(
+            **SileroVADArgs(
+                sample_rate=self.args.sample_rate,
+                repo_or_dir=self.args.repo_or_dir,
+                model=self.args.model,
+                source=self.args.source,
+                force_reload=self.args.force_reload,
+                verbose=self.args.verbose,
+                onnx=self.args.onnx,
+                silero_sensitivity=self.args.silero_sensitivity,
+                is_pad_tensor=self.args.is_pad_tensor,
+                check_frames_mode=self.args.check_frames_mode,
+            ).__dict__
+        )
+        super().__init__(
+            **VADAnalyzerArgs(
+                sample_rate=self.args.sample_rate,
+                num_channels=self.args.num_channels,
+                confidence=self.args.confidence,
+                start_secs=self.args.start_secs,
+                stop_secs=self.args.stop_secs,
+                min_volume=self.args.min_volume,
+            ).__dict__
+        )
         self._last_reset_time = 0
 
     @property

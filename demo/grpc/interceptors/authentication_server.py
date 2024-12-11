@@ -5,29 +5,25 @@ import grpc
 
 def _unary_unary_rpc_terminator(code, details):
     return grpc.unary_unary_rpc_method_handler(
-        lambda ignored_request, context:
-            context.abort(code, details + "(uu)")
+        lambda ignored_request, context: context.abort(code, details + "(uu)")
     )
 
 
 def _stream_unary_rpc_terminator(code, details):
     return grpc.stream_unary_rpc_method_handler(
-        lambda ignored_request, context:
-            context.abort(code, details + "(su)")
+        lambda ignored_request, context: context.abort(code, details + "(su)")
     )
 
 
 def _unary_stream_rpc_terminator(code, details):
     return grpc.unary_stream_rpc_method_handler(
-        lambda ignored_request, context:
-            context.abort(code, details + "(us)")
+        lambda ignored_request, context: context.abort(code, details + "(us)")
     )
 
 
 def _stream_stream_rpc_terminator(code, details):
     return grpc.stream_stream_rpc_method_handler(
-        lambda ignored_request, context:
-            context.abort(code, details + "(ss)")
+        lambda ignored_request, context: context.abort(code, details + "(ss)")
     )
 
 
@@ -44,10 +40,7 @@ class AuthenticationInterceptor(grpc.ServerInterceptor):
         }
 
     def intercept_service(self, continuation, handler_call_details):
-        logging.debug(
-            f"{self._header}, {self._value},"
-            f"{handler_call_details}"
-        )
+        logging.debug(f"{self._header}, {self._value}," f"{handler_call_details}")
         if (self._header, self._value) in handler_call_details.invocation_metadata:
             return continuation(handler_call_details)  # next
         else:

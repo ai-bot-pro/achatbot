@@ -18,7 +18,7 @@ load_dotenv(override=True)
 app = typer.Typer()
 
 
-@app.command('gen_image')
+@app.command("gen_image")
 def gen_image(
     prompt: str,
     width: int = 640,
@@ -33,7 +33,7 @@ def gen_image(
         height=height,
         steps=steps,
         n=n,
-        response_format="b64_json"
+        response_format="b64_json",
     )
 
     res = []
@@ -43,14 +43,14 @@ def gen_image(
     return res
 
 
-@app.command('save_image')
+@app.command("save_image")
 def save_gen_image(
-        prompt: str,
-        file_name: str,
-        save_dir: str = "./images",
-        width: int = 640,
-        height: int = 480,
-        n: int = 1,
+    prompt: str,
+    file_name: str,
+    save_dir: str = "./images",
+    width: int = 640,
+    height: int = 480,
+    n: int = 1,
 ):
     base64_imgs = gen_image(prompt, width=width, height=height, steps=4, n=n)
     if not base64_imgs:
@@ -72,8 +72,7 @@ python -m demo.image_together_flux save_image "llama, sitting in a field of flow
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s',
-        handlers=[
-            logging.StreamHandler()],
+        format="%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s",
+        handlers=[logging.StreamHandler()],
     )
     app()

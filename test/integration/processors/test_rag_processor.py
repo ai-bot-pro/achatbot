@@ -21,7 +21,10 @@ from apipeline.frames.sys_frames import StopTaskFrame
 from apipeline.pipeline.runner import PipelineRunner
 
 from src.cmd.bots.rag.daily_langchain_rag_bot import DEFAULT_SYSTEM_PROMPT
-from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
+from src.processors.aggregators.llm_response import (
+    LLMAssistantResponseAggregator,
+    LLMUserResponseAggregator,
+)
 from src.processors.ai_frameworks.langchain_rag_processor import LangchainRAGProcessor
 from src.cmd.bots.rag.helper import get_tidb_url
 from src.common.logger import Logger
@@ -30,10 +33,12 @@ from src.types.frames.control_frames import (
     LLMFullResponseEndFrame,
     LLMFullResponseStartFrame,
     UserStartedSpeakingFrame,
-    UserStoppedSpeakingFrame)
-from src.types.frames.data_frames import (TextFrame, TranscriptionFrame)
+    UserStoppedSpeakingFrame,
+)
+from src.types.frames.data_frames import TextFrame, TranscriptionFrame
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 
@@ -85,7 +90,6 @@ class TestRAGLangchainProcessor(unittest.IsolatedAsyncioTestCase):
         return self.message_store[session_id]
 
     async def test_rag(self):
-
         api_key = os.environ.get("OPENAI_API_KEY")
         if "groq" in self.base_url:
             api_key = os.environ.get("GROQ_API_KEY")
@@ -108,11 +112,11 @@ class TestRAGLangchainProcessor(unittest.IsolatedAsyncioTestCase):
         vectorstore = TiDBVectorStore(
             connection_string=get_tidb_url(),
             embedding_function=JinaEmbeddings(
-                jina_api_key=os.getenv('JINA_API_KEY'),
+                jina_api_key=os.getenv("JINA_API_KEY"),
                 model_name=embed_model_name,
             ),
             table_name="AndrejKarpathy",
-            distance_strategy=os.getenv('TIDB_VSS_DISTANCE_STRATEGY', 'cosine'),
+            distance_strategy=os.getenv("TIDB_VSS_DISTANCE_STRATEGY", "cosine"),
         )
         score_threshold = 0.8
         if self.lang == "zh":
@@ -126,9 +130,18 @@ class TestRAGLangchainProcessor(unittest.IsolatedAsyncioTestCase):
         if self.lang == "zh":
             system_prompt += " You must reply, Please communicate in Chinese"
         logging.info(f"use system prompt: {system_prompt}")
-        answer_prompt = ChatPromptTemplate.from_messages([(
-            "system", system_prompt + """ \
-                {context}"""), MessagesPlaceholder("chat_history"), ("human", "{input}"), ])
+        answer_prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    system_prompt
+                    + """ \
+                {context}""",
+                ),
+                MessagesPlaceholder("chat_history"),
+                ("human", "{input}"),
+            ]
+        )
         question_answer_chain = create_stuff_documents_chain(llm, answer_prompt)
         rag_chain = create_retrieval_chain(retriever, question_answer_chain)
         # chain = prompt | rag
@@ -137,7 +150,8 @@ class TestRAGLangchainProcessor(unittest.IsolatedAsyncioTestCase):
             self.get_session_history,
             history_messages_key="chat_history",
             input_messages_key="input",
-            output_messages_key="answer")
+            output_messages_key="answer",
+        )
         langchain_processor = LangchainRAGProcessor(chain=rag_history_chain)
 
         tma_in = LLMUserResponseAggregator()

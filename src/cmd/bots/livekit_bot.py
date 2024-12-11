@@ -4,7 +4,10 @@ from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
 
-from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
+from src.processors.aggregators.llm_response import (
+    LLMAssistantResponseAggregator,
+    LLMUserResponseAggregator,
+)
 from src.processors.llm.base import LLMProcessor
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.common.types import LivekitParams
@@ -14,6 +17,7 @@ from src.cmd.bots import register_ai_room_bots
 from src.types.frames.data_frames import LLMMessagesFrame
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 
@@ -57,15 +61,17 @@ class LivekitBot(LivekitRoomBot):
         assistant_response = LLMAssistantResponseAggregator(messages)
 
         self.task = PipelineTask(
-            Pipeline([
-                transport.input_processor(),
-                asr_processor,
-                user_response,
-                llm_processor,
-                tts_processor,
-                transport.output_processor(),
-                assistant_response,
-            ]),
+            Pipeline(
+                [
+                    transport.input_processor(),
+                    asr_processor,
+                    user_response,
+                    llm_processor,
+                    tts_processor,
+                    transport.output_processor(),
+                    assistant_response,
+                ]
+            ),
             params=PipelineParams(
                 # TODO: open interruptions some issue when sub remote participant
                 allow_interruptions=False,
@@ -75,23 +81,26 @@ class LivekitBot(LivekitRoomBot):
         )
 
         transport.add_event_handlers(
-            "on_first_participant_joined",
-            [self.on_first_participant_say_hi])
+            "on_first_participant_joined", [self.on_first_participant_say_hi]
+        )
 
         await PipelineRunner().run(self.task)
 
     async def on_first_participant_say_hi(self, transport: LivekitTransport, participant):
         # joined use tts say "hello" to introduce with llm generate
-        if self._bot_config.tts \
-                and self._bot_config.llm \
-                and self._bot_config.llm.messages \
-                and len(self._bot_config.llm.messages) == 1:
+        if (
+            self._bot_config.tts
+            and self._bot_config.llm
+            and self._bot_config.llm.messages
+            and len(self._bot_config.llm.messages) == 1
+        ):
             hi_text = "Please introduce yourself first."
-            if self._bot_config.llm.language \
-                    and self._bot_config.llm.language == "zh":
+            if self._bot_config.llm.language and self._bot_config.llm.language == "zh":
                 hi_text = "请用中文介绍下自己。"
-            self._bot_config.llm.messages.append({
-                "role": "user",
-                "content": hi_text,
-            })
+            self._bot_config.llm.messages.append(
+                {
+                    "role": "user",
+                    "content": hi_text,
+                }
+            )
             await self.task.queue_frames([LLMMessagesFrame(self._bot_config.llm.messages)])

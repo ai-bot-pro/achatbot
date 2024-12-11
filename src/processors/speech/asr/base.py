@@ -15,7 +15,11 @@ from src.processors.ai_processor import AsyncAIProcessor
 from src.common.utils.helper import exp_smoothing, calculate_audio_volume
 from src.types.frames.data_frames import DailyTransportMessageFrame, TranscriptionFrame
 from src.types.speech.language import Language
-from src.types.frames.control_frames import ASRArgsUpdateFrame, ASRLanguageUpdateFrame, ASRModelUpdateFrame
+from src.types.frames.control_frames import (
+    ASRArgsUpdateFrame,
+    ASRLanguageUpdateFrame,
+    ASRModelUpdateFrame,
+)
 
 
 class ASRProcessorBase(AsyncAIProcessor):
@@ -65,14 +69,16 @@ class ASRProcessorBase(AsyncAIProcessor):
 class SegmentedASRProcessor(ASRProcessorBase):
     """SegmentedASRProcessor is a segement audio asr class for speech-to-text processors."""
 
-    def __init__(self,
-                 *,
-                 min_volume: float = 0.6,
-                 max_silence_secs: float = 0.3,
-                 max_buffer_secs: float = 1.5,
-                 sample_rate: int = 16000,
-                 num_channels: int = 1,
-                 **kwargs):
+    def __init__(
+        self,
+        *,
+        min_volume: float = 0.6,
+        max_silence_secs: float = 0.3,
+        max_buffer_secs: float = 1.5,
+        sample_rate: int = 16000,
+        num_channels: int = 1,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self._min_volume = min_volume
         self._max_silence_secs = max_silence_secs
@@ -124,7 +130,8 @@ class SegmentedASRProcessor(ASRProcessorBase):
         silence_secs = self._silence_num_frames / self._sample_rate
         buffer_secs = self._wave.getnframes() / self._sample_rate
         if self._content.tell() > 0 and (
-                buffer_secs > self._max_buffer_secs or silence_secs > self._max_silence_secs):
+            buffer_secs > self._max_buffer_secs or silence_secs > self._max_silence_secs
+        ):
             self._silence_num_frames = 0
             self._wave.close()
             self._content.seek(0)

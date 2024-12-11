@@ -53,8 +53,8 @@ class LivekitDescribeVisionBot(LivekitRoomBot):
 
         @transport.event_handler("on_first_participant_joined")
         async def on_first_participant_joined(
-                transport: LivekitTransport,
-                participant: rtc.RemoteParticipant,
+            transport: LivekitTransport,
+            participant: rtc.RemoteParticipant,
         ):
             # subscribed the first participant
             transport.capture_participant_video(participant.sid, framerate=0)
@@ -68,22 +68,24 @@ class LivekitDescribeVisionBot(LivekitRoomBot):
 
         @transport.event_handler("on_video_track_subscribed")
         async def on_video_track_subscribed(
-                transport: LivekitTransport,
-                participant: rtc.RemoteParticipant,
+            transport: LivekitTransport,
+            participant: rtc.RemoteParticipant,
         ):
             transport.capture_participant_video(participant.sid, framerate=0)
 
-        pipeline = Pipeline([
-            transport.input_processor(),
-            asr_processor,
-            # llm_in_aggr,
-            in_aggr,
-            image_requester,
-            vision_aggregator,
-            llm_processor,
-            tts_processor,
-            transport.output_processor(),
-            # llm_out_aggr,
-        ])
+        pipeline = Pipeline(
+            [
+                transport.input_processor(),
+                asr_processor,
+                # llm_in_aggr,
+                in_aggr,
+                image_requester,
+                vision_aggregator,
+                llm_processor,
+                tts_processor,
+                transport.output_processor(),
+                # llm_out_aggr,
+            ]
+        )
         self.task = PipelineTask(pipeline, params=PipelineParams())
         await PipelineRunner().run(self.task)

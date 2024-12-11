@@ -13,7 +13,6 @@ from src.types.llm.transformers import TransformersLMArgs
 
 
 class TransformersBaseLLM(BaseLLM, ILlm):
-
     def __init__(self, **args) -> None:
         from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
 
@@ -35,24 +34,32 @@ class TransformersBaseLLM(BaseLLM, ILlm):
                 trust_remote_code=True,
             ).eval()
         else:
-            self._model = AutoModelForCausalLM.from_pretrained(
-                self.args.lm_model_name_or_path,
-                torch_dtype=self.args.lm_torch_dtype,
-                attn_implementation=self.args.lm_attn_impl,
-                trust_remote_code=True,
-            ).eval().to(self.args.lm_device)
+            self._model = (
+                AutoModelForCausalLM.from_pretrained(
+                    self.args.lm_model_name_or_path,
+                    torch_dtype=self.args.lm_torch_dtype,
+                    attn_implementation=self.args.lm_attn_impl,
+                    trust_remote_code=True,
+                )
+                .eval()
+                .to(self.args.lm_device)
+            )
 
         self._tokenizer = AutoTokenizer.from_pretrained(
-            self.args.lm_model_name_or_path, trust_remote_code=True)
+            self.args.lm_model_name_or_path, trust_remote_code=True
+        )
         self._streamer = TextIteratorStreamer(
-            self._tokenizer, skip_prompt=True, skip_special_tokens=True)
+            self._tokenizer, skip_prompt=True, skip_special_tokens=True
+        )
 
         self._chat_history = ChatHistory(self.args.chat_history_size)
         if self.args.init_chat_role and self.args.init_chat_prompt:
-            self._chat_history.init({
-                "role": self.args.init_chat_role,
-                "content": self.args.init_chat_prompt,
-            })
+            self._chat_history.init(
+                {
+                    "role": self.args.init_chat_role,
+                    "content": self.args.init_chat_prompt,
+                }
+            )
 
         # subclass to init
         self.init()
@@ -68,7 +75,7 @@ class TransformersBaseLLM(BaseLLM, ILlm):
 
     @abstractmethod
     def warmup(self):
-        raise NotImplemented("must be implemented in the child class")
+        raise NotImplementedError("must be implemented in the child class")
 
     def generate(self, session: Session):
         r"""
@@ -115,8 +122,8 @@ class TransformersBaseLLM(BaseLLM, ILlm):
                 res += text
                 pos = self._have_special_char(res)
                 if pos > -1:
-                    yield res[:pos + 1]
-                    res = res[pos + 1:]
+                    yield res[: pos + 1]
+                    res = res[pos + 1 :]
             if len(res) > 0:
                 yield res
 

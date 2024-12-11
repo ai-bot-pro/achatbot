@@ -5,7 +5,8 @@ try:
     from openai import AsyncOpenAI, BadRequestError
 except ModuleNotFoundError as e:
     logging.error(
-        "In order to use OpenAI, you need to `pip install openai`. Also, set `OPENAI_API_KEY` environment variable.")
+        "In order to use OpenAI, you need to `pip install openai`. Also, set `OPENAI_API_KEY` environment variable."
+    )
     raise Exception(f"Missing module: {e}")
 from apipeline.frames.sys_frames import ErrorFrame
 from apipeline.frames.data_frames import Frame, AudioRawFrame
@@ -25,12 +26,13 @@ class OpenAITTSProcessor(TTSProcessorBase):
     """
 
     def __init__(
-            self,
-            *,
-            api_key: str | None = None,
-            voice: Literal["alloy", "echo", "fable", "onyx", "nova", "shimmer"] = "alloy",
-            model: Literal["tts-1", "tts-1-hd"] = "tts-1",
-            **kwargs):
+        self,
+        *,
+        api_key: str | None = None,
+        voice: Literal["alloy", "echo", "fable", "onyx", "nova", "shimmer"] = "alloy",
+        model: Literal["tts-1", "tts-1-hd"] = "tts-1",
+        **kwargs,
+    ):
         super().__init__(**kwargs)
 
         self._voice = voice
@@ -52,16 +54,19 @@ class OpenAITTSProcessor(TTSProcessorBase):
             await self.start_ttfb_metrics()
 
             async with self._client.audio.speech.with_streaming_response.create(
-                    input=text,
-                    model=self._model,
-                    voice=self._voice,
-                    response_format="pcm",
+                input=text,
+                model=self._model,
+                voice=self._voice,
+                response_format="pcm",
             ) as r:
                 if r.status_code != 200:
                     error = await r.text()
                     logging.error(
-                        f"{self} error getting audio (status: {r.status_code}, error: {error})")
-                    yield ErrorFrame(f"Error getting audio (status: {r.status_code}, error: {error})")
+                        f"{self} error getting audio (status: {r.status_code}, error: {error})"
+                    )
+                    yield ErrorFrame(
+                        f"Error getting audio (status: {r.status_code}, error: {error})"
+                    )
                     self._tts_done_event.set()
                     return
                 await self.start_tts_usage_metrics(text)

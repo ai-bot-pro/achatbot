@@ -16,6 +16,7 @@ from src.processors.speech.tts.elevenlabs_tts_processor import ElevenLabsTTSProc
 from src.transports.daily import DailyTransport
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 r"""
@@ -52,16 +53,18 @@ class TestElevenlabsTTSProcessor(unittest.IsolatedAsyncioTestCase):
     async def test_tts_daily_output(self):
         bot_name = "my test bot"
         transport = DailyTransport(
-            self.room_url, None, bot_name,
-            DailyParams(audio_out_enabled=True))
+            self.room_url, None, bot_name, DailyParams(audio_out_enabled=True)
+        )
 
         tts = ElevenLabsTTSProcessor(
             voice_id=self.voice_id,
             # sync_order_send=True,  # for send EndFrame in the end to test
         )
 
-        task = PipelineTask(Pipeline([tts, transport.output_processor()]),
-                            params=PipelineParams(allow_interruptions=True))
+        task = PipelineTask(
+            Pipeline([tts, transport.output_processor()]),
+            params=PipelineParams(allow_interruptions=True),
+        )
 
         # Register an event handler so we can play the audio when the
         # participant joins.
@@ -70,12 +73,14 @@ class TestElevenlabsTTSProcessor(unittest.IsolatedAsyncioTestCase):
             participant_name = bot_name
             if "userName" in participant["info"]:
                 participant_name = participant["info"]["userName"]
-            await task.queue_frames([
-                TextFrame(f"你好，Hello there. {participant_name}"),
-                TextFrame(f"你是一个中国人。"),
-                TextFrame(f"一名中文助理，请用中文简短回答，回答限制在5句话内。"),
-                EndFrame(),
-            ])
+            await task.queue_frames(
+                [
+                    TextFrame(f"你好，Hello there. {participant_name}"),
+                    TextFrame("你是一个中国人。"),
+                    TextFrame("一名中文助理，请用中文简短回答，回答限制在5句话内。"),
+                    EndFrame(),
+                ]
+            )
 
         runner = PipelineRunner()
         await runner.run(task)

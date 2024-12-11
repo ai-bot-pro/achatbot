@@ -11,7 +11,6 @@ from src.types.frames.data_frames import TransportMessageFrame, AgoraTransportMe
 
 
 class AgoraOutputTransportProcessor(AudioCameraOutputProcessor):
-
     def __init__(self, client: AgoraTransportClient, params: AgoraParams, **kwargs):
         super().__init__(params, **kwargs)
         self._client = client
@@ -56,10 +55,9 @@ class AgoraOutputTransportProcessor(AudioCameraOutputProcessor):
         if frame.characters:
             metrics["characters"] = frame.characters
 
-        message = AgoraTransportMessageFrame(message={
-            "type": "chatbot-metrics",
-            "metrics": metrics
-        })
+        message = AgoraTransportMessageFrame(
+            message={"type": "chatbot-metrics", "metrics": metrics}
+        )
         await self._client.send_message(message)
 
     async def write_raw_audio_frames(self, frames: bytes):

@@ -12,6 +12,7 @@ class CustomConfidence(BaseModel):
     a and b or c => False
     a or b or c => True
     """
+
     boolean_op: str = "and"  # `is_detected` | and `is_detected` | or `is_detected`
     class_name: str = "person"
     d_min_cn: int = 1  # min detected obj cn in image

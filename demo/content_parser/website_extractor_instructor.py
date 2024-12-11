@@ -21,12 +21,12 @@ class WebsiteExtractor:
         Initialize the WebsiteExtractor.
         """
         self.unwanted_tags = []
-        self.user_agent = 'Mozilla/5.0'
+        self.user_agent = "Mozilla/5.0"
         self.timeout = 10
         self.remove_patterns = [
-            '!\\[.*?\\]\\(.*?\\)',
-            '\\[([^\\]]+)\\]\\([^\\)]+\\)',
-            'https?://\\S+|www\\.\\S+',
+            "!\\[.*?\\]\\(.*?\\)",
+            "\\[([^\\]]+)\\]\\([^\\)]+\\)",
+            "https?://\\S+|www\\.\\S+",
         ]
 
     def extract_content(self, url: str) -> str:
@@ -35,12 +35,12 @@ class WebsiteExtractor:
             normalized_url = self.normalize_url(url)
 
             # Request the webpage
-            headers = {'User-Agent': self.user_agent}
+            headers = {"User-Agent": self.user_agent}
             response = requests.get(normalized_url, headers=headers, timeout=self.timeout)
             response.raise_for_status()  # Raise an exception for bad status codes
 
             # Parse the page content with BeautifulSoup
-            soup = BeautifulSoup(response.text, 'html.parser')
+            soup = BeautifulSoup(response.text, "html.parser")
 
             # Remove unwanted elements
             self.remove_unwanted_elements(soup)
@@ -55,14 +55,16 @@ class WebsiteExtractor:
             raise Exception(f"Failed to extract content from {url}: {str(e)}")
         except Exception as e:
             logging.error(
-                f"An unexpected error occurred while extracting content from {url}: {str(e)}")
+                f"An unexpected error occurred while extracting content from {url}: {str(e)}"
+            )
             raise Exception(
-                f"An unexpected error occurred while extracting content from {url}: {str(e)}")
+                f"An unexpected error occurred while extracting content from {url}: {str(e)}"
+            )
 
     def normalize_url(self, url: str) -> str:
         # If the URL doesn't start with a scheme, add 'https://'
-        if not url.startswith(('http://', 'https://')):
-            url = 'https://' + url
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
 
         # Parse the URL
         parsed = urlparse(url)
@@ -89,14 +91,14 @@ class WebsiteExtractor:
         cleaned_content = html.unescape(content)
 
         # Remove extra whitespace
-        cleaned_content = re.sub(r'\s+', ' ', cleaned_content)
+        cleaned_content = re.sub(r"\s+", " ", cleaned_content)
 
         # Remove extra newlines
-        cleaned_content = re.sub(r'\n{3,}', '\n\n', cleaned_content)
+        cleaned_content = re.sub(r"\n{3,}", "\n\n", cleaned_content)
 
         # Apply custom cleaning patterns from config
         for pattern in self.remove_patterns:
-            cleaned_content = re.sub(pattern, '', cleaned_content)
+            cleaned_content = re.sub(pattern, "", cleaned_content)
 
         return cleaned_content.strip()
 
@@ -119,8 +121,8 @@ def extract_content(test_urls: List[str]) -> None:
 @app.command()
 def instruct_content(
     test_urls: List[str],
-    language: str = 'en',
-    mode='text',
+    language: str = "en",
+    mode="text",
 ) -> None:
     console = Console()
     extractor = WebsiteExtractor()
@@ -154,7 +156,7 @@ TABLE_MODEL=podcast python -m demo.content_parser.website_extractor_instructor i
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s',
+        format="%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s",
         handlers=[
             # logging.FileHandler("extractor.log"),
             logging.StreamHandler()

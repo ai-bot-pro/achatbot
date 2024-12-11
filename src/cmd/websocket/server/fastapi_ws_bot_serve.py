@@ -35,19 +35,17 @@ if __name__ == "__main__":
     default_host = os.getenv("HOST", "0.0.0.0")
     default_port = int(os.getenv("FAST_API_PORT", "4321"))
 
-    parser = argparse.ArgumentParser(
-        description="Fastapi Websocket Bot Runner")
-    parser.add_argument("--host", type=str,
-                        default=default_host, help="Host address")
-    parser.add_argument("--port", type=int,
-                        default=default_port, help="Port number")
-    parser.add_argument("--reload", action="store_true",
-                        help="Reload code on change")
-    parser.add_argument("--ngrok", action='store_true',
-                        help="use ngrok proxy")
-    parser.add_argument("-f", type=str,
-                        default=os.path.join(CONFIG_DIR, "bots/dummy_bot.json"),
-                        help="Bot configuration json file")
+    parser = argparse.ArgumentParser(description="Fastapi Websocket Bot Runner")
+    parser.add_argument("--host", type=str, default=default_host, help="Host address")
+    parser.add_argument("--port", type=int, default=default_port, help="Port number")
+    parser.add_argument("--reload", action="store_true", help="Reload code on change")
+    parser.add_argument("--ngrok", action="store_true", help="use ngrok proxy")
+    parser.add_argument(
+        "-f",
+        type=str,
+        default=os.path.join(CONFIG_DIR, "bots/dummy_bot.json"),
+        help="Bot configuration json file",
+    )
 
     config = parser.parse_args()
 
@@ -66,5 +64,5 @@ if __name__ == "__main__":
         "src.cmd.http.server.fastapi_daily_bot_serve:app",
         host=config.host,
         port=config.port,
-        reload=config.reload
+        reload=config.reload,
     )

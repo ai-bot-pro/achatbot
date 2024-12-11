@@ -22,6 +22,7 @@ from src.cmd.bots.run import BotTaskRunnerFE, EngineClassInfo, RunBotInfo
 
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 
@@ -29,6 +30,7 @@ Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=Tr
 
 
 # --------------------- API -----------------
+
 
 class APIResponse(BaseModel):
     error_code: int = 0
@@ -99,6 +101,7 @@ def check_host_whitelist(request: Request):
 # ------------ Fast API Routes ------------ #
 # https://fastapi.tiangolo.com/async/
 
+
 @app.middleware("http")
 async def allowed_hosts_middleware(request: Request, call_next):
     # Middle that optionally checks for hosts in a whitelist
@@ -134,8 +137,7 @@ async def create_room(name, tag: str = "daily_room"):
     """create room then redirect to room url"""
     try:
         room_obj = getRoomMgr(RunBotInfo(room_manager=EngineClassInfo(tag=tag)))
-        room: GeneralRoomInfo = await room_obj.create_room(
-            name, exp_time_s=ROOM_EXPIRE_TIME)
+        room: GeneralRoomInfo = await room_obj.create_room(name, exp_time_s=ROOM_EXPIRE_TIME)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"{e}")
 
@@ -150,7 +152,8 @@ curl -XPOST "http://0.0.0.0:4321/create_random_room" \
 
 @app.post("/create_random_room")
 async def fastapi_create_random_room(
-        exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME, tag: str = "daily_room") -> JSONResponse:
+    exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME, tag: str = "daily_room"
+) -> JSONResponse:
     try:
         res = await create_random_room(exp_time_s, tag)
     except Exception as e:
@@ -159,13 +162,14 @@ async def fastapi_create_random_room(
     return JSONResponse(res)
 
 
-async def create_random_room(exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME,
-                             tag: str = "daily_room") -> dict[str, Any]:
+async def create_random_room(
+    exp_time_s: int = RANDOM_ROOM_EXPIRE_TIME, tag: str = "daily_room"
+) -> dict[str, Any]:
     """create random room and token return"""
     if exp_time_s > MAX_RANDOM_ROOM_EXPIRE_TIME:
         raise HTTPException(
-            status_code=400,
-            detail=f"exp_time_s must be less than {MAX_RANDOM_ROOM_EXPIRE_TIME} s")
+            status_code=400, detail=f"exp_time_s must be less than {MAX_RANDOM_ROOM_EXPIRE_TIME} s"
+        )
     room_obj = getRoomMgr(RunBotInfo(room_manager=EngineClassInfo(tag=tag)))
     room: GeneralRoomInfo = await room_obj.create_room(exp_time_s=exp_time_s)
 
@@ -232,19 +236,16 @@ curl -XPOST "http://0.0.0.0:4321/bot_join/DailyLangchainRAGBot" \
 
 
 @app.post("/realtime_ai/bot_join/{chat_bot_name}")
-async def fastapi_bot_join(chat_bot_name: str, info: RunBotInfo) -> JSONResponse:
+async def fastapi_bot_join_ra(chat_bot_name: str, info: RunBotInfo) -> JSONResponse:
     # for realtime-ai, no biz code, api design not good
     try:
         res = await bot_join(chat_bot_name, info)
     except Exception as e:
         logging.error(f"Exception in bot_join: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"{e}")
-    if res['error_code'] > 0:
+    if res["error_code"] > 0:
         raise HTTPException(status_code=500, detail=f"{res['error_detail']}")
-    return JSONResponse({
-        "room_url": res['data']['room_url'],
-        "token": res['data']['token']
-    })
+    return JSONResponse({"room_url": res["data"]["room_url"], "token": res["data"]["token"]})
 
 
 @app.post("/bot_join/{chat_bot_name}")
@@ -261,11 +262,13 @@ async def fastapi_bot_join(chat_bot_name: str, info: RunBotInfo) -> JSONResponse
     return JSONResponse(res)
 
 
-async def bot_websocket_join(chat_bot_name: str,
-                             info: RunBotInfo | dict,
-                             services: dict = None,
-                             config_list: list = None,
-                             config: dict = None) -> dict[str, Any]:
+async def bot_websocket_join(
+    chat_bot_name: str,
+    info: RunBotInfo | dict,
+    services: dict = None,
+    config_list: list = None,
+    config: dict = None,
+) -> dict[str, Any]:
     """join websocket chat with bot"""
     logging.info(f"chat_bot_name: {chat_bot_name} request bot info: {info}")
     if isinstance(info, dict):
@@ -296,11 +299,13 @@ async def bot_websocket_join(chat_bot_name: str,
     return APIResponse(data=data).model_dump()
 
 
-async def bot_join(chat_bot_name: str,
-                   info: RunBotInfo | dict,
-                   services: dict = None,
-                   config_list: list = None,
-                   config: dict = None) -> dict[str, Any]:
+async def bot_join(
+    chat_bot_name: str,
+    info: RunBotInfo | dict,
+    services: dict = None,
+    config_list: list = None,
+    config: dict = None,
+) -> dict[str, Any]:
     """join random room chat with bot"""
 
     logging.info(f"chat_bot_name: {chat_bot_name} request bot info: {info}")
@@ -374,29 +379,24 @@ curl -XPOST "http://0.0.0.0:4321/bot_join/chat-bot/DailyLangchainRAGBot" \
 
 
 @app.post("/realtime-ai/bot_join/{room_name}/{chat_bot_name}")
-async def fastapi_bot_join_room(
-        room_name: str,
-        chat_bot_name: str,
-        info: RunBotInfo) -> JSONResponse:
+async def fastapi_bot_join_room_ra(
+    room_name: str, chat_bot_name: str, info: RunBotInfo
+) -> JSONResponse:
     try:
         res = await bot_join_room(room_name, chat_bot_name, info)
     except Exception as e:
         logging.error(f"Exception in bot_join_room: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"{e}")
 
-    if res['error_code'] > 0:
+    if res["error_code"] > 0:
         raise HTTPException(status_code=500, detail=f"{res['error_detail']}")
-    return JSONResponse({
-        "room_url": res['data']['room_url'],
-        "token": res['data']['token']
-    })
+    return JSONResponse({"room_url": res["data"]["room_url"], "token": res["data"]["token"]})
 
 
 @app.post("/bot_join/{room_name}/{chat_bot_name}")
 async def fastapi_bot_join_room(
-        room_name: str,
-        chat_bot_name: str,
-        info: RunBotInfo) -> JSONResponse:
+    room_name: str, chat_bot_name: str, info: RunBotInfo
+) -> JSONResponse:
     try:
         res = await bot_join_room(room_name, chat_bot_name, info)
     except Exception as e:
@@ -406,10 +406,14 @@ async def fastapi_bot_join_room(
     return JSONResponse(res)
 
 
-async def bot_join_room(room_name: str, chat_bot_name: str, info: RunBotInfo | dict,
-                        services: dict = None,
-                        config_list: list = None,
-                        config: dict = None) -> dict[str, Any]:
+async def bot_join_room(
+    room_name: str,
+    chat_bot_name: str,
+    info: RunBotInfo | dict,
+    services: dict = None,
+    config_list: list = None,
+    config: dict = None,
+) -> dict[str, Any]:
     """join room chat with bot"""
 
     logging.info(f"room_name: {room_name} chat_bot_name: {chat_bot_name} request bot info: {info}")
@@ -470,7 +474,7 @@ curl -XGET "http://0.0.0.0:4321/status/53187" | jq .
 """
 
 
-@ app.get("/status/{pid}")
+@app.get("/status/{pid}")
 async def fastapi_get_status(pid: str) -> JSONResponse:
     try:
         res = await get_status(pid)
@@ -569,11 +573,13 @@ async def get_room_bots(room_name: str, tag: str = "daily_room") -> dict[str, An
     room = None
     for val in bot_task_mgr.tasks.values():
         if val.tag == room_name and tag.split("_")[0] in val.name.lower():
-            procs.append({
-                "pid": val.tid,
-                "name": val.name,
-                "status": "running" if val.is_alive() else "finished",
-            })
+            procs.append(
+                {
+                    "pid": val.tid,
+                    "name": val.name,
+                    "status": "running" if val.is_alive() else "finished",
+                }
+            )
 
     try:
         room_obj = getRoomMgr(RunBotInfo(room_manager=EngineClassInfo(tag=tag)))
@@ -586,10 +592,12 @@ async def get_room_bots(room_name: str, tag: str = "daily_room") -> dict[str, An
             error_detail=f"Failed to get room {room_name} : {ex}",
         ).model_dump()
 
-    response = APIResponse(data={
-        "room_info": room.model_dump(),
-        "bots": procs,
-    })
+    response = APIResponse(
+        data={
+            "room_info": room.model_dump(),
+            "bots": procs,
+        }
+    )
 
     return response.model_dump()
 
@@ -598,8 +606,8 @@ def getRoomMgr(run_bot_info: RunBotInfo = None) -> IRoomManager:
     room_mgr: IRoomManager = None
     if run_bot_info and run_bot_info.room_manager:
         room_mgr = RoomManagerEnvInit.initEngine(
-            run_bot_info.room_manager.tag,
-            run_bot_info.room_manager.args)
+            run_bot_info.room_manager.tag, run_bot_info.room_manager.args
+        )
     else:
         room_mgr = RoomManagerEnvInit.initEngine()
     return room_mgr
@@ -610,7 +618,7 @@ def ngrok_proxy(port):
     import nest_asyncio
 
     ngrok_tunnel = ngrok.connect(port)
-    print('Public URL:', ngrok_tunnel.public_url)
+    print("Public URL:", ngrok_tunnel.public_url)
     nest_asyncio.apply()
 
 
@@ -626,23 +634,18 @@ if __name__ == "__main__":
     import uvicorn
 
     if os.getenv("ACHATBOT_WORKER_MULTIPROC_METHOD", "fork") == "spawn":
-        multiprocessing.set_start_method('spawn')
+        multiprocessing.set_start_method("spawn")
 
     default_host = os.getenv("HOST", "0.0.0.0")
     default_port = int(os.getenv("FAST_API_PORT", "4321"))
 
-    parser = argparse.ArgumentParser(
-        description="Fastapi Bot Server")
+    parser = argparse.ArgumentParser(description="Fastapi Bot Server")
     parser.add_argument("--task_type", type=str, default="multiprocessing", help="task type")
     parser.add_argument("--task_done_timeout", type=int, default=5, help="task done timeout s")
-    parser.add_argument("--host", type=str,
-                        default=default_host, help="Host address")
-    parser.add_argument("--port", type=int,
-                        default=default_port, help="Port number")
-    parser.add_argument("--reload", action="store_true",
-                        help="Reload code on change")
-    parser.add_argument("--ngrok", type=bool,
-                        default=False, help="use ngrok proxy")
+    parser.add_argument("--host", type=str, default=default_host, help="Host address")
+    parser.add_argument("--port", type=int, default=default_port, help="Port number")
+    parser.add_argument("--reload", action="store_true", help="Reload code on change")
+    parser.add_argument("--ngrok", type=bool, default=False, help="use ngrok proxy")
 
     config = parser.parse_args()
 
@@ -654,5 +657,5 @@ if __name__ == "__main__":
         "src.cmd.http.server.fastapi_daily_bot_serve:app",
         host=config.host,
         port=config.port,
-        reload=config.reload
+        reload=config.reload,
     )

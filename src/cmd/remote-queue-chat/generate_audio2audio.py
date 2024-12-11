@@ -47,10 +47,9 @@ Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=True, is_console=Fal
 def main():
     conn = RedisQueueConnector(
         send_key=os.getenv("SEND_KEY", "SEND"),
-        host=os.getenv(
-            "REDIS_HOST",
-            "redis-12259.c240.us-east-1-3.ec2.redns.redis-cloud.com"),
-        port=os.getenv("REDIS_PORT", "12259"))
+        host=os.getenv("REDIS_HOST", "redis-12259.c240.us-east-1-3.ec2.redns.redis-cloud.com"),
+        port=os.getenv("REDIS_PORT", "12259"),
+    )
 
     op = os.getenv("RUN_OP", "fe")
     if op == "fe":

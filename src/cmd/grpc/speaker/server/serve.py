@@ -13,17 +13,17 @@ Logger.init(
     os.getenv("LOG_LEVEL", "debug").upper(),
     app_name="chat-bot-tts-serve",
     is_file=False,
-    is_console=True)
+    is_console=True,
+)
 
 
 def serve() -> None:
-    port = os.getenv('PORT', "50052")
-    max_workers = int(os.getenv('MAX_WORKERS', "10"))
+    port = os.getenv("PORT", "50052")
+    max_workers = int(os.getenv("MAX_WORKERS", "10"))
     logging.info(f"serve port: {port} max_workers: {max_workers}")
     token = "oligei-tts"
     authenticator = AuthenticationInterceptor(
-        'authorization', token,
-        grpc.StatusCode.UNAUTHENTICATED, 'Access denied!'
+        "authorization", token, grpc.StatusCode.UNAUTHENTICATED, "Access denied!"
     )
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=max_workers),

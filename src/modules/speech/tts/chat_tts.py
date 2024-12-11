@@ -21,6 +21,7 @@ class ChatTTS(BaseTTS, ITts):
 
     def __init__(self, **args) -> None:
         import deps.ChatTTS.ChatTTS as ChatTTS
+
         self.args = ChatTTSArgs(**args)
         self.chat = ChatTTS.Chat()
         self.chat.load(
@@ -47,7 +48,7 @@ class ChatTTS(BaseTTS, ITts):
         # use oral_(0-9), laugh_(0-2), break_(0-7)
         # to generate special token in text to synthesize.
         self.args.params_refine_text = ChatTTS.Chat.RefineTextParams(
-            prompt='[oral_2][laugh_0][break_6]',
+            prompt="[oral_2][laugh_0][break_6]",
             max_new_token=1024,
         )
 
@@ -67,7 +68,9 @@ class ChatTTS(BaseTTS, ITts):
         self.set_speaker(self.rand_speaker)
         logging.debug(f"{self.TAG} synthesis: {text}")
         wav = self.chat.infer(
-            [text,],
+            [
+                text,
+            ],
             skip_refine_text=self.args.skip_refine_text,
             refine_text_only=self.args.refine_text_only,
             params_refine_text=self.args.params_refine_text,

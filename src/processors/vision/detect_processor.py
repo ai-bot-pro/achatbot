@@ -28,12 +28,13 @@ class DetectProcessor(AIProcessor):
         out_detected_text: str | list = "goodbye, see you next time",
         detector: IVisionDetector | EngineClass | None = None,
         session: Session | None = None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self._detected_text = detected_text if isinstance(detected_text, list) else [detected_text]
-        self._out_detected_text = out_detected_text if isinstance(
-            out_detected_text, list) else [out_detected_text]
+        self._out_detected_text = (
+            out_detected_text if isinstance(out_detected_text, list) else [out_detected_text]
+        )
         self._detected = False
         self._detector = detector
         self._session = session

@@ -26,8 +26,8 @@ LLM_TAG=llm_transformers_manual_vision_molmo \
 class TestTransformersVLlama(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.llm_tag = os.getenv('LLM_TAG', "llm_transformers_manual_vision_llama")
-        cls.prompt = os.getenv('LLM_PROMPT', "what's your name?")
+        cls.llm_tag = os.getenv("LLM_TAG", "llm_transformers_manual_vision_llama")
+        cls.prompt = os.getenv("LLM_PROMPT", "what's your name?")
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
@@ -47,14 +47,18 @@ class TestTransformersVLlama(unittest.TestCase):
     def test_chat_completion_prompts(self):
         prompt_cases = [
             self.prompt,
-            (self.prompt, 'en'),
-            (self.prompt, 'zh'),
-            [{"type": "image",
-              "image": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
-              },
-             {"type": "text",
-              "text": "Describe this video. Please reply to my message in chinese",
-              }],
+            (self.prompt, "en"),
+            (self.prompt, "zh"),
+            [
+                {
+                    "type": "image",
+                    "image": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
+                },
+                {
+                    "type": "text",
+                    "text": "Describe this video. Please reply to my message in chinese",
+                },
+            ],
         ]
 
         for prompt in prompt_cases:

@@ -6,7 +6,10 @@ from apipeline.pipeline.runner import PipelineRunner
 from fastapi import WebSocket
 
 from src.cmd.bots.base_fastapi_websocket_server import AIFastapiWebsocketBot
-from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
+from src.processors.aggregators.llm_response import (
+    LLMAssistantResponseAggregator,
+    LLMUserResponseAggregator,
+)
 from src.processors.llm.base import LLMProcessor
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
@@ -64,15 +67,17 @@ class FastapiWebsocketServerBot(AIFastapiWebsocketBot):
         assistant_response = LLMAssistantResponseAggregator(messages)
 
         self.task = PipelineTask(
-            Pipeline([
-                transport.input_processor(),
-                self.asr_processor,
-                user_response,
-                self.llm_processor,
-                self.tts_processor,
-                transport.output_processor(),
-                assistant_response,
-            ]),
+            Pipeline(
+                [
+                    transport.input_processor(),
+                    self.asr_processor,
+                    user_response,
+                    self.llm_processor,
+                    self.tts_processor,
+                    transport.output_processor(),
+                    assistant_response,
+                ]
+            ),
             params=PipelineParams(
                 allow_interruptions=True,
                 enable_metrics=True,
@@ -80,12 +85,8 @@ class FastapiWebsocketServerBot(AIFastapiWebsocketBot):
             ),
         )
 
-        transport.add_event_handler(
-            "on_client_connected",
-            self.on_client_connected)
-        transport.add_event_handler(
-            "on_client_disconnected",
-            self.on_client_disconnected)
+        transport.add_event_handler("on_client_connected", self.on_client_connected)
+        transport.add_event_handler("on_client_disconnected", self.on_client_disconnected)
 
         await PipelineRunner(handle_sigint=self._handle_sigint).run(self.task)
 
@@ -98,15 +99,14 @@ class FastapiWebsocketServerBot(AIFastapiWebsocketBot):
         self.session.set_client_id(client_id=f"{websocket.client.host}:{websocket.client.port}")
 
         # joined use tts say "hello" to introduce with llm generate
-        if self._bot_config.tts \
-                and self._bot_config.llm \
-                and self._bot_config.llm.messages:
+        if self._bot_config.tts and self._bot_config.llm and self._bot_config.llm.messages:
             hi_text = "Please introduce yourself first."
-            if self._bot_config.llm.language \
-                    and self._bot_config.llm.language == "zh":
+            if self._bot_config.llm.language and self._bot_config.llm.language == "zh":
                 hi_text = "请用中文介绍下自己。"
-            self._bot_config.llm.messages.append({
-                "role": "user",
-                "content": hi_text,
-            })
+            self._bot_config.llm.messages.append(
+                {
+                    "role": "user",
+                    "content": hi_text,
+                }
+            )
             await self.task.queue_frames([LLMMessagesFrame(self._bot_config.llm.messages)])

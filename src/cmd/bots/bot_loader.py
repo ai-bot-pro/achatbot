@@ -1,4 +1,3 @@
-
 import asyncio
 import json
 import logging
@@ -20,7 +19,7 @@ from src.cmd.bots import register_ai_fastapi_ws_bots, register_ai_room_bots
 
 async def load_bot_config_from_local(file_path: str):
     bot_config = {}
-    with open(file_path, 'r') as f:
+    with open(file_path, "r") as f:
         bot_config = json.load(f)
         print(json.dumps(bot_config, indent=4, sort_keys=True))
     bot_info = RunBotInfo(**bot_config)
@@ -28,10 +27,11 @@ async def load_bot_config_from_local(file_path: str):
     return bot_info
 
 
-class BotLoader():
+class BotLoader:
     """
     load bot at once
     """
+
     run_bots = {}
     lock = asyncio.Lock()
 
@@ -39,7 +39,7 @@ class BotLoader():
     async def load_bot(
         local_file_path: str | pathlib.PosixPath,
         is_re_init=False,
-        bot_type: Literal['room_bot', 'ws_bot', "fastapi_ws_bot"] = "room_bot",
+        bot_type: Literal["room_bot", "ws_bot", "fastapi_ws_bot"] = "room_bot",
     ) -> AIBot:
         """
         load once from str or pathlib.PosixPath(for container volume)
@@ -67,8 +67,7 @@ class BotLoader():
         )
 
         async with BotLoader.lock:
-            if bot_info.chat_bot_name in BotLoader.run_bots \
-                    and is_re_init is False:
+            if bot_info.chat_bot_name in BotLoader.run_bots and is_re_init is False:
                 logging.info(f"{bot_info.chat_bot_name} inited, don't re-init.")
                 return BotLoader.run_bots[bot_info.chat_bot_name]
 
@@ -106,7 +105,8 @@ class BotLoader():
                         raise Exception(detail)
 
                     run_bot = register_ai_fastapi_ws_bots[bot_info.chat_bot_name](
-                        websocket=None, **vars(bot_args))
+                        websocket=None, **vars(bot_args)
+                    )
             BotLoader.run_bots[bot_info.chat_bot_name] = run_bot
 
             return run_bot

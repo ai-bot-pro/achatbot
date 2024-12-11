@@ -23,18 +23,21 @@ try:
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        "In order to use Deepgram, you need to `pip install deepgram`. Also, set `DEEPGRAM_API_KEY` environment variable.")
+        "In order to use Deepgram, you need to `pip install deepgram`. Also, set `DEEPGRAM_API_KEY` environment variable."
+    )
     raise Exception(f"Missing module: {e}")
 
 
 class DeepgramAsrProcessor(ASRProcessorBase):
-    def __init__(self,
-                 *,
-                 api_key: str = "",
-                 url: str = "",
-                 language: str = "en",
-                 model: str = "nova-2",
-                 **kwargs):
+    def __init__(
+        self,
+        *,
+        api_key: str = "",
+        url: str = "",
+        language: str = "en",
+        model: str = "nova-2",
+        **kwargs,
+    ):
         super().__init__(**kwargs)
 
         self._live_options: ListenWebSocketOptions = ListenWebSocketOptions(
@@ -48,7 +51,8 @@ class DeepgramAsrProcessor(ASRProcessorBase):
         )
         api_key = os.getenv("DEEPGRAM_API_KEY", api_key)
         self._client = DeepgramClient(
-            api_key, config=DeepgramClientOptions(url=url, options={"keepalive": "true"}))
+            api_key, config=DeepgramClientOptions(url=url, options={"keepalive": "true"})
+        )
         self._connection: AsyncListenWebSocketClient = self._client.listen.asyncwebsocket.v("1")
         self._connection.on(LiveTranscriptionEvents.Transcript, self._on_message)
 
@@ -105,15 +109,21 @@ class DeepgramAsrProcessor(ASRProcessorBase):
             language = Language(language)
         if len(transcript) > 0:
             if is_final:
-                logging.info(f'transcript Text: [{transcript}]')
-                await self.push_frame(TranscriptionFrame(
-                    transcript, "",
-                    time_now_iso8601(),
-                    language,
-                ))
+                logging.info(f"transcript Text: [{transcript}]")
+                await self.push_frame(
+                    TranscriptionFrame(
+                        transcript,
+                        "",
+                        time_now_iso8601(),
+                        language,
+                    )
+                )
             else:
-                await self.push_frame(InterimTranscriptionFrame(
-                    transcript, "",
-                    time_now_iso8601(),
-                    language,
-                ))
+                await self.push_frame(
+                    InterimTranscriptionFrame(
+                        transcript,
+                        "",
+                        time_now_iso8601(),
+                        language,
+                    )
+                )

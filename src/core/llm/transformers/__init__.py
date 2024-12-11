@@ -3,9 +3,9 @@ from src.types.llm.transformers import TransformersLMArgs
 from transformers import HfArgumentParser
 
 
-class TransformersLLMInit():
+class TransformersLLMInit:
     @staticmethod
-    def get_transformers_llm_args(parse_file: str = '') -> dict:
+    def get_transformers_llm_args(parse_file: str = "") -> dict:
         parser = HfArgumentParser(
             TransformersLMArgs,
         )

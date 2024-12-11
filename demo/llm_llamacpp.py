@@ -10,7 +10,7 @@ from llama_cpp.llama_tokenizer import LlamaHFTokenizer
 
 
 def text_to_speech(text: str):
-    if platform.system() != 'Darwin':
+    if platform.system() != "Darwin":
         return
     print("bot speech:", text)
     try:
@@ -31,10 +31,7 @@ def get_current_weather(location, unit="fahrenheit"):
 
 
 def web_search(query: str):
-    info = {
-        "query": query,
-        "result": "search dumpy result"
-    }
+    info = {"query": query, "result": "search dumpy result"}
 
     return json.dumps(info)
 
@@ -77,7 +74,7 @@ def generate(model_path: str, prompt: str, stream=True):
     item = ""
     if stream:
         for output in output:
-            item += output['choices'][0]['text']
+            item += output["choices"][0]["text"]
             # if len(item) == 12:
             if "\n" in item:
                 print(item)
@@ -92,9 +89,7 @@ def generate(model_path: str, prompt: str, stream=True):
 
 
 def chat_completion(model_path: str, system: str, query: str, stream=False):
-    llm = Llama(
-        model_path=model_path,
-        chat_format="chatml")
+    llm = Llama(model_path=model_path, chat_format="chatml")
     output = llm.create_chat_completion(
         messages=[
             {
@@ -112,22 +107,19 @@ def chat_completion(model_path: str, system: str, query: str, stream=False):
     out_str = ""
     if stream is False:
         print(output)
-        if 'content' in output['choices'][0]['message']:
-            out_str = output['choices'][0]['message']['content']
+        if "content" in output["choices"][0]["message"]:
+            out_str = output["choices"][0]["message"]["content"]
     else:
         for item in output:
             print(item)
-            if 'content' in item['choices'][0]['delta']:
-                out_str += item['choices'][0]['delta']['content']
+            if "content" in item["choices"][0]["delta"]:
+                out_str += item["choices"][0]["delta"]["content"]
     text_to_speech(out_str)
 
 
 def chat_completion_func_call(
-        model_name: str,
-        model_path: str,
-        system: str,
-        query: str,
-        stream=False):
+    model_name: str, model_path: str, system: str, query: str, stream=False
+):
     if "functionary" in model_name:
         # llm = Llama.from_pretrained(
         #    repo_id="meetkai/functionary-small-v2.4-GGUF",
@@ -138,7 +130,9 @@ def chat_completion_func_call(
         llm = Llama(
             model_path=model_path,
             chat_format="functionary-v2",
-            tokenizer=LlamaHFTokenizer.from_pretrained("./models/meetkai/functionary-small-v2.4-GGUF"),
+            tokenizer=LlamaHFTokenizer.from_pretrained(
+                "./models/meetkai/functionary-small-v2.4-GGUF"
+            ),
         )
     else:
         llm = Llama(
@@ -150,9 +144,8 @@ def chat_completion_func_call(
         {
             "role": "system",
             "content": system,
-
         },
-        {"role": "user", "content": query}
+        {"role": "user", "content": query},
     ]
     print(messages)
     tools = [  # For functionary-7b-v2 we use "tools"; for functionary-7b-v1.4 we use "functions" = [{"name": "get_current_weather", "description":..., "parameters": ....}]
@@ -166,12 +159,12 @@ def chat_completion_func_call(
                     "properties": {
                         "location": {
                             "type": "string",
-                            "description": "The city and state, e.g., San Francisco, CA"
+                            "description": "The city and state, e.g., San Francisco, CA",
                         }
                     },
-                    "required": ["location"]
-                }
-            }
+                    "required": ["location"],
+                },
+            },
         },
         {
             "type": "function",
@@ -180,15 +173,10 @@ def chat_completion_func_call(
                 "description": "web search by query",
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "web search query"
-                        }
-                    },
-                    "required": ["query"]
-                }
-            }
+                    "properties": {"query": {"type": "string", "description": "web search query"}},
+                    "required": ["query"],
+                },
+            },
         },
     ]
 
@@ -216,28 +204,28 @@ def chat_completion_func_call(
     function_name = ""
     is_tool_call = False
     if stream is False:
-        print(output['choices'])
-        if 'tool_calls' in output['choices'][0]['message']:
+        print(output["choices"])
+        if "tool_calls" in output["choices"][0]["message"]:
             is_tool_call = True
-            args_str = output['choices'][0]['message']['tool_calls'][0]["function"]["arguments"]
-            function_name = output['choices'][0]['message']['tool_calls'][0]["function"]['name']
+            args_str = output["choices"][0]["message"]["tool_calls"][0]["function"]["arguments"]
+            function_name = output["choices"][0]["message"]["tool_calls"][0]["function"]["name"]
         else:
-            if 'content' in output['choices'][0]['message']:
-                out_str = output['choices'][0]['message']['content']
+            if "content" in output["choices"][0]["message"]:
+                out_str = output["choices"][0]["message"]["content"]
     else:
         for item in output:
-            print(item['choices'][0])
-            if 'tool_calls' in item['choices'][0]['delta']:
+            print(item["choices"][0])
+            if "tool_calls" in item["choices"][0]["delta"]:
                 is_tool_call = True
-                tool_calls = item['choices'][0]['delta']['tool_calls']
+                tool_calls = item["choices"][0]["delta"]["tool_calls"]
                 if tool_calls is None or len(tool_calls) == 0:
                     continue
                 args_str += tool_calls[0]["function"]["arguments"]
-                if tool_calls[0]["function"]['name'] is not None:
-                    function_name = tool_calls[0]["function"]['name']
+                if tool_calls[0]["function"]["name"] is not None:
+                    function_name = tool_calls[0]["function"]["name"]
             else:
-                if 'content' in item['choices'][0]['delta']:
-                    out_str += item['choices'][0]['delta']['content']
+                if "content" in item["choices"][0]["delta"]:
+                    out_str += item["choices"][0]["delta"]["content"]
     if is_tool_call is True:
         print(function_name)
         args = json.loads(args_str)
@@ -258,16 +246,17 @@ def chat_vision_img(model_path, clip_model_path):
         messages=[
             {"role": "system", "content": ""},
             {
-                "role": "user", "content": [
+                "role": "user",
+                "content": [
                     {"type": "text", "text": "请描述下图片"},
                     {
                         "type": "image_url",
                         "image_url": {
                             "url": "https://raw.githubusercontent.com/OpenBMB/MiniCPM-V/main/assets/airplane.jpeg"
-                        }
-                    }
-                ]
-            }
+                        },
+                    },
+                ],
+            },
         ]
     )
     print(res)
@@ -286,33 +275,41 @@ TOKENIZERS_PARALLELISM=true python demo/llm_llamacpp.py -t chat-func -q "查下�
 
 python demo/llm_llamacpp.py -t chat-vision-img -st 1 -m ./models/openbmb/MiniCPM-V-2_6-gguf/ggml-model-Q4_0.gguf -cm ./models/openbmb/MiniCPM-V-2_6-gguf/mmproj-model-f16.gguf
 """
-if __name__ == '__main__':
+if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_name', "-mn", type=str,
-                        default="qwen", help='e.g. qwen,functionary')
-    parser.add_argument('--type', "-t", type=str,
-                        default="generate", help='choice generate | chat | chat-func')
-    parser.add_argument('--model_path', "-m", type=str,
-                        default="./models/qwen2-1_5b-instruct-q8_0.gguf", help='model path')
     parser.add_argument(
-        '--clip_model_path',
+        "--model_name", "-mn", type=str, default="qwen", help="e.g. qwen,functionary"
+    )
+    parser.add_argument(
+        "--type", "-t", type=str, default="generate", help="choice generate | chat | chat-func"
+    )
+    parser.add_argument(
+        "--model_path",
+        "-m",
+        type=str,
+        default="./models/qwen2-1_5b-instruct-q8_0.gguf",
+        help="model path",
+    )
+    parser.add_argument(
+        "--clip_model_path",
         "-cm",
         type=str,
         default="./models/openbmb/MiniCPM-V-2_6-gguf/mmproj-model-f16.gguf",
-        help='clip model path')
+        help="clip model path",
+    )
 
     parser.add_argument(
-        '--system',
+        "--system",
         "-s",
         type=str,
         default="你是一个中国人,智能助手,请用中文回答。回答限制在1-5句话内。要友好、乐于助人且简明扼要。默认使用公制单位。保持对话简短而甜蜜。只用纯文本回答，不要包含链接或其他附加内容。不要回复计算机代码，例如不要返回用户的经度。",
-        help='system prompt')
+        help="system prompt",
+    )
 
-    parser.add_argument('--query', "-q", type=str,
-                        default="你好", help='query prompt')
-    parser.add_argument('--stream', "-st", type=bool,
-                        default=False, help='stream output')
+    parser.add_argument("--query", "-q", type=str, default="你好", help="query prompt")
+    parser.add_argument("--stream", "-st", type=bool, default=False, help="stream output")
     args = parser.parse_args()
     system_prompt = args.system
     model_path = args.model_path

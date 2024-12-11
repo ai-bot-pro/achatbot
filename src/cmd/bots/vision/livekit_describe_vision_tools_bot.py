@@ -7,7 +7,11 @@ from apipeline.pipeline.pipeline import Pipeline, FrameDirection
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.pipeline.task import PipelineTask, PipelineParams
 
-from src.processors.aggregators.openai_llm_context import OpenAIAssistantContextAggregator, OpenAILLMContext, OpenAIUserContextAggregator
+from src.processors.aggregators.openai_llm_context import (
+    OpenAIAssistantContextAggregator,
+    OpenAILLMContext,
+    OpenAIUserContextAggregator,
+)
 from src.processors.llm.base import LLMProcessor
 from src.processors.user_image_request_processor import UserImageOrTextRequestProcessor
 from src.processors.aggregators.vision_image_frame import VisionImageFrameAggregator
@@ -33,16 +37,18 @@ class LivekitDescribeVisionToolsBot(LivekitRoomBot):
         self.init_bot_config()
 
     async def get_weather(
-            self,
-            function_name: str,
-            tool_call_id: str,
-            arguments: Any,
-            llm: LLMProcessor,
-            context: OpenAILLMContext,
-            result_callback: Callable[[Any], Awaitable[None]]):
+        self,
+        function_name: str,
+        tool_call_id: str,
+        arguments: Any,
+        llm: LLMProcessor,
+        context: OpenAILLMContext,
+        result_callback: Callable[[Any], Awaitable[None]],
+    ):
         logging.info(
             f"function_name:{function_name}, tool_call_id:{tool_call_id},"
-            f"arguments:{arguments}, llm:{llm}, context:{context}")
+            f"arguments:{arguments}, llm:{llm}, context:{context}"
+        )
 
         location = arguments["location"]
         # just a mock response
@@ -54,22 +60,25 @@ class LivekitDescribeVisionToolsBot(LivekitRoomBot):
             self.get_weather_call_cn = 0
 
     async def describe_image(
-            self,
-            function_name: str,
-            tool_call_id: str,
-            arguments: Any,
-            llm: LLMProcessor,
-            context: OpenAILLMContext,
-            result_callback: Callable[[Any], Awaitable[None]]):
+        self,
+        function_name: str,
+        tool_call_id: str,
+        arguments: Any,
+        llm: LLMProcessor,
+        context: OpenAILLMContext,
+        result_callback: Callable[[Any], Awaitable[None]],
+    ):
         logging.info(
             f"function_name:{function_name}, tool_call_id:{tool_call_id},"
-            f"arguments:{arguments}, llm:{llm}, context:{context}")
+            f"arguments:{arguments}, llm:{llm}, context:{context}"
+        )
 
         self.describe_image_cn += 1
         if self.max_function_call_cn > self.get_weather_call_cn:
             # await result_callback(f"describe image.")
             await llm.push_frame(
-                UserImageRequestFrame(self.participant_id), FrameDirection.UPSTREAM)
+                UserImageRequestFrame(self.participant_id), FrameDirection.UPSTREAM
+            )
         else:
             self.describe_image_cn = 0
 
@@ -97,11 +106,9 @@ class LivekitDescribeVisionToolsBot(LivekitRoomBot):
         )
 
         init_user_prompts = []
-        if self._bot_config.extends \
-                and "init_image_request_prompts" in self._bot_config.extends:
+        if self._bot_config.extends and "init_image_request_prompts" in self._bot_config.extends:
             init_user_prompts = self._bot_config.extends["init_image_request_prompts"]
-        image_requester = UserImageOrTextRequestProcessor(
-            init_user_prompts=init_user_prompts)
+        image_requester = UserImageOrTextRequestProcessor(init_user_prompts=init_user_prompts)
         vision_aggregator = VisionImageFrameAggregator(pass_text=True)
 
         self.llm_context = OpenAILLMContext()
@@ -133,25 +140,28 @@ class LivekitDescribeVisionToolsBot(LivekitRoomBot):
             await tts_processor.say(
                 f"你好,{participant_name}。"
                 f"欢迎使用 Vision Tools Bot."
-                f"我是一名虚拟工具型助手，可以结合视频进行提问。")
+                f"我是一名虚拟工具型助手，可以结合视频进行提问。"
+            )
 
         @transport.event_handler("on_video_track_subscribed")
         async def on_video_track_subscribed(
-                transport: LivekitTransport,
-                participant: rtc.RemoteParticipant,
+            transport: LivekitTransport,
+            participant: rtc.RemoteParticipant,
         ):
             transport.capture_participant_video(participant.sid, framerate=0)
 
-        pipeline = Pipeline([
-            transport.input_processor(),
-            asr_processor,
-            image_requester,
-            vision_aggregator,
-            llm_user_ctx_aggr,
-            llm_processor,
-            tts_processor,
-            transport.output_processor(),
-            llm_assistant_ctx_aggr,
-        ])
+        pipeline = Pipeline(
+            [
+                transport.input_processor(),
+                asr_processor,
+                image_requester,
+                vision_aggregator,
+                llm_user_ctx_aggr,
+                llm_processor,
+                tts_processor,
+                transport.output_processor(),
+                llm_assistant_ctx_aggr,
+            ]
+        )
         self.task = PipelineTask(pipeline, params=PipelineParams())
         await PipelineRunner().run(self.task)

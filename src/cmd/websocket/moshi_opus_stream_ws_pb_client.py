@@ -16,8 +16,8 @@ from apipeline.serializers.protobuf import ProtobufFrameSerializer
 shutdown_flag = asyncio.Event()
 
 # ANSI escape codes for colored text
-GREEN = '\033[92m'
-RESET = '\033[0m'
+GREEN = "\033[92m"
+RESET = "\033[0m"
 
 
 class Connection:
@@ -68,9 +68,9 @@ class Connection:
     # Async loops for bidirectional audio streaming:
 
     async def send_loop(self):
-        '''
+        """
         Async loop for sending opus stream to the websocket
-        '''
+        """
         while not shutdown_flag.is_set():
             await asyncio.sleep(0.001)
             msg = self.opus_writer.read_bytes()
@@ -93,9 +93,9 @@ class Connection:
             await self.ws.close()
 
     async def receive_loop(self):
-        '''
+        """
         Async loop for receiving messages from the websocket, including text and opus stream
-        '''
+        """
         sentence = ""
         async for msg in self.ws:
             try:
@@ -128,9 +128,9 @@ class Connection:
         print("receive_loop done")
 
     async def decoder_loop(self):
-        '''
+        """
         Async loop for decoding audio from the websocket into raw pcm audio, and queueing it for playback
-        '''
+        """
 
         all_pcm_data = None
         while not shutdown_flag.is_set():
@@ -145,7 +145,7 @@ class Connection:
                 all_pcm_data = np.concatenate((all_pcm_data, pcm))
             while all_pcm_data.shape[-1] >= self.frame_size:
                 self.out_queue.put(all_pcm_data[: self.frame_size])
-                all_pcm_data = np.array(all_pcm_data[self.frame_size:])
+                all_pcm_data = np.array(all_pcm_data[self.frame_size :])
         print("decoder_loop done")
 
     async def run(self):
@@ -180,11 +180,12 @@ async def run(endpoint: str):
         except aiohttp.ClientError as e:
             print(f"Connection error: {e}")
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Moshi Websocket Client")
-    parser.add_argument("--endpoint", type=str,
-                        default="ws://localhost:4321", help="websocket endpoint")
+    parser = argparse.ArgumentParser(description="Moshi Websocket Client")
+    parser.add_argument(
+        "--endpoint", type=str, default="ws://localhost:4321", help="websocket endpoint"
+    )
     args = parser.parse_args()
 
     try:

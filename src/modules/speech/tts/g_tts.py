@@ -24,12 +24,9 @@ class GTTS(BaseTTS, ITts):
 
     async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
         from gtts import gTTS
+
         with io.BytesIO() as f:
-            tts = gTTS(
-                text=text,
-                lang=self.args.language,
-                tld=self.args.tld,
-                slow=self.args.slow)
+            tts = gTTS(text=text, lang=self.args.language, tld=self.args.tld, slow=self.args.slow)
             tts.write_to_fp(f)
             f.seek(0)
 
@@ -38,18 +35,20 @@ class GTTS(BaseTTS, ITts):
                 audio = audio.speedup(
                     playback_speed=self.args.speed_increase,
                     chunk_size=self.args.chunk_size,
-                    crossfade=self.args.crossfade_lenght)
-            audio_resampled = audio.set_frame_rate(
-                22050).set_channels(
-                1).set_sample_width(2)  # 16bit sample_width 16/8=2
+                    crossfade=self.args.crossfade_lenght,
+                )
+            audio_resampled = (
+                audio.set_frame_rate(22050).set_channels(1).set_sample_width(2)
+            )  # 16bit sample_width 16/8=2
             audio_data = audio_resampled.raw_data
             yield audio_data
 
     def get_voices(self):
         from gtts.lang import tts_langs
+
         voices = []
         languages = tts_langs()
-        tlds = ['com', 'com.au', 'co.uk', 'us', 'ca', 'co.in', 'ie', 'co.za']
+        tlds = ["com", "com.au", "co.uk", "us", "ca", "co.in", "ie", "co.za"]
 
         for lang in languages.keys():
             for tld in tlds:

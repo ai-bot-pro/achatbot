@@ -25,16 +25,16 @@ _MODELS = {
 
 
 def whisper_transcribe(audio_path, download_root, model_size="base", target_lang="zh"):
-    audio_model = whisper.load_model(
-        model_size, download_root=download_root)
+    audio_model = whisper.load_model(model_size, download_root=download_root)
     result = audio_model.transcribe(
         audio_path,
         language=target_lang,
         beam_size=5,
         word_timestamps=True,
-        condition_on_previous_text=True)
+        condition_on_previous_text=True,
+    )
     print(result)
-    text = result['text'].strip()
+    text = result["text"].strip()
     print(text)
 
 
@@ -44,34 +44,35 @@ def whisper_transcribe(audio_path, download_root, model_size="base", target_lang
 # whisper_timestamped records/tmp.wav --language zh --model medium --model_dir ./models
 # whisper_timestamped records/tmp.wav --language zh --model large --model_dir ./models
 
+
 def whisper_transcribe_timestamped(audio_path, download_root, model_size="base", target_lang="zh"):
-    audio_model = whisper.load_model(
-        model_size, download_root=download_root)
+    audio_model = whisper.load_model(model_size, download_root=download_root)
     # help(transcribe_timestamped)
-    result = transcribe_timestamped(
-        audio_model, audio_path, language=target_lang)
+    result = transcribe_timestamped(audio_model, audio_path, language=target_lang)
     print(result)
-    text = result['text'].strip()
+    text = result["text"].strip()
     print(text)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_type', "-t", type=str,
-                        default="whisper", help='choice whisper | whisper_timestamped')
-    parser.add_argument('--audio_path', "-a", type=str,
-                        default="./records/tmp.wav", help='audio path')
-    parser.add_argument('--model_size', "-s", type=str,
-                        default="base", help='model size')
-    parser.add_argument('--model_path', "-m", type=str,
-                        default="./models", help='model root path')
-    parser.add_argument('--lang', "-l", type=str,
-                        default="zh", help='target language')
+    parser.add_argument(
+        "--model_type",
+        "-t",
+        type=str,
+        default="whisper",
+        help="choice whisper | whisper_timestamped",
+    )
+    parser.add_argument(
+        "--audio_path", "-a", type=str, default="./records/tmp.wav", help="audio path"
+    )
+    parser.add_argument("--model_size", "-s", type=str, default="base", help="model size")
+    parser.add_argument("--model_path", "-m", type=str, default="./models", help="model root path")
+    parser.add_argument("--lang", "-l", type=str, default="zh", help="target language")
     args = parser.parse_args()
     if args.model_type == "whisper_timestamped":
-        whisper_transcribe_timestamped(args.audio_path, args.model_path,
-                                       args.model_size, args.lang)
+        whisper_transcribe_timestamped(args.audio_path, args.model_path, args.model_size, args.lang)
     else:
-        whisper_transcribe(args.audio_path, args.model_path,
-                           args.model_size, args.lang)
+        whisper_transcribe(args.audio_path, args.model_path, args.model_size, args.lang)

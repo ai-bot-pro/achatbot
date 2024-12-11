@@ -14,8 +14,8 @@ from src.processors.image.base import ImageGenProcessor
 
 # https://huggingface.co/docs/api-inference/tasks/text-to-image
 
-class HFApiInferenceImageGenProcessor(ImageGenProcessor):
 
+class HFApiInferenceImageGenProcessor(ImageGenProcessor):
     def __init__(
         self,
         *,
@@ -39,7 +39,8 @@ class HFApiInferenceImageGenProcessor(ImageGenProcessor):
         API_URL = f"https://api-inference.huggingface.co/models/{self._model}"
         headers = {"Authorization": f"Bearer {self._api_key}"}
         response = await self._aiohttp_session.post(
-            API_URL, headers=headers,
+            API_URL,
+            headers=headers,
             json={
                 "inputs": prompt,
                 # target_size is not work, use default params

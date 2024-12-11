@@ -20,7 +20,7 @@ def compute_rms(data):
     ints = struct.unpack(format, data)
 
     # Calculate RMS
-    sum_squares = sum(i ** 2 for i in ints)
+    sum_squares = sum(i**2 for i in ints)
     rms = (sum_squares / len(ints)) ** 0.5
     return rms
 
@@ -28,9 +28,13 @@ def compute_rms(data):
 def record_audio():
     audio = pyaudio.PyAudio()
     stream = audio.open(
-        format=FORMAT, channels=CHANNELS, rate=RATE,
-        input=True, input_device_index=None,
-        frames_per_buffer=CHUNK)
+        format=FORMAT,
+        channels=CHANNELS,
+        rate=RATE,
+        input=True,
+        input_device_index=None,
+        frames_per_buffer=CHUNK,
+    )
 
     silent_chunks = 0
     audio_started = False
@@ -59,13 +63,13 @@ def record_audio():
     audio.terminate()
 
     # save audio to a WAV file
-    with wave.open('records/tmp.wav', 'wb') as wf:
+    with wave.open("records/tmp.wav", "wb") as wf:
         wf.setnchannels(CHANNELS)
         wf.setsampwidth(audio.get_sample_size(FORMAT))
         wf.setframerate(RATE)
-        wf.writeframes(b''.join(frames))
+        wf.writeframes(b"".join(frames))
         wf.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     record_audio()

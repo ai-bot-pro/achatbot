@@ -22,10 +22,7 @@ class OCRProcessor(AIProcessor):
     """
 
     def __init__(
-        self,
-        ocr: IVisionOCR | EngineClass | None = None,
-        session: Session | None = None,
-        **kwargs
+        self, ocr: IVisionOCR | EngineClass | None = None, session: Session | None = None, **kwargs
     ):
         super().__init__(**kwargs)
         self._detected = False

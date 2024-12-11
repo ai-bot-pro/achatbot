@@ -15,6 +15,7 @@ class WebrtcVAD(BaseVAD):
 
     def __init__(self, **args) -> None:
         import webrtcvad
+
         self.args = WebRTCVADArgs(**args)
         self.model = webrtcvad.Vad(self.args.aggressiveness)
         self.audio_buffer = None
@@ -29,7 +30,8 @@ class WebrtcVAD(BaseVAD):
         num_frames = math.ceil(len(self.audio_buffer) / (2 * frame_length))
         speech_frames = 0
         logging.debug(
-            f"{self.TAG} Speech detected audio_len:{len(self.audio_buffer)} frame_len:{frame_length} num_frames {num_frames}")
+            f"{self.TAG} Speech detected audio_len:{len(self.audio_buffer)} frame_len:{frame_length} num_frames {num_frames}"
+        )
 
         for i in range(num_frames):
             start_byte = i * frame_length * 2
@@ -39,14 +41,16 @@ class WebrtcVAD(BaseVAD):
             if self.model.is_speech(frame, self.args.sample_rate):
                 speech_frames += 1
                 if self.args.check_frames_mode == VAD_CHECK_PER_FRAMES:
-                    logging.debug(f"{self.TAG} Speech detected in frame {i + 1}"
-                                  f" of {num_frames}")
+                    logging.debug(
+                        f"{self.TAG} Speech detected in frame {i + 1}" f" of {num_frames}"
+                    )
                     # await save_audio_to_file(frame, "webrtc_vad_frame.wav")
                     return True
         if self.args.check_frames_mode == VAD_CHECK_ALL_FRAMES:
             if speech_frames == num_frames:
-                logging.debug(f"{self.TAG} Speech detected in {speech_frames} of "
-                              f"{num_frames} frames")
+                logging.debug(
+                    f"{self.TAG} Speech detected in {speech_frames} of " f"{num_frames} frames"
+                )
             else:
                 logging.debug(f"{self.TAG} Speech not detected in all {num_frames} frames")
             return speech_frames == num_frames

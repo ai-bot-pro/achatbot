@@ -16,12 +16,7 @@ async def main(room: rtc.Room):
         api.AccessToken()
         .with_identity("python-publisher")
         .with_name("Python Publisher")
-        .with_grants(
-            api.VideoGrants(
-                room_join=True,
-                room=os.getenv("ROOM_NAME", "chat-room")
-            )
-        )
+        .with_grants(api.VideoGrants(room_join=True, room=os.getenv("ROOM_NAME", "chat-room")))
         .to_jwt()
     )
     url = os.getenv("LIVEKIT_URL")

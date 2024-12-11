@@ -10,7 +10,10 @@ from apipeline.processors.aggregators.sentence import SentenceAggregator
 from apipeline.pipeline.task import PipelineTask, PipelineParams
 from apipeline.frames.data_frames import Frame, TextFrame, ImageRawFrame
 
-from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
+from src.processors.aggregators.llm_response import (
+    LLMAssistantResponseAggregator,
+    LLMUserResponseAggregator,
+)
 from src.processors.user_image_request_processor import UserImageTextRequestProcessor
 from src.processors.aggregators.user_response import UserResponseAggregator
 from src.processors.aggregators.vision_image_frame import VisionImageFrameAggregator
@@ -30,31 +33,27 @@ from .. import register_ai_room_bots
 
 
 class FrameTraceLogger(FrameProcessor):
-
     def __init__(
-            self,
-            tag: str,
-            *,
-            name: str | None = None,
-            loop: AbstractEventLoop | None = None,
-            **kwargs):
+        self, tag: str, *, name: str | None = None, loop: AbstractEventLoop | None = None, **kwargs
+    ):
         super().__init__(name=name, loop=loop, **kwargs)
         self._tag = tag
 
     async def process_frame(
-            self,
-            frame: Frame,
-            direction: FrameDirection = FrameDirection.DOWNSTREAM):
+        self, frame: Frame, direction: FrameDirection = FrameDirection.DOWNSTREAM
+    ):
         await super().process_frame(frame, direction)
 
         from_to = f"{self._prev} ---> {self}"
         if direction == FrameDirection.UPSTREAM:
             from_to = f"{self} <--- {self._next} "
-        if not isinstance(frame, BotSpeakingFrame) \
-                and not isinstance(frame, BotStartedSpeakingFrame) \
-                and not isinstance(frame, BotStoppedSpeakingFrame) \
-                and not isinstance(frame, UserStartedSpeakingFrame) \
-                and not isinstance(frame, UserStoppedSpeakingFrame):
+        if (
+            not isinstance(frame, BotSpeakingFrame)
+            and not isinstance(frame, BotStartedSpeakingFrame)
+            and not isinstance(frame, BotStoppedSpeakingFrame)
+            and not isinstance(frame, UserStartedSpeakingFrame)
+            and not isinstance(frame, UserStoppedSpeakingFrame)
+        ):
             logging.info(f"Tag: {self._tag}; {from_to} get Frame: {frame}")
         await self.push_frame(frame, direction)
 
@@ -95,13 +94,15 @@ class LivekitChatVisionBot(LivekitRoomBot):
             "你他娘的是个人才。",
             "熊二。",
             "熊大。",
-            "光头强。"
+            "光头强。",
         ]
 
         self.desc_img_prompt = "Describe the image in a short sentence."
-        if self._bot_config.vision_llm \
-                and self._bot_config.vision_llm.language \
-                and self._bot_config.vision_llm.language == "zh":
+        if (
+            self._bot_config.vision_llm
+            and self._bot_config.vision_llm.language
+            and self._bot_config.vision_llm.language == "zh"
+        ):
             self.desc_img_prompt = "请描述下图片内容"
 
     async def text_filter(self, frame: Frame):
@@ -138,14 +139,12 @@ class LivekitChatVisionBot(LivekitRoomBot):
             params=livekit_params,
         )
 
-        transport.add_event_handler(
-            "on_first_participant_joined",
-            self.on_first_participant_joined)
+        transport.add_event_handler("on_first_participant_joined", self.on_first_participant_joined)
 
         @transport.event_handler("on_video_track_subscribed")
         async def on_video_track_subscribed(
-                transport: LivekitTransport,
-                participant: rtc.RemoteParticipant,
+            transport: LivekitTransport,
+            participant: rtc.RemoteParticipant,
         ):
             transport.capture_participant_video(participant.sid, framerate=0)
 
@@ -167,37 +166,45 @@ class LivekitChatVisionBot(LivekitRoomBot):
 
         llm_out_aggr = LLMAssistantResponseAggregator()
 
-        pipeline = Pipeline([
-            transport.input_processor(),
-            asr_processor,
-            llm_in_aggr,
-            llm_processor,
-            ParallelPipeline(
-                # NOTE: SentenceAggregator no start/end tag to do, need match sentence to end
-                # [SentenceAggregator(), FrameTraceLogger(tag="1.0")],
-                [SentenceAggregator(), self.image_requester, vision_aggregator, vision_llm_processor],
-                [SentenceAggregator(), text_filter, img_filter],
-            ),
-            tts_processor,
-            transport.output_processor(),
-            llm_out_aggr,
-        ])
+        pipeline = Pipeline(
+            [
+                transport.input_processor(),
+                asr_processor,
+                llm_in_aggr,
+                llm_processor,
+                ParallelPipeline(
+                    # NOTE: SentenceAggregator no start/end tag to do, need match sentence to end
+                    # [SentenceAggregator(), FrameTraceLogger(tag="1.0")],
+                    [
+                        SentenceAggregator(),
+                        self.image_requester,
+                        vision_aggregator,
+                        vision_llm_processor,
+                    ],
+                    [SentenceAggregator(), text_filter, img_filter],
+                ),
+                tts_processor,
+                transport.output_processor(),
+                llm_out_aggr,
+            ]
+        )
         self.task = PipelineTask(pipeline, params=PipelineParams())
         await PipelineRunner().run(self.task)
 
     async def on_first_participant_joined(
-        self,
-        transport: LivekitTransport,
-        participant: rtc.RemoteParticipant
+        self, transport: LivekitTransport, participant: rtc.RemoteParticipant
     ):
         transport.capture_participant_video(participant.sid, framerate=0)
         self.image_requester.set_participant_id(participant.sid)
         # joined use tts say "hello" to introduce with llm generate
-        if self._bot_config.tts \
-                and self._bot_config.llm \
-                and self._bot_config.llm.messages \
-                and len(self._bot_config.llm.messages) > 0:
+        if (
+            self._bot_config.tts
+            and self._bot_config.llm
+            and self._bot_config.llm.messages
+            and len(self._bot_config.llm.messages) > 0
+        ):
             messages = self._bot_config.llm.messages
-            messages[0]["content"] = self._bot_config.llm.messages[0]["content"] + \
-                " Please introduce yourself first."
+            messages[0]["content"] = (
+                self._bot_config.llm.messages[0]["content"] + " Please introduce yourself first."
+            )
             await self.task.queue_frames([LLMMessagesFrame(messages)])

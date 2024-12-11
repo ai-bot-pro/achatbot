@@ -2,14 +2,16 @@ import logging
 from threading import Thread
 
 import torch
+
 try:
     from qwen_vl_utils import process_vision_info
     from transformers import MllamaForConditionalGeneration, AutoProcessor, TextIteratorStreamer
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        f"In order to use Llama-3.2-Vision-Instruct, you need to `pip install achatbot[llm_transformers_manual_vision_llama]`,"
-        f"use awq model need to `pip install achatbot[llm_transformers_manual_vision_llama,autoawq]`")
+        "In order to use Llama-3.2-Vision-Instruct, you need to `pip install achatbot[llm_transformers_manual_vision_llama]`,"
+        "use awq model need to `pip install achatbot[llm_transformers_manual_vision_llama,autoawq]`"
+    )
     raise Exception(f"Missing module: {e}")
 
 
@@ -41,12 +43,16 @@ class TransformersManualVisionLlamaLLM(TransformersBaseLLM):
                 # trust_remote_code=True,
             )
         else:
-            self._model = MllamaForConditionalGeneration.from_pretrained(
-                self.args.lm_model_name_or_path,
-                torch_dtype=self.args.lm_torch_dtype,
-                attn_implementation=self.args.lm_attn_impl,
-                # trust_remote_code=True,
-            ).eval().to(self.args.lm_device)
+            self._model = (
+                MllamaForConditionalGeneration.from_pretrained(
+                    self.args.lm_model_name_or_path,
+                    torch_dtype=self.args.lm_torch_dtype,
+                    attn_implementation=self.args.lm_attn_impl,
+                    # trust_remote_code=True,
+                )
+                .eval()
+                .to(self.args.lm_device)
+            )
 
         # The default range for the number of visual tokens per image in the model is 4-16384.
         # You can set min_pixels and max_pixels according to your needs, such as a
@@ -60,10 +66,12 @@ class TransformersManualVisionLlamaLLM(TransformersBaseLLM):
 
         self._chat_history = ChatHistory(self.args.chat_history_size)
         if self.args.init_chat_role and self.args.init_chat_prompt:
-            self._chat_history.init({
-                "role": self.args.init_chat_role,
-                "content": self.args.init_chat_prompt,
-            })
+            self._chat_history.init(
+                {
+                    "role": self.args.init_chat_role,
+                    "content": self.args.init_chat_prompt,
+                }
+            )
 
         self.warmup()
 
@@ -82,8 +90,7 @@ class TransformersManualVisionLlamaLLM(TransformersBaseLLM):
             return_tensors="pt",
         ).to(self._model.device)
 
-        streamer = TextIteratorStreamer(
-            self._tokenizer, skip_prompt=True, skip_special_tokens=True)
+        streamer = TextIteratorStreamer(self._tokenizer, skip_prompt=True, skip_special_tokens=True)
 
         warmup_gen_kwargs = dict(
             model_inputs,
@@ -104,16 +111,18 @@ class TransformersManualVisionLlamaLLM(TransformersBaseLLM):
         )
 
     def generate(self, session: Session):
-        prompt = session.ctx.state['prompt']
+        prompt = session.ctx.state["prompt"]
         if isinstance(prompt, tuple):
             prompt, language_code = prompt
             if isinstance(prompt, str):
-                if TO_LLM_LANGUAGE[language_code] == 'zh':
-                    prompt = f"请用中文回复。" + prompt
+                if TO_LLM_LANGUAGE[language_code] == "zh":
+                    prompt = "请用中文回复。" + prompt
                 else:
-                    prompt = f"Please reply to my message in {TO_LLM_LANGUAGE[language_code]}. " + prompt
+                    prompt = (
+                        f"Please reply to my message in {TO_LLM_LANGUAGE[language_code]}. " + prompt
+                    )
 
-        message = {'role': self.args.user_role, 'content': prompt}
+        message = {"role": self.args.user_role, "content": prompt}
         self._chat_history.append(message)
         chat_history = self._chat_history.to_list()
         logging.debug(f"chat_history:{chat_history}")
@@ -125,13 +134,10 @@ class TransformersManualVisionLlamaLLM(TransformersBaseLLM):
         image_inputs, _ = process_vision_info(chat_history)
         logging.debug(f"image_inputs:{image_inputs}")
         model_inputs = self._tokenizer(
-            images=image_inputs,
-            text=[text],
-            padding=True,
-            return_tensors="pt").to(self._model.device)
+            images=image_inputs, text=[text], padding=True, return_tensors="pt"
+        ).to(self._model.device)
 
-        streamer = TextIteratorStreamer(
-            self._tokenizer, skip_prompt=True, skip_special_tokens=True)
+        streamer = TextIteratorStreamer(self._tokenizer, skip_prompt=True, skip_special_tokens=True)
 
         generation_kwargs = dict(
             model_inputs,
@@ -142,7 +148,8 @@ class TransformersManualVisionLlamaLLM(TransformersBaseLLM):
             temperature=self.args.lm_gen_temperature,
             repetition_penalty=self.args.lm_gen_repetition_penalty,
             min_new_tokens=self.args.lm_gen_min_new_tokens,
-            max_new_tokens=self.args.lm_gen_max_new_tokens)
+            max_new_tokens=self.args.lm_gen_max_new_tokens,
+        )
         thread = Thread(target=self._model.generate, kwargs=generation_kwargs)
         thread.start()
 

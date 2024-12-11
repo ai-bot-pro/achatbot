@@ -27,14 +27,14 @@ SILERO_REPO_OR_DIR=/Users/wuyong/.cache/torch/hub/snakers4_silero-vad_master \
 class TestSileroVADDetector(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tag = os.getenv('DETECTOR_TAG', "silero_vad")
-        audio_file = os.path.join(TEST_DIR, f"audio_files", f"vad_test.wav")
-        cls.audio_file = os.getenv('AUDIO_FILE', audio_file)
-        cls.repo_or_dir = os.getenv('SILERO_REPO_OR_DIR', "snakers4/silero-vad")
-        cls.model = os.getenv('SILERO_MODEL', "silero_vad")
-        cls.check_frames_mode = int(os.getenv('CHECK_FRAMES_MODE', "1"))
-        cls.source = os.getenv('SILERO_MODEL_SOURCE', "github")
-        cls.trust_repo = bool(os.getenv('SILERO_TRUST_REPO', "1"))
+        cls.tag = os.getenv("DETECTOR_TAG", "silero_vad")
+        audio_file = os.path.join(TEST_DIR, "audio_files", "vad_test.wav")
+        cls.audio_file = os.getenv("AUDIO_FILE", audio_file)
+        cls.repo_or_dir = os.getenv("SILERO_REPO_OR_DIR", "snakers4/silero-vad")
+        cls.model = os.getenv("SILERO_MODEL", "silero_vad")
+        cls.check_frames_mode = int(os.getenv("CHECK_FRAMES_MODE", "1"))
+        cls.source = os.getenv("SILERO_MODEL_SOURCE", "github")
+        cls.trust_repo = bool(os.getenv("SILERO_TRUST_REPO", "1"))
 
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
@@ -52,9 +52,9 @@ class TestSileroVADDetector(unittest.TestCase):
         ).__dict__
         print(kwargs)
         self.detector: IDetector | EngineClass = EngineFactory.get_engine_by_tag(
-            EngineClass, self.tag, **kwargs)
-        self.session = Session(**SessionCtx(
-            "test_silero_vad_client_id", 16000, 2).__dict__)
+            EngineClass, self.tag, **kwargs
+        )
+        self.session = Session(**SessionCtx("test_silero_vad_client_id", 16000, 2).__dict__)
 
     def tearDown(self):
         self.detector.close()
@@ -67,9 +67,13 @@ class TestSileroVADDetector(unittest.TestCase):
         self.assertEqual(self.detector.args.sample_rate, audio_segment.frame_rate)
         self.detector.set_audio_data(audio_segment.raw_data)
         if hasattr(self.detector, "audio_buffer"):
-            file_path = asyncio.run(save_audio_to_file(
-                self.detector.audio_buffer, self.session.get_record_audio_name(),
-                audio_dir=RECORDS_DIR))
+            file_path = asyncio.run(
+                save_audio_to_file(
+                    self.detector.audio_buffer,
+                    self.session.get_record_audio_name(),
+                    audio_dir=RECORDS_DIR,
+                )
+            )
             print(file_path)
         res = asyncio.run(self.detector.detect(self.session))
         logging.debug(res)
@@ -80,11 +84,12 @@ class TestSileroVADDetector(unittest.TestCase):
 
     def test_record_detect(self):
         import pyaudio
+
         rate, frame_len = self.detector.get_sample_info()
         paud = pyaudio.PyAudio()
-        audio_stream = paud.open(rate=rate, channels=1,
-                                 format=pyaudio.paInt16, input=True,
-                                 frames_per_buffer=1024)
+        audio_stream = paud.open(
+            rate=rate, channels=1, format=pyaudio.paInt16, input=True, frames_per_buffer=1024
+        )
 
         audio_stream.start_stream()
         logging.debug("start recording")

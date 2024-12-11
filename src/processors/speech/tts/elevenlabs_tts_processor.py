@@ -10,16 +10,16 @@ from src.processors.speech.tts.base import TTSProcessorBase
 
 
 class ElevenLabsTTSProcessor(TTSProcessorBase):
-
     def __init__(
-            self,
-            *,
-            voice_id: str = "pNInz6obpgDQGcFmaJgB",  # zh: VGcvPRjFP4qKhICQHO7d
-            api_key: str = "",
-            model_id: str = "eleven_multilingual_v2",
-            language: str | None = None,
-            aiohttp_session: aiohttp.ClientSession | None = None,
-            **kwargs):
+        self,
+        *,
+        voice_id: str = "pNInz6obpgDQGcFmaJgB",  # zh: VGcvPRjFP4qKhICQHO7d
+        api_key: str = "",
+        model_id: str = "eleven_multilingual_v2",
+        language: str | None = None,
+        aiohttp_session: aiohttp.ClientSession | None = None,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
 
         self._api_key = os.getenv("ELEVENLABS_API_KEY", api_key)
@@ -66,7 +66,9 @@ class ElevenLabsTTSProcessor(TTSProcessorBase):
 
         await self.start_ttfb_metrics()
 
-        async with self._aiohttp_session.post(url, json=payload, headers=headers, params=querystring) as r:
+        async with self._aiohttp_session.post(
+            url, json=payload, headers=headers, params=querystring
+        ) as r:
             if r.status != 200:
                 text = await r.text()
                 logging.error(f"{self} error getting audio (status: {r.status}, error: {text})")

@@ -6,9 +6,7 @@ import uuid
 
 from src.cmd.fe import TerminalChatClient
 from src.cmd.be import Audio2AudioChatWorker as ChatWorker
-from src.common.connector.grpc_stream import (
-    GrpcStreamClientConnector, GrpcStreamServeConnector
-)
+from src.common.connector.grpc_stream import GrpcStreamClientConnector, GrpcStreamServeConnector
 from src.common.logger import Logger
 
 
@@ -35,16 +33,15 @@ def main():
             os.getenv("LOG_LEVEL", "debug").upper(),
             app_name="chat-bot-grpc-fe",
             is_file=True,
-            is_console=False)
+            is_console=False,
+        )
         conn = GrpcStreamClientConnector()
         client = TerminalChatClient()
         client.run(conn)
     else:
         Logger.init(
-            logging.DEBUG,
-            app_name="chat-bot-grpc-be-worker",
-            is_file=True,
-            is_console=False)
+            logging.DEBUG, app_name="chat-bot-grpc-be-worker", is_file=True, is_console=False
+        )
         conn = GrpcStreamServeConnector()
         ChatWorker().run(conn)
     conn.close()

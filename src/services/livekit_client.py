@@ -10,7 +10,12 @@ from apipeline.frames.data_frames import AudioRawFrame, ImageRawFrame
 
 from src.common.types import SAMPLE_WIDTH, LivekitParams
 from src.common.utils.audio_utils import resample_audio
-from src.types.frames.data_frames import LivekitTransportMessageFrame, TransportMessageFrame, UserAudioRawFrame, UserImageRawFrame
+from src.types.frames.data_frames import (
+    LivekitTransportMessageFrame,
+    TransportMessageFrame,
+    UserAudioRawFrame,
+    UserImageRawFrame,
+)
 
 try:
     from livekit import rtc, api, protocol
@@ -18,7 +23,8 @@ try:
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        "In order to use Livekit, you need to `pip install achatbot[livekit, livekit-api]`.")
+        "In order to use Livekit, you need to `pip install achatbot[livekit, livekit-api]`."
+    )
     raise Exception(f"Missing module: {e}")
 
 
@@ -52,7 +58,9 @@ class LivekitTransportClient:
             raise Exception(f"token {token} is not valid")
 
         self._room_name = self._token_claims.video.room
-        self._join_name = self._token_claims.name if self._token_claims.name else self._token_claims.identity
+        self._join_name = (
+            self._token_claims.name if self._token_claims.name else self._token_claims.identity
+        )
         self._local_participant: rtc.Participant | None = None  # room VirtualDevice bot
         self._params = params
         self._callbacks = callbacks
@@ -126,16 +134,19 @@ class LivekitTransportClient:
         return True
 
     async def cleanup(self):
-        if self._in_audio_task\
-                and not self._in_audio_task.cancelled():
+        if self._in_audio_task and not self._in_audio_task.cancelled():
             self._in_audio_task.cancel()
             await self._in_audio_task
-        if self._on_participant_audio_frame_task \
-                and not self._on_participant_audio_frame_task.cancelled():
+        if (
+            self._on_participant_audio_frame_task
+            and not self._on_participant_audio_frame_task.cancelled()
+        ):
             self._on_participant_audio_frame_task.cancel()
             await self._on_participant_audio_frame_task
-        if self._on_participant_video_frame_task \
-                and not self._on_participant_video_frame_task.cancelled():
+        if (
+            self._on_participant_video_frame_task
+            and not self._on_participant_video_frame_task.cancelled()
+        ):
             self._on_participant_video_frame_task.cancel()
             await self._on_participant_video_frame_task
 
@@ -143,8 +154,10 @@ class LivekitTransportClient:
     async def _join(self):
         self._joining = True
         participants = self.get_participants()
-        logging.info(f"{self._join_name} Connecting to {self._room_name},"
-                     f" current remote participants:{participants}")
+        logging.info(
+            f"{self._join_name} Connecting to {self._room_name},"
+            f" current remote participants:{participants}"
+        )
 
         options = rtc.RoomOptions(auto_subscribe=True)
         if self._params.e2ee_shared_key:
@@ -167,7 +180,8 @@ class LivekitTransportClient:
             raise e
 
         logging.info(
-            f"local_participant:{self._room.local_participant} joined room: {self._room_name} connection_state: {self._room.connection_state}")
+            f"local_participant:{self._room.local_participant} joined room: {self._room_name} connection_state: {self._room.connection_state}"
+        )
         self._joining = False
         self._joined = True
         self._local_participant = self._room.local_participant
@@ -189,8 +203,7 @@ class LivekitTransportClient:
             # - for pub/write out to local_participant microphone
             if self._params.audio_out_enabled:
                 self._out_audio_source = rtc.AudioSource(
-                    self._params.audio_out_sample_rate,
-                    self._params.audio_out_channels
+                    self._params.audio_out_sample_rate, self._params.audio_out_channels
                 )
                 self._out_audio_track = rtc.LocalAudioTrack.create_audio_track(
                     "achatbot-out-audio", self._out_audio_source
@@ -198,7 +211,8 @@ class LivekitTransportClient:
                 options = rtc.TrackPublishOptions()
                 options.source = rtc.TrackSource.SOURCE_MICROPHONE
                 publication = await self._room.local_participant.publish_track(
-                    self._out_audio_track, options)
+                    self._out_audio_track, options
+                )
                 logging.info(f"audio track local publication {publication}")
 
             # Set up video source and track
@@ -209,11 +223,13 @@ class LivekitTransportClient:
                     self._params.camera_out_height,
                 )
                 self._out_video_track = rtc.LocalVideoTrack.create_video_track(
-                    "achatbot-video", self._out_video_source)
+                    "achatbot-video", self._out_video_source
+                )
                 options = rtc.TrackPublishOptions()
                 options.source = rtc.TrackSource.SOURCE_CAMERA
                 publication = await self._room.local_participant.publish_track(
-                    self._out_video_track, options)
+                    self._out_video_track, options
+                )
                 logging.info(f"video track local publication {publication}")
 
             # Check if there are already participants in the room
@@ -243,8 +259,12 @@ class LivekitTransportClient:
         await self._async_on_disconnected(reason="Leave Room.")
         self._in_local_audio_stream and await self._in_local_audio_stream.aclose()
         self._participant_audio_stream and await self._participant_audio_stream.aclose()
-        self._capture_participant_audio_stream and await self._capture_participant_audio_stream.aclose()
-        self._capture_participant_video_stream and await self._capture_participant_video_stream.aclose()
+        self._capture_participant_audio_stream and await (
+            self._capture_participant_audio_stream.aclose()
+        )
+        self._capture_participant_video_stream and await (
+            self._capture_participant_video_stream.aclose()
+        )
         await self._room.disconnect()
 
     async def leave(self):
@@ -386,8 +406,9 @@ class LivekitTransportClient:
         participant: rtc.RemoteParticipant,
     ):
         logging.info(f"track subscribed: {track} from participant {participant}")
-        if track.kind == rtc.TrackKind.KIND_AUDIO \
-                and (self._params.audio_in_enabled or self._params.vad_enabled):
+        if track.kind == rtc.TrackKind.KIND_AUDIO and (
+            self._params.audio_in_enabled or self._params.vad_enabled
+        ):
             if self._params.audio_in_participant_enabled:
                 # dispatch particpant track for capture participant audio stream
                 self._in_participant_audio_tracks[participant.sid] = track
@@ -399,11 +420,10 @@ class LivekitTransportClient:
                     num_channels=self._params.audio_in_channels,
                 )
                 self._in_audio_task = asyncio.create_task(
-                    self._process_audio_stream(
-                        self._participant_audio_stream, participant.sid))
+                    self._process_audio_stream(self._participant_audio_stream, participant.sid)
+                )
             await self._callbacks.on_audio_track_subscribed(participant)
-        elif track.kind == rtc.TrackKind.KIND_VIDEO \
-                and self._params.camera_in_enabled:
+        elif track.kind == rtc.TrackKind.KIND_VIDEO and self._params.camera_in_enabled:
             self._in_participant_video_tracks[participant.sid] = track
             await self._callbacks.on_video_track_subscribed(participant)
 
@@ -464,17 +484,22 @@ class LivekitTransportClient:
             logging.warning(f"participant_id {participant_id} no audio track")
             return
 
-        if self._current_sub_audio_participant_id \
-                and self._capture_participant_audio_stream \
-                and self._current_sub_audio_participant_id == participant_id:
+        if (
+            self._current_sub_audio_participant_id
+            and self._capture_participant_audio_stream
+            and self._current_sub_audio_participant_id == participant_id
+        ):
             logging.info(
-                f"participant_id {participant_id} has captured aduio stream: {self._capture_participant_audio_stream}")
+                f"participant_id {participant_id} has captured aduio stream: {self._capture_participant_audio_stream}"
+            )
             return
 
         # switch audio stream
-        if self._current_sub_audio_participant_id \
-                and self._capture_participant_audio_stream \
-                and self._current_sub_audio_participant_id != participant_id:
+        if (
+            self._current_sub_audio_participant_id
+            and self._capture_participant_audio_stream
+            and self._current_sub_audio_participant_id != participant_id
+        ):
             self._current_sub_audio_participant_id = participant_id
             asyncio.create_task(self._capture_participant_audio_stream.aclose())
 
@@ -485,7 +510,9 @@ class LivekitTransportClient:
         )
         self._on_participant_audio_frame_task = asyncio.create_task(
             self._async_on_participant_audio_frame(
-                participant_id, callback, self._capture_participant_audio_stream))
+                participant_id, callback, self._capture_participant_audio_stream
+            )
+        )
 
     async def _async_on_participant_audio_frame(
         self,
@@ -506,7 +533,8 @@ class LivekitTransportClient:
                         callback(audio_frame)
                 else:
                     logging.warning(
-                        f"Received unexpected event type: {type(audio_frame_event)} and participant {participant_id}")
+                        f"Received unexpected event type: {type(audio_frame_event)} and participant {participant_id}"
+                    )
             except asyncio.CancelledError:
                 await audio_stream.aclose()
                 logging.info("task cancelled")
@@ -515,7 +543,8 @@ class LivekitTransportClient:
                 logging.error(f"task Error: {e}", exc_info=True)
 
     async def read_participant_next_audio_frame_iter(
-            self, participant_id: str) -> AsyncGenerator[AudioRawFrame, None]:
+        self, participant_id: str
+    ) -> AsyncGenerator[AudioRawFrame, None]:
         """read next audio frame from remote participant audio track stream iter"""
         audio_track = self._in_participant_audio_tracks.get(participant_id)
         if not audio_track:
@@ -554,18 +583,19 @@ class LivekitTransportClient:
         # Allow 8kHz and 16kHz, other sampple rate convert to 16kHz
         if original_sample_rate not in [8000, 16000]:
             sample_rate = 16000
-            pcm_data = resample_audio(
-                pcm_data, original_sample_rate, sample_rate)
+            pcm_data = resample_audio(pcm_data, original_sample_rate, sample_rate)
         else:
             sample_rate = original_sample_rate
 
         if sample_rate != self._params.audio_in_sample_rate:
             self._params.audio_in_sample_rate = sample_rate
             if self._params.vad_enabled and self._params.vad_analyzer:
-                self._params.vad_analyzer.set_args({
-                    "sample_rate": sample_rate,
-                    "num_channels": original_num_channels,
-                })
+                self._params.vad_analyzer.set_args(
+                    {
+                        "sample_rate": sample_rate,
+                        "num_channels": original_num_channels,
+                    }
+                )
 
         return UserAudioRawFrame(
             user_id=participant_id,
@@ -576,7 +606,10 @@ class LivekitTransportClient:
 
     # Audio out
 
-    async def write_raw_audio_frames(self, frames: bytes,):
+    async def write_raw_audio_frames(
+        self,
+        frames: bytes,
+    ):
         if not self._joined or not self._out_audio_source:
             return
 
@@ -601,28 +634,34 @@ class LivekitTransportClient:
     # Camera in
 
     def _convert_input_video_image(
-            self,
-            participant_id: str,
-            video_frame_event: rtc.VideoFrameEvent,
-            target_color_mode: str = "RGB") -> UserImageRawFrame | None:
+        self,
+        participant_id: str,
+        video_frame_event: rtc.VideoFrameEvent,
+        target_color_mode: str = "RGB",
+    ) -> UserImageRawFrame | None:
         buffer = video_frame_event.frame
 
         match buffer.type:
             case rtc.VideoBufferType.RGBA:
                 image = Image.frombuffer(
-                    "RGBA", (buffer.width, buffer.height), buffer.data, "raw", "RGBA", 0, 1)
+                    "RGBA", (buffer.width, buffer.height), buffer.data, "raw", "RGBA", 0, 1
+                )
             case rtc.VideoBufferType.ABGR:
                 image = Image.frombuffer(
-                    "ABGR", (buffer.width, buffer.height), buffer.data, "raw", "ABGR", 0, 1)
+                    "ABGR", (buffer.width, buffer.height), buffer.data, "raw", "ABGR", 0, 1
+                )
             case rtc.VideoBufferType.ARGB:
                 image = Image.frombuffer(
-                    "ARGB", (buffer.width, buffer.height), buffer.data, "raw", "ARGB", 0, 1)
+                    "ARGB", (buffer.width, buffer.height), buffer.data, "raw", "ARGB", 0, 1
+                )
             case rtc.VideoBufferType.BGRA:
                 image = Image.frombuffer(
-                    "BGRA", (buffer.width, buffer.height), buffer.data, "raw", "BGRA", 0, 1)
+                    "BGRA", (buffer.width, buffer.height), buffer.data, "raw", "BGRA", 0, 1
+                )
             case rtc.VideoBufferType.RGB24:
                 image = Image.frombuffer(
-                    "RGB", (buffer.width, buffer.height), buffer.data, "raw", "RGB", 0, 1)
+                    "RGB", (buffer.width, buffer.height), buffer.data, "raw", "RGB", 0, 1
+                )
             case _:
                 logging.warning(f"buffer type:{buffer.type} un support convert")
                 return None
@@ -653,7 +692,7 @@ class LivekitTransportClient:
         callback: Callable[[UserImageRawFrame], Awaitable[None]],
         framerate: int = 30,
         video_source: str = "camera",
-        color_format: str = "RGB"
+        color_format: str = "RGB",
     ):
         # just capture one participant video
         video_track = self._in_participant_video_tracks.get(participant_id)
@@ -661,17 +700,22 @@ class LivekitTransportClient:
             logging.warning(f"participant_id {participant_id} no video track")
             return
 
-        if self._current_sub_video_participant_id \
-                and self._capture_participant_video_stream \
-                and self._current_sub_video_participant_id == participant_id:
+        if (
+            self._current_sub_video_participant_id
+            and self._capture_participant_video_stream
+            and self._current_sub_video_participant_id == participant_id
+        ):
             logging.info(
-                f"participant_id {participant_id} has captured video stream: {self._capture_participant_video_stream}")
+                f"participant_id {participant_id} has captured video stream: {self._capture_participant_video_stream}"
+            )
             return
 
         # switch video stream
-        if self._current_sub_video_participant_id \
-                and self._capture_participant_video_stream \
-                and self._current_sub_video_participant_id != participant_id:
+        if (
+            self._current_sub_video_participant_id
+            and self._capture_participant_video_stream
+            and self._current_sub_video_participant_id != participant_id
+        ):
             self._current_sub_video_participant_id = participant_id
             asyncio.create_task(self._capture_participant_video_stream.aclose())
 
@@ -682,23 +726,26 @@ class LivekitTransportClient:
 
         self._on_participant_video_frame_task = asyncio.create_task(
             self._async_on_participant_video_frame(
-                participant_id, callback,
-                self._capture_participant_video_stream, color_format))
+                participant_id, callback, self._capture_participant_video_stream, color_format
+            )
+        )
 
     async def _async_on_participant_video_frame(
         self,
         participant_id: str,
         callback: Callable[[UserImageRawFrame], Awaitable[None]],
         video_stream: rtc.VideoStream,
-        color_format: str = "RGB"
+        color_format: str = "RGB",
     ):
         logging.info(
-            f"Started capture participant_id:{participant_id} from video stream {video_stream}")
+            f"Started capture participant_id:{participant_id} from video stream {video_stream}"
+        )
         async for video_frame_event in video_stream:
             try:
                 if isinstance(video_frame_event, rtc.VideoFrameEvent):
                     image_frame = self._convert_input_video_image(
-                        participant_id, video_frame_event,
+                        participant_id,
+                        video_frame_event,
                         target_color_mode=color_format,
                     )
                     if asyncio.iscoroutinefunction(callback):
@@ -707,7 +754,8 @@ class LivekitTransportClient:
                         callback(image_frame)
                 else:
                     logging.warning(
-                        f"Received unexpected event type: {type(video_frame_event)} and participant {participant_id}")
+                        f"Received unexpected event type: {type(video_frame_event)} and participant {participant_id}"
+                    )
             except asyncio.CancelledError:
                 await video_stream.aclose()
                 logging.info("task cancelled")
@@ -734,6 +782,6 @@ class LivekitTransportClient:
             self._params.camera_out_width,
             self._params.camera_out_height,
             rtc_frame_type,
-            frame.image
+            frame.image,
         )
         self._out_video_source.capture_frame(video_frame)

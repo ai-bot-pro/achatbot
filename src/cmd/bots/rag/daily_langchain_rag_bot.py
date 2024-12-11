@@ -18,7 +18,10 @@ from apipeline.pipeline.runner import PipelineRunner
 
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.processors.speech.tts.tts_processor import TTSProcessor
-from src.processors.aggregators.llm_response import LLMAssistantResponseAggregator, LLMUserResponseAggregator
+from src.processors.aggregators.llm_response import (
+    LLMAssistantResponseAggregator,
+    LLMUserResponseAggregator,
+)
 from src.processors.ai_frameworks.langchain_rag_processor import LangchainRAGProcessor
 from src.processors.speech.audio_volume_time_processor import AudioVolumeTimeProcessor
 from src.processors.speech.asr.base import TranscriptionTimingLogProcessor
@@ -29,6 +32,7 @@ from src.cmd.bots.base_daily import DailyRoomBot
 from src.cmd.bots import register_ai_room_bots
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 DEFAULT_SYSTEM_PROMPT = """
@@ -114,11 +118,11 @@ class DailyLangchainRAGBot(DailyRoomBot):
         vectorstore = TiDBVectorStore(
             connection_string=get_tidb_url(),
             embedding_function=JinaEmbeddings(
-                jina_api_key=os.getenv('JINA_API_KEY'),
+                jina_api_key=os.getenv("JINA_API_KEY"),
                 model_name=model_name,
             ),
             table_name="AndrejKarpathy",
-            distance_strategy=os.getenv('TIDB_VSS_DISTANCE_STRATEGY', 'cosine'),
+            distance_strategy=os.getenv("TIDB_VSS_DISTANCE_STRATEGY", "cosine"),
         )
         score_threshold = 0.8
         if self._bot_config.llm.language == "zh":
@@ -131,15 +135,20 @@ class DailyLangchainRAGBot(DailyRoomBot):
         system_prompt = DEFAULT_SYSTEM_PROMPT
         if self._bot_config.llm.language == "zh":
             system_prompt += " Please communicate in Chinese"
-        if self._bot_config.llm.messages and len(self._bot_config.llm.messages) > 0 \
-                and len(self._bot_config.llm.messages[0]['content']) > 0:
-            system_prompt = self._bot_config.llm.messages[0]['content']
+        if (
+            self._bot_config.llm.messages
+            and len(self._bot_config.llm.messages) > 0
+            and len(self._bot_config.llm.messages[0]["content"]) > 0
+        ):
+            system_prompt = self._bot_config.llm.messages[0]["content"]
         logging.info(f"use system prompt: {system_prompt}")
-        answer_prompt = ChatPromptTemplate.from_messages([
-            ("system", system_prompt + """{context}"""),
-            MessagesPlaceholder("chat_history"),
-            ("human", "{input}"),
-        ])
+        answer_prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", system_prompt + """{context}"""),
+                MessagesPlaceholder("chat_history"),
+                ("human", "{input}"),
+            ]
+        )
         question_answer_chain = create_stuff_documents_chain(llm, answer_prompt)
         rag_chain = create_retrieval_chain(retriever, question_answer_chain)
         # chain = prompt | rag
@@ -148,7 +157,8 @@ class DailyLangchainRAGBot(DailyRoomBot):
             self.get_session_history,
             history_messages_key="chat_history",
             input_messages_key="input",
-            output_messages_key="answer")
+            output_messages_key="answer",
+        )
         self.langchain_processor = LangchainRAGProcessor(chain=rag_history_chain)
 
         avt_processor = AudioVolumeTimeProcessor()
@@ -164,40 +174,39 @@ class DailyLangchainRAGBot(DailyRoomBot):
             daily_params,
         )
 
-        pipeline = Pipeline([
-            transport.input_processor(),   # Transport user input
-            avt_processor,  # Audio volume timer
-            asr_processor,  # Speech-to-text
-            tl_processor,  # Transcription timing logger
-            llm_in_aggr,              # User responses
-            self.langchain_processor,  # RAG
-            tts_processor,       # TTS
-            transport.output_processor(),  # Transport bot output
-            llm_out_aggr,             # Assistant spoken responses
-        ])
+        pipeline = Pipeline(
+            [
+                transport.input_processor(),  # Transport user input
+                avt_processor,  # Audio volume timer
+                asr_processor,  # Speech-to-text
+                tl_processor,  # Transcription timing logger
+                llm_in_aggr,  # User responses
+                self.langchain_processor,  # RAG
+                tts_processor,  # TTS
+                transport.output_processor(),  # Transport bot output
+                llm_out_aggr,  # Assistant spoken responses
+            ]
+        )
 
-        task = PipelineTask(pipeline, PipelineParams(
-            allow_interruptions=True,
-            enable_metrics=True,
-            report_only_initial_ttfb=True,
-        ))
+        task = PipelineTask(
+            pipeline,
+            PipelineParams(
+                allow_interruptions=True,
+                enable_metrics=True,
+                report_only_initial_ttfb=True,
+            ),
+        )
 
-        transport.add_event_handler(
-            "on_first_participant_joined",
-            self.on_first_participant_joined)
-        transport.add_event_handler(
-            "on_participant_left",
-            self.on_participant_left)
-        transport.add_event_handler(
-            "on_call_state_updated",
-            self.on_call_state_updated)
+        transport.add_event_handler("on_first_participant_joined", self.on_first_participant_joined)
+        transport.add_event_handler("on_participant_left", self.on_participant_left)
+        transport.add_event_handler("on_call_state_updated", self.on_call_state_updated)
 
         runner = PipelineRunner()
 
         await runner.run(task)
 
     async def on_first_participant_joined(self, transport: DailyTransport, participant):
-        self.session.set_client_id(participant['id'])
-        self.langchain_processor.set_participant_id(participant['id'])
+        self.session.set_client_id(participant["id"])
+        self.langchain_processor.set_participant_id(participant["id"])
         # transport.capture_participant_transcription(participant["id"])
         logging.info(f"First participant {participant['id']} joined")

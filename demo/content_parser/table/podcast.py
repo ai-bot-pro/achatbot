@@ -24,15 +24,18 @@ client = instructor.from_gemini(
         # "top_p": 0.1,
         # "top_k": 40,
         # "response_mime_type": "text/plain",
-    }
+    },
 )
 
 
 def extract_models(content: str, mode="partial", **kwargs):
     match mode:
-        case "partial": return extract_models_partial(content, **kwargs)
-        case "iterable": return extract_models_iterable(content, **kwargs)
-        case _: return extract_models_text(content, **kwargs)
+        case "partial":
+            return extract_models_partial(content, **kwargs)
+        case "iterable":
+            return extract_models_iterable(content, **kwargs)
+        case _:
+            return extract_models_text(content, **kwargs)
 
 
 def extract_models_partial(content: str, **kwargs):
@@ -99,7 +102,7 @@ def extract_role_models_iterable(content: str, **kwargs):
 
 
 class PaperRoleSystemPromptArgs(BaseModel):
-    language: str = 'en'
+    language: str = "en"
     podcast_name: str = "AI Radio FM - Paper Read Channel"
     podcast_tagline: str = "Your Personal Generative AI Podcast"
     conversation_style: List[str] = [
@@ -113,8 +116,7 @@ class PaperRoleSystemPromptArgs(BaseModel):
     ]
     dialogue_structure: List[str] = [
         "Introduction",
-        "Main Content Detail Explain and Summarize"
-        "What problem is this paper trying to solve",
+        "Main Content Detail Explain and Summarize" "What problem is this paper trying to solve",
         "What are the relevant studies",
         "How does the paper solve this problem",
         "What experiments were done in the paper",
@@ -144,7 +146,7 @@ class PaperRoleSystemPromptArgs(BaseModel):
 
 
 class RoleSystemPromptArgs(BaseModel):
-    language: str = 'en'
+    language: str = "en"
     podcast_name: str = "AI Radio FM - Technology Channel"
     podcast_tagline: str = "Your Personal Generative AI Podcast"
     conversation_style: List[str] = [
@@ -202,7 +204,8 @@ def get_system_prompt(**kwargs) -> str:
     dialogue_structure = ",".join(args.dialogue_structure)
     engagement_techniques = ",".join(args.engagement_techniques)
 
-    speech_synthesis_markup_language_shots = rf"""
+    speech_synthesis_markup_language_shots = (
+        r"""
 [Content: using advanced TTS-specific markup as needed.]
 [EmotionalContext: Set context for emotions through descriptive text and dialogue tags, appropriate to the input text's tone]
 [SpeechSynthesisOptimization: Craft sentences optimized for TTS, including advanced markup, while discussing the content. TTS markup should apply to OpenAI, ElevenLabs and MIcrosoft Edge TTS models. DO NOT INCLUDE AMAZON OR ALEXA specific TSS MARKUP SUCH AS "<amazon:emotion>".]
@@ -210,7 +213,10 @@ def get_system_prompt(**kwargs) -> str:
 [PronunciationControl: Utilize "<say-as>" TAG for any complex terms in the input content, e_g SSML use <say-as interpret-as="characters">SSML</say-as>.]
 [Emphasis: Use "<emphasis>" TAG for key terms or phrases from the input content]
 [Metacognition: Analyze dialogue quality (Accuracy of Summary, Engagement, TTS-Readiness). Make sure TSS tags are properly closed, for instance <TAG> should be closed with </TAG>.]
-    """ if args.is_SSML else ""
+    """
+        if args.is_SSML
+        else ""
+    )
 
     return rf"""
 INSTRUCTION: Discuss the below input in a podcast conversation format, following these guidelines:
@@ -291,7 +297,8 @@ def speakers(podcast: Podcast, speakers: List[str]) -> List[str]:
     names = role_names(podcast)
     if len(speakers) != len(names):
         raise ValueError(
-            f"The number of speakers ({len(speakers)}) does not match the number of roles ({len(names)}).")
+            f"The number of speakers ({len(speakers)}) does not match the number of roles ({len(names)})."
+        )
 
     res = []
     for item in zip(speakers, names):
@@ -328,7 +335,7 @@ def console_table(podcasts: Generator[Podcast, None, None] | List[Podcast]):
             if not podcast.roles:
                 continue
 
-            new_table = Table(title=podcast.title + '\n' + podcast.description)
+            new_table = Table(title=podcast.title + "\n" + podcast.description)
             new_table.add_column("RoleName", style="magenta")
             new_table.add_column("RoleSpeakContent", style="green")
 

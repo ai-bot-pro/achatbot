@@ -1,10 +1,9 @@
 import logging
 
+import os
 import unittest
 
-from src.common.connector.grpc_stream import (
-    GrpcStreamClientConnector, GrpcStreamServeConnector
-)
+from src.common.connector.grpc_stream import GrpcStreamClientConnector, GrpcStreamServeConnector
 from src.common.logger import Logger
 from src.common.interface import IConnector
 
@@ -32,19 +31,19 @@ class TestGrpcStreamConnector(unittest.TestCase):
         pass
 
     def test_send_recv(self):
-        print('be send')
-        self.be_connector.send((1, 2, 3), 'be')
-        print('fe recv')
-        v1, v2, v3 = self.fe_connector.recv('fe')
+        print("be send")
+        self.be_connector.send((1, 2, 3), "be")
+        print("fe recv")
+        v1, v2, v3 = self.fe_connector.recv("fe")
         print(v1, v2, v3)
         self.assertEqual(v1, 1)
         self.assertEqual(v2, 2)
         self.assertEqual(v3, 3)
 
-        print('fe send')
-        self.fe_connector.send((3, 2, 1), 'fe')
-        print('be recv')
-        v3, v2, v1 = self.be_connector.recv('be')
+        print("fe send")
+        self.fe_connector.send((3, 2, 1), "fe")
+        print("be recv")
+        v3, v2, v1 = self.be_connector.recv("be")
         print(v1, v2, v3)
         self.assertEqual(v1, 1)
         self.assertEqual(v2, 2)

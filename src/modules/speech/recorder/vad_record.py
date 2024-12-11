@@ -16,13 +16,15 @@ class VADRecorder(AudioRecorder, IRecorder):
 
     def __init__(self, **args) -> None:
         vad_args = VADRecoderArgs(**args)
-        super().__init__(**AudioRecoderArgs(
-            silent_chunks=vad_args.silent_chunks,
-            silence_timeout_s=vad_args.silence_timeout_s,
-            num_frames=vad_args.num_frames,
-            is_stream_callback=vad_args.is_stream_callback,
-            no_stream_sleep_time_s=vad_args.no_stream_sleep_time_s,
-        ).__dict__)
+        super().__init__(
+            **AudioRecoderArgs(
+                silent_chunks=vad_args.silent_chunks,
+                silence_timeout_s=vad_args.silence_timeout_s,
+                num_frames=vad_args.num_frames,
+                is_stream_callback=vad_args.is_stream_callback,
+                no_stream_sleep_time_s=vad_args.no_stream_sleep_time_s,
+            ).__dict__
+        )
         self.args = vad_args
 
     async def record_audio(self, session: Session) -> list[bytes | None]:
@@ -43,10 +45,13 @@ class VADRecorder(AudioRecorder, IRecorder):
         silence_timeout = 0
         if "silence_timeout_s" in session.ctx.state:
             logging.info(
-                f"{self.TAG} recording with silence_timeout {session.ctx.state['silence_timeout_s']} s")
-            silence_timeout = int(session.ctx.state['silence_timeout_s'])
+                f"{self.TAG} recording with silence_timeout {session.ctx.state['silence_timeout_s']} s"
+            )
+            silence_timeout = int(session.ctx.state["silence_timeout_s"])
 
-        frames_duration_ms = 1000 * self.stream_info.in_frames_per_buffer // self.stream_info.in_sample_rate
+        frames_duration_ms = (
+            1000 * self.stream_info.in_frames_per_buffer // self.stream_info.in_sample_rate
+        )
         num_padding_frames = self.args.padding_ms // frames_duration_ms
         ring_buffer = collections.deque(maxlen=num_padding_frames)
         triggered = False
@@ -77,17 +82,18 @@ class VADRecorder(AudioRecorder, IRecorder):
                             yield f
                     ring_buffer.clear()
                 else:
-                    if silence_timeout > 0 \
-                            and time.time() - start_time > silence_timeout:
+                    if silence_timeout > 0 and time.time() - start_time > silence_timeout:
                         logging.warning(f"{self.TAG} recording silence timeout")
                         break
             else:
                 yield frame
                 ring_buffer.append((frame, is_active_speech))
                 num_unvoiced = len(
-                    [f for f, is_active_speech in ring_buffer if not is_active_speech])
+                    [f for f, is_active_speech in ring_buffer if not is_active_speech]
+                )
                 logging.debug(
-                    f"num_unvoiced: {num_unvoiced} threshold: {self.args.silent_ratio} * {ring_buffer.maxlen}")
+                    f"num_unvoiced: {num_unvoiced} threshold: {self.args.silent_ratio} * {ring_buffer.maxlen}"
+                )
                 if num_unvoiced > self.args.silent_ratio * ring_buffer.maxlen:
                     triggered = False
                     yield None
@@ -110,13 +116,13 @@ class WakeWordsVADRecorder(VADRecorder):
 
         # ring buffer
         pre_recording_buffer_duration = 3.0
-        maxlen = int((sample_rate // frame_length) *
-                     pre_recording_buffer_duration)
+        maxlen = int((sample_rate // frame_length) * pre_recording_buffer_duration)
         self.audio_buffer = RingBuffer(maxlen)
 
         self.audio.start_stream()
         logging.info(
-            f"start {self.TAG} recording; audio sample_rate: {self.sample_rate},frame_length:{self.frame_length}, audio buffer maxlen: {maxlen}")
+            f"start {self.TAG} recording; audio sample_rate: {self.sample_rate},frame_length:{self.frame_length}, audio buffer maxlen: {maxlen}"
+        )
 
         if self.args.is_stream_callback is False:
             self.set_args(num_frames=self.frame_length)
@@ -141,16 +147,14 @@ class WakeWordsVADRecorder(VADRecorder):
 
     async def record_audio(self, session: Session) -> list[bytes]:
         if session.ctx.waker is None:
-            logging.warning(
-                f"{self.TAG} no waker instance in session ctx, use {super().TAG}")
+            logging.warning(f"{self.TAG} no waker instance in session ctx, use {super().TAG}")
             return await super().record_audio(session)
         await self._record_audio(session)
         return await super().record_audio(session)
 
     async def record_audio_generator(self, session: Session) -> AsyncGenerator[bytes, None]:
         if session.ctx.waker is None:
-            logging.warning(
-                f"{self.TAG} no waker instance in session ctx, use {super().TAG}")
+            logging.warning(f"{self.TAG} no waker instance in session ctx, use {super().TAG}")
             async for item in super().record_audio_generator(session):
                 yield item
 

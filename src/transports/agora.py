@@ -57,7 +57,10 @@ class AgoraTransport(BaseTransport):
         self._params.app_id = params.app_id or os.getenv("AGORA_APP_ID")
         self._params.app_cert = params.app_cert or os.getenv("AGORA_APP_CERT")
         self._client = AgoraTransportClient(
-            token, self._params, callbacks, self._loop,
+            token,
+            self._params,
+            callbacks,
+            self._loop,
         )
         logging.debug(f"AgoraTransport params:{self._params}")
 
@@ -67,7 +70,8 @@ class AgoraTransport(BaseTransport):
     def input_processor(self) -> AgoraInputTransportProcessor:
         if not self._input:
             self._input = AgoraInputTransportProcessor(
-                self._client, self._params, name=self._input_name)
+                self._client, self._params, name=self._input_name
+            )
         return self._input
 
     def output_processor(self) -> AgoraOutputTransportProcessor:
@@ -88,46 +92,40 @@ class AgoraTransport(BaseTransport):
         return await self._client.get_participant_metadata(participant_id)
 
     async def _on_connected(
-            self,
-            agora_rtc_conn: rtc.RTCConnection,
-            conn_info: rtc.RTCConnInfo,
-            reason: str):
+        self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: str
+    ):
         await self._call_event_handler("on_connected", agora_rtc_conn, conn_info, reason)
 
-    async def _on_first_participant_joined(
-            self,
-            user_id: int):
+    async def _on_first_participant_joined(self, user_id: int):
         await self._call_event_handler("on_first_participant_joined", user_id)
 
     async def _on_error(self, error_msg: str):
         await self._call_event_handler("on_error", error_msg)
 
     async def _on_connection_state_changed(
-            self,
-            agora_rtc_conn: rtc.RTCConnection,
-            conn_info: rtc.RTCConnInfo,
-            reason: str):
-        await self._call_event_handler("on_connection_state_changed", agora_rtc_conn, conn_info, reason)
+        self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: str
+    ):
+        await self._call_event_handler(
+            "on_connection_state_changed", agora_rtc_conn, conn_info, reason
+        )
 
     async def _on_connection_failure(self, error_msg: str):
         await self._call_event_handler("on_connection_failure", error_msg)
 
     async def _on_disconnected(
-            self,
-            agora_rtc_conn: rtc.RTCConnection,
-            conn_info: rtc.RTCConnInfo,
-            reason: str):
+        self, agora_rtc_conn: rtc.RTCConnection, conn_info: rtc.RTCConnInfo, reason: str
+    ):
         await self._call_event_handler("on_disconnected", agora_rtc_conn, conn_info, reason)
 
     async def _on_participant_connected(self, agora_rtc_conn: rtc.RTCConnection, user_id: int):
         await self._call_event_handler("on_participant_connected", agora_rtc_conn, user_id)
 
     async def _on_participant_disconnected(
-            self,
-            agora_rtc_conn: rtc.RTCConnection,
-            user_id: int,
-            reason: str):
-        await self._call_event_handler("on_participant_disconnected", agora_rtc_conn, user_id, reason)
+        self, agora_rtc_conn: rtc.RTCConnection, user_id: int, reason: str
+    ):
+        await self._call_event_handler(
+            "on_participant_disconnected", agora_rtc_conn, user_id, reason
+        )
         if self._input:
             await self._input.process_frame(EndFrame(), FrameDirection.DOWNSTREAM)
         if self._output:
@@ -149,7 +147,13 @@ class AgoraTransport(BaseTransport):
     ):
         await self._call_event_handler(
             "on_audio_subscribe_state_changed",
-            agora_local_user, channel, user_id, old_state, new_state, elapse_since_last_state)
+            agora_local_user,
+            channel,
+            user_id,
+            old_state,
+            new_state,
+            elapse_since_last_state,
+        )
 
     async def _on_video_subscribe_state_changed(
         self,
@@ -162,7 +166,13 @@ class AgoraTransport(BaseTransport):
     ):
         await self._call_event_handler(
             "on_video_subscribe_state_changed",
-            agora_local_user, channel, user_id, old_state, new_state, elapse_since_last_state)
+            agora_local_user,
+            channel,
+            user_id,
+            old_state,
+            new_state,
+            elapse_since_last_state,
+        )
 
     async def send_message(self, message: str, participant_id: str | None = None):
         if self._output:
@@ -184,8 +194,7 @@ class AgoraTransport(BaseTransport):
         num_channels=None,
     ):
         if self._input:
-            self._input.capture_participant_audio(
-                participant_id, sample_rate, num_channels)
+            self._input.capture_participant_audio(participant_id, sample_rate, num_channels)
 
     def capture_participant_video(
         self,
@@ -204,4 +213,5 @@ class AgoraTransport(BaseTransport):
         """
         if self._input:
             self._input.capture_participant_video(
-                participant_id, framerate, video_source, color_format)
+                participant_id, framerate, video_source, color_format
+            )

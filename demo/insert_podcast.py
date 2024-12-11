@@ -68,8 +68,8 @@ class Podcast(BaseModel):
     is_published: bool = False
 
 
-@app.command('get_audio_duration')
-def get_audio_duration(file_path, format='mp3'):
+@app.command("get_audio_duration")
+def get_audio_duration(file_path, format="mp3"):
     audio = None
     match format:
         case "flv":
@@ -85,7 +85,7 @@ def get_audio_duration(file_path, format='mp3'):
     return duration
 
 
-@app.command('get_podcast')
+@app.command("get_podcast")
 def get_podcast(
     audio_file: str,
     title: str,
@@ -101,7 +101,8 @@ def get_podcast(
         if language != "en":
             language = "zh-CN" if language == "zh" else language
             en_title = GoogleTranslator(
-                source=language, target="en",
+                source=language,
+                target="en",
             ).translate(title)
         gen_img_prompt = f"podcast cover image which content is about {en_title}"
         img_file = save_gen_image(gen_img_prompt, uuid.uuid4().hex)
@@ -127,7 +128,7 @@ def get_podcast(
     return podcast
 
 
-@app.command('insert_podcast_to_d1')
+@app.command("insert_podcast_to_d1")
 def insert_podcast_to_d1(
     audio_file: str,
     title: str,
@@ -143,10 +144,13 @@ def insert_podcast_to_d1(
     language: str = "en",
 ) -> Podcast:
     podcast = get_podcast(
-        audio_file=audio_file, title=title,
-        author=author, speakers=speakers,
+        audio_file=audio_file,
+        title=title,
+        author=author,
+        speakers=speakers,
         audio_content=audio_content,
-        pid=pid, language=language,
+        pid=pid,
+        language=language,
     )
 
     now = datetime.now()
@@ -174,7 +178,7 @@ def insert_podcast_to_d1(
     return res["success"]
 
 
-@app.command('update_podcast_cover_to_d1')
+@app.command("update_podcast_cover_to_d1")
 def update_podcast_cover_to_d1(
     pid: str,
     cover_img_url: str,
@@ -212,8 +216,7 @@ python -m demo.insert_podcast update_podcast_cover_to_d1 \
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s',
-        handlers=[
-            logging.StreamHandler()],
+        format="%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s",
+        handlers=[logging.StreamHandler()],
     )
     app()

@@ -19,9 +19,11 @@ python -m unittest test.modules.speech.tts.test_edge.TestEdgeTTS.test_synthesize
 class TestEdgeTTS(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tts_tag = os.getenv('TTS_TAG', "tts_edge")
+        cls.tts_tag = os.getenv("TTS_TAG", "tts_edge")
         cls.tts_text = os.getenv(
-            'TTS_TEXT', "hello, 你好，我是机器人, 有什么可以帮助您的吗？请告诉我您需要的信息或问题，我会尽力为您解答。")
+            "TTS_TEXT",
+            "hello, 你好，我是机器人, 有什么可以帮助您的吗？请告诉我您需要的信息或问题，我会尽力为您解答。",
+        )
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
@@ -30,9 +32,8 @@ class TestEdgeTTS(unittest.TestCase):
 
     def setUp(self):
         kwargs = {}
-        kwargs['voice_name'] = "zh-CN-XiaoxiaoNeural"
-        self.tts: EdgeTTS = EngineFactory.get_engine_by_tag(
-            EngineClass, self.tts_tag, **kwargs)
+        kwargs["voice_name"] = "zh-CN-XiaoxiaoNeural"
+        self.tts: EdgeTTS = EngineFactory.get_engine_by_tag(EngineClass, self.tts_tag, **kwargs)
         self.session = Session(**SessionCtx("test_tts_client_id").__dict__)
 
     def tearDown(self):
@@ -55,13 +56,13 @@ class TestEdgeTTS(unittest.TestCase):
         self.assertGreater(len(voices), 0)
         print(voices, len(voices))
 
-        voices = asyncio.run(self.tts.get_voices(
-            ShortName=self.tts.args.voice_name))
+        voices = asyncio.run(self.tts.get_voices(ShortName=self.tts.args.voice_name))
         self.assertGreater(len(voices), 0)
         print(voices, len(voices))
 
     def test_synthesize(self):
         import pyaudio
+
         stream_info = self.tts.get_stream_info()
         self.pyaudio_instance = pyaudio.PyAudio()
         self.audio_stream = self.pyaudio_instance.open(
@@ -69,7 +70,8 @@ class TestEdgeTTS(unittest.TestCase):
             channels=stream_info["channels"],
             rate=stream_info["rate"],
             output_device_index=None,
-            output=True)
+            output=True,
+        )
 
         self.session.ctx.state["tts_text"] = self.tts_text
         print(self.session.ctx)
@@ -81,7 +83,7 @@ class TestEdgeTTS(unittest.TestCase):
                 self.audio_stream.write(chunk)
                 continue
             for i in range(0, len(chunk), sub_chunk_size):
-                sub_chunk = chunk[i:i + sub_chunk_size]
+                sub_chunk = chunk[i : i + sub_chunk_size]
                 self.audio_stream.write(sub_chunk)
 
         self.audio_stream.stop_stream()
@@ -92,4 +94,5 @@ class TestEdgeTTS(unittest.TestCase):
         async def inference():
             async for chunk in self.tts._inference(self.session, self.tts_text):
                 self.assertGreaterEqual(len(chunk), 0)
+
         asyncio.run(inference())

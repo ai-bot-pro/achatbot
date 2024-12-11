@@ -21,6 +21,7 @@ from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.modules.vision.detector import VisionDetectorEnvInit
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 
@@ -28,22 +29,23 @@ class Env(
     PromptInit,
     AudioStreamEnvInit,
     VADAnalyzerEnvInit,
-    VADEnvInit, WakerEnvInit,
+    VADEnvInit,
+    WakerEnvInit,
     RecorderEnvInit,
     ASREnvInit,
-    LLMEnvInit, SearchFuncEnvInit, WeatherFuncEnvInit,
+    LLMEnvInit,
+    SearchFuncEnvInit,
+    WeatherFuncEnvInit,
     TTSEnvInit,
     PlayerEnvInit,
     VisionDetectorEnvInit,
 ):
-
     @classmethod
     async def save_to_yamls(cls, tag=None):
         return await Conf.save_to_yamls(cls, tag)
 
 
 class YamlConfig(PromptInit):
-
     @staticmethod
     async def load_engine(key, tag, file_path):
         #!TODO: dispatch load_engine to sub modules @weedge
@@ -54,14 +56,13 @@ class YamlConfig(PromptInit):
         import src.modules.speech
 
         conf = await Conf.load_from_yaml(file_path)
-        engine = EngineFactory.get_engine_by_tag(
-            EngineClass, tag, **conf)
+        engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **conf)
         return key, engine
 
     @staticmethod
     async def load(mainifests_path=None, engine_name=None) -> dict:
         if mainifests_path is None:
-            env = os.getenv('CONF_ENV', "local")
+            env = os.getenv("CONF_ENV", "local")
             mainifests_path = os.path.join(CONFIG_DIR, env, "manifests.yaml")
 
         conf = await Conf.load_from_yaml(mainifests_path)
@@ -69,8 +70,7 @@ class YamlConfig(PromptInit):
         for key, item in conf.items():
             if engine_name and engine_name != key:
                 continue
-            task = asyncio.create_task(
-                YamlConfig.load_engine(key, item.tag, item.file_path))
+            task = asyncio.create_task(YamlConfig.load_engine(key, item.tag, item.file_path))
             tasks.append(task)
         res = await asyncio.gather(*tasks)
 
@@ -193,12 +193,12 @@ if __name__ == "__main__":
     Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
 
     import argparse
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--op', "-o", type=str,
-                        default="load_engine", help='op method')
-    parser.add_argument('--init_type', "-i", type=str,
-                        default="env",
-                        help='init type from env or config')
+    parser.add_argument("--op", "-o", type=str, default="load_engine", help="op method")
+    parser.add_argument(
+        "--init_type", "-i", type=str, default="env", help="init type from env or config"
+    )
     args = parser.parse_args()
     if args.op == "load_engine":
         engines = asyncio.run(YamlConfig.load())

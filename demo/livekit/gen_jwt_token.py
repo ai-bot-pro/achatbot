@@ -12,12 +12,7 @@ def generate_token():
         api.AccessToken()
         .with_identity(user_identity)
         .with_name("weedge")
-        .with_grants(
-            api.VideoGrants(
-                room_join=True,
-                room=os.getenv("ROOM_NAME", "chat-room")
-            )
-        )
+        .with_grants(api.VideoGrants(room_join=True, room=os.getenv("ROOM_NAME", "chat-room")))
         .with_ttl(datetime.timedelta(hours=1))
         .to_jwt()
     )
