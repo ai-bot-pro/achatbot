@@ -393,11 +393,11 @@ local_scheme = "no-local-version"
 
 #https://docs.astral.sh/ruff/configuration/
 [tool.ruff]
-exclude = ["*_pb2.py", "deps"]
+exclude = ["*_pb2.py", "*_pb2_*", "deps", "idl"]
 indent-width = 4
 line-length = 100
 
 [tool.ruff.format]
 exclude = ["*.pyi", "*.ipynb"]
 [tool.ruff.lint]
-ignore = ["F401", "F403", "F405"]
+ignore = ["F401", "F403", "F405", "F541"]
