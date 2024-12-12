@@ -19,3 +19,6 @@
 [submodule "deps/GLM4Voice"]
 	path = deps/GLM4Voice
 	url = https://github.com/weedge/GLM-4-Voice.git
+[submodule "deps/FreezeOmni"]
+	path = deps/FreezeOmni
+	url = https://github.com/weedge/Freeze-Omni.git
