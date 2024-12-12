@@ -23,6 +23,7 @@ class DailyAsrGLMVoiceBot(DailyRoomBot):
     """
     use daily audio stream(bytes) --> asr --- text ---> GLM voice processor -->text/audio_bytes
     - if use tools, need ft base model GLM-4-9B with audio tokenizer, use tools instruct dataset
+    - Tech Report: https://arxiv.org/pdf/2412.02612
     """
 
     def __init__(self, **args) -> None:
