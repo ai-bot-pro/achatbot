@@ -166,7 +166,6 @@ def instruct_content_tts(
             output_file = os.path.join(save_dir, f"{extractor.file_name}_{formatted_time}.mp3")
             tmp_dir = os.path.join(save_dir, extractor.file_name)
             extraction = instruct_podcast_tts(content, tmp_dir, role_tts_voices, language)
-            exit(0)
             p_tmp_dir = os.path.join(tmp_dir, "0")
             merge_audio_files(input_dir=p_tmp_dir, output_file=output_file)
         except Exception as e:
