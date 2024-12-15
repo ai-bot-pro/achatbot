@@ -61,6 +61,7 @@ async def gen_podcast_tts_audios(
     role_tts_voices: List[str],
 ):
     podcast_index, role_index = (0, 0)
+    pre_role = ""
     pre_cn, cur_cn = (0, 0)
     for extraction in data_models:
         if not extraction.roles:
@@ -70,7 +71,6 @@ async def gen_podcast_tts_audios(
             os.makedirs(p_save_dir)
         # print(f"----------podcast {podcast_index}----{len(extraction.roles)}---------")
 
-        pre_role = ""
         pre_cn = cur_cn
         cur_cn = len(extraction.roles)
         if pre_cn == cur_cn:
@@ -166,6 +166,7 @@ def instruct_content_tts(
             output_file = os.path.join(save_dir, f"{extractor.file_name}_{formatted_time}.mp3")
             tmp_dir = os.path.join(save_dir, extractor.file_name)
             extraction = instruct_podcast_tts(content, tmp_dir, role_tts_voices, language)
+            exit(0)
             p_tmp_dir = os.path.join(tmp_dir, "0")
             merge_audio_files(input_dir=p_tmp_dir, output_file=output_file)
         except Exception as e:

@@ -6,6 +6,10 @@ from src.common.session import Session
 from src.common.device_cuda import CUDAInfo
 from src.modules.speech.asr.base import ASRBase
 
+"""
+https://huggingface.co/learn/audio-course/en/chapter5/asr_models
+"""
+
 
 class WhisperAsr(ASRBase):
     TAG = "whisper_asr"
