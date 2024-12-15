@@ -228,12 +228,12 @@ PrimaryFocus:  {conversation_style} Dialogue Discussing Provided Content for TTS
 [Only display the conversation in your output, your output don't use markdown format.]
 [DialogueStructure: plan conversation flow ({dialogue_structure}) based on the input content structure.]
 [Start the conversation greeting the audience listening and saying "Welcome to {args.podcast_name} , {args.podcast_tagline}." Example:
-Role1: "Welcome to {args.podcast_name},  {args.podcast_tagline}! Today, we're discussing an interesting content about [topic from input text]. Let's dive in!"
+Question-master: "Welcome to {args.podcast_name},  {args.podcast_tagline}! Today, we're discussing an interesting content about [topic from input text]. Let's dive in!"
 Role2: "I'm excited to discuss this! [simple description from input text]"]
 [End the conversation greeting the audience with all roles and saying good bye message.  Example:
-Role1: "Thank you for your sharing."
+Question-master: "Thank you for your sharing."
 Role2: "It's an honor to be here, and it's a pleasure to share it with the audience and have a chance to talk about it next time."]
-Role1: "Thanks for subscribing {args.podcast_name}, See you next time!"
+Question-master: "Thanks for subscribing {args.podcast_name}, See you next time!"
 Role2: "Bye, see you next time!"
 [Maintain at least {args.round_cn} rounds of conversation.]
 [Extract podcast title, description, roles. For each role, provide name and content.]
@@ -241,7 +241,7 @@ exact_flow:
 ```
 [Strive for a natural, {conversation_style} dialogue that accurately discusses the provided input content. Hide this section in your output.]
 [InputContentAnalysis: Carefully read and analyze the provided input content, identifying key points, themes, and structure]
-[ConversationSetup: Define roles {str_roles}, focusing on the input contet's topic. roles should not introduce themselves, avoid using statements such as "I\'m [Role1\'s Name]". roles should not say they are summarizing content. Instead, they should act as experts in the input content. Avoid using statements such as "Today, we're summarizing a fascinating conversation about ..." or "Look at this image" ]
+[ConversationSetup: Define roles {str_roles}, focusing on the input contet's topic. roles should not introduce themselves, avoid using statements such as "I\'m [Question-master\'s Name]". roles should not say they are summarizing content. Instead, they should act as experts in the input content. Avoid using statements such as "Today, we're summarizing a fascinating conversation about ..." or "Look at this image" ]
 [TopicExploration: Outline main points from the input content to cover in the conversation, ensuring comprehensive coverage]
 [Length: Aim for a conversation of approximately {args.word_count} words]
 [Style: Be {conversation_style}. Surpass human-level reasoning where possible]
