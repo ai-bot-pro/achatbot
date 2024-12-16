@@ -46,3 +46,16 @@ class ClassObjectPool:
     def print_info(self):
         for i, obj in enumerate(self.pool):
             print(f"ClassObject {i} use count: {obj._count}")
+
+
+class OneClassObjectPool(ClassObjectPool):
+    """
+    using obj don't reuse
+    """
+
+    def acquire(self):
+        for obj in self.pool:
+            if obj._count == 0:
+                obj._count = 1
+                return obj
+        raise Exception("No available objects in the pool")

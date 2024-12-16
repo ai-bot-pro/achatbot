@@ -8,7 +8,6 @@ import torch
 from apipeline.frames import *
 
 
-from src.core.llm.transformers.manual_voice_freeze_omni import TransformersManualVoicFreezeOmni
 from src.processors.voice.base import VoiceProcessorBase
 from src.types.llm.lmgen import *
 from src.types.llm.transformers import TransformersLMArgs
@@ -16,6 +15,11 @@ from src.common.session import Session
 from src.common.types import SessionCtx
 from src.common.utils.audio_utils import bytes2TorchTensorWith16
 from src.types.frames import *
+
+DEFAULT_SYS_PROMPT = "You are a helpful voice assistant.\
+Your answer should be coherent, natural, simple, complete.\
+Your name is Xiao Yun.\
+Your inventor is Tencent."
 
 
 class FreezeOmniVoiceBaseProcessor(VoiceProcessorBase):
@@ -25,12 +29,11 @@ class FreezeOmniVoiceBaseProcessor(VoiceProcessorBase):
         self,
         *,
         system_prompt: str = "",
-        voice_tokenizer_path: str | None = None,  # audio encoder/ft extractor
-        model_path: str | None = None,  # gen lm and text tokenizer
-        voice_decoder_path: str | None = None,  # audio decoder
-        device: str = "cuda",
-        torch_dtype: str = "auto",  # auto,float16,bfloat16,float32
-        bnb_quant_type: str = "int4",
+        model_path: str | None = None,  # audio-llm, decoder and codec(decoder) ckpt path
+        llm_path: str | None = None,  # text llm path
+        top_k: int = 20,
+        top_p: float = 0.8,
+        temperature: float = 0.8,
         session: Session | None = None,
         **kwargs,
     ):
@@ -42,13 +45,12 @@ class FreezeOmniVoiceBaseProcessor(VoiceProcessorBase):
         else:
             sys.path.insert(1, os.path.join(cur_dir, "../../../deps/FreezeOmni"))
 
-        self._sys_prompt = system_prompt or TransformersManualVoicFreezeOmni.DEFAULT_SYS_PROMPT
-        self._voice_tokenizer_path = voice_tokenizer_path
+        self._sys_prompt = system_prompt or DEFAULT_SYS_PROMPT
         self._model_path = model_path
-        self._voice_decoder_path = voice_decoder_path
-        self._torch_dtype = torch_dtype
-        self._bnb_quant_type = bnb_quant_type
-        self._device = device
+        self._llm_path = llm_path
+        self._top_k = top_k
+        self._top_p = top_p
+        self._temperature = temperature
 
         self._session = session or Session(**SessionCtx(uuid.uuid4()).__dict__)
 
