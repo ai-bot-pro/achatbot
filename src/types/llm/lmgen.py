@@ -42,3 +42,15 @@ class GLMVoiceOutArgs(GLMVoiceArgs):
     """GLM Voice Out defualt arguments"""
 
     audio_sample_rate: int = 22050
+
+
+@dataclass
+class FreezeOmniVoiceInArgs(GLMVoiceArgs):
+    """FreezeOmni Voice In defualt arguments"""
+
+
+@dataclass
+class FreezeOmniVoiceOutArgs(GLMVoiceArgs):
+    """FreezeOmni Voice Out defualt arguments"""
+
+    audio_sample_rate: int = 24000

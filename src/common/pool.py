@@ -22,6 +22,7 @@ class ClassObjectPool:
         Returns:
         - None
         """
+        self.cls = cls
         self.pool = self._initialize_pool(size, cls, multi_thread_init, **kwargs)
 
     def _initialize_pool(self, size, cls, multi_thread_init: bool = False, **kwargs):
@@ -45,7 +46,7 @@ class ClassObjectPool:
 
     def print_info(self):
         for i, obj in enumerate(self.pool):
-            print(f"ClassObject {i} use count: {obj._count}")
+            print(f"ClassObject {self.cls} {i} use count: {obj._count}")
 
 
 class OneClassObjectPool(ClassObjectPool):
