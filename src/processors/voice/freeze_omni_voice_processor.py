@@ -1,17 +1,14 @@
-import os
-import sys
 import uuid
 import math
 import logging
 from copy import deepcopy
 from typing import AsyncGenerator
 
-import numpy as np
 import soundfile
 import torch
 import torchaudio
 from apipeline.frames import *
-from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
+from apipeline.processors.frame_processor import FrameDirection
 
 from deps.FreezeOmni.bin.inference import audioEncoderProcessor
 from deps.FreezeOmni.models.decoder.llm2tts import llm2TTS
@@ -109,7 +106,7 @@ class FreezeOmniVoiceProcessor(VoiceProcessorBase):
         self._session = session or Session(**SessionCtx(uuid.uuid4()).__dict__)
 
         self.reset()
-        self.load_models(inference_pipeline_pool, tts_pool)
+        self.load_models()
 
     @property
     def stream_info(self) -> dict:
@@ -124,7 +121,7 @@ class FreezeOmniVoiceProcessor(VoiceProcessorBase):
         self._history_texts = ""
         self._stat = ""
 
-    def load_models(self, inference_pipeline_pool, tts_pool):
+    def load_models(self):
         logging.info("loading model weights")
         # stream chunk to encoder
         self.audio_processor = audioEncoderProcessor()
@@ -160,7 +157,7 @@ class FreezeOmniVoiceProcessor(VoiceProcessorBase):
         # self.system_role = deepcopy(self.init_outputs)
 
         self.tts_pool.print_info()
-        self.pipeline_pool.print_info()
+        self.inference_pipeline_pool.print_info()
 
         logging.info("start done")
 
@@ -171,7 +168,7 @@ class FreezeOmniVoiceProcessor(VoiceProcessorBase):
         self.inference_pipeline_pool.release(self.inference_pipeline_obj)
         self.inference_pipeline = None
         self.tts_pool.print_info()
-        self.pipeline_pool.print_info()
+        self.inference_pipeline_pool.print_info()
         logging.info("stop done")
 
     async def cancel(self, frame: CancelFrame):
@@ -181,7 +178,7 @@ class FreezeOmniVoiceProcessor(VoiceProcessorBase):
         self.inference_pipeline_pool.release(self.inference_pipeline_obj)
         self.inference_pipeline = None
         self.tts_pool.print_info()
-        self.pipeline_pool.print_info()
+        self.inference_pipeline_pool.print_info()
         logging.info("cancel done")
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):

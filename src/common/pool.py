@@ -31,7 +31,7 @@ class ClassObjectPool:
             return pool
         else:
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                futures = [executor.submit(cls, **kwargs) for _ in range(size)]
+                futures = [executor.submit(ClassObject, cls, **kwargs) for _ in range(size)]
                 return [future.result() for future in concurrent.futures.as_completed(futures)]
 
     def acquire(self):
