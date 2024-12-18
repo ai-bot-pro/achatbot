@@ -1,6 +1,7 @@
 import os
 import logging
 import asyncio
+import sys
 import uuid
 
 from apipeline.frames.control_frames import EndFrame
@@ -338,6 +339,12 @@ class AIBot(IBot):
     def get_audio_freeze_omni_voice_processor(
         self, llm: LLMConfig | None = None
     ) -> VoiceProcessorBase:
+        cur_dir = os.path.dirname(__file__)
+        if bool(os.getenv("ACHATBOT_PKG", "")):
+            sys.path.insert(1, os.path.join(cur_dir, "../../FreezeOmni"))
+        else:
+            sys.path.insert(1, os.path.join(cur_dir, "../../../deps/FreezeOmni"))
+
         from src.processors.voice.freeze_omni_voice_processor import FreezeOmniVoiceProcessor
 
         if not llm:

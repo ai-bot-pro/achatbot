@@ -1,18 +1,17 @@
-from copy import deepcopy
-import math
 import os
-import logging
 import sys
-from typing import AsyncGenerator
 import uuid
+import math
+import logging
+from copy import deepcopy
+from typing import AsyncGenerator
 
 import numpy as np
 import soundfile
 import torch
+import torchaudio
 from apipeline.frames import *
 from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
-import torchaudio
-
 
 from deps.FreezeOmni.bin.inference import audioEncoderProcessor
 from deps.FreezeOmni.models.decoder.llm2tts import llm2TTS
@@ -74,7 +73,7 @@ class FreezeOmniVoiceObjPool:
             size=args.llm_exec_nums,
             cls=inferencePipeline,
             multi_thread_init=False,
-            configs=args,
+            args=args,
         )
 
     @staticmethod
@@ -101,12 +100,6 @@ class FreezeOmniVoiceProcessor(VoiceProcessorBase):
         **kwargs,
     ):
         super().__init__(**kwargs)
-
-        cur_dir = os.path.dirname(__file__)
-        if bool(os.getenv("ACHATBOT_PKG", "")):
-            sys.path.insert(1, os.path.join(cur_dir, "../../FreezeOmni"))
-        else:
-            sys.path.insert(1, os.path.join(cur_dir, "../../../deps/FreezeOmni"))
 
         self._args = args
         if isinstance(args, dict):
