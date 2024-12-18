@@ -103,6 +103,10 @@ def import_bots(bot_name: str = "DummyBot"):
         from .voice import daily_asr_glm_voice_bot
 
         return True
+    if "DailyFreezeOmniVoiceBot" in bot_name:
+        from .voice import daily_freeze_omni_voice_bot
+
+        return True
     if "LivekitBot" in bot_name:
         from . import livekit_bot
 
@@ -143,10 +147,10 @@ def import_bots(bot_name: str = "DummyBot"):
         from .vision import livekit_describe_vision_tools_bot
 
         return True
-    if "LivekitMoshiVoiceBot" in bot_name:
-        from .voice import livekit_moshi_bot
+    # if "LivekitMoshiVoiceBot" in bot_name:
+    #    from .voice import livekit_moshi_bot
 
-        return True
+    #    return True
     if "AgoraBot" in bot_name:
         from . import agora_bot
 

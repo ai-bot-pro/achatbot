@@ -335,6 +335,20 @@ class AIBot(IBot):
             llm_processor = GLMAudioVoiceProcessor()
         return llm_processor
 
+    def get_audio_freeze_omni_voice_processor(
+        self, llm: LLMConfig | None = None
+    ) -> VoiceProcessorBase:
+        from src.processors.voice.freeze_omni_voice_processor import FreezeOmniVoiceProcessor
+
+        if not llm:
+            llm = self._bot_config.voice_llm
+        # TODO: need create inference_pipeline_pool and tts pool
+        if llm.args:
+            llm_processor = FreezeOmniVoiceProcessor(**llm.args)
+        else:
+            llm_processor = FreezeOmniVoiceProcessor()
+        return llm_processor
+
     def get_openai_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
         # TODO: use openai reatime voice api
         pass
