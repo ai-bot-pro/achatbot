@@ -61,33 +61,58 @@ class DailyFreezeOmniVoiceBot(DailyRoomBot):
         # if self._bot_config.llm.messages:
         #     messages = self._bot_config.llm.messages
 
+        parallel_pipeline = ParallelPipeline(
+            [  # save user audio pipeline
+                UserAudioResponseAggregator(),
+                FrameLogger(
+                    prefix="user audio aggr to save ==>",
+                    include_frame_types=[AudioRawFrame],
+                ),
+                AudioSaveProcessor(prefix_name="user_audio_aggr"),
+                FrameLogger(include_frame_types=[PathAudioRawFrame]),
+                NullFilter(),
+                # check no downstream frame to log
+                # FrameLogger(),
+            ],
+            [  # bot speak and save pipeline
+                UserAudioResponseAggregator(),
+                FrameLogger(
+                    prefix="user audio aggr ==>",
+                    include_frame_types=[AudioRawFrame],
+                ),
+                self._voice_processor,
+                FrameLogger(
+                    prefix="bot audio speak ==>",
+                    include_frame_types=[AudioRawFrame, TextFrame],
+                ),
+                AudioSaveProcessor(prefix_name="bot_speak"),
+                FrameLogger(
+                    prefix="bot speak to save ==>",
+                    include_frame_types=[PathAudioRawFrame],
+                ),
+            ],
+        )
+
+        single_pipeline = Pipeline(
+            [
+                UserAudioResponseAggregator(),
+                FrameLogger(
+                    prefix="user audio aggr ==>",
+                    include_frame_types=[AudioRawFrame],
+                ),
+                self._voice_processor,
+                FrameLogger(
+                    prefix="bot audio speak ==>",
+                    include_frame_types=[AudioRawFrame, TextFrame],
+                ),
+            ]
+        )
+
         self.task = PipelineTask(
             Pipeline(
                 [
                     transport.input_processor(),
-                    ParallelPipeline(
-                        [  # save user audio pipeline
-                            UserAudioResponseAggregator(),
-                            FrameLogger(
-                                prefix="user audio aggr to save ==>",
-                                include_frame_types=[AudioRawFrame],
-                            ),
-                            AudioSaveProcessor(prefix_name="user_audio_aggr"),
-                            FrameLogger(include_frame_types=[PathAudioRawFrame]),
-                            NullFilter(),
-                            # check no downstream frame to log
-                            # FrameLogger(),
-                        ],
-                        [  # bot speak and save pipeline
-                            self._voice_processor,
-                            FrameLogger(include_frame_types=[AudioRawFrame, TextFrame]),
-                            AudioSaveProcessor(prefix_name="bot_speak"),
-                            FrameLogger(
-                                prefix="bot speak to save ==>",
-                                include_frame_types=[PathAudioRawFrame],
-                            ),
-                        ],
-                    ),
+                    single_pipeline,
                     transport.output_processor(),
                 ]
             ),
