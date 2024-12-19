@@ -112,6 +112,7 @@ class DailyFreezeOmniVoiceBot(DailyRoomBot):
             Pipeline(
                 [
                     transport.input_processor(),
+                    # parallel_pipeline,
                     single_pipeline,
                     transport.output_processor(),
                 ]
