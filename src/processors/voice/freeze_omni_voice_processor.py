@@ -222,6 +222,10 @@ class FreezeOmniVoiceProcessor(VoiceProcessorBase):
             self._outputs["encoder_cache"] = None
             self._outputs["pe_index"] = 0
             self._outputs["stat"] = "ss"
+            if "text" in self._outputs:
+                del self._outputs["text"]
+            if "hidden_state" in self._outputs:
+                del self._outputs["hidden_state"]
 
             # Stage3: start speak
             self._outputs = self.inference_pipeline.speech_dialogue(None, **self._outputs)
