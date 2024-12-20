@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 name = "achatbot"
 #dynamic = ["version"]
 # todo
-version = "0.0.8.3"
+version = "0.0.8.4"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"

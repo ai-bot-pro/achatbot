@@ -37,7 +37,7 @@ modal serve -e achatbot src/fastapi_serve.py
 # need create .env.example to modal Secrets
 IMAGE_NAME=default modal serve -e achatbot src/fastapi_webrtc_audio_bot_serve.py
 ```
-- curl api to run chat room bot with webrtc (daily/livekit)
+- curl api to run chat room bot with webrtc (daily/livekit/agora)
 `https://weedge-achatbot--fastapi-webrtc-audio-bot-srv-app-dev.modal.run/docs` see api docs
 ```shell
 curl --location 'https://weedge-achatbot--fastapi-webrtc-audio-bot-srv-app-dev.modal.run/bot_join/chat-room/DailyBot' \
@@ -129,7 +129,7 @@ IMAGE_NAME=qwen IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 LLM_MODEL_NAME_OR_PATH=Qwen/Q
 # webrtc_vision_bot serve on llama vision llm pip image
 IMAGE_NAME=llama IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
 ```
-- curl api to run chat room bot with webrtc (daily/livekit)
+- curl api to run chat room bot with webrtc (daily/livekit/agora)
 ```shell
 curl --location 'https://weedge-achatbot--fastapi-webrtc-vision-qwen-bot-srv-app-dev.modal.run/bot_join/chat-room/DailyDescribeVisionBot' \
 --header 'Content-Type: application/json' \
@@ -188,7 +188,7 @@ curl --location 'https://weedge-achatbot--fastapi-webrtc-vision-qwen-bot-srv-app
 # need create .env.example to modal Secrets for webrtc key
 IMAGE_NAME=default IMAGE_CONCURRENT_CN=1 IMAGE_GPU=T4 modal serve -e achatbot src/fastapi_webrtc_glm_voice_bot_serve.py
 ```
-- curl api to run chat room bot with webrtc (daily/livekit)
+- curl api to run chat room bot with webrtc (daily/livekit/agora)
 ```shell
 curl --location 'https://weedge-achatbot--fastapi-webrtc-glm-voice-bot-srv-app-dev.modal.run/bot_join/chat-room/DailyGLMVoiceBot' \
 --header 'Content-Type: application/json' \
@@ -291,6 +291,52 @@ curl --location 'https://weedge-achatbot--fastapi-webrtc-glm-voice-bot-srv-app-d
 }'
 ```
 
+### webrtc_freeze_omni_voice_bot
+- run webrtc_freeze_omni_voice_bot serve with task queue(redis)
+```shell
+# webrtc_audio_bot serve on default pip image
+# need create .env.example to modal Secrets for webrtc key
+IMAGE_NAME=default IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_freeze_omni_voice_bot_serve.py
+```
+- curl api to run chat room bot with webrtc (daily/livekit/agora)
+```shell
+curl --location 'https://weedge-achatbot--fastapi-webrtc-freeze-omni-voice-bo-4b7458-dev.modal.run/bot_join/chat-room/DailyFreezeOmniVoiceBot' \
+--header 'Content-Type: application/json' \
+--data '{
+  "chat_bot_name": "DailyFreezeOmniVoiceBot",
+  "room_name": "chat-room",
+  "room_url": "",
+  "token": "",
+  "room_manager": {
+    "tag": "daily_room",
+    "args": {
+      "privacy": "public"
+    }
+  },
+  "services": {
+    "pipeline": "achatbot",
+    "vad": "silero",
+    "voice_llm": "freeze_omni"
+  },
+  "config": {
+    "vad": {
+      "tag": "silero_vad_analyzer",
+      "args": { "stop_secs": 0.7 }
+    },
+    "voice_llm": {
+      "tag": "freeze_omni_voice_processor",
+      "args": {
+        "args": {
+          "llm_path": "/root/.achatbot/models/Qwen/Qwen2-7B-Instruct",
+          "model_path": "/root/.achatbot/models/VITA-MLLM/Freeze-Omni/checkpoints"
+        }
+      }
+    }
+  },
+  "config_list": []
+}'
+```
+
 ## modal deploy (online)
 - deploy webrtc_audio_bot serve
 ```shell
@@ -322,9 +368,15 @@ endpoint: https://weedge-achatbot--fastapi-webrtc-vision-llama-bot-srv-app.modal
 
 - deploy webrtc_glm_voice_bot serve
 ```shell
-IMAGE_NAME=default modal deploy -e achatbot src/fastapi_webrtc_glm_voice_bot_serve.py
+IMAGE_NAME=default IMAGE_CONCURRENT_CN=1 IMAGE_GPU=T4 modal deploy -e achatbot src/fastapi_webrtc_glm_voice_bot_serve.py
 ```
 endpoint: https://weedge-achatbot--fastapi-webrtc-glm-voice-bot-srv-app.modal.run/
+
+- deploy webrtc_freeze_omni_voice_bot serve
+```shell
+IMAGE_NAME=default IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal deploy -e achatbot src/fastapi_webrtc_freeze_omni_voice_bot_serve.py
+```
+endpoint: https://weedge-achatbot--fastapi-webrtc-freeze_omni-voice-bot-srv-app.modal.run/
 
 # references (nice docs) 👍 @modal
 - https://modal.com/docs/guide
