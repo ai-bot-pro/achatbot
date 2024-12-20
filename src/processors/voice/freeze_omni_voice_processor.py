@@ -1,9 +1,13 @@
+# python 2 -> python3 print
+# from __future__ import print_function
+
 import asyncio
+import builtins
+import datetime
 import uuid
 import math
 import logging
-from copy import deepcopy
-from typing import AsyncGenerator, Generator, Iterable
+from typing import AsyncGenerator, Generator
 
 import torch
 import torchaudio
@@ -26,6 +30,16 @@ DEFAULT_SYS_PROMPT = "You are a helpful voice assistant.\
 Your answer should be coherent, natural, simple, complete.\
 Your name is QQ.\
 Your inventor is Tencent."
+
+
+def custom_print(*args, **kwargs):
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+    original_print(f"[{current_time}] [{__name__}]", *args, **kwargs)
+
+
+# change print function to add time stamp
+original_print = builtins.print
+builtins.print = custom_print
 
 
 @dataclass
@@ -207,7 +221,7 @@ class FreezeOmniVoiceProcessor(VoiceProcessorBase):
             audio_tensor = bytes2TorchTensorWith16(frame.audio)
         audio_tensor = audio_tensor.reshape(-1)  # [1,len] -> [len]
         if self._stat == "cl" or self._stat == "el":
-            # - cl: continue audio to process
+            # - cl: continue audio to process (NOTE: need audio size >= chunk_size)
             # - el: aggr sl - el  audio to process
 
             # Satge1: start listen
