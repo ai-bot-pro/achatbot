@@ -37,6 +37,7 @@ class AudioResponseAggregator(FrameProcessor):
         self._seen_end_frame = False
         self._seen_interim_results = False
         self._cur_audio_frame = None
+        self._audio_buffer.clear()
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)

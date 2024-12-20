@@ -201,3 +201,6 @@ pypi_build/
 runs
 *.jpg
 *.png
+
+#ruff
+.ruff_cache/

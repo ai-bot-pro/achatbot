@@ -2,7 +2,11 @@ import logging
 
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
+from apipeline.processors.filters.null_filter import NullFilter
+from apipeline.processors.filters.function_filter import FunctionFilter
+from apipeline.processors.filters.frame_filter import FrameFilter
 from apipeline.pipeline.runner import PipelineRunner
+from apipeline.pipeline.parallel_pipeline import ParallelPipeline
 from apipeline.processors.logger import FrameLogger
 from apipeline.frames import AudioRawFrame, TextFrame
 
@@ -21,11 +25,10 @@ load_dotenv(override=True)
 
 
 @register_ai_room_bots.register
-class DailyGLMVoiceBot(DailyRoomBot):
+class DailyFreezeOmniVoiceBot(DailyRoomBot):
     """
-    use daily audio stream(bytes) --> GLM voice processor -->text/audio_bytes
-    - if use tools, need ft base model GLM-4-9B with audio tokenizer, use tools instruct dataset
-    - Tech Report: https://arxiv.org/pdf/2412.02612
+    use daily audio stream(bytes) --> FreezeOmni voice processor -->text/audio_bytes
+    - Tech Report: https://arxiv.org/pdf/2411.00774
     """
 
     def __init__(self, **args) -> None:
@@ -42,7 +45,7 @@ class DailyGLMVoiceBot(DailyRoomBot):
             vad_audio_passthrough=True,
         )
 
-        self._voice_processor = self.get_audio_glm_voice_processor()
+        self._voice_processor = self.get_audio_freeze_omni_voice_processor()
         stream_info = self._voice_processor.stream_info
         self.params.audio_out_sample_rate = stream_info["sample_rate"]
         self.params.audio_out_channels = stream_info["channels"]
@@ -58,17 +61,59 @@ class DailyGLMVoiceBot(DailyRoomBot):
         # if self._bot_config.llm.messages:
         #     messages = self._bot_config.llm.messages
 
+        parallel_pipeline = ParallelPipeline(
+            [  # save user audio pipeline
+                UserAudioResponseAggregator(),
+                FrameLogger(
+                    prefix="user audio aggr to save ==>",
+                    include_frame_types=[AudioRawFrame],
+                ),
+                AudioSaveProcessor(prefix_name="user_audio_aggr"),
+                FrameLogger(include_frame_types=[PathAudioRawFrame]),
+                NullFilter(),
+                # check no downstream frame to log
+                # FrameLogger(),
+            ],
+            [  # bot speak and save pipeline
+                UserAudioResponseAggregator(),
+                FrameLogger(
+                    prefix="user audio aggr ==>",
+                    include_frame_types=[AudioRawFrame],
+                ),
+                self._voice_processor,
+                FrameLogger(
+                    prefix="bot audio speak ==>",
+                    include_frame_types=[AudioRawFrame, TextFrame],
+                ),
+                AudioSaveProcessor(prefix_name="bot_speak"),
+                FrameLogger(
+                    prefix="bot speak to save ==>",
+                    include_frame_types=[PathAudioRawFrame],
+                ),
+            ],
+        )
+
+        single_pipeline = Pipeline(
+            [
+                UserAudioResponseAggregator(),
+                FrameLogger(
+                    prefix="user audio aggr ==>",
+                    include_frame_types=[AudioRawFrame],
+                ),
+                self._voice_processor,
+                FrameLogger(
+                    prefix="bot audio speak ==>",
+                    include_frame_types=[AudioRawFrame, TextFrame],
+                ),
+            ]
+        )
+
         self.task = PipelineTask(
             Pipeline(
                 [
                     transport.input_processor(),
-                    UserAudioResponseAggregator(),
-                    FrameLogger(include_frame_types=[AudioRawFrame]),
-                    AudioSaveProcessor(prefix_name="user_audio_aggr"),
-                    FrameLogger(include_frame_types=[PathAudioRawFrame]),
-                    self._voice_processor,
-                    FrameLogger(include_frame_types=[AudioRawFrame, TextFrame]),
-                    AudioSaveProcessor(prefix_name="bot_speak"),
+                    # parallel_pipeline,
+                    single_pipeline,
                     transport.output_processor(),
                 ]
             ),

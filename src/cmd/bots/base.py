@@ -1,6 +1,7 @@
 import os
 import logging
 import asyncio
+import sys
 import uuid
 
 from apipeline.frames.control_frames import EndFrame
@@ -333,6 +334,26 @@ class AIBot(IBot):
             llm_processor = GLMAudioVoiceProcessor(**llm.args)
         else:
             llm_processor = GLMAudioVoiceProcessor()
+        return llm_processor
+
+    def get_audio_freeze_omni_voice_processor(
+        self, llm: LLMConfig | None = None
+    ) -> VoiceProcessorBase:
+        cur_dir = os.path.dirname(__file__)
+        if bool(os.getenv("ACHATBOT_PKG", "")):
+            sys.path.insert(1, os.path.join(cur_dir, "../../FreezeOmni"))
+        else:
+            sys.path.insert(1, os.path.join(cur_dir, "../../../deps/FreezeOmni"))
+
+        from src.processors.voice.freeze_omni_voice_processor import FreezeOmniVoiceProcessor
+
+        if not llm:
+            llm = self._bot_config.voice_llm
+        # TODO: need create inference_pipeline_pool and tts pool
+        if llm.args:
+            llm_processor = FreezeOmniVoiceProcessor(**llm.args)
+        else:
+            llm_processor = FreezeOmniVoiceProcessor()
         return llm_processor
 
     def get_openai_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
