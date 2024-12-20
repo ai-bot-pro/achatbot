@@ -249,6 +249,7 @@ class FreezeOmniVoiceProcessor(VoiceProcessorBase):
             self._outputs["adapter_cache"] = None
             self._outputs["encoder_cache"] = None
             self._outputs["pe_index"] = 0
+            self._outputs["last_id"] = None
             self._outputs["stat"] = "ss"
 
         if self._outputs["stat"] == "ss":
@@ -284,6 +285,7 @@ class FreezeOmniVoiceProcessor(VoiceProcessorBase):
                 break
             del self._outputs["text"]
             del self._outputs["hidden_state"]
+            # https://superfastpython.com/asyncio-to_thread/
             self._outputs = await asyncio.to_thread(
                 self.inference_pipeline.speech_dialogue, None, **self._outputs
             )
