@@ -3,7 +3,7 @@ import uuid
 import math
 import logging
 from copy import deepcopy
-from typing import AsyncGenerator, Generator
+from typing import AsyncGenerator, Generator, Iterable
 
 import torch
 import torchaudio
@@ -237,93 +237,110 @@ class FreezeOmniVoiceProcessor(VoiceProcessorBase):
             self._outputs["pe_index"] = 0
             self._outputs["stat"] = "ss"
 
-        if self._outputs["stat"] == "ss":  # audioLLM(asr) recognize -> start speak
-            if "text" in self._outputs:
-                del self._outputs["text"]
-            if "hidden_state" in self._outputs:
-                del self._outputs["hidden_state"]
-            # Stage3: start speak
-            self._outputs = self.inference_pipeline.speech_dialogue(None, **self._outputs)
-            cur_hidden_state = []
-            cur_hidden_state.append(self._outputs["hidden_state"])
-            await self.push_frame(BotStartedSpeakingFrame())
+        if self._outputs["stat"] == "ss":
+            async for item in self.start_speak():
+                yield item
 
-            whole_text = ""
-            last_text = ""
-            cur_text = ""
-            # Stage4: contiune speak until stat is set to 'sl'
-            # use 'stop' to interrupt generation, stat need to be manually set as 'sl'
-            stop = False
-            while True:
-                await self.push_frame(BotSpeakingFrame())
-                if len(self._outputs["past_tokens"]) > self._args.max_past_tokens:
-                    logging.info(
-                        f"trigger max_past_tokens:{self._args.max_past_tokens} to stop tts"
-                    )
-                    stop = True
-                if stop:
-                    break
-                del self._outputs["text"]
-                del self._outputs["hidden_state"]
-                self._outputs = self.inference_pipeline.speech_dialogue(None, **self._outputs)
-                if self._outputs["stat"] == "cs":  # continue speak
-                    cur_hidden_state.append(self._outputs["hidden_state"])
-                    whole_text += self._outputs["text"][len(last_text) :]
-                    cur_text += self._outputs["text"][len(last_text) :]
-                    suffix_list = ["。", "：", "？", "！", ".", "?", "!", "\n"]
-                    if self._outputs["text"][len(last_text) :].endswith(tuple(suffix_list)):
-                        if (
-                            self._outputs["text"][len(last_text) :].endswith(".")
-                            and last_text[-1].isdigit()
-                        ):
-                            pass
-                        else:
-                            if len(cur_hidden_state) > 0:
-                                await self.push_frame(TextFrame(text=cur_text))
-                                for item in self.decoder(cur_hidden_state, cur_text):
-                                    # audio_bytes = postprocess_tts_wave_int16(item)
-                                    audio_bytes = (
-                                        (item.squeeze().float().cpu().numpy() * 32768)
-                                        .astype("int16")
-                                        .tobytes()
-                                    )
-                                    logging.info(
-                                        f"seg tensor:{item.shape},push audio len:{len(audio_bytes)}"
-                                    )
-                                    audio_frame = AudioRawFrame(
-                                        audio=audio_bytes, sample_rate=24000
-                                    )
-                                    await self.queue_frame(audio_frame)
-                                    yield None
-                                    # yield audio_frame
-                                    # await asyncio.sleep(0.01)
-                                cur_hidden_state = []
-                            cur_text = ""
-                if self._outputs["stat"] == "sl":
-                    break
-                # print(self._outputs['text'])
-                last_text = self._outputs["text"]
+    async def start_speak(self):
+        """
+        audioLLM(asr) recognize -> start speak
+        """
+        if "text" in self._outputs:
+            del self._outputs["text"]
+        if "hidden_state" in self._outputs:
+            del self._outputs["hidden_state"]
+        # Stage3: start speak
+        self._outputs = self.inference_pipeline.speech_dialogue(None, **self._outputs)
+        cur_hidden_state = []
+        cur_hidden_state.append(self._outputs["hidden_state"])
+        await self.push_frame(BotStartedSpeakingFrame())
 
-            if len(cur_hidden_state) != 0:
-                await self.push_frame(TextFrame(text=cur_text))
-                for item in self.decoder(cur_hidden_state, cur_text):
-                    # audio_bytes = postprocess_tts_wave_int16(item)
-                    audio_bytes = (
-                        (item.squeeze().float().cpu().numpy() * 32768).astype("int16").tobytes()
-                    )
-                    logging.info(f"seg tensor:{item.shape},push audio len:{len(audio_bytes)}")
-                    audio_frame = AudioRawFrame(audio=audio_bytes, sample_rate=24000)
-                    await self.queue_frame(AudioRawFrame(audio=audio_bytes, sample_rate=24000))
-                    yield None
-                    # yield audio_frame
-                    # await asyncio.sleep(0.01)
+        whole_text = ""
+        last_text = ""
+        cur_text = ""
+        # Stage4: contiune speak until stat is set to 'sl'
+        # use 'stop' to interrupt generation, stat need to be manually set as 'sl'
+        stop = False
+        while True:
+            await self.push_frame(BotSpeakingFrame())
+            if len(self._outputs["past_tokens"]) > self._args.max_past_tokens:
+                logging.info(f"trigger max_past_tokens:{self._args.max_past_tokens} to stop tts")
+                stop = True
+            if stop:
+                break
+            del self._outputs["text"]
+            del self._outputs["hidden_state"]
+            self._outputs = await asyncio.to_thread(
+                self.inference_pipeline.speech_dialogue, None, **self._outputs
+            )
+            if self._outputs["stat"] == "cs":  # continue speak
+                cur_hidden_state.append(self._outputs["hidden_state"])
+                whole_text += self._outputs["text"][len(last_text) :]
+                cur_text += self._outputs["text"][len(last_text) :]
+                suffix_list = ["。", "：", "？", "！", ".", "?", "!", "\n"]
+                if self._outputs["text"][len(last_text) :].endswith(tuple(suffix_list)):
+                    if (
+                        self._outputs["text"][len(last_text) :].endswith(".")
+                        and last_text[-1].isdigit()
+                    ):
+                        pass
+                    else:
+                        if len(cur_hidden_state) > 0:
+                            await self.push_frame(TextFrame(text=cur_text))
+                            segs = await asyncio.to_thread(
+                                self.decoder,
+                                cur_hidden_state,
+                                cur_text,
+                            )
+                            for item in segs:
+                                # audio_bytes = postprocess_tts_wave_int16(item)
+                                audio_bytes = (
+                                    (item.squeeze().float().cpu().numpy() * 32768)
+                                    .astype("int16")
+                                    .tobytes()
+                                )
+                                logging.info(
+                                    f"seg tensor:{item.shape},push audio len:{len(audio_bytes)}"
+                                )
+                                audio_frame = AudioRawFrame(audio=audio_bytes, sample_rate=24000)
+                                await self.queue_frame(audio_frame)
+                                yield None
+                                # yield audio_frame
+                                # await asyncio.sleep(0.01)
+                            cur_hidden_state = []
+                        cur_text = ""
+            if self._outputs["stat"] == "sl":
+                break
+            # print(self._outputs['text'])
+            last_text = self._outputs["text"]
 
-            # one turn conversation over, set stat is "sl"
-            await self.push_frame(BotStoppedSpeakingFrame())
-            self._outputs["stat"] = "sl"
-            self._outputs["last_id"] = None
+        if len(cur_hidden_state) != 0:
+            await self.push_frame(TextFrame(text=cur_text))
+            segs = await asyncio.to_thread(self.decoder, cur_hidden_state, cur_text)
+            for item in segs:
+                # audio_bytes = postprocess_tts_wave_int16(item)
+                audio_bytes = (
+                    (item.squeeze().float().cpu().numpy() * 32768).astype("int16").tobytes()
+                )
+                logging.info(f"seg tensor:{item.shape},push audio len:{len(audio_bytes)}")
+                audio_frame = AudioRawFrame(audio=audio_bytes, sample_rate=24000)
+                await self.queue_frame(AudioRawFrame(audio=audio_bytes, sample_rate=24000))
+                yield None
+                # yield audio_frame
+                # await asyncio.sleep(0.01)
 
-    def decoder(self, cur_hidden_state, cur_text) -> Generator[torch.Tensor, None, None]:
+        # one turn conversation over, set stat is "sl"
+        await self.push_frame(BotStoppedSpeakingFrame())
+        self._outputs["stat"] = "sl"
+        self._outputs["last_id"] = None
+
+    def decoder(self, cur_hidden_state, cur_text) -> list[torch.Tensor]:
+        segs = []
+        for seg in self.decoder_iter(cur_hidden_state, cur_text):
+            segs.append(seg)
+        return segs
+
+    def decoder_iter(self, cur_hidden_state, cur_text) -> Generator[torch.Tensor, None, None]:
         """
         Decodes the current hidden state and text to generate audio segments using speech decoder.
         """
@@ -333,6 +350,7 @@ class FreezeOmniVoiceProcessor(VoiceProcessorBase):
         embeddings = self.inference_pipeline.model.llm_decoder.model.embed_tokens(
             torch.tensor(self.inference_pipeline.model.tokenizer.encode(cur_text_procced)).cuda()
         )
+
         for seg in self.llm2tts.run(
             embeddings.reshape(-1, 896).unsqueeze(0),
             self._args.decoder_top_k,
