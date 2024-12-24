@@ -27,15 +27,15 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
         "https://en.wikipedia.org/wiki/Large_language_model"
     
     # pdf
-    # https://www.apple.com/ios/ios-18/pdf/iOS_18_All_New_Features_Sept_2024.pdf
+    # https://web.stanford.edu/~jurafsky/slp3/ed3bookaug20_2024.pdf 600 page is ok~ :)
     python -m demo.content_parser_tts instruct-content-tts \
-        "/Users/wuyong/Desktop/iOS_18_All_New_Features_Sept_2024.pdf"
+        "/Users/wuyong/Desktop/Speech and Language Processing.pdf"
     
     python -m demo.content_parser_tts instruct-content-tts \
         --role-tts-voices zh-CN-YunjianNeural \
         --role-tts-voices zh-CN-XiaoxiaoNeural \
         --language zh \
-        "/Users/wuyong/Desktop/iOS_18_All_New_Features_Sept_2024.pdf"
+        "/Users/wuyong/Desktop/Speech and Language Processing.pdf"
     ```
   
 - cmd chat bots:

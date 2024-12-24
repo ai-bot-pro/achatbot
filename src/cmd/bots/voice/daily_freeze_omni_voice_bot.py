@@ -61,7 +61,7 @@ class DailyFreezeOmniVoiceBot(DailyRoomBot):
         # if self._bot_config.llm.messages:
         #     messages = self._bot_config.llm.messages
 
-        parallel_pipeline = ParallelPipeline(
+        _ = ParallelPipeline(
             [  # save user audio pipeline
                 UserAudioResponseAggregator(),
                 FrameLogger(
