@@ -1,7 +1,7 @@
 import logging
 import os
 
-from src.common.types import MODELS_DIR, SileroVADArgs, WebRTCVADArgs
+from src.common.types import MODELS_DIR, FSMNVADArgs, SileroVADArgs, WebRTCVADArgs
 from src.common import interface
 from src.common.factory import EngineClass, EngineFactory
 
@@ -19,6 +19,8 @@ class VADEnvInit:
             from . import webrtc_vad
         elif "webrtc_silero_vad" in tag:
             from . import webrtc_silero_vad
+        elif "fsmn_vad" in tag:
+            from . import fsmn_vad
         elif "silero_vad" in tag:
             from . import silero_vad
 
@@ -60,6 +62,17 @@ class VADEnvInit:
         return kwargs
 
     @staticmethod
+    def get_fsmn_vad_args() -> dict:
+        kwargs = FSMNVADArgs(
+            sample_rate=int(os.getenv("SAMPLE_RATE", "16000")),
+            model=os.getenv("FSMN_VAD_MODEL", "fsmn-vad"),
+            model_version=os.getenv("FSMN_VAD_MODEL_VERSION", "v2.0.4"),
+            check_frames_mode=int(os.getenv("CHECK_FRAMES_MODE", "1")),
+        ).__dict__
+
+        return kwargs
+
+    @staticmethod
     def get_webrtc_vad_args() -> dict:
         kwargs = WebRTCVADArgs(
             aggressiveness=int(os.getenv("AGGRESSIVENESS", "1")),
@@ -77,6 +90,7 @@ class VADEnvInit:
         "webrtc_vad": get_webrtc_vad_args,
         "webrtc_silero_vad": get_webrtc_silero_vad_args,
         "pyannote_vad": get_pyannote_vad_args,
+        "fsmn_vad": get_fsmn_vad_args,
     }
 
 
