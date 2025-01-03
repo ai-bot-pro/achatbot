@@ -215,6 +215,15 @@ class WebRTCVADArgs:
     frame_duration_ms: int = 20  # ms
 
 
+@dataclass
+class FSMNVADArgs:
+    sample_rate: int = RATE
+    model: str = "fsmn-vad"
+    model_version: str = "v2.0.4"
+    check_frames_mode: int = VAD_CHECK_PER_FRAMES
+    # frame_duration_ms: int = 64  # ms,  frame_length: 1024 = 16000*64 / 1000
+
+
 INIT_SILERO_SENSITIVITY = 0.4
 # How often should we reset internal model state
 SILERO_MODEL_RESET_STATES_TIME = 5.0
