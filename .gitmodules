@@ -22,3 +22,6 @@
 [submodule "deps/FreezeOmni"]
 	path = deps/FreezeOmni
 	url = https://github.com/weedge/Freeze-Omni.git
+[submodule "deps/F5TTS"]
+	path = deps/F5TTS
+	url = https://github.com/weedge/f5-tts.git

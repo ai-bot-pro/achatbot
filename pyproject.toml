@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 name = "achatbot"
 #dynamic = ["version"]
 # todo
-version = "0.0.8.4"
+version = "0.0.8.5"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -258,9 +258,19 @@ tts_chat = [
     "nemo_text_processing~=1.0.2; sys_platform == 'linux'",
     "transformers[torch]>=4.40.2",
 ]
+tts_f5 = [
+    "torch~=2.2.2",
+    "vocos~=0.1.0",
+    "torchdiffeq",
+    "jieba",
+    "achatbot[librosa,soundfile]",
+    "pynini~=2.1.5; sys_platform == 'linux'",
+    "transformers[torch]>=4.40.2",
+    "x_transformers>=1.31.14",
+]
 # multi tts modules engine
 speech_tts = [
-    "achatbot[tts_coqui,tts_edge,tts_g,tts_pyttsx3,tts_cosy_voice,tts_chat]",
+    "achatbot[tts_coqui,tts_edge,tts_g,tts_pyttsx3,tts_cosy_voice,tts_chat,tts_f5]",
 ]
 
 # voice

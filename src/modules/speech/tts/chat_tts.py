@@ -52,7 +52,7 @@ class ChatTTS(BaseTTS, ITts):
             max_new_token=1024,
         )
 
-    def set_speaker(self, speaker: str) -> None:
+    def set_voice(self, speaker: str) -> None:
         self.args.params_infer_code.spk_emb = speaker
 
     def get_stream_info(self) -> dict:
@@ -65,7 +65,7 @@ class ChatTTS(BaseTTS, ITts):
         }
 
     async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
-        self.set_speaker(self.rand_speaker)
+        self.set_voice(self.rand_speaker)
         logging.debug(f"{self.TAG} synthesis: {text}")
         wav = self.chat.infer(
             [
