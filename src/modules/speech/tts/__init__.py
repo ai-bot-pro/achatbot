@@ -2,10 +2,12 @@ import logging
 import os
 
 from src.common.types import MODELS_DIR, RECORDS_DIR, CosyVoiceTTSArgs
+from src.types.speech.tts.f5 import F5TTSArgs
 from src.common import interface
 from src.common.factory import EngineClass, EngineFactory
 
 from dotenv import load_dotenv
+
 
 load_dotenv(override=True)
 
@@ -25,6 +27,8 @@ class TTSEnvInit:
             from . import edge_tts
         elif "tts_cosy_voice" in tag:
             from . import cosy_voice_tts
+        elif "tts_f5" in tag:
+            from . import f5_tts
         # elif "tts_openai" in tag:
         # from . import openai_tts
 
@@ -70,6 +74,11 @@ class TTSEnvInit:
         return kwargs
 
     @staticmethod
+    def get_tts_f5_args() -> dict:
+        kwargs = F5TTSArgs().__dict__
+        return kwargs
+
+    @staticmethod
     def get_tts_edge_args() -> dict:
         kwargs = {}
         kwargs["voice_name"] = os.getenv("TTS_VOICE", "zh-CN-XiaoxiaoNeural")
@@ -87,6 +96,7 @@ class TTSEnvInit:
     map_config_func = {
         "tts_coqui": get_tts_coqui_args,
         "tts_cosy_voice": get_tts_cosy_voice_args,
+        "tts_f5": get_tts_f5_args,
         "tts_chat": get_tts_chat_args,
         "tts_edge": get_tts_edge_args,
         "tts_g": get_tts_g_args,

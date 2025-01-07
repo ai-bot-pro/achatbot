@@ -316,6 +316,7 @@ class PersonalAIProxyArgs:
     func_weather_name: str = "openweathermap_api"
 
 
+# ---------------- TTS -----------------
 @dataclass
 class CoquiTTSArgs:
     conf_file: str = ""

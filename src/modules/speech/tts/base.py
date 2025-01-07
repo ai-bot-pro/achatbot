@@ -64,6 +64,9 @@ class BaseTTS(EngineClass):
                         buff.extend(item)
 
     async def synthesize(self, session: Session) -> AsyncGenerator[bytes, None]:
+        add_silence_chunk = (
+            self.args.add_silence_chunk if hasattr(self.args, "add_silence_chunk") else True
+        )
         if "tts_text_iter" in session.ctx.state:
             for text in session.ctx.state["tts_text_iter"]:
                 text: str = self.filter_special_chars(text)
@@ -71,6 +74,8 @@ class BaseTTS(EngineClass):
                     continue
                 async for chunk in self._inference(session, text):
                     yield chunk
+                if add_silence_chunk is False:
+                    continue
                 silence_chunk = self._get_end_silence_chunk(session, text)
                 if silence_chunk:
                     yield silence_chunk
@@ -80,6 +85,8 @@ class BaseTTS(EngineClass):
             if len(text.strip()) > 0:
                 async for chunk in self._inference(session, text):
                     yield chunk
+                if add_silence_chunk is False:
+                    return
                 silence_chunk = self._get_end_silence_chunk(session, text)
                 if silence_chunk:
                     yield silence_chunk
