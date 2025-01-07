@@ -173,5 +173,7 @@ class F5TTS(BaseTTS, ITts):
         )
 
         # yield audio_utils.postprocess_tts_wave_int16(torch.from_numpy(wav))
+
         # use float32 have high-quality wave
-        yield audio_utils.postprocess_tts_wave(torch.from_numpy(wav))
+        # yield audio_utils.postprocess_tts_wave(torch.from_numpy(wav))
+        yield np.frombuffer(wav, dtype=np.float32).tobytes()
