@@ -1,11 +1,13 @@
 import logging
 import os
 
-from src.common.types import MODELS_DIR, RECORDS_DIR, CosyVoiceTTSArgs, F5TTSArgs
+from src.common.types import MODELS_DIR, RECORDS_DIR, CosyVoiceTTSArgs
+from src.types.speech.tts.f5 import F5TTSArgs
 from src.common import interface
 from src.common.factory import EngineClass, EngineFactory
 
 from dotenv import load_dotenv
+
 
 load_dotenv(override=True)
 

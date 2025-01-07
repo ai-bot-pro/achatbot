@@ -259,9 +259,13 @@ tts_chat = [
     "transformers[torch]>=4.40.2",
 ]
 tts_f5 = [
+    "wandb",                                  # for training
+    "ema_pytorch",                            # for training
+    "datasets",                               # for training
     "torch~=2.2.2",
-    "vocos~=0.1.0",
+    "torchaudio~=2.2.2",
     "torchdiffeq",
+    "vocos~=0.1.0",
     "jieba",
     "achatbot[librosa,soundfile]",
     "pynini~=2.1.5; sys_platform == 'linux'",
