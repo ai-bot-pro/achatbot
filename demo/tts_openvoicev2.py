@@ -1,4 +1,4 @@
-## melo-tts
+## OpenVoiceV2 & melo-tts
 # - https://weedge.github.io/post/multimoding/voices/open_voice_extra_se_and_convert/
 # - https://github.com/myshell-ai/MeloTTS
 
@@ -19,7 +19,7 @@ try:
     from deps.OpenVoice.openvoice.api import ToneColorConverter
 except ModuleNotFoundError as e:
     logging.error(
-        "In order to use openvoice-tts, you need to `pip install achatbot[tts_openvoice]`."
+        "In order to use openvoice-tts, you need to `pip install achatbot[tts_openvoicev2]`."
     )
     raise Exception(f"Missing module: {e}")
 
@@ -94,6 +94,7 @@ def speak(np_audio_data: np.ndarray, rate: int):
 
 
 def save(data: np.ndarray, rate: int, file_name: str = "melo_tts"):
+    os.makedirs(RECORDS_DIR, exist_ok=True)
     output_path = os.path.join(RECORDS_DIR, f"{file_name}_{language}.wav")
     soundfile.write(output_path, data, rate)
     print(output_path)
@@ -108,7 +109,7 @@ def openvoice_clone(
 ):
     if target_se_path:
         print(f"target_se load form {target_se_path}")
-        target_se = torch.load(f"{target_se_path}", map_location=device)
+        target_se = torch.load(target_se_path, map_location=device)
     # download melo-tts model ckpt
     # huggingface-cli download myshell-ai/MeloTTS-English-v3 --local-dir ./models/myshell-ai/MeloTTS-English-v3
     # huggingface-cli download myshell-ai/MeloTTS-Chinese --local-dir ./models/myshell-ai/MeloTTS-Chinese

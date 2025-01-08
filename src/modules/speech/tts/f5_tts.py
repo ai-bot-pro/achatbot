@@ -132,7 +132,7 @@ class F5TTS(BaseTTS, ITts):
             self.vocoder_model,
             device=self.args.device,
         )
-        print("Warm-up completed.")
+        logging.info("Warm-up completed.")
 
     def get_stream_info(self) -> dict:
         return {
