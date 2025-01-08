@@ -6,7 +6,6 @@ import io
 import os
 import sys
 import logging
-from typing import BinaryIO
 
 import torch
 import numpy as np
@@ -39,23 +38,26 @@ def load_tone_color_converter():
     # huggingface-cli download myshell-ai/OpenVoiceV2 --local-dir ./models/myshell-ai/OpenVoiceV2
 
     converter_conf_path = os.path.join(MODELS_DIR, "myshell-ai/OpenVoiceV2/converter/config.json")
+    tone_color_converter = ToneColorConverter(converter_conf_path, device=device)
+    # m = tone_color_converter.model
+    # model_million_params = sum(p.numel() for p in m.parameters()) / 1e6
+    # print(m)
+    # print(f"{model_million_params}M parameters")
+
     converter_ckpt_path = os.path.join(
         MODELS_DIR, "myshell-ai/OpenVoiceV2/converter/checkpoint.pth"
     )
-    tone_color_converter = ToneColorConverter(converter_conf_path, device=device)
-    m = tone_color_converter.model
-    model_million_params = sum(p.numel() for p in m.parameters()) / 1e6
-    print(m)
-    print(f"{model_million_params}M parameters")
     tone_color_converter.load_ckpt(converter_ckpt_path)
 
     return tone_color_converter
 
 
 def reference_target_se_extractor(
-    tone_color_converter: ToneColorConverter,
-    reference_speaker_file: str = os.path.join(RECORDS_DIR, "demo_speaker0.mp3"),
+    tone_color_converter: ToneColorConverter | None = None,
+    reference_speaker_file: str = os.path.join(ASSETS_DIR, "basic_ref_zh.wav"),
 ):
+    if tone_color_converter is None:
+        tone_color_converter = load_tone_color_converter()
     # This is the voice you want to clone
     target_dir = os.path.join(RECORDS_DIR, "openvoicev2")
     os.makedirs(target_dir, exist_ok=True)
@@ -66,7 +68,7 @@ def reference_target_se_extractor(
     se_path = os.path.join(target_dir, audio_name, "se.pth")
     print(f"saved target tone color file: {se_path}, target tone color shape: {target_se.shape}")
 
-    return target_se
+    return target_se, se_path
 
 
 def speak(np_audio_data: np.ndarray, rate: int):
@@ -101,8 +103,12 @@ def save(data: np.ndarray, rate: int, file_name: str = "melo_tts"):
 def openvoice_clone(
     tone_color_converter: ToneColorConverter,
     target_se: torch.Tensor,
-    watermark="@weedge",
+    target_se_path: str = "",
+    watermark="@Weedge",
 ):
+    if target_se_path:
+        print(f"target_se load form {target_se_path}")
+        target_se = torch.load(f"{target_se_path}", map_location=device)
     # download melo-tts model ckpt
     # huggingface-cli download myshell-ai/MeloTTS-English-v3 --local-dir ./models/myshell-ai/MeloTTS-English-v3
     # huggingface-cli download myshell-ai/MeloTTS-Chinese --local-dir ./models/myshell-ai/MeloTTS-Chinese
@@ -120,8 +126,8 @@ def openvoice_clone(
         ckpt_path=ckpt_path,
     )
     # print the number of parameters in the model
-    model_million_params = sum(p.numel() for p in model.parameters()) / 1e6
-    print(f"model params: {model_million_params} M {model}")
+    # model_million_params = sum(p.numel() for p in model.parameters()) / 1e6
+    # print(f"model params: {model_million_params} M {model}")
     print(f"config params:{model.hps}")
     speaker_ids = model.hps.data.spk2id
     print(speaker_ids)
@@ -131,35 +137,32 @@ def openvoice_clone(
         speaker_key = speaker_key.lower().replace("_", "-")
         print(speaker_id, speaker_key)
 
-        text = "我最近在学习deep learning，希望能够在未来的artificial intelligence领域有所建树。"
+        text = "我们介绍了一种深度且轻量级的Transformer，名为DeLighT，它在参数数量显著减少的情况下，提供了与标准基于Transformer的模型相似或更好的性能。"
         np_audio_data = model.tts_to_file(text, speaker_id, None, speed=speed)
 
+        src_path = ""
         if os.getenv("IS_SAVE", None):
             src_path = save(np_audio_data, model.hps.data.sampling_rate)
 
         speak(np_audio_data, model.hps.data.sampling_rate)
 
-        # Run the tone color converter
-        se_ckpt_path = os.path.join(
-            MODELS_DIR, f"myshell-ai/OpenVoiceV2/base_speakers/ses/{speaker_key}.pth"
-        )
-        source_se = torch.load(se_ckpt_path, map_location=device)
-
         if not src_path:
             print("no src_path, use soundfile")
-            # 将 numpy array 转换为 BytesIO
             audio_buf = io.BytesIO()
-            # 写入 WAV 格式数据到 BytesIO
             soundfile.write(
                 audio_buf,
                 np_audio_data.astype(dtype=np.float32),
                 model.hps.data.sampling_rate,
                 format="WAV",
             )
-            # 将指针移回开始位置
             audio_buf.seek(0)
-            # 创建 SoundFile 对象
             src_path = soundfile.SoundFile(audio_buf)
+
+        # Run the tone color converter
+        se_ckpt_path = os.path.join(
+            MODELS_DIR, f"myshell-ai/OpenVoiceV2/base_speakers/ses/{speaker_key}.pth"
+        )
+        source_se = torch.load(se_ckpt_path, map_location=device)
 
         np_convert_audio_data = tone_color_converter.convert(
             audio_src_path=src_path,  # 使用 SoundFile 对象
@@ -168,6 +171,7 @@ def openvoice_clone(
             output_path=None,
             message=watermark,
         )
+        # print(np_convert_audio_data)
 
         if isinstance(src_path, soundfile.SoundFile):
             # 关闭文件
@@ -175,14 +179,16 @@ def openvoice_clone(
             audio_buf.close()
 
         if os.getenv("IS_SAVE", None):
-            save(np_convert_audio_data, model.hps.data.sampling_rate, file_name="openvoicev2_tts")
+            save(
+                np_convert_audio_data,
+                tone_color_converter.hps.data.sampling_rate,
+                file_name="openvoicev2_tts",
+            )
 
-        speak(np_convert_audio_data, model.hps.data.sampling_rate)
+        speak(np_convert_audio_data, tone_color_converter.hps.data.sampling_rate)
 
 
 if __name__ == "__main__":
     tone_color_converter = load_tone_color_converter()
-
-    target_se = reference_target_se_extractor(tone_color_converter)
-
-    openvoice_clone(tone_color_converter, target_se)
+    target_se, se_path = reference_target_se_extractor(tone_color_converter)
+    openvoice_clone(tone_color_converter, target_se, target_se_path=se_path)
