@@ -86,12 +86,12 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
     - [x] search: search,search1,serper
     - [x] weather: openweathermap
   - speech:
-    - [x] asr: sense_voice_asr, whisper_asr, whisper_timestamped_asr, whisper_faster_asr, whisper_transformers_asr, whisper_mlx_asr, lightning_whisper_mlx_asr(!TODO), whisper_groq_asr
+    - [x] asr: sense_voice_asr, whisper_asr, whisper_timestamped_asr, whisper_faster_asr, whisper_transformers_asr, whisper_mlx_asr, whisper_groq_asr
     - [x] audio_stream: daily_room_audio_stream(in/out), pyaudio_stream(in/out)
-    - [x] detector: porcupine_wakeword,pyannote_vad,webrtc_vad,silero_vad,webrtc_silero_vad
+    - [x] detector: porcupine_wakeword,pyannote_vad,webrtc_vad,silero_vad,webrtc_silero_vad,fsmn_vad
     - [x] player: stream_player
     - [x] recorder: rms_recorder, wakeword_rms_recorder, vad_recorder, wakeword_vad_recorder
-    - [x] tts: tts_chat,tts_coqui,tts_cosy_voice,tts_edge,tts_g
+    - [x] tts: tts_chat,tts_coqui,tts_cosy_voice,tts_edge,tts_g,tts_f5,tts_openvoicev2
     - [x] vad_analyzer: daily_webrtc_vad_analyzer,silero_vad_analyzer
   - vision
     - [x] OCR(*Optical Character Recognition*):
@@ -142,6 +142,7 @@ deploy it to cloudflare page worker with nextjs, access https://storytelling.pag
 # Install
 > [!NOTE]
 > `python --version` >=3.10 with [asyncio-task](https://docs.python.org/3.10/library/asyncio-task.html)
+> if install `achatbot[tts_openvoicev2]` need install melo-tts `pip install git+https://github.com/myshell-ai/MeloTTS.git`
 
 > [!TIP]
 > use [uv](https://github.com/astral-sh/uv) + pip to run, install the required dependencies fastly, e.g.:
@@ -384,6 +385,8 @@ ACHATBOT_PKG=1 TTS_TAG=tts_g IS_RELOAD=1 python -m achatbot.cmd.grpc.speaker.cli
 ACHATBOT_PKG=1 TTS_TAG=tts_coqui IS_RELOAD=1 python -m achatbot.cmd.grpc.speaker.client
 ACHATBOT_PKG=1 TTS_TAG=tts_chat IS_RELOAD=1 python -m achatbot.cmd.grpc.speaker.client
 ACHATBOT_PKG=1 TTS_TAG=tts_cosy_voice IS_RELOAD=1 python -m achatbot.cmd.grpc.speaker.client
+ACHATBOT_PKG=1 TTS_TAG=tts_f5 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+ACHATBOT_PKG=1 TTS_TAG=tts_openvoicev2 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 ```
 
 
