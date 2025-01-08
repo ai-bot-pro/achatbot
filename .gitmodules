@@ -25,3 +25,6 @@
 [submodule "deps/F5TTS"]
 	path = deps/F5TTS
 	url = https://github.com/weedge/f5-tts.git
+[submodule "deps/OpenVoice"]
+	path = deps/OpenVoice
+	url = https://github.com/weedge/OpenVoice.git
