@@ -282,7 +282,7 @@ tts_openvoicev2 = [
     "pypinyin",
     "cn2an",
     "langid",
-    "melotts@git+https://github.com/myshell-ai/MeloTTS.git",
+    #"melotts@git+https://github.com/myshell-ai/MeloTTS.git",
 ]
 # multi tts modules engine
 speech_tts = [

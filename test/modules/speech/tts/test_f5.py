@@ -32,9 +32,9 @@ class TestF5TTS(unittest.TestCase):
         )
 
         cls.voc_name = os.getenv("VOC_NAME", "vocos")
-        cls.model_type = (os.getenv("MODEL_TYPE", "F5-TTS"),)
+        cls.model_type = os.getenv("MODEL_TYPE", "F5-TTS")
         vocos_model_dir = os.path.join(MODELS_DIR, "charactr/vocos-mel-24khz")
-        cls.vocoder_model_dir = os.getenv("MODELS_DIR", vocos_model_dir)
+        cls.vocoder_model_dir = os.getenv("VOCODER_MODEL_DIR", vocos_model_dir)
         tts_model_ckpt_path = os.path.join(
             MODELS_DIR, "SWivid/F5-TTS/F5TTS_Base/model_1200000.safetensors"
         )
@@ -49,7 +49,7 @@ class TestF5TTS(unittest.TestCase):
                 )
             else:
                 raise Exception("E2-TTS just support vocos vocoder")
-        cls.model_ckpt_path = os.getenv("MODELS_DIR", tts_model_ckpt_path)
+        cls.model_ckpt_path = os.getenv("MODEL_CKPT_PATH", tts_model_ckpt_path)
 
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
