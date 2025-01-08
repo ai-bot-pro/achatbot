@@ -24,19 +24,25 @@ class AudioStreamEnvInit:
         return engine
 
     @staticmethod
-    def initAudioInStreamEngine() -> interface.IAudioStream | EngineClass:
+    def initAudioInStreamEngine(
+        tag: str | None = None, kwargs: dict | None = None
+    ) -> interface.IAudioStream | EngineClass:
         # audio stream
-        tag = os.getenv("AUDIO_IN_STREAM_TAG", "pyaudio_in_stream")
-        kwargs = AudioStreamEnvInit.map_config_func[tag]()
+        tag = tag if tag else os.getenv("AUDIO_IN_STREAM_TAG", "pyaudio_in_stream")
+        if kwargs is None:
+            kwargs = AudioStreamEnvInit.map_config_func[tag]()
         engine = AudioStreamEnvInit.getEngine(tag, **kwargs)
         logging.info(f"initAudioInStreamEngine: {tag}, {engine}")
         return engine
 
     @staticmethod
-    def initAudioOutStreamEngine() -> interface.IAudioStream | EngineClass:
+    def initAudioOutStreamEngine(
+        tag: str | None = None, kwargs: dict | None = None
+    ) -> interface.IAudioStream | EngineClass:
         # audio stream
-        tag = os.getenv("AUDIO_OUT_STREAM_TAG", "pyaudio_out_stream")
-        kwargs = AudioStreamEnvInit.map_config_func[tag]()
+        tag = tag if tag else os.getenv("AUDIO_OUT_STREAM_TAG", "pyaudio_out_stream")
+        if kwargs is None:
+            kwargs = AudioStreamEnvInit.map_config_func[tag]()
         engine = AudioStreamEnvInit.getEngine(tag, **kwargs)
         logging.info(f"initAudioOutStreamEngine: {tag}, {engine}")
         return engine

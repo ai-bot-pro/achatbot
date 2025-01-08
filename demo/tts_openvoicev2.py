@@ -39,10 +39,16 @@ def load_tone_color_converter():
 
     converter_conf_path = os.path.join(MODELS_DIR, "myshell-ai/OpenVoiceV2/converter/config.json")
     tone_color_converter = ToneColorConverter(converter_conf_path, device=device)
-    # m = tone_color_converter.model
-    # model_million_params = sum(p.numel() for p in m.parameters()) / 1e6
-    # print(m)
-    # print(f"{model_million_params}M parameters")
+
+    # model_million_params = sum(p.numel() for p in tone_color_converter.model.parameters()) / 1e6
+    # print(f"coverter model: {tone_color_converter.model}")
+    # print(f"coverter model parameters: {model_million_params}M ")
+
+    # model_million_params = (
+    #    sum(p.numel() for p in tone_color_converter.watermark_model.parameters()) / 1e6
+    # )
+    # print(f"coverter watermark model: {tone_color_converter.watermark_model}")
+    # print(f"coverter watermark model parameters: {model_million_params}M ")
 
     converter_ckpt_path = os.path.join(
         MODELS_DIR, "myshell-ai/OpenVoiceV2/converter/checkpoint.pth"
@@ -128,8 +134,9 @@ def openvoice_clone(
     )
     # print the number of parameters in the model
     # model_million_params = sum(p.numel() for p in model.parameters()) / 1e6
-    # print(f"model params: {model_million_params} M {model}")
-    print(f"config params:{model.hps}")
+    # print(f"melo tts model params: {model_million_params} M {model}")
+
+    print(f"melo tts config params:{model.hps}")
     speaker_ids = model.hps.data.spk2id
     print(speaker_ids)
 

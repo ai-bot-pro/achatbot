@@ -1,30 +1,36 @@
-import traceback
-import logging
-import json
-import time
 import os
+import sys
 import uuid
+import json
+import logging
+import traceback
 
 import grpc
+from dotenv import load_dotenv
+
+try:
+    cur_dir = os.path.dirname(__file__)
+    sys.path.insert(1, os.path.join(cur_dir, "../../../common/grpc/idl"))
+    from src.common.grpc.idl.tts_pb2_grpc import TTSStub
+    from src.common.grpc.idl.tts_pb2 import (
+        LoadModelRequest,
+        LoadModelResponse,
+        SynthesizeRequest,
+        SynthesizeResponse,
+    )
+except ModuleNotFoundError as e:
+    raise Exception(f"grpc import error: {e}")
 
 from src.common.factory import EngineClass
 from src.common.interface import IAudioStream
 from src.modules.speech.audio_stream import AudioStreamEnvInit
 from src.modules.speech.player import PlayerEnvInit
 from src.modules.speech.tts import TTSEnvInit
-from src.common.grpc.idl.tts_pb2 import (
-    LoadModelRequest,
-    LoadModelResponse,
-    SynthesizeRequest,
-    SynthesizeResponse,
-)
-from src.common.grpc.idl.tts_pb2_grpc import TTSStub
 from src.common.grpc.interceptors.authentication_client import add_authentication
 from src.common.logger import Logger
 from src.common.types import SessionCtx
 from src.common.session import Session
 
-from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
@@ -63,8 +69,12 @@ TTS_TAG=tts_g IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 TTS_TAG=tts_coqui IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 TTS_TAG=tts_chat IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 TTS_TAG=tts_cosy_voice IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+TTS_TAG=tts_f5 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+TTS_TAG=tts_openvoicev2 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 """
 if __name__ == "__main__":
+    player = None
+    channel = None
     try:
         client_id = str(uuid.uuid4())
         session = Session(**SessionCtx(client_id).__dict__)

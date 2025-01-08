@@ -67,9 +67,8 @@ class OpenVoiceV2TTS(BaseTTS, ITts):
         self.load_tone_color_stats()
 
         # set target_sample_rate
-        self.target_sample_rate = self.tts_model.hps.data.sampling_rate
-        if self.args.enable_clone is True:
-            self.target_sample_rate = self.tone_color_converter_model.hps.data.sampling_rate
+        # just use tone_color_converter_model sampling rate
+        self.target_sample_rate = self.tone_color_converter_model.hps.data.sampling_rate
 
         os.makedirs(RECORDS_DIR, exist_ok=True)
         self._warm_up()

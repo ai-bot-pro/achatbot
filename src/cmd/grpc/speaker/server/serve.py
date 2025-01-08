@@ -1,13 +1,23 @@
 from concurrent import futures
 import logging
 import os
+import sys
 
 import grpc
+from dotenv import load_dotenv
 
-from src.common.logger import Logger
-from src.common.grpc.idl.tts_pb2_grpc import add_TTSServicer_to_server
+try:
+    cur_dir = os.path.dirname(__file__)
+    sys.path.insert(1, os.path.join(cur_dir, "../../../../common/grpc/idl"))
+    from src.common.grpc.idl.tts_pb2_grpc import add_TTSServicer_to_server
+except ModuleNotFoundError as e:
+    raise Exception(f"grpc import error: {e}")
+
 from src.common.grpc.interceptors.authentication_server import AuthenticationInterceptor
 from src.cmd.grpc.speaker.server.servicers.tts import TTS
+from src.common.logger import Logger
+
+load_dotenv(override=True)
 
 Logger.init(
     os.getenv("LOG_LEVEL", "debug").upper(),

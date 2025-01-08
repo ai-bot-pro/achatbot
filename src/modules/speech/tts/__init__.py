@@ -1,13 +1,11 @@
 import logging
 import os
 
-from src.common.types import MODELS_DIR, RECORDS_DIR, CosyVoiceTTSArgs
-from src.types.speech.tts.f5 import F5TTSArgs
-from src.common import interface
-from src.common.factory import EngineClass, EngineFactory
-
 from dotenv import load_dotenv
 
+from src.common.types import MODELS_DIR, RECORDS_DIR, CosyVoiceTTSArgs
+from src.common import interface
+from src.common.factory import EngineClass, EngineFactory
 
 load_dotenv(override=True)
 
@@ -29,6 +27,8 @@ class TTSEnvInit:
             from . import cosy_voice_tts
         elif "tts_f5" in tag:
             from . import f5_tts
+        elif "tts_openvoicev2" in tag:
+            from . import openvoicev2_tts
         # elif "tts_openai" in tag:
         # from . import openai_tts
 
@@ -75,7 +75,56 @@ class TTSEnvInit:
 
     @staticmethod
     def get_tts_f5_args() -> dict:
-        kwargs = F5TTSArgs().__dict__
+        from src.types.speech.tts.f5 import F5TTSArgs, F5TTSDiTModelConfig
+
+        kwargs = F5TTSArgs(
+            model_type=os.getenv("F5TTS_MODEL_TYPE", "F5-TTS"),
+            model_cfg=F5TTSDiTModelConfig().__dict__,
+            model_ckpt_path=os.getenv(
+                "F5TTS_MODEL_CKPT_PATH",
+                os.path.join(MODELS_DIR, "SWivid/F5-TTS/F5TTS_Base/model_1200000.safetensors"),
+            ),
+            vocab_file=os.getenv("F5TTS_VOCAB_FILE", ""),
+            vocoder_name=os.getenv("F5TTS_VOC_NAME", "vocos"),
+            vocoder_ckpt_dir=os.getenv(
+                "F5TTS_VOCODER_MODEL_DIR",
+                os.path.join(MODELS_DIR, "charactr/vocos-mel-24khz"),
+            ),
+            ref_audio_file=os.getenv("F5TTS_AUDIO_PATH", ""),
+            ref_text=os.getenv("F5TTS_REFERENCE_TEXT", ""),
+        ).__dict__
+        return kwargs
+
+    @staticmethod
+    def get_tts_openvoicev2_args() -> dict:
+        from src.types.speech.tts.openvoicev2 import OpenVoiceV2TTSArgs
+
+        kwargs = OpenVoiceV2TTSArgs(
+            language=os.getenv("OPENVOICEV2_LANGUAGE", "ZH"),
+            tts_ckpt_path=os.getenv(
+                "OPENVOICEV2_TTS_CKPT_PATH",
+                os.path.join(MODELS_DIR, "myshell-ai/MeloTTS-Chinese/checkpoint.pth"),
+            ),
+            tts_config_path=os.getenv(
+                "OPENVOICEV2_TTS_CONFIG_PATH",
+                os.path.join(MODELS_DIR, "myshell-ai/MeloTTS-Chinese/config.json"),
+            ),
+            enable_clone=bool(os.getenv("ENABLE_CLONE", "")),
+            converter_ckpt_path=os.getenv(
+                "OPENVOICEV2_CONVERTER_CKPT_PATH",
+                os.path.join(MODELS_DIR, "myshell-ai/OpenVoiceV2/converter/checkpoint.pth"),
+            ),
+            converter_conf_path=os.getenv(
+                "OPENVOICEV2_CONVERTER_CONF_PATH",
+                os.path.join(MODELS_DIR, "myshell-ai/OpenVoiceV2/converter/config.json"),
+            ),
+            src_se_ckpt_path=os.getenv(
+                "OPENVOICEV2_SRC_SE_CKPT_PATH",
+                os.path.join(MODELS_DIR, f"myshell-ai/OpenVoiceV2/base_speakers/ses/zh.pth"),
+            ),
+            target_se_ckpt_path=os.getenv("OPENVOICEV2_TARGET_SE_CKPT_PATH", ""),
+            is_save=bool(os.getenv("IS_SAVE", "")),
+        ).__dict__
         return kwargs
 
     @staticmethod
@@ -97,6 +146,7 @@ class TTSEnvInit:
         "tts_coqui": get_tts_coqui_args,
         "tts_cosy_voice": get_tts_cosy_voice_args,
         "tts_f5": get_tts_f5_args,
+        "tts_openvoicev2": get_tts_openvoicev2_args,
         "tts_chat": get_tts_chat_args,
         "tts_edge": get_tts_edge_args,
         "tts_g": get_tts_g_args,
