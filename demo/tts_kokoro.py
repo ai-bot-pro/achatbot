@@ -79,6 +79,7 @@ def run_torch_kokoro(
     logging.info(f"Loaded voice: {VOICE_NAME}")
 
     audio_samples, out_ps = generate(MODEL, text, VOICEPACK, lang=VOICE_NAME[0])
+    print(audio_samples.shape, audio_samples, out_ps)
     sd.play(audio_samples, 24000)
     sd.wait()
 
@@ -117,6 +118,7 @@ def run_onnx_kokoro(
         espeak_ng_lib_path="/usr/local/Cellar/espeak-ng/1.52.0/lib/libespeak-ng.1.dylib",
     )
     audio_samples, sample_rate = kokoro.create(text, voice="af_sarah", speed=1.0, lang="en-us")
+    print(audio_samples.shape, audio_samples, sample_rate)
     sd.play(audio_samples, sample_rate)
     sd.wait()
 
