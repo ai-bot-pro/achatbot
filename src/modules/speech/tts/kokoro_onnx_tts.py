@@ -16,7 +16,7 @@ brew install espeak-ng
 python -m demo.tts_kokoro export_pytorch_voices_to_json
 """
 try:
-    from kokoro_onnx import Kokoro
+    from kokoro_onnx import Kokoro, SUPPORTED_LANGUAGES
 except ModuleNotFoundError as e:
     logging.error(
         "In order to use kokoro-tts with onnx, you need to `pip install achatbot[tts_onnx_kokoro]`."
@@ -61,13 +61,24 @@ class KokoroOnnxTTS(BaseTTS, ITts):
         }
 
     async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
-        if self.args.tts_stream is True:
-            for audio_samples, _ in self.kokoro.create_stream(
-                text, voice=self.args.voice, speed=self.args.speed, lang=self.args.language
-            ):
+        # assert ,no yield, so pre check
+        if (
+            self.args.language in SUPPORTED_LANGUAGES
+            and self.args.speed >= 0.5
+            and self.args.speed <= 2.0
+            and self.args.voice in self.get_voices()
+        ):
+            if self.args.tts_stream is True:
+                async for stream in self.kokoro.create_stream(
+                    text, voice=self.args.voice, speed=self.args.speed, lang=self.args.language
+                ):
+                    yield np.frombuffer(stream[0], dtype=np.float32).tobytes()
+            else:
+                audio_samples, _ = self.kokoro.create(
+                    text, voice=self.args.voice, speed=self.args.speed, lang=self.args.language
+                )
                 yield np.frombuffer(audio_samples, dtype=np.float32).tobytes()
         else:
-            audio_samples, _ = self.kokoro.create(
-                text, voice=self.args.voice, speed=self.args.speed, lang=self.args.language
-            )
-            yield np.frombuffer(audio_samples, dtype=np.float32).tobytes()
+            logging.warning(f"check args: {self.args}, no need to synthesize")
+            yield b""
+            return
