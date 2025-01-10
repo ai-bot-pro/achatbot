@@ -43,6 +43,16 @@ class GetVoicesResponse(_message.Message):
     voices: _containers.RepeatedScalarFieldContainer[str]
     def __init__(self, voices: _Optional[_Iterable[str]] = ...) -> None: ...
 
+class SetVoiceRequest(_message.Message):
+    __slots__ = ("voice",)
+    VOICE_FIELD_NUMBER: _ClassVar[int]
+    voice: str
+    def __init__(self, voice: _Optional[str] = ...) -> None: ...
+
+class SetVoiceResponse(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
 class GetStreamInfoRequest(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
