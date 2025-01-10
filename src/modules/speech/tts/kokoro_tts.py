@@ -82,7 +82,7 @@ class KokoroTorchTTS(BaseTTS, ITts):
             self.voices[voice] = voice_stats
 
     def get_voices(self) -> list[str]:
-        return self.voices.keys()
+        return list(self.voices.keys())
 
     def set_voice(self, voice: str):
         if voice in self.get_voices():

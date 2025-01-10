@@ -28,6 +28,7 @@ class KokoroOnnxTTS(BaseTTS, ITts):
     """
     https://github.com/ai-bot-pro/achatbot/pull/105
     """
+
     TAG = "tts_onnx_kokoro"
 
     @classmethod
@@ -48,7 +49,7 @@ class KokoroOnnxTTS(BaseTTS, ITts):
         )
 
     def get_voices(self) -> list[str]:
-        return self.kokoro.get_voices()
+        return list(self.kokoro.get_voices())
 
     def set_voice(self, voice: str):
         if voice in self.get_voices():

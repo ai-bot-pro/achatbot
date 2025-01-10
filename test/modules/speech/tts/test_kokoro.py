@@ -1,6 +1,7 @@
 import os
 import logging
 
+import random
 import unittest
 
 from src.modules.speech.tts import TTSEnvInit
@@ -12,9 +13,11 @@ from src.common.types import SessionCtx
 
 r"""
 python -m unittest test.modules.speech.tts.test_kokoro.TestKOKORO.test_get_voices
+python -m unittest test.modules.speech.tts.test_kokoro.TestKOKORO.test_set_voice
 python -m unittest test.modules.speech.tts.test_kokoro.TestKOKORO.test_synthesize
 
 TTS_TAG=tts_onnx_kokoro python -m unittest test.modules.speech.tts.test_kokoro.TestKOKORO.test_get_voices
+TTS_TAG=tts_onnx_kokoro python -m unittest test.modules.speech.tts.test_kokoro.TestKOKORO.test_set_voice
 TTS_TAG=tts_onnx_kokoro KOKORO_ESPEAK_NG_LIB_PATH=/usr/local/lib/libespeak-ng.1.dylib python -m unittest test.modules.speech.tts.test_kokoro.TestKOKORO.test_synthesize
 TTS_STREAM=1 TTS_TAG=tts_onnx_kokoro KOKORO_ESPEAK_NG_LIB_PATH=/usr/local/lib/libespeak-ng.1.dylib python -m unittest test.modules.speech.tts.test_kokoro.TestKOKORO.test_synthesize
 """
@@ -47,6 +50,13 @@ class TestKOKORO(unittest.TestCase):
         self.assertGreater(len(voices), 0)
         print(voices)
 
+    def test_set_voice(self):
+        voice = random.choice(self.tts.get_voices())
+        self.tts.set_voice(voice)
+
+        print(voice)
+        self.assertEqual(self.tts.args.voice, voice)
+
     def test_synthesize(self):
         import pyaudio
 
@@ -59,6 +69,8 @@ class TestKOKORO(unittest.TestCase):
             output_device_index=None,
             output=True,
         )
+
+        self.test_set_voice()
 
         self.session.ctx.state["tts_text"] = self.tts_text
         print(self.session.ctx)
