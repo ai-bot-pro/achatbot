@@ -30,6 +30,10 @@ except ModuleNotFoundError as e:
 
 
 class KokoroTorchTTS(BaseTTS, ITts):
+    """
+    https://github.com/ai-bot-pro/achatbot/pull/105
+    """
+
     TAG = "tts_kokoro"
 
     @classmethod

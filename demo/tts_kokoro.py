@@ -34,7 +34,7 @@ python -m demo.tts_kokoro export_pytorch_voices_to_json
 python -m demo.tts_kokoro run_onnx_kokoro
 """
 try:
-    from kokoro_onnx import Kokoro
+    from kokoro_onnx import Kokoro, EspeakConfig
 except ModuleNotFoundError as e:
     logging.error(
         "In order to use kokoro-tts with onnx, you need to `pip install achatbot[tts_onnx_kokoro]`."
@@ -112,10 +112,11 @@ def run_onnx_kokoro(
     model_struct_stats_ckpt = os.path.join(MODELS_DIR, "Kokoro82M/kokoro-v0_19.onnx")
     voices_file = os.path.join(MODELS_DIR, "Kokoro82M/kokoro-voices.json")
     print(model_struct_stats_ckpt, voices_file)
+    espeak_ng_lib_path = os.getenv("ESPEAK_NG_LIB_PATH", "/usr/local/lib/libespeak-ng.1.dylib")
     kokoro = Kokoro(
         model_struct_stats_ckpt,
         voices_file,
-        espeak_ng_lib_path="/usr/local/Cellar/espeak-ng/1.52.0/lib/libespeak-ng.1.dylib",
+        espeak_config=EspeakConfig(lib_path=espeak_ng_lib_path),
     )
     audio_samples, sample_rate = kokoro.create(text, voice="af_sarah", speed=1.0, lang="en-us")
     print(audio_samples.shape, audio_samples, sample_rate)

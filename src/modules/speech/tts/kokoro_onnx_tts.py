@@ -16,7 +16,7 @@ brew install espeak-ng
 python -m demo.tts_kokoro export_pytorch_voices_to_json
 """
 try:
-    from kokoro_onnx import Kokoro, SUPPORTED_LANGUAGES
+    from kokoro_onnx import Kokoro, SUPPORTED_LANGUAGES, EspeakConfig
 except ModuleNotFoundError as e:
     logging.error(
         "In order to use kokoro-tts with onnx, you need to `pip install achatbot[tts_onnx_kokoro]`."
@@ -25,6 +25,9 @@ except ModuleNotFoundError as e:
 
 
 class KokoroOnnxTTS(BaseTTS, ITts):
+    """
+    https://github.com/ai-bot-pro/achatbot/pull/105
+    """
     TAG = "tts_onnx_kokoro"
 
     @classmethod
@@ -38,8 +41,10 @@ class KokoroOnnxTTS(BaseTTS, ITts):
         self.kokoro = Kokoro(
             self.args.model_struct_stats_ckpt,
             self.args.voices_file_path,
-            espeak_ng_lib_path=self.args.espeak_ng_lib_path,
-            espeak_ng_data_path=self.args.espeak_ng_data_path,
+            espeak_config=EspeakConfig(
+                lib_path=self.args.espeak_ng_lib_path,
+                data_path=self.args.espeak_ng_data_path,
+            ),
         )
 
     def get_voices(self) -> list[str]:
