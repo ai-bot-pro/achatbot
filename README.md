@@ -4,10 +4,18 @@
 
 achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect object etc..
 
+<details>
+<summary>:evergreen_tree: Project Structure</summary>
+  
 # Project Structure
-![project-structure](https://github.com/user-attachments/assets/5bf7cebb-e590-4718-a78a-6b0c0b36ea28)
+![project-structure](https://github.com/user-attachments/assets/5bf7cebb-e590-4718-a78a-6b0c0b36ea28)  
 
-# Feature
+</details>
+
+<details>
+<summary>:herb: Features</summary>
+  
+# Features
 - demo
   
   - [podcast](https://github.com/ai-bot-pro/achatbot/blob/main/demo/content_parser_tts.py)
@@ -113,6 +121,11 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
   - docker -> k8s/k3s
   - etc...
 
+</details>
+
+<details>
+<summary>:sunflower: Service Deployment Architecture</summary>
+  
 # Service Deployment Architecture
 
 ## UI (easy to deploy with github like pages)
@@ -137,6 +150,8 @@ deploy it to cloudflare page worker with nextjs, access https://storytelling.pag
 - [x] [deploy/cerebrium/fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/cerebrium/fastapi-daily-chat-bot) :)
 - [x] [deploy/aws/fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/aws/fastapi-daily-chat-bot) :|
 - [x] [deploy/docker/fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/docker) 🏃
+
+</details>
 
 
 # Install
@@ -170,7 +185,7 @@ pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
 ```
 
 #  Run chat bots
-## Run chat bots with colab notebook
+## :memo: Run chat bots with colab notebook
 
 |                           Chat Bot                           | optional-dependencies                                        | Colab                                                        | Device                                                       | Pipeline Desc                                                |
 | :----------------------------------------------------------: | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
@@ -193,7 +208,9 @@ pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
 |                                                              |                                                              |                                                              |                                                              |                                                              |
 
 
-
+<details>
+<summary>:new_moon: Run local chat bots</summary>
+  
 ## Run local chat bots
 
 > [!NOTE]
@@ -270,7 +287,12 @@ pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
     ACHATBOT_PKG=1 TQDM_DISABLE=True \
         python -m achatbot.cmd.local-terminal-chat.generate_audio2audio > ~/.achatbot/log/std_out.log
     ```
+</details>
 
+    
+<details>
+<summary>:waxing_crescent_moon: Run remote http fastapi daily chat bots</summary>
+  
 ## Run remote http fastapi daily chat bots
 1. run `pip install "achatbot[fastapi_daily_bot_server]"` to install dependencies to run http fastapi daily chat bot; 
 
@@ -299,7 +321,11 @@ pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
     -H "Content-Type: application/json" \
     -d '{}' | jq .
    ```
+</details>
 
+<details>
+<summary>:first_quarter_moon: Run remote http fastapi daily chat bots</summary>
+  
 ## Run remote rpc chat bot worker
 1. run `pip install "achatbot[remote_rpc_chat_bot_be_worker]"` to install dependencies to run rpc chat bot BE worker; e.g. :
    - use dufault env params to run rpc chat bot BE worker
@@ -314,7 +340,12 @@ ACHATBOT_PKG=1 RUN_OP=fe \
     TTS_TAG=tts_edge \
     python -m achatbot.cmd.grpc.terminal-chat.generate_audio2audio > ~/.achatbot/log/fe_std_out.log
 ```
+</details>
 
+
+<details>
+<summary>:waxing_gibbous_moon: Run remote queue chat bot worker</summary>
+  
 ## Run remote queue chat bot worker
 1. run `pip install "achatbot[remote_queue_chat_bot_be_worker]"` to install dependencies to run queue chat bot worker; e.g.:
    - use default env params to run 
@@ -371,7 +402,12 @@ ACHATBOT_PKG=1 RUN_OP=fe \
    <a href="https://colab.research.google.com/github/weedge/doraemon-nb/blob/main/chat_bot_gpu_worker.ipynb" target="_parent">
    <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
    
-   - sense_voice(asr) -> qwen (llm) -> cosy_voice (tts): 
+   - sense_voice(asr) -> qwen (llm) -> cosy_voice (tts)
+
+</details>
+
+<details>
+<summary>:full_moon: Run remote grpc tts speaker bot</summary>
 
 ## Run remote grpc tts speaker bot
 1. run `pip install "achatbot[remote_grpc_tts_server]"` to install dependencies to run grpc tts speaker bot server; 
@@ -388,7 +424,11 @@ ACHATBOT_PKG=1 TTS_TAG=tts_cosy_voice IS_RELOAD=1 python -m achatbot.cmd.grpc.sp
 ACHATBOT_PKG=1 TTS_TAG=tts_f5 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 ACHATBOT_PKG=1 TTS_TAG=tts_openvoicev2 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 ```
+</details>
 
+<details>
+  
+<summary>:video_camera: Multimodal Interaction</summary>
 
 # Multimodal Interaction
 ## audio (voice)
@@ -410,6 +450,7 @@ ACHATBOT_PKG=1 TTS_TAG=tts_openvoicev2 IS_RELOAD=1 python -m src.cmd.grpc.speake
 
 ## more
 - Embodied Intelligence: Robots that touch the world, perceive and move
+</details>
 
 # License
 
