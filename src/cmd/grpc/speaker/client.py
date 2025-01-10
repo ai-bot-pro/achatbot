@@ -17,6 +17,10 @@ try:
         LoadModelResponse,
         SynthesizeRequest,
         SynthesizeResponse,
+        GetStreamInfoRequest,
+        GetStreamInfoReponse,
+        GetVoicesRequest,
+        GetVoicesResponse,
     )
 except ModuleNotFoundError as e:
     raise Exception(f"grpc import error: {e}")
@@ -53,11 +57,20 @@ def load_model(tts_stub: TTSStub):
 
 
 def synthesize_us(tts_stub: TTSStub):
-    tts_stub = TTSStub(channel)
     request_data = SynthesizeRequest(tts_text="hello,你好，我是机器人")
     response_iterator = tts_stub.SynthesizeUS(request_data)
     for response in response_iterator:
         yield response.tts_audio
+
+
+def get_stream_info(tts_stub: TTSStub):
+    response: GetStreamInfoReponse = tts_stub.GetStreamInfo(GetStreamInfoRequest())
+    return response
+
+
+def get_voices(tts_stub: TTSStub):
+    response: GetVoicesResponse = tts_stub.GetVoices(GetVoicesRequest())
+    return response.voices
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -88,6 +101,10 @@ if __name__ == "__main__":
         tts_stub = TTSStub(channel)
 
         load_model(tts_stub)
+        stream_info = get_stream_info(tts_stub)
+        logging.debug(f"stream_info:{stream_info}")
+        voices = get_voices(tts_stub)
+        logging.debug(f"voices:{voices}")
         tts_audio_iter = synthesize_us(tts_stub)
 
         audio_out_stream: IAudioStream | EngineClass = AudioStreamEnvInit.initAudioOutStreamEngine()
