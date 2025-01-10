@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 name = "achatbot"
 #dynamic = ["version"]
 # todo
-version = "0.0.8.5"
+version = "0.0.8.6"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -284,9 +284,18 @@ tts_openvoicev2 = [
     "langid",
     #"melotts@git+https://github.com/myshell-ai/MeloTTS.git",
 ]
+tts_kokoro = [
+    #apt-get -qq -y install espeak-ng > /dev/null 2>&1
+    "torch~=2.2.2",
+    "transformers[torch]>=4.40.2",
+    "phonemizer",
+    "scipy",
+    "munch",
+]
+tts_onnx_kokoro = ["kokoro-onnx~=0.2.5"]
 # multi tts modules engine
 speech_tts = [
-    "achatbot[tts_coqui,tts_edge,tts_g,tts_pyttsx3,tts_cosy_voice,tts_chat,tts_f5,tts_openvoicev2]",
+    "achatbot[tts_coqui,tts_edge,tts_g,tts_pyttsx3,tts_cosy_voice,tts_chat,tts_f5,tts_openvoicev2,tts_kokoro]",
 ]
 
 # voice

@@ -217,6 +217,10 @@ class ITts(ABC):
     def set_voice(self, voice: str):
         raise NotImplementedError("must be implemented in the child class")
 
+    @abstractmethod
+    def get_voices(self, voice: str) -> list:
+        raise NotImplementedError("must be implemented in the child class")
+
 
 class IPlayer(ABC):
     @abstractmethod

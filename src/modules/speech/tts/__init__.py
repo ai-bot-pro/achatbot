@@ -29,6 +29,10 @@ class TTSEnvInit:
             from . import f5_tts
         elif "tts_openvoicev2" in tag:
             from . import openvoicev2_tts
+        elif "tts_kokoro" in tag:
+            from . import kokoro_tts
+        elif "tts_onnx_kokoro" in tag:
+            from . import kokoro_onnx_tts
         # elif "tts_openai" in tag:
         # from . import openai_tts
 
@@ -128,6 +132,24 @@ class TTSEnvInit:
         return kwargs
 
     @staticmethod
+    def get_tts_kokoro_args() -> dict:
+        kwargs = {}
+        kwargs["language"] = os.getenv("KOKORO_LANGUAGE", "a")
+        kwargs["voice"] = os.getenv("KOKORO_VOICE", "af")
+        kwargs["tts_stream"] = bool(os.getenv("TTS_STREAM", ""))
+        return kwargs
+
+    @staticmethod
+    def get_tts_onnx_kokoro_args() -> dict:
+        kwargs = {}
+        kwargs["language"] = os.getenv("KOKORO_LANGUAGE", "en-us")
+        kwargs["voice"] = os.getenv("KOKORO_VOICE", "af")
+        kwargs["espeak_ng_lib_path"] = os.getenv("KOKORO_ESPEAK_NG_LIB_PATH", None)
+        kwargs["espeak_ng_data_path"] = os.getenv("KOKORO_ESPEAK_NG_DATA_PATH", None)
+        kwargs["tts_stream"] = bool(os.getenv("TTS_STREAM", ""))
+        return kwargs
+
+    @staticmethod
     def get_tts_edge_args() -> dict:
         kwargs = {}
         kwargs["voice_name"] = os.getenv("TTS_VOICE", "zh-CN-XiaoxiaoNeural")
@@ -147,6 +169,8 @@ class TTSEnvInit:
         "tts_cosy_voice": get_tts_cosy_voice_args,
         "tts_f5": get_tts_f5_args,
         "tts_openvoicev2": get_tts_openvoicev2_args,
+        "tts_kokoro": get_tts_kokoro_args,
+        "tts_onnx_kokoro": get_tts_onnx_kokoro_args,
         "tts_chat": get_tts_chat_args,
         "tts_edge": get_tts_edge_args,
         "tts_g": get_tts_g_args,
