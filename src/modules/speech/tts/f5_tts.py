@@ -154,7 +154,9 @@ class F5TTS(BaseTTS, ITts):
     def get_voices(self):
         return [self.args.ref_text]
 
-    async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
+    async def _inference(
+        self, session: Session, text: str, **kwargs
+    ) -> AsyncGenerator[bytes, None]:
         wav, _, _ = infer_process(
             self.args.ref_audio_file,
             self.args.ref_text,

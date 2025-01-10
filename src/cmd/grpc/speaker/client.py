@@ -42,20 +42,19 @@ Logger.init(
 )
 
 
-def load_model(channel):
+def load_model(tts_stub: TTSStub):
     tag = os.getenv("TTS_TAG", "tts_edge")
     is_reload = bool(os.getenv("IS_RELOAD", None))
     kwargs = TTSEnvInit.map_config_func[tag]()
-    tts_stub = TTSStub(channel)
     request = LoadModelRequest(tts_tag=tag, is_reload=is_reload, json_kwargs=json.dumps(kwargs))
     logging.debug(request)
     response = tts_stub.LoadModel(request)
     logging.debug(response)
 
 
-def synthesize_us(channel):
+def synthesize_us(tts_stub: TTSStub):
     tts_stub = TTSStub(channel)
-    request_data = SynthesizeRequest(tts_text="你好，我是机器人")
+    request_data = SynthesizeRequest(tts_text="hello,你好，我是机器人")
     response_iterator = tts_stub.SynthesizeUS(request_data)
     for response in response_iterator:
         yield response.tts_audio
@@ -71,6 +70,8 @@ TTS_TAG=tts_chat IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 TTS_TAG=tts_cosy_voice IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 TTS_TAG=tts_f5 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 TTS_TAG=tts_openvoicev2 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+TTS_TAG=tts_kokoro IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+TTS_TAG=tts_onnx_kokoro IS_RELOAD=1 KOKORO_ESPEAK_NG_LIB_PATH=/usr/local/lib/libespeak-ng.1.dylib KOKORO_LANGUAGE=cmn python -m src.cmd.grpc.speaker.client
 """
 if __name__ == "__main__":
     player = None
@@ -84,9 +85,10 @@ if __name__ == "__main__":
         port = os.getenv("PORT", "50052")
         channel = grpc.insecure_channel(f"localhost:{port}")
         channel = grpc.intercept_channel(channel, authentication)
+        tts_stub = TTSStub(channel)
 
-        load_model(channel)
-        tts_audio_iter = synthesize_us(channel)
+        load_model(tts_stub)
+        tts_audio_iter = synthesize_us(tts_stub)
 
         audio_out_stream: IAudioStream | EngineClass = AudioStreamEnvInit.initAudioOutStreamEngine()
         player = PlayerEnvInit.initPlayerEngine()

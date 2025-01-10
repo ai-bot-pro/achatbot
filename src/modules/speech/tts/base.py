@@ -6,6 +6,7 @@ from typing import AsyncGenerator, Generator
 
 import numpy as np
 
+from src.common.interface import ITts
 from src.common.types import PYAUDIO_PAINT16
 from src.common.factory import EngineClass
 from src.common.session import Session
@@ -21,7 +22,7 @@ class TTSVoice:
         return f"<TTSVoice(name={self.name} id={self.id})>"
 
 
-class BaseTTS(EngineClass):
+class BaseTTS(EngineClass, ITts):
     def synthesize_sync(self, session: Session) -> Generator[bytes, None, None]:
         is_stream = self.args.tts_stream if hasattr(self.args, "tts_stream") else False
         logging.debug(f"is_stream:{is_stream}")
@@ -72,7 +73,7 @@ class BaseTTS(EngineClass):
                 text: str = self.filter_special_chars(text)
                 if len(text.strip()) == 0:
                     continue
-                async for chunk in self._inference(session, text):
+                async for chunk in self._inference(session, text, **session.ctx.state):
                     yield chunk
                 if add_silence_chunk is False:
                     continue
@@ -83,7 +84,7 @@ class BaseTTS(EngineClass):
             text = session.ctx.state["tts_text"]
             text = self.filter_special_chars(text)
             if len(text.strip()) > 0:
-                async for chunk in self._inference(session, text):
+                async for chunk in self._inference(session, text, **session.ctx.state):
                     yield chunk
                 if add_silence_chunk is False:
                     return
@@ -91,7 +92,9 @@ class BaseTTS(EngineClass):
                 if silence_chunk:
                     yield silence_chunk
 
-    async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
+    async def _inference(
+        self, session: Session, text: str, **kwargs
+    ) -> AsyncGenerator[bytes, None]:
         raise NotImplementedError(
             "The _inference method must be implemented by the derived subclass."
         )
@@ -157,3 +160,6 @@ class BaseTTS(EngineClass):
 
     def set_voice(self, voice: str):
         pass
+
+    def get_voices(self):
+        return []

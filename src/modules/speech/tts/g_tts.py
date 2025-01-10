@@ -22,7 +22,9 @@ class GTTS(BaseTTS, ITts):
         self.args = GTTSArgs(**args)
         self.file_path = os.path.join(RECORDS_DIR, GTTS_SYNTHESIS_FILE)
 
-    async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
+    async def _inference(
+        self, session: Session, text: str, **kwargs
+    ) -> AsyncGenerator[bytes, None]:
         from gtts import gTTS
 
         with io.BytesIO() as f:
@@ -52,6 +54,6 @@ class GTTS(BaseTTS, ITts):
 
         for lang in languages.keys():
             for tld in tlds:
-                voices.append(GTTSArgs(language=lang, tld=tld))
+                voices.append(f"{lang}-{tld}")
 
         return voices

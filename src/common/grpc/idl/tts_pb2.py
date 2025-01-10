@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ttts.proto\x12\x0c\x63hat_bot.tts\"K\n\x10LoadModelRequest\x12\x0f\n\x07tts_tag\x18\x01 \x01(\t\x12\x11\n\tis_reload\x18\x02 \x01(\x08\x12\x13\n\x0bjson_kwargs\x18\x03 \x01(\t\"\x13\n\x11LoadModelResponse\"%\n\x11SynthesizeRequest\x12\x10\n\x08tts_text\x18\x01 \x01(\t\"\'\n\x12SynthesizeResponse\x12\x11\n\ttts_audio\x18\x01 \x01(\x0c\x32\xac\x01\n\x03TTS\x12N\n\tLoadModel\x12\x1e.chat_bot.tts.LoadModelRequest\x1a\x1f.chat_bot.tts.LoadModelResponse\"\x00\x12U\n\x0cSynthesizeUS\x12\x1f.chat_bot.tts.SynthesizeRequest\x1a .chat_bot.tts.SynthesizeResponse\"\x00\x30\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ttts.proto\x12\x0c\x63hat_bot.tts\"K\n\x10LoadModelRequest\x12\x0f\n\x07tts_tag\x18\x01 \x01(\t\x12\x11\n\tis_reload\x18\x02 \x01(\x08\x12\x13\n\x0bjson_kwargs\x18\x03 \x01(\t\"\x13\n\x11LoadModelResponse\":\n\x11SynthesizeRequest\x12\x10\n\x08tts_text\x18\x01 \x01(\t\x12\x13\n\x0bjson_kwargs\x18\x02 \x01(\t\"\'\n\x12SynthesizeResponse\x12\x11\n\ttts_audio\x18\x01 \x01(\x0c\"\x12\n\x10GetVoicesRequest\"#\n\x11GetVoicesResponse\x12\x0e\n\x06voices\x18\x01 \x03(\t\"\x16\n\x14GetStreamInfoRequest\"\\\n\x14GetStreamInfoReponse\x12\x0e\n\x06\x66ormat\x18\x01 \x01(\x05\x12\x10\n\x08\x63hannels\x18\x02 \x01(\x05\x12\x0c\n\x04rate\x18\x03 \x01(\x05\x12\x14\n\x0csample_width\x18\x04 \x01(\x05\x32\xd7\x02\n\x03TTS\x12N\n\tLoadModel\x12\x1e.chat_bot.tts.LoadModelRequest\x1a\x1f.chat_bot.tts.LoadModelResponse\"\x00\x12N\n\tGetVoices\x12\x1e.chat_bot.tts.GetVoicesRequest\x1a\x1f.chat_bot.tts.GetVoicesResponse\"\x00\x12Y\n\rGetStreamInfo\x12\".chat_bot.tts.GetStreamInfoRequest\x1a\".chat_bot.tts.GetStreamInfoReponse\"\x00\x12U\n\x0cSynthesizeUS\x12\x1f.chat_bot.tts.SynthesizeRequest\x1a .chat_bot.tts.SynthesizeResponse\"\x00\x30\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -26,9 +26,17 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_LOADMODELRESPONSE']._serialized_start=104
   _globals['_LOADMODELRESPONSE']._serialized_end=123
   _globals['_SYNTHESIZEREQUEST']._serialized_start=125
-  _globals['_SYNTHESIZEREQUEST']._serialized_end=162
-  _globals['_SYNTHESIZERESPONSE']._serialized_start=164
-  _globals['_SYNTHESIZERESPONSE']._serialized_end=203
-  _globals['_TTS']._serialized_start=206
-  _globals['_TTS']._serialized_end=378
+  _globals['_SYNTHESIZEREQUEST']._serialized_end=183
+  _globals['_SYNTHESIZERESPONSE']._serialized_start=185
+  _globals['_SYNTHESIZERESPONSE']._serialized_end=224
+  _globals['_GETVOICESREQUEST']._serialized_start=226
+  _globals['_GETVOICESREQUEST']._serialized_end=244
+  _globals['_GETVOICESRESPONSE']._serialized_start=246
+  _globals['_GETVOICESRESPONSE']._serialized_end=281
+  _globals['_GETSTREAMINFOREQUEST']._serialized_start=283
+  _globals['_GETSTREAMINFOREQUEST']._serialized_end=305
+  _globals['_GETSTREAMINFOREPONSE']._serialized_start=307
+  _globals['_GETSTREAMINFOREPONSE']._serialized_end=399
+  _globals['_TTS']._serialized_start=402
+  _globals['_TTS']._serialized_end=745
 # @@protoc_insertion_point(module_scope)

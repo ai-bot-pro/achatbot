@@ -44,6 +44,16 @@ class TTSStub(object):
                 request_serializer=tts__pb2.LoadModelRequest.SerializeToString,
                 response_deserializer=tts__pb2.LoadModelResponse.FromString,
                 _registered_method=True)
+        self.GetVoices = channel.unary_unary(
+                '/chat_bot.tts.TTS/GetVoices',
+                request_serializer=tts__pb2.GetVoicesRequest.SerializeToString,
+                response_deserializer=tts__pb2.GetVoicesResponse.FromString,
+                _registered_method=True)
+        self.GetStreamInfo = channel.unary_unary(
+                '/chat_bot.tts.TTS/GetStreamInfo',
+                request_serializer=tts__pb2.GetStreamInfoRequest.SerializeToString,
+                response_deserializer=tts__pb2.GetStreamInfoReponse.FromString,
+                _registered_method=True)
         self.SynthesizeUS = channel.unary_stream(
                 '/chat_bot.tts.TTS/SynthesizeUS',
                 request_serializer=tts__pb2.SynthesizeRequest.SerializeToString,
@@ -55,6 +65,18 @@ class TTSServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def LoadModel(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetVoices(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetStreamInfo(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -73,6 +95,16 @@ def add_TTSServicer_to_server(servicer, server):
                     servicer.LoadModel,
                     request_deserializer=tts__pb2.LoadModelRequest.FromString,
                     response_serializer=tts__pb2.LoadModelResponse.SerializeToString,
+            ),
+            'GetVoices': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetVoices,
+                    request_deserializer=tts__pb2.GetVoicesRequest.FromString,
+                    response_serializer=tts__pb2.GetVoicesResponse.SerializeToString,
+            ),
+            'GetStreamInfo': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetStreamInfo,
+                    request_deserializer=tts__pb2.GetStreamInfoRequest.FromString,
+                    response_serializer=tts__pb2.GetStreamInfoReponse.SerializeToString,
             ),
             'SynthesizeUS': grpc.unary_stream_rpc_method_handler(
                     servicer.SynthesizeUS,
@@ -107,6 +139,60 @@ class TTS(object):
             '/chat_bot.tts.TTS/LoadModel',
             tts__pb2.LoadModelRequest.SerializeToString,
             tts__pb2.LoadModelResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetVoices(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/chat_bot.tts.TTS/GetVoices',
+            tts__pb2.GetVoicesRequest.SerializeToString,
+            tts__pb2.GetVoicesResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetStreamInfo(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/chat_bot.tts.TTS/GetStreamInfo',
+            tts__pb2.GetStreamInfoRequest.SerializeToString,
+            tts__pb2.GetStreamInfoReponse.FromString,
             options,
             channel_credentials,
             insecure,

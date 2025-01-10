@@ -10,6 +10,7 @@ from src.common.types import SessionCtx
 from src.modules.speech.tts.pyttsx3_tts import Pyttsx3TTS
 
 r"""
+python -m unittest test.modules.speech.tts.test_pyttsx3.TestPyttsx3TTS.test_get_voices
 python -m unittest test.modules.speech.tts.test_pyttsx3.TestPyttsx3TTS.test_synthesize
 """
 

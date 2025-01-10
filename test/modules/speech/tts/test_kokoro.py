@@ -30,7 +30,8 @@ class TestKOKORO(unittest.TestCase):
         cls.tts_text = os.getenv(
             "TTS_TEXT",
             # "hello, test.modules.speech.tts.test_kokoro.TestKOKORO.test_synthesize.",
-            "How could I know? It's an unanswerable question. Like asking an unborn child if they'll lead a good life. They haven't even been born.",
+            "你好，我是机器人",
+            # "How could I know? It's an unanswerable question. Like asking an unborn child if they'll lead a good life. They haven't even been born.",
         )
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
@@ -61,6 +62,7 @@ class TestKOKORO(unittest.TestCase):
         import pyaudio
 
         stream_info = self.tts.get_stream_info()
+        print(stream_info)
         self.pyaudio_instance = pyaudio.PyAudio()
         self.audio_stream = self.pyaudio_instance.open(
             format=stream_info["format"],
