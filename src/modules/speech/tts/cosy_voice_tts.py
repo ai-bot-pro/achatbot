@@ -71,7 +71,9 @@ class CosyVoiceTTS(BaseTTS, ITts):
 
         return spk_ids
 
-    async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
+    async def _inference(
+        self, session: Session, text: str, **kwargs
+    ) -> AsyncGenerator[bytes, None]:
         if self.reference_audio is None:
             if len(self.args.instruct_text.strip()) == 0:
                 output = self.model.inference_sft(text, self.args.spk_id)

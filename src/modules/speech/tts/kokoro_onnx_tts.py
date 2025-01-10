@@ -66,7 +66,10 @@ class KokoroOnnxTTS(BaseTTS, ITts):
             "np_dtype": np.float32,
         }
 
-    async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
+    async def _inference(
+        self, session: Session, text: str, **kwargs
+    ) -> AsyncGenerator[bytes, None]:
+        print(self.args, kwargs, SUPPORTED_LANGUAGES)
         # assert ,no yield, so pre check
         if (
             self.args.language in SUPPORTED_LANGUAGES

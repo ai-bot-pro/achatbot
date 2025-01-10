@@ -1,6 +1,7 @@
+from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from typing import ClassVar as _ClassVar, Optional as _Optional
+from typing import ClassVar as _ClassVar, Iterable as _Iterable, Optional as _Optional
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -19,13 +20,41 @@ class LoadModelResponse(_message.Message):
     def __init__(self) -> None: ...
 
 class SynthesizeRequest(_message.Message):
-    __slots__ = ("tts_text",)
+    __slots__ = ("tts_text", "json_kwargs")
     TTS_TEXT_FIELD_NUMBER: _ClassVar[int]
+    JSON_KWARGS_FIELD_NUMBER: _ClassVar[int]
     tts_text: str
-    def __init__(self, tts_text: _Optional[str] = ...) -> None: ...
+    json_kwargs: str
+    def __init__(self, tts_text: _Optional[str] = ..., json_kwargs: _Optional[str] = ...) -> None: ...
 
 class SynthesizeResponse(_message.Message):
     __slots__ = ("tts_audio",)
     TTS_AUDIO_FIELD_NUMBER: _ClassVar[int]
     tts_audio: bytes
     def __init__(self, tts_audio: _Optional[bytes] = ...) -> None: ...
+
+class GetVoicesRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class GetVoicesResponse(_message.Message):
+    __slots__ = ("voices",)
+    VOICES_FIELD_NUMBER: _ClassVar[int]
+    voices: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, voices: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class GetStreamInfoRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class GetStreamInfoReponse(_message.Message):
+    __slots__ = ("format", "channels", "rate", "sample_width")
+    FORMAT_FIELD_NUMBER: _ClassVar[int]
+    CHANNELS_FIELD_NUMBER: _ClassVar[int]
+    RATE_FIELD_NUMBER: _ClassVar[int]
+    SAMPLE_WIDTH_FIELD_NUMBER: _ClassVar[int]
+    format: int
+    channels: int
+    rate: int
+    sample_width: int
+    def __init__(self, format: _Optional[int] = ..., channels: _Optional[int] = ..., rate: _Optional[int] = ..., sample_width: _Optional[int] = ...) -> None: ...

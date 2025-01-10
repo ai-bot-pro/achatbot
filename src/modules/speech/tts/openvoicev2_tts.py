@@ -199,7 +199,7 @@ class OpenVoiceV2TTS(BaseTTS, ITts):
             self.tts_model.hps.data.spk2id["custom"] = target_se_path
 
     def get_voices(self):
-        return self.tts_model.hps.data.spk2id
+        return list(self.tts_model.hps.data.spk2id.values())
 
     def reference_target_se_extractor(
         self,
@@ -220,7 +220,9 @@ class OpenVoiceV2TTS(BaseTTS, ITts):
 
         return target_se, se_path
 
-    async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
+    async def _inference(
+        self, session: Session, text: str, **kwargs
+    ) -> AsyncGenerator[bytes, None]:
         sample_rate = self.tts_model.hps.data.sampling_rate
         np_audio_data = self.tts_model.tts_to_file(
             text,

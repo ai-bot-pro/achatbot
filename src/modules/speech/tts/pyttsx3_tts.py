@@ -27,7 +27,9 @@ class Pyttsx3TTS(BaseTTS, ITts):
         self.set_voice(self.args.voice_name)
         self.file_path = os.path.join(RECORDS_DIR, PYTTSX3_SYNTHESIS_FILE)
 
-    async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
+    async def _inference(
+        self, session: Session, text: str, **kwargs
+    ) -> AsyncGenerator[bytes, None]:
         logging.debug(f"{self.TAG} synthesis: {text} save to file: {self.file_path}")
         self.engine.save_to_file(text, self.file_path)
         self.engine.runAndWait()
@@ -48,8 +50,7 @@ class Pyttsx3TTS(BaseTTS, ITts):
         voice_objects = []
         voices = self.engine.getProperty("voices")
         for voice in voices:
-            voice_object = TTSVoice(voice.name, voice.id)
-            voice_objects.append(voice_object)
+            voice_objects.append(voice.name)
         return voice_objects
 
     def set_voice(self, voice: Union[str, TTSVoice]):

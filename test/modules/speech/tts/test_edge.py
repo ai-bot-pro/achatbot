@@ -40,23 +40,27 @@ class TestEdgeTTS(unittest.TestCase):
         pass
 
     def test_get_voices(self):
-        voices = asyncio.run(self.tts.get_voices(Language="zh", Gender="Female"))
+        voices = self.tts.get_voices()
         self.assertGreater(len(voices), 0)
         print(voices, len(voices))
 
-        voices = asyncio.run(self.tts.get_voices(Language="zh", Gender="Male"))
+        voices = asyncio.run(self.tts._get_voices(Language="zh", Gender="Female"))
         self.assertGreater(len(voices), 0)
         print(voices, len(voices))
 
-        voices = asyncio.run(self.tts.get_voices(Language="en", Gender="Female"))
+        voices = asyncio.run(self.tts._get_voices(Language="zh", Gender="Male"))
         self.assertGreater(len(voices), 0)
         print(voices, len(voices))
 
-        voices = asyncio.run(self.tts.get_voices(Language="en", Gender="Male"))
+        voices = asyncio.run(self.tts._get_voices(Language="en", Gender="Female"))
         self.assertGreater(len(voices), 0)
         print(voices, len(voices))
 
-        voices = asyncio.run(self.tts.get_voices(ShortName=self.tts.args.voice_name))
+        voices = asyncio.run(self.tts._get_voices(Language="en", Gender="Male"))
+        self.assertGreater(len(voices), 0)
+        print(voices, len(voices))
+
+        voices = asyncio.run(self.tts._get_voices(ShortName=self.tts.args.voice_name))
         self.assertGreater(len(voices), 0)
         print(voices, len(voices))
 

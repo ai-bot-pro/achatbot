@@ -64,7 +64,9 @@ class ChatTTS(BaseTTS, ITts):
             "np_dtype": np.int16,
         }
 
-    async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
+    async def _inference(
+        self, session: Session, text: str, **kwargs
+    ) -> AsyncGenerator[bytes, None]:
         self.set_voice(self.rand_speaker)
         logging.debug(f"{self.TAG} synthesis: {text}")
         wav = self.chat.infer(

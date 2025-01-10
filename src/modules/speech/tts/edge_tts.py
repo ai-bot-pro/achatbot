@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import AsyncGenerator
 import random
@@ -23,17 +24,19 @@ class EdgeTTS(BaseTTS, ITts):
         self.args = EdgeTTSArgs(**args)
         self.file_path = os.path.join(RECORDS_DIR, EDGE_TTS_SYNTHESIS_FILE)
 
-    async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
+    async def _inference(
+        self, session: Session, text: str, **kwargs
+    ) -> AsyncGenerator[bytes, None]:
         import edge_tts
 
         if self.args.voice_name:
-            voices = await self.get_voices(ShortName=self.args.voice_name)
+            voices = await self._get_voices(ShortName=self.args.voice_name)
             logging.debug(f"{self.TAG} voices: {voices}")
             if len(voices) == 0:
                 raise Exception(f"{self.TAG} voice:{self.args.voice_name} don't support")
         else:
-            voices = self.get_voices(Gender=self.args.gender, Language=self.args.language)
-            self.args.voice_name = random.choice(voices)["Name"]
+            voices = await self._get_voices(Gender=self.args.gender, Language=self.args.language)
+            self.args.voice_name = random.choice(voices)["ShotName"]
 
         communicate: edge_tts.Communicate = edge_tts.Communicate(
             text,
@@ -61,7 +64,17 @@ class EdgeTTS(BaseTTS, ITts):
             audio_data = audio_resampled.raw_data
             yield audio_data
 
-    async def get_voices(self, **kwargs):
+    def get_voices(self) -> list:
+        voice_maps = asyncio.run(self._get_voices())
+        voices = []
+        for voice_map in voice_maps:
+            print(voice_map)
+            if "ShortName" in voice_map:
+                voices.append(voice_map["ShortName"])
+
+        return voices
+
+    async def _get_voices(self, **kwargs):
         from edge_tts import VoicesManager
 
         voice_mg: VoicesManager = await VoicesManager.create()

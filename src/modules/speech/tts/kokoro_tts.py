@@ -100,7 +100,9 @@ class KokoroTorchTTS(BaseTTS, ITts):
             "np_dtype": np.float32,
         }
 
-    async def _inference(self, session: Session, text: str) -> AsyncGenerator[bytes, None]:
+    async def _inference(
+        self, session: Session, text: str, **kwargs
+    ) -> AsyncGenerator[bytes, None]:
         audio_samples, _ = generate(
             self.model, text, self.voice_stats, lang=self.args.voice[0], speed=self.args.speed
         )
