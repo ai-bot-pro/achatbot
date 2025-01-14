@@ -324,7 +324,7 @@ pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
 </details>
 
 <details>
-<summary>:first_quarter_moon: Run remote http fastapi daily chat bots</summary>
+<summary>:first_quarter_moon: Run remote rpc chat bot worker</summary>
   
 ## Run remote rpc chat bot worker
 1. run `pip install "achatbot[remote_rpc_chat_bot_be_worker]"` to install dependencies to run rpc chat bot BE worker; e.g. :
