@@ -239,7 +239,7 @@ tts_pyttsx3 = ["pyttsx3~=2.90"]
 tts_cosy_voice = [
     "torch~=2.2.2",
     "torchaudio~=2.2.2",
-    "transformers[torch]>=4.40.2",
+    "transformers[torch]~=4.40.2",
     "hyperpyyaml~=1.2.2",
     "onnxruntime~=1.18.1",
     "openai-whisper==20231117",
@@ -260,7 +260,7 @@ tts_chat = [
     "pynini~=2.1.5; sys_platform == 'linux'",
     "WeTextProcessing~=1.0.2; sys_platform == 'linux'",
     "nemo_text_processing~=1.0.2; sys_platform == 'linux'",
-    "transformers[torch]>=4.40.2",
+    "transformers[torch]~=4.40.2",
 ]
 tts_f5 = [
     "wandb",                       # for training
@@ -272,7 +272,7 @@ tts_f5 = [
     "jieba",
     "pypinyin",
     "achatbot[librosa,soundfile]",
-    "transformers[torch]>=4.40.2",
+    "transformers[torch]~=4.40.2",
     "x_transformers>=1.31.14",
     "vocos~=0.1.0",
 ]
@@ -291,7 +291,7 @@ tts_openvoicev2 = [
 tts_kokoro = [
     #apt-get -qq -y install espeak-ng > /dev/null 2>&1
     "torch~=2.2.2",
-    "transformers[torch]>=4.40.2",
+    "transformers[torch]~=4.40.2",
     "phonemizer",
     "scipy",
     "munch",

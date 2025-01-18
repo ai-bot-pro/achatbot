@@ -73,6 +73,13 @@ class CosyVoice2TTS(CosyVoiceTTS):
         self.args.reference_audio_path = reference_audio_path
         self.reference_audio = load_wav(self.args.reference_audio_path, RATE)
 
+    def set_src_voice(self, src_audio_path: str):
+        if os.path.exists(src_audio_path) is False:
+            raise FileNotFoundError(f"src_audio_path: {src_audio_path}")
+
+        self.args.src_audio_path = src_audio_path
+        self.src_audio = load_wav(self.args.src_audio_path, RATE)
+
     def get_voices(self):
         if self.args.reference_audio_path:
             return [self.args.reference_audio_path]

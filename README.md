@@ -99,7 +99,7 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
     - [x] detector: porcupine_wakeword,pyannote_vad,webrtc_vad,silero_vad,webrtc_silero_vad,fsmn_vad
     - [x] player: stream_player
     - [x] recorder: rms_recorder, wakeword_rms_recorder, vad_recorder, wakeword_vad_recorder
-    - [x] tts: tts_chat,tts_coqui,tts_cosy_voice,tts_edge,tts_g,tts_f5,tts_openvoicev2
+    - [x] tts: tts_chat,tts_coqui,tts_cosy_voice,tts_cosy_voice2,tts_edge,tts_g,tts_f5,tts_openvoicev2,tts_kokoro
     - [x] vad_analyzer: daily_webrtc_vad_analyzer,silero_vad_analyzer
   - vision
     - [x] OCR(*Optical Character Recognition*):
