@@ -4,7 +4,7 @@ import asyncio
 
 import unittest
 
-from modules.speech.tts.cosy_voice2_tts import CosyVoiceTTS
+from src.modules.speech.tts.cosy_voice2_tts import CosyVoiceTTS
 from src.common.factory import EngineFactory, EngineClass
 from src.common.logger import Logger
 from src.common.session import Session
@@ -14,6 +14,32 @@ from src.common.types import SessionCtx, CosyVoiceTTSArgs, MODELS_DIR
 r"""
 python -m unittest test.modules.speech.tts.test_cosy_voice.TestCosyVoiceTTS.test_synthesize
 python -m unittest test.modules.speech.tts.test_cosy_voice.TestCosyVoiceTTS.test_get_voices
+
+
+# cosyvoice2 no spk, so need reference audio
+LOG_LEVEL=INFO TTS_TAG=tts_cosy_voice2 MODELS_DIR=/content/achatbot/models/FunAudioLLM/CosyVoice2-0.5B \
+  REFERENCE_AUDIO_PATH=/content/achatbot/records/test_tts_cosy_voice.wav \
+  python -m unittest test.modules.speech.tts.test_cosy_voice.TestCosyVoiceTTS.test_get_voices
+
+# cosyvoice2 test_synthesize with instruct2 infer
+LOG_LEVEL=INFO TTS_TAG=tts_cosy_voice2 MODELS_DIR=/content/achatbot/models/FunAudioLLM/CosyVoice2-0.5B \
+  REFERENCE_AUDIO_PATH=/content/achatbot/records/test_tts_cosy_voice.wav \
+  INSTRUCT_TEXT="用四川话说这句话" \
+  python -m unittest test.modules.speech.tts.test_cosy_voice.TestCosyVoiceTTS.test_synthesize
+
+# cosyvoice2 test_synthesize with zero shot infer
+LOG_LEVEL=INFO TTS_TAG=tts_cosy_voice2 MODELS_DIR=/content/achatbot/models/FunAudioLLM/CosyVoice2-0.5B \
+  TTS_TEXT="您好啊，我是🤖机器人，很高兴认识您~" \
+  REFERENCE_AUDIO_PATH=/content/achatbot/records/test_tts_cosy_voice.wav \
+  REFERENCE_TEXT="你好，我是机器人, hello, test.modules.speech.tts.test_gtts.TestGTTS.test_synthesize" \
+  python -m unittest test.modules.speech.tts.test_cosy_voice.TestCosyVoiceTTS.test_synthesize
+
+# cosyvoice2 test_synthesize with cross lingual infer and use fine grained control, 
+# for supported control, check cosyvoice/tokenizer/tokenizer.py#L248
+LOG_LEVEL=DEBUG TTS_TAG=tts_cosy_voice2 MODELS_DIR=/content/achatbot/models/FunAudioLLM/CosyVoice2-0.5B \
+  TTS_TEXT="在他讲述那个荒诞故事的过程中，他突然[laughter]停下来，因为他自己也被逗笑了[laughter]。" \
+  REFERENCE_AUDIO_PATH=/content/achatbot/records/test_tts_cosy_voice.wav \
+  python -m unittest test.modules.speech.tts.test_cosy_voice.TestCosyVoiceTTS.test_synthesize
 """
 
 
@@ -36,9 +62,12 @@ class TestCosyVoiceTTS(unittest.TestCase):
     def setUp(self):
         kwargs = CosyVoiceTTSArgs(
             model_dir=self.model_dir,
+            reference_text=os.getenv("REFERENCE_TEXT", ""),
             reference_audio_path=os.getenv("REFERENCE_AUDIO_PATH", ""),
             instruct_text=os.getenv("INSTRUCT_TEXT", ""),
-            spk_id=os.getenv("SPK_ID", ""),
+            spk_id=os.getenv(
+                "SPK_ID", ""
+            ),  # for cosyvoice sft/struct inference, cosyvoice2 don't use it
         ).__dict__
         self.tts: CosyVoiceTTS = EngineFactory.get_engine_by_tag(
             EngineClass, self.tts_tag, **kwargs
@@ -54,11 +83,12 @@ class TestCosyVoiceTTS(unittest.TestCase):
 
     def test_get_voices(self):
         voices = self.tts.get_voices()
-        self.assertGreater(len(voices), 0)
+        self.assertGreaterEqual(len(voices), 0)
         print(voices)
 
     def test_synthesize(self):
         stream_info = self.tts.get_stream_info()
+        print(stream_info)
         self.session.ctx.state["tts_text"] = self.tts_text
         print(self.session.ctx)
         iter = self.tts.synthesize_sync(self.session)

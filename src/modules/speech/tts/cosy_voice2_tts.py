@@ -5,6 +5,9 @@ import sys
 from typing import AsyncGenerator
 
 from dotenv import load_dotenv
+import torchaudio
+
+from .cosy_voice_tts import CosyVoiceTTS
 
 try:
     cur_dir = os.path.dirname(__file__)
@@ -26,9 +29,8 @@ except ImportError:
 
 from src.common.interface import ITts
 from src.common.session import Session
-from src.common.types import CosyVoiceTTSArgs, RATE
+from src.common.types import RECORDS_DIR, CosyVoiceTTSArgs, RATE
 from src.common.utils.audio_utils import postprocess_tts_wave_int16
-from .cosy_voice_tts import CosyVoiceTTS
 
 load_dotenv(override=True)
 
@@ -47,52 +49,52 @@ class CosyVoice2TTS(CosyVoiceTTS):
     def __init__(self, **args) -> None:
         self.args = CosyVoiceTTSArgs(**args)
         self.model = CosyVoice2(self.args.model_dir)
-        voices = self.get_voices()
-        if self.args.spk_id not in voices:
-            self.args.spk_id = random.choice(voices)
-        self.reference_audio = None
-        if os.path.exists(self.args.reference_audio_path):
-            self.reference_audio = load_wav(self.args.reference_audio_path, RATE)
-        for name, model in {
-            "llm_model": self.model.model.llm,
-            "flow_model": self.model.model.flow,
-            "hift_model": self.model.model.hift,
-        }.items():
-            model_million_params = sum(p.numel() for p in model.parameters()) / 1e6
-            logging.debug(f"{name} {model} {model_million_params}M parameters")
+
+        # CosyVoice2 no spk_ids, so need reference_audio
+        self.set_voice(self.args.reference_audio_path)
+
+        self.clear()
+        self.log_parameters()
 
     def clear(self):
-        # CosyVoice2 和 CosyVoice 的配置不同，
-        # cosyvoice: https://huggingface.co/FunAudioLLM/CosyVoice-300M/blob/main/cosyvoice.yaml
-        # cosyvoice2: https://huggingface.co/FunAudioLLM/CosyVoice2-0.5B/blob/main/cosyvoice.yaml
-        # 调完老版本CosyVoice，再调要CosyVoice2， 需要对hann.window和mel_basis重置一下
+        """
+        CosyVoice2 和 CosyVoice 的配置不同，
+        cosyvoice: https://huggingface.co/FunAudioLLM/CosyVoice-300M/blob/main/cosyvoice.yaml
+        cosyvoice2: https://huggingface.co/FunAudioLLM/CosyVoice2-0.5B/blob/main/cosyvoice.yaml
+        调完老版本CosyVoice，再调要CosyVoice2， 需要对hann.window和mel_basis重置一下
+        """
         hann_window.clear()
         mel_basis.clear()
+
+    def set_voice(self, reference_audio_path: str):
+        if os.path.exists(reference_audio_path) is False:
+            raise FileNotFoundError(f"reference_audio_path: {reference_audio_path}")
+
+        self.args.reference_audio_path = reference_audio_path
+        self.reference_audio = load_wav(self.args.reference_audio_path, RATE)
+
+    def get_voices(self):
+        if self.args.reference_audio_path:
+            return [self.args.reference_audio_path]
+        return []
 
     async def _inference(
         self, session: Session, text: str, **kwargs
     ) -> AsyncGenerator[bytes, None]:
-        if self.reference_audio is None:
-            if len(self.args.instruct_text.strip()) == 0:
-                output = self.model.inference_sft(
-                    text, self.args.spk_id, stream=self.args.tts_stream, speed=self.args.tts_speed
-                )
-            else:
-                output = self.model.inference_instruct2(
-                    text,
-                    self.args.instruct_text,
-                    stream=self.args.tts_stream,
-                    speed=self.args.tts_speed,
-                )
+        if len(self.args.instruct_text.strip()) > 0:
+            # if have instruct_text then use instruct2 infer
+            logging.debug("instruct2 infer")
+            output = self.model.inference_instruct2(
+                text,
+                self.args.instruct_text,
+                self.reference_audio,
+                stream=self.args.tts_stream,
+                speed=self.args.tts_speed,
+            )
         else:
-            if len(self.args.reference_text.strip()) == 0:
-                output = self.model.inference_cross_lingual(
-                    text,
-                    self.reference_audio,
-                    stream=self.args.tts_stream,
-                    speed=self.args.tts_speed,
-                )
-            else:
+            if len(self.args.reference_text.strip()) > 0:
+                # if have reference_text then use zero shot infer
+                logging.debug("zero shot infer")
                 output = self.model.inference_zero_shot(
                     text,
                     self.args.reference_text,
@@ -100,8 +102,22 @@ class CosyVoice2TTS(CosyVoiceTTS):
                     stream=self.args.tts_stream,
                     speed=self.args.tts_speed,
                 )
-        if "tts_speech" in output:
-            # torchaudio.save(os.path.join(RECORDS_DIR, f'{self.TAG}_speech.wav'),
-            #                output['tts_speech'], 22050)
-            res = postprocess_tts_wave_int16(output["tts_speech"])
-            yield res
+            else:
+                # if no reference_text and no instruct_text,
+                # default use cross lingual infer;
+                # fine grained control, for supported control, check cosyvoice/tokenizer/tokenizer.py#L248
+                logging.debug("cross lingual infer")
+                output = self.model.inference_cross_lingual(
+                    text,
+                    self.reference_audio,
+                    stream=self.args.tts_stream,
+                    speed=self.args.tts_speed,
+                )
+
+        for item in output:
+            if "tts_speech" in item:
+                # torchaudio.save(
+                #    os.path.join(RECORDS_DIR, f"{self.TAG}_speech.wav"), item["tts_speech"], 22050
+                # )
+                res = postprocess_tts_wave_int16(item["tts_speech"])
+                yield res

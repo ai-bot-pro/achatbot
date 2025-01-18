@@ -376,15 +376,24 @@ class EdgeTTSArgs:
 @dataclass
 class CosyVoiceTTSArgs:
     r"""
-    For zero_shot/cross_lingual inference, please use CosyVoice-300M model.
+    CosyVoice:
+    For zero_shot/cross_lingual/vc(voice convert) inference, please use CosyVoice-300M model.
     For sft inference, please use CosyVoice-300M-SFT model.
     For instruct inference, please use CosyVoice-300M-Instruct model.
+
+    CosyVoice2:
+    - if no reference_text and no instruct_text, default use cross lingual infer;
+        fine grained control, for supported control, check cosyvoice/tokenizer/tokenizer.py#L248
+    - if have reference_text and no instruct_text, use zero shot infer;
+    - if have no reference_text and have instruct_text, use instruct2 infer;
     """
 
     model_dir: str = os.path.join(MODELS_DIR, "CosyVoice-300M-SFT")  # sft model
 
     reference_text: str = ""  # reference audio text
     reference_audio_path: str = ""  # 16k sample rate audio file for base pt model
+
+    src_audio_path: str = ""  # for voice convert from src to reference audio
 
     instruct_text: str = ""  # use with instruct model
     spk_id: str = ""  # use with sft and instruct model when use CosyVoice, CosyVoice2 instruct2 method remove spk_id
