@@ -12,9 +12,45 @@ from src.common.utils.wav import save_audio_to_file
 from src.common.types import SessionCtx, CosyVoiceTTSArgs, MODELS_DIR
 
 r"""
-python -m unittest test.modules.speech.tts.test_cosy_voice.TestCosyVoiceTTS.test_synthesize
 python -m unittest test.modules.speech.tts.test_cosy_voice.TestCosyVoiceTTS.test_get_voices
 
+# cosyvoice default use sft infer
+LOG_LEVEL=INFO TTS_TAG=tts_cosy_voice MODELS_DIR=/content/achatbot/models/FunAudioLLM/CosyVoice-300M-SFT \
+  python -m unittest test.modules.speech.tts.test_cosy_voice.TestCosyVoiceTTS.test_synthesize
+
+# cosyvoice test_synthesize with instruct infer
+LOG_LEVEL=INFO TTS_TAG=tts_cosy_voice MODELS_DIR=/content/achatbot/models/FunAudioLLM/CosyVoice-300M-Instruct \
+  TTS_TEXT="在面对挑战时，他展现了非凡的<strong>勇气</strong>与<strong>智慧</strong>。" \
+  INSTRUCT_TEXT="Theo \'Crimson\', is a fiery, passionate rebel leader. Fights with fervor for justice, but struggles with impulsiveness." \
+  python -m unittest test.modules.speech.tts.test_cosy_voice.TestCosyVoiceTTS.test_synthesize
+
+# cosyvoice test_synthesize with zero shot infer
+# zero_shot usage, <|zh|><|en|><|jp|><|yue|><|ko|> for Chinese/English/Japanese/Cantonese/Korean
+LOG_LEVEL=INFO TTS_TAG=tts_cosy_voice MODELS_DIR=/content/achatbot/models/FunAudioLLM/CosyVoice-300M \
+  TTS_TEXT="您好啊，我是🤖机器人，很高兴认识您~" \
+  REFERENCE_AUDIO_PATH=/content/achatbot/test/audio_files/asr_example_zh.wav \
+  REFERENCE_TEXT="欢迎大家来体验达摩院推出的语音识别模型。" \
+  python -m unittest test.modules.speech.tts.test_cosy_voice.TestCosyVoiceTTS.test_synthesize
+
+# cosyvoice test_synthesize with cross_lingual infer
+LOG_LEVEL=INFO TTS_TAG=tts_cosy_voice MODELS_DIR=/content/achatbot/models/FunAudioLLM/CosyVoice-300M \
+  TTS_TEXT="<|en|>And then later on, fully acquiring that company. So keeping management in line, interest in line with the asset that\'s coming into the family is a reason why sometimes we don\'t buy the whole thing." \
+  REFERENCE_AUDIO_PATH=/content/achatbot/test/audio_files/asr_example_zh.wav \
+  python -m unittest test.modules.speech.tts.test_cosy_voice.TestCosyVoiceTTS.test_synthesize
+
+# cosyvoice test_synthesize with voice convert infer
+LOG_LEVEL=INFO TTS_TAG=tts_cosy_voice MODELS_DIR=/content/achatbot/models/FunAudioLLM/CosyVoice-300M \
+  SRC_AUDIO_PATH=/content/achatbot/deps/CosyVoice/asset/cross_lingual_prompt.wav \
+  REFERENCE_AUDIO_PATH=/content/achatbot/test/audio_files/asr_example_zh.wav \
+  python -m unittest test.modules.speech.tts.test_cosy_voice.TestCosyVoiceTTS.test_synthesize
+
+
+------
+
+# cosyvoice2 no spk, so need reference audio
+LOG_LEVEL=INFO TTS_TAG=tts_cosy_voice2 MODELS_DIR=/content/achatbot/models/FunAudioLLM/CosyVoice2-0.5B \
+  REFERENCE_AUDIO_PATH=/content/achatbot/records/test_tts_cosy_voice.wav \
+  python -m unittest test.modules.speech.tts.test_cosy_voice.TestCosyVoiceTTS.test_get_voices
 
 # cosyvoice2 no spk, so need reference audio
 LOG_LEVEL=INFO TTS_TAG=tts_cosy_voice2 MODELS_DIR=/content/achatbot/models/FunAudioLLM/CosyVoice2-0.5B \
@@ -64,6 +100,7 @@ class TestCosyVoiceTTS(unittest.TestCase):
             model_dir=self.model_dir,
             reference_text=os.getenv("REFERENCE_TEXT", ""),
             reference_audio_path=os.getenv("REFERENCE_AUDIO_PATH", ""),
+            src_audio_path=os.getenv("SRC_AUDIO_PATH", ""),
             instruct_text=os.getenv("INSTRUCT_TEXT", ""),
             spk_id=os.getenv(
                 "SPK_ID", ""
