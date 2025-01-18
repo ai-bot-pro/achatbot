@@ -238,16 +238,20 @@ tts_g = ["gTTS~=2.5.1"]
 tts_pyttsx3 = ["pyttsx3~=2.90"]
 tts_cosy_voice = [
     "torch~=2.2.2",
+    "torchaudio~=2.2.2",
+    "transformers[torch]>=4.40.2",
     "hyperpyyaml~=1.2.2",
     "onnxruntime~=1.18.1",
     "openai-whisper==20231117",
     "WeTextProcessing~=1.0.2; sys_platform == 'linux'",
     "conformer~=0.3.2",
     "diffusers[torch]~=0.30.0",
-    "lightning~=2.4.0",
+    "lightning~=2.2.4",
     "wget~=3.2",
     "modelscope~=1.16.0",
+    "achatbot[conf]",
 ]
+tts_cosy_voice2 = ["achatbot[tts_cosy_voice]"]
 tts_chat = [
     "torch~=2.2.2",
     "vocos~=0.1.0",

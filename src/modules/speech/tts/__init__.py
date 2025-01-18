@@ -25,6 +25,8 @@ class TTSEnvInit:
             from . import edge_tts
         elif "tts_cosy_voice" in tag:
             from . import cosy_voice_tts
+        elif "tts_cosy_voice2" in tag:
+            from . import cosy_voice2_tts
         elif "tts_f5" in tag:
             from . import f5_tts
         elif "tts_openvoicev2" in tag:
@@ -167,6 +169,7 @@ class TTSEnvInit:
     map_config_func = {
         "tts_coqui": get_tts_coqui_args,
         "tts_cosy_voice": get_tts_cosy_voice_args,
+        "tts_cosy_voice2": get_tts_cosy_voice_args,
         "tts_f5": get_tts_f5_args,
         "tts_openvoicev2": get_tts_openvoicev2_args,
         "tts_kokoro": get_tts_kokoro_args,

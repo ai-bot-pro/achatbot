@@ -1,4 +1,5 @@
 import os
+import random
 import sys
 import uuid
 import json
@@ -21,6 +22,8 @@ try:
         GetStreamInfoReponse,
         GetVoicesRequest,
         GetVoicesResponse,
+        SetVoiceRequest,
+        SetVoiceResponse,
     )
 except ModuleNotFoundError as e:
     raise Exception(f"grpc import error: {e}")
@@ -73,6 +76,11 @@ def get_voices(tts_stub: TTSStub):
     return response.voices
 
 
+def set_voice(tts_stub: TTSStub, voice: str):
+    response = tts_stub.SetVoice(SetVoiceRequest(voice=voice))
+    return response
+
+
 logging.basicConfig(level=logging.DEBUG)
 
 """
@@ -101,10 +109,18 @@ if __name__ == "__main__":
         tts_stub = TTSStub(channel)
 
         load_model(tts_stub)
+
         stream_info = get_stream_info(tts_stub)
         logging.debug(f"stream_info:{stream_info}")
+
         voices = get_voices(tts_stub)
         logging.debug(f"voices:{voices}")
+
+        # voice must match language to select
+        # voice = random.choice(voices)
+        # logging.debug(f"set voice:{voice}")
+        # set_voice(tts_stub, voice)
+
         tts_audio_iter = synthesize_us(tts_stub)
 
         audio_out_stream: IAudioStream | EngineClass = AudioStreamEnvInit.initAudioOutStreamEngine()

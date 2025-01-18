@@ -49,6 +49,11 @@ class TTSStub(object):
                 request_serializer=tts__pb2.GetVoicesRequest.SerializeToString,
                 response_deserializer=tts__pb2.GetVoicesResponse.FromString,
                 _registered_method=True)
+        self.SetVoice = channel.unary_unary(
+                '/chat_bot.tts.TTS/SetVoice',
+                request_serializer=tts__pb2.SetVoiceRequest.SerializeToString,
+                response_deserializer=tts__pb2.SetVoiceResponse.FromString,
+                _registered_method=True)
         self.GetStreamInfo = channel.unary_unary(
                 '/chat_bot.tts.TTS/GetStreamInfo',
                 request_serializer=tts__pb2.GetStreamInfoRequest.SerializeToString,
@@ -71,6 +76,12 @@ class TTSServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def GetVoices(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SetVoice(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -100,6 +111,11 @@ def add_TTSServicer_to_server(servicer, server):
                     servicer.GetVoices,
                     request_deserializer=tts__pb2.GetVoicesRequest.FromString,
                     response_serializer=tts__pb2.GetVoicesResponse.SerializeToString,
+            ),
+            'SetVoice': grpc.unary_unary_rpc_method_handler(
+                    servicer.SetVoice,
+                    request_deserializer=tts__pb2.SetVoiceRequest.FromString,
+                    response_serializer=tts__pb2.SetVoiceResponse.SerializeToString,
             ),
             'GetStreamInfo': grpc.unary_unary_rpc_method_handler(
                     servicer.GetStreamInfo,
@@ -166,6 +182,33 @@ class TTS(object):
             '/chat_bot.tts.TTS/GetVoices',
             tts__pb2.GetVoicesRequest.SerializeToString,
             tts__pb2.GetVoicesResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SetVoice(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/chat_bot.tts.TTS/SetVoice',
+            tts__pb2.SetVoiceRequest.SerializeToString,
+            tts__pb2.SetVoiceResponse.FromString,
             options,
             channel_credentials,
             insecure,

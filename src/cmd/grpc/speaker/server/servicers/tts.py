@@ -12,6 +12,8 @@ from src.common.grpc.idl.tts_pb2 import (
     GetVoicesResponse,
     LoadModelRequest,
     LoadModelResponse,
+    SetVoiceRequest,
+    SetVoiceResponse,
     SynthesizeRequest,
     SynthesizeResponse,
 )
@@ -49,6 +51,10 @@ class TTS(TTSServicer):
     def GetVoices(self, request: GetVoicesRequest, context: grpc.ServicerContext):
         voices = self.tts.get_voices()
         return GetVoicesResponse(voices=voices)
+
+    def SetVoice(self, request: SetVoiceRequest, context: grpc.ServicerContext):
+        self.tts.set_voice(request.voice)
+        return SetVoiceResponse()
 
     def GetStreamInfo(self, request: GetStreamInfoRequest, context: grpc.ServicerContext):
         info = self.tts.get_stream_info()

@@ -20,12 +20,18 @@ message LoadModelRequest {
 
 message LoadModelResponse {}
 
-message SynthesizeRequest { string tts_text = 1; string json_kwargs = 2;}
+message SynthesizeRequest {
+  string tts_text = 1;
+  string json_kwargs = 2;
+}
 
 message SynthesizeResponse { bytes tts_audio = 1; }
 
 message GetVoicesRequest {}
 message GetVoicesResponse { repeated string voices = 1; }
+
+message SetVoiceRequest { string voice = 1; }
+message SetVoiceResponse {}
 
 message GetStreamInfoRequest {}
 message GetStreamInfoReponse {
@@ -38,6 +44,7 @@ message GetStreamInfoReponse {
 service TTS {
   rpc LoadModel(LoadModelRequest) returns (LoadModelResponse) {}
   rpc GetVoices(GetVoicesRequest) returns (GetVoicesResponse) {}
+  rpc SetVoice(SetVoiceRequest) returns (SetVoiceResponse) {}
   rpc GetStreamInfo(GetStreamInfoRequest) returns (GetStreamInfoReponse) {}
   rpc SynthesizeUS(SynthesizeRequest) returns (stream SynthesizeResponse) {}
 }
