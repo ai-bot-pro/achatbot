@@ -382,13 +382,22 @@ class CosyVoiceTTSArgs:
     """
 
     model_dir: str = os.path.join(MODELS_DIR, "CosyVoice-300M-SFT")  # sft model
+
+    reference_text: str = ""  # reference audio text
     reference_audio_path: str = ""  # 16k sample rate audio file for base pt model
+
     instruct_text: str = ""  # use with instruct model
-    spk_id: str = ""  # use with sft and instruct model
+    spk_id: str = ""  # use with sft and instruct model when use CosyVoice, CosyVoice2 instruct2 method remove spk_id
+
     language: str = "zh"
     tts_default_silence_duration: float = 0.3
     tts_comma_silence_duration: float = 0.3
     tts_sentence_silence_duration: float = 0.6
+    tts_speed: float = 1.0
+
+    # stream
+    tts_stream: bool = False
+    chunk_length_seconds: float = 1.0
 
 
 # ------------- llm function calling -----------------

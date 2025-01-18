@@ -4,7 +4,7 @@ import asyncio
 
 import unittest
 
-from src.modules.speech.tts.cosy_voice_tts import CosyVoiceTTS
+from modules.speech.tts.cosy_voice2_tts import CosyVoiceTTS
 from src.common.factory import EngineFactory, EngineClass
 from src.common.logger import Logger
 from src.common.session import Session

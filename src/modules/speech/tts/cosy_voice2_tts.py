@@ -5,43 +5,48 @@ import sys
 from typing import AsyncGenerator
 
 from dotenv import load_dotenv
-import numpy as np
+
+try:
+    cur_dir = os.path.dirname(__file__)
+    if bool(os.getenv("ACHATBOT_PKG", "")):
+        sys.path.insert(1, os.path.join(cur_dir, "../../../CosyVoice"))
+        sys.path.insert(2, os.path.join(cur_dir, "../../../CosyVoice/third_party/Matcha-TTS"))
+    else:
+        sys.path.insert(1, os.path.join(cur_dir, "../../../../deps/CosyVoice"))
+        sys.path.insert(
+            2, os.path.join(cur_dir, "../../../../deps/CosyVoice/third_party/Matcha-TTS")
+        )
+    from deps.CosyVoice.cosyvoice.cli.cosyvoice import CosyVoice2
+    from deps.CosyVoice.cosyvoice.utils.file_utils import load_wav
+    from matcha.utils.audio import hann_window, mel_basis
+
+except ImportError:
+    logging.error("Failed to import CosyVoice2, need pip install achatbot[tts_cosey_voice2] ")
+    pass
 
 from src.common.interface import ITts
 from src.common.session import Session
-from src.common.types import PYAUDIO_PAINT16, CosyVoiceTTSArgs, RATE
+from src.common.types import CosyVoiceTTSArgs, RATE
 from src.common.utils.audio_utils import postprocess_tts_wave_int16
-from .base import BaseTTS
+from .cosy_voice_tts import CosyVoiceTTS
 
 load_dotenv(override=True)
 
 
-class CosyVoiceTTS(BaseTTS, ITts):
+class CosyVoice2TTS(CosyVoiceTTS):
     r"""
-    https://arxiv.org/abs/2407.05407v2
+    https://arxiv.org/abs/2412.10117
     """
 
-    TAG = "tts_cosy_voice"
+    TAG = "tts_cosy_voice2"
 
     @classmethod
     def get_args(cls, **kwargs) -> dict:
         return {**CosyVoiceTTSArgs().__dict__, **kwargs}
 
     def __init__(self, **args) -> None:
-        cur_dir = os.path.dirname(__file__)
-        if bool(os.getenv("ACHATBOT_PKG", "")):
-            sys.path.insert(1, os.path.join(cur_dir, "../../../CosyVoice"))
-            sys.path.insert(2, os.path.join(cur_dir, "../../../CosyVoice/third_party/Matcha-TTS"))
-        else:
-            sys.path.insert(1, os.path.join(cur_dir, "../../../../deps/CosyVoice"))
-            sys.path.insert(
-                2, os.path.join(cur_dir, "../../../../deps/CosyVoice/third_party/Matcha-TTS")
-            )
-        from deps.CosyVoice.cosyvoice.cli.cosyvoice import CosyVoice
-        from deps.CosyVoice.cosyvoice.utils.file_utils import load_wav
-
         self.args = CosyVoiceTTSArgs(**args)
-        self.model = CosyVoice(self.args.model_dir)
+        self.model = CosyVoice2(self.args.model_dir)
         voices = self.get_voices()
         if self.args.spk_id not in voices:
             self.args.spk_id = random.choice(voices)
@@ -56,39 +61,13 @@ class CosyVoiceTTS(BaseTTS, ITts):
             model_million_params = sum(p.numel() for p in model.parameters()) / 1e6
             logging.debug(f"{name} {model} {model_million_params}M parameters")
 
-    def get_voices(self):
-        spk_ids = []
-        for spk_id in self.model.list_avaliable_spks():
-            if self.args.language == "zh" and "中" in spk_id:
-                spk_ids.append(spk_id)
-            if self.args.language == "zh_yue" and "粤" in spk_id:
-                spk_ids.append(spk_id)
-            if self.args.language == "en" and "英" in spk_id:
-                spk_ids.append(spk_id)
-            if self.args.language == "jp" and "日" in spk_id:
-                spk_ids.append(spk_id)
-            if self.args.language == "ko" and "韩" in spk_id:
-                spk_ids.append(spk_id)
-
-        return spk_ids
-
-    def get_stream_info(self) -> dict:
-        return {
-            "format": PYAUDIO_PAINT16,
-            # "format": PYAUDIO_PAFLOAT32,
-            "channels": 1,
-            "rate": 22050,  # target_sample_rate
-            "sample_width": 2,
-            "np_dtype": np.int16,
-            # "np_dtype": np.float32,
-        }
-
-    def set_voice(self, spk_id: str):
-        # now just support spk_id
-        if spk_id in self.model.list_avaliable_spks():
-            self.args.spk_id = spk_id
-        else:
-            logging.warning(f"Speaker ID {spk_id} not found! Using speaker ID {self.args.spk_id}")
+    def clear(self):
+        # CosyVoice2 和 CosyVoice 的配置不同，
+        # cosyvoice: https://huggingface.co/FunAudioLLM/CosyVoice-300M/blob/main/cosyvoice.yaml
+        # cosyvoice2: https://huggingface.co/FunAudioLLM/CosyVoice2-0.5B/blob/main/cosyvoice.yaml
+        # 调完老版本CosyVoice，再调要CosyVoice2， 需要对hann.window和mel_basis重置一下
+        hann_window.clear()
+        mel_basis.clear()
 
     async def _inference(
         self, session: Session, text: str, **kwargs
@@ -96,15 +75,11 @@ class CosyVoiceTTS(BaseTTS, ITts):
         if self.reference_audio is None:
             if len(self.args.instruct_text.strip()) == 0:
                 output = self.model.inference_sft(
-                    text,
-                    self.args.spk_id,
-                    stream=self.args.tts_stream,
-                    speed=self.args.tts_speed,
+                    text, self.args.spk_id, stream=self.args.tts_stream, speed=self.args.tts_speed
                 )
             else:
-                output = self.model.inference_instruct(
+                output = self.model.inference_instruct2(
                     text,
-                    self.args.spk_id,
                     self.args.instruct_text,
                     stream=self.args.tts_stream,
                     speed=self.args.tts_speed,
