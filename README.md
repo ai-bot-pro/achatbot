@@ -18,7 +18,7 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
 # Features
 - demo
   
-  - [podcast](https://github.com/ai-bot-pro/achatbot/blob/main/demo/content_parser_tts.py)
+  - [podcast](https://github.com/ai-bot-pro/achatbot/blob/main/demo/content_parser_tts.py)  AI Podcast：https://weedge.us.kg/ :)
   
     ```shell
     # need GOOGLE_API_KEY in environment variables
@@ -324,7 +324,7 @@ pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
 </details>
 
 <details>
-<summary>:first_quarter_moon: Run remote http fastapi daily chat bots</summary>
+<summary>:first_quarter_moon: Run remote rpc chat bot worker</summary>
   
 ## Run remote rpc chat bot worker
 1. run `pip install "achatbot[remote_rpc_chat_bot_be_worker]"` to install dependencies to run rpc chat bot BE worker; e.g. :
