@@ -6,7 +6,10 @@ import os
 from pathlib import Path
 import sys
 import logging
+import time
+from typing import Optional
 
+import click
 import typer
 import torch
 import numpy as np
@@ -20,6 +23,7 @@ try:
     cur_dir = os.path.dirname(__file__)
     sys.path.insert(1, os.path.join(cur_dir, "../deps/FishSpeech"))
     from deps.FishSpeech.fish_speech.models.vqgan.modules.firefly import FireflyArchitecture
+    from deps.FishSpeech.fish_speech.models.text2semantic.inference import load_model, generate_long
     from deps.FishSpeech.fish_speech.utils.file import AUDIO_EXTENSIONS
 except ModuleNotFoundError as e:
     logging.error(
@@ -27,7 +31,7 @@ except ModuleNotFoundError as e:
     )
     raise Exception(f"Missing module: {e}")
 
-from src.common.types import ASSETS_DIR, MODELS_DIR, RECORDS_DIR
+from src.common.types import MODELS_DIR, RECORDS_DIR
 
 
 app = typer.Typer()
@@ -40,6 +44,13 @@ def get_device():
         return "mps"
     else:
         return "cpu"
+
+
+def print_model_params(model: torch.nn.Module):
+    # print the number of parameters in the model
+    model_million_params = sum(p.numel() for p in model.parameters()) / 1e6
+    logging.debug(model)
+    logging.debug(f"{model_million_params} M parameters")
 
 
 def load_gan_model(
@@ -96,10 +107,7 @@ def encode_codebook_indices(
         config_path=config_path,
         device=device,
     )
-    # print the number of parameters in the model
-    model_million_params = sum(p.numel() for p in model.parameters()) / 1e6
-    logging.debug(model)
-    logging.debug(f"{model_million_params} M parameters")
+    print_model_params(model)
 
     # load audio
     if input_path.suffix in AUDIO_EXTENSIONS:
@@ -160,10 +168,7 @@ def gen_waveform(
         config_path=config_path,
         device=device,
     )
-    # print the number of parameters in the model
-    model_million_params = sum(p.numel() for p in model.parameters()) / 1e6
-    logging.debug(model)
-    logging.debug(f"{model_million_params} M parameters")
+    print_model_params(model)
 
     # load indices
     logging.info(f"Processing precomputed indices from {codebook_indices_path}")
@@ -191,9 +196,103 @@ def gen_waveform(
         logging.info(f"Saved audio to {waveform_output_path}")
 
 
+@app.command("gen_codebook_indices")
+def gen_codebook_indices(
+    lm_checkpoint_dir: str = str(os.path.join(MODELS_DIR, "fishaudio/fish-speech-1.5")),
+    text: str = "你说的对, 但是原神是一款由米哈游自主研发的开放世界手游.",
+    prompt_text: Optional[list[str]] = None,
+    prompt_tokens: Optional[list[Path]] = None,
+    num_samples: int = 1,
+    max_new_tokens: int = 0,
+    top_p: float = 0.7,
+    repetition_penalty: float = 1.2,
+    temperature: float = 0.7,
+    device: str | None = None,
+    compile: bool = False,
+    seed: int = 42,
+    half: bool = False,
+    iterative_prompt: bool = True,
+    chunk_length: int = 100,
+    output_codebook_indices_dir: str = os.path.join(MODELS_DIR, "fishspeech_codebook_indices"),
+) -> None:
+    if prompt_text is not None and len(prompt_text) != len(prompt_tokens):
+        raise ValueError(
+            f"Number of prompt text ({len(prompt_text)}) and prompt tokens ({len(prompt_tokens)}) should be the same"
+        )
+
+    precision = torch.half if half else torch.bfloat16
+    device = device or get_device()
+
+    os.makedirs(output_codebook_indices_dir, exist_ok=True)
+
+    logging.info(f"Loading Dual-AR LM model from {lm_checkpoint_dir} ...")
+    t0 = time.time()
+    model, decode_one_token = load_model(lm_checkpoint_dir, device, precision, compile=compile)
+    print_model_params(model)
+    with torch.device(device):
+        model.setup_caches(
+            max_batch_size=1,
+            max_seq_len=model.config.max_seq_len,
+            dtype=next(model.parameters()).dtype,
+        )
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+
+    logging.info(f"Time to load model: {time.time() - t0:.02f} seconds")
+
+    if prompt_tokens is not None:
+        prompt_tokens = [torch.from_numpy(np.load(p)).to(device) for p in prompt_tokens]
+
+    torch.manual_seed(seed)
+
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+
+    generator = generate_long(
+        model=model,
+        device=device,
+        decode_one_token=decode_one_token,
+        text=text,
+        num_samples=num_samples,
+        max_new_tokens=max_new_tokens,
+        top_p=top_p,
+        repetition_penalty=repetition_penalty,
+        temperature=temperature,
+        compile=compile,
+        iterative_prompt=iterative_prompt,
+        chunk_length=chunk_length,
+        prompt_text=prompt_text,
+        prompt_tokens=prompt_tokens,
+    )
+
+    idx = 0
+    codes = []
+
+    for response in generator:
+        if response.action == "sample":
+            codes.append(response.codes)
+            logging.info(f"Sampled text: {response.text}, codes: {response.codes.shape}")
+        elif response.action == "next":
+            if codes:
+                file_path = f"{output_codebook_indices_dir}/codes_{idx}.npy"
+                np.save(
+                    file_path,
+                    torch.cat(codes, dim=1).cpu().numpy(),
+                )
+                logging.info(f"Saved codes to {file_path}")
+            logging.info(f"Next sample")
+            codes = []
+            idx += 1
+        else:
+            logging.error(f"Error: {response}")
+
+
 r"""
 python -m demo.tts_fishspeech encode_codebook_indices ./records/asr_example_zh.wav ./models/fishspeech_ref_code_indices.npy
 python -m demo.tts_fishspeech gen_waveform ./models/fishspeech_ref_code_indices.npy ./records/asr_example_zh_fishspeech_gen.wav
+
+python -m demo.tts_fishspeech gen_codebook_indices --num-samples 2
+python -m demo.tts_fishspeech gen_waveform ./models/fishspeech_codebook_indices/codes_1.npy ./records/codes_1_fishspeech_gen.wav
 """
 
 if __name__ == "__main__":
