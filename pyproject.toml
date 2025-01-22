@@ -10,8 +10,7 @@
 # pip-compile --all-extras pyproject.toml
 
 [build-system]
-requires = ["setuptools >= 61.0"]
-#requires = ["setuptools", "setuptools-scm"]
+requires = ["setuptools>=61.0", "setuptools-scm>=8.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -297,6 +296,19 @@ tts_kokoro = [
     "munch",
 ]
 tts_onnx_kokoro = ["kokoro-onnx~=0.2.5"]
+tts_fishspeech = [
+    "torch~=2.3.0",                     # for torch.nn.attention
+    "torchaudio~=2.3.0",
+    "transformers[torch]~=4.40.2",
+    "natsort>=8.4.0",
+    "loguru>=0.6.0",
+    "rich>=13.5.3",
+    "vector_quantize_pytorch==1.14.24",
+    "loralib>=0.1.2",
+    "tiktoken>=0.8.0",
+    "pyrootutils",
+    "achatbot[conf,einops,librosa]",
+]
 # multi tts modules engine
 speech_tts = [
     "achatbot[tts_coqui,tts_edge,tts_g,tts_pyttsx3,tts_cosy_voice,tts_chat,tts_f5,tts_openvoicev2,tts_kokoro]",
