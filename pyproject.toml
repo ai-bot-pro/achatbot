@@ -297,7 +297,7 @@ tts_kokoro = [
 ]
 tts_onnx_kokoro = ["kokoro-onnx~=0.2.5"]
 tts_fishspeech = [
-    "torch~=2.3.0",                     # for torch.nn.attention
+    "torch~=2.3.0",                     # for torch.nn.attention with flash attention
     "torchaudio~=2.3.0",
     "transformers[torch]~=4.40.2",
     "natsort>=8.4.0",
@@ -306,6 +306,8 @@ tts_fishspeech = [
     "vector_quantize_pytorch==1.14.24",
     "loralib>=0.1.2",
     "tiktoken>=0.8.0",
+    "pytorch-lightning~=2.4.0",
+    "lightning~=2.4.0",
     "pyrootutils",
     "achatbot[conf,einops,librosa]",
 ]

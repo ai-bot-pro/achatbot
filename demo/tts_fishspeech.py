@@ -170,11 +170,12 @@ def gen_waveform(
     )
     print_model_params(model)
 
-    # load indices
+    # load indices (codebook_num, feature_num)
     logging.info(f"Processing precomputed indices from {codebook_indices_path}")
     indices = np.load(codebook_indices_path)
     indices = torch.from_numpy(indices).to(device).long()
-    assert indices.ndim == 2, f"Expected 2D indices, got {indices.ndim}"
+    assert indices.ndim == 2, f"Expected 2D indices (codebook_num, feature_num), got {indices.ndim}"
+    logging.debug(f"Loaded indices of shape(codebook_num, feature_num) {indices.shape}, {indices}")
 
     # Firefly-GAN Decoder
     # 1. DownsampleFiniteScalarQuantize with grouped FSQ input vq codebook indices decode (upsample) to Mel spec
@@ -191,7 +192,7 @@ def gen_waveform(
     if is_save is True:
         waveform_np = (
             waveform_tensor[0, 0].float().detach().cpu().numpy()
-        )  # B=1 C=1, save waveform seq
+        )  # B=1 C=1, save waveform seq , the same as waveform_tensor[0][0], waveform_tensor.squeeze()
         soundfile.write(waveform_output_path, waveform_np, model.spec_transform.sample_rate)
         logging.info(f"Saved audio to {waveform_output_path}")
 
@@ -292,6 +293,20 @@ python -m demo.tts_fishspeech encode_codebook_indices ./records/asr_example_zh.w
 python -m demo.tts_fishspeech gen_waveform ./models/fishspeech_ref_code_indices.npy ./records/asr_example_zh_fishspeech_gen.wav
 
 python -m demo.tts_fishspeech gen_codebook_indices --num-samples 2
+python -m demo.tts_fishspeech gen_waveform ./models/fishspeech_codebook_indices/codes_1.npy ./records/codes_1_fishspeech_gen.wav
+
+python -m demo.tts_fishspeech gen_codebook_indices --num-samples 2 \
+  --text "hello world,你叫什么名字，能讲一个故事吗？" \
+  --prompt-text "" \
+  --prompt-tokens "./models/fishspeech_ref_code_indices.npy" 
+python -m demo.tts_fishspeech gen_waveform ./models/fishspeech_codebook_indices/codes_0.npy ./records/codes_0_fishspeech_gen.wav
+python -m demo.tts_fishspeech gen_waveform ./models/fishspeech_codebook_indices/codes_1.npy ./records/codes_1_fishspeech_gen.wav
+
+python -m demo.tts_fishspeech gen_codebook_indices --num-samples 2 \
+  --text "hello world,你叫什么名字，能讲一个故事吗？" \
+  --prompt-text "开心" \
+  --prompt-tokens "./models/fishspeech_ref_code_indices.npy" 
+python -m demo.tts_fishspeech gen_waveform ./models/fishspeech_codebook_indices/codes_0.npy ./records/codes_0_fishspeech_gen.wav
 python -m demo.tts_fishspeech gen_waveform ./models/fishspeech_codebook_indices/codes_1.npy ./records/codes_1_fishspeech_gen.wav
 """
 

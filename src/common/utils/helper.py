@@ -1,7 +1,10 @@
+import hashlib
 import json
+import logging
 
 import pyloudnorm as pyln
 import numpy as np
+import torch
 
 
 async def load_json(path):
@@ -43,3 +46,27 @@ def normalize_value(value, min_value, max_value):
     normalized = (value - min_value) / (max_value - min_value)
     normalized_clamped = max(0, min(1, normalized))
     return normalized_clamped
+
+
+def print_model_params(model: torch.nn.Module, extra_info=""):
+    # print the number of parameters in the model
+    model_million_params = sum(p.numel() for p in model.parameters()) / 1e6
+    logging.debug(model)
+    logging.debug(f"{extra_info} {model_million_params} M parameters")
+
+
+def get_device():
+    if torch.cuda.is_available():
+        return "cuda"
+    if torch.backends.mps.is_available():
+        return "mps"
+    else:
+        return "cpu"
+
+
+def file_md5_hash(file_path: str):
+    # Compute a hash of the file
+    with open(file_path, "rb") as _file:
+        data = _file.read()
+        data_hash = hashlib.md5(data).hexdigest()
+        return data_hash
