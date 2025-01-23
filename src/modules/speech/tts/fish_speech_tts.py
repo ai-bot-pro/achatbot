@@ -59,7 +59,7 @@ class FishSpeechTTS(BaseTTS, ITts):
         self.gan_model: FireflyArchitecture = self.load_gan_model()
 
         self.ref_encode_codebook_indices: torch.Tensor = None
-        self.set_voice(self.args.ref_audio_path)
+        self.args.ref_audio_path and self.set_voice(self.args.ref_audio_path)
 
         self.warm_up()
 
@@ -165,8 +165,9 @@ class FishSpeechTTS(BaseTTS, ITts):
             prompt_tokens=None,
         )
         for chunk in generate_codebook_indices_iter:
-            logging.debug(f"Warm Up GenerateResponse {chunk}")
-            self.decode_vq_tokens(chunk.codes)
+            logging.debug(f"Warm Up chunk {chunk}")
+            if chunk.action == "sample" and chunk.codes is not None:
+                self.decode_vq_tokens(chunk.codes)
 
         logging.info(f"End Warm Up")
 
@@ -258,15 +259,15 @@ class FishSpeechTTS(BaseTTS, ITts):
         return waveform, tensor shape is 1D
         """
         feature_lengths = torch.tensor([code_indices.shape[1]], device=self.gan_model.device)
-        logging.info(f"VQ features: {code_indices.shape}, feature_lengths: {feature_lengths}")
 
-        if isinstance(self.gan_model, FireflyArchitecture):
-            return self.gan_model.decode(
-                indices=code_indices[None],
-                feature_lengths=feature_lengths,
-            )[0].squeeze()
+        waveform = self.gan_model.decode(
+            indices=code_indices[None],
+            feature_lengths=feature_lengths,
+        )[0].squeeze()
 
-        raise ValueError(f"Unknown model type: {type(self.gan_model)}")
+        logging.info(
+            f"VQ features: {code_indices.shape}, feature_lengths: {feature_lengths}, waveform: {waveform}"
+        )
 
     def get_stream_info(self) -> dict:
         return {
@@ -287,6 +288,12 @@ class FishSpeechTTS(BaseTTS, ITts):
         if self.args.normalize:
             text = ChnNormedText(raw_text=text).normalize()
 
+        prompt_text = []
+        prompt_tokens = []
+        if self.ref_encode_codebook_indices is not None and self.args.ref_text is not None:
+            prompt_text.append(self.args.ref_text)
+            prompt_tokens.append(self.ref_encode_codebook_indices)
+
         generate_codebook_indices_iter = generate_long(
             model=self.dual_ar_model,
             device=self.args.device,
@@ -300,11 +307,12 @@ class FishSpeechTTS(BaseTTS, ITts):
             compile=self.args.compile,
             iterative_prompt=self.args.iterative_prompt,
             chunk_length=self.args.chunk_length,
-            prompt_text=None,
-            prompt_tokens=None,
+            prompt_text=prompt_text,
+            prompt_tokens=prompt_tokens,
         )
         for chunk in generate_codebook_indices_iter:
             logging.debug(f"inference GenerateResponse {chunk}")
-            audio_segment = self.get_audio_segment(chunk.codes)
-
-            yield audio_segment.astype(np.float32).tobytes()
+            if chunk.action == "sample" and chunk.codes is not None:
+                audio_segment = self.get_audio_segment(chunk.codes)
+                yield audio_segment.astype(np.float32).tobytes()
+        yield None
