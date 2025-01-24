@@ -103,12 +103,15 @@ class FishSpeechTTS(BaseTTS, ITts):
             compile=self.args.compile,
         )
         print_model_params(model, "dual_ar_lm")
-        with torch.device(self.args.device):
-            model.setup_caches(
-                max_batch_size=1,
-                max_seq_len=model.config.max_seq_len,
-                dtype=next(model.parameters()).dtype,
-            )
+
+        if self.args.kv_cache is True:
+            with torch.device(self.args.device):
+                model.setup_caches(
+                    max_batch_size=1,
+                    max_seq_len=model.config.max_seq_len,
+                    dtype=next(model.parameters()).dtype,
+                )
+
         if torch.cuda.is_available():
             torch.cuda.synchronize()
 

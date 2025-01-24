@@ -313,7 +313,7 @@ tts_fishspeech = [
 ]
 # multi tts modules engine
 speech_tts = [
-    "achatbot[tts_coqui,tts_edge,tts_g,tts_pyttsx3,tts_cosy_voice,tts_chat,tts_f5,tts_openvoicev2,tts_kokoro]",
+    "achatbot[tts_coqui,tts_edge,tts_g,tts_pyttsx3,tts_cosy_voice,tts_chat,tts_f5,tts_openvoicev2,tts_kokoro,tts_fishspeech]",
 ]
 
 # voice
