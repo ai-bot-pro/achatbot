@@ -3,7 +3,7 @@ import os
 
 from dotenv import load_dotenv
 
-from src.common.types import MODELS_DIR, RECORDS_DIR, CosyVoiceTTSArgs
+from src.common.types import MODELS_DIR, RECORDS_DIR
 from src.common import interface
 from src.common.factory import EngineClass, EngineFactory
 
@@ -13,29 +13,29 @@ load_dotenv(override=True)
 class TTSEnvInit:
     @staticmethod
     def getEngine(tag, **kwargs) -> interface.ITts | EngineClass:
-        if "tts_coqui" in tag:
+        if "tts_coqui" == tag:
             from . import coqui_tts
-        elif "tts_chat" in tag:
+        elif "tts_chat" == tag:
             from . import chat_tts
-        elif "tts_pyttsx3" in tag:
+        elif "tts_pyttsx3" == tag:
             from . import pyttsx3_tts
-        elif "tts_g" in tag:
+        elif "tts_g" == tag:
             from . import g_tts
-        elif "tts_edge" in tag:
+        elif "tts_edge" == tag:
             from . import edge_tts
-        elif "tts_cosy_voice" in tag:
-            from . import cosy_voice_tts
-        elif "tts_cosy_voice2" in tag:
+        elif "tts_cosy_voice2" == tag:
             from . import cosy_voice2_tts
-        elif "tts_f5" in tag:
+        elif "tts_cosy_voice" == tag:
+            from . import cosy_voice_tts
+        elif "tts_f5" == tag:
             from . import f5_tts
-        elif "tts_openvoicev2" in tag:
+        elif "tts_openvoicev2" == tag:
             from . import openvoicev2_tts
-        elif "tts_kokoro" in tag:
+        elif "tts_kokoro" == tag:
             from . import kokoro_tts
-        elif "tts_onnx_kokoro" in tag:
+        elif "tts_onnx_kokoro" == tag:
             from . import kokoro_onnx_tts
-        elif "tts_fishspeech" in tag:
+        elif "tts_fishspeech" == tag:
             from . import fish_speech_tts
         # elif "tts_openai" in tag:
         # from . import openai_tts
@@ -78,7 +78,9 @@ class TTSEnvInit:
 
     @staticmethod
     def get_tts_cosy_voice_args() -> dict:
-        model_dir = os.path.join(MODELS_DIR, "CosyVoice-300M-SFT")
+        from src.common.types import CosyVoiceTTSArgs
+
+        model_dir = os.path.join(MODELS_DIR, "FunAudioLLM/CosyVoice-300M-SFT")
         model_dir = os.getenv("COSY_VOICE_MODELS_DIR", model_dir)
         kwargs = CosyVoiceTTSArgs(
             model_dir=model_dir,

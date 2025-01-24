@@ -8,6 +8,8 @@ import traceback
 
 import grpc
 from dotenv import load_dotenv
+import numpy as np
+import soundfile
 
 try:
     cur_dir = os.path.dirname(__file__)
@@ -35,7 +37,7 @@ from src.modules.speech.player import PlayerEnvInit
 from src.modules.speech.tts import TTSEnvInit
 from src.common.grpc.interceptors.authentication_client import add_authentication
 from src.common.logger import Logger
-from src.common.types import SessionCtx
+from src.common.types import RECORDS_DIR, SessionCtx, PYAUDIO_PAFLOAT32, PYAUDIO_PAINT16
 from src.common.session import Session
 
 
@@ -102,6 +104,9 @@ TTS_TAG=tts_cosy_voice2 \
 if __name__ == "__main__":
     player = None
     channel = None
+    is_save = bool(os.getenv("IS_SAVE", ""))
+    tts_tag = os.getenv("TTS_TAG")
+    res = bytearray()
     try:
         client_id = str(uuid.uuid4())
         session = Session(**SessionCtx(client_id).__dict__)
@@ -128,21 +133,42 @@ if __name__ == "__main__":
 
         tts_audio_iter = synthesize_us(tts_stub)
 
-        audio_out_stream: IAudioStream | EngineClass = AudioStreamEnvInit.initAudioOutStreamEngine()
-        player = PlayerEnvInit.initPlayerEngine()
-        player.set_out_stream(audio_out_stream)
-        player.open()
-        player.start(session)
+        if is_save is False:
+            audio_out_stream: IAudioStream | EngineClass = (
+                AudioStreamEnvInit.initAudioOutStreamEngine()
+            )
+            player = PlayerEnvInit.initPlayerEngine()
+            player.set_out_stream(audio_out_stream)
+            player.open()
+            player.start(session)
+
         for tts_audio in tts_audio_iter:
             logging.debug(f"play tts_chunk len:{len(tts_audio)}")
             session.ctx.state["tts_chunk"] = tts_audio
-            player.play_audio(session)
-        player.stop(session)
+            if is_save is False:
+                player.play_audio(session)
+            else:
+                res.extend(tts_audio)
+
+        if is_save is False:
+            player.stop(session)
     except grpc.RpcError as e:
         logging.error(f"grpc.RpcError: {e}")
     except Exception as e:
         tb_str = traceback.format_exc()
         logging.error(f"Exception: {e}; traceback: {tb_str}")
     finally:
-        channel and channel.close()
-        player and player.close()
+        if len(res) > 0:
+            file_name = f"grpc_{tts_tag}.wav"
+            os.makedirs(RECORDS_DIR, exist_ok=True)
+            file_path = os.path.join(RECORDS_DIR, file_name)
+            np_dtype = np.float32
+            if stream_info.format == PYAUDIO_PAINT16:
+                np_dtype = np.int16
+            data = np.frombuffer(res, dtype=np_dtype)
+            soundfile.write(file_path, data, stream_info.rate)
+            logging.info(f"save audio stream to {file_path}")
+
+        if is_save is False:
+            channel and channel.close()
+            player and player.close()
