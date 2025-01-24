@@ -10,8 +10,7 @@
 # pip-compile --all-extras pyproject.toml
 
 [build-system]
-requires = ["setuptools >= 61.0"]
-#requires = ["setuptools", "setuptools-scm"]
+requires = ["setuptools>=61.0", "setuptools-scm>=8.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -239,7 +238,7 @@ tts_pyttsx3 = ["pyttsx3~=2.90"]
 tts_cosy_voice = [
     "torch~=2.2.2",
     "torchaudio~=2.2.2",
-    "transformers[torch]~=4.40.2",
+    "transformers~=4.40.2",
     "hyperpyyaml~=1.2.2",
     "onnxruntime~=1.18.1",
     "openai-whisper==20231117",
@@ -260,7 +259,7 @@ tts_chat = [
     "pynini~=2.1.5; sys_platform == 'linux'",
     "WeTextProcessing~=1.0.2; sys_platform == 'linux'",
     "nemo_text_processing~=1.0.2; sys_platform == 'linux'",
-    "transformers[torch]~=4.40.2",
+    "transformers~=4.40.2",
 ]
 tts_f5 = [
     "wandb",                       # for training
@@ -272,7 +271,7 @@ tts_f5 = [
     "jieba",
     "pypinyin",
     "achatbot[librosa,soundfile]",
-    "transformers[torch]~=4.40.2",
+    "transformers~=4.40.2",
     "x_transformers>=1.31.14",
     "vocos~=0.1.0",
 ]
@@ -291,12 +290,27 @@ tts_openvoicev2 = [
 tts_kokoro = [
     #apt-get -qq -y install espeak-ng > /dev/null 2>&1
     "torch~=2.2.2",
-    "transformers[torch]~=4.40.2",
+    "transformers~=4.40.2",
     "phonemizer",
     "scipy",
     "munch",
 ]
 tts_onnx_kokoro = ["kokoro-onnx~=0.2.5"]
+tts_fishspeech = [
+    "torch~=2.3.1",                     # for torch.nn.attention with flash attention
+    "torchaudio~=2.3.1",
+    "transformers~=4.40.2",
+    "natsort>=8.4.0",
+    "loguru>=0.6.0",
+    "rich>=13.5.3",
+    "vector_quantize_pytorch==1.14.24",
+    "loralib>=0.1.2",
+    "tiktoken>=0.8.0",
+    "pytorch-lightning~=2.4.0",
+    "lightning~=2.4.0",
+    "pyrootutils",
+    "achatbot[conf,einops,librosa]",
+]
 # multi tts modules engine
 speech_tts = [
     "achatbot[tts_coqui,tts_edge,tts_g,tts_pyttsx3,tts_cosy_voice,tts_chat,tts_f5,tts_openvoicev2,tts_kokoro]",

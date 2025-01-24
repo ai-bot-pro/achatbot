@@ -33,7 +33,7 @@ if [ -n "$pypi" ]; then
     pip install -q build
     rm -rf dist && python3 -m build 
     if [ "$pypi" == "devpypi" ]; then
-        pip install dist/*.whl
+        pip install -U dist/*.whl
     else
         twine upload --verbose --skip-existing --repository $pypi dist/*
     fi

@@ -215,10 +215,22 @@ class ITts(ABC):
 
     @abstractmethod
     def set_voice(self, voice: str):
+        """
+        Note:
+        - just simple voice set, don't support set voice with user id
+        - if set user voice ,need external store set api
+        - u can impl set_user_voice method
+        """
         raise NotImplementedError("must be implemented in the child class")
 
     @abstractmethod
     def get_voices(self, voice: str) -> list:
+        """
+        Note:
+        - just simple voice get, don't support get voice with user id
+        - if get user voice ,need external store get api
+        - u can impl get_user_voices method
+        """
         raise NotImplementedError("must be implemented in the child class")
 
 

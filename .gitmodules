@@ -28,3 +28,6 @@
 [submodule "deps/OpenVoice"]
 	path = deps/OpenVoice
 	url = https://github.com/weedge/OpenVoice.git
+[submodule "deps/FishSpeech"]
+	path = deps/FishSpeech
+	url = https://github.com/weedge/fish-speech.git

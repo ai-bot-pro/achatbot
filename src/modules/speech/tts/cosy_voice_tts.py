@@ -25,7 +25,7 @@ try:
     # logging.shutdown()
 except ImportError:
     logging.error("Failed to import CosyVoice, need pip install achatbot[tts_cosey_voice] ")
-    pass
+    exit()
 
 from src.common.interface import ITts
 from src.common.session import Session

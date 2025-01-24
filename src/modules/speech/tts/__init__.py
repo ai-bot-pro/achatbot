@@ -3,7 +3,7 @@ import os
 
 from dotenv import load_dotenv
 
-from src.common.types import MODELS_DIR, RECORDS_DIR, CosyVoiceTTSArgs
+from src.common.types import MODELS_DIR, RECORDS_DIR
 from src.common import interface
 from src.common.factory import EngineClass, EngineFactory
 
@@ -13,28 +13,30 @@ load_dotenv(override=True)
 class TTSEnvInit:
     @staticmethod
     def getEngine(tag, **kwargs) -> interface.ITts | EngineClass:
-        if "tts_coqui" in tag:
+        if "tts_coqui" == tag:
             from . import coqui_tts
-        elif "tts_chat" in tag:
+        elif "tts_chat" == tag:
             from . import chat_tts
-        elif "tts_pyttsx3" in tag:
+        elif "tts_pyttsx3" == tag:
             from . import pyttsx3_tts
-        elif "tts_g" in tag:
+        elif "tts_g" == tag:
             from . import g_tts
-        elif "tts_edge" in tag:
+        elif "tts_edge" == tag:
             from . import edge_tts
-        elif "tts_cosy_voice" in tag:
-            from . import cosy_voice_tts
-        elif "tts_cosy_voice2" in tag:
+        elif "tts_cosy_voice2" == tag:
             from . import cosy_voice2_tts
-        elif "tts_f5" in tag:
+        elif "tts_cosy_voice" == tag:
+            from . import cosy_voice_tts
+        elif "tts_f5" == tag:
             from . import f5_tts
-        elif "tts_openvoicev2" in tag:
+        elif "tts_openvoicev2" == tag:
             from . import openvoicev2_tts
-        elif "tts_kokoro" in tag:
+        elif "tts_kokoro" == tag:
             from . import kokoro_tts
-        elif "tts_onnx_kokoro" in tag:
+        elif "tts_onnx_kokoro" == tag:
             from . import kokoro_onnx_tts
+        elif "tts_fishspeech" == tag:
+            from . import fish_speech_tts
         # elif "tts_openai" in tag:
         # from . import openai_tts
 
@@ -76,7 +78,45 @@ class TTSEnvInit:
 
     @staticmethod
     def get_tts_cosy_voice_args() -> dict:
-        kwargs = CosyVoiceTTSArgs().__dict__
+        from src.common.types import CosyVoiceTTSArgs
+
+        model_dir = os.path.join(MODELS_DIR, "FunAudioLLM/CosyVoice-300M-SFT")
+        model_dir = os.getenv("COSY_VOICE_MODELS_DIR", model_dir)
+        kwargs = CosyVoiceTTSArgs(
+            model_dir=model_dir,
+            reference_text=os.getenv("COSY_VOICE_REFERENCE_TEXT", ""),
+            reference_audio_path=os.getenv("COSY_VOICE_REFERENCE_AUDIO_PATH", ""),
+            src_audio_path=os.getenv("COSY_VOICE_SRC_AUDIO_PATH", ""),
+            instruct_text=os.getenv("COSY_VOICE_INSTRUCT_TEXT", ""),
+            spk_id=os.getenv(
+                "COSY_VOICE_SPK_ID", ""
+            ),  # for cosyvoice sft/struct inference, cosyvoice2 don't use it
+        ).__dict__
+        return kwargs
+
+    @staticmethod
+    def get_tts_fishspeech_args() -> dict:
+        from src.types.speech.tts.fish_speech import FishSpeechTTSArgs
+
+        lm_checkpoint_dir = os.path.join(MODELS_DIR, "fishaudio/fish-speech-1.5")
+        lm_checkpoint_dir = os.getenv("FS_LM_CHECKPOINT_DIR", lm_checkpoint_dir)
+        gan_checkpoint_path = os.path.join(
+            MODELS_DIR,
+            "fishaudio/fish-speech-1.5",
+            "firefly-gan-vq-fsq-8x1024-21hz-generator.pth",
+        )
+        gan_checkpoint_path = os.getenv("FS_GAN_CHECKPOINT_PATH", gan_checkpoint_path)
+        kwargs = FishSpeechTTSArgs(
+            warm_up_text=os.getenv("FS_WARM_UP_TEXT", ""),
+            lm_checkpoint_dir=lm_checkpoint_dir,
+            gan_checkpoint_path=gan_checkpoint_path,
+            gan_config_path=os.getenv(
+                "FS_GAN_CONFIG_PATH",
+                "../../../../deps/FishSpeech/fish_speech/configs",
+            ),
+            ref_audio_path=os.getenv("FS_REFERENCE_AUDIO_PATH", None),
+            ref_text=os.getenv("FS_REFERENCE_TEXT", ""),
+        ).__dict__
         return kwargs
 
     @staticmethod
@@ -170,6 +210,7 @@ class TTSEnvInit:
         "tts_coqui": get_tts_coqui_args,
         "tts_cosy_voice": get_tts_cosy_voice_args,
         "tts_cosy_voice2": get_tts_cosy_voice_args,
+        "tts_fishspeech": get_tts_fishspeech_args,
         "tts_f5": get_tts_f5_args,
         "tts_openvoicev2": get_tts_openvoicev2_args,
         "tts_kokoro": get_tts_kokoro_args,
