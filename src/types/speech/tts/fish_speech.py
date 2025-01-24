@@ -9,8 +9,8 @@ from src.common.types import MODELS_DIR
 
 
 class FishSpeechTTSInferArgs(BaseModel):
-    warm_up_text: str = "weedge niubility!"
-    ref_text: str | None = None
+    warm_up_text: str = "weedge,🐂niubility!🍺"
+    ref_text: str | None = ""
     # ref_encode_codebook_indices file path
     ref_audio_path: str | None = None
     # ref prompt tokens cache, @todo: get/set from dist kv store cache/db

@@ -147,6 +147,9 @@ class FishSpeechTTS(BaseTTS, ITts):
         return model
 
     def warm_up(self):
+        if not self.args.warm_up_text:
+            logging.warning(f"No warm_up_text to Warm Up")
+            return
         logging.info(f"Start Warm Up")
         generate_codebook_indices_iter = generate_long(
             model=self.dual_ar_model,
@@ -161,8 +164,8 @@ class FishSpeechTTS(BaseTTS, ITts):
             compile=self.args.compile,
             iterative_prompt=self.args.iterative_prompt,
             chunk_length=self.args.chunk_length,
-            prompt_text=None,
-            prompt_tokens=None,
+            prompt_text=[],  # don't use None
+            prompt_tokens=[],  # don't use None
         )
         for chunk in generate_codebook_indices_iter:
             logging.debug(f"Warm Up chunk {chunk}")
@@ -233,8 +236,9 @@ class FishSpeechTTS(BaseTTS, ITts):
             # Decode the symbolic tokens to audio
             segment = self.decode_vq_tokens(code_indices=code_indices)
 
-        # Convert the audio to numpy
-        return segment.float().cpu().numpy()
+        # Convert the audio to numpy(float32)
+        res = segment.float().detach().cpu().numpy()
+        return res
 
     def encode_audios(self, audios: torch.Tensor) -> torch.Tensor:
         """
@@ -268,6 +272,7 @@ class FishSpeechTTS(BaseTTS, ITts):
         logging.info(
             f"VQ features: {code_indices.shape}, feature_lengths: {feature_lengths}, waveform: {waveform}"
         )
+        return waveform
 
     def get_stream_info(self) -> dict:
         return {
@@ -314,5 +319,6 @@ class FishSpeechTTS(BaseTTS, ITts):
             logging.debug(f"inference GenerateResponse {chunk}")
             if chunk.action == "sample" and chunk.codes is not None:
                 audio_segment = self.get_audio_segment(chunk.codes)
-                yield audio_segment.astype(np.float32).tobytes()
-        yield None
+
+                yield audio_segment.tobytes()
+                # yield audio_segment.astype(np.float32).tobytes()

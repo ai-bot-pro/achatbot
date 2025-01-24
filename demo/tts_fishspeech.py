@@ -200,9 +200,9 @@ def gen_waveform(
 @app.command("gen_codebook_indices")
 def gen_codebook_indices(
     lm_checkpoint_dir: str = str(os.path.join(MODELS_DIR, "fishaudio/fish-speech-1.5")),
-    text: str = "你说的对, 但是原神是一款由米哈游自主研发的开放世界手游.",
-    prompt_text: Optional[list[str]] = None,
-    prompt_tokens: Optional[list[Path]] = None,
+    text: str = "weedge,🐂niubility!🍺",
+    prompt_text: list[str] = [],
+    prompt_tokens: list[Path] = [],
     num_samples: int = 1,
     max_new_tokens: int = 0,
     top_p: float = 0.7,
@@ -223,6 +223,7 @@ def gen_codebook_indices(
 
     precision = torch.half if half else torch.bfloat16
     device = device or get_device()
+    logging.info(f"device {device}")
 
     os.makedirs(output_codebook_indices_dir, exist_ok=True)
 

@@ -20,6 +20,51 @@ python -m unittest test.modules.speech.tts.test_fish_speech.TestFishSpeechTTS.te
 python -m unittest test.modules.speech.tts.test_fish_speech.TestFishSpeechTTS.test_set_voice
 python -m unittest test.modules.speech.tts.test_fish_speech.TestFishSpeechTTS.test_synthesize
 python -m unittest test.modules.speech.tts.test_fish_speech.TestFishSpeechTTS.test_synthesize_speak
+
+# warm up
+FS_WARM_UP_TEXT="hello weedge" python -m unittest test.modules.speech.tts.test_fish_speech.TestFishSpeechTTS.test_synthesize
+FS_WARM_UP_TEXT="hello weedge" python -m unittest test.modules.speech.tts.test_fish_speech.TestFishSpeechTTS.test_synthesize_speak
+
+# use ref audio
+FS_REFERENCE_AUDIO_PATH=./test/audio_files/asr_example_zh.wav \
+    TTS_TEXT="好的，我们从扩散过程开始。它是一个马尔可夫过程，其中数据 x 通过逐步添加噪声转化为 z。" \
+    python -m unittest test.modules.speech.tts.test_fish_speech.TestFishSpeechTTS.test_synthesize
+FS_REFERENCE_AUDIO_PATH=./test/audio_files/asr_example_zh.wav \
+    TTS_TEXT="好的，我们从扩散过程开始。它是一个马尔可夫过程，其中数据 x 通过逐步添加噪声转化为 z。" \
+    python -m unittest test.modules.speech.tts.test_fish_speech.TestFishSpeechTTS.test_synthesize_speak
+
+# warm up; use ref audio and prompt text
+FS_REFERENCE_AUDIO_PATH=./test/audio_files/asr_example_zh.wav  \
+    FS_REFERENCE_TEXT="高兴的说出内容" \
+    FS_WARM_UP_TEXT="hello weedge" \
+    TTS_TEXT="好的，我们从扩散过程开始。它是一个马尔可夫过程，其中数据 x 通过逐步添加噪声转化为 z。 " \
+    python -m unittest test.modules.speech.tts.test_fish_speech.TestFishSpeechTTS.test_synthesize
+
+# warm up; use ref audio and prompt text; long text
+FS_REFERENCE_AUDIO_PATH=./test/audio_files/asr_example_zh.wav \
+    FS_REFERENCE_TEXT="高兴的说出内容" \
+    FS_WARM_UP_TEXT="hello weedge" \
+    TTS_TEXT="好的，我们从扩散过程开始。它是一个马尔可夫过程，其中数据 x 通过逐步添加噪声转化为 z。
+这个过程可以用公式表示为 q(z|x) = N(αx, σ^2I)，其中 α 和 σ 是控制噪声量的参数。
+反向过程是从噪声 z 恢复数据 x 的过程，通过神经网络估计得到 x_θ(z)。
+训练目标是最小化噪声估计误差，也就是 ϵ_θ(z) 与实际噪声 ϵ 之间的差距。
+关键点在于训练了条件模型和无条件模型，然后通过公式混合它们的 score。
+公式可以简化为 ϵ_tilde = (1+w)ϵ_conditional - wϵ_unconditional, w 是引导的强度。 " \
+    python -m unittest test.modules.speech.tts.test_fish_speech.TestFishSpeechTTS.test_synthesize
+
+# warm up; use ref audio and prompt text; long text to speak
+FS_REFERENCE_AUDIO_PATH=./test/audio_files/asr_example_zh.wav \
+    FS_REFERENCE_TEXT="高兴的说出内容" \
+    FS_WARM_UP_TEXT="hello weedge" \
+    TTS_TEXT="好的，我们从扩散过程开始。它是一个马尔可夫过程，其中数据 x 通过逐步添加噪声转化为 z。
+这个过程可以用公式表示为 q(z|x) = N(αx, σ^2I)，其中 α 和 σ 是控制噪声量的参数。
+反向过程是从噪声 z 恢复数据 x 的过程，通过神经网络估计得到 x_θ(z)。
+训练目标是最小化噪声估计误差，也就是 ϵ_θ(z) 与实际噪声 ϵ 之间的差距。
+关键点在于训练了条件模型和无条件模型，然后通过公式混合它们的 score。
+公式可以简化为 ϵ_tilde = (1+w)ϵ_conditional - wϵ_unconditional, w 是引导的强度。 " \
+    python -m unittest test.modules.speech.tts.test_fish_speech.TestFishSpeechTTS.test_synthesize_speak
+
+fish-speech 对公式的支持还不够好，需要微调，加入朗读公式的音频文本数据进行训练
 """
 
 
@@ -49,7 +94,7 @@ class TestFishSpeechTTS(unittest.TestCase):
 
     def setUp(self):
         kwargs = FishSpeechTTSArgs(
-            warm_up_text=os.getenv("FS_WARM_UP_TEXT", "Hello world."),
+            warm_up_text=os.getenv("FS_WARM_UP_TEXT", ""),
             lm_checkpoint_dir=self.lm_checkpoint_dir,
             gan_checkpoint_path=self.gan_checkpoint_path,
             gan_config_path=os.getenv(
@@ -57,7 +102,7 @@ class TestFishSpeechTTS(unittest.TestCase):
                 "../../../../deps/FishSpeech/fish_speech/configs",
             ),
             ref_audio_path=os.getenv("FS_REFERENCE_AUDIO_PATH", None),
-            ref_text=os.getenv("FS_REFERENCE_TEXT", None),
+            ref_text=os.getenv("FS_REFERENCE_TEXT", ""),
         ).__dict__
         self.tts: FishSpeechTTS = EngineFactory.get_engine_by_tag(
             EngineClass, self.tts_tag, **kwargs
