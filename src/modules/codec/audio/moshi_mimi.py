@@ -36,11 +36,13 @@ class MoshiMimiCodec(EngineClass, ICodec):
         print_model_params(self.model, "moshi-mimi")
 
     def encode_code(self, waveform_tensor: torch.Tensor) -> torch.Tensor:
-        vq_codes = self.model.encode(waveform_tensor)
-        logging.deug(f"encode waveform to vq_codes: {vq_codes}")
+        vq_codes = self.model.encode(
+            waveform_tensor[None, None, :].to(self.args.device)
+        )  # waveform_tensor: [1,1,T]
+        logging.debug(f"encode waveform to vq_codes: {vq_codes.shape}")
         return vq_codes
 
     def decode_code(self, vq_codes: torch.Tensor) -> torch.Tensor:
-        waveform_tensor = self.model.decode(vq_codes)
-        logging.deug(f"decode vq_codes to gen waveform: {waveform_tensor.shape}")
-        return waveform_tensor
+        waveform_tensor = self.model.decode(vq_codes.to(self.args.device))
+        logging.debug(f"decode vq_codes to gen waveform: {waveform_tensor.shape}")
+        return waveform_tensor[0][0]

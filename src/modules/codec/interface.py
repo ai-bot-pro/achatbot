@@ -14,7 +14,7 @@ class ICodec(ABC):
         Encode the given input tensor to quantized representation.
 
         Args:
-            wav_tensor (torch.Tensor): Float tensor of shape [B, C, T]
+            wav_tensor (torch.Tensor): Float tensor of shape [T]
 
         Returns:
             vq_codes (torch.Tensor): an int tensor of shape [B, K, T]
@@ -30,6 +30,6 @@ class ICodec(ABC):
             vq_codes (torch.Tensor): Int tensor of shape [B, K, T]
 
         Returns:
-            waveform_tensor (torch.Tensor): Float tensor of shape [B, C, T], the reconstructed audio.
+            waveform_tensor (torch.Tensor): Float tensor of shape [T], the reconstructed audio.
         """
         raise NotImplementedError("must be implemented in the child class")

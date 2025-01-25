@@ -31,9 +31,10 @@ class TransformersMimiCodec(EngineClass, ICodec):
 
     def load_model(self):
         self.model = MimiModel.from_pretrained(self.args.model_dir)
-        self.feature_extractor = AutoFeatureExtractor.from_pretrained(self.args.model_dir)
-        self.model.eval().cuda()
+        self.model.eval().to(self.args.device)
         print_model_params(self.model, "mimi")
+        self.feature_extractor = AutoFeatureExtractor.from_pretrained(self.args.model_dir)
+        logging.debug(f"feature_extractor: {self.feature_extractor}")
 
     @torch.no_grad
     def encode_code(self, waveform_tensor: torch.Tensor) -> torch.Tensor:
@@ -44,12 +45,13 @@ class TransformersMimiCodec(EngineClass, ICodec):
             return_tensors="pt",
         )
 
-        vq_codes = self.model.encode(inputs["input_values"])
-        logging.deug(f"encode waveform to vq_codes: {vq_codes}")
+        output = self.model.encode(inputs["input_values"])
+        vq_codes = output.audio_codes
+        logging.debug(f"encode waveform to vq_codes: {vq_codes.shape}")
         return vq_codes
 
     @torch.no_grad
     def decode_code(self, vq_codes: torch.Tensor) -> torch.Tensor:
-        waveform_tensor = self.model.decode(vq_codes)[0]
-        logging.deug(f"decode vq_codes to gen waveform: {waveform_tensor.shape}")
-        return waveform_tensor
+        waveform_tensor = self.model.decode(vq_codes.to(self.args.device))[0]
+        logging.debug(f"decode vq_codes to gen waveform: {waveform_tensor.shape}")
+        return waveform_tensor[0][0]

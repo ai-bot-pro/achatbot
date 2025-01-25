@@ -12,9 +12,12 @@ from src.types.codec import CodecArgs
 from src.modules.codec import CodecEnvInit, ICodec
 
 r"""
-CODEC_TAG=codec_xcodec2 python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
-CODEC_TAG=codec_moshi_mimi python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
-CODEC_TAG=codec_transformers_mimi python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
+CODEC_TAG=codec_xcodec2 CODEC_MODEL_DIR=./models/HKUSTAudio/xcodec2 \
+    python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
+CODEC_TAG=codec_moshi_mimi CODEC_MODEL_DIR=./models/kyutai/moshiko-pytorch-bf16 \
+    python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
+CODEC_TAG=codec_transformers_mimi CODEC_MODEL_DIR=./models/kyutai/mimi \
+    python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
 """
 
 
@@ -44,12 +47,14 @@ class TestCodec(unittest.TestCase):
 
     def test_encode_decode(self):
         wav, sr = soundfile.read(self.audio_file)
-        wav_tensor = torch.from_numpy(wav).float()  # Shape: (B, C, T)
+        wav_tensor = torch.from_numpy(wav).float()  # Shape: (T)
         print(f"encode to vq codes from wav_tensor: {wav_tensor.shape}")
-        vq_code = self.codec.encode_code(self.session)
+        vq_code = self.codec.encode_code(wav_tensor)
         print(f"vq_code: {vq_code.shape}")
         wav_tensor = self.codec.decode_code(vq_code)
         print(f"decode vq_code to wav_tensor: {wav_tensor.shape}")
 
         wav_np = wav_tensor.detach().cpu().numpy()
-        soundfile.write("test_codec.wav", wav_np, sr)
+        output_path = f"{self.codec_tag}_test_codec.wav"
+        soundfile.write(output_path, wav_np, sr)
+        print(f"save to {output_path}")
