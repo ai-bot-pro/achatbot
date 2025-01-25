@@ -31,3 +31,6 @@
 [submodule "deps/FishSpeech"]
 	path = deps/FishSpeech
 	url = https://github.com/weedge/fish-speech.git
+[submodule "deps/StyleTTS2"]
+	path = deps/StyleTTS2
+	url = https://github.com/weedge/StyleTTS2.git
