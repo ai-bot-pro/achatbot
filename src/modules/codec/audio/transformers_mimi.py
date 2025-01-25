@@ -36,7 +36,7 @@ class TransformersMimiCodec(EngineClass, ICodec):
         print_model_params(self.model, "mimi")
 
     @torch.no_grad
-    def enncode_code(self, waveform_tensor: torch.Tensor) -> torch.Tensor:
+    def encode_code(self, waveform_tensor: torch.Tensor) -> torch.Tensor:
         # pre-process the input waveform
         inputs = self.feature_extractor(
             raw_audio=waveform_tensor,

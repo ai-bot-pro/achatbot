@@ -35,7 +35,7 @@ class MoshiMimiCodec(EngineClass, ICodec):
         self.model = loaders.get_mimi(ckpt_file, self.args.device)
         print_model_params(self.model, "moshi-mimi")
 
-    def enncode_code(self, waveform_tensor: torch.Tensor) -> torch.Tensor:
+    def encode_code(self, waveform_tensor: torch.Tensor) -> torch.Tensor:
         vq_codes = self.model.encode(waveform_tensor)
         logging.deug(f"encode waveform to vq_codes: {vq_codes}")
         return vq_codes

@@ -29,7 +29,8 @@ class XCodec2Codec(EngineClass, ICodec):
         print_model_params(self.model, "xcodec2")
 
     @torch.no_grad
-    def enncode_code(self, waveform_tensor: torch.Tensor) -> torch.Tensor:
+    def encode_code(self, waveform_tensor: torch.Tensor) -> torch.Tensor:
+        waveform_tensor = waveform_tensor.unsqueeze(0)  # Shape: (C, T) C=1
         vq_codes = self.model.encode_code(input_waveform=waveform_tensor)
         logging.deug(f"encode waveform to vq_codes: {vq_codes}")
         return vq_codes
