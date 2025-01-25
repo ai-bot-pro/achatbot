@@ -346,7 +346,7 @@ deep_translator = ["deep_translator~=1.11.4"]
 # https://huggingface.co/kyutai/mimi/blob/main/config.json transformers_version
 codec_transformers_mimi = ["transformers[torch]~=4.45.1"]
 codec_moshi_mimi = ["moshi~=0.1.0"]
-codec_xcodec2 = ["xcodec2~=0.1.3"]
+codec_xcodec2 = ["xcodec2==0.1.3"]
 
 # -----------------processor------------------
 # when use asr tts processor 

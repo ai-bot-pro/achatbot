@@ -7,7 +7,9 @@ except ModuleNotFoundError as e:
     logging.error(
         "In order to use xcodec2-codec, you need to `pip install achatbot[codec_xcodec2]`."
     )
-    raise Exception(f"Missing module: {e}. Please check your PyTorch installation and dependencies.")
+    raise Exception(
+        f"Missing module: {e}. Please check your PyTorch installation and dependencies."
+    )
 
 from src.common.factory import EngineClass
 from src.common.utils.helper import print_model_params
@@ -25,7 +27,7 @@ class XCodec2Codec(EngineClass, ICodec):
 
     def load_model(self):
         self.model = XCodec2Model.from_pretrained(self.args.model_dir)
-        self.model.eval().cuda()
+        self.model.eval().to(self.args.device)
         print_model_params(self.model, "xcodec2")
 
     @torch.no_grad
@@ -39,4 +41,4 @@ class XCodec2Codec(EngineClass, ICodec):
     def decode_code(self, vq_codes: torch.Tensor) -> torch.Tensor:
         waveform_tensor = self.model.decode_code(vq_codes.to(self.args.device))
         logging.debug(f"decode vq_codes to gen waveform: {waveform_tensor.shape}")
-        return waveform_tensor
+        return waveform_tensor[0][0]

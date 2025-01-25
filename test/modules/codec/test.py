@@ -51,7 +51,7 @@ class TestCodec(unittest.TestCase):
         print(f"encode to vq codes from wav_tensor: {wav_tensor.shape}")
         vq_code = self.codec.encode_code(wav_tensor)
         print(f"vq_code: {vq_code.shape}")
-        wav_tensor = self.codec.decode_code(vq_code)
+        wav_tensor = self.codec.decode_code(vq_code)  # Shape: (T)
         print(f"decode vq_code to wav_tensor: {wav_tensor.shape}")
 
         wav_np = wav_tensor.detach().cpu().numpy()
