@@ -330,6 +330,9 @@ llm_transformers_manual_voice_glm = [
 llm_transformers_manual_voice_freeze_omni = [
     "achatbot[llm_transformers_manual_voice,librosa,soundfile,yaml]",
 ]
+llm_transformers_manual_speech_llasa = [
+    "achatbot[llm_transformers_manual_voice]",
+]
 
 
 # player module tag -> pkgs
