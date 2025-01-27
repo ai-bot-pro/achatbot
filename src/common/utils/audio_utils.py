@@ -7,6 +7,24 @@ import torch
 
 from src.common.types import INT16_MAX_ABS_VALUE
 
+AUDIO_EXTENSIONS = {
+    ".mp3",
+    ".wav",
+    ".flac",
+    ".ogg",
+    ".m4a",
+    ".wma",
+    ".aac",
+    ".aiff",
+    ".aif",
+    ".aifc",
+}
+
+VIDEO_EXTENSIONS = {
+    ".mp4",
+    ".avi",
+}
+
 
 def bytes2NpArrayWith16(frames: bytes | bytearray):
     # Convert the buffer frames to a NumPy array

@@ -230,6 +230,14 @@ vision_transformers_got_ocr = [
 # core llms
 core_llm = ["achatbot[llama_cpp,llm_personalai_proxy]"]
 
+# -----------------codec------------------
+# https://huggingface.co/kyutai/mimi/blob/main/config.json transformers_version
+codec_transformers_mimi = ["transformers[torch]~=4.45.1"]
+codec_moshi_mimi = ["moshi~=0.1.0"]
+codec_xcodec2 = ["xcodec2==0.1.3"]
+
+# ---------------TTS----------------------
+
 # tts module tag -> pkgs
 tts_coqui = ["TTS~=0.22.0"]
 tts_edge = ["edge-tts~=6.1.12"]
@@ -311,6 +319,8 @@ tts_fishspeech = [
     "pyrootutils",
     "achatbot[conf,einops,librosa]",
 ]
+tts_llasa = ["achatbot[codec_xcodec2]"]
+
 # multi tts modules engine
 speech_tts = [
     "achatbot[tts_coqui,tts_edge,tts_g,tts_pyttsx3,tts_cosy_voice,tts_chat,tts_f5,tts_openvoicev2,tts_kokoro]",
@@ -345,11 +355,6 @@ vision_yolo_detector = ["ultralytics~=8.3.12", "supervision~=0.24.0"]
 pytube = ["pytube~=15.0.0"]
 deep_translator = ["deep_translator~=1.11.4"]
 
-# -----------------codec------------------
-# https://huggingface.co/kyutai/mimi/blob/main/config.json transformers_version
-codec_transformers_mimi = ["transformers[torch]~=4.45.1"]
-codec_moshi_mimi = ["moshi~=0.1.0"]
-codec_xcodec2 = ["xcodec2==0.1.3"]
 
 # -----------------processor------------------
 # when use asr tts processor 

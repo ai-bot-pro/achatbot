@@ -5,7 +5,7 @@ from queue import Queue
 
 try:
     import torch
-    from transformers import AutoModel, AutoTokenizer, AutoModelForCausalLM
+    from transformers import AutoTokenizer, AutoModelForCausalLM
     from transformers.generation.streamers import BaseStreamer
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
@@ -96,7 +96,7 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
         self.warmup()
 
     def warmup(self):
-        if self.args.warnup_steps <= 0:
+        if self.args.warnup_steps <= 0 or not self.args.warnup_prompt:
             logging.info("no warmup!")
             return
 
@@ -142,12 +142,25 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
         TTS: text + ref audio -> llama2 -> vq code tokens
         """
         prompt = session.ctx.state["prompt"]  # tts text
+        speech_ids_prefix_str = ""
+        if "vq_code_prompt" in session.ctx.state:
+            vq_code_prompt = session.ctx.state[
+                "vq_code_prompt"
+            ]  # ref audio vq code tokens tensor shape (1, 1, T)
+            vq_code_prompt = vq_code_prompt[0, 0, :]
+            # Convert int 12345 to token <|s_12345|>
+            speech_ids_prefix = ids_to_speech_tokens(vq_code_prompt)
+            speech_ids_prefix_str = "".join(speech_ids_prefix)
+
         formatted_text = f"<|TEXT_UNDERSTANDING_START|>{prompt}<|TEXT_UNDERSTANDING_END|>"
 
         # Tokenize the text
         chat = [
             {"role": "user", "content": "Convert the text to speech:" + formatted_text},
-            {"role": "assistant", "content": "<|SPEECH_GENERATION_START|>"},
+            {
+                "role": "assistant",
+                "content": f"<|SPEECH_GENERATION_START|>{speech_ids_prefix_str}",
+            },
         ]
 
         input_ids = self._tokenizer.apply_chat_template(
