@@ -159,7 +159,7 @@ class IMultimodalLlm(ABC):
 
 class ILlm(ABC):
     @abstractmethod
-    def generate(self, session) -> Iterator[str]:
+    def generate(self, session, **kwargs) -> Iterator[str]:
         """
         generate text or tokens with stream iterator
         - local llm cpu/gpu bind

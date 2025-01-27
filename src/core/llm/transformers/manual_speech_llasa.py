@@ -137,7 +137,7 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
 
     # @torch.no_grad()
     @torch.inference_mode()
-    def generate(self, session: Session):
+    def generate(self, session: Session, **kwargs):
         """
         TTS: text + ref audio -> llama2 -> vq code tokens
         """
@@ -172,13 +172,21 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
             input_ids=input_ids,
             eos_token_id=speech_end_id,
             streamer=self._streamer,
-            min_new_tokens=self.args.lm_gen_min_new_tokens,
-            max_new_tokens=self.args.lm_gen_max_new_tokens,
-            top_k=self.args.lm_gen_top_k,
-            top_p=self.args.lm_gen_top_p,
-            do_sample=self.args.lm_gen_do_sample,
-            temperature=self.args.lm_gen_temperature,
-            repetition_penalty=self.args.lm_gen_repetition_penalty,
+            min_new_tokens=kwargs["min_new_tokens"]
+            if "min_new_tokens" in kwargs
+            else self.args.lm_gen_min_new_tokens,
+            max_new_tokens=kwargs["max_new_tokens"]
+            if "max_new_tokens" in kwargs
+            else self.args.lm_gen_max_new_tokens,
+            top_k=kwargs["top_k"] if "top_k" in kwargs else self.args.lm_gen_top_k,
+            top_p=kwargs["top_p"] if "top_p" in kwargs else self.args.lm_gen_top_p,
+            do_sample=kwargs["do_sample"] if "do_sample" in kwargs else self.args.lm_gen_do_sample,
+            temperature=kwargs["temperature"]
+            if "temperature" in kwargs
+            else self.args.lm_gen_temperature,
+            repetition_penalty=kwargs["repetition_penalty"]
+            if "repetition_penalty" in kwargs
+            else self.args.lm_gen_repetition_penalty,
         )
         thread = Thread(target=self._model.generate, kwargs=generation_kwargs)
         thread.start()

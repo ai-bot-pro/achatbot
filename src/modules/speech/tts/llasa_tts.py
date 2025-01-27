@@ -41,6 +41,8 @@ class LlasaTTS(BaseTTS, ITts):
         self.ref_encode_codebook_indices: torch.Tensor = None
         self.args.ref_audio_file_path and self.set_voice(self.args.ref_audio_file_path)
 
+        # lm model gen warmup, codec model decode don't to warmup
+
     def ref_codebook_indices_dir(self):
         """
         mkdir -p $ref_dir
@@ -111,4 +113,14 @@ class LlasaTTS(BaseTTS, ITts):
     async def _inference(
         self, session: Session, text: str, **kwargs
     ) -> AsyncGenerator[bytes, None]:
-        pass
+        input_text = text
+        if self.args.prompt_text:
+            input_text += " " + self.args.prompt_text
+        session.ctx.state["prompt"] = input_text
+        session.ctx.state["vq_code_prompt"] = self.ref_encode_codebook_indices
+        speech_vq_tokens = self.lm_model.generate(session, **kwargs)
+
+        for tokens in speech_vq_tokens:
+            # Decode the speech tokens to speech waveform
+            gen_wav = self.codec_model.decode_code(tokens)  # shape [T]
+            yield gen_wav.float().detach().cpu().numpy().tobytes()
