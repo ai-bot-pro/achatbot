@@ -15,6 +15,7 @@ except ModuleNotFoundError as e:
     raise Exception(f"Missing module: {e}")
 
 
+from src.common.utils.helper import get_device
 from src.common.session import Session
 from src.types.llm.transformers import TransformersLMArgs
 from .base import TransformersBaseLLM
@@ -87,6 +88,7 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
 
     def __init__(self, **args):
         self.args = TransformersLMArgs(**args)
+        self.args.lm_device = self.args.lm_device or get_device()
         logging.info("TransformersLMArgs: %s", self.args)
         self._model = AutoModelForCausalLM.from_pretrained(self.args.lm_model_name_or_path)
         self._model.eval().to(self.args.lm_device)
