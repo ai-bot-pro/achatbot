@@ -1,7 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import os
 
-from common.types import MODELS_DIR
+from src.common.types import MODELS_DIR
 from src.types.codec import CodecArgs
 from src.types.llm.transformers import TransformersSpeechLMArgs
 
@@ -12,8 +12,8 @@ class LlasaTTSArgs:
     TransformersManualSpeechLlasa LM + xcodec2 -> llasa TTS
     """
 
-    lm_args: TransformersSpeechLMArgs = TransformersSpeechLMArgs()
-    xcode2_args: CodecArgs = CodecArgs()
+    lm_args: TransformersSpeechLMArgs = field(default_factory=TransformersSpeechLMArgs)
+    xcode2_args: CodecArgs = field(default_factory=CodecArgs)
 
     # ref audio file path and prompt text
     ref_audio_file_path: str = ""

@@ -12,7 +12,7 @@ except ModuleNotFoundError as e:
     )
 
 from src.common.factory import EngineClass
-from src.common.utils.helper import print_model_params
+from src.common.utils.helper import get_device, print_model_params
 from src.types.codec import CodecArgs
 from src.modules.codec.interface import ICodec
 
@@ -23,6 +23,8 @@ class XCodec2Codec(EngineClass, ICodec):
     def __init__(self, **kwargs) -> None:
         super().__init__()
         self.args = CodecArgs(**kwargs)
+        self.args.device = self.args.device or get_device()
+        logging.info("CodecArgs: %s", self.args)
         self.load_model()
 
     def load_model(self):

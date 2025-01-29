@@ -17,7 +17,7 @@ except ModuleNotFoundError as e:
 
 from src.common.utils.helper import get_device
 from src.common.session import Session
-from src.types.llm.transformers import TransformersLMArgs
+from src.types.llm.transformers import TransformersSpeechLMArgs
 from .base import TransformersBaseLLM
 
 
@@ -87,7 +87,7 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
     DEFAULT_SYS_PROMPT = ""
 
     def __init__(self, **args):
-        self.args = TransformersLMArgs(**args)
+        self.args = TransformersSpeechLMArgs(**args)
         self.args.lm_device = self.args.lm_device or get_device()
         logging.info("TransformersLMArgs: %s", self.args)
         self._model = AutoModelForCausalLM.from_pretrained(self.args.lm_model_name_or_path)
@@ -112,16 +112,16 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
             {"role": "assistant", "content": "<|SPEECH_GENERATION_START|>"},
         ]
 
-        input_ids = self.tokenizer.apply_chat_template(
+        input_ids = self._tokenizer.apply_chat_template(
             chat, tokenize=True, return_tensors="pt", continue_final_message=True
         )
         input_ids = input_ids.to("cuda")
-        speech_end_id = self.tokenizer.convert_tokens_to_ids("<|SPEECH_GENERATION_END|>")
+        speech_end_id = self._tokenizer.convert_tokens_to_ids("<|SPEECH_GENERATION_END|>")
 
         warmup_gen_kwargs = dict(
             input_ids=input_ids,
             eos_token_id=speech_end_id,
-            streamer=self.streamer,
+            streamer=self._streamer,
             min_new_tokens=self.args.lm_gen_min_new_tokens,
             max_new_tokens=self.args.lm_gen_max_new_tokens,
             top_k=self.args.lm_gen_top_k,
@@ -145,7 +145,9 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
         """
         prompt = session.ctx.state["prompt"]  # tts text
         speech_ids_prefix_str = ""
-        if "vq_code_prompt" in session.ctx.state:
+        if "vq_code_prompt" in session.ctx.state and isinstance(
+            session.ctx.state["vq_code_prompt"], torch.Tensor
+        ):
             vq_code_prompt = session.ctx.state[
                 "vq_code_prompt"
             ]  # ref audio vq code tokens tensor shape (1, 1, T)
@@ -168,12 +170,13 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
         input_ids = self._tokenizer.apply_chat_template(
             chat, tokenize=True, return_tensors="pt", continue_final_message=True
         )
-        input_ids = input_ids.to("cuda")
+        input_ids = input_ids.to(self.args.lm_device)
         speech_end_id = self._tokenizer.convert_tokens_to_ids("<|SPEECH_GENERATION_END|>")
         generation_kwargs = dict(
             input_ids=input_ids,
             eos_token_id=speech_end_id,
             streamer=self._streamer,
+            max_length=2048,  # We trained our model with a max length of 2048
             min_new_tokens=kwargs["min_new_tokens"]
             if "min_new_tokens" in kwargs
             else self.args.lm_gen_min_new_tokens,
@@ -190,6 +193,7 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
             if "repetition_penalty" in kwargs
             else self.args.lm_gen_repetition_penalty,
         )
+        #print("generation_kwargs", generation_kwargs)
         thread = Thread(target=self._model.generate, kwargs=generation_kwargs)
         thread.start()
 

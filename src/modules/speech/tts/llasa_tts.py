@@ -62,7 +62,7 @@ class LlasaTTS(BaseTTS, ITts):
 
         if input_path.suffix == ".npy":
             self.ref_encode_codebook_indices = torch.from_numpy(np.load(input_path)).to(
-                self.args.device
+                self.args.lm_args.lm_device
             )
             md5_hash = file_md5_hash(ref_audio_path)
             self.voices[md5_hash] = self.ref_encode_codebook_indices
@@ -79,7 +79,7 @@ class LlasaTTS(BaseTTS, ITts):
             # only 16khz speech support!
             audio = torchaudio.functional.resample(audio, sr, RATE)
 
-        audios = audio[None].to(self.args.device)
+        audios = audio[None].to(self.args.xcode2_args.device)
         logging.info(f"Loaded audio with {audios.shape[2] / RATE:.2f} seconds")
 
         indices = self.codec_model.encode_code(audios[0][0])
@@ -121,6 +121,7 @@ class LlasaTTS(BaseTTS, ITts):
         speech_vq_tokens = self.lm_model.generate(session, **kwargs)
 
         for tokens in speech_vq_tokens:
-            # Decode the speech tokens to speech waveform
-            gen_wav = self.codec_model.decode_code(tokens)  # shape [T]
-            yield gen_wav.float().detach().cpu().numpy().tobytes()
+            if tokens.shape[0] > 0:
+                # Decode the speech tokens to speech waveform
+                gen_wav = self.codec_model.decode_code(tokens[None, None, :])  # shape [T]
+                yield gen_wav.float().detach().cpu().numpy().tobytes()

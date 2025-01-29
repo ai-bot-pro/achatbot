@@ -16,6 +16,15 @@ python -m unittest test.modules.speech.tts.test_llasa.TestLlasaTTS.test_set_voic
 python -m unittest test.modules.speech.tts.test_llasa.TestLlasaTTS.test_synthesize
 python -m unittest test.modules.speech.tts.test_llasa.TestLlasaTTS.test_synthesize_speak
 
+# ref audio 
+LLASA_REF_AUDIO_PATH=./test/audio_files/asr_example_zh.wav \
+    LLASA_PROMPT_TEXT="欢迎大家来体验达摩院推出的语音识别模型" \
+    python -m unittest test.modules.speech.tts.test_llasa.TestLlasaTTS.test_synthesize
+
+LLASA_REF_AUDIO_PATH=./test/audio_files/asr_example_zh.wav \
+    LLASA_PROMPT_TEXT="欢迎大家来体验达摩院推出的语音识别模型" \
+    python -m unittest test.modules.speech.tts.test_llasa.TestLlasaTTS.test_synthesize_speak
+
 """
 
 
