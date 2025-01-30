@@ -224,12 +224,12 @@ class TTSEnvInit:
                 lm_gen_repetition_penalty=float(
                     os.getenv("LLASA_LM_GEN_REPETITION_PENALTY", "1.1")
                 ),
-            ),
+            ).__dict__,
             xcode2_args=CodecArgs(
                 model_dir=os.getenv(
                     "XCODE2_MODEL_PATH", os.path.join(MODELS_DIR, "HKUSTAudio/xcodec2")
                 ),
-            ),
+            ).__dict__,
             ref_audio_file_path=os.getenv("LLASA_REF_AUDIO_PATH", ""),
             prompt_text=os.getenv("LLASA_PROMPT_TEXT", ""),
             is_save=bool(os.getenv("LLASA_IS_SAVE", "")),

@@ -131,6 +131,11 @@ class TransformersLMArgs:
         metadata={"help": "The BitsAndBytes quantization type, default int4."},
     )
 
+    def to_dict(self) -> dict:
+        return {
+            field.name: getattr(self, field.name) for field in self.__dataclass_fields__.values()
+        }
+
 
 @dataclass
 class TransformersSpeechLMArgs(TransformersLMArgs):
@@ -138,7 +143,5 @@ class TransformersSpeechLMArgs(TransformersLMArgs):
     text+speech lm args
     """
 
-    ref_vq_code_prompt_tokens: torch.Tensor = field(
-        default=None,
-        metadata={"help": "The prompt tokens for reference vq code."},
-    )
+    def to_dict(self) -> dict:
+        return super().to_dict()

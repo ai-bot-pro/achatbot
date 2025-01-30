@@ -20,19 +20,19 @@ from src.common.utils.helper import file_md5_hash
 from src.common.types import PYAUDIO_PAFLOAT32, RATE
 from src.common.interface import ITts
 from src.common.session import Session
+from src.types.codec import CodecArgs
 from src.types.speech.tts.llasa import LlasaTTSArgs
+from src.types.llm.transformers import TransformersSpeechLMArgs
 from .base import BaseTTS
 
 
 class LlasaTTS(BaseTTS, ITts):
     TAG = "tts_llasa"
 
-    @classmethod
-    def get_args(cls, **kwargs) -> dict:
-        return {**LlasaTTSArgs().__dict__, **kwargs}
-
     def __init__(self, **kwargs) -> None:
         self.args = LlasaTTSArgs(**kwargs)
+        self.args.lm_args = TransformersSpeechLMArgs(**self.args.lm_args)
+        self.args.xcode2_args = CodecArgs(**self.args.xcode2_args)
         self.lm_model = TransformersManualSpeechLlasa(**self.args.lm_args.__dict__)
         self.codec_model = XCodec2Codec(**self.args.xcode2_args.__dict__)
 

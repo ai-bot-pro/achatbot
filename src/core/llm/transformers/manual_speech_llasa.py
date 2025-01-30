@@ -37,7 +37,7 @@ def extract_speech_ids(speech_tokens_str):
             num = int(num_str)
             speech_ids.append(num)
         else:
-            print(f"Unexpected token: {token_str}")
+            logging.error(f"Unexpected token: {token_str}")
     return speech_ids
 
 
@@ -193,14 +193,14 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
             if "repetition_penalty" in kwargs
             else self.args.lm_gen_repetition_penalty,
         )
-        #print("generation_kwargs", generation_kwargs)
+        # print("generation_kwargs", generation_kwargs)
         thread = Thread(target=self._model.generate, kwargs=generation_kwargs)
         thread.start()
 
         i, j = 0, 0
         generated_ids = []
         for token_id in self._streamer:
-            print(token_id, end=",", flush=True)
+            # print(token_id, end=",", flush=True)
             generated_ids.append(token_id)
             i += 1
 
