@@ -145,7 +145,6 @@ class TransformersManualVoicGLM(TransformersBaseLLM):
     def generate(self, session: Session):
         """
         (text/speech prompt) input text + speech tokens -> glm -> (text/speech) output tokens
-        TODO: parallel+batch generation (text | audio)
         """
         prompt = session.ctx.state["prompt"]
         inputs = self._tokenizer([prompt], return_tensors="pt").to(self._model.device)

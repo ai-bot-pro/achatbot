@@ -37,6 +37,8 @@ class TTSEnvInit:
             from . import kokoro_onnx_tts
         elif "tts_fishspeech" == tag:
             from . import fish_speech_tts
+        elif "tts_llasa" == tag:
+            from . import llasa_tts
         # elif "tts_openai" in tag:
         # from . import openai_tts
 
@@ -44,12 +46,10 @@ class TTSEnvInit:
         return engine
 
     @staticmethod
-    def initTTSEngine(select_tag=None) -> interface.ITts | EngineClass:
+    def initTTSEngine(tag=None, **kwargs) -> interface.ITts | EngineClass:
         # tts
-        tag = os.getenv("TTS_TAG", "tts_edge")
-        if select_tag:
-            tag = select_tag
-        kwargs = TTSEnvInit.map_config_func[tag]()
+        tag = tag or os.getenv("TTS_TAG", "tts_edge")
+        kwargs = kwargs or TTSEnvInit.map_config_func[tag]()
         engine = TTSEnvInit.getEngine(tag, **kwargs)
         logging.info(f"initTTSEngine: {tag}, {engine}")
         return engine
@@ -205,12 +205,47 @@ class TTSEnvInit:
         kwargs["speed_increase"] = float(os.getenv("SPEED_INCREASE", "1.5"))
         return kwargs
 
+    @staticmethod
+    def get_tts_llasa_args() -> dict:
+        from src.types.speech.tts.llasa import LlasaTTSArgs
+        from src.types.llm.transformers import TransformersSpeechLMArgs
+        from src.types.codec import CodecArgs
+
+        kwargs = LlasaTTSArgs(
+            lm_args=TransformersSpeechLMArgs(
+                lm_model_name_or_path=os.getenv(
+                    "LLASA_LM_MODEL_PATH", os.path.join(MODELS_DIR, "HKUSTAudio/Llasa-1B")
+                ),
+                lm_device=os.getenv("LLASA_LM_DEVICE", None),
+                warnup_steps=int(os.getenv("LLASA_WARNUP_STEPS", "0")),
+                lm_gen_top_k=int(os.getenv("LLASA_LM_GEN_TOP_K", "10")),
+                lm_gen_top_p=float(os.getenv("LLASA_LM_GEN_TOP_P", "1.0")),
+                lm_gen_temperature=float(os.getenv("LLASA_LM_GEN_TEMPERATURE", "0.8")),
+                lm_gen_repetition_penalty=float(
+                    os.getenv("LLASA_LM_GEN_REPETITION_PENALTY", "1.1")
+                ),
+            ).__dict__,
+            xcode2_args=CodecArgs(
+                model_dir=os.getenv(
+                    "XCODE2_MODEL_PATH", os.path.join(MODELS_DIR, "HKUSTAudio/xcodec2")
+                ),
+            ).__dict__,
+            ref_audio_file_path=os.getenv("LLASA_REF_AUDIO_PATH", ""),
+            prompt_text=os.getenv("LLASA_PROMPT_TEXT", ""),
+            is_save=bool(os.getenv("LLASA_IS_SAVE", "")),
+            output_codebook_indices_dir=os.getenv(
+                "LLASA_CODEBOOK_INDICES_DIR", os.path.join(MODELS_DIR, "llasa_codebook_indices")
+            ),
+        ).__dict__
+        return kwargs
+
     # TAG : config
     map_config_func = {
         "tts_coqui": get_tts_coqui_args,
         "tts_cosy_voice": get_tts_cosy_voice_args,
         "tts_cosy_voice2": get_tts_cosy_voice_args,
         "tts_fishspeech": get_tts_fishspeech_args,
+        "tts_llasa": get_tts_llasa_args,
         "tts_f5": get_tts_f5_args,
         "tts_openvoicev2": get_tts_openvoicev2_args,
         "tts_kokoro": get_tts_kokoro_args,

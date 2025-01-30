@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
@@ -163,3 +164,11 @@ class BaseTTS(EngineClass, ITts):
 
     def get_voices(self):
         return []
+
+    def load_ref_voices(self):
+        """
+        lazy load reference voices
+        """
+        voices = {}
+        return voices
+
