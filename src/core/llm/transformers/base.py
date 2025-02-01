@@ -77,7 +77,7 @@ class TransformersBaseLLM(BaseLLM, ILlm):
     def warmup(self):
         raise NotImplementedError("must be implemented in the child class")
 
-    def generate(self, session: Session):
+    def generate(self, session: Session, **kwargs):
         r"""
         Instead of using model.chat(), we directly use model.generate()
         But you need to use tokenizer.apply_chat_template() to format your inputs as shown below

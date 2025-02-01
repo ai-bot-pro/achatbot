@@ -1,5 +1,7 @@
 from dataclasses import dataclass, field
 
+import torch
+
 
 @dataclass
 class TransformersLMArgs:
@@ -102,6 +104,10 @@ class TransformersLMArgs:
             "help": "Controls the token repetition pealty.  no repetition Default is 1.0, >1.0: low repetition, <1.0: high repetition"
         },
     )
+    lm_tokenizer_decode_batch_size: int = field(
+        default=60,
+        metadata={"help": "Number of tokens to batch decode at a time"},
+    )
     chat_history_size: int | None = field(
         default=None,
         metadata={
@@ -124,3 +130,18 @@ class TransformersLMArgs:
         default="int4",
         metadata={"help": "The BitsAndBytes quantization type, default int4."},
     )
+
+    def to_dict(self) -> dict:
+        return {
+            field.name: getattr(self, field.name) for field in self.__dataclass_fields__.values()
+        }
+
+
+@dataclass
+class TransformersSpeechLMArgs(TransformersLMArgs):
+    """
+    text+speech lm args
+    """
+
+    def to_dict(self) -> dict:
+        return super().to_dict()
