@@ -17,6 +17,8 @@ from src.common.types import ASSETS_DIR, PYAUDIO_PAINT16, PYAUDIO_PAFLOAT32
 from src.types.speech.tts.f5 import F5TTSArgs
 from .base import BaseTTS
 
+load_dotenv(override=True)
+
 try:
     cur_dir = os.path.dirname(__file__)
     if bool(os.getenv("ACHATBOT_PKG", "")):
@@ -37,9 +39,6 @@ try:
 except ModuleNotFoundError as e:
     logging.error("In order to use f5-tts, you need to `pip install achatbot[tts_f5]`.")
     raise Exception(f"Missing module: {e}")
-
-
-load_dotenv(override=True)
 
 
 class F5TTS(BaseTTS, ITts):
