@@ -6,6 +6,7 @@ from threading import Thread
 from dotenv import load_dotenv
 
 from PIL import Image
+import numpy as np
 
 from src.common.session import Session
 from src.common.utils.helper import get_device
@@ -179,7 +180,7 @@ class TransformersManualVisionJanusPro(TransformersManualJanusPro):
 
 class TransformersManualGenImageJanusPro(TransformersManualJanusPro):
     r"""
-    Text-to-Image Generation
+    Text-to-Image Generation image(384*384)
     https://github.com/deepseek-ai/Janus
 
     vl_chat_processor.tokenizer.encode + AR LM model + gen_vision_model.decode
@@ -190,6 +191,107 @@ class TransformersManualGenImageJanusPro(TransformersManualJanusPro):
     def warmup(self):
         pass
 
+    def unpack(self, dec, width, height, parallel_size=5):
+        dec = dec.to(torch.float32).cpu().numpy().transpose(0, 2, 3, 1)
+        dec = np.clip((dec + 1) / 2 * 255, 0, 255)
+
+        visual_img = np.zeros((parallel_size, width, height, 3), dtype=np.uint8)
+        visual_img[:, :, :] = dec
+
+        return visual_img
+
+    @torch.no_grad()
+    def _generate(
+        self,
+        input_ids,
+        width,
+        height,
+        temperature: float = 1,
+        parallel_size: int = 5,
+        cfg_weight: float = 5,
+        image_token_num_per_image: int = 576,
+        patch_size: int = 16,
+    ):
+        torch.cuda.empty_cache()
+        tokens = torch.zeros((parallel_size * 2, len(input_ids)), dtype=torch.int).to(
+            self._model.device
+        )
+        for i in range(parallel_size * 2):
+            tokens[i, :] = input_ids
+            if i % 2 != 0:
+                tokens[i, 1:-1] = self.vl_chat_processor.pad_id
+        inputs_embeds = self._model.language_model.get_input_embeddings()(tokens)
+        generated_tokens = torch.zeros(
+            (parallel_size, image_token_num_per_image), dtype=torch.int
+        ).to(self._model.device)
+
+        pkv = None
+        for i in range(image_token_num_per_image):
+            outputs = self._model.language_model.model(
+                inputs_embeds=inputs_embeds, use_cache=True, past_key_values=pkv
+            )
+            pkv = outputs.past_key_values
+            hidden_states = outputs.last_hidden_state
+            logits = self._model.gen_head(hidden_states[:, -1, :])
+            logit_cond = logits[0::2, :]
+            logit_uncond = logits[1::2, :]
+            logits = logit_uncond + cfg_weight * (logit_cond - logit_uncond)
+            probs = torch.softmax(logits / temperature, dim=-1)
+            next_token = torch.multinomial(probs, num_samples=1)
+            generated_tokens[:, i] = next_token.squeeze(dim=-1)
+            next_token = torch.cat(
+                [next_token.unsqueeze(dim=1), next_token.unsqueeze(dim=1)], dim=1
+            ).view(-1)
+            img_embeds = self._model.prepare_gen_img_embeds(next_token)
+            inputs_embeds = img_embeds.unsqueeze(dim=1)
+        patches = self._model.gen_vision_model.decode_code(
+            generated_tokens.to(dtype=torch.int),
+            shape=[parallel_size, 8, width // patch_size, height // patch_size],
+        )
+
+        return generated_tokens.to(dtype=torch.int), patches
+
+    @torch.no_grad()
+    def _gen_image(self, prompt, guidance):
+        width = 384
+        height = 384
+        parallel_size = 5
+
+        messages = [
+            {"role": "User", "content": prompt},
+            {"role": "Assistant", "content": ""},
+        ]
+        text = self.vl_chat_processor.apply_sft_template_for_multi_turn_prompts(
+            conversations=messages, sft_format=self.vl_chat_processor.sft_format, system_prompt=""
+        )
+        text = text + self.vl_chat_processor.image_start_tag
+        input_ids = torch.LongTensor(self._tokenizer.encode(text))
+        _, patches = self._generate(
+            input_ids,
+            width // 16 * 16,
+            height // 16 * 16,
+            cfg_weight=guidance,
+            parallel_size=parallel_size,
+        )
+        images = self.unpack(patches, width // 16 * 16, height // 16 * 16)
+
+        return [
+            Image.fromarray(images[i]).resize((1024, 1024), Image.LANCZOS)
+            for i in range(parallel_size)
+        ]
+
     @torch.inference_mode()
-    def generate(self, session: Session):
-        pass
+    def generate(self, session: Session, **kwargs):
+        prompt = session.ctx.state["text"]
+        if "cuda" in str(self._model.device):
+            torch.cuda.empty_cache()
+        seed = kwargs.get("seed", self.args.lm_gen_seed)
+        set_all_random_seed(seed)
+
+        guidance = kwargs.get("guidance", 5.0)
+        images = self._gen_image(prompt, guidance)
+        for img in images:
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            buf.seek(0)
+            yield buf.read()
