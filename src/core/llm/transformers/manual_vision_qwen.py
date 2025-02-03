@@ -106,7 +106,11 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
             max_new_tokens=self.args.lm_gen_max_new_tokens,
         )
 
-        self._warmup(target=self._model.generate, kwargs=warmup_gen_kwargs)
+        self._warmup(
+            target=self._model.generate,
+            kwargs=warmup_gen_kwargs,
+            streamer=streamer,
+        )
 
     def generate(self, session: Session):
         prompt = session.ctx.state["prompt"]

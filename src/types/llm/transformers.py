@@ -62,6 +62,10 @@ class TransformersLMArgs:
             "help": "The initial chat prompt to establish context for the language model. Default is 'You are a helpful AI assistant.'"
         },
     )
+    lm_gen_seed: int = field(
+        default=42,
+        metadata={"help": "The seed to use for the language model. Default is 42."},
+    )
     lm_gen_max_new_tokens: int = field(
         default=1024,
         metadata={
