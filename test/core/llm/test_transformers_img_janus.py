@@ -5,6 +5,7 @@ from time import perf_counter
 import unittest
 from dotenv import load_dotenv
 from PIL import Image
+import numpy as np
 
 from src.core.llm.transformers.base import TransformersBaseLLM
 from src.common.logger import Logger
@@ -16,17 +17,15 @@ load_dotenv(override=True)
 
 r"""
 LLM_DEVICE=cuda LLM_MODEL_NAME_OR_PATH=./models/deepseek-ai/Janus-Pro-1B \
-    python -m unittest test.core.llm.test_transformers_v_janus.TestTransformersVJanus.test_chat_completion_prompts
+    python -m unittest test.core.llm.test_transformers_img_janus.TestTransformersImgJanus.test_gen_imgs
 """
 
 
-class TestTransformersVJanus(unittest.TestCase):
+class TestTransformersImgJanus(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        img_file = os.path.join(TEST_DIR, "img_files", "03-Confusing-Pictures.jpg")
-        cls.img_file = os.getenv("IMG_FILE", img_file)
-        cls.prompt = os.getenv("PROMPT", "描述下图片中的内容")
-        cls.llm_tag = os.getenv("LLM_TAG", "llm_transformers_manual_vision_janus")
+        cls.prompt = os.getenv("PROMPT", "超人大战钢铁侠")
+        cls.llm_tag = os.getenv("LLM_TAG", "llm_transformers_manual_image_janus")
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
@@ -43,27 +42,31 @@ class TestTransformersVJanus(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_chat_completion_prompts(self):
+    def test_gen_imgs(self):
         prompt_cases = [
-            [Image.open(self.img_file), self.prompt],
+            self.prompt,
         ]
 
+        os.makedirs("generated_samples", exist_ok=True)
+        i = 0
         for prompt in prompt_cases:
             print("\n--------test prompt: ", prompt, "--------\n")
             with self.subTest(prompt=prompt):
                 self.session.ctx.state["prompt"] = prompt
                 logging.debug(self.session.ctx)
                 logging.debug(self.engine.args)
-                iter = self.engine.chat_completion(self.session)
+                iter = self.engine.generate(self.session)
 
                 generated_text = ""
                 times = []
                 start_time = perf_counter()
+                j = 0
                 for item in iter:
-                    # print(item)
-                    generated_text += item
+                    save_path = os.path.join("generated_samples", f"pro_img_{i}_{j}.jpg")
+                    Image.fromarray(np.frombuffer(item)).save(save_path)
                     times.append(perf_counter() - start_time)
                     start_time = perf_counter()
-                logging.debug(f"chat_completion TTFT time: {times[0]} s")
-                logging.debug(f"generated text: {generated_text}")
+                    j += 1
+                logging.debug(f"generate first image time: {times[0]} s")
                 self.assertGreater(len(generated_text), 0)
+                i += 1
