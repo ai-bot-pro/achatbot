@@ -129,6 +129,7 @@ class TransformersManualVisionJanusPro(TransformersManualJanusPro):
 
     @torch.inference_mode()
     def generate(self, session: Session, **kwargs):
+        logging.debug(f"kwargs: {kwargs}")
         if "cuda" in str(self._model.device):
             torch.cuda.empty_cache()
         seed = kwargs.get("seed", self.args.lm_gen_seed)
@@ -282,7 +283,12 @@ class TransformersManualGenImageJanusPro(TransformersManualJanusPro):
             cfg_weight=guidance,
             parallel_size=parallel_size,
         )
-        images = self.unpack(patches, width // 16 * 16, height // 16 * 16)
+        images = self.unpack(
+            patches,
+            width // 16 * 16,
+            height // 16 * 16,
+            parallel_size=parallel_size,
+        )
 
         return [
             Image.fromarray(images[i]).resize((1024, 1024), Image.LANCZOS)
@@ -291,6 +297,7 @@ class TransformersManualGenImageJanusPro(TransformersManualJanusPro):
 
     @torch.inference_mode()
     def generate(self, session: Session, **kwargs):
+        logging.debug(f"kwargs: {kwargs}")
         prompt = session.ctx.state["prompt"]
         if "cuda" in str(self._model.device):
             torch.cuda.empty_cache()
