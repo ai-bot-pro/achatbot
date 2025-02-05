@@ -149,3 +149,18 @@ class TransformersSpeechLMArgs(TransformersLMArgs):
 
     def to_dict(self) -> dict:
         return super().to_dict()
+
+
+@dataclass
+class TransformersImageLMArgs(TransformersLMArgs):
+    """
+    text+Image lm args
+    """
+
+    vae_model_name_or_path: str = field(
+        default="stabilityai/sdxl-vae",
+        metadata={"help": "The diffusion model to use. Default is 'stabilityai/sdxl-vae'."},
+    )
+
+    def to_dict(self) -> dict:
+        return super().to_dict()

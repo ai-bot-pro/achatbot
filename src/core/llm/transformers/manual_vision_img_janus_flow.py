@@ -24,9 +24,9 @@ try:
     else:
         sys.path.insert(1, os.path.join(cur_dir, "../../../../deps/Janus"))
     import torch
-    from transformers import AutoModelForCausalLM, AutoConfig, TextIteratorStreamer
-    from deps.Janus.janus.models import MultiModalityCausalLM, VLChatProcessor
-    from deps.Janus.janus.utils.io import load_pil_images
+    from transformers import AutoConfig, TextIteratorStreamer
+    from deps.Janus.janus.janusflow.models import MultiModalityCausalLM, VLChatProcessor
+    from diffusers.models import AutoencoderKL
 except ModuleNotFoundError as e:
     logging.error(
         "In order to use DeepSeek janus, you need to `pip install achatbot[llm_transformers_manual_vision_img_janus]`."
@@ -34,7 +34,7 @@ except ModuleNotFoundError as e:
     raise Exception(f"Missing module: {e}")
 
 
-class TransformersManualJanusPro(TransformersBaseLLM):
+class TransformersManualJanusFlow(TransformersBaseLLM):
     r"""
     base class for Multimodal Understanding + Text-to-Image Generation
     https://github.com/deepseek-ai/Janus
@@ -47,12 +47,11 @@ class TransformersManualJanusPro(TransformersBaseLLM):
         self.args.lm_device = self.args.lm_device or get_device()
         logging.info("TransformersLMArgs: %s", self.args)
 
-        # https://huggingface.co/deepseek-ai/Janus-Pro-1B/blob/main/config.json
-        # https://huggingface.co/deepseek-ai/Janus-Pro-7B/blob/main/config.json
+        # https://huggingface.co/deepseek-ai/JanusFlow-1.3B/blob/main/config.json
         config = AutoConfig.from_pretrained(self.args.lm_model_name_or_path)
         language_config = config.language_config
         language_config._attn_implementation = "eager"
-        self._model: MultiModalityCausalLM = AutoModelForCausalLM.from_pretrained(
+        self._model: MultiModalityCausalLM = MultiModalityCausalLM.from_pretrained(
             self.args.lm_model_name_or_path,
             language_config=language_config,
             trust_remote_code=True,
@@ -77,7 +76,7 @@ class TransformersManualJanusPro(TransformersBaseLLM):
         self.warmup()
 
 
-class TransformersManualVisionJanusPro(TransformersManualJanusPro):
+class TransformersManualVisionJanusFlow(TransformersManualJanusFlow):
     r"""
     Multimodal Understanding
     https://github.com/deepseek-ai/Janus
@@ -85,7 +84,7 @@ class TransformersManualVisionJanusPro(TransformersManualJanusPro):
     vl_chat_processor.tokenizer.encode + AR LM model + vl_chat_processor.tokenizer.decode
     """
 
-    TAG = "llm_transformers_manual_vision_janus"
+    TAG = "llm_transformers_manual_vision_janus_flow"
 
     def warmup(self):
         dummy_input_text = self.args.warnup_prompt
@@ -194,112 +193,114 @@ class TransformersManualVisionJanusPro(TransformersManualJanusPro):
         self._chat_history.append({"role": "Assistant", "content": generated_text})
 
 
-class TransformersManualGenImageJanusPro(TransformersManualJanusPro):
+class TransformersManualGenImageJanusFlow(TransformersManualJanusFlow):
     r"""
     Text-to-Image Generation image(384*384)
     https://github.com/deepseek-ai/Janus
 
-    vl_chat_processor.tokenizer.encode + AR LM model + gen_vision_model.decode
+    vl_chat_processor.tokenizer.encode + AR LM model + (vision_gen_dec_model + sdxl vae)
     """
 
-    TAG = "llm_transformers_manual_image_janus"
+    TAG = "llm_transformers_manual_image_janus_flow"
+
+    def __init__(self, **args) -> None:
+        vae_model_name_or_path = "stabilityai/sdxl-vae"
+        if args.get("vae_model_name_or_path"):
+            vae_model_name_or_path = args.pop("vae_model_name_or_path")
+
+        super().__init__(**args)
+        self.vae = AutoencoderKL.from_pretrained(vae_model_name_or_path)
+        self.vae = self.vae.to(
+            self.args.lm_device,
+            dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float16,
+        ).eval()
 
     def warmup(self):
         pass
 
-    def unpack(self, dec, width, height, parallel_size=1):
-        dec = dec.to(torch.float32).cpu().numpy().transpose(0, 2, 3, 1)
-        dec = np.clip((dec + 1) / 2 * 255, 0, 255)
-
-        visual_img = np.zeros((parallel_size, width, height, 3), dtype=np.uint8)
-        visual_img[:, :, :] = dec
-
-        return visual_img
-
     @torch.no_grad()
-    def _generate(
+    def _gen_image(
         self,
-        input_ids,
-        width,
-        height,
-        temperature: float = 1,
-        parallel_size: int = 5,
-        cfg_weight: float = 5,
-        image_token_num_per_image: int = 576,
-        patch_size: int = 16,
+        prompt: str,
+        cfg_weight: float = 5.0,
+        num_inference_steps: int = 30,
+        batch_size: int = 5,
     ):
-        tokens = torch.zeros((parallel_size * 2, len(input_ids)), dtype=torch.int).to(
+        input_ids = self._tokenizer.encode(prompt)
+        input_ids = torch.LongTensor(input_ids)
+
+        tokens = torch.stack([input_ids] * 2 * batch_size).cuda()
+        tokens[batch_size:, 1:] = self.vl_chat_processor.pad_id
+        inputs_embeds = self._model.language_model.get_input_embeddings()(tokens)
+
+        # we remove the last <bog> token and replace it with t_emb later
+        inputs_embeds = inputs_embeds[:, :-1, :]
+
+        # generate with rectified flow ode
+        # step 1: encode with vision_gen_enc
+        z = torch.randn((batch_size, 4, 48, 48), dtype=torch.bfloat16).cuda()
+
+        dt = 1.0 / num_inference_steps
+        dt = torch.zeros_like(z).cuda().to(torch.bfloat16) + dt
+
+        # step 2: run ode
+        attention_mask = torch.ones((2 * batch_size, inputs_embeds.shape[1] + 577)).to(
             self._model.device
         )
-        for i in range(parallel_size * 2):
-            tokens[i, :] = input_ids
-            if i % 2 != 0:
-                tokens[i, 1:-1] = self.vl_chat_processor.pad_id
-        inputs_embeds = self._model.language_model.get_input_embeddings()(tokens)
-        generated_tokens = torch.zeros(
-            (parallel_size, image_token_num_per_image), dtype=torch.int
-        ).to(self._model.device)
+        attention_mask[batch_size:, 1 : inputs_embeds.shape[1]] = 0
+        attention_mask = attention_mask.int()
+        for step in range(num_inference_steps):
+            # prepare inputs for the llm
+            z_input = torch.cat([z, z], dim=0)  # for cfg
+            t = step / num_inference_steps * 1000.0
+            t = torch.tensor([t] * z_input.shape[0]).to(dt)
+            z_enc = self._model.vision_gen_enc_model(z_input, t)
+            z_emb, t_emb, hs = z_enc[0], z_enc[1], z_enc[2]
+            z_emb = z_emb.view(z_emb.shape[0], z_emb.shape[1], -1).permute(0, 2, 1)
+            z_emb = self._model.vision_gen_enc_aligner(z_emb)
+            llm_emb = torch.cat([inputs_embeds, t_emb.unsqueeze(1), z_emb], dim=1)
 
-        pkv = None
-        for i in range(image_token_num_per_image):
-            outputs = self._model.language_model.model(
-                inputs_embeds=inputs_embeds, use_cache=True, past_key_values=pkv
-            )
-            pkv = outputs.past_key_values
+            # input to the llm
+            # we apply attention mask for CFG: 1 for tokens that are not masked, 0 for tokens that are masked.
+            if step == 0:
+                outputs = self._model.language_model.model(
+                    inputs_embeds=llm_emb,
+                    use_cache=True,
+                    attention_mask=attention_mask,
+                    past_key_values=None,
+                )
+                past_key_values = []
+                for kv_cache in past_key_values:
+                    k, v = kv_cache[0], kv_cache[1]
+                    past_key_values.append(
+                        (k[:, :, : inputs_embeds.shape[1], :], v[:, :, : inputs_embeds.shape[1], :])
+                    )
+                past_key_values = tuple(past_key_values)
+            else:
+                outputs = self._model.language_model.model(
+                    inputs_embeds=llm_emb,
+                    use_cache=True,
+                    attention_mask=attention_mask,
+                    past_key_values=past_key_values,
+                )
             hidden_states = outputs.last_hidden_state
-            logits = self._model.gen_head(hidden_states[:, -1, :])
-            logit_cond = logits[0::2, :]
-            logit_uncond = logits[1::2, :]
-            logits = logit_uncond + cfg_weight * (logit_cond - logit_uncond)
-            probs = torch.softmax(logits / temperature, dim=-1)
-            next_token = torch.multinomial(probs, num_samples=1)
-            generated_tokens[:, i] = next_token.squeeze(dim=-1)
-            next_token = torch.cat(
-                [next_token.unsqueeze(dim=1), next_token.unsqueeze(dim=1)], dim=1
-            ).view(-1)
-            img_embeds = self._model.prepare_gen_img_embeds(next_token)
-            inputs_embeds = img_embeds.unsqueeze(dim=1)
-        patches = self._model.gen_vision_model.decode_code(
-            generated_tokens.to(dtype=torch.int),
-            shape=[parallel_size, 8, width // patch_size, height // patch_size],
-        )
 
-        return generated_tokens.to(dtype=torch.int), patches
+            # transform hidden_states back to v
+            hidden_states = self._model.vision_gen_dec_aligner(
+                self._model.vision_gen_dec_aligner_norm(hidden_states[:, -576:, :])
+            )
+            hidden_states = hidden_states.reshape(z_emb.shape[0], 24, 24, 768).permute(0, 3, 1, 2)
+            v = self._model.vision_gen_dec_model(hidden_states, hs, t_emb)
+            v_cond, v_uncond = torch.chunk(v, 2)
+            v = cfg_weight * v_cond - (cfg_weight - 1.0) * v_uncond
+            z = z + dt * v
 
-    @torch.no_grad()
-    def _gen_image(self, prompt, guidance, parallel_size=1):
-        width = 384
-        height = 384
+        # step 3: decode with vision_gen_dec and sdxl vae
+        decoded_image = self.vae.decode(z / self.vae.config.scaling_factor).sample
+        # unpack
+        decoded_image = decoded_image.clip_(-1.0, 1.0) * 0.5 + 0.5
 
-        messages = [
-            {"role": "User", "content": prompt},
-            {"role": "Assistant", "content": ""},
-        ]
-        text = self.vl_chat_processor.apply_sft_template_for_multi_turn_prompts(
-            conversations=messages,
-            sft_format=self.vl_chat_processor.sft_format,
-            system_prompt="",
-        )
-        text = text + self.vl_chat_processor.image_start_tag
-        input_ids = torch.LongTensor(self._tokenizer.encode(text))
-        _, patches = self._generate(
-            input_ids,
-            width // 16 * 16,
-            height // 16 * 16,
-            cfg_weight=guidance,
-            parallel_size=parallel_size,
-        )
-        images = self.unpack(
-            patches,
-            width // 16 * 16,
-            height // 16 * 16,
-            parallel_size=parallel_size,
-        )
-
-        return [
-            Image.fromarray(images[i]).resize((1024, 1024), Image.LANCZOS)
-            for i in range(parallel_size)
-        ]
+        return decoded_image.detach().cpu().numpy()
 
     @torch.inference_mode()
     def generate(self, session: Session, **kwargs):
@@ -311,23 +312,32 @@ class TransformersManualGenImageJanusPro(TransformersManualJanusPro):
         set_all_random_seed(seed)
 
         guidance = kwargs.get("guidance", 5.0)
-        parallel_size = kwargs.get("parallel_size", 1)
-        images = self._gen_image(prompt, guidance, parallel_size)
-        for img in images:
-            buf = io.BytesIO()
-            img.save(buf, format="PNG")
-            buf.seek(0)
-            yield buf.read()
+        num_inference_steps = kwargs.get("num_inference_steps", 30)
+        batch_size = kwargs.get("batch_size", 5)
+        np_img = self._gen_image(
+            prompt,
+            cfg_weight=guidance,
+            num_inference_steps=num_inference_steps,
+            batch_size=batch_size,
+        )
+
+        # numpy array -> PIL Image
+        img = Image.fromarray((np_img * 255).astype(np.uint8).transpose(1, 2, 0))
+        # PIL Image -> bytes
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        buf.seek(0)
+        yield buf.read()
 
 
-class TransformersManualVisionGenImageJanusPro(
-    TransformersManualGenImageJanusPro, TransformersManualVisionJanusPro
+class TransformersManualVisionGenImageJanusFlow(
+    TransformersManualGenImageJanusFlow, TransformersManualVisionJanusFlow
 ):
     r"""
     Multimodal Understanding + Text-to-Image Generation
     https://github.com/deepseek-ai/Janus
 
-    vl_chat_processor.tokenizer + AR LM model + gen_vision_model
+    vl_chat_processor.tokenizer.encode + AR LM model + (vision_gen_dec_model + sdxl vae)
     """
 
     def generate(self, session: Session, **kwargs):
@@ -338,6 +348,6 @@ class TransformersManualVisionGenImageJanusPro(
         to distinguish based on parameters
         """
         if isinstance(session.ctx.state.get("prompt"), list):
-            return TransformersManualVisionJanusPro.generate(self, session, **kwargs)
+            return TransformersManualVisionJanusFlow.generate(self, session, **kwargs)
         else:
-            return TransformersManualGenImageJanusPro.generate(self, session, **kwargs)
+            return TransformersManualGenImageJanusFlow.generate(self, session, **kwargs)
