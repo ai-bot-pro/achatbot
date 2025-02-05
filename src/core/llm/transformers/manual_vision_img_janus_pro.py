@@ -291,7 +291,7 @@ class TransformersManualGenImageJanusPro(TransformersManualJanusPro):
 
     @torch.inference_mode()
     def generate(self, session: Session, **kwargs):
-        prompt = session.ctx.state["text"]
+        prompt = session.ctx.state["prompt"]
         if "cuda" in str(self._model.device):
             torch.cuda.empty_cache()
         seed = kwargs.get("seed", self.args.lm_gen_seed)

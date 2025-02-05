@@ -26,6 +26,8 @@ class LLMEnvInit:
             from .transformers import manual_vision_molmo
         elif "llm_transformers_manual_vision_janus" in tag:
             from .transformers import manual_vision_img_janus_pro
+        elif "llm_transformers_manual_image_janus" in tag:
+            from .transformers import manual_vision_img_janus_pro
         elif "llm_transformers_manual" in tag:
             from .transformers import manual
         elif "llm_transformers_pipeline" in tag:
@@ -136,4 +138,5 @@ class LLMEnvInit:
         "llm_transformers_manual_vision_llama": get_llm_transformers_args,
         "llm_transformers_manual_vision_molmo": get_llm_transformers_args,
         "llm_transformers_manual_vision_janus": get_llm_transformers_args,
+        "llm_transformers_manual_image_janus": get_llm_transformers_args,
     }
