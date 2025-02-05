@@ -19,6 +19,11 @@ load_dotenv(override=True)
 r"""
 LLM_DEVICE=cuda LLM_MODEL_NAME_OR_PATH=./models/deepseek-ai/Janus-Pro-1B \
     python -m unittest test.core.llm.test_transformers_img_janus.TestTransformersImgJanus.test_gen_imgs
+
+LLM_DEVICE=cuda LLM_TAG=llm_transformers_manual_image_janus_flow \
+    LLM_MODEL_NAME_OR_PATH=./models/deepseek-ai/Janus-Pro-1B \
+    VAE_MODEL_NAME_OR_PATH=./models/stabilityai/sdxl-vae \
+    python -m unittest test.core.llm.test_transformers_img_janus.TestTransformersImgJanus.test_gen_imgs
 """
 
 
@@ -28,6 +33,11 @@ class TestTransformersImgJanus(unittest.TestCase):
         cls.seed = int(os.getenv("SEED", "1234"))
         cls.parallel_size = int(os.getenv("PARALLEL_SIZE", "1"))
         cls.guidance = float(os.getenv("GUIDANCE", "5.0"))
+
+        # janus flow
+        cls.batch_size = int(os.getenv("BATCH_SIZE", "5"))
+        cls.num_inference_steps = int(os.getenv("NUM_INFERENCE_STEPS", "30"))
+
         cls.llm_tag = os.getenv("LLM_TAG", "llm_transformers_manual_image_janus")
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
@@ -53,10 +63,18 @@ class TestTransformersImgJanus(unittest.TestCase):
         ]
 
         generate_args = {
-            "seed":self.seed,
+            "seed": self.seed,
             "parallel_size": self.parallel_size,
             "guidance": self.guidance,
         }
+        if "flow" in self.engine.TAG:
+            generate_args = {
+                "seed": self.seed,
+                "guidance": self.guidance,
+                "num_inference_steps": self.num_inference_steps,
+                "batch_size": self.batch_size,
+            }
+
         os.makedirs("generated_samples", exist_ok=True)
         i = 0
         for prompt in prompt_cases:
