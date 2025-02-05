@@ -19,7 +19,7 @@ LLM_DEVICE=cuda LLM_MODEL_NAME_OR_PATH=./models/deepseek-ai/Janus-Pro-1B \
     python -m unittest test.core.llm.test_transformers_v_janus.TestTransformersVJanus.test_chat_completion_prompts
 
 LLM_DEVICE=cuda LLM_TAG=llm_transformers_manual_vision_janus_flow \
-    LLM_MODEL_NAME_OR_PATH=./models/deepseek-ai/Janus-Pro-1B \
+    LLM_MODEL_NAME_OR_PATH=./models/deepseek-ai/JanusFlow-1.3B \
     python -m unittest test.core.llm.test_transformers_v_janus.TestTransformersVJanus.test_chat_completion_prompts
 """
 

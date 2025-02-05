@@ -139,6 +139,7 @@ class LLMEnvInit:
             "VAE_MODEL_NAME_OR_PATH",
             os.path.join(MODELS_DIR, "stabilityai/sdxl-vae"),
         )
+        return kwargs
 
     # TAG : config
     map_config_func = {

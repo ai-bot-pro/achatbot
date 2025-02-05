@@ -21,7 +21,7 @@ LLM_DEVICE=cuda LLM_MODEL_NAME_OR_PATH=./models/deepseek-ai/Janus-Pro-1B \
     python -m unittest test.core.llm.test_transformers_img_janus.TestTransformersImgJanus.test_gen_imgs
 
 LLM_DEVICE=cuda LLM_TAG=llm_transformers_manual_image_janus_flow \
-    LLM_MODEL_NAME_OR_PATH=./models/deepseek-ai/Janus-Pro-1B \
+    LLM_MODEL_NAME_OR_PATH=./models/deepseek-ai/JanusFlow-1.3B \
     VAE_MODEL_NAME_OR_PATH=./models/stabilityai/sdxl-vae \
     python -m unittest test.core.llm.test_transformers_img_janus.TestTransformersImgJanus.test_gen_imgs
 """
@@ -92,7 +92,7 @@ class TestTransformersImgJanus(unittest.TestCase):
                     times.append(perf_counter() - start_time)
                     start_time = perf_counter()
 
-                    save_path = os.path.join("generated_samples", f"pro_img_{i}_{j}.jpg")
+                    save_path = os.path.join("generated_samples", f"{self.llm_tag}_img_{i}_{j}.jpg")
                     if isinstance(item, bytes):
                         img = Image.open(io.BytesIO(item))
                         img.save(save_path)

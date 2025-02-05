@@ -210,6 +210,8 @@ class TransformersManualGenImageJanusFlow(TransformersManualJanusFlow):
 
         super().__init__(**args)
         self.vae = AutoencoderKL.from_pretrained(vae_model_name_or_path)
+        print_model_params(self.vae, "VAE")
+
         self.vae = self.vae.to(
             self.args.lm_device,
             dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float16,
@@ -229,7 +231,7 @@ class TransformersManualGenImageJanusFlow(TransformersManualJanusFlow):
         input_ids = self._tokenizer.encode(prompt)
         input_ids = torch.LongTensor(input_ids)
 
-        tokens = torch.stack([input_ids] * 2 * batch_size).cuda()
+        tokens = torch.stack([input_ids] * 2 * batch_size).to(self._model.device)
         tokens[batch_size:, 1:] = self.vl_chat_processor.pad_id
         inputs_embeds = self._model.language_model.get_input_embeddings()(tokens)
 
@@ -238,10 +240,18 @@ class TransformersManualGenImageJanusFlow(TransformersManualJanusFlow):
 
         # generate with rectified flow ode
         # step 1: encode with vision_gen_enc
-        z = torch.randn((batch_size, 4, 48, 48), dtype=torch.bfloat16).cuda()
+        z = torch.randn((batch_size, 4, 48, 48), dtype=torch.bfloat16).to(self._model.device)
 
         dt = 1.0 / num_inference_steps
-        dt = torch.zeros_like(z).cuda().to(torch.bfloat16) + dt
+        dt = (
+            torch.zeros_like(z)
+            .cuda()
+            .to(
+                self._model.device,
+                dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float16,
+            )
+            + dt
+        )
 
         # step 2: run ode
         attention_mask = torch.ones((2 * batch_size, inputs_embeds.shape[1] + 577)).to(
@@ -320,6 +330,7 @@ class TransformersManualGenImageJanusFlow(TransformersManualJanusFlow):
             num_inference_steps=num_inference_steps,
             batch_size=batch_size,
         )
+        logging.debug(f"Generated image shape: {np_img.shape}")
 
         # numpy array -> PIL Image
         img = Image.fromarray((np_img * 255).astype(np.uint8).transpose(1, 2, 0))
