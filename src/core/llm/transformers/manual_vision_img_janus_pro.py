@@ -127,8 +127,11 @@ class TransformersManualVisionJanusPro(TransformersManualJanusPro):
             torch.cuda.empty_cache()
         seed = kwargs.get("seed", self.args.lm_gen_seed)
         set_all_random_seed(seed)
-        question = session.ctx.state["prompt"]
-        image_data = session.ctx.state["image_data"]  # bytes
+
+        assert isinstance(session.ctx.state["prompt"], list)
+        assert len(session.ctx.state["prompt"]) > 1
+        question = session.ctx.state["prompt"][-1]
+        pil_images = session.ctx.state["prompt"][:-1]
 
         # conversation
         message = {
@@ -142,7 +145,7 @@ class TransformersManualVisionJanusPro(TransformersManualJanusPro):
         conversation = chat_history + [{"role": "Assistant", "content": ""}]
 
         # inputs
-        pil_images = [Image.open(io.BytesIO(image_data))]
+        # pil_images = [Image.open(io.BytesIO(image_data))]
         prepare_inputs = self.vl_chat_processor(
             conversations=conversation, images=pil_images, force_batchify=True
         ).to(
@@ -191,7 +194,7 @@ class TransformersManualGenImageJanusPro(TransformersManualJanusPro):
     def warmup(self):
         pass
 
-    def unpack(self, dec, width, height, parallel_size=5):
+    def unpack(self, dec, width, height, parallel_size=1):
         dec = dec.to(torch.float32).cpu().numpy().transpose(0, 2, 3, 1)
         dec = np.clip((dec + 1) / 2 * 255, 0, 255)
 
@@ -212,7 +215,6 @@ class TransformersManualGenImageJanusPro(TransformersManualJanusPro):
         image_token_num_per_image: int = 576,
         patch_size: int = 16,
     ):
-        torch.cuda.empty_cache()
         tokens = torch.zeros((parallel_size * 2, len(input_ids)), dtype=torch.int).to(
             self._model.device
         )
@@ -252,17 +254,18 @@ class TransformersManualGenImageJanusPro(TransformersManualJanusPro):
         return generated_tokens.to(dtype=torch.int), patches
 
     @torch.no_grad()
-    def _gen_image(self, prompt, guidance):
+    def _gen_image(self, prompt, guidance, parallel_size=1):
         width = 384
         height = 384
-        parallel_size = 5
 
         messages = [
             {"role": "User", "content": prompt},
             {"role": "Assistant", "content": ""},
         ]
         text = self.vl_chat_processor.apply_sft_template_for_multi_turn_prompts(
-            conversations=messages, sft_format=self.vl_chat_processor.sft_format, system_prompt=""
+            conversations=messages,
+            sft_format=self.vl_chat_processor.sft_format,
+            system_prompt="",
         )
         text = text + self.vl_chat_processor.image_start_tag
         input_ids = torch.LongTensor(self._tokenizer.encode(text))
@@ -289,7 +292,8 @@ class TransformersManualGenImageJanusPro(TransformersManualJanusPro):
         set_all_random_seed(seed)
 
         guidance = kwargs.get("guidance", 5.0)
-        images = self._gen_image(prompt, guidance)
+        parallel_size = kwargs.get("parallel_size", 1)
+        images = self._gen_image(prompt, guidance, parallel_size)
         for img in images:
             buf = io.BytesIO()
             img.save(buf, format="PNG")

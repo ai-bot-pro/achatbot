@@ -87,8 +87,7 @@ class TransformersBaseLLM(BaseLLM, ILlm):
 
         for llm chat template format.
         - 'prompt': str (text)
-        - 'prompt': [PIL.Image, str]
-        - janus 'prompt': [str,]
+        - 'prompt': [PIL.Image,..., str]
         - vision image 'prompt' e.g.: [
                 {
                     "type": "image",
