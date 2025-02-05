@@ -36,7 +36,7 @@ except ModuleNotFoundError as e:
 
 class TransformersManualJanusPro(TransformersBaseLLM):
     r"""
-    Multimodal Understanding + Text-to-Image Generation
+    base class for Multimodal Understanding + Text-to-Image Generation
     https://github.com/deepseek-ai/Janus
 
     vl_chat_processor.tokenizer + AR LM model + gen_vision_model
@@ -312,3 +312,28 @@ class TransformersManualGenImageJanusPro(TransformersManualJanusPro):
             img.save(buf, format="PNG")
             buf.seek(0)
             yield buf.read()
+
+
+class TransformersManualVisionGenImageJanusPro(
+    TransformersManualGenImageJanusPro, TransformersManualVisionJanusPro
+):
+    r"""
+    Multimodal Understanding + Text-to-Image Generation
+    https://github.com/deepseek-ai/Janus
+
+    vl_chat_processor.tokenizer + AR LM model + gen_vision_model
+    """
+
+    def generate(self, session: Session, **kwargs):
+        r"""
+        根据Python的MRO规则：
+        在多重继承中，Python会从左到右搜索父类
+        使用第一个父类中的generate,需要定义generate方法通过参数来区分
+        """
+        # 根据session.ctx.state中的内容判断使用哪个generate方法
+        if isinstance(session.ctx.state.get("prompt"), list):
+            # 如果prompt是列表（包含图像），使用视觉理解模式
+            return TransformersManualVisionJanusPro.generate(self, session, **kwargs)
+        else:
+            # 如果prompt是字符串，使用图像生成模式
+            return TransformersManualGenImageJanusPro.generate(self, session, **kwargs)
