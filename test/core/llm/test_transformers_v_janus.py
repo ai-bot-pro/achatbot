@@ -45,7 +45,7 @@ class TestTransformersVJanus(unittest.TestCase):
 
     def test_chat_completion_prompts(self):
         prompt_cases = [
-            [Image.open(self.img_file), ""],
+            [Image.open(self.img_file), self.prompt],
         ]
 
         for prompt in prompt_cases:

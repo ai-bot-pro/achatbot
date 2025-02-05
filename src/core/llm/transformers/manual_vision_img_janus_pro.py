@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from PIL import Image
 import numpy as np
 
+from src.common.chat_history import ChatHistory
 from src.common.session import Session
 from src.common.utils.helper import get_device
 from src.core.llm.transformers.base import TransformersBaseLLM
@@ -56,7 +57,10 @@ class TransformersManualJanusPro(TransformersBaseLLM):
             language_config=language_config,
             trust_remote_code=True,
         )
-        self._model = self._model.to(self.args.lm_device).eval()
+        self._model = self._model.to(
+            self.args.lm_device,
+            dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float16,
+        ).eval()
 
         self.vl_chat_processor: VLChatProcessor = VLChatProcessor.from_pretrained(
             self.args.lm_model_name_or_path
@@ -67,6 +71,7 @@ class TransformersManualJanusPro(TransformersBaseLLM):
             self._tokenizer, skip_prompt=True, skip_special_tokens=True
         )
 
+        self._chat_history = ChatHistory(self.args.chat_history_size)
         self.warmup()
 
 
@@ -90,13 +95,14 @@ class TransformersManualVisionJanusPro(TransformersManualJanusPro):
             {"role": "Assistant", "content": ""},
         ]
 
+        dummy_pil_images = [Image.new("RGB", (100, 100), color="white")]
         prepare_inputs = self.vl_chat_processor(
-            conversations=conversation, images=None, force_batchify=True
+            conversations=conversation, images=dummy_pil_images, force_batchify=True
         ).to(
-            self.args.lm_device,
+            self._model.device,
             dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float16,
         )
-        logging.debug(f"prepare_inputs: {prepare_inputs}")
+        # logging.debug(f"prepare_inputs: {prepare_inputs}")
 
         # input embeddings
         inputs_embeds = self._model.prepare_inputs_embeds(**prepare_inputs)
@@ -149,10 +155,10 @@ class TransformersManualVisionJanusPro(TransformersManualJanusPro):
         prepare_inputs = self.vl_chat_processor(
             conversations=conversation, images=pil_images, force_batchify=True
         ).to(
-            self.args.lm_device,
+            self._model.device,
             dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float16,
         )
-        logging.debug(f"prepare_inputs: {prepare_inputs}")
+        # logging.debug(f"prepare_inputs: {prepare_inputs}")
 
         # input embeddings
         inputs_embeds = self._model.prepare_inputs_embeds(**prepare_inputs)
