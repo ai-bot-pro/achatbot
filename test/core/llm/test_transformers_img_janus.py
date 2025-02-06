@@ -33,6 +33,8 @@ class TestTransformersImgJanus(unittest.TestCase):
         cls.seed = int(os.getenv("SEED", "1234"))
         cls.parallel_size = int(os.getenv("PARALLEL_SIZE", "1"))
         cls.guidance = float(os.getenv("GUIDANCE", "5.0"))
+        cls.img_size = os.getenv("IMAGE_SIZE", "1024x1024")
+        cls.gen_width, cls.gen_height = map(int, cls.img_size.split("x"))
 
         # janus flow
         cls.batch_size = int(os.getenv("BATCH_SIZE", "1"))
@@ -66,6 +68,8 @@ class TestTransformersImgJanus(unittest.TestCase):
             "seed": self.seed,
             "parallel_size": self.parallel_size,
             "guidance": self.guidance,
+            "gen_width": self.gen_width,
+            "gen_height": self.gen_height,
         }
         if "flow" in self.engine.TAG:
             generate_args = {
@@ -73,6 +77,8 @@ class TestTransformersImgJanus(unittest.TestCase):
                 "guidance": self.guidance,
                 "num_inference_steps": self.num_inference_steps,
                 "batch_size": self.batch_size,
+                "gen_width": self.gen_width,
+                "gen_height": self.gen_height,
             }
 
         os.makedirs("generated_samples", exist_ok=True)

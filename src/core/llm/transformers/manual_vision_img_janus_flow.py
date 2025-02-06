@@ -324,6 +324,8 @@ class TransformersManualGenImageJanusFlow(TransformersManualJanusFlow):
         guidance = kwargs.get("guidance", 5.0)
         num_inference_steps = kwargs.get("num_inference_steps", 30)
         batch_size = kwargs.get("batch_size", 1)
+        gen_width = kwargs.get("gen_width", 1024)
+        gen_height = kwargs.get("gen_height", 1024)
         np_imgs = self._gen_image(
             prompt,
             cfg_weight=guidance,
@@ -332,10 +334,15 @@ class TransformersManualGenImageJanusFlow(TransformersManualJanusFlow):
         )
         logging.debug(f"Generated image shape: {np_imgs.shape}")
 
-        for i in np_imgs.shape[0]:
+        for i in range(np_imgs.shape[0]):
             np_img = np_imgs[i]
             # numpy array -> PIL Image
-            img = Image.fromarray((np_img * 255).astype(np.uint8).transpose(1, 2, 0))
+            img = Image.fromarray(
+                (np_img * 255)
+                .astype(np.uint8)
+                .transpose(1, 2, 0)
+                .resize((gen_width, gen_height), Image.LANCZOS)
+            )
             # PIL Image -> bytes
             buf = io.BytesIO()
             img.save(buf, format="PNG")

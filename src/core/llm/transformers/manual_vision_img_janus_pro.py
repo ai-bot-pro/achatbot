@@ -267,7 +267,7 @@ class TransformersManualGenImageJanusPro(TransformersManualJanusPro):
         return generated_tokens.to(dtype=torch.int), patches
 
     @torch.no_grad()
-    def _gen_image(self, prompt, guidance, parallel_size=1):
+    def _gen_image(self, prompt, guidance, parallel_size=1, gen_width=1024, gen_height=1024):
         width = 384
         height = 384
 
@@ -297,7 +297,7 @@ class TransformersManualGenImageJanusPro(TransformersManualJanusPro):
         )
 
         return [
-            Image.fromarray(images[i]).resize((1024, 1024), Image.LANCZOS)
+            Image.fromarray(images[i]).resize((gen_width, gen_height), Image.LANCZOS)
             for i in range(parallel_size)
         ]
 
@@ -312,7 +312,15 @@ class TransformersManualGenImageJanusPro(TransformersManualJanusPro):
 
         guidance = kwargs.get("guidance", 5.0)
         parallel_size = kwargs.get("parallel_size", 1)
-        images = self._gen_image(prompt, guidance, parallel_size)
+        gen_width = kwargs.get("gen_width", 1024)
+        gen_height = kwargs.get("gen_height", 1024)
+        images = self._gen_image(
+            prompt,
+            guidance,
+            parallel_size=parallel_size,
+            gen_width=gen_width,
+            gen_height=gen_height,
+        )
         for img in images:
             buf = io.BytesIO()
             img.save(buf, format="PNG")
