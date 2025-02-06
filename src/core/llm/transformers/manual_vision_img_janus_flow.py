@@ -310,7 +310,7 @@ class TransformersManualGenImageJanusFlow(TransformersManualJanusFlow):
         # unpack
         decoded_image = decoded_image.clip_(-1.0, 1.0) * 0.5 + 0.5
 
-        return decoded_image.detach().cpu().numpy()
+        return decoded_image.detach().cpu().type(torch.float32).numpy()
 
     @torch.inference_mode()
     def generate(self, session: Session, **kwargs):
@@ -323,22 +323,24 @@ class TransformersManualGenImageJanusFlow(TransformersManualJanusFlow):
 
         guidance = kwargs.get("guidance", 5.0)
         num_inference_steps = kwargs.get("num_inference_steps", 30)
-        batch_size = kwargs.get("batch_size", 5)
-        np_img = self._gen_image(
+        batch_size = kwargs.get("batch_size", 1)
+        np_imgs = self._gen_image(
             prompt,
             cfg_weight=guidance,
             num_inference_steps=num_inference_steps,
             batch_size=batch_size,
         )
-        logging.debug(f"Generated image shape: {np_img.shape}")
+        logging.debug(f"Generated image shape: {np_imgs.shape}")
 
-        # numpy array -> PIL Image
-        img = Image.fromarray((np_img * 255).astype(np.uint8).transpose(1, 2, 0))
-        # PIL Image -> bytes
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
-        buf.seek(0)
-        yield buf.read()
+        for i in np_imgs.shape[0]:
+            np_img = np_imgs[i]
+            # numpy array -> PIL Image
+            img = Image.fromarray((np_img * 255).astype(np.uint8).transpose(1, 2, 0))
+            # PIL Image -> bytes
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            buf.seek(0)
+            yield buf.read()
 
 
 class TransformersManualVisionGenImageJanusFlow(

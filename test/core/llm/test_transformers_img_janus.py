@@ -35,7 +35,7 @@ class TestTransformersImgJanus(unittest.TestCase):
         cls.guidance = float(os.getenv("GUIDANCE", "5.0"))
 
         # janus flow
-        cls.batch_size = int(os.getenv("BATCH_SIZE", "5"))
+        cls.batch_size = int(os.getenv("BATCH_SIZE", "1"))
         cls.num_inference_steps = int(os.getenv("NUM_INFERENCE_STEPS", "30"))
 
         cls.llm_tag = os.getenv("LLM_TAG", "llm_transformers_manual_image_janus")
