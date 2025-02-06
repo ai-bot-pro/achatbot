@@ -236,6 +236,14 @@ llm_transformers_manual_vision_img_janus = [
     "attrdict",
     "timm>=0.9.16",
 ]
+llm_transformers_manual_vision_deepseekvl2 = [
+    "achatbot[accelerate,einops]",
+    "transformers==4.38.2",        # https://github.com/deepseek-ai/DeepSeek-VL2/issues/4#issuecomment-2550928148
+    "xformers>=0.0.21",
+    "sentencepiece",
+    "attrdict",
+    "timm>=0.9.16",
+]
 
 # core llms
 core_llm = ["achatbot[llama_cpp,llm_personalai_proxy]"]
