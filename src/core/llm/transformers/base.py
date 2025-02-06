@@ -110,15 +110,15 @@ class TransformersBaseLLM(BaseLLM, ILlm):
         """
         pass
 
-    def chat_completion(self, session: Session):
+    def chat_completion(self, session: Session, **kwargs):
         if self.args.lm_stream is False:
             res = ""
-            for text in self.generate(session):
+            for text in self.generate(session, **kwargs):
                 res += text
             yield res
         else:
             res = ""
-            for text in self.generate(session):
+            for text in self.generate(session, **kwargs):
                 res += text
                 pos = self._have_special_char(res)
                 if pos > -1:
