@@ -16,13 +16,13 @@ load_dotenv(override=True)
 
 r"""
 LLM_DEVICE=cuda LLM_MODEL_NAME_OR_PATH=./models/deepseek-ai/deepseek-vl2-tiny \
-    python -m unittest test.core.llm.test_transformers_v_janus.TestTransformersVJanus.test_chat_completion_prompts
+    python -m unittest test.core.llm.test_transformers_v_deepseek.TestTransformersVJanus.test_chat_completion_prompts
 
-LLM_DEVICE=cuda LLM_MODEL_NAME_OR_PATH=./models/deepseek-ai/deepseek-vl2-small\
-    python -m unittest test.core.llm.test_transformers_v_janus.TestTransformersVJanus.test_chat_completion_prompts
+LLM_DEVICE=cuda LLM_MODEL_NAME_OR_PATH=./models/deepseek-ai/deepseek-vl2-small \
+    python -m unittest test.core.llm.test_transformers_v_deepseek.TestTransformersVJanus.test_chat_completion_prompts
 
 LLM_DEVICE=cuda LLM_MODEL_NAME_OR_PATH=./models/deepseek-ai/deepseek-vl2 \
-    python -m unittest test.core.llm.test_transformers_v_janus.TestTransformersVJanus.test_chat_completion_prompts
+    python -m unittest test.core.llm.test_transformers_v_deepseek.TestTransformersVJanus.test_chat_completion_prompts
 """
 
 

@@ -57,7 +57,7 @@ class TransformersManualVisionDeepSeekVL2(TransformersBaseLLM):
         language_config._attn_implementation = "eager"
         self._model: DeepseekVLV2ForCausalLM = AutoModelForCausalLM.from_pretrained(
             self.args.lm_model_name_or_path,
-            # language_config=language_config,
+            language_config=language_config,
             trust_remote_code=True,
         )
         print_model_params(self._model, self.TAG)
@@ -83,10 +83,10 @@ class TransformersManualVisionDeepSeekVL2(TransformersBaseLLM):
         dummy_input_text = self.args.warnup_prompt
         conversation = [
             {
-                "role": "User",
-                "content": f"<image_placeholder>\n{dummy_input_text}",
+                "role": "<|User|>",
+                "content": f"<image>\n{dummy_input_text}",
             },
-            {"role": "Assistant", "content": ""},
+            {"role": "<|Assistant|>", "content": ""},
         ]
 
         dummy_pil_images = [Image.new("RGB", (100, 100), color="white")]
@@ -143,14 +143,14 @@ class TransformersManualVisionDeepSeekVL2(TransformersBaseLLM):
 
         # conversation
         message = {
-            "role": "User",
-            "content": f"<image_placeholder>\n{question}",
+            "role": "<|User|>",
+            "content": f"<image>\n{question}",
             # "images": [image_data],
         }
         self._chat_history.append(message)
         chat_history = self._chat_history.to_list()
         logging.debug(f"chat_history:{chat_history}")
-        conversation = chat_history + [{"role": "Assistant", "content": ""}]
+        conversation = chat_history + [{"role": "<|Assistant|>", "content": ""}]
 
         # inputs
         # pil_images = [Image.open(io.BytesIO(image_data))]
@@ -186,4 +186,4 @@ class TransformersManualVisionDeepSeekVL2(TransformersBaseLLM):
         for new_text in self._streamer:
             generated_text += new_text
             yield new_text
-        self._chat_history.append({"role": "Assistant", "content": generated_text})
+        self._chat_history.append({"role": "<|Assistant|>", "content": generated_text})
