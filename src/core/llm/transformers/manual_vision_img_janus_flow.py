@@ -337,11 +337,8 @@ class TransformersManualGenImageJanusFlow(TransformersManualJanusFlow):
         for i in range(np_imgs.shape[0]):
             np_img = np_imgs[i]
             # numpy array -> PIL Image
-            img = Image.fromarray(
-                (np_img * 255)
-                .astype(np.uint8)
-                .transpose(1, 2, 0)
-                .resize((gen_width, gen_height), Image.LANCZOS)
+            img = Image.fromarray((np_img * 255).astype(np.uint8).transpose(1, 2, 0)).resize(
+                (gen_width, gen_height), Image.LANCZOS
             )
             # PIL Image -> bytes
             buf = io.BytesIO()
