@@ -238,6 +238,7 @@ llm_transformers_manual_vision_img_janus = [
 ]
 llm_transformers_manual_vision_deepseekvl2 = [
     "achatbot[llm_transformers_manual_vision,accelerate,einops]",
+    "transformers==4.38.2",                                       # https://github.com/deepseek-ai/DeepSeek-VL2/issues/4#issuecomment-2550928148
     "xformers>=0.0.21",
     "sentencepiece",
     "attrdict",

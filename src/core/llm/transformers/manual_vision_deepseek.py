@@ -57,7 +57,7 @@ class TransformersManualVisionDeepSeekVL2(TransformersBaseLLM):
         language_config._attn_implementation = "eager"
         self._model: DeepseekVLV2ForCausalLM = AutoModelForCausalLM.from_pretrained(
             self.args.lm_model_name_or_path,
-            language_config=language_config,
+            # language_config=language_config,
             trust_remote_code=True,
         )
         print_model_params(self._model, self.TAG)
@@ -119,7 +119,7 @@ class TransformersManualVisionDeepSeekVL2(TransformersBaseLLM):
         )
 
         self._warmup(
-            target=self._model.language_model.generate,
+            target=self._model.language.generate,
             kwargs=warmup_gen_kwargs,
             streamer=self._streamer,
         )
@@ -179,7 +179,7 @@ class TransformersManualVisionDeepSeekVL2(TransformersBaseLLM):
             temperature=lm_gen_temperature,
             top_p=lm_gen_top_p,
         )
-        thread = Thread(target=self._model.language_model.generate, kwargs=generation_kwargs)
+        thread = Thread(target=self._model.language.generate, kwargs=generation_kwargs)
         thread.start()
 
         generated_text = ""
