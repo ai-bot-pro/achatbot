@@ -37,3 +37,7 @@
 [submodule "deps/Janus"]
 	path = deps/Janus
 	url = https://github.com/weedge/Janus.git
+[submodule "deps/DeepSeekVL2"]
+	path = deps/DeepSeekVL2
+	url = https://github.com/weedge/DeepSeek-VL2.git
+

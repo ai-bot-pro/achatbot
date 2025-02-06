@@ -236,6 +236,13 @@ llm_transformers_manual_vision_img_janus = [
     "attrdict",
     "timm>=0.9.16",
 ]
+llm_transformers_manual_vision_deepseekvl2 = [
+    "achatbot[llm_transformers_manual_vision,accelerate,einops]",
+    "xformers>=0.0.21",
+    "sentencepiece",
+    "attrdict",
+    "timm>=0.9.16",
+]
 
 # core llms
 core_llm = ["achatbot[llama_cpp,llm_personalai_proxy]"]
