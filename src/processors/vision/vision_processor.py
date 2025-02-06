@@ -46,6 +46,28 @@ class VisionProcessor(VisionProcessorBase):
 
         logging.debug(f"Analyzing image: {frame}")
 
+        if (
+            "llm_transformers" in self._llm.SELECTED_TAG
+            and "vision_janus" in self._llm.SELECTED_TAG
+        ):  # transformers vision janus pro
+            async for item in self._run_janus_vision(frame):
+                yield item
+        else:
+            async for item in self._run_vision(frame):
+                yield item
+
+    async def _run_janus_vision(self, frame: VisionImageRawFrame) -> AsyncGenerator[Frame, None]:
+        self._session.ctx.state["prompt"] = []
+        if frame.image:
+            image = Image.frombytes(frame.mode, frame.size, frame.image)
+            self._session.ctx.state["prompt"].append(image)
+        self._session.ctx.state["prompt"].append(frame.text)
+
+        iter = self._llm.chat_completion(self._session)
+        for item in iter:
+            yield TextFrame(text=item)
+
+    async def _run_vision(self, frame: VisionImageRawFrame) -> AsyncGenerator[Frame, None]:
         self._session.ctx.state["prompt"] = [
             {"type": "text", "text": frame.text},
         ]

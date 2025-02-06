@@ -6,7 +6,7 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
 
 <details>
 <summary>:evergreen_tree: Project Structure</summary>
-  
+
 # Project Structure
 ![project-structure](https://github.com/user-attachments/assets/5bf7cebb-e590-4718-a78a-6b0c0b36ea28)  
 
@@ -14,7 +14,7 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
 
 <details>
 <summary>:herb: Features</summary>
-  
+
 # Features
 - demo
   
@@ -86,9 +86,12 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
   - local llm: 
     - [x] llama-cpp (support text,vision with function-call model)
     - [x] transformers(manual, pipeline) (support text,vision:🦙,Qwen2-vl,Molmo with function-call model)
-    - [ ] mlx_lm 
+      - [x] Llama 🦙
+      - [x] Qwen2-vl
+      - [x] Molmo
+      - [x] Janus-Pro Janus-Flow
   - remote api llm: personal-ai(like openai api, other ai provider)
-
+  
 - AI modules:
   - functions:
     - [x] search: search,search1,serper
@@ -125,7 +128,7 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
 
 <details>
 <summary>:sunflower: Service Deployment Architecture</summary>
-  
+
 # Service Deployment Architecture
 
 ## UI (easy to deploy with github like pages)
@@ -192,7 +195,7 @@ pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
 | [daily_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/daily_bot.py)<br />[livekit_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/livekit_bot.py)<br />[agora_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/agora_bot.py)<br /> | e.g.:<br />daily_room_audio_stream \| livekit_room_audio_stream,<br />sense_voice_asr,<br />groq \| together api llm(text), <br />tts_edge | <a href="https://github.com/weedge/doraemon-nb/blob/main/webrtc_audio_bot.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | CPU (free, 2 cores)                                          | e.g.:<br />daily \| livekit room in stream<br />-> silero (vad)<br />-> sense_voice (asr) <br />-> groq \| together  (llm) <br />-> edge (tts)<br />-> daily \| livekit room out stream |
 | [generate_audio2audio](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/remote-queue-chat/generate_audio2audio.py) | remote_queue_chat_bot_be_worker                              | <a href="https://github.com/weedge/doraemon-nb/blob/main/chat_bot_gpu_worker.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | T4(free)                                                     | e.g.:<br />pyaudio in stream<br />-> silero (vad)<br />-> sense_voice (asr) <br />-> qwen (llm) <br />-> cosy_voice (tts)<br />-> pyaudio out stream |
 | [daily_describe_vision_tools_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/vision/daily_describe_vision_tools_bot.py)<br />[livekit_describe_vision_tools_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/vision/livekit_describe_vision_tools_bot.py)<br />[agora_describe_vision_tools_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/agora_describe_vision_tools_bot.py)<br /> | e.g.:<br />daily_room_audio_stream \|livekit_room_audio_stream<br />deepgram_asr,<br />goole_gemini,<br />tts_edge | <a href="https://github.com/weedge/doraemon-nb/blob/main/achatbot_describe_vision_tools_bot.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | CPU(free, 2 cores)                                           | e.g.:<br />daily \|livekit room in stream<br />-> silero (vad)<br />-> deepgram (asr) <br />-> google gemini  <br />-> edge (tts)<br />-> daily \|livekit room out stream |
-| [daily_describe_vision_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/vision/daily_describe_vision_bot.py)<br />[livekit_describe_vision_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/vision/livekit_describe_vision_bot.py)<br />[agora_describe_vision_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/agora_describe_vision_bot.py)<br /> | e.g.:<br />daily_room_audio_stream \| livekit_room_audio_stream<br />sense_voice_asr,<br />llm_transformers_manual_vision_qwen,<br />tts_edge | <a href="https://github.com/weedge/doraemon-nb/blob/main/achatbot_vision_qwen_vl.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | - Qwen2-VL-2B-Instruct<br /> T4(free)<br />- Qwen2-VL-7B-Instruct<br />L4<br />- Llama-3.2-11B-Vision-Instruct<br />L4<br />- allenai/Molmo-7B-D-0924<br />A100 | e.g.:<br />daily \| livekit room in stream<br />-> silero (vad)<br />-> sense_voice (asr) <br />-> qwen-vl (llm) <br />-> edge (tts)<br />-> daily \| livekit room out stream |
+| [daily_describe_vision_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/vision/daily_describe_vision_bot.py)<br />[livekit_describe_vision_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/vision/livekit_describe_vision_bot.py)<br />[agora_describe_vision_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/agora_describe_vision_bot.py)<br /> | e.g.:<br />daily_room_audio_stream \| livekit_room_audio_stream<br />sense_voice_asr,<br />llm_transformers_manual_vision_qwen,<br />tts_edge | achatbot_vision_qwen_vl.ipynb:<br /><a href="https://github.com/weedge/doraemon-nb/blob/main/achatbot_vision_qwen_vl.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a><br />achatbot_vision_janus.ipynb:<br /><a href="https://github.com/weedge/doraemon-nb/blob/main/achatbot_vision_janus.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | - Qwen2-VL-2B-Instruct<br /> T4(free)<br />- Qwen2-VL-7B-Instruct<br />L4<br />- Llama-3.2-11B-Vision-Instruct<br />L4<br />- allenai/Molmo-7B-D-0924<br />A100 | e.g.:<br />daily \| livekit room in stream<br />-> silero (vad)<br />-> sense_voice (asr) <br />-> qwen-vl (llm) <br />-> edge (tts)<br />-> daily \| livekit room out stream |
 | [daily_chat_vision_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/vision/daily_chat_vision_bot.py)<br />[livekit_chat_vision_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/vision/livekit_chat_vision_bot.py)<br />[agora_chat_vision_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/agora_chat_vision_bot.py)<br /> | e.g.:<br />daily_room_audio_stream \|livekit_room_audio_stream<br />sense_voice_asr,<br />llm_transformers_manual_vision_qwen,<br />tts_edge | <a href="https://github.com/weedge/doraemon-nb/blob/main/achatbot_daily_chat_vision_bot.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | - Qwen2-VL-2B-Instruct<br /> T4(free)<br />- Qwen2-VL-7B-Instruct<br />L4<br />- Ll<br/>ama-3.2-11B-Vision-Instruct<br />L4<br />- allenai/Molmo-7B-D-0924<br />A100 | e.g.:<br />daily \| livekit room in stream<br />-> silero (vad)<br />-> sense_voice (asr) <br />-> llm answer guide qwen-vl (llm) <br />-> edge (tts)<br />-> daily \| livekit room out stream |
 | [daily_chat_tools_vision_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/vision/daily_chat_tools_vision_bot.py)<br />[livekit_chat_tools_vision_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/vision/livekit_chat_tools_vision_bot.py)<br />[agora_chat_tools_vision_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/vision/agora_chat_tools_vision_bot.py)<br /> | e.g.:<br />daily_room_audio_stream \| livekit_room_audio_stream<br />sense_voice_asr,<br />groq api llm(text), <br />tools:<br />- llm_transformers_manual_vision_qwen,<br />tts_edge | <a href="https://github.com/weedge/doraemon-nb/blob/main/achatbot_daily_chat_tools_vision_bot.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | - Qwen2-VL-2B-Instruct<br<br/> /> T4(free)<br />- Qwen2-VL-7B-Instruct<br />L4<br />- Llama-3.2-11B-Vision-Instruct<br />L4 <br />- allenai/Molmo-7B-D-0924<br />A100 | e.g.:<br />daily \| livekit room in stream<br />-> silero (vad)<br />-> sense_voice (asr) <br />->llm with tools qwen-vl  <br />-> edge (tts)<br />-> daily \| livekit room out stream |
 | [daily_annotate_vision_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/vision/daily_annotate_vision_bot.py)<br />[livekit_annotate_vision_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/vision/livekit_annotate_vision_bot.py)<br />[agora_annotate_vision_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/vision/agora_annotate_vision_bot.py)<br /> | e.g.:<br />daily_room_audio_stream \| livekit_room_audio_stream<br />vision_yolo_detector<br />tts_edge | <a href="https://github.com/weedge/doraemon-nb/blob/main/daily_annotate_vision_bot.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | T4(free)                                                     | e.g.:<br />daily \| livekit room in stream<br />vision_yolo_detector<br />-> edge (tts)<br />-> daily \| livekit room out stream |
@@ -210,7 +213,7 @@ pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
 
 <details>
 <summary>:new_moon: Run local chat bots</summary>
-  
+
 ## Run local chat bots
 
 > [!NOTE]
@@ -287,12 +290,12 @@ pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
     ACHATBOT_PKG=1 TQDM_DISABLE=True \
         python -m achatbot.cmd.local-terminal-chat.generate_audio2audio > ~/.achatbot/log/std_out.log
     ```
-</details>
+    </details>
 
     
 <details>
 <summary>:waxing_crescent_moon: Run remote http fastapi daily chat bots</summary>
-  
+
 ## Run remote http fastapi daily chat bots
 1. run `pip install "achatbot[fastapi_daily_bot_server]"` to install dependencies to run http fastapi daily chat bot; 
 
@@ -321,11 +324,11 @@ pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
     -H "Content-Type: application/json" \
     -d '{}' | jq .
    ```
-</details>
+   </details>
 
 <details>
 <summary>:first_quarter_moon: Run remote rpc chat bot worker</summary>
-  
+
 ## Run remote rpc chat bot worker
 1. run `pip install "achatbot[remote_rpc_chat_bot_be_worker]"` to install dependencies to run rpc chat bot BE worker; e.g. :
    - use dufault env params to run rpc chat bot BE worker
@@ -345,7 +348,7 @@ ACHATBOT_PKG=1 RUN_OP=fe \
 
 <details>
 <summary>:waxing_gibbous_moon: Run remote queue chat bot worker</summary>
-  
+
 ## Run remote queue chat bot worker
 1. run `pip install "achatbot[remote_queue_chat_bot_be_worker]"` to install dependencies to run queue chat bot worker; e.g.:
    - use default env params to run 
@@ -434,7 +437,7 @@ ACHATBOT_PKG=1 TTS_TAG=tts_cosy_voice2 \
 </details>
 
 <details>
-  
+
 <summary>:video_camera: Multimodal Interaction</summary>
 
 # Multimodal Interaction

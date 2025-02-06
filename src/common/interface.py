@@ -168,7 +168,7 @@ class ILlm(ABC):
         raise NotImplementedError("must be implemented in the child class")
 
     @abstractmethod
-    def chat_completion(self, session) -> Iterator[str]:
+    def chat_completion(self, session, **kwargs) -> Iterator[str]:
         raise NotImplementedError("must be implemented in the child class")
 
     @abstractmethod

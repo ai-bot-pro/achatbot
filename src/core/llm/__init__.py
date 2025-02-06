@@ -24,6 +24,14 @@ class LLMEnvInit:
             from .transformers import manual_vision_llama
         elif "llm_transformers_manual_vision_molmo" in tag:
             from .transformers import manual_vision_molmo
+        elif "llm_transformers_manual_vision_janus_flow" in tag:
+            from .transformers import manual_vision_img_janus_flow
+        elif "llm_transformers_manual_image_janus_flow" in tag:
+            from .transformers import manual_vision_img_janus_flow
+        elif "llm_transformers_manual_vision_janus" in tag:
+            from .transformers import manual_vision_img_janus_pro
+        elif "llm_transformers_manual_image_janus" in tag:
+            from .transformers import manual_vision_img_janus_pro
         elif "llm_transformers_manual" in tag:
             from .transformers import manual
         elif "llm_transformers_pipeline" in tag:
@@ -124,6 +132,15 @@ class LLMEnvInit:
             return TransformersLLMInit.get_transformers_llm_args(hf_parser_file)
         return LLMEnvInit._get_llm_transformers_args()
 
+    @staticmethod
+    def get_llm_transformers_manual_image_janus_flow_args() -> dict:
+        kwargs = LLMEnvInit.get_llm_transformers_args()
+        kwargs["vae_model_name_or_path"] = os.getenv(
+            "VAE_MODEL_NAME_OR_PATH",
+            os.path.join(MODELS_DIR, "stabilityai/sdxl-vae"),
+        )
+        return kwargs
+
     # TAG : config
     map_config_func = {
         "llm_llamacpp": get_llm_llamacpp_args,
@@ -133,4 +150,8 @@ class LLMEnvInit:
         "llm_transformers_manual_vision_qwen": get_llm_transformers_args,
         "llm_transformers_manual_vision_llama": get_llm_transformers_args,
         "llm_transformers_manual_vision_molmo": get_llm_transformers_args,
+        "llm_transformers_manual_vision_janus": get_llm_transformers_args,
+        "llm_transformers_manual_image_janus": get_llm_transformers_args,
+        "llm_transformers_manual_vision_janus_flow": get_llm_transformers_args,
+        "llm_transformers_manual_image_janus_flow": get_llm_transformers_manual_image_janus_flow_args,
     }

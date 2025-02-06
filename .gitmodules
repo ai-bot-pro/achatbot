@@ -34,3 +34,6 @@
 [submodule "deps/StyleTTS2"]
 	path = deps/StyleTTS2
 	url = https://github.com/weedge/StyleTTS2.git
+[submodule "deps/Janus"]
+	path = deps/Janus
+	url = https://github.com/weedge/Janus.git
