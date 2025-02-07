@@ -18,7 +18,7 @@ class TransformersLMArgs:
     lm_device_map: str | dict | None = field(
         default=None,
         metadata={
-            "help": "The device map for multi cpu/gpu. use 'cuda' for GPU acceleration, 'mps','cpu','auto', dict, None. default None"
+            "help": "The device map for multi cpu/gpu. use dict for GPU acceleration, 'mps','cpu','auto', dict, None. default None"
         },
     )
     lm_device: str = field(
