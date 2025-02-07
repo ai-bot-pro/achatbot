@@ -381,6 +381,16 @@ IMAGE_NAME=llama IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/
 ```
 endpoint: https://weedge-achatbot--fastapi-webrtc-vision-llama-bot-srv-app.modal.run/
 
+```shell
+IMAGE_NAME=janus IMAGE_CONCURRENT_CN=1 IMAGE_GPU=T4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+```
+endpoint: https://weedge-achatbot--fastapi-webrtc-vision-janus-bot-srv-app.modal.run/
+
+```shell
+IMAGE_NAME=deepseekvl2 IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+```
+endpoint: https://weedge-achatbot--fastapi-webrtc-vision-deepseekvl2-bot-srv-app.modal.run/
+
 - deploy webrtc_glm_voice_bot serve
 ```shell
 IMAGE_NAME=default IMAGE_CONCURRENT_CN=1 IMAGE_GPU=T4 modal deploy -e achatbot src/fastapi_webrtc_glm_voice_bot_serve.py
