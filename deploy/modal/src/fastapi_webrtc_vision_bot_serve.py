@@ -173,8 +173,8 @@ class ContainerRuntimeConfig:
                     "]~=0.0.8.8",
                     "huggingface_hub[hf_transfer]==0.24.7",
                 ],
-                # extra_index_url="https://pypi.org/simple/",
-                extra_index_url="https://test.pypi.org/simple/",
+                extra_index_url="https://pypi.org/simple/",
+                # extra_index_url="https://test.pypi.org/simple/",
             )
             .env(
                 {
