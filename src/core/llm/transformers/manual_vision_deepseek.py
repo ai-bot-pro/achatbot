@@ -34,6 +34,38 @@ except ModuleNotFoundError as e:
     raise Exception(f"Missing module: {e}")
 
 
+def split_model(model_name):
+    device_map = {}
+
+    # splits layers into different GPUs (need use L4 for bfloat16 with flash attention)
+    model_splits = {
+        # DeepSeek-VL2-tiny is built on DeepSeekMoE-3B (total activated parameters are 1.0B)
+        "deepseek-ai/deepseek-vl2-tiny": [12],  # 1 GPU for 3B
+        # DeepSeek-VL2-small is built on DeepSeekMoE-16B (total activated parameters are 2.8B)
+        "deepseek-ai/deepseek-vl2-small": [13, 14],  # 2 GPU for 16b
+        # DeepSeek-VL2 is built on DeepSeekMoE-27B (total activated parameters are 4.5B)
+        "deepseek-ai/deepseek-vl2": [10, 10, 10],  # 3 GPU for 27b
+    }
+    num_layers_per_gpu = model_splits[model_name]
+    num_layers = sum(num_layers_per_gpu)
+    layer_cnt = 0
+    for i, num_layer in enumerate(num_layers_per_gpu):
+        for j in range(num_layer):
+            device_map[f"language.model.layers.{layer_cnt}"] = i
+            layer_cnt += 1
+
+    # exlude layer and last layer on cuda 0
+    device_map["vision"] = 0
+    device_map["projector"] = 0
+    device_map["image_newline"] = 0
+    device_map["view_seperator"] = 0
+    device_map["language.model.embed_tokens"] = 0
+    device_map["language.model.norm"] = 0
+    device_map["language.lm_head"] = 0
+    device_map[f"language.model.layers.{num_layers - 1}"] = 0
+    return device_map
+
+
 class TransformersManualVisionDeepSeekVL2(TransformersBaseLLM):
     r"""
     Multimodal Understanding
@@ -55,17 +87,28 @@ class TransformersManualVisionDeepSeekVL2(TransformersBaseLLM):
         config = AutoConfig.from_pretrained(self.args.lm_model_name_or_path)
         language_config = config.language_config
         language_config._attn_implementation = "eager"
-        self._model: DeepseekVLV2ForCausalLM = AutoModelForCausalLM.from_pretrained(
-            self.args.lm_model_name_or_path,
-            language_config=language_config,
-            trust_remote_code=True,
-        )
+        if self.args.lm_device_map:
+            self.args.lm_device_map |= split_model(
+                "/".join(self.args.lm_model_name_or_path.split("/")[-2:])
+            )
+            self._model: DeepseekVLV2ForCausalLM = AutoModelForCausalLM.from_pretrained(
+                self.args.lm_model_name_or_path,
+                language_config=language_config,
+                trust_remote_code=True,
+                dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float16,
+                device_map=self.args.lm_device_map,
+            ).eval()
+        else:
+            self._model: DeepseekVLV2ForCausalLM = AutoModelForCausalLM.from_pretrained(
+                self.args.lm_model_name_or_path,
+                language_config=language_config,
+                trust_remote_code=True,
+            )
+            self._model = self._model.to(
+                self.args.lm_device,
+                dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float16,
+            ).eval()
         print_model_params(self._model, self.TAG)
-
-        self._model = self._model.to(
-            self.args.lm_device,
-            dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float16,
-        ).eval()
 
         self.vl_chat_processor: DeepseekVLV2Processor = DeepseekVLV2Processor.from_pretrained(
             self.args.lm_model_name_or_path

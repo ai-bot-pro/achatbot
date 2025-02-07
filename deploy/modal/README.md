@@ -129,8 +129,20 @@ IMAGE_NAME=qwen IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 LLM_MODEL_NAME_OR_PATH=Qwen/Q
 # webrtc_vision_bot serve on llama vision llm pip image
 IMAGE_NAME=llama IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
 # webrtc_vision_bot serve on janus vision llm pip image
+# https://www.nvidia.com/en-us/data-center/tesla-t4/ 16G
 IMAGE_NAME=janus IMAGE_CONCURRENT_CN=1 IMAGE_GPU=T4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
 IMAGE_NAME=janus IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 LLM_MODEL_NAME_OR_PATH=deepseek-ai/Janus-Pro-7B modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+# webrtc_vision_bot serve on deepseekvl2 vision llm pip image
+# https://www.nvidia.com/en-us/data-center/l4/ 24GB 
+IMAGE_NAME=deepseekvl2 IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+# https://www.nvidia.com/en-us/data-center/l40s/ 48G
+IMAGE_NAME=deepseekvl2 IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L40S LLM_MODEL_NAME_OR_PATH=deepseek-ai/deepseek-vl2-small modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+# https://www.nvidia.com/en-us/data-center/a100/ 40G
+IMAGE_NAME=deepseekvl2 IMAGE_CONCURRENT_CN=1 IMAGE_GPU=A100 LLM_MODEL_NAME_OR_PATH=deepseek-ai/deepseek-vl2-small modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+# https://www.nvidia.com/en-us/data-center/a100/ 80G
+IMAGE_NAME=deepseekvl2 IMAGE_CONCURRENT_CN=1 IMAGE_GPU=A100-80GB LLM_MODEL_NAME_OR_PATH=deepseek-ai/deepseek-vl2 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+# https://www.nvidia.com/en-us/data-center/h100/ 80G
+IMAGE_NAME=deepseekvl2 IMAGE_CONCURRENT_CN=1 IMAGE_GPU=H100 LLM_MODEL_NAME_OR_PATH=deepseek-ai/deepseek-vl2 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
 ```
 - curl api to run chat room bot with webrtc (daily/livekit/agora)
 ```shell
@@ -368,6 +380,16 @@ endpoint: https://weedge-achatbot--fastapi-webrtc-vision-qwen-bot-srv-app.modal.
 IMAGE_NAME=llama IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
 ```
 endpoint: https://weedge-achatbot--fastapi-webrtc-vision-llama-bot-srv-app.modal.run/
+
+```shell
+IMAGE_NAME=janus IMAGE_CONCURRENT_CN=1 IMAGE_GPU=T4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+```
+endpoint: https://weedge-achatbot--fastapi-webrtc-vision-janus-bot-srv-app.modal.run/
+
+```shell
+IMAGE_NAME=deepseekvl2 IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+```
+endpoint: https://weedge-achatbot--fastapi-webrtc-vision-deepseekvl2-bot-srv-app.modal.run/
 
 - deploy webrtc_glm_voice_bot serve
 ```shell
