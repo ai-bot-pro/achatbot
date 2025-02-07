@@ -37,6 +37,7 @@ except ModuleNotFoundError as e:
 def split_model(model_name):
     device_map = {}
     model_splits = {
+        # "deepseek-ai/deepseek-vl2-tiny": [12],  # 1 GPU for 16b
         "deepseek-ai/deepseek-vl2-small": [13, 14],  # 2 GPU for 16b
         "deepseek-ai/deepseek-vl2": [10, 10, 10],  # 3 GPU for 27b
     }
