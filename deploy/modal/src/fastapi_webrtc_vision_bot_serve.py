@@ -35,7 +35,7 @@ class ContainerRuntimeConfig:
                     "ASR_LANG": "zn",
                     "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
                     # llm processor model, default:google gemini_flash_latest
-                    "GOOGLE_LLM_MODEL": "gemini-1.5-flash-latest",
+                    "GOOGLE_LLM_MODEL": "gemini-2.0-flash",
                     # tts module engine TAG,default tts_edge
                     "TTS_TAG": "tts_edge",
                 }
@@ -72,7 +72,7 @@ class ContainerRuntimeConfig:
                     "ASR_LANG": "zn",
                     "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
                     # llm processor model, default:google gemini_flash_latest
-                    "GOOGLE_LLM_MODEL": "gemini-1.5-flash-latest",
+                    "GOOGLE_LLM_MODEL": "gemini-2.0-flash",
                     "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "Qwen/Qwen2-VL-2B-Instruct")}',
                     # tts module engine TAG,default tts_edge
                     "TTS_TAG": "tts_edge",
@@ -110,7 +110,7 @@ class ContainerRuntimeConfig:
                     "ASR_LANG": "zn",
                     "ASR_MODEL_NAME_OR_PATH": "FunAudioLLM/SenseVoiceSmall",
                     # llm processor model, default:google gemini_flash_latest
-                    "GOOGLE_LLM_MODEL": "gemini-1.5-flash-latest",
+                    "GOOGLE_LLM_MODEL": "gemini-2.0-flash",
                     "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "unsloth/Llama-3.2-11B-Vision-Instruct")}',
                     # tts module engine TAG,default tts_edge
                     "TTS_TAG": "tts_edge",
@@ -148,8 +148,47 @@ class ContainerRuntimeConfig:
                     "ASR_LANG": "zn",
                     "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
                     # llm processor model, default:google gemini_flash_latest
-                    "GOOGLE_LLM_MODEL": "gemini-1.5-flash-latest",
+                    "GOOGLE_LLM_MODEL": "gemini-2.0-flash",
                     "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "deepseek-ai/Janus-Pro-1B")}',
+                    # tts module engine TAG,default tts_edge
+                    "TTS_TAG": "tts_edge",
+                }
+            )
+        ),
+        "deepseekvl2": (
+            modal.Image.debian_slim(python_version="3.11")
+            .apt_install("git", "git-lfs", "ffmpeg")
+            .pip_install(
+                [
+                    "achatbot["
+                    "fastapi_bot_server,"
+                    "livekit,livekit-api,daily,agora,"
+                    "silero_vad_analyzer,daily_langchain_rag_bot,"
+                    "sense_voice_asr,deepgram_asr_processor,"
+                    "llm_transformers_manual_vision_deepseekvl2,"
+                    "openai_llm_processor,google_llm_processor,litellm_processor,"
+                    "tts_edge,"
+                    "deep_translator,together_ai,"
+                    "queue"
+                    "]~=0.0.8.8",
+                    "huggingface_hub[hf_transfer]==0.24.7",
+                ],
+                # extra_index_url="https://pypi.org/simple/",
+                extra_index_url="https://test.pypi.org/simple/",
+            )
+            .env(
+                {
+                    "HF_HUB_ENABLE_HF_TRANSFER": "1",
+                    "ACHATBOT_PKG": "1",
+                    "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
+                    "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
+                    # asr module engine TAG, default whisper_timestamped_asr
+                    "ASR_TAG": "sense_voice_asr",
+                    "ASR_LANG": "zn",
+                    "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
+                    # llm processor model, default:google gemini_flash_latest
+                    "GOOGLE_LLM_MODEL": "gemini-2.0-flash",
+                    "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "deepseek-ai/deepseek-vl2-tiny")}',
                     # tts module engine TAG,default tts_edge
                     "TTS_TAG": "tts_edge",
                 }

@@ -131,6 +131,9 @@ IMAGE_NAME=llama IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/
 # webrtc_vision_bot serve on janus vision llm pip image
 IMAGE_NAME=janus IMAGE_CONCURRENT_CN=1 IMAGE_GPU=T4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
 IMAGE_NAME=janus IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 LLM_MODEL_NAME_OR_PATH=deepseek-ai/Janus-Pro-7B modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+# webrtc_vision_bot serve on deepseekvl2 vision llm pip image
+IMAGE_NAME=deepseekvl2 IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+IMAGE_NAME=deepseekvl2 IMAGE_CONCURRENT_CN=1 IMAGE_GPU=A100 LLM_MODEL_NAME_OR_PATH=deepseek-ai/deepseek-vl2-small modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
 ```
 - curl api to run chat room bot with webrtc (daily/livekit/agora)
 ```shell
