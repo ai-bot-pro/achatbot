@@ -415,7 +415,7 @@ glm_voice_processor = [
 freeze_omni_voice_processor = [
     "achatbot[llm_transformers_manual_voice_freeze_omni]",
 ]
-moshi_voice_processor = ["moshi~=0.1.0"]
+moshi_voice_processor = ["moshi~=0.2.1"]
 
 
 #------------------------bot-------------------------
