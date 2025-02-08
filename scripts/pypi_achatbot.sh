@@ -15,6 +15,7 @@ if [ $# -ge 1 ] && [ "$1" == "dev" ]; then
 fi
 echo "upload to $pypi"
 
+rm -rf pypi_build/app/achatbot
 mkdir -p pypi_build/app/achatbot
 
 cp -r src/* pypi_build/app/achatbot/
@@ -37,6 +38,6 @@ if [ -n "$pypi" ]; then
     else
         twine upload --verbose --skip-existing --repository $pypi dist/*
     fi
-    rm -rf pypi_build
+    rm -rf pypi_build/app/achatbot
 fi 
 

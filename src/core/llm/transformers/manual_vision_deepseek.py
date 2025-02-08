@@ -39,12 +39,12 @@ def split_model(model_name):
 
     # splits layers into different GPUs (need use L4 for bfloat16 with flash attention)
     model_splits = {
-        # DeepSeek-VL2-tiny is built on DeepSeekMoE-3B (total activated parameters are 1.0B)
+        # DeepSeek-VL2-tiny is built on DeepSeekMoE-3B (total activated parameters are 1.0B) with 12 layers
         "deepseek-ai/deepseek-vl2-tiny": [12],  # 1 GPU for 3B
-        # DeepSeek-VL2-small is built on DeepSeekMoE-16B (total activated parameters are 2.8B)
+        # DeepSeek-VL2-small is built on DeepSeekMoE-16B (total activated parameters are 2.8B) with 27 layers
         "deepseek-ai/deepseek-vl2-small": [13, 14],  # 2 GPU for 16b
-        # DeepSeek-VL2 is built on DeepSeekMoE-27B (total activated parameters are 4.5B)
-        "deepseek-ai/deepseek-vl2": [10, 10, 10],  # 3 GPU for 27b
+        # DeepSeek-VL2 is built on DeepSeekMoE-27B (total activated parameters are 4.5B) with 30 layers
+        "deepseek-ai/deepseek-vl2": [6, 8, 8, 8],  # 3 GPU for 27b
     }
     num_layers_per_gpu = model_splits[model_name]
     num_layers = sum(num_layers_per_gpu)
@@ -78,8 +78,6 @@ class TransformersManualVisionDeepSeekVL2(TransformersBaseLLM):
 
     def __init__(self, **args) -> None:
         self.args = TransformersLMArgs(**args)
-        self.args.lm_device = self.args.lm_device or get_device()
-        logging.info("TransformersLMArgs: %s", self.args)
 
         # https://huggingface.co/deepseek-ai/deepseek-vl2/blob/main/config.json (MLA + MOE)
         # https://huggingface.co/deepseek-ai/deepseek-vl2-small/blob/main/config.json (MLA + MOE)
@@ -87,18 +85,24 @@ class TransformersManualVisionDeepSeekVL2(TransformersBaseLLM):
         config = AutoConfig.from_pretrained(self.args.lm_model_name_or_path)
         language_config = config.language_config
         language_config._attn_implementation = "eager"
-        if self.args.lm_device_map:
-            self.args.lm_device_map |= split_model(
-                "/".join(self.args.lm_model_name_or_path.split("/")[-2:])
-            )
+        if self.args.lm_device_map is not None:
+            if isinstance(self.args.lm_device_map, dict):
+                customer_deivce_map = self.args.lm_device_map
+                default_device_map = split_model(
+                    "/".join(self.args.lm_model_name_or_path.split("/")[-2:])
+                )
+                self.args.lm_device_map = {**default_device_map, **customer_deivce_map}
+            logging.info(f"TransformersLMArgs: {self.args}")
             self._model: DeepseekVLV2ForCausalLM = AutoModelForCausalLM.from_pretrained(
                 self.args.lm_model_name_or_path,
                 language_config=language_config,
                 trust_remote_code=True,
-                dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float16,
+                torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float16,
                 device_map=self.args.lm_device_map,
             ).eval()
         else:
+            self.args.lm_device = self.args.lm_device or get_device()
+            logging.info(f"TransformersLMArgs: {self.args}")
             self._model: DeepseekVLV2ForCausalLM = AutoModelForCausalLM.from_pretrained(
                 self.args.lm_model_name_or_path,
                 language_config=language_config,
@@ -108,6 +112,7 @@ class TransformersManualVisionDeepSeekVL2(TransformersBaseLLM):
                 self.args.lm_device,
                 dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float16,
             ).eval()
+        logging.info(f"TransformersLMArgs: {self.args} model.device: {self._model.device}")
         print_model_params(self._model, self.TAG)
 
         self.vl_chat_processor: DeepseekVLV2Processor = DeepseekVLV2Processor.from_pretrained(
