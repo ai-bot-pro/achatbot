@@ -170,11 +170,11 @@ class ContainerRuntimeConfig:
                     "tts_edge,"
                     "deep_translator,together_ai,"
                     "queue"
-                    "]~=0.0.8.8",
+                    "]~=0.0.8.8.3",
                     "huggingface_hub[hf_transfer]==0.24.7",
                 ],
-                extra_index_url="https://pypi.org/simple/",
-                # extra_index_url="https://test.pypi.org/simple/",
+                # extra_index_url="https://pypi.org/simple/",
+                extra_index_url="https://test.pypi.org/simple/",
             )
             .env(
                 {
@@ -222,7 +222,6 @@ class ContainerRuntimeConfig:
 
     @staticmethod
     def get_allow_concurrent_inputs():
-        # T4, L4, A10G, A100, H100
         concurrent_cn = int(os.getenv("IMAGE_CONCURRENT_CN", "1"))
         print(f"image_concurrent_cn:{concurrent_cn}")
         return concurrent_cn
