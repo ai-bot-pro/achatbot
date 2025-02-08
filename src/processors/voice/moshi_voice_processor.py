@@ -16,7 +16,7 @@ from apipeline.frames import (
 import numpy as np
 import torch
 
-from src.common.utils.helper import get_device
+from src.common.utils.helper import get_device, print_model_params
 from src.common.utils.audio_utils import (
     bytes2NpArrayWith16,
     postprocess_tts_wave_int16,
@@ -110,6 +110,7 @@ class MoshiVoiceBaseProcessor(VoiceProcessorBase):
 
         logging.info("loading mimi")
         self._mimi = self._checkpoint_info.get_mimi(device=self._device)
+        print_model_params(self._mimi, "mimi")
         logging.info("mimi loaded")
 
         logging.info("loading bpe text tokenizer")
@@ -121,12 +122,13 @@ class MoshiVoiceBaseProcessor(VoiceProcessorBase):
         condition_tensors = get_condition_tensors(
             self._checkpoint_info.model_type, self._moshi_lm, batch_size=1, cfg_coef=self._cfg_coef
         )
-        self.lm_gen = LMGen(
+        self._lm_gen = LMGen(
             self._moshi_lm,
             cfg_coef=self._cfg_coef,
             condition_tensors=condition_tensors,
             **self._lm_gen_args.__dict__,
         )
+        print_model_params(self._lm_gen, "streaming moshi lm")
         logging.info("moshi lm loaded")
 
     def load_models_v1(self):
