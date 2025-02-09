@@ -14,10 +14,11 @@ class ContainerRuntimeConfig:
                     "websocket_server_transport,"
                     "silero_vad_analyzer,"
                     "moshi_voice_processor"
-                    "]~=0.0.8.3",
+                    "]~=0.0.8.10",
                     "huggingface_hub[hf_transfer]==0.24.7",
                 ],
                 extra_index_url="https://pypi.org/simple/",
+                # extra_index_url="https://test.pypi.org/simple/",
             )
             .env(
                 {
@@ -28,6 +29,7 @@ class ContainerRuntimeConfig:
                     ),
                     "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
                     "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
+                    "MODEL_NAME": os.getenv("MODEL_NAME", "kyutai/moshiko-pytorch-bf16"),
                 }
             )
         ),
@@ -41,6 +43,14 @@ class ContainerRuntimeConfig:
         print(f"use image:{image_name}")
         return ContainerRuntimeConfig.images[image_name]
 
+    @staticmethod
+    def get_gpu():
+        # https://modal.com/docs/reference/modal.gpu
+        # T4, L4, A10G, L40S, A100, A100-80GB, H100
+        gpu = os.getenv("IMAGE_GPU", "L4")
+        print(f"image_gpu:{gpu}")
+        return gpu
+
 
 img = ContainerRuntimeConfig.get_img()
 with img.imports():
@@ -50,13 +60,14 @@ with img.imports():
     import os
 
     from fastapi import WebSocket
-    from huggingface_hub import hf_hub_download
+    from huggingface_hub import hf_hub_download, snapshot_download
     from moshi.models import loaders
 
     from achatbot.cmd.bots.base_fastapi_websocket_server import AIFastapiWebsocketBot
     from achatbot.cmd.http.server.fastapi_daily_bot_serve import app as fastapi_app
     from achatbot.cmd.bots.bot_loader import BotLoader
     from achatbot.common.logger import Logger
+    from achatbot.common.types import MODELS_DIR
 
 # ----------------------- app -------------------------------
 app = modal.App("fastapi_ws_moshi_voice_bot")
@@ -69,7 +80,7 @@ volume = modal.Volume.from_name("bot_config", create_if_missing=True)
     image=img,
     # secrets=[modal.Secret.from_name("achatbot")],
     volumes={"/bots": volume},
-    gpu="A10G",
+    gpu=ContainerRuntimeConfig.get_gpu(),
     container_idle_timeout=1200,
     timeout=600,
     allow_concurrent_inputs=1,
@@ -79,13 +90,18 @@ class Srv:
     def setup(self):
         Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
         # https://huggingface.co/docs/huggingface_hub/guides/download
+        # llm model repo
+        llm_model_repo = os.getenv("MODEL_NAME")
         repo_id = loaders.DEFAULT_REPO
+        if llm_model_repo:
+            repo_id = "/".join(llm_model_repo.split("/")[-2:])
+        snapshot_download(
+            repo_id=repo_id,
+            repo_type="model",
+            allow_patterns="*",
+            # local_dir=os.path.join(MODELS_DIR, repo_id),  # noqa: F821
+        )
         bot_config_name = os.getenv("BOT_CONFIG_NAME", "")
-        if "moshika" in bot_config_name:
-            repo_id = "kyutai/moshika-pytorch-bf16"
-        hf_hub_download(repo_id, loaders.MOSHI_NAME)
-        hf_hub_download(repo_id, loaders.MIMI_NAME)
-        hf_hub_download(repo_id, loaders.TEXT_TOKENIZER_NAME)
         logging.info(f"download model done, config name:{bot_config_name}, hf_repo:{repo_id}")
 
     @modal.enter()

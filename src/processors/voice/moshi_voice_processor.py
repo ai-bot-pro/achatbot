@@ -13,14 +13,13 @@ from apipeline.frames import (
     AudioRawFrame,
     TextFrame,
 )
-from moshi.models.loaders import DEFAULT_REPO
 import numpy as np
 import torch
 
+from src.common.utils.helper import get_device, print_model_params
 from src.common.utils.audio_utils import (
     bytes2NpArrayWith16,
     postprocess_tts_wave_int16,
-    resample_audio,
 )
 from src.processors.voice.base import VoiceProcessorBase
 from src.types.llm.lmgen import LMGenArgs
@@ -29,6 +28,8 @@ try:
     from sphn import OpusStreamReader, OpusStreamWriter, resample
     from sentencepiece import SentencePieceProcessor
     from moshi.models import loaders, MimiModel, LMModel, LMGen
+    from moshi.run_inference import get_condition_tensors, seed_all
+
     from huggingface_hub import hf_hub_download
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
@@ -38,21 +39,13 @@ except ModuleNotFoundError as e:
     raise Exception(f"Missing module: {e}")
 
 
-def seed_all(seed):
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)  # for multi-GPU setups
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.backends.cudnn.deterministic = False
-    torch.backends.cudnn.benchmark = False
-
-
 class MoshiVoiceBaseProcessor(VoiceProcessorBase):
     """
-    use mimi speech codec + moshi lm(moshiko/moshika)
+    use mimi speech codec + moshi lm(moshiko/moshika, hibiki);
+    speech-text foundation model and full-duplex spoken dialogue framework
     - A1-T2A2: (speech)-to-(speech and text) (mimi(speech encoder)) -> (llm) -- text|speech tokens --> bpe(text decoder)|mimi(speech decoder))
+        - moshi (moshiko/moshika): speech-text foundation model
+        - hibiki: speech fr->en translate model
 
     NOTE:
     - moshi genative lm no system prompt and funciton call.
@@ -66,7 +59,8 @@ class MoshiVoiceBaseProcessor(VoiceProcessorBase):
         mimi_weight_file: str | None = None,
         text_tokenizer_file: str | None = None,
         moshi_weight_file: str | None = None,
-        device: str = "cuda",
+        device: str | None = None,
+        cfg_coef: float = 1.0,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -78,8 +72,10 @@ class MoshiVoiceBaseProcessor(VoiceProcessorBase):
         self._mimi_weight_file = mimi_weight_file
         self._text_tokenizer_file = text_tokenizer_file
         self._moshi_weight_file = moshi_weight_file
-        self._device = device
+        self._device = device or get_device()
+        self._cfg_coef = cfg_coef
 
+        self._checkpoint_info: loaders.CheckpointInfo = None
         self._mimi: MimiModel = None
         self._text_tokenizer: SentencePieceProcessor = None
         self._moshi_lm: LMModel = None
@@ -105,6 +101,38 @@ class MoshiVoiceBaseProcessor(VoiceProcessorBase):
         }
 
     def load_models(self):
+        self._checkpoint_info: loaders.CheckpointInfo = loaders.CheckpointInfo.from_hf_repo(
+            self._model_name,
+            self._moshi_weight_file,
+            self._mimi_weight_file,
+            self._text_tokenizer_file,
+        )
+
+        logging.info("loading mimi")
+        self._mimi = self._checkpoint_info.get_mimi(device=self._device)
+        print_model_params(self._mimi, "mimi")
+        self._frame_size = int(self._mimi.sample_rate / self._mimi.frame_rate)
+        logging.info("mimi loaded")
+
+        logging.info("loading bpe text tokenizer")
+        self._text_tokenizer = self._checkpoint_info.get_text_tokenizer()
+        logging.info("bpe text tokenizer loaded")
+
+        logging.info("loading moshi lm")
+        self._moshi_lm = self._checkpoint_info.get_moshi(device=self._device)
+        condition_tensors = get_condition_tensors(
+            self._checkpoint_info.model_type, self._moshi_lm, batch_size=1, cfg_coef=self._cfg_coef
+        )
+        self._lm_gen = LMGen(
+            self._moshi_lm,
+            cfg_coef=self._cfg_coef,
+            condition_tensors=condition_tensors,
+            **self._lm_gen_args.__dict__,
+        )
+        print_model_params(self._lm_gen, "streaming moshi lm")
+        logging.info("moshi lm loaded")
+
+    def load_models_v1(self):
         logging.info("loading mimi")
         if self._mimi_weight_file is None:
             self._mimi_weight_file = hf_hub_download(self._model_name, loaders.MIMI_NAME)
@@ -121,7 +149,7 @@ class MoshiVoiceBaseProcessor(VoiceProcessorBase):
         self._text_tokenizer = SentencePieceProcessor(self._text_tokenizer_file)
         logging.info("loaded text tokenizer")
 
-        logging.info("loading moshi")
+        logging.info("loading moshi lm")
         if self._moshi_weight_file is None:
             self._moshi_weight_file = hf_hub_download(self._model_name, loaders.MOSHI_NAME)
         self._moshi_lm = loaders.get_moshi_lm(self._moshi_weight_file, self._device)
@@ -129,7 +157,7 @@ class MoshiVoiceBaseProcessor(VoiceProcessorBase):
             self._moshi_lm,
             **self._lm_gen_args.__dict__,
         )
-        logging.info("moshi loaded")
+        logging.info("moshi lm loaded")
 
     def warmup(self):
         logging.info("start warmup")
@@ -165,7 +193,8 @@ class MoshiVoiceOpusStreamProcessor(MoshiVoiceBaseProcessor):
         mimi_weight_file: str | None = None,
         text_tokenizer_file: str | None = None,
         moshi_weight_file: str | None = None,
-        device: str = "cuda",
+        device: str | None = None,
+        cfg_coef: float = 1.0,
         **kwargs,
     ):
         super().__init__(
@@ -175,6 +204,7 @@ class MoshiVoiceOpusStreamProcessor(MoshiVoiceBaseProcessor):
             text_tokenizer_file=text_tokenizer_file,
             moshi_weight_file=moshi_weight_file,
             device=device,
+            cfg_coef=cfg_coef,
             **kwargs,
         )
 
@@ -235,6 +265,8 @@ class MoshiVoiceOpusStreamProcessor(MoshiVoiceBaseProcessor):
 
     async def _audio_in_task_handler(self):
         self._all_pcm_data = None
+        # skip_frames = 1
+
         while True:
             try:
                 pcm = self._opus_reader.read_pcm()
