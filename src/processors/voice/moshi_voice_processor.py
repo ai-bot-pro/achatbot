@@ -111,6 +111,7 @@ class MoshiVoiceBaseProcessor(VoiceProcessorBase):
         logging.info("loading mimi")
         self._mimi = self._checkpoint_info.get_mimi(device=self._device)
         print_model_params(self._mimi, "mimi")
+        self._frame_size = int(self._mimi.sample_rate / self._mimi.frame_rate)
         logging.info("mimi loaded")
 
         logging.info("loading bpe text tokenizer")
@@ -264,7 +265,7 @@ class MoshiVoiceOpusStreamProcessor(MoshiVoiceBaseProcessor):
 
     async def _audio_in_task_handler(self):
         self._all_pcm_data = None
-        skip_frames = 1
+        # skip_frames = 1
 
         while True:
             try:
@@ -294,14 +295,6 @@ class MoshiVoiceOpusStreamProcessor(MoshiVoiceBaseProcessor):
 
                         # mimi encode speech tensor chunk
                         codes = self._mimi.encode(chunk)
-
-                        if skip_frames:
-                            # The first input audio frame is ignored, as from the point of
-                            # view of the model it is in the past. We still `mimi.encode` for simplicity,
-                            # however as the first encoded frame has a specific structure (due to the left padding),
-                            # we reset the streaming state of the encoder to reapply the padding on the next call.
-                            self.mimi.reset_streaming()
-                            skip_frames -= 1
 
                         for c in range(codes.shape[-1]):
                             # lm gen tokens

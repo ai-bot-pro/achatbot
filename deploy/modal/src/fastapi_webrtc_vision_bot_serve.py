@@ -215,7 +215,8 @@ class ContainerRuntimeConfig:
 
     @staticmethod
     def get_gpu():
-        # T4, L4, A10G, A100, H100
+        # https://modal.com/docs/reference/modal.gpu
+        # T4, L4, A10G, L40S, A100, A100-80GB, H100
         gpu = os.getenv("IMAGE_GPU", None)
         print(f"image_gpu:{gpu}")
         return gpu

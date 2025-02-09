@@ -108,6 +108,11 @@ curl --location 'https://weedge-achatbot--fastapi-webrtc-audio-bot-srv-app-dev.m
 modal volume put -e achatbot bot_config  ../../config/bots/fastapi_websocket_moshi_voice_bot.json / -f
 # ws_moshi_voice_bot serve on default pip image
 IMAGE_NAME=default modal serve -e achatbot src/fastapi_ws_moshi_voice_bot_serve.py
+
+# put local config to modal volume bot_config / dir
+modal volume put -e achatbot bot_config ../../config/bots/fastapi_websocket_moshi_hibiki_voice_bot.json / -f
+# ws_moshi_hibiki_voice_bot serve on default pip image
+IMAGE_NAME=default IMAGE_GPU=L4 BOT_CONFIG_NAME=fastapi_websocket_moshi_hibiki_voice_bot MODEL_NAME=kyutai/hibiki-1b-pytorch-bf16 modal serve -e achatbot src/fastapi_ws_moshi_voice_bot_serve.py
 ```
 - run moshi_opus_stream_ws_pb_client to chat with moshi in CLI
 ```shell
