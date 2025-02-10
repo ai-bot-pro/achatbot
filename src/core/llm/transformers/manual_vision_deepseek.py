@@ -44,7 +44,7 @@ def split_model(model_name):
         # DeepSeek-VL2-small is built on DeepSeekMoE-16B (total activated parameters are 2.8B) with 27 layers
         "deepseek-ai/deepseek-vl2-small": [13, 14],  # 2 GPU for 16b
         # DeepSeek-VL2 is built on DeepSeekMoE-27B (total activated parameters are 4.5B) with 30 layers
-        "deepseek-ai/deepseek-vl2": [6, 8, 8, 8],  # 3 GPU for 27b
+        "deepseek-ai/deepseek-vl2": [6, 8, 8, 8],  # 4 GPU for 27b
     }
     num_layers_per_gpu = model_splits[model_name]
     num_layers = sum(num_layers_per_gpu)
