@@ -1,5 +1,6 @@
 import json
 import os
+import random
 from typing import Generator, List, Set
 
 from pydantic import BaseModel, Field
@@ -143,7 +144,7 @@ class PaperRoleSystemPromptArgs(BaseModel):
         description="Speech Synthesis Markup Language: https://www.w3.org/TR/speech-synthesis/",
     )
     round_cn: int = Field(
-        default=30,
+        default=random.randint(30, 50),
         description="at least maintain rounds of conversation",
     )
 
@@ -182,7 +183,7 @@ class RoleSystemPromptArgs(BaseModel):
         description="Speech Synthesis Markup Language: https://www.w3.org/TR/speech-synthesis/",
     )
     round_cn: int = Field(
-        default=20,
+        default=random.randint(20, 30),
         description="at least maintain rounds of conversation",
     )
 

@@ -70,6 +70,9 @@ class TransformersBaseLLM(BaseLLM, ILlm):
     def chat_history(self) -> ChatHistory:
         return self._chat_history if self._chat_history else ChatHistory()
 
+    def set_system_prompt(self, **kwargs):
+        pass
+
     def init(self):
         pass
 
@@ -86,8 +89,10 @@ class TransformersBaseLLM(BaseLLM, ILlm):
         - 'prompt': str (text+speech-tokens with instructions, no chat tpl)
 
         for llm chat template format.
-        - 'prompt': str (text)
-        - 'prompt': [PIL.Image,..., str]
+        - 'prompt': str (text) # prompt or instruction
+        - 'prompt': [PIL.Image,..., str] # vision
+        - 'prompt': [str, np.ndarray] # voice
+        - 'prompt': [str, np.ndarray,[PIL.Image]] # omni
         - vision image 'prompt' e.g.: [
                 {
                     "type": "image",
