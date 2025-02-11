@@ -133,10 +133,12 @@ IMAGE_NAME=qwen IMAGE_CONCURRENT_CN=1 IMAGE_GPU=T4 modal serve -e achatbot src/f
 IMAGE_NAME=qwen IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 LLM_MODEL_NAME_OR_PATH=Qwen/Qwen2-VL-7B-Instruct modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
 # webrtc_vision_bot serve on llama vision llm pip image
 IMAGE_NAME=llama IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+
 # webrtc_vision_bot serve on janus vision llm pip image
 # https://www.nvidia.com/en-us/data-center/tesla-t4/ 16G
 IMAGE_NAME=janus IMAGE_CONCURRENT_CN=1 IMAGE_GPU=T4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
 IMAGE_NAME=janus IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 LLM_MODEL_NAME_OR_PATH=deepseek-ai/Janus-Pro-7B modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+
 # webrtc_vision_bot serve on deepseekvl2 vision llm pip image
 # https://www.nvidia.com/en-us/data-center/l4/ 24GB 
 IMAGE_NAME=deepseekvl2 IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
@@ -153,6 +155,10 @@ IMAGE_NAME=deepseekvl2 IMAGE_CONCURRENT_CN=1 IMAGE_GPU=H100 LLM_MODEL_NAME_OR_PA
 IMAGE_NAME=deepseekvl2 IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4:2 LLM_MODEL_NAME_OR_PATH=deepseek-ai/deepseek-vl2-small modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
 # deepseek-ai/deepseek-vl2 use 4xL4
 IMAGE_NAME=deepseekvl2 IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4:4 LLM_MODEL_NAME_OR_PATH=deepseek-ai/deepseek-vl2 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+
+# webrtc_vision_bot serve on minicpmo vision llm pip image
+# https://www.nvidia.com/en-us/data-center/l4/ 24GB 
+IMAGE_NAME=minicpmo IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
 
 ```
 - curl api to run chat room bot with webrtc (daily/livekit/agora)

@@ -219,3 +219,31 @@ class UserVoiceRawFrame(UserAudioRawFrame):
 
     def __str__(self):
         return f"text:{self.text} {super().__str__()}"
+
+
+@dataclass
+class VisionImageVoiceRawFrame(DataFrame):
+    """An image + audio with an instruct text to ask for a description of it. Will be
+    shown by the transport if the transport's camera is enabled.
+
+    """
+
+    text: str | None
+    audio: AudioRawFrame | None
+    images: List[ImageRawFrame] | None
+
+    def __str__(self):
+        return f"{self.name}(text: {self.text}, audio:{self.audio}, images:{self.images})"
+
+
+@dataclass
+class UserVisionImageVoiceRawFrame(VisionImageVoiceRawFrame):
+    """An user image + audio with an instruct text to ask for a description of it. Will be
+    shown by the transport if the transport's camera is enabled.
+
+    """
+
+    user_id: str = ""
+
+    def __str__(self):
+        return f"user_id:{self.user_id} {super().__str__()}"

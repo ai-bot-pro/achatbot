@@ -90,9 +90,9 @@ class TransformersBaseLLM(BaseLLM, ILlm):
 
         for llm chat template format.
         - 'prompt': str (text) # prompt or instruction
-        - 'prompt': [PIL.Image,..., str] # vision
-        - 'prompt': [str, np.ndarray] # voice
-        - 'prompt': [str, np.ndarray,[PIL.Image]] # omni
+        - 'prompt': [PIL.Image,..., str] # vision, imgs+prompt
+        - 'prompt': [str, np.ndarray] # voice, instruction+audio
+        - 'prompt': [str, np.ndarray, [PIL.Image,...]] # vision+voice, instruction+audio+imgs
         - vision image 'prompt' e.g.: [
                 {
                     "type": "image",
@@ -153,7 +153,6 @@ class TransformersBaseLLM(BaseLLM, ILlm):
             for _ in streamer:
                 times.append(time.perf_counter() - start_time)
                 start_time = time.perf_counter()
-                pass
             logging.info(f"step {step} warnup TTFT time: {times[0]} s")
 
         if "cuda" in str(self._model.device):

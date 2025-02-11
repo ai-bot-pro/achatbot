@@ -19,7 +19,7 @@ class VoiceProcessorBase(AsyncAIProcessor):
     - A1-T1: (speech)-to-(text) (asr)
     - T1-T2A2: (text)-to-(speech and text) ((text-llm)+tts)
     - A1-T2A2: (speech)-to-(speech and text) (asr+(text-llm)+tts)
-    - T2-A2: (text)-to-(speech) (tts)
+    - T1-A2: (text)-to-(speech) (tts)
 
     support streaming mode
     """

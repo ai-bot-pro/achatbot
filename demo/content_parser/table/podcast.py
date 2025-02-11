@@ -144,7 +144,7 @@ class PaperRoleSystemPromptArgs(BaseModel):
         description="Speech Synthesis Markup Language: https://www.w3.org/TR/speech-synthesis/",
     )
     round_cn: int = Field(
-        default=random.randint(30, 50),
+        default=os.getenv("ROUND_CN", random.randint(30, 50)),
         description="at least maintain rounds of conversation",
     )
 

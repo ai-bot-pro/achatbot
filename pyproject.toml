@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 name = "achatbot"
 #dynamic = ["version"]
 # todo
-version = "0.0.8.10"
+version = "0.0.8.10.11"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -363,15 +363,14 @@ llm_transformers_manual_speech_llasa = [
 ]
 llm_transformers_manual_vision_voice_minicpmo = [
     "achatbot[librosa,soundfile]",
-    "Pillow==10.1.0",
-    "torch==2.3.1",
-    "torchaudio==2.3.1",
-    "torchvision==0.18.1",
+    "torch~=2.2.2",
+    "torchaudio~=2.2.2",
+    "torchvision~=0.17.2",
     "transformers==4.44.2",
     #"librosa==0.9.0",
     #"soundfile==0.12.1",
-    "vector-quantize-pytorch==1.18.5",
-    "vocos==0.1.0",
+    "vector-quantize-pytorch~=1.18.5",
+    "vocos~=0.1.0",
     "decord",
     "moviepy",
 ]
