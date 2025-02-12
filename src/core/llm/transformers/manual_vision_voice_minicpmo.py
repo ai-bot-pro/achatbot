@@ -29,8 +29,7 @@ from src.common.types import RECORDS_DIR
 from .base import TransformersBaseLLM
 
 
-class TransformersManualVisionVoiceMiniCPMO(TransformersBaseLLM):
-    TAG = "llm_transformers_manual_vision_voice_minicpmo"
+class TransformersManualMiniCPMO(TransformersBaseLLM):
     # from: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/modeling_minicpmo.py#L168
     RATE = 24000  # vocos config rate: 24000
 
@@ -268,11 +267,13 @@ class TransformersManualVisionVoiceMiniCPMO(TransformersBaseLLM):
             self._model.reset_session()
 
 
-class TransformersManualVisionMiniCPMO(TransformersManualVisionVoiceMiniCPMO):
+class TransformersManualVisionMiniCPMO(TransformersManualMiniCPMO):
     """
-    vision(images + text) -> AutoProcessor(MiniCPMVImageProcessor(images),MiniCPMOTokenizerFast(text)->MiniCPMOProcessor) -> tokens(text input_ids + images) -> SiglipVisionTransformer -> vllm embeddings (vision, vision_hidden_states)-> Qwen2ForCausalLM(Qwen2.5-7B,use Qwen2 LM) -> text + hidden stats(embeddings)
-    - MiniCPMOProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/processing_minicpmo.py#L38
-    - MiniCPMVImageProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/image_processing_minicpmv.py#L121
+    vision(images + text) -> AutoProcessor(MiniCPMVImageProcessor(images),MiniCPMOTokenizerFast(text)->MiniCPMOProcessor) -> tokens(text input_ids + images batch feature) -> SiglipVisionTransformer -> vllm embeddings (vision, vision_hidden_states)-> Qwen2ForCausalLM(Qwen2.5-7B,use Qwen2 LM) -> text + hidden stats(embeddings)
+    - AutoProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/preprocessor_config.json
+        - ⭐️ MiniCPMOProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/processing_minicpmo.py#L38
+        - MiniCPMOTokenizerFast: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/tokenization_minicpmo_fast.py
+        - MiniCPMVImageProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/image_processing_minicpmv.py#L121
     - ⭐️ SiglipVisionTransformer: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/modeling_navit_siglip.py#L850
     - Qwen2ForCausalLM: https://github.com/huggingface/transformers/blob/v4.44.2/src/transformers/models/qwen2/modeling_qwen2.py
     """
@@ -303,11 +304,11 @@ class TransformersManualVisionMiniCPMO(TransformersManualVisionVoiceMiniCPMO):
             yield item["text"]
 
 
-class TransformersManualInstructSpeechMiniCPMO(TransformersManualVisionVoiceMiniCPMO):
+class TransformersManualInstructSpeechMiniCPMO(TransformersManualMiniCPMO):
     r"""
-    TTS: instruction text -> AutoProcessor(MiniCPMOTokenizerFast->MiniCPMOProcessor) -> tokens(text input_ids) -> Qwen2ForCausalLM(Qwen2.5-7B,use Qwen2 LM) -> text + hidden stats(embeddings) -> ChatTTSProcessor(text_tokenizer:BertTokenizerFast) -> ConditionalChatTTS(ChatTTS-200M, use Llama2 LM) ->  audio vq codes -> _generate_mel_spec -> mel spectrograms -> vocos decode_mel_to_audio -> audio(waveform)
+    TTS: instruction text -> AutoProcessor(MiniCPMOTokenizerFast(text)->MiniCPMOProcessor) -> tokens(text input_ids) -> Qwen2ForCausalLM(Qwen2.5-7B,use Qwen2 LM) -> text + hidden stats(embeddings) -> ChatTTSProcessor(text_tokenizer:BertTokenizerFast) -> ConditionalChatTTS(ChatTTS-200M, use Llama2 LM) ->  audio vq codes -> _generate_mel_spec -> mel spectrograms -> vocos decode_mel_to_audio -> audio(waveform)
     - AutoProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/preprocessor_config.json
-        - MiniCPMOProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/processing_minicpmo.py
+        - ⭐️ MiniCPMOProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/processing_minicpmo.py
         - MiniCPMOTokenizerFast: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/tokenization_minicpmo_fast.py
     - Qwen2ForCausalLM: https://github.com/huggingface/transformers/blob/v4.44.2/src/transformers/models/qwen2/modeling_qwen2.py
     - ConditionalChatTTS(⭐️ nice code ⭐️): https://huggingface.co/openbmb/MiniCPM-o-2_6/blob/main/modeling_minicpmo.py#L2590
@@ -355,9 +356,9 @@ class TransformersManualTextSpeechMiniCPMO(TransformersManualInstructSpeechMiniC
     TAG = "llm_transformers_manual_text_speech_minicpmo"
 
 
-class TransformersManualAudioMiniCPMO(TransformersManualVisionVoiceMiniCPMO):
+class TransformersManualAudioMiniCPMO(TransformersManualMiniCPMO):
     r"""
-    Voice: audio -> AutoProcessor(WhisperFeatureExtractor->MiniCPMOProcessor) -> tokens(audio_features) -> MiniCPMWhisperEncoder -> audio embeddings -> Qwen2ForCausalLM(Qwen2.5-7B,use Qwen2 LM) -> text + hidden stats(embeddings)
+    Voice: audio -> AutoProcessor(WhisperFeatureExtractor(audio)->MiniCPMOProcessor) -> tokens(audio_features) -> MiniCPMWhisperEncoder -> audio embeddings -> Qwen2ForCausalLM(Qwen2.5-7B,use Qwen2 LM) -> text + hidden stats(embeddings)
     - AutoProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/preprocessor_config.json
         - MiniCPMOProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/processing_minicpmo.py
         - WhisperFeatureExtractor: https://github.com/huggingface/transformers/blob/v4.42.2/src/transformers/models/whisper/feature_extraction_whisper.py#L36
@@ -407,11 +408,11 @@ class TransformersManualAudioMiniCPMO(TransformersManualVisionVoiceMiniCPMO):
         return prompt
 
 
-class TransformersManualVoiceMiniCPMO(TransformersManualVisionVoiceMiniCPMO):
+class TransformersManualVoiceMiniCPMO(TransformersManualMiniCPMO):
     r"""
-    Voice: audio -> AutoProcessor(WhisperFeatureExtractor->MiniCPMOProcessor) -> tokens(audio_features) -> MiniCPMWhisperEncoder -> audio embeddings -> Qwen2ForCausalLM(Qwen2.5-7B,use Qwen2 LM) -> text + hidden stats(embeddings) -> ChatTTSProcessor(text_tokenizer:BertTokenizerFast) -> ConditionalChatTTS(ChatTTS-200M, use Llama2 LM) ->  audio vq codes -> _generate_mel_spec -> mel spectrograms -> vocos decode_mel_to_audio -> audio(waveform)
+    Voice: audio -> AutoProcessor(WhisperFeatureExtractor->MiniCPMOProcessor) -> tokens(audio_features) -> MiniCPMWhisperEncoder SiglipVisionTransformer -> audio embeddings -> Qwen2ForCausalLM(Qwen2.5-7B,use Qwen2 LM) -> text + hidden stats(embeddings) -> ChatTTSProcessor(text_tokenizer:BertTokenizerFast) -> ConditionalChatTTS(ChatTTS-200M, use Llama2 LM) ->  audio vq codes -> _generate_mel_spec -> mel spectrograms -> vocos decode_mel_to_audio -> audio(waveform)
     - AutoProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/preprocessor_config.json
-        - MiniCPMOProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/processing_minicpmo.py
+        - ⭐️ MiniCPMOProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/processing_minicpmo.py
         - WhisperFeatureExtractor: https://github.com/huggingface/transformers/blob/v4.42.2/src/transformers/models/whisper/feature_extraction_whisper.py#L36
     - ⭐️ MiniCPMWhisperEncoder: https://huggingface.co/openbmb/MiniCPM-o-2_6/blob/main/modeling_minicpmo.py#L1973
     - Qwen2ForCausalLM: https://github.com/huggingface/transformers/blob/v4.44.2/src/transformers/models/qwen2/modeling_qwen2.py
@@ -446,3 +447,22 @@ class TransformersManualVoiceMiniCPMO(TransformersManualVisionVoiceMiniCPMO):
             return [session.ctx.state["prompt"][-1]]
 
         return session.ctx.state["prompt"]
+
+
+class TransformersManualVisionVoiceMiniCPMO(TransformersManualMiniCPMO):
+    r"""
+    Voice: images + audio -> AutoProcessor(MiniCPMVImageProcessor(images) + WhisperFeatureExtractor(audio) -> MiniCPMOProcessor) -> tokens(image_batch_features + audio_features) -> SiglipVisionTransformer(images) + MiniCPMWhisperEncoder(audio) -> image + audio embeddings -> Qwen2ForCausalLM(Qwen2.5-7B,use Qwen2 LM) -> text + hidden stats(embeddings) -> ChatTTSProcessor(text_tokenizer:BertTokenizerFast) -> ConditionalChatTTS(ChatTTS-200M, use Llama2 LM) -> audio vq codes -> _generate_mel_spec -> mel spectrograms -> vocos decode_mel_to_audio -> audio(waveform)
+    - AutoProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/preprocessor_config.json
+        - ⭐️ MiniCPMOProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/processing_minicpmo.py
+        - MiniCPMVImageProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/image_processing_minicpmv.py#L121
+        - WhisperFeatureExtractor: https://github.com/huggingface/transformers/blob/v4.42.2/src/transformers/models/whisper/feature_extraction_whisper.py#L36
+    - ⭐️ SiglipVisionTransformer: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/modeling_navit_siglip.py#L850
+    - ⭐️ MiniCPMWhisperEncoder: https://huggingface.co/openbmb/MiniCPM-o-2_6/blob/main/modeling_minicpmo.py#L1973
+    - Qwen2ForCausalLM: https://github.com/huggingface/transformers/blob/v4.44.2/src/transformers/models/qwen2/modeling_qwen2.py
+    - ConditionalChatTTS(⭐️ nice code ⭐️): https://huggingface.co/openbmb/MiniCPM-o-2_6/blob/main/modeling_minicpmo.py#L2590
+        - VQ-VAE(DVAE, vq use GroupedResidualFSQ): https://huggingface.co/openbmb/MiniCPM-o-2_6/blob/main/modeling_minicpmo.py#L2350
+    - Vocos: https://huggingface.co/openbmb/MiniCPM-o-2_6/blob/main/modeling_minicpmo.py#L168
+        - from https://github.com/gemelo-ai/vocos
+    """
+
+    TAG = "llm_transformers_manual_vision_voice_minicpmo"
