@@ -31,6 +31,8 @@ from .base import TransformersBaseLLM
 
 class TransformersManualVisionVoiceMiniCPMO(TransformersBaseLLM):
     TAG = "llm_transformers_manual_vision_voice_minicpmo"
+    # from: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/modeling_minicpmo.py#L168
+    RATE = 24000  # vocos config rate: 24000
 
     def __init__(self, **args) -> None:
         # session sys settings
@@ -92,9 +94,11 @@ class TransformersManualVisionVoiceMiniCPMO(TransformersBaseLLM):
         if init_audio is False and init_tts is False:
             model.init_tts()
 
-        self._sys_msg = self._model.get_sys_prompt(
-            ref_audio=self.ref_audio, mode=self.interaction_mode, language=self.language
-        )
+        self._sys_msg = None
+        if self.interaction_mode is not None:
+            self._sys_msg = self._model.get_sys_prompt(
+                ref_audio=self.ref_audio, mode=self.interaction_mode, language=self.language
+            )
 
         self._chat_history = ChatHistory(self.args.chat_history_size)
         if self._sys_msg:
@@ -124,9 +128,10 @@ class TransformersManualVisionVoiceMiniCPMO(TransformersBaseLLM):
         if ref_audio_path is not None:
             self.ref_audio, _ = librosa.load(ref_audio_path, sr=16000, mono=True)
 
-        self._sys_msg = self._model.get_sys_prompt(
-            ref_audio=self.ref_audio, mode=self.interaction_mode, language=self.language
-        )
+        if self.interaction_mode is not None:
+            self._sys_msg = self._model.get_sys_prompt(
+                ref_audio=self.ref_audio, mode=self.interaction_mode, language=self.language
+            )
 
     def warmup(self):
         logging.info(f"Warming up {self.__class__.__name__} device: {self._model.device}")
@@ -197,18 +202,16 @@ class TransformersManualVisionVoiceMiniCPMO(TransformersBaseLLM):
         # msgs = self._chat_history.to_list()
 
         # 1. prefill system prompt and msgs and decode first token (prefill_decode(decode first token for TTFT(Time to First Token)))
-        # TODO: change hf streaming_prefill method to support chat history @weedge
+        # TODO: if deploy on serve, change hf streaming_prefill method to support chat history @weedge
         self._sys_msg and self._model.streaming_prefill(
             session_id=session.ctx.client_id, msgs=[self._sys_msg], tokenizer=self._tokenizer
         )
-
-        # 2.prefill msgs and decode first token (prefill_decode(decode first token for TTFT(Time to First Token)))
         # https://huggingface.co/openbmb/MiniCPM-o-2_6/blob/main/modeling_minicpmo.py#L1049
         self._model.streaming_prefill(
             session_id=session.ctx.client_id, msgs=[message], tokenizer=self._tokenizer
         )
 
-        # 3. generate(decoding) (decode_n_tokens for TPOT(Time per Output Token))
+        # 2. generate(decoding) (decode_n_tokens for TPOT(Time per Output Token))
         # https://huggingface.co/openbmb/MiniCPM-o-2_6/blob/main/modeling_minicpmo.py#L1168
         lm_gen_temperature = kwargs.get("temperature", self.args.lm_gen_temperature)
         generate_audio = kwargs.get("generate_audio", self.generate_audio)
@@ -252,6 +255,7 @@ class TransformersManualVisionVoiceMiniCPMO(TransformersBaseLLM):
             # https://huggingface.co/openbmb/MiniCPM-o-2_6/blob/main/modeling_minicpmo.py#L1230
             # llm_generate_chunk -> dict {"text":text}
             for r in streamer:
+                # r["text"] = r["text"].split("<|tts_eos|>")[0]
                 if "<|tts_eos|>" in r["text"]:
                     r["text"] = r["text"].replace("<|tts_eos|>", "")
                 text += r["text"]
@@ -265,10 +269,18 @@ class TransformersManualVisionVoiceMiniCPMO(TransformersBaseLLM):
 
 
 class TransformersManualVisionMiniCPMO(TransformersManualVisionVoiceMiniCPMO):
+    """
+    vision(images + text) -> AutoProcessor(MiniCPMVImageProcessor(images),MiniCPMOTokenizerFast(text)->MiniCPMOProcessor) -> tokens(text input_ids + images) -> SiglipVisionTransformer -> vllm embeddings (vision, vision_hidden_states)-> Qwen2ForCausalLM(Qwen2.5-7B,use Qwen2 LM) -> text + hidden stats(embeddings)
+    - MiniCPMOProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/processing_minicpmo.py#L38
+    - MiniCPMVImageProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/image_processing_minicpmv.py#L121
+    - ⭐️ SiglipVisionTransformer: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/modeling_navit_siglip.py#L850
+    - Qwen2ForCausalLM: https://github.com/huggingface/transformers/blob/v4.44.2/src/transformers/models/qwen2/modeling_qwen2.py
+    """
+
     TAG = "llm_transformers_manual_vision_minicpmo"
 
     def __init__(self, **args) -> None:
-        # vision-only
+        # vision-only vision understanding I1->T2
         args["init_audio"] = False  # no asr
         args["init_tts"] = False  # no tts
         args["generate_audio"] = False  # no gen audio
@@ -291,28 +303,63 @@ class TransformersManualVisionMiniCPMO(TransformersManualVisionVoiceMiniCPMO):
             yield item["text"]
 
 
-class TransformersManualSpeechMiniCPMO(TransformersManualVisionVoiceMiniCPMO):
-    TAG = "llm_transformers_manual_speech_minicpmo"
+class TransformersManualInstructSpeechMiniCPMO(TransformersManualVisionVoiceMiniCPMO):
+    r"""
+    TTS: instruction text -> AutoProcessor(MiniCPMOTokenizerFast->MiniCPMOProcessor) -> tokens(text input_ids) -> Qwen2ForCausalLM(Qwen2.5-7B,use Qwen2 LM) -> text + hidden stats(embeddings) -> ChatTTSProcessor(text_tokenizer:BertTokenizerFast) -> ConditionalChatTTS(ChatTTS-200M, use Llama2 LM) ->  audio vq codes -> _generate_mel_spec -> mel spectrograms -> vocos decode_mel_to_audio -> audio(waveform)
+    - AutoProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/preprocessor_config.json
+        - MiniCPMOProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/processing_minicpmo.py
+        - MiniCPMOTokenizerFast: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/tokenization_minicpmo_fast.py
+    - Qwen2ForCausalLM: https://github.com/huggingface/transformers/blob/v4.44.2/src/transformers/models/qwen2/modeling_qwen2.py
+    - ConditionalChatTTS(⭐️ nice code ⭐️): https://huggingface.co/openbmb/MiniCPM-o-2_6/blob/main/modeling_minicpmo.py#L2590
+        - VQ-VAE(DVAE, vq use GroupedResidualFSQ): https://huggingface.co/openbmb/MiniCPM-o-2_6/blob/main/modeling_minicpmo.py#L2350
+    - Vocos: https://huggingface.co/openbmb/MiniCPM-o-2_6/blob/main/modeling_minicpmo.py#L168
+        - from https://github.com/gemelo-ai/vocos
+
+    instruction: https://voxinstruct.github.io/VoxInstruct/
+    Note: 适合离线一次生成语音，多次生成语音不一致
+    colab笔记: https://github.com/weedge/doraemon-nb/blob/main/OpenBMB_MiniCPMo.ipynb
+    """
+
+    TAG = "llm_transformers_manual_instruct_speech_minicpmo"
 
     def __init__(self, **args) -> None:
-        # tts
+        # tts T1->A2
         args["init_audio"] = False  # no asr
         args["init_tts"] = True  # tts
         args["generate_audio"] = True  # gen audio
 
+        args["ref_audio_path"] = None
+        self.tts_task = args.get("tts_task", "instruct2speech")
+
         super().__init__(**args)
 
     def get_prompt(self, session: Session) -> list:
-        assert isinstance(session.ctx.state["prompt"], str)
+        assert isinstance(session.ctx.state["prompt"], list)
+        assert len(session.ctx.state["prompt"]) == 1  # instruction text
 
         prompt = session.ctx.state["prompt"]
         return prompt
 
+    @torch.inference_mode()
+    def generate(self, session: Session, **kwargs):
+        for item in super().generate(session, **kwargs):
+            yield item["audio_wav"]
+
 
 class TransformersManualAudioMiniCPMO(TransformersManualVisionVoiceMiniCPMO):
+    r"""
+    Voice: audio -> AutoProcessor(WhisperFeatureExtractor->MiniCPMOProcessor) -> tokens(audio_features) -> MiniCPMWhisperEncoder -> audio embeddings -> Qwen2ForCausalLM(Qwen2.5-7B,use Qwen2 LM) -> text + hidden stats(embeddings)
+    - AutoProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/preprocessor_config.json
+        - MiniCPMOProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/processing_minicpmo.py
+        - WhisperFeatureExtractor: https://github.com/huggingface/transformers/blob/v4.42.2/src/transformers/models/whisper/feature_extraction_whisper.py#L36
+    - ⭐️ MiniCPMWhisperEncoder: https://huggingface.co/openbmb/MiniCPM-o-2_6/blob/main/modeling_minicpmo.py#L1973
+    - Qwen2ForCausalLM: https://github.com/huggingface/transformers/blob/v4.44.2/src/transformers/models/qwen2/modeling_qwen2.py
+    """
+
     TAG = "llm_transformers_manual_audio_minicpmo"
 
     def __init__(self, **args) -> None:
+        # audio understanding A1->T2
         args["init_audio"] = True  # asr
         args["init_tts"] = False  # no tts
         args["generate_audio"] = False  # no gen audio
@@ -343,8 +390,8 @@ class TransformersManualAudioMiniCPMO(TransformersManualVisionVoiceMiniCPMO):
     def get_prompt(self, session: Session):
         assert isinstance(session.ctx.state["prompt"], list)
         assert len(session.ctx.state["prompt"]) == 2
-        assert isinstance(session.ctx.state["prompt"][-1], np.ndarray)
-        assert isinstance(session.ctx.state["prompt"][0], str)
+        assert isinstance(session.ctx.state["prompt"][0], str)  # task promt
+        assert isinstance(session.ctx.state["prompt"][-1], np.ndarray)  # audio
 
         prompt = session.ctx.state["prompt"]
         prompt[0] = self.task_prompt
@@ -352,22 +399,41 @@ class TransformersManualAudioMiniCPMO(TransformersManualVisionVoiceMiniCPMO):
 
 
 class TransformersManualVoiceMiniCPMO(TransformersManualVisionVoiceMiniCPMO):
+    r"""
+    Voice: audio -> AutoProcessor(WhisperFeatureExtractor->MiniCPMOProcessor) -> tokens(audio_features) -> MiniCPMWhisperEncoder -> audio embeddings -> Qwen2ForCausalLM(Qwen2.5-7B,use Qwen2 LM) -> text + hidden stats(embeddings) -> ChatTTSProcessor(text_tokenizer:BertTokenizerFast) -> ConditionalChatTTS(ChatTTS-200M, use Llama2 LM) ->  audio vq codes -> _generate_mel_spec -> mel spectrograms -> vocos decode_mel_to_audio -> audio(waveform)
+    - AutoProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/preprocessor_config.json
+        - MiniCPMOProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/processing_minicpmo.py
+        - WhisperFeatureExtractor: https://github.com/huggingface/transformers/blob/v4.42.2/src/transformers/models/whisper/feature_extraction_whisper.py#L36
+    - ⭐️ MiniCPMWhisperEncoder: https://huggingface.co/openbmb/MiniCPM-o-2_6/blob/main/modeling_minicpmo.py#L1973
+    - Qwen2ForCausalLM: https://github.com/huggingface/transformers/blob/v4.44.2/src/transformers/models/qwen2/modeling_qwen2.py
+    - ConditionalChatTTS(⭐️ nice code ⭐️): https://huggingface.co/openbmb/MiniCPM-o-2_6/blob/main/modeling_minicpmo.py#L2590
+        - VQ-VAE(DVAE, vq use GroupedResidualFSQ): https://huggingface.co/openbmb/MiniCPM-o-2_6/blob/main/modeling_minicpmo.py#L2350
+    - Vocos: https://huggingface.co/openbmb/MiniCPM-o-2_6/blob/main/modeling_minicpmo.py#L168
+        - from https://github.com/gemelo-ai/vocos
+    """
+
     TAG = "llm_transformers_manual_voice_minicpmo"
 
     def __init__(self, **args) -> None:
-        # speech to speech
+        # speech to speech A1 -> T2A2
         args["init_audio"] = True  # asr
         args["init_tts"] = True  # tts
         args["generate_audio"] = True  # gen audio
+
+        # mimick | audio_roleplay | audio_assistant
         self.voice_task = args.get("voice_task", "mimick")
+        interaction_mode = args.pop("interaction_mode", "omni")
+        if interaction_mode in ["audio_roleplay", "audio_assistant"]:
+            self.voice_task = interaction_mode
 
         super().__init__(**args)
 
     def get_prompt(self, session: Session):
         assert isinstance(session.ctx.state["prompt"], list)
         assert len(session.ctx.state["prompt"]) == 2
-        assert isinstance(session.ctx.state["prompt"][-1], np.ndarray)
-        assert isinstance(session.ctx.state["prompt"][0], str)
+        assert isinstance(session.ctx.state["prompt"][0], str)  # prompt or instruction
+        assert isinstance(session.ctx.state["prompt"][-1], np.ndarray)  # audio
+        if self.voice_task != "mimick":
+            return [session.ctx.state["prompt"][-1]]
 
-        prompt = session.ctx.state["prompt"]
-        return prompt
+        return session.ctx.state["prompt"]
