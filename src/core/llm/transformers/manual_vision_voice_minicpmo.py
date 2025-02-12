@@ -329,6 +329,7 @@ class TransformersManualInstructSpeechMiniCPMO(TransformersManualVisionVoiceMini
         args["generate_audio"] = True  # gen audio
 
         args["ref_audio_path"] = None
+        # instruct2speech | voice_cloning
         self.tts_task = args.get("tts_task", "instruct2speech")
 
         super().__init__(**args)
@@ -344,6 +345,14 @@ class TransformersManualInstructSpeechMiniCPMO(TransformersManualVisionVoiceMini
     def generate(self, session: Session, **kwargs):
         for item in super().generate(session, **kwargs):
             yield item["audio_wav"]
+
+
+class TransformersManualTextSpeechMiniCPMO(TransformersManualInstructSpeechMiniCPMO):
+    r"""
+    text -> chat lm -> gen text -> speech lm -> audio
+    """
+
+    TAG = "llm_transformers_manual_text_speech_minicpmo"
 
 
 class TransformersManualAudioMiniCPMO(TransformersManualVisionVoiceMiniCPMO):
