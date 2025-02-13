@@ -34,6 +34,7 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
     RATE = 24000  # vocos config rate: 24000
 
     def __init__(self, **args) -> None:
+        logging.debug(f"args:{args}")
         # session sys settings
         # language
         self.language = args.pop("language", "zh")
@@ -51,9 +52,9 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
             self.ref_audio, _ = librosa.load(ref_audio_path, sr=16000, mono=True)
 
         # init vision/voice
-        init_vision = args.pop("init_vision", True)
-        init_audio = args.pop("init_audio", True)
-        init_tts = args.pop("init_tts", True)
+        self.init_vision = args.pop("init_vision", True)
+        self.init_audio = args.pop("init_audio", True)
+        self.init_tts = args.pop("init_tts", True)
 
         # whether gen result audio (tts)
         self.generate_audio = args.pop("generate_audio", True)
@@ -78,19 +79,19 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
             trust_remote_code=True,
             attn_implementation=self.args.lm_attn_impl,
             torch_dtype=self.torch_dtype,
-            init_vision=init_vision,
-            init_audio=init_audio,
-            init_tts=init_tts,
+            init_vision=self.init_vision,
+            init_audio=self.init_audio,
+            init_tts=self.init_tts,
         )
         print_model_params(model, self.TAG)
-        self._model = model.eval().cuda()
+        self._model = model.to(self.args.lm_device).eval()
 
         self._tokenizer = AutoTokenizer.from_pretrained(
             self.args.lm_model_name_or_path, trust_remote_code=True
         )
 
         # In addition to vision-only mode, tts processor and vocos also needs to be initialized
-        if init_audio is False and init_tts is False:
+        if self.init_audio is False and self.init_tts is False:
             model.init_tts()
 
         self._sys_msg = None
@@ -140,12 +141,15 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
             torch.cuda.synchronize()
             start_event.record()
 
-        dummy_pil_image = Image.new("RGB", (100, 100), color="white")
         dummy_input_text = self.args.warnup_prompt
+        content = [dummy_input_text]
+        if self.init_vision is True:
+            dummy_pil_image = Image.new("RGB", (100, 100), color="white")
+            content = [dummy_pil_image, dummy_input_text]
         msgs = [
             {
                 "role": "user",
-                "content": [dummy_pil_image, dummy_input_text],
+                "content": content,
             }
         ]
 
@@ -190,11 +194,13 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
 
     @torch.inference_mode()
     def generate(self, session: Session, **kwargs):
-        logging.debug(f"kwargs: {kwargs}")
+        logging.debug(f"session state: {session.ctx.state} kwargs: {kwargs}")
         seed = kwargs.get("seed", self.args.lm_gen_seed)
         set_all_random_seed(seed)
 
         prompt = self.get_prompt(session)
+        logging.debug(f"prompt: {prompt}")
+
         message = {"role": "user", "content": prompt}
         # history save in kv_cache: llm_past_key_values
         # self._chat_history.append(message)
@@ -232,7 +238,7 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
         audios = []
         text = ""
 
-        if self.generate_audio:
+        if generate_audio:
             # https://huggingface.co/openbmb/MiniCPM-o-2_6/blob/main/modeling_minicpmo.py#L1496
             # _generate_mel_spec_audio_streaming -> streamer (OmniOutput)
             for r in streamer:  # OmniOutput

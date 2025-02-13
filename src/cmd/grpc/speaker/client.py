@@ -102,6 +102,9 @@ TTS_TAG=tts_cosy_voice2 \
     IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 TTS_TAG=tts_llasa IS_SAVE=1 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 TTS_TAG=tts_llasa IS_SAVE=1 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+TTS_TAG=tts_minicpmo \
+    LLM_MODEL_NAME_OR_PATH=./models/openbmb/MiniCPM-o-2_6 \
+    IS_SAVE=1 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 """
 if __name__ == "__main__":
     player = None
