@@ -3,6 +3,7 @@ import os
 
 from dotenv import load_dotenv
 
+from src.core.llm import LLMEnvInit
 from src.common.types import MODELS_DIR, RECORDS_DIR
 from src.common import interface
 from src.common.factory import EngineClass, EngineFactory
@@ -243,8 +244,7 @@ class TTSEnvInit:
 
     @staticmethod
     def get_tts_minicpmo_args() -> dict:
-        kwargs = {}
-        kwargs["language"] = os.getenv("TTS_LANG", "zh")
+        kwargs = LLMEnvInit.get_llm_transformers_args()
         kwargs["instruct_tpl"] = os.getenv("TTS_INSTRUCT_TPL", "")
         return kwargs
 

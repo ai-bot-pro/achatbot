@@ -101,6 +101,7 @@ TTS_TAG=tts_cosy_voice2 \
     COSY_VOICE_REFERENCE_AUDIO_PATH=./test/audio_files/asr_example_zh.wav \
     IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 TTS_TAG=tts_llasa IS_SAVE=1 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+TTS_TAG=tts_llasa IS_SAVE=1 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 """
 if __name__ == "__main__":
     player = None
