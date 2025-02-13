@@ -39,6 +39,8 @@ class TTSEnvInit:
             from . import fish_speech_tts
         elif "tts_llasa" == tag:
             from . import llasa_tts
+        elif "tts_minicpmo" == tag:
+            from . import minicpmo_tts
         # elif "tts_openai" in tag:
         # from . import openai_tts
 
@@ -239,6 +241,13 @@ class TTSEnvInit:
         ).__dict__
         return kwargs
 
+    @staticmethod
+    def get_tts_minicpmo_args() -> dict:
+        kwargs = {}
+        kwargs["language"] = os.getenv("TTS_LANG", "zh")
+        kwargs["instruct_tpl"] = os.getenv("TTS_INSTRUCT_TPL", "")
+        return kwargs
+
     # TAG : config
     map_config_func = {
         "tts_coqui": get_tts_coqui_args,
@@ -253,4 +262,5 @@ class TTSEnvInit:
         "tts_chat": get_tts_chat_args,
         "tts_edge": get_tts_edge_args,
         "tts_g": get_tts_g_args,
+        "tts_minicpmo": get_tts_minicpmo_args,
     }

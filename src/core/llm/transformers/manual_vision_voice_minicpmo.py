@@ -269,6 +269,7 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
 
 class TransformersManualVisionMiniCPMO(TransformersManualMiniCPMO):
     """
+        Vision only
     vision(images + text) -> AutoProcessor(MiniCPMVImageProcessor(images),MiniCPMOTokenizerFast(text)->MiniCPMOProcessor) -> tokens(text input_ids + images batch feature) -> SiglipVisionTransformer -> vllm embeddings (vision, vision_hidden_states)-> Qwen2ForCausalLM(Qwen2.5-7B,use Qwen2 LM) -> text + hidden stats(embeddings)
     - AutoProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/preprocessor_config.json
         - ⭐️ MiniCPMOProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/processing_minicpmo.py#L38
@@ -282,6 +283,7 @@ class TransformersManualVisionMiniCPMO(TransformersManualMiniCPMO):
 
     def __init__(self, **args) -> None:
         # vision-only vision understanding I1->T2
+        args["init_vision"] = True  # vision
         args["init_audio"] = False  # no asr
         args["init_tts"] = False  # no tts
         args["generate_audio"] = False  # no gen audio
@@ -306,7 +308,8 @@ class TransformersManualVisionMiniCPMO(TransformersManualMiniCPMO):
 
 class TransformersManualInstructSpeechMiniCPMO(TransformersManualMiniCPMO):
     r"""
-    TTS: instruction text -> AutoProcessor(MiniCPMOTokenizerFast(text)->MiniCPMOProcessor) -> tokens(text input_ids) -> Qwen2ForCausalLM(Qwen2.5-7B,use Qwen2 LM) -> text + hidden stats(embeddings) -> ChatTTSProcessor(text_tokenizer:BertTokenizerFast) -> ConditionalChatTTS(ChatTTS-200M, use Llama2 LM) ->  audio vq codes -> _generate_mel_spec -> mel spectrograms -> vocos decode_mel_to_audio -> audio(waveform)
+    Instruction Speech:
+    instruction text -> AutoProcessor(MiniCPMOTokenizerFast(text)->MiniCPMOProcessor) -> tokens(text input_ids) -> Qwen2ForCausalLM(Qwen2.5-7B,use Qwen2 LM) -> text + hidden stats(embeddings) -> ChatTTSProcessor(text_tokenizer:BertTokenizerFast) -> ConditionalChatTTS(ChatTTS-200M, use Llama2 LM) ->  audio vq codes -> _generate_mel_spec -> mel spectrograms -> vocos decode_mel_to_audio -> audio(waveform)
     - AutoProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/preprocessor_config.json
         - ⭐️ MiniCPMOProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/processing_minicpmo.py
         - MiniCPMOTokenizerFast: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/tokenization_minicpmo_fast.py
@@ -325,11 +328,12 @@ class TransformersManualInstructSpeechMiniCPMO(TransformersManualMiniCPMO):
 
     def __init__(self, **args) -> None:
         # tts T1->A2
+        args["init_vision"] = False  # no vision
         args["init_audio"] = False  # no asr
         args["init_tts"] = True  # tts
         args["generate_audio"] = True  # gen audio
 
-        args["ref_audio_path"] = None
+        args["interaction_mode"] = None
         # instruct2speech | voice_cloning
         self.tts_task = args.get("tts_task", "instruct2speech")
 
@@ -348,19 +352,41 @@ class TransformersManualInstructSpeechMiniCPMO(TransformersManualMiniCPMO):
             yield item["audio_wav"]
 
 
-class TransformersManualTextSpeechMiniCPMO(TransformersManualInstructSpeechMiniCPMO):
+class TransformersManualTextSpeechMiniCPMO(TransformersManualMiniCPMO):
     r"""
     text -> chat lm -> gen text -> speech lm -> audio
     """
 
     TAG = "llm_transformers_manual_text_speech_minicpmo"
 
+    def __init__(self, **args) -> None:
+        # tts T1->T2A2
+        args["init_vision"] = False  # no vision
+        args["init_audio"] = False  # no asr
+        args["init_tts"] = True  # tts
+        args["generate_audio"] = True  # gen audio
+
+        args["interaction_mode"] = "voice_cloning"
+        # voice cloning chat
+        self.tts_task = args.get("tts_task", "voice_cloning_chat")
+
+        super().__init__(**args)
+
+    def get_prompt(self, session: Session) -> list:
+        assert isinstance(session.ctx.state["prompt"], list)
+        assert len(session.ctx.state["prompt"]) == 1
+        assert isinstance(session.ctx.state["prompt"][0], str)
+
+        prompt = session.ctx.state["prompt"]
+        return prompt
+
 
 class TransformersManualAudioMiniCPMO(TransformersManualMiniCPMO):
     r"""
-    Voice: audio -> AutoProcessor(WhisperFeatureExtractor(audio)->MiniCPMOProcessor) -> tokens(audio_features) -> MiniCPMWhisperEncoder -> audio embeddings -> Qwen2ForCausalLM(Qwen2.5-7B,use Qwen2 LM) -> text + hidden stats(embeddings)
+    Audio Understanding:
+    audio -> AutoProcessor(WhisperFeatureExtractor(audio)->MiniCPMOProcessor) -> tokens(audio_features) -> MiniCPMWhisperEncoder -> audio embeddings -> Qwen2ForCausalLM(Qwen2.5-7B,use Qwen2 LM) -> text + hidden stats(embeddings)
     - AutoProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/preprocessor_config.json
-        - MiniCPMOProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/processing_minicpmo.py
+        - ⭐️ MiniCPMOProcessor: https://huggingface.co/openbmb/MiniCPM-o-2_6-int4/blob/main/processing_minicpmo.py
         - WhisperFeatureExtractor: https://github.com/huggingface/transformers/blob/v4.42.2/src/transformers/models/whisper/feature_extraction_whisper.py#L36
     - ⭐️ MiniCPMWhisperEncoder: https://huggingface.co/openbmb/MiniCPM-o-2_6/blob/main/modeling_minicpmo.py#L1973
     - Qwen2ForCausalLM: https://github.com/huggingface/transformers/blob/v4.44.2/src/transformers/models/qwen2/modeling_qwen2.py
@@ -370,6 +396,7 @@ class TransformersManualAudioMiniCPMO(TransformersManualMiniCPMO):
 
     def __init__(self, **args) -> None:
         # audio understanding A1->T2
+        args["init_vision"] = False  # no vision
         args["init_audio"] = True  # asr
         args["init_tts"] = False  # no tts
         args["generate_audio"] = False  # no gen audio
@@ -426,6 +453,7 @@ class TransformersManualVoiceMiniCPMO(TransformersManualMiniCPMO):
 
     def __init__(self, **args) -> None:
         # speech to speech A1 -> T2A2
+        args["init_vision"] = False  # no vision
         args["init_audio"] = True  # asr
         args["init_tts"] = True  # tts
         args["generate_audio"] = True  # gen audio
@@ -465,4 +493,5 @@ class TransformersManualVisionVoiceMiniCPMO(TransformersManualMiniCPMO):
         - from https://github.com/gemelo-ai/vocos
     """
 
+    # vision+audio to audio A1V1 -> T2A2
     TAG = "llm_transformers_manual_vision_voice_minicpmo"
