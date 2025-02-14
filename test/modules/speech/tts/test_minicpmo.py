@@ -16,7 +16,8 @@ from src.common.utils.wav import save_audio_to_file
 from src.common.types import RECORDS_DIR, SessionCtx, MODELS_DIR
 
 r"""
-python -m unittest test.modules.speech.tts.test_minicpmo.TestMiniCPMoTTS.test_synthesize
+LLM_MODEL_NAME_OR_PATH=./models/openbmb/MiniCPM-o-2_6 \
+    python -m unittest test.modules.speech.tts.test_minicpmo.TestMiniCPMoTTS.test_synthesize
 """
 
 
@@ -29,9 +30,6 @@ class TestMiniCPMoTTS(unittest.TestCase):
             "你好，hello.",
         )
 
-        lm_checkpoint_dir = os.path.join(MODELS_DIR, "openbmb/MiniCPM-o-2_6")
-        cls.lm_checkpoint_dir = os.getenv("LM_CHECKPOINT_DIR", lm_checkpoint_dir)
-
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
@@ -40,7 +38,7 @@ class TestMiniCPMoTTS(unittest.TestCase):
 
     def setUp(self):
         kwargs = {}
-        self.tts: EngineClass | ITts = TTSEnvInit.getEngine(self.tts_tag, **kwargs)
+        self.tts: EngineClass | ITts = TTSEnvInit.initTTSEngine(self.tts_tag, **kwargs)
         self.session = Session(**SessionCtx("test_tts_client_id").__dict__)
         self.pyaudio_instance = None
         self.audio_stream = None

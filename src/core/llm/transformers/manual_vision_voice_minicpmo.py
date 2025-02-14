@@ -16,7 +16,7 @@ try:
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        "In order to use Qwen2-VL, you need to `pip install achatbot[llm_transformers_manual_vision_voice_minicpmo]`,"
+        "In order to use omni MiniCPMo, you need to `pip install achatbot[llm_transformers_manual_vision_voice_minicpmo]`,"
     )
     raise Exception(f"Missing module: {e}")
 
@@ -90,8 +90,11 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
             self.args.lm_model_name_or_path, trust_remote_code=True
         )
 
-        # In addition to vision-only mode, tts processor and vocos also needs to be initialized
+        # In addition to vision-only mode or open generate audio,
+        # tts processor and vocos also needs to be initialized
         if self.init_audio is False and self.init_tts is False:
+            model.init_tts()
+        elif self.generate_audio is True:
             model.init_tts()
 
         self._sys_msg = None
@@ -134,6 +137,8 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
             )
 
     def warmup(self):
+        if self.args.warnup_steps < 0:
+            return
         logging.info(f"Warming up {self.__class__.__name__} device: {self._model.device}")
         if "cuda" in str(self._model.device):
             start_event = torch.cuda.Event(enable_timing=True)
@@ -178,6 +183,7 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
                         times.append(time.perf_counter() - start_time)
                         start_time = time.perf_counter()
                     logging.info(f"step {step} warnup TTFT time: {times[0]} s")
+                    step += 1
 
         if "cuda" in str(self._model.device):
             end_event.record()
