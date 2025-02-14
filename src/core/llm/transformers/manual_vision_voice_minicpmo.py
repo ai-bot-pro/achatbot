@@ -347,7 +347,7 @@ class TransformersManualInstructSpeechMiniCPMO(TransformersManualMiniCPMO):
 
         args["interaction_mode"] = None
         # instruct2speech | voice_cloning
-        self.tts_task = args.get("tts_task", "instruct2speech")
+        self.tts_task = args.pop("tts_task", "instruct2speech")
 
         super().__init__(**args)
 
@@ -384,7 +384,7 @@ class TransformersManualTextSpeechMiniCPMO(TransformersManualMiniCPMO):
 
         args["interaction_mode"] = "voice_cloning"
         # voice cloning chat
-        self.tts_task = args.get("tts_task", "voice_cloning_chat")
+        self.tts_task = args.pop("tts_task", "voice_cloning_chat")
 
         super().__init__(**args)
 
@@ -417,7 +417,7 @@ class TransformersManualAudioMiniCPMO(TransformersManualMiniCPMO):
         args["init_tts"] = False  # no tts
         args["generate_audio"] = False  # no gen audio
 
-        audio_task = args.get("audio_task", "asr")
+        audio_task = args.pop("audio_task", "asr")
         # ASR task
         self.task_prompt = (
             "Please listen to the audio snippet carefully and transcribe the content."
@@ -475,7 +475,7 @@ class TransformersManualVoiceMiniCPMO(TransformersManualMiniCPMO):
         args["generate_audio"] = True  # gen audio
 
         # mimick | audio_roleplay | audio_assistant
-        self.voice_task = args.get("voice_task", "mimick")
+        self.voice_task = args.pop("voice_task", "mimick")
         interaction_mode = args.pop("interaction_mode", "omni")
         if interaction_mode in ["audio_roleplay", "audio_assistant"]:
             self.voice_task = interaction_mode
