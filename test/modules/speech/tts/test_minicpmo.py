@@ -16,7 +16,16 @@ from src.common.utils.wav import save_audio_to_file
 from src.common.types import RECORDS_DIR, SessionCtx, MODELS_DIR
 
 r"""
+# do sample
 LLM_MODEL_NAME_OR_PATH=./models/openbmb/MiniCPM-o-2_6 \
+    LLM_GEN_TEMPERATURE=0.5 \
+    LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
+    python -m unittest test.modules.speech.tts.test_minicpmo.TestMiniCPMoTTS.test_synthesize
+
+# don't do sample
+LLM_MODEL_NAME_OR_PATH=./models/openbmb/MiniCPM-o-2_6 \
+    LLM_GEN_TEMPERATURE=0.0 \
+    LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
     python -m unittest test.modules.speech.tts.test_minicpmo.TestMiniCPMoTTS.test_synthesize
 """
 
