@@ -1,11 +1,16 @@
+import asyncio
+import io
 import uuid
 import logging
 from typing import AsyncGenerator
 
 import librosa
+import numpy as np
+import soundfile as sf
 from apipeline.frames import *
 
 from src.core.llm.transformers.manual_vision_voice_minicpmo import (
+    TransformersManualMiniCPMO,
     TransformersManualTextSpeechMiniCPMO,
     TransformersManualVoiceMiniCPMO,
 )
@@ -20,6 +25,15 @@ from src.types.frames import PathAudioRawFrame
 
 
 class MiniCPMoVoiceProcessor(VoiceProcessorBase):
+    def __init__(
+        self,
+        *,
+        session: Session | None = None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self._model: TransformersManualMiniCPMO = None
+
     @property
     def stream_info(self) -> dict:
         """Return dict out stream info"""
@@ -44,20 +58,26 @@ class MiniCPMoVoiceProcessor(VoiceProcessorBase):
     async def gen(self) -> AsyncGenerator[Frame, None]:
         tensor_audio_stream = self._model.generate(self._session)
         for item in tensor_audio_stream:
+            logging.debug(f"generate data: {item}")
             tensor_audio = item.pop("audio_wav", None)
-            text = item.pop("text", "")
-            if text.strip() != "":
-                yield TextFrame(text)
+            text = item.pop("text", "").strip()
+            if text != "":
+                await self.push_frame(TextFrame(text=text))
 
             if tensor_audio is not None:  # don't use if tensor_audio to check
-                audio_bytes = tensor_audio.float().detach().cpu().numpy().tobytes()
+                audio_bytes = (
+                    (tensor_audio.float().detach().cpu().numpy() * 32768).astype(np.int16).tobytes()
+                )
+                logging.debug(
+                    f"audio tensor:{tensor_audio.shape},push audio len:{len(audio_bytes)}"
+                )
                 await self.queue_frame(
                     AudioRawFrame(
                         audio=audio_bytes,
                         sample_rate=self._model.RATE,
-                        num_channels=1,
                     )
                 )
+            yield None
 
 
 class MiniCPMoMimickVoiceProcessor(MiniCPMoVoiceProcessor):
