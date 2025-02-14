@@ -361,7 +361,11 @@ class TransformersManualInstructSpeechMiniCPMO(TransformersManualMiniCPMO):
     @torch.inference_mode()
     def generate(self, session: Session, **kwargs):
         for item in super().generate(session, **kwargs):
-            yield item["audio_wav"]
+            audio_wav = item.pop("audio_wav", None)
+            text = item.pop("text", "")
+            if text.strip() == "":
+                continue
+            yield audio_wav
 
 
 class TransformersManualTextSpeechMiniCPMO(TransformersManualMiniCPMO):

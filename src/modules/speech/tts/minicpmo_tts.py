@@ -53,5 +53,7 @@ class MiniCPMoTTS(BaseTTS, ITts):
         tensor_audio_stream = self.lm_model.generate(session, **kwargs)
 
         for tensor_audio in tensor_audio_stream:
-            if tensor_audio:
+            if tensor_audio is not None:  # don't use if tensor_audio to check
                 yield tensor_audio.float().detach().cpu().numpy().tobytes()
+            else:
+                yield None
