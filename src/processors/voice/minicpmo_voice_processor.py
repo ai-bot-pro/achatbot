@@ -60,6 +60,39 @@ class MiniCPMoVoiceProcessor(VoiceProcessorBase):
                 )
 
 
+class MiniCPMoMimickVoiceProcessor(MiniCPMoVoiceProcessor):
+    """
+    mimick voice
+    - A1-T2A2
+    """
+
+    def __init__(
+        self,
+        *,
+        session: Session | None = None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+
+        self._session = session or Session(**SessionCtx(uuid.uuid4()).__dict__)
+        kwargs["voice_task"] = "mimick"
+        self.mimick_prompt = kwargs.pop(
+            "mimick_prompt",
+            "Please repeat each user's speech, including voice style and speech content.",
+        )
+        self._model = TransformersManualVoiceMiniCPMO(**kwargs)
+
+    async def run_voice(self, frame: AudioRawFrame) -> AsyncGenerator[Frame, None]:
+        if isinstance(frame, PathAudioRawFrame):
+            audio_nparr, _ = librosa.load(frame.path, sr=16000, mono=True)
+        else:
+            audio_nparr = bytes2NpArrayWith16(frame.audio)
+
+        self._session.ctx.state["prompt"] = [self.mimick_prompt, audio_nparr]
+        async for item in self.gen():
+            yield item
+
+
 class MiniCPMoAudioVoiceProcessor(MiniCPMoVoiceProcessor):
     """
     - A1-T2A2
@@ -74,6 +107,9 @@ class MiniCPMoAudioVoiceProcessor(MiniCPMoVoiceProcessor):
         super().__init__(**kwargs)
 
         self._session = session or Session(**SessionCtx(uuid.uuid4()).__dict__)
+        kwargs["voice_task"] = kwargs.get("voice_task", "audio_assistant")
+        if kwargs["voice_task"] not in ["audio_roleplay", "audio_assistant"]:
+            raise ValueError("voice_task must be audio_roleplay or audio_assistant")
         self._model = TransformersManualVoiceMiniCPMO(**kwargs)
 
     async def run_voice(self, frame: AudioRawFrame) -> AsyncGenerator[Frame, None]:
@@ -82,7 +118,7 @@ class MiniCPMoAudioVoiceProcessor(MiniCPMoVoiceProcessor):
         else:
             audio_nparr = bytes2NpArrayWith16(frame.audio)
 
-        self._session.ctx.state["prompt"] = [audio_nparr]
+        self._session.ctx.state["prompt"] = ["", audio_nparr]
         async for item in self.gen():
             yield item
 

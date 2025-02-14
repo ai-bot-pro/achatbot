@@ -107,6 +107,14 @@ def import_bots(bot_name: str = "DummyBot"):
         from .voice import daily_freeze_omni_voice_bot
 
         return True
+    if "DailyMiniCPMoVoiceBot" in bot_name:
+        from .voice import daily_minicpmo_voice_bot
+
+        return True
+    if "DailyAsrMiniCPMoVoiceBot" in bot_name:
+        from .voice import daily_asr_minicpmo_voice_bot
+
+        return True
     if "LivekitBot" in bot_name:
         from . import livekit_bot
 

@@ -19,11 +19,10 @@ load_dotenv(override=True)
 
 
 @register_ai_room_bots.register
-class DailyAsrGLMVoiceBot(DailyRoomBot):
+class DailyAsrMiniCPMoVoiceBot(DailyRoomBot):
     """
-    use daily audio stream(bytes) --> asr --> text ---> GLM voice processor -->text/audio_bytes
-    - if use tools, need ft base model GLM-4-9B with audio tokenizer, use tools instruct dataset
-    - Tech Report: https://arxiv.org/pdf/2412.02612
+    use daily audio stream(bytes) --> asr --> text ---> MiniCPMo voice processor -->text/audio_bytes
+    - if use tools, need ft base model MiniCPM-o 2.6 with audio tokenizer, use tools instruct dataset, see: https://github.com/OpenBMB/MiniCPM-o?tab=readme-ov-file#fine-tuning
     """
 
     def __init__(self, **args) -> None:
@@ -41,7 +40,7 @@ class DailyAsrGLMVoiceBot(DailyRoomBot):
         )
         asr_processor = self.get_asr_processor()
 
-        self._voice_processor = self.get_text_glm_voice_processor()
+        self._voice_processor = self.get_text_minicpmo_voice_processor()
         stream_info = self._voice_processor.stream_info
         self.params.audio_out_sample_rate = stream_info["sample_rate"]
         self.params.audio_out_channels = stream_info["channels"]

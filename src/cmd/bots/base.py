@@ -314,6 +314,28 @@ class AIBot(IBot):
             llm_processor = VoiceOpusStreamEchoProcessor()
         return llm_processor
 
+    def get_text_minicpmo_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
+        from src.processors.voice.minicpmo_voice_processor import MiniCPMoTextVoiceProcessor
+
+        if not llm:
+            llm = self._bot_config.voice_llm
+        if llm.args:
+            llm_processor = MiniCPMoTextVoiceProcessor(**llm.args)
+        else:
+            llm_processor = MiniCPMoTextVoiceProcessor()
+        return llm_processor
+
+    def get_audio_minicpmo_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
+        from src.processors.voice.minicpmo_voice_processor import MiniCPMoAudioVoiceProcessor
+
+        if not llm:
+            llm = self._bot_config.voice_llm
+        if llm.args:
+            llm_processor = MiniCPMoAudioVoiceProcessor(**llm.args)
+        else:
+            llm_processor = MiniCPMoAudioVoiceProcessor()
+        return llm_processor
+
     def get_text_glm_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
         from src.processors.voice.glm_voice_processor import GLMTextVoiceProcessor
 
