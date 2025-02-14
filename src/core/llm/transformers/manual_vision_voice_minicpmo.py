@@ -378,7 +378,7 @@ class TransformersManualTextSpeechMiniCPMO(TransformersManualMiniCPMO):
     def __init__(self, **args) -> None:
         # tts T1->T2A2
         args["init_vision"] = False  # no vision
-        args["init_audio"] = False  # no asr
+        args["init_audio"] = True  # voice_cloning use need use ref audio,
         args["init_tts"] = True  # tts
         args["generate_audio"] = True  # gen audio
 
