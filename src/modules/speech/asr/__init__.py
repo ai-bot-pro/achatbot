@@ -31,11 +31,12 @@ class ASREnvInit:
         def get_args(tag):
             if tag in ASREnvInit.map_config_func:
                 return ASREnvInit.map_config_func[tag]()
-            return ASREnvInit.get_asr_args(tag)
+            return ASREnvInit.get_asr_args()
 
         # asr
         tag = tag or os.getenv("ASR_TAG", "whisper_timestamped_asr")
         kwargs = kwargs or get_args(tag)
+        logging.info(f"initASREngine: {tag}, {kwargs}")
         engine = ASREnvInit.getEngine(tag, **kwargs)
         logging.info(f"initASREngine: {tag}, {engine}")
         return engine
@@ -53,9 +54,9 @@ class ASREnvInit:
     def get_asr_minicpmo_args() -> dict:
         kwargs = LLMEnvInit.get_llm_transformers_args()
         kwargs["language"] = os.getenv("ASR_LANG", "zh")
-        kwargs["use_gptq_ckpt"] = bool(os.getenv("USE_GPTQ_CKPT", "1"))
+        kwargs["use_gptq_ckpt"] = bool(os.getenv("USE_GPTQ_CKPT", ""))
         return kwargs
 
     map_config_func = {
-        "asr_minicpmo": get_asr_minicpmo_args,
+        "minicpmo_asr": get_asr_minicpmo_args,
     }

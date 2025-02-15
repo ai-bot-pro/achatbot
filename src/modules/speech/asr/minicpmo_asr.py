@@ -14,6 +14,10 @@ from src.modules.speech.asr.base import ASRBase
 class MiniCPMoAsr(ASRBase):
     TAG = "minicpmo_asr"
 
+    @classmethod
+    def get_args(cls, **kwargs) -> dict:
+        return kwargs
+
     def __init__(self, **args) -> None:
         self.model = TransformersManualAudioMiniCPMO(**args)
         self.args = args
@@ -28,9 +32,9 @@ class MiniCPMoAsr(ASRBase):
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
         prompt = ["", self.asr_audio]
         session.ctx.state["prompt"] = session.ctx.state.get("prompt", prompt)
-        transcription, _ = await asyncio.to_thread(self.model.generate, session)
+        transcription = self.model.generate, session
         for item in transcription:
-            clean_text = re.sub(r"<\|.*?\|>", "", item["text"])
+            clean_text = re.sub(r"<\|.*?\|>", "", item)
             yield clean_text
 
     async def transcribe(self, session: Session) -> dict:

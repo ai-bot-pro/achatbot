@@ -7,7 +7,6 @@ import asyncio
 from src.common.logger import Logger
 from src.common.utils.helper import load_json, get_audio_segment
 from src.common.utils.wav import save_audio_to_file
-from src.common.factory import EngineFactory, EngineClass
 from src.common.session import Session
 from src.common.interface import IAsr
 from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR
@@ -15,13 +14,13 @@ from src.modules.speech.asr import ASREnvInit
 
 
 r"""
-python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
+python -m unittest test.modules.speech.asr.test_minicpmo_asr.TestMiniCPMoASR.test_transcribe_stream
 
-python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
+python -m unittest test.modules.speech.asr.test_minicpmo_asr.TestMiniCPMoASR.test_transcribe
 """
 
 
-class TestWhisperASR(unittest.TestCase):
+class TestMiniCPMoASR(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # wget
@@ -32,7 +31,7 @@ class TestWhisperASR(unittest.TestCase):
         cls.asr_tag = os.getenv("ASR_TAG", "minicpmo_asr")
         cls.audio_file = os.getenv("AUDIO_FILE", audio_file)
 
-        Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
+        Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
 
     @classmethod
     def tearDownClass(cls):
@@ -50,7 +49,6 @@ class TestWhisperASR(unittest.TestCase):
 
     def test_transcribe_stream(self):
         self.asr.set_audio_data(self.audio_file)
-        self.asr.args.language = self.asr_lang
         res = self.asr.transcribe_stream_sync(self.session)
         for word in res:
             print(word)
