@@ -32,7 +32,7 @@ class MiniCPMoAsr(ASRBase):
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
         prompt = ["", self.asr_audio]
         session.ctx.state["prompt"] = session.ctx.state.get("prompt", prompt)
-        transcription = self.model.generate, session
+        transcription = self.model.generate(session)
         for item in transcription:
             clean_text = re.sub(r"<\|.*?\|>", "", item)
             yield clean_text
