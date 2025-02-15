@@ -507,6 +507,11 @@ class TransformersManualAudioMiniCPMO(TransformersManualMiniCPMO):
         prompt[0] = self.task_prompt
         return prompt
 
+    @torch.inference_mode()
+    def generate(self, session: Session, **kwargs):
+        for item in super().generate(session, **kwargs):
+            yield item["text"]
+
 
 class TransformersManualVoiceMiniCPMO(TransformersManualMiniCPMO):
     r"""
