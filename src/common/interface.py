@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Any, Iterator, AsyncGenerator, Generator, List
 
+import numpy as np
+
 
 class IModel(ABC):
     @abstractmethod
@@ -159,7 +161,7 @@ class IMultimodalLlm(ABC):
 
 class ILlm(ABC):
     @abstractmethod
-    def generate(self, session, **kwargs) -> Iterator[str]:
+    def generate(self, session, **kwargs) -> Iterator[str | dict | np.ndarray]:
         """
         generate text or tokens with stream iterator
         - local llm cpu/gpu bind

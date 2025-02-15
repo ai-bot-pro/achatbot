@@ -69,7 +69,7 @@ class AsyncAIProcessor(AsyncFrameProcessor):
 
     async def process_generator(self, generator: AsyncGenerator[Frame, None]):
         async for f in generator:
-            if f:
+            if f is not None:
                 if isinstance(f, ErrorFrame):
                     await self.push_error(f)
                 else:

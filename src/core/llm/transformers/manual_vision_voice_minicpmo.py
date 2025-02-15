@@ -509,5 +509,17 @@ class TransformersManualVisionVoiceMiniCPMO(TransformersManualMiniCPMO):
         - from https://github.com/gemelo-ai/vocos
     """
 
-    # vision+audio to audio A1V1 -> T2A2
+    # vision+audio to audio I1A1 -> T2A2
     TAG = "llm_transformers_manual_vision_voice_minicpmo"
+
+    def get_prompt(self, session: Session) -> list:
+        prompt = []
+        assert isinstance(session.ctx.state["prompt"], list)
+        assert len(session.ctx.state["prompt"]) == 2
+        assert isinstance(session.ctx.state["prompt"][0], np.ndarray)
+        assert isinstance(session.ctx.state["prompt"][-1], list)
+        for item in session.ctx.state["prompt"][:-1]:  # user images prompt
+            assert isinstance(item, Image.Image)
+
+        prompt = session.ctx.state["prompt"]
+        return prompt

@@ -115,6 +115,10 @@ def import_bots(bot_name: str = "DummyBot"):
         from .voice import daily_asr_minicpmo_voice_bot
 
         return True
+    if "DailyMiniCPMoVisionVoiceBot" in bot_name:
+        from .omni import daily_minicpmo_vision_voice_bot
+
+        return True
     if "LivekitBot" in bot_name:
         from . import livekit_bot
 

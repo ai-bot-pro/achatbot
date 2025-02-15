@@ -84,6 +84,7 @@ class AIConfig(BaseModel):
     nlp_task_llm: Optional[LLMConfig] = None
     voice_llm: Optional[LLMConfig] = None
     vision_llm: Optional[LLMConfig] = None
+    omin_llm: Optional[LLMConfig] = None
     vision_detector: Optional[VisionDetectorConfig] = None
     vision_ocr: Optional[VisionOCRConfig] = None
     tts: Optional[TTSConfig] = None

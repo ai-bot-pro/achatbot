@@ -32,6 +32,7 @@ class MiniCPMoVoiceProcessor(VoiceProcessorBase):
         **kwargs,
     ):
         super().__init__(**kwargs)
+        self._session = session or Session(**SessionCtx(uuid.uuid4()).__dict__)
         self._model: TransformersManualMiniCPMO = None
 
     @property
@@ -83,7 +84,7 @@ class MiniCPMoVoiceProcessor(VoiceProcessorBase):
 class MiniCPMoMimickVoiceProcessor(MiniCPMoVoiceProcessor):
     """
     mimick voice
-    - A1-T2A2
+    - A1->T2A2
     """
 
     def __init__(
@@ -92,9 +93,8 @@ class MiniCPMoMimickVoiceProcessor(MiniCPMoVoiceProcessor):
         session: Session | None = None,
         **kwargs,
     ):
-        super().__init__(**kwargs)
+        super().__init__(session=session, **kwargs)
 
-        self._session = session or Session(**SessionCtx(uuid.uuid4()).__dict__)
         kwargs["voice_task"] = "mimick"
         self.mimick_prompt = kwargs.pop(
             "mimick_prompt",
@@ -115,7 +115,7 @@ class MiniCPMoMimickVoiceProcessor(MiniCPMoVoiceProcessor):
 
 class MiniCPMoAudioVoiceProcessor(MiniCPMoVoiceProcessor):
     """
-    - A1-T2A2
+    - A1->T2A2
     """
 
     def __init__(
@@ -124,9 +124,8 @@ class MiniCPMoAudioVoiceProcessor(MiniCPMoVoiceProcessor):
         session: Session | None = None,
         **kwargs,
     ):
-        super().__init__(**kwargs)
+        super().__init__(session=session, **kwargs)
 
-        self._session = session or Session(**SessionCtx(uuid.uuid4()).__dict__)
         kwargs["voice_task"] = kwargs.get("voice_task", "audio_assistant")
         if kwargs["voice_task"] not in ["audio_roleplay", "audio_assistant"]:
             raise ValueError("voice_task must be audio_roleplay or audio_assistant")
@@ -145,7 +144,7 @@ class MiniCPMoAudioVoiceProcessor(MiniCPMoVoiceProcessor):
 
 class MiniCPMoTextVoiceProcessor(MiniCPMoVoiceProcessor):
     """
-    - T1-T2A2
+    - T1->T2A2
     """
 
     def __init__(
@@ -154,9 +153,8 @@ class MiniCPMoTextVoiceProcessor(MiniCPMoVoiceProcessor):
         session: Session | None = None,
         **kwargs,
     ):
-        super().__init__(**kwargs)
+        super().__init__(session=session, **kwargs)
 
-        self._session = session or Session(**SessionCtx(uuid.uuid4()).__dict__)
         self._model = TransformersManualTextSpeechMiniCPMO(**kwargs)
 
     async def run_text(self, frame: TextFrame) -> AsyncGenerator[Frame, None]:
