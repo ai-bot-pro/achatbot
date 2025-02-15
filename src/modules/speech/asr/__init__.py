@@ -53,6 +53,7 @@ class ASREnvInit:
     def get_asr_minicpmo_args() -> dict:
         kwargs = LLMEnvInit.get_llm_transformers_args()
         kwargs["language"] = os.getenv("ASR_LANG", "zh")
+        kwargs["use_gptq_ckpt"] = bool(os.getenv("USE_GPTQ_CKPT", "1"))
         return kwargs
 
     map_config_func = {
