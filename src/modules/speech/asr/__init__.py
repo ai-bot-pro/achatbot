@@ -52,6 +52,7 @@ class ASREnvInit:
     @staticmethod
     def get_asr_minicpmo_args() -> dict:
         kwargs = LLMEnvInit.get_llm_transformers_args()
+        kwargs["language"] = os.getenv("ASR_LANG", "zh")
         return kwargs
 
     map_config_func = {
