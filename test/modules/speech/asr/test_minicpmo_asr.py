@@ -56,14 +56,12 @@ class TestMiniCPMoASR(unittest.TestCase):
 
     def test_transcribe(self):
         self.asr.set_audio_data(self.audio_file)
-        self.asr.args.language = self.asr_lang
         res = asyncio.run(self.asr.transcribe(self.session))
         print(res)
 
     def test_transcribe_with_bytes(self):
         with open(self.audio_file, "rb") as file:
             self.asr.set_audio_data(file.read())
-            self.asr.args.language = self.asr_lang
             res = asyncio.run(self.asr.transcribe(self.session))
             print(res)
 
