@@ -6,7 +6,7 @@ from apipeline.frames import *
 import librosa
 import numpy as np
 
-from common.session import Session
+from src.common.session import Session
 from src.core.llm.transformers.manual_vision_voice_minicpmo import (
     TransformersManualVisionVoiceMiniCPMO,
 )
@@ -47,6 +47,11 @@ class MiniCPMoVisionVoiceProcessor(VisionVoiceProcessorBase):
 
         # frame.text and self._session.ctx.state["prompt"].append(frame.text)
 
+        if frame.images:
+            for image_frame in frame.images:
+                image = Image.frombytes(image_frame.mode, image_frame.size, image_frame.image)
+                self._session.ctx.state["prompt"].append(image)
+
         if frame.audio and frame.audio.audio:
             if isinstance(frame.audio, PathAudioRawFrame):
                 audio_nparr, _ = librosa.load(frame.audio.path, sr=16000, mono=True)
@@ -54,10 +59,6 @@ class MiniCPMoVisionVoiceProcessor(VisionVoiceProcessorBase):
                 audio_nparr = bytes2NpArrayWith16(frame.audio.audio)
             self._session.ctx.state["prompt"].append(audio_nparr)
 
-        if frame.images:
-            for image_frame in frame.images:
-                image = Image.frombytes(image_frame.mode, image_frame.size, image_frame.image)
-                self._session.ctx.state["prompt"].append(image)
-
+        print(self._session.ctx.state["prompt"])
         async for item in self.gen():
             yield item

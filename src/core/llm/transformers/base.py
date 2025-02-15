@@ -92,7 +92,7 @@ class TransformersBaseLLM(BaseLLM, ILlm):
         - 'prompt': str (text) # prompt or instruction
         - 'prompt': [PIL.Image,..., str] # vision, imgs+prompt
         - 'prompt': [str, np.ndarray] # voice, instruction+audio
-        - 'prompt': [str, np.ndarray, [PIL.Image,...]] # vision+voice, instruction+audio+imgs
+        - 'prompt': [PIL.Image,..., np.ndarray] # vision+voice, instruction+audio+imgs
         - vision image 'prompt' e.g.: [
                 {
                     "type": "image",

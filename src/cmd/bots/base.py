@@ -345,7 +345,7 @@ class AIBot(IBot):
         from src.processors.omni.minicpmo_vision_voice import MiniCPMoVisionVoiceProcessor
 
         if not llm:
-            llm = self._bot_config.omin_llm
+            llm = self._bot_config.omni_llm
         if llm.args:
             llm_processor = MiniCPMoVisionVoiceProcessor(**llm.args)
         else:

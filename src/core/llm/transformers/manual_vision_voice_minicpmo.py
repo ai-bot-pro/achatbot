@@ -513,13 +513,11 @@ class TransformersManualVisionVoiceMiniCPMO(TransformersManualMiniCPMO):
     TAG = "llm_transformers_manual_vision_voice_minicpmo"
 
     def get_prompt(self, session: Session) -> list:
-        prompt = []
         assert isinstance(session.ctx.state["prompt"], list)
-        assert len(session.ctx.state["prompt"]) == 2
-        assert isinstance(session.ctx.state["prompt"][0], np.ndarray)
-        assert isinstance(session.ctx.state["prompt"][-1], list)
+        assert len(session.ctx.state["prompt"]) >= 2
         for item in session.ctx.state["prompt"][:-1]:  # user images prompt
             assert isinstance(item, Image.Image)
+        assert isinstance(session.ctx.state["prompt"][-1], np.ndarray)
 
         prompt = session.ctx.state["prompt"]
         return prompt

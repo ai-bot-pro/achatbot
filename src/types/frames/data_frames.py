@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, List
 
 
@@ -230,10 +230,14 @@ class VisionImageVoiceRawFrame(DataFrame):
 
     text: str | None = None
     audio: AudioRawFrame | None = None
-    images: List[ImageRawFrame] = []
+    images: List[ImageRawFrame] = field(default_factory=list)
 
     def __str__(self):
-        return f"{self.name}(text: {self.text}, audio:{self.audio}, images:{self.images})"
+        s = f"{self.name}(text: {self.text}, audio:{self.audio}, images:"
+        for image in self.images:
+            s += f"{image}, "
+        s += ")"
+        return s
 
 
 @dataclass
