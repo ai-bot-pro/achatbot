@@ -59,6 +59,5 @@ class MiniCPMoVisionVoiceProcessor(VisionVoiceProcessorBase):
                 audio_nparr = bytes2NpArrayWith16(frame.audio.audio)
             self._session.ctx.state["prompt"].append(audio_nparr)
 
-        print(self._session.ctx.state["prompt"])
         async for item in self.gen():
             yield item

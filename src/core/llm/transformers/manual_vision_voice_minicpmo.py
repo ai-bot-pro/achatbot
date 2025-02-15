@@ -61,6 +61,9 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
         # whether save result audio
         self.save_output = args.pop("save_output", False)
 
+        # whether use gptq ckpt
+        self.use_gptq_ckpt = args.pop("use_gptq_ckpt", False)
+
         self.args = TransformersLMArgs(**args)
         if self.args.lm_torch_dtype != "auto":
             self.torch_dtype = getattr(torch, self.args.lm_torch_dtype)
@@ -74,17 +77,41 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
 
         # if load vision-only model, please set init_audio=False and init_tts=False
         # if load audio-only model, please set init_vision=False
-        model = AutoModel.from_pretrained(
-            self.args.lm_model_name_or_path,
-            trust_remote_code=True,
-            attn_implementation=self.args.lm_attn_impl,
-            torch_dtype=self.torch_dtype,
-            init_vision=self.init_vision,
-            init_audio=self.init_audio,
-            init_tts=self.init_tts,
-        )
-        print_model_params(model, self.TAG)
-        self._model = model.to(self.args.lm_device).eval()
+        if self.use_gptq_ckpt is True:
+            self.init_gptq_llm()
+        else:
+            if self.args.lm_device_map:
+                self._model = AutoModel.from_pretrained(
+                    self.args.lm_model_name_or_path,
+                    trust_remote_code=True,
+                    low_cpu_mem_usage=True,
+                    #!NOTE: https://github.com/huggingface/transformers/issues/20896
+                    # device_map for multi cpu/gpu with accelerate
+                    # https://github.com/openai/whisper/discussions/1948
+                    # flash_attention_2 is use in device map
+                    device_map=self.args.lm_device_map,
+                    attn_implementation=self.args.lm_attn_impl,
+                    torch_dtype=self.torch_dtype,
+                    init_vision=self.init_vision,
+                    init_audio=self.init_audio,
+                    init_tts=self.init_tts,
+                ).eval()
+            else:
+                self._model = (
+                    AutoModel.from_pretrained(
+                        self.args.lm_model_name_or_path,
+                        trust_remote_code=True,
+                        low_cpu_mem_usage=True,
+                        attn_implementation=self.args.lm_attn_impl,
+                        torch_dtype=self.torch_dtype,
+                        init_vision=self.init_vision,
+                        init_audio=self.init_audio,
+                        init_tts=self.init_tts,
+                    )
+                    .to(self.args.lm_device)
+                    .eval()
+                )
+        print_model_params(self._model, self.TAG)
 
         self._tokenizer = AutoTokenizer.from_pretrained(
             self.args.lm_model_name_or_path, trust_remote_code=True
@@ -93,9 +120,9 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
         # In addition to vision-only mode or open generate audio,
         # tts processor and vocos also needs to be initialized
         if self.init_audio is False and self.init_tts is False:
-            model.init_tts()
+            self._model.init_tts()
         elif self.generate_audio is True:
-            model.init_tts()
+            self._model.init_tts()
 
         self._sys_msg = None
         if self.interaction_mode is not None:
@@ -109,6 +136,36 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
 
         self.warmup()
         self.reset_session()
+
+    def init_gptq_llm(self):
+        try:
+            from auto_gptq import AutoGPTQForCausalLM
+        except ModuleNotFoundError as e:
+            logging.error(f"Exception: {e}")
+            logging.error(
+                """In order to use omni MiniCPMo, you need to do below steps:
+                ```shell
+                git clone https://github.com/OpenBMB/AutoGPTQ.git -b minicpmo
+                cd AutoGPTQ && git checkout minicpmo && pip install -vvv --quiet --no-build-isolation -e .
+                ```
+                chose openbmb/MiniCPM-o-2_6-int4 ckpt from huggingface hub
+                """
+            )
+            raise Exception(f"Missing module: {e}")
+
+        self._model = AutoGPTQForCausalLM.from_quantized(
+            self.args.lm_model_name_or_path,
+            torch_dtype=torch.bfloat16,
+            trust_remote_code=True,
+            low_cpu_mem_usage=True,
+            device="cuda:0",  # just for gpu acceleration, load in cuda:0
+            attn_implementation=self.args.lm_attn_impl,
+            disable_exllama=True,
+            disable_exllamav2=True,
+            init_vision=self.init_vision,
+            init_audio=self.init_audio,
+            init_tts=self.init_tts,
+        ).eval()
 
     def reset_session(self):
         # a new conversation need reset session first,
@@ -427,7 +484,7 @@ class TransformersManualAudioMiniCPMO(TransformersManualMiniCPMO):
         # Speaker Analysis task
         if audio_task == "speaker_analysis":
             self.task_prompt = "Based on the speaker's content, speculate on their gender, condition, age range, and health status."
-        # General Audio Captio
+        # General Audio Caption
         if audio_task == "audio_caption":
             self.task_prompt = "Summarize the main content of the audio."
         # General Sound Scene Tagging
