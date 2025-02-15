@@ -228,9 +228,9 @@ class VisionImageVoiceRawFrame(DataFrame):
 
     """
 
-    text: str | None
-    audio: AudioRawFrame | None
-    images: List[ImageRawFrame] | None
+    text: str | None = None
+    audio: AudioRawFrame | None = None
+    images: List[ImageRawFrame] = []
 
     def __str__(self):
         return f"{self.name}(text: {self.text}, audio:{self.audio}, images:{self.images})"
