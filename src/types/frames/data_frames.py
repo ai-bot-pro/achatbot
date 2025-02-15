@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, List
 
 
@@ -219,3 +219,35 @@ class UserVoiceRawFrame(UserAudioRawFrame):
 
     def __str__(self):
         return f"text:{self.text} {super().__str__()}"
+
+
+@dataclass
+class VisionImageVoiceRawFrame(DataFrame):
+    """An image + audio with an instruct text to ask for a description of it. Will be
+    shown by the transport if the transport's camera is enabled.
+
+    """
+
+    text: str | None = None
+    audio: AudioRawFrame | None = None
+    images: List[ImageRawFrame] = field(default_factory=list)
+
+    def __str__(self):
+        s = f"{self.name}(text: {self.text}, audio:{self.audio}, images:"
+        for image in self.images:
+            s += f"{image}, "
+        s += ")"
+        return s
+
+
+@dataclass
+class UserVisionImageVoiceRawFrame(VisionImageVoiceRawFrame):
+    """An user image + audio with an instruct text to ask for a description of it. Will be
+    shown by the transport if the transport's camera is enabled.
+
+    """
+
+    user_id: str = ""
+
+    def __str__(self):
+        return f"user_id:{self.user_id} {super().__str__()}"

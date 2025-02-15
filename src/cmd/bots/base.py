@@ -7,6 +7,7 @@ import uuid
 from apipeline.frames.control_frames import EndFrame
 from apipeline.pipeline.task import PipelineTask
 
+from src.processors.omni.base import VisionVoiceProcessorBase
 from src.processors.voice.base import VoiceProcessorBase
 from src.processors.image.base import ImageGenProcessor
 from src.processors.image import get_image_gen_processor
@@ -312,6 +313,43 @@ class AIBot(IBot):
             from src.processors.voice.moshi_voice_processor import VoiceOpusStreamEchoProcessor
 
             llm_processor = VoiceOpusStreamEchoProcessor()
+        return llm_processor
+
+    def get_text_minicpmo_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
+        from src.processors.voice.minicpmo_voice_processor import MiniCPMoTextVoiceProcessor
+
+        if not llm:
+            llm = self._bot_config.voice_llm
+        if llm.args:
+            llm_processor = MiniCPMoTextVoiceProcessor(**llm.args)
+        else:
+            llm_processor = MiniCPMoTextVoiceProcessor()
+        return llm_processor
+
+    def get_audio_minicpmo_voice_processor(
+        self, llm: LLMConfig | None = None
+    ) -> VoiceProcessorBase:
+        from src.processors.voice.minicpmo_voice_processor import MiniCPMoAudioVoiceProcessor
+
+        if not llm:
+            llm = self._bot_config.voice_llm
+        if llm.args:
+            llm_processor = MiniCPMoAudioVoiceProcessor(**llm.args)
+        else:
+            llm_processor = MiniCPMoAudioVoiceProcessor()
+        return llm_processor
+
+    def get_minicpmo_vision_voice_processor(
+        self, llm: LLMConfig | None = None
+    ) -> VisionVoiceProcessorBase:
+        from src.processors.omni.minicpmo_vision_voice import MiniCPMoVisionVoiceProcessor
+
+        if not llm:
+            llm = self._bot_config.omni_llm
+        if llm.args:
+            llm_processor = MiniCPMoVisionVoiceProcessor(**llm.args)
+        else:
+            llm_processor = MiniCPMoVisionVoiceProcessor()
         return llm_processor
 
     def get_text_glm_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:

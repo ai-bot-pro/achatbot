@@ -34,6 +34,8 @@ class LLMEnvInit:
             from .transformers import manual_vision_img_janus_pro
         elif "llm_transformers_manual_image_janus" in tag:
             from .transformers import manual_vision_img_janus_pro
+        elif "llm_transformers_manual_vision_minicpmo" in tag:
+            from .transformers import manual_vision_voice_minicpmo
         elif "llm_transformers_manual" in tag:
             from .transformers import manual
         elif "llm_transformers_pipeline" in tag:
@@ -122,6 +124,7 @@ class LLMEnvInit:
             init_chat_prompt=os.getenv("LLM_INIT_CHAT_PROMPT", ""),
             chat_history_size=int(os.getenv("LLM_CHAT_HISTORY_SIZE", "10")),  # cache 10 round
             model_type=os.getenv("LLM_MODEL_TYPE", "chat_completion"),
+            warnup_steps=int(os.getenv("LLM_WARMUP_STEPS", "1")),
         ).__dict__
         return kwargs
 
@@ -157,4 +160,5 @@ class LLMEnvInit:
         "llm_transformers_manual_image_janus": get_llm_transformers_args,
         "llm_transformers_manual_vision_janus_flow": get_llm_transformers_args,
         "llm_transformers_manual_image_janus_flow": get_llm_transformers_manual_image_janus_flow_args,
+        "llm_transformers_manual_vision_minicpmo": get_llm_transformers_args,
     }

@@ -70,6 +70,9 @@ class TransformersBaseLLM(BaseLLM, ILlm):
     def chat_history(self) -> ChatHistory:
         return self._chat_history if self._chat_history else ChatHistory()
 
+    def set_system_prompt(self, **kwargs):
+        pass
+
     def init(self):
         pass
 
@@ -86,8 +89,10 @@ class TransformersBaseLLM(BaseLLM, ILlm):
         - 'prompt': str (text+speech-tokens with instructions, no chat tpl)
 
         for llm chat template format.
-        - 'prompt': str (text)
-        - 'prompt': [PIL.Image,..., str]
+        - 'prompt': str (text) # prompt or instruction
+        - 'prompt': [PIL.Image,..., str] # vision, imgs+prompt
+        - 'prompt': [str, np.ndarray] # voice, instruction+audio
+        - 'prompt': [PIL.Image,..., np.ndarray] # vision+voice, instruction+audio+imgs
         - vision image 'prompt' e.g.: [
                 {
                     "type": "image",
@@ -148,7 +153,6 @@ class TransformersBaseLLM(BaseLLM, ILlm):
             for _ in streamer:
                 times.append(time.perf_counter() - start_time)
                 start_time = time.perf_counter()
-                pass
             logging.info(f"step {step} warnup TTFT time: {times[0]} s")
 
         if "cuda" in str(self._model.device):

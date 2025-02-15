@@ -101,6 +101,12 @@ TTS_TAG=tts_cosy_voice2 \
     COSY_VOICE_REFERENCE_AUDIO_PATH=./test/audio_files/asr_example_zh.wav \
     IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 TTS_TAG=tts_llasa IS_SAVE=1 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+TTS_TAG=tts_llasa IS_SAVE=1 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+LLM_MODEL_NAME_OR_PATH=./models/openbmb/MiniCPM-o-2_6 \
+    LLM_GEN_TEMPERATURE=0.0 \
+    LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
+    python -m unittest test.modules.speech.tts.test_minicpmo.TestMiniCPMoTTS.test_synthesize
+
 """
 if __name__ == "__main__":
     player = None
