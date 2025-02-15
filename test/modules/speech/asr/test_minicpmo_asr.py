@@ -14,9 +14,30 @@ from src.modules.speech.asr import ASREnvInit
 
 
 r"""
-python -m unittest test.modules.speech.asr.test_minicpmo_asr.TestMiniCPMoASR.test_transcribe_stream
+LLM_MODEL_NAME_OR_PATH=./models/openbmb/MiniCPM-o-2_6 \
+    LLM_GEN_TEMPERATURE=0.0 \
+    LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
+    python -m unittest test.modules.speech.asr.test_minicpmo_asr.TestMiniCPMoASR.test_transcribe_stream
 
-python -m unittest test.modules.speech.asr.test_minicpmo_asr.TestMiniCPMoASR.test_transcribe
+LLM_MODEL_NAME_OR_PATH=./models/openbmb/MiniCPM-o-2_6-int4 USE_GPTQ_CKPT=1 \
+    LLM_GEN_TEMPERATURE=0.0 \
+    LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
+    python -m unittest test.modules.speech.asr.test_minicpmo_asr.TestMiniCPMoASR.test_transcribe_stream
+
+LLM_MODEL_NAME_OR_PATH=./models/openbmb/MiniCPM-o-2_6 \
+    LLM_GEN_TEMPERATURE=0.0 \
+    LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
+    python -m unittest test.modules.speech.asr.test_minicpmo_asr.TestMiniCPMoASR.test_transcribe
+
+LLM_MODEL_NAME_OR_PATH=./models/openbmb/MiniCPM-o-2_6-int4 USE_GPTQ_CKPT=1 \
+    LLM_GEN_TEMPERATURE=0.0 \
+    LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
+    python -m unittest test.modules.speech.asr.test_minicpmo_asr.TestMiniCPMoASR.test_transcribe
+
+!LLM_MODEL_NAME_OR_PATH=./models/openbmb/MiniCPM-o-2_6 \
+    LLM_GEN_TEMPERATURE=0.0 \
+    LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
+    python -m unittest test.modules.speech.asr.test_minicpmo_asr.TestMiniCPMoASR.test_transcribe_with_bytes
 """
 
 
