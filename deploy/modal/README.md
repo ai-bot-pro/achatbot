@@ -369,6 +369,184 @@ curl --location 'https://weedge-achatbot--fastapi-webrtc-freeze-omni-voice-bo-4b
 }'
 ```
 
+### webrtc_minicpmo_vision_voice_bot
+- run webrtc_minicpmo_vision_voice_bot serve with task queue(redis)
+```shell
+# webrtc_audio_bot serve on default pip image
+# need create .env.example to modal Secrets for webrtc key
+IMAGE_NAME=default IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_minicpmo_vision_voice_bot_serve.py
+# use gptq int4 ckpt
+IMAGE_NAME=default IMAGE_CONCURRENT_CN=1 IMAGE_GPU=T4 USE_GPTQ_CKPT=1 modal serve -e achatbot src/fastapi_webrtc_minicpmo_vision_voice_bot_serve.py
+```
+- curl api to run chat room bot with webrtc (daily)
+```shell
+# DailyMiniCPMoVoiceBot no ref audio, use sdpa attn impl
+curl --location 'https://weedge-achatbot--fastapi-webrtc-minicpmo-omni-bot-srv-app-dev.modal.run/bot_join/chat-room/DailyMiniCPMoVoiceBot' \
+--header 'Content-Type: application/json' \
+--data '{
+  "chat_bot_name": "DailyMiniCPMoVoiceBot",
+  "room_name": "chat-room",
+  "room_url": "",
+  "token": "",
+  "room_manager": {
+    "tag": "daily_room",
+    "args": {
+      "privacy": "public"
+    }
+  },
+  "services": {
+    "pipeline": "achatbot",
+    "vad": "silero",
+    "voice_llm": "minicpmo"
+  },
+  "config": {
+    "vad": {
+      "tag": "silero_vad_analyzer",
+      "args": { "stop_secs": 0.7 }
+    },
+    "voice_llm": {
+      "tag": "minicpmo_voice_processor",
+      "args": {
+        "lm_device": "cuda",
+        "lm_torch_dtype": "bfloat16",
+        "lm_attn_impl": "sdpa",
+        "warnup_steps": 1,
+        "lm_gen_temperature": 0.5,
+        "lm_model_name_or_path": "/root/.achatbot/models/openbmb/MiniCPM-o-2_6"
+      }
+    }
+  },
+  "config_list": []
+}'
+# DailyAsrMiniCPMoVoiceBot with ref audio, use sdpa attn impl
+curl --location 'https://weedge-achatbot--fastapi-webrtc-minicpmo-omni-bot-srv-app-dev.modal.run/bot_join/chat-room/DailyAsrMiniCPMoVoiceBot' \
+--header 'Content-Type: application/json' \
+--data '{
+    "chat_bot_name": "DailyAsrMiniCPMoVoiceBot",
+    "config": {
+        "asr": {
+            "args": {
+                "language": "zn",
+                "model_name_or_path": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall"
+            },
+            "tag": "sense_voice_asr"
+        },
+        "vad": {
+            "args": {
+                "stop_secs": 0.7
+            },
+            "tag": "silero_vad_analyzer"
+        },
+        "voice_llm": {
+            "args": {
+                "lm_attn_impl": "sdpa",
+                "lm_device": "cuda",
+                "lm_gen_temperature": 0.5,
+                "lm_model_name_or_path": "/root/.achatbot/models/openbmb/MiniCPM-o-2_6",
+                "lm_torch_dtype": "bfloat16",
+                "ref_audio_path": "/root/.achatbot/assets/asr_example_zh.wav",
+                "warnup_steps": 1
+            },
+            "tag": "asr_minicpmo_voice_processor"
+        }
+    },
+    "config_list": [],
+    "room_manager": {
+        "args": {
+            "privacy": "public"
+        },
+        "tag": "daily_room"
+    },
+    "room_name": "chat-room",
+    "room_url": "",
+    "services": {
+        "asr": "sense_voice",
+        "pipeline": "achatbot",
+        "vad": "silero",
+        "voice_llm": "minicpmo"
+    },
+    "token": ""
+}'
+# DailyMiniCPMoVoiceBot no ref audio, use flash_attention_2 attn impl
+curl --location 'https://weedge-achatbot--fastapi-webrtc-minicpmo-omni-bot-srv-app-dev.modal.run/bot_join/chat-room/DailyMiniCPMoVisionVoiceBot' \
+--header 'Content-Type: application/json' \
+--data '{
+  "chat_bot_name": "DailyMiniCPMoVisionVoiceBot",
+  "room_name": "chat-room",
+  "room_url": "",
+  "token": "",
+  "room_manager": {
+    "tag": "daily_room",
+    "args": {
+      "privacy": "public"
+    }
+  },
+  "services": {
+    "pipeline": "achatbot",
+    "vad": "silero",
+    "omni_llm": "minicpmo"
+  },
+  "config": {
+    "vad": {
+      "tag": "silero_vad_analyzer",
+      "args": { "stop_secs": 0.7 }
+    },
+    "omni_llm": {
+      "tag": "minicpmo_vision_voice_processor",
+      "args": {
+        "lm_device_map": "auto",
+        "lm_torch_dtype": "bfloat16",
+        "lm_attn_impl": "flash_attention_2",
+        "warnup_steps": 1,
+        "lm_gen_temperature": 0.5,
+        "ref_audio_path": "/root/.achatbot/assets/asr_example_zh.wav",
+        "lm_model_name_or_path": "/root/.achatbot/models/openbmb/MiniCPM-o-2_6"
+      }
+    }
+  },
+  "config_list": []
+}'
+# DailyMiniCPMoVoiceBot with ref audio, use flash_attention_2 attn impl, use gptq int4 ckpt 
+curl --location 'https://weedge-achatbot--fastapi-webrtc-minicpmo-omni-bot-srv-app-dev.modal.run/bot_join/chat-room/DailyMiniCPMoVisionVoiceBot' \
+--header 'Content-Type: application/json' \
+--data '{
+  "chat_bot_name": "DailyMiniCPMoVisionVoiceBot",
+  "room_name": "chat-room",
+  "room_url": "",
+  "token": "",
+  "room_manager": {
+    "tag": "daily_room",
+    "args": {
+      "privacy": "public"
+    }
+  },
+  "services": {
+    "pipeline": "achatbot",
+    "vad": "silero",
+    "omni_llm": "minicpmo"
+  },
+  "config": {
+    "vad": {
+      "tag": "silero_vad_analyzer",
+      "args": { "stop_secs": 0.7 }
+    },
+    "omni_llm": {
+      "tag": "minicpmo_vision_voice_processor",
+      "args": {
+        "lm_device_map": "auto",
+        "lm_torch_dtype": "bfloat16",
+        "lm_attn_impl": "flash_attention_2",
+        "warnup_steps": 1,
+        "lm_gen_temperature": 0.5,
+        "ref_audio_path": "/root/.achatbot/assets/asr_example_zh.wav",
+        "lm_model_name_or_path": "/root/.achatbot/models/openbmb/MiniCPM-o-2_6-int4"
+      }
+    }
+  },
+  "config_list": []
+}'
+```
+
 ## modal deploy (online)
 - deploy webrtc_audio_bot serve
 ```shell
