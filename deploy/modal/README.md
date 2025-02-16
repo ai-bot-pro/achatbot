@@ -598,6 +598,12 @@ IMAGE_NAME=default IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal deploy -e achatbot s
 ```
 endpoint: https://weedge-achatbot--fastapi-webrtc-freeze_omni-voice-bot-srv-app.modal.run/
 
+- deploy webrtc_minicpmo_vision_voice_bot serve
+```shell
+IMAGE_NAME=default IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal deploy -e achatbot src/fastapi_webrtc_minicpmo_vision_voice_bot_serve.py
+```
+endpoint: https://weedge-achatbot--fastapi-webrtc-minicpmo_omni-bot-srv-app.modal.run/
+
 # references (nice docs) 👍 @modal
 - https://modal.com/docs/guide
 - https://modal.com/docs/guide/gpu
