@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 name = "achatbot"
 #dynamic = ["version"]
 # todo
-version = "0.0.8.10.11"
+version = "0.0.8.10.13"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -362,7 +362,7 @@ llm_transformers_manual_speech_llasa = [
     "achatbot[llm_transformers_manual_voice]",
 ]
 llm_transformers_manual_vision_voice_minicpmo = [
-    "achatbot[librosa,soundfile]",
+    "achatbot[accelerate,librosa,soundfile]",
     "torch~=2.2.2",
     "torchaudio~=2.2.2",
     "torchvision~=0.17.2",
