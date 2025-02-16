@@ -22,7 +22,7 @@ class ContainerRuntimeConfig:
                     "USE_GPTQ_CKPT": os.getenv("USE_GPTQ_CKPT", ""),
                     "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "openbmb/MiniCPM-o-2_6")}',
                     # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#gpu-feature-list
-                    "TORCH_CUDA_ARCH_LIST": "7.5;8.0;8.6+PTX;8.9;9.0",
+                    "TORCH_CUDA_ARCH_LIST": "7.5;8.0;8.6+PTX;8.9;9.0",# for auto-gptq install
                 }
             )
             .run_commands(
@@ -45,7 +45,7 @@ class ContainerRuntimeConfig:
                     "llm_transformers_manual_vision_voice_minicpmo,"
                     "queue"
                     "]~=0.0.8.10.13",
-                    "huggingface_hub[hf_transfer]==0.24.7",
+                    "huggingface_hub[hf_transfer]==0.26.0",
                     "wget",
                 ],
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
