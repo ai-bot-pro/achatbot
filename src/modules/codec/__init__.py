@@ -16,6 +16,8 @@ class CodecEnvInit:
     def getEngine(tag, **kwargs) -> ICodec | EngineClass:
         if "codec_transformers_mimi" == tag:
             from .audio import transformers_mimi
+        elif "codec_transformers_dac" == tag:
+            from .audio import transformers_dac
         elif "codec_moshi_mimi" == tag:
             from .audio import moshi_mimi
         elif "codec_xcodec2" == tag:
@@ -42,5 +44,6 @@ class CodecEnvInit:
     map_config_func = {
         "codec_xcodec2": get_args,
         "codec_transformers_mimi": get_args,
+        "codec_transformers_dac": get_args,
         "codec_moshi_mimi": get_args,
     }
