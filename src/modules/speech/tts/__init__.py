@@ -42,6 +42,8 @@ class TTSEnvInit:
             from . import llasa_tts
         elif "tts_minicpmo" == tag:
             from . import minicpmo_tts
+        elif "tts_zonos" == tag:
+            from . import zonos_tts
         # elif "tts_openai" in tag:
         # from . import openai_tts
 
@@ -248,6 +250,19 @@ class TTSEnvInit:
         kwargs["instruct_tpl"] = os.getenv("TTS_INSTRUCT_TPL", "")
         return kwargs
 
+    @staticmethod
+    def get_tts_zonos_args() -> dict:
+        from src.types.speech.tts.zonos import ZonosTTSArgs
+
+        lm_checkpoint_dir = os.path.join(MODELS_DIR, "Zyphra/Zonos-v0.1-transformer")
+        lm_checkpoint_dir = os.getenv("ZONOS_LM_CHECKPOINT_DIR", lm_checkpoint_dir)
+        kwargs = ZonosTTSArgs(
+            lm_checkpoint_dir=lm_checkpoint_dir,
+            language=os.getenv("LANGUAGE", "en-us"),
+            ref_audio_file_path=os.getenv("ZONOS_REF_AUDIO_PATH", ""),
+        ).__dict__
+        return kwargs
+
     # TAG : config
     map_config_func = {
         "tts_coqui": get_tts_coqui_args,
@@ -263,4 +278,5 @@ class TTSEnvInit:
         "tts_edge": get_tts_edge_args,
         "tts_g": get_tts_g_args,
         "tts_minicpmo": get_tts_minicpmo_args,
+        "tts_zonos": get_tts_zonos_args,
     }

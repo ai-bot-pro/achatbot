@@ -12,6 +12,7 @@ class ZonosTTSArgs:
     """
 
     lm_checkpoint_dir: str = str(os.path.join(MODELS_DIR, "Zyphra/Zonos-v0.1-transformer"))
+    device: str | None = None
 
     codec_args: dict = field(default_factory=CodecArgs().__dict__)
 

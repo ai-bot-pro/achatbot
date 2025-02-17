@@ -5,9 +5,6 @@ import sys
 import time
 from typing import AsyncGenerator
 
-import hydra
-from hydra import compose, initialize
-from hydra.utils import instantiate
 import numpy as np
 import torch
 import torchaudio
@@ -24,6 +21,7 @@ except ModuleNotFoundError as e:
     logging.error("In order to use zonos-tts, you need to `pip install achatbot[tts_zonos]`.")
     raise Exception(f"Missing module: {e}")
 
+from src.common.utils.audio_utils import AUDIO_EXTENSIONS
 from src.common.random import set_all_random_seed
 from src.common.types import PYAUDIO_PAFLOAT32, PYAUDIO_PAINT16
 from src.common.utils.helper import file_md5_hash, get_device, print_model_params
@@ -94,7 +92,20 @@ class ZonosSpeechTTS(BaseTTS, ITts):
         logging.info(f"End Warm Up")
 
     def set_voice(self, ref_audio_path: str):
-        pass
+        """
+        - ref_audio_path is audio path, make speaker embedding
+        """
+        if os.path.exists(ref_audio_path) is False:
+            raise FileNotFoundError(f"reference_audio_path: {ref_audio_path}")
+
+        md5_hash = file_md5_hash(ref_audio_path)
+        if md5_hash in self.voices:
+            logging.info(f"{ref_audio_path} had set speaker embedding")
+            return
+
+        wav, sr = torchaudio.load(self.args.ref_audio_file_path)
+        self.speaker = self.model.make_speaker_embedding(wav, sr)
+        self.voices[md5_hash] = self.speaker
 
     def get_voices(self) -> list:
         return list(self.voices.keys())
