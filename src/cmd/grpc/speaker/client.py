@@ -121,6 +121,7 @@ TTS_TAG=tts_minicpmo \
 TTS_TAG=tts_zonos \
     ZONOS_LM_CHECKPOINT_DIR=./models/Zyphra/Zonos-v0.1-transformer \
     ZONOS_DAC_MODEL_DIR=./models/descript/dac_44khz \
+    SPEAKER_EMBEDDING_MODEL_DIR=./models/Zyphra/Zonos-v0.1-speaker-embedding
     ZONOS_REF_AUDIO_PATH=./test/audio_files/asr_example_zh.wav \
     IS_SAVE=1 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 """
