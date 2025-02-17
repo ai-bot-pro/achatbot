@@ -262,7 +262,7 @@ class TTSEnvInit:
             MODELS_DIR, "Zyphra/Zonos-v0.1-speaker-embedding"
         )
         speaker_embedding_model_dir = os.getenv(
-            "speaker_embedding_model_dir", speaker_embedding_model_dir
+            "SPEAKER_EMBEDDING_MODEL_DIR", speaker_embedding_model_dir
         )
         kwargs = ZonosTTSArgs(
             lm_checkpoint_dir=lm_checkpoint_dir,
