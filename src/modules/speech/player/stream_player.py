@@ -243,6 +243,18 @@ class PlayStreamInit:
                 "rate": 16000,
                 "sample_width": 2,
             },
+            "tts_minicpmo": {
+                "format": PYAUDIO_PAFLOAT32,
+                "channels": 1,
+                "rate": 24000,
+                "sample_width": 2,
+            },
+            "tts_zonos": {
+                "format": PYAUDIO_PAFLOAT32,
+                "channels": 1,
+                "rate": 44100,
+                "sample_width": 2,
+            },
             "tts_daily_speaker": {
                 "format": PYAUDIO_PAINT16,
                 "channels": 1,
