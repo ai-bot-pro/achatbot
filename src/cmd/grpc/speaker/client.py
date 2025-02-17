@@ -120,8 +120,9 @@ if __name__ == "__main__":
         # todo: up to the rpc gateway to auth
         token = "oligei-tts"
         authentication = add_authentication("authorization", token)
+        host = os.getenv("HOST", "localhost")
         port = os.getenv("PORT", "50052")
-        channel = grpc.insecure_channel(f"localhost:{port}")
+        channel = grpc.insecure_channel(f"{host}:{port}")
         channel = grpc.intercept_channel(channel, authentication)
         tts_stub = TTSStub(channel)
 
