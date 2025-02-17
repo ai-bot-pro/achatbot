@@ -18,7 +18,9 @@ try:
     from deps.Zonos.zonos.model import Zonos
     from deps.Zonos.zonos.conditioning import make_cond_dict
 except ModuleNotFoundError as e:
-    logging.error("In order to use zonos-tts, you need to `pip install achatbot[tts_zonos]`.")
+    logging.error(
+        "In order to use zonos-tts, you need to `apt install -y espeak-ng`,  `pip install achatbot[tts_zonos]`."
+    )
     raise Exception(f"Missing module: {e}")
 
 from src.common.utils.audio_utils import AUDIO_EXTENSIONS
@@ -42,6 +44,7 @@ class ZonosSpeechTTS(BaseTTS, ITts):
         self.voices = {}
         self.args = ZonosTTSArgs(**args)
         self.args.device = self.args.device or get_device()
+        logging.debug(f"args:{self.args}")
         repo_id = "/".join(self.args.lm_checkpoint_dir.split("/")[-2:])
         self.model = Zonos.from_pretrained(
             repo_id,
@@ -50,15 +53,19 @@ class ZonosSpeechTTS(BaseTTS, ITts):
         )
         self.model.requires_grad_(False).eval()
 
+        self.speaker: torch.Tensor = None
         if self.args.ref_audio_file_path and os.path.exists(self.args.ref_audio_file_path):
             wav, sr = torchaudio.load(self.args.ref_audio_file_path)
             self.speaker = self.model.make_speaker_embedding(wav, sr)
+
+        self.warm_up()
 
     def warm_up(self):
         if not self.args.warm_up_text:
             logging.warning(f"No warm_up_text to Warm Up")
             return
-        logging.info(f"Warming up {self.__class__.__name__} device: {self._model.device}")
+
+        logging.info(f"Warming up {self.__class__.__name__} device: {self.model.device}")
         cond_dict = make_cond_dict(
             text=self.args.warm_up_text, speaker=self.speaker, language=self.args.language
         )
@@ -69,7 +76,7 @@ class ZonosSpeechTTS(BaseTTS, ITts):
             chunk_size=self.args.chunk_size,
         )
 
-        if "cuda" in str(self._model.device):
+        if "cuda" in str(self.model.device):
             start_event = torch.cuda.Event(enable_timing=True)
             end_event = torch.cuda.Event(enable_timing=True)
             torch.cuda.synchronize()
@@ -83,7 +90,7 @@ class ZonosSpeechTTS(BaseTTS, ITts):
                 start_time = time.perf_counter()
             logging.info(f"step {step} warnup TTFT(chunk) time: {times[0]} s")
 
-        if "cuda" in str(self._model.device):
+        if "cuda" in str(self.model.device):
             end_event.record()
             torch.cuda.synchronize()
             logging.info(
@@ -103,7 +110,7 @@ class ZonosSpeechTTS(BaseTTS, ITts):
             logging.info(f"{ref_audio_path} had set speaker embedding")
             return
 
-        wav, sr = torchaudio.load(self.args.ref_audio_file_path)
+        wav, sr = torchaudio.load(ref_audio_path)
         self.speaker = self.model.make_speaker_embedding(wav, sr)
         self.voices[md5_hash] = self.speaker
 
@@ -126,6 +133,7 @@ class ZonosSpeechTTS(BaseTTS, ITts):
     async def _inference(
         self, session: Session, text: str, **kwargs
     ) -> AsyncGenerator[bytes, None]:
+        # logging.debug(f"session:{session}, text:{text}")
         if "cuda" in str(self.model.device):
             torch.cuda.empty_cache()
         seed = kwargs.get("seed", self.args.seed)

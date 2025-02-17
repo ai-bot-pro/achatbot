@@ -209,7 +209,7 @@ class ContainerRuntimeConfig:
                     "tts_edge,"
                     "deep_translator,together_ai,"
                     "queue"
-                    "]~=0.0.8.10.11",
+                    "]~=0.0.8.111",
                     "huggingface_hub[hf_transfer]==0.24.7",
                 ],
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),

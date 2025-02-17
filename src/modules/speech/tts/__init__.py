@@ -258,7 +258,7 @@ class TTSEnvInit:
         lm_checkpoint_dir = os.getenv("ZONOS_LM_CHECKPOINT_DIR", lm_checkpoint_dir)
         kwargs = ZonosTTSArgs(
             lm_checkpoint_dir=lm_checkpoint_dir,
-            language=os.getenv("LANGUAGE", "en-us"),
+            language=os.getenv("TTS_LANG", "en-us"),  # don't use sys env LANGUAGE
             ref_audio_file_path=os.getenv("ZONOS_REF_AUDIO_PATH", ""),
         ).__dict__
         return kwargs

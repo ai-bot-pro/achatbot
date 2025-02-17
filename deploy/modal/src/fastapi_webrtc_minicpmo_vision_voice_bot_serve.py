@@ -45,7 +45,7 @@ class ContainerRuntimeConfig:
                     "sense_voice_asr,deepgram_asr_processor,"
                     "llm_transformers_manual_vision_voice_minicpmo,"
                     "queue"
-                    "]~=0.0.8.10.13",
+                    "]~=0.0.8.11",
                     "huggingface_hub[hf_transfer]==0.26.0",
                     "wget",
                 ],

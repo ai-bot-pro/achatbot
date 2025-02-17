@@ -14,8 +14,6 @@ class ZonosTTSArgs:
     lm_checkpoint_dir: str = str(os.path.join(MODELS_DIR, "Zyphra/Zonos-v0.1-transformer"))
     device: str | None = None
 
-    codec_args: dict = field(default_factory=CodecArgs().__dict__)
-
     # ref audio file path and prompt text
     ref_audio_file_path: str = ""
     prompt_text: str = ""
@@ -36,11 +34,13 @@ class ZonosTTSArgs:
 
     # sample conditioning params
     language: str = "en-us"
-    emotion: list[float] = [0.3077, 0.0256, 0.0256, 0.0256, 0.0256, 0.0256, 0.2564, 0.3077]
+    emotion: list[float] = field(
+        default_factory=lambda: [0.3077, 0.0256, 0.0256, 0.0256, 0.0256, 0.0256, 0.2564, 0.3077]
+    )
     fmax: float = 22050.0
     pitch_std: float = 20.0
     speaking_rate: float = 15.0
-    vqscore_8: list[float] = [0.78] * 8
+    vqscore_8: list[float] = field(default_factory=lambda: [0.78] * 8)
     ctc_loss: float = 0.0
     dnsmos_ovrl: float = 4.0
 
