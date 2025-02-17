@@ -19,7 +19,8 @@ try:
     from deps.Zonos.zonos.conditioning import make_cond_dict
 except ModuleNotFoundError as e:
     logging.error(
-        "In order to use zonos-tts, you need to `apt install -y espeak-ng`,  `pip install achatbot[tts_zonos]`."
+        "In order to use zonos-tts use transformer, you need to `apt install -y espeak-ng`,  `pip install achatbot[tts_zonos]`."
+        + "if use transformer + mabama2, need `pip install achatbot[tts_zonos_hybrid]`"
     )
     raise Exception(f"Missing module: {e}")
 

@@ -351,6 +351,12 @@ tts_zonos = [
     "huggingface-hub>=0.28.1",
     "achatbot[soundfile]",
 ]
+tts_zonos_hybrid = [
+    "achatbot[tts_zonos]",
+    "flash-attn>=2.7.3",
+    "mamba-ssm>=2.2.4",
+    "causal-conv1d>=1.5.0.post8",
+]
 
 # multi tts modules engine
 speech_tts = [
