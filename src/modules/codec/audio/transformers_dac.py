@@ -49,7 +49,6 @@ class TransformersDescriptAudioCodec(EngineClass, ICodec):
 
     @torch.no_grad
     def encode_code(self, waveform_tensor: torch.Tensor) -> torch.Tensor:
-        assert len(waveform_tensor.shape) == 1
         return self.model.encode(waveform_tensor[None, None, :].to(self.args.device)).audio_codes
         # pre-process the input waveform
         inputs = self.feature_extractor(
