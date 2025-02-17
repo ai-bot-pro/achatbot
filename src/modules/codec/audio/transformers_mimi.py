@@ -40,6 +40,7 @@ class TransformersMimiCodec(EngineClass, ICodec):
 
     @torch.no_grad
     def encode_code(self, waveform_tensor: torch.Tensor) -> torch.Tensor:
+        return self.model.encode(waveform_tensor[None, None, :].to(self.args.device)).audio_codes
         # pre-process the input waveform
         inputs = self.feature_extractor(
             raw_audio=waveform_tensor,
@@ -47,7 +48,7 @@ class TransformersMimiCodec(EngineClass, ICodec):
             return_tensors="pt",
         )
 
-        output = self.model.encode(inputs["input_values"])
+        output = self.model.encode(inputs["input_values"].to(self.args.device))
         vq_codes = output.audio_codes
         logging.debug(f"encode waveform to vq_codes: {vq_codes.shape}")
         return vq_codes

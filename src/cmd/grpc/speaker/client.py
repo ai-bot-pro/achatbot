@@ -87,26 +87,43 @@ logging.basicConfig(level=logging.DEBUG)
 
 """
 TTS_TAG=tts_edge IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+
 TTS_TAG=tts_g IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+
 TTS_TAG=tts_coqui IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+
 TTS_TAG=tts_chat IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+
 TTS_TAG=tts_cosy_voice IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+
 TTS_TAG=tts_fishspeech IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+
 TTS_TAG=tts_f5 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+
 TTS_TAG=tts_openvoicev2 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+
 TTS_TAG=tts_kokoro IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 TTS_TAG=tts_onnx_kokoro IS_RELOAD=1 KOKORO_ESPEAK_NG_LIB_PATH=/usr/local/lib/libespeak-ng.1.dylib KOKORO_LANGUAGE=cmn python -m src.cmd.grpc.speaker.client
+
 TTS_TAG=tts_cosy_voice2 \
     COSY_VOICE_MODELS_DIR=./models/FunAudioLLM/CosyVoice2-0.5B \
     COSY_VOICE_REFERENCE_AUDIO_PATH=./test/audio_files/asr_example_zh.wav \
     IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
-TTS_TAG=tts_llasa IS_SAVE=1 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
-TTS_TAG=tts_llasa IS_SAVE=1 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
-LLM_MODEL_NAME_OR_PATH=./models/openbmb/MiniCPM-o-2_6 \
-    LLM_GEN_TEMPERATURE=0.0 \
-    LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
-    python -m unittest test.modules.speech.tts.test_minicpmo.TestMiniCPMoTTS.test_synthesize
 
+TTS_TAG=tts_llasa IS_SAVE=1 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+TTS_TAG=tts_llasa IS_SAVE=1 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+
+TTS_TAG=tts_minicpmo \
+    LLM_DEVICE=cuda LLM_GEN_TEMPERATURE=0.5 LLM_TORCH_DTYPE=bfloat16 \
+    LLM_MODEL_NAME_OR_PATH=./models/openbmb/MiniCPM-o-2_6 \
+    IS_SAVE=1 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+
+TTS_TAG=tts_zonos \
+    ZONOS_LM_CHECKPOINT_DIR=./models/Zyphra/Zonos-v0.1-transformer \
+    ZONOS_DAC_MODEL_DIR=./models/descript/dac_44khz \
+    SPEAKER_EMBEDDING_MODEL_DIR=./models/Zyphra/Zonos-v0.1-speaker-embedding
+    ZONOS_REF_AUDIO_PATH=./test/audio_files/asr_example_zh.wav \
+    IS_SAVE=1 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 """
 if __name__ == "__main__":
     player = None
@@ -120,8 +137,9 @@ if __name__ == "__main__":
         # todo: up to the rpc gateway to auth
         token = "oligei-tts"
         authentication = add_authentication("authorization", token)
+        host = os.getenv("HOST", "localhost")
         port = os.getenv("PORT", "50052")
-        channel = grpc.insecure_channel(f"localhost:{port}")
+        channel = grpc.insecure_channel(f"{host}:{port}")
         channel = grpc.intercept_channel(channel, authentication)
         tts_stub = TTSStub(channel)
 

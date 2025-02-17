@@ -43,7 +43,7 @@ class TransformersGoTOCRArgs:
         default="Repeat the word 'weedge niu bi'.",
         metadata={"help": "warnup llm generate prompt. Default is 'weedge niu bi'."},
     )
-    warnup_steps: int = field(
+    warmup_steps: int = field(
         default=2,
         metadata={"help": "The number of steps to run the warmup prompt. Default is 2."},
     )

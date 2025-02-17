@@ -18,6 +18,10 @@ CODEC_TAG=codec_moshi_mimi CODEC_MODEL_DIR=./models/kyutai/moshiko-pytorch-bf16 
     python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
 CODEC_TAG=codec_transformers_mimi CODEC_MODEL_DIR=./models/kyutai/mimi \
     python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
+CODEC_TAG=codec_transformers_dac CODEC_MODEL_DIR=./models/descript/dac_16khz \
+    python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
+CODEC_TAG=codec_transformers_dac CODEC_MODEL_DIR=./models/descript/dac_44khz \
+    python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
 """
 
 
@@ -48,7 +52,7 @@ class TestCodec(unittest.TestCase):
     def test_encode_decode(self):
         wav, sr = soundfile.read(self.audio_file)
         wav_tensor = torch.from_numpy(wav).float()  # Shape: (T)
-        print(f"encode to vq codes from wav_tensor: {wav_tensor.shape}")
+        print(f"encode to vq codes from wav_tensor: {wav_tensor.shape}, rate: {sr}")
         vq_code = self.codec.encode_code(wav_tensor)
         print(f"vq_code: {vq_code.shape}")
         wav_tensor = self.codec.decode_code(vq_code)  # Shape: (T)

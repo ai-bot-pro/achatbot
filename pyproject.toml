@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 name = "achatbot"
 #dynamic = ["version"]
 # todo
-version = "0.0.8.10.13"
+version = "0.0.8.11"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -253,6 +253,7 @@ core_llm = ["achatbot[llama_cpp,llm_personalai_proxy]"]
 codec_transformers_mimi = ["transformers[torch]~=4.45.1"]
 codec_moshi_mimi = ["moshi~=0.1.0"]
 codec_xcodec2 = ["xcodec2==0.1.3"]
+codec_transformers_dac = ["transformers[torch]~=4.45.1"]
 
 # ---------------TTS----------------------
 
@@ -338,6 +339,24 @@ tts_fishspeech = [
     "achatbot[conf,einops,librosa]",
 ]
 tts_llasa = ["achatbot[codec_xcodec2]"]
+tts_zonos = [
+    "torch>=2.5.1",
+    "inflect>=7.5.0",
+    "kanjize>=1.5.0",
+    "phonemizer>=3.3.0",
+    "sudachidict-full>=20241021",
+    "sudachipy>=0.6.10",
+    "torchaudio>=2.5.1",
+    "transformers>=4.48.1",       # use 4.45.1
+    "huggingface-hub>=0.28.1",
+    "achatbot[soundfile]",
+]
+tts_zonos_hybrid = [
+    "achatbot[tts_zonos]",
+    "flash-attn>=2.7.3",
+    "mamba-ssm>=2.2.4",
+    "causal-conv1d>=1.5.0.post8",
+]
 
 # multi tts modules engine
 speech_tts = [
@@ -499,7 +518,7 @@ pythonpath = ["tests"]
 local_scheme = "no-local-version"
 
 
-#https://docs.astral.sh/ruff/configuration/
+# https://docs.astral.sh/ruff/configuration/
 [tool.ruff]
 exclude = ["*_pb2.py", "*_pb2_*", "deps", "idl"]
 indent-width = 4
@@ -509,3 +528,7 @@ line-length = 100
 exclude = ["*.pyi", "*.ipynb"]
 [tool.ruff.lint]
 ignore = ["F401", "F403", "F405", "F541"]
+
+# uv
+[tool.uv]
+no-build-isolation-package = ["flash-attn"]

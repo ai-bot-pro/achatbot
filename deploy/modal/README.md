@@ -410,7 +410,7 @@ curl --location 'https://weedge-achatbot--fastapi-webrtc-minicpmo-omni-bot-srv-a
         "lm_device": "cuda",
         "lm_torch_dtype": "bfloat16",
         "lm_attn_impl": "sdpa",
-        "warnup_steps": 1,
+        "warmup_steps": 1,
         "lm_gen_temperature": 0.5,
         "lm_model_name_or_path": "/root/.achatbot/models/openbmb/MiniCPM-o-2_6"
       }
@@ -445,7 +445,7 @@ curl --location 'https://weedge-achatbot--fastapi-webrtc-minicpmo-omni-bot-srv-a
                 "lm_model_name_or_path": "/root/.achatbot/models/openbmb/MiniCPM-o-2_6",
                 "lm_torch_dtype": "bfloat16",
                 "ref_audio_path": "/root/.achatbot/assets/asr_example_zh.wav",
-                "warnup_steps": 1
+                "warmup_steps": 1
             },
             "tag": "asr_minicpmo_voice_processor"
         }
@@ -497,7 +497,7 @@ curl --location 'https://weedge-achatbot--fastapi-webrtc-minicpmo-omni-bot-srv-a
         "lm_device_map": "auto",
         "lm_torch_dtype": "bfloat16",
         "lm_attn_impl": "flash_attention_2",
-        "warnup_steps": 1,
+        "warmup_steps": 1,
         "lm_gen_temperature": 0.5,
         "ref_audio_path": "/root/.achatbot/assets/asr_example_zh.wav",
         "lm_model_name_or_path": "/root/.achatbot/models/openbmb/MiniCPM-o-2_6"
@@ -536,7 +536,7 @@ curl --location 'https://weedge-achatbot--fastapi-webrtc-minicpmo-omni-bot-srv-a
         "lm_device_map": "auto",
         "lm_torch_dtype": "bfloat16",
         "lm_attn_impl": "flash_attention_2",
-        "warnup_steps": 1,
+        "warmup_steps": 1,
         "lm_gen_temperature": 0.5,
         "ref_audio_path": "/root/.achatbot/assets/asr_example_zh.wav",
         "lm_model_name_or_path": "/root/.achatbot/models/openbmb/MiniCPM-o-2_6-int4"
