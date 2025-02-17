@@ -220,7 +220,7 @@ class TTSEnvInit:
                     "LLASA_LM_MODEL_PATH", os.path.join(MODELS_DIR, "HKUSTAudio/Llasa-1B")
                 ),
                 lm_device=os.getenv("LLASA_LM_DEVICE", None),
-                warnup_steps=int(os.getenv("LLASA_WARNUP_STEPS", "0")),
+                warmup_steps=int(os.getenv("LLASA_WARMUP_STEPS", "0")),
                 lm_gen_top_k=int(os.getenv("LLASA_LM_GEN_TOP_K", "10")),
                 lm_gen_top_p=float(os.getenv("LLASA_LM_GEN_TOP_P", "1.0")),
                 lm_gen_temperature=float(os.getenv("LLASA_LM_GEN_TEMPERATURE", "0.8")),

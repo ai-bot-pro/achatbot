@@ -144,7 +144,7 @@ class TransformersBaseLLM(BaseLLM, ILlm):
             torch.cuda.synchronize()
             start_event.record()
 
-        n_steps = self.args.warnup_steps
+        n_steps = self.args.warmup_steps
         for step in range(n_steps):
             thread = Thread(target=target, args=args, kwargs=kwargs)
             thread.start()

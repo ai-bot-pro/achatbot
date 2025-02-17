@@ -194,7 +194,7 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
             )
 
     def warmup(self):
-        if self.args.warnup_steps < 0:
+        if self.args.warmup_steps < 0:
             return
         logging.info(f"Warming up {self.__class__.__name__} device: {self._model.device}")
         if "cuda" in str(self._model.device):
@@ -215,7 +215,7 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
             }
         ]
 
-        for i in range(self.args.warnup_steps):
+        for i in range(self.args.warmup_steps):
             self._sys_msg and self._model.streaming_prefill(
                 session_id="", msgs=[self._sys_msg], tokenizer=self._tokenizer
             )
@@ -232,7 +232,7 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
                 repetition_penalty=self.args.lm_gen_repetition_penalty,
                 generate_audio=False,
             )
-            for step in range(self.args.warnup_steps):
+            for step in range(self.args.warmup_steps):
                 for _ in streamer:
                     times = []
                     start_time = time.perf_counter()

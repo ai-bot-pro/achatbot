@@ -124,7 +124,7 @@ class LLMEnvInit:
             init_chat_prompt=os.getenv("LLM_INIT_CHAT_PROMPT", ""),
             chat_history_size=int(os.getenv("LLM_CHAT_HISTORY_SIZE", "10")),  # cache 10 round
             model_type=os.getenv("LLM_MODEL_TYPE", "chat_completion"),
-            warnup_steps=int(os.getenv("LLM_WARMUP_STEPS", "1")),
+            warmup_steps=int(os.getenv("LLM_WARMUP_STEPS", "1")),
         ).__dict__
         return kwargs
 

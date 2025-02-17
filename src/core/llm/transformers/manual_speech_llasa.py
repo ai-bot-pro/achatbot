@@ -98,7 +98,7 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
         self.warmup()
 
     def warmup(self):
-        if self.args.warnup_steps <= 0 or not self.args.warnup_prompt:
+        if self.args.warmup_steps <= 0 or not self.args.warnup_prompt:
             logging.info("no warmup!")
             return
 
