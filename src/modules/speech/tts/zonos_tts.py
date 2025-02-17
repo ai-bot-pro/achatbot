@@ -51,6 +51,7 @@ class ZonosSpeechTTS(BaseTTS, ITts):
             repo_id,
             device=self.args.device,
             local_dir=self.args.lm_checkpoint_dir,
+            dac_model_path=self.args.dac_model_dir,
         )
         self.model.requires_grad_(False).eval()
 
