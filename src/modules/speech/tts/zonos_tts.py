@@ -58,7 +58,9 @@ class ZonosSpeechTTS(BaseTTS, ITts):
         self.speaker: torch.Tensor = None
         if self.args.ref_audio_file_path and os.path.exists(self.args.ref_audio_file_path):
             wav, sr = torchaudio.load(self.args.ref_audio_file_path)
-            self.speaker = self.model.make_speaker_embedding(wav, sr)
+            self.speaker = self.model.make_speaker_embedding(
+                wav, sr, local_dir=self.args.speaker_embedding_model_dir
+            )
 
         self.warm_up()
 
@@ -113,7 +115,9 @@ class ZonosSpeechTTS(BaseTTS, ITts):
             return
 
         wav, sr = torchaudio.load(ref_audio_path)
-        self.speaker = self.model.make_speaker_embedding(wav, sr)
+        self.speaker = self.model.make_speaker_embedding(
+            wav, sr, local_dir=self.args.speaker_embedding_model_dir
+        )
         self.voices[md5_hash] = self.speaker
 
     def get_voices(self) -> list:

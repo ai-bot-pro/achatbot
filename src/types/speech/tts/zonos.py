@@ -14,6 +14,9 @@ class ZonosTTSArgs:
     device: str | None = None
     lm_checkpoint_dir: str = str(os.path.join(MODELS_DIR, "Zyphra/Zonos-v0.1-transformer"))
     dac_model_dir: str = str(os.path.join(MODELS_DIR, "descript/dac_44khz"))
+    speaker_embedding_model_dir: str = str(
+        os.path.join(MODELS_DIR, "Zyphra/Zonos-v0.1-speaker-embedding")
+    )
 
     # ref audio file path and prompt text
     ref_audio_file_path: str = ""

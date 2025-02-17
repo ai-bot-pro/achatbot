@@ -258,9 +258,16 @@ class TTSEnvInit:
         lm_checkpoint_dir = os.getenv("ZONOS_LM_CHECKPOINT_DIR", lm_checkpoint_dir)
         dac_model_dir = os.path.join(MODELS_DIR, "Zyphra/Zonos-v0.1-transformer")
         dac_model_dir = os.getenv("ZONOS_DAC_MODEL_DIR", dac_model_dir)
+        speaker_embedding_model_dir = os.path.join(
+            MODELS_DIR, "Zyphra/Zonos-v0.1-speaker-embedding"
+        )
+        speaker_embedding_model_dir = os.getenv(
+            "speaker_embedding_model_dir", speaker_embedding_model_dir
+        )
         kwargs = ZonosTTSArgs(
             lm_checkpoint_dir=lm_checkpoint_dir,
             dac_model_dir=dac_model_dir,
+            speaker_embedding_model_dir=speaker_embedding_model_dir,
             language=os.getenv("TTS_LANG", "en-us"),  # don't use sys env LANGUAGE
             ref_audio_file_path=os.getenv("ZONOS_REF_AUDIO_PATH", ""),
         ).__dict__
