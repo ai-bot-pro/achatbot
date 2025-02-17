@@ -50,6 +50,9 @@ class MiniCPMoTTS(BaseTTS, ITts):
         if is_instruct is True:
             instruction = input_text
         session.ctx.state["prompt"] = [instruction]
+        if self.lm_model.tts_task == "voice_cloning":
+            instruct = kwargs.pop("instruct", self.instruct_tpl)
+            session.ctx.state["prompt"] = [instruct, input_text]
         tensor_audio_stream = self.lm_model.generate(session, **kwargs)
 
         for tensor_audio in tensor_audio_stream:

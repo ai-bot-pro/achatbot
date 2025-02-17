@@ -405,12 +405,19 @@ class TransformersManualInstructSpeechMiniCPMO(TransformersManualMiniCPMO):
         args["interaction_mode"] = None
         # instruct2speech | voice_cloning
         self.tts_task = args.pop("tts_task", "instruct2speech")
+        if self.tts_task == "voice_cloning":
+            args["init_audio"] = True  # voice_cloning use need use ref audio,
 
         super().__init__(**args)
 
     def get_prompt(self, session: Session) -> list:
         assert isinstance(session.ctx.state["prompt"], list)
-        assert len(session.ctx.state["prompt"]) == 1  # instruction text
+        if self.tts_task == "instruct2speech":
+            assert len(session.ctx.state["prompt"]) == 1  # instruction text
+        if self.tts_task == "voice_cloning":
+            assert (
+                len(session.ctx.state["prompt"]) == 2
+            )  # instruction + tts text with cloning audio
 
         prompt = session.ctx.state["prompt"]
         return prompt
