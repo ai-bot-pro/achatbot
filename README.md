@@ -1,6 +1,5 @@
 # achatbot
 [![PyPI](https://img.shields.io/pypi/v/achatbot)](https://pypi.org/project/achatbot/)
-<a href="https://app.commanddash.io/agent/github_ai-bot-pro_achatbot"><img src="https://img.shields.io/badge/AI-Code%20Agent-EB9FDA"></a>
 
 achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect object etc..
 
