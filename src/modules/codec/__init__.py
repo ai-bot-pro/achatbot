@@ -32,7 +32,7 @@ class CodecEnvInit:
         tag = tag or os.getenv("CODEC_TAG", "codec_xcodec2")
         kwargs = kwargs or CodecEnvInit.map_config_func[tag]()
         engine = CodecEnvInit.getEngine(tag, **kwargs)
-        logging.info(f"initVADEngine: {tag}, {engine}")
+        logging.info(f"initCodecEngine: {tag}, {engine}")
         return engine
 
     @staticmethod

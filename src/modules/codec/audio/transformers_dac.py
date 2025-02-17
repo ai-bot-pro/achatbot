@@ -5,7 +5,7 @@ import torch
 import torchaudio
 
 try:
-    from transformers.models.dac import DacModel
+    from transformers import DacModel, AutoFeatureExtractor
 except ModuleNotFoundError as e:
     logging.error(
         "In order to use transoformers mimi codec, you need to `pip install achatbot[codec_transformers_dac]`."
@@ -39,6 +39,8 @@ class TransformersDescriptAudioCodec(EngineClass, ICodec):
         print_model_params(self.model, "dac")
         self.sampling_rate = self.model.config.sampling_rate
         logging.info(f"dac config: {self.model.config}")
+        self.feature_extractor = AutoFeatureExtractor.from_pretrained(self.args.model_dir)
+        logging.info(f"feature_extractor: {self.feature_extractor}")
 
     def preprocess(self, wav: torch.Tensor, sr: int) -> torch.Tensor:
         wav = torchaudio.functional.resample(wav, sr, self.sampling_rate)
@@ -48,7 +50,15 @@ class TransformersDescriptAudioCodec(EngineClass, ICodec):
     @torch.no_grad
     def encode_code(self, waveform_tensor: torch.Tensor) -> torch.Tensor:
         assert len(waveform_tensor.shape) == 1
-        output = self.model.encode(waveform_tensor[None, None, :])
+        return self.model.encode(waveform_tensor[None, None, :].to(self.args.device)).audio_codes
+        # pre-process the input waveform
+        inputs = self.feature_extractor(
+            raw_audio=waveform_tensor,
+            sampling_rate=self.feature_extractor.sampling_rate,
+            return_tensors="pt",
+        )
+
+        output = self.model.encode(inputs["input_values"].to(self.args.device))
         vq_codes = output.audio_codes
         logging.debug(f"encode waveform to vq_codes: {vq_codes.shape}")
         return vq_codes
@@ -58,6 +68,8 @@ class TransformersDescriptAudioCodec(EngineClass, ICodec):
         with torch.autocast(
             self.model.device.type, torch.float16, enabled=self.model.device.type != "cpu"
         ):
-            waveform_tensor = self.model.decode(audio_codes=vq_codes).audio_values
+            waveform_tensor = self.model.decode(
+                quantized_representation=None, audio_codes=vq_codes
+            ).audio_values
             logging.debug(f"decode vq_codes to gen waveform: {waveform_tensor.shape}")
             return waveform_tensor[0].float()
