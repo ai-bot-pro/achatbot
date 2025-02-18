@@ -27,6 +27,22 @@ LLM_MODEL_NAME_OR_PATH=./models/openbmb/MiniCPM-o-2_6 \
     LLM_GEN_TEMPERATURE=0.0 \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
     python -m unittest test.modules.speech.tts.test_minicpmo.TestMiniCPMoTTS.test_synthesize
+
+# voice cloning do sample
+LLM_MODEL_NAME_OR_PATH=./models/openbmb/MiniCPM-o-2_6 \
+    LLM_GEN_TEMPERATURE=0.0 \
+    LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
+    TTS_TASK=voice_cloning \
+    REF_AUDIO_PATH=./test/audio_files/asr_example_zh.wav \
+    python -m unittest test.modules.speech.tts.test_minicpmo.TestMiniCPMoTTS.test_synthesize
+    
+# voice cloning don't do sample
+LLM_MODEL_NAME_OR_PATH=./models/openbmb/MiniCPM-o-2_6 \
+    LLM_GEN_TEMPERATURE=0.0 \
+    LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
+    TTS_TASK=voice_cloning \
+    REF_AUDIO_PATH=./test/audio_files/asr_example_zh.wav \
+    python -m unittest test.modules.speech.tts.test_minicpmo.TestMiniCPMoTTS.test_synthesize
 """
 
 
@@ -56,7 +72,6 @@ class TestMiniCPMoTTS(unittest.TestCase):
         self.audio_stream and self.audio_stream.stop_stream()
         self.audio_stream and self.audio_stream.close()
         self.pyaudio_instance and self.pyaudio_instance.terminate()
-
 
     def test_synthesize(self):
         self.session.ctx.state["tts_text"] = self.tts_text

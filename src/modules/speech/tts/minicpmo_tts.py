@@ -19,12 +19,20 @@ class MiniCPMoTTS(BaseTTS, ITts):
 
     TAG = "tts_minicpmo"
     DEFAULT_INSTRUCT_TPL = f"Speak like a male charming superstar, radiating confidence and style in every word. Please read the text below:\n"
+    DEFAULT_VOICE_CLONE_INSTRUCT = f"Please read the text below:\n"
 
     def __init__(self, **kwargs) -> None:
         self.instruct_tpl = self.DEFAULT_INSTRUCT_TPL
         instruct_tpl = kwargs.pop("instruct_tpl", self.DEFAULT_INSTRUCT_TPL)
         if len(instruct_tpl.strip()) > 0:
             self.instruct_tpl = instruct_tpl
+        else:
+            self.instruct_tpl = self.DEFAULT_INSTRUCT_TPL
+        voice_clone_instruct = kwargs.pop("voice_clone_instruct", self.DEFAULT_VOICE_CLONE_INSTRUCT)
+        if len(voice_clone_instruct.strip()) > 0:
+            self.voice_clone_instruct = voice_clone_instruct
+        else:
+            self.voice_clone_instruct = self.DEFAULT_VOICE_CLONE_INSTRUCT
         self.lm_model = TransformersManualInstructSpeechMiniCPMO(**kwargs)
 
     def get_stream_info(self) -> dict:
@@ -51,8 +59,8 @@ class MiniCPMoTTS(BaseTTS, ITts):
             instruction = input_text
         session.ctx.state["prompt"] = [instruction]
         if self.lm_model.tts_task == "voice_cloning":
-            instruct = kwargs.pop("instruct", self.instruct_tpl)
-            session.ctx.state["prompt"] = [instruct, input_text]
+            voice_clone_instruct = kwargs.pop("voice_clone_instruct", self.voice_clone_instruct)
+            session.ctx.state["prompt"] = [voice_clone_instruct, input_text]
         tensor_audio_stream = self.lm_model.generate(session, **kwargs)
 
         for tensor_audio in tensor_audio_stream:

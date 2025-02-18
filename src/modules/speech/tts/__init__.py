@@ -247,7 +247,10 @@ class TTSEnvInit:
     @staticmethod
     def get_tts_minicpmo_args() -> dict:
         kwargs = LLMEnvInit.get_llm_transformers_args()
+        kwargs["tts_task"] = os.getenv("TTS_TASK", "instruct2speech")
         kwargs["instruct_tpl"] = os.getenv("TTS_INSTRUCT_TPL", "")
+        kwargs["voice_clone_instruct"] = os.getenv("VOICE_CLONE_INSTRUCT", "")
+        kwargs["ref_audio_path"] = os.getenv("REF_AUDIO_PATH", None)
         return kwargs
 
     @staticmethod

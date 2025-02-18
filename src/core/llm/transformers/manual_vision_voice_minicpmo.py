@@ -406,6 +406,7 @@ class TransformersManualInstructSpeechMiniCPMO(TransformersManualMiniCPMO):
         # instruct2speech | voice_cloning
         self.tts_task = args.pop("tts_task", "instruct2speech")
         if self.tts_task == "voice_cloning":
+            assert os.path.exists(args.get("ref_audio_path"))
             args["init_audio"] = True  # voice_cloning use need use ref audio,
 
         super().__init__(**args)
@@ -449,6 +450,7 @@ class TransformersManualTextSpeechMiniCPMO(TransformersManualMiniCPMO):
         args["interaction_mode"] = "voice_cloning"
         # voice cloning chat
         self.tts_task = args.pop("tts_task", "voice_cloning_chat")
+        assert os.path.exists(args.get("ref_audio_path"))
 
         super().__init__(**args)
 
