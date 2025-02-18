@@ -18,8 +18,8 @@ client = instructor.from_gemini(
     client=genai.GenerativeModel(
         # model_name="models/gemini-1.5-flash-latest",
         # model_name="models/gemini-2.0-flash-exp",
-        model_name="models/gemini-2.0-flash",
-        # model_name="models/gemini-2.0-pro-exp-02-05",
+        # model_name="models/gemini-2.0-flash",
+        model_name=os.getenv("GEMINI_MODEL", "models/gemini-2.0-pro-exp-02-05"),
     ),
     mode=instructor.Mode.GEMINI_JSON,
     generation_config={
