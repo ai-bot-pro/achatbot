@@ -402,15 +402,24 @@ class TransformersManualInstructSpeechMiniCPMO(TransformersManualMiniCPMO):
         args["init_tts"] = True  # tts
         args["generate_audio"] = True  # gen audio
 
-        args["interaction_mode"] = None
+        # args["interaction_mode"] = None
         # instruct2speech | voice_cloning
-        self.tts_task = args.pop("tts_task", "instruct2speech")
+        self.tts_task = args.pop("tts_task", "voice_cloning")
+        if self.tts_task == "voice_cloning":
+            assert os.path.exists(args.get("ref_audio_path"))
+            args["init_audio"] = True  # voice_cloning use need use ref audio,
+            args["interaction_mode"] = "voice_cloning"
 
         super().__init__(**args)
 
     def get_prompt(self, session: Session) -> list:
         assert isinstance(session.ctx.state["prompt"], list)
-        assert len(session.ctx.state["prompt"]) == 1  # instruction text
+        if self.tts_task == "instruct2speech":
+            assert len(session.ctx.state["prompt"]) == 1  # instruction text
+        if self.tts_task == "voice_cloning":
+            assert (
+                len(session.ctx.state["prompt"]) == 2
+            )  # instruction + tts text with cloning audio
 
         prompt = session.ctx.state["prompt"]
         return prompt
@@ -419,9 +428,6 @@ class TransformersManualInstructSpeechMiniCPMO(TransformersManualMiniCPMO):
     def generate(self, session: Session, **kwargs):
         for item in super().generate(session, **kwargs):
             audio_wav = item.pop("audio_wav", None)
-            text = item.pop("text", "")
-            if text.strip() == "":
-                continue
             yield audio_wav
 
 
@@ -442,6 +448,7 @@ class TransformersManualTextSpeechMiniCPMO(TransformersManualMiniCPMO):
         args["interaction_mode"] = "voice_cloning"
         # voice cloning chat
         self.tts_task = args.pop("tts_task", "voice_cloning_chat")
+        assert os.path.exists(args.get("ref_audio_path"))
 
         super().__init__(**args)
 
