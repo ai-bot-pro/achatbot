@@ -117,6 +117,7 @@ TTS_TAG=tts_llasa IS_SAVE=1 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 TTS_TAG=tts_minicpmo \
     LLM_DEVICE=cuda LLM_GEN_TEMPERATURE=0.5 LLM_TORCH_DTYPE=bfloat16 \
     LLM_MODEL_NAME_OR_PATH=./models/openbmb/MiniCPM-o-2_6 \
+    TTS_TASK=instruct2speech \
     IS_SAVE=1 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 
 # voice_cloning

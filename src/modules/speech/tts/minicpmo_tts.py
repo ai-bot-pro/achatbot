@@ -19,7 +19,7 @@ class MiniCPMoTTS(BaseTTS, ITts):
 
     TAG = "tts_minicpmo"
     DEFAULT_INSTRUCT_TPL = f"Speak like a male charming superstar, radiating confidence and style in every word. Please read the text below:\n"
-    DEFAULT_VOICE_CLONE_INSTRUCT = f"Please read the text below:\n"
+    DEFAULT_VOICE_CLONE_INSTRUCT = f"Please read the text below."
 
     def __init__(self, **kwargs) -> None:
         self.instruct_tpl = self.DEFAULT_INSTRUCT_TPL

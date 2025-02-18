@@ -20,17 +20,19 @@ r"""
 LLM_MODEL_NAME_OR_PATH=./models/openbmb/MiniCPM-o-2_6 \
     LLM_GEN_TEMPERATURE=0.5 \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
+    TTS_TASK=instruct2speech \
     python -m unittest test.modules.speech.tts.test_minicpmo.TestMiniCPMoTTS.test_synthesize
 
 # don't do sample
 LLM_MODEL_NAME_OR_PATH=./models/openbmb/MiniCPM-o-2_6 \
     LLM_GEN_TEMPERATURE=0.0 \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
+    TTS_TASK=instruct2speech \
     python -m unittest test.modules.speech.tts.test_minicpmo.TestMiniCPMoTTS.test_synthesize
 
 # voice cloning do sample
 LLM_MODEL_NAME_OR_PATH=./models/openbmb/MiniCPM-o-2_6 \
-    LLM_GEN_TEMPERATURE=0.0 \
+    LLM_GEN_TEMPERATURE=0.5 \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
     TTS_TASK=voice_cloning \
     REF_AUDIO_PATH=./test/audio_files/asr_example_zh.wav \
