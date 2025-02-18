@@ -84,16 +84,30 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
 - core module:
   - local llm: 
     - [x] llama-cpp (support text,vision with function-call model)
-    - [x] transformers(manual, pipeline) (support text,vision:🦙,Qwen2-vl,Molmo with function-call model)
-    - [ ] mlx_lm 
+    - [x] transformers(manual, pipeline) (support text; vision,vision+image; speech,voice; vision+voice)
+      - [x] llm_transformers_manual_vision_llama
+      - [x] llm_transformers_manual_vision_molmo
+      - [x] llm_transformers_manual_vision_qwen
+      - [x] llm_transformers_manual_vision_deepseek
+      - [x] llm_transformers_manual_vision_janus_flow
+      - [x] llm_transformers_manual_image_janus_flow
+      - [x] llm_transformers_manual_vision_janus
+      - [x] llm_transformers_manual_image_janus
+      - [x] llm_transformers_manual_speech_llasa
+      - [x] llm_transformers_manual_voice_glm
+      - [x] llm_transformers_manual_vision_voice_minicpmo, llm_transformers_manual_voice_minicpmo,llm_transformers_manual_audio_minicpmo,llm_transformers_manual_text_speech_minicpmo,llm_transformers_manual_instruct_speech_minicpmo,llm_transformers_manual_vision_minicpmo
   - remote api llm: personal-ai(like openai api, other ai provider)
-
+  
 - AI modules:
   - functions:
     - [x] search: search,search1,serper
     - [x] weather: openweathermap
   - speech:
-    - [x] asr: sense_voice_asr, whisper_asr, whisper_timestamped_asr, whisper_faster_asr, whisper_transformers_asr, whisper_mlx_asr, whisper_groq_asr
+    - [x] asr: 
+      - [x] whisper_asr, whisper_timestamped_asr, whisper_faster_asr, whisper_transformers_asr, whisper_mlx_asr
+      - [x] whisper_groq_asr
+      - [x] sense_voice_asr
+      - [x] minicpmo_asr (whisper)
     - [x] audio_stream: daily_room_audio_stream(in/out), pyaudio_stream(in/out)
     - [x] detector: porcupine_wakeword,pyannote_vad,webrtc_vad,silero_vad,webrtc_silero_vad,fsmn_vad
     - [x] player: stream_player
