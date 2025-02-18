@@ -43,3 +43,6 @@
 [submodule "deps/Zonos"]
 	path = deps/Zonos
 	url = https://github.com/weedge/Zonos.git
+[submodule "deps/StepAudio"]
+	path = deps/StepAudio
+	url = https://github.com/weedge/Step-Audio.git
