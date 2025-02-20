@@ -1,16 +1,22 @@
 import logging
+import os
+import sys
 from threading import Thread
-from queue import Queue
 
 import torch
 
 try:
-    from transformers import BitsAndBytesConfig, AutoModel, AutoTokenizer
+    cur_dir = os.path.dirname(__file__)
+    if bool(os.getenv("ACHATBOT_PKG", "")):
+        sys.path.insert(1, os.path.join(cur_dir, "../../../StepAudio"))
+    else:
+        sys.path.insert(1, os.path.join(cur_dir, "../../../../deps/StepAudio"))
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from deps.StepAudio.tts import LogitsProcessorList, RepetitionAwareLogitsProcessor
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        "In order to use GLM-Voice, you need to `pip install achatbot[llm_transformers_manual_voice_glm]`,"
-        "use Int4 precision with 4-bit quantization, need to `pip install achatbot[llm_transformers_manual_voice_glm,bitsandbytes]`"
+        "In order to use Step-Audio-TTS, you need to `pip install achatbot[llm_transformers_manual_speech_step1]`. "
     )
     raise Exception(f"Missing module: {e}")
 
@@ -21,34 +27,20 @@ from .base import TransformersBaseLLM
 from .streamer import TokenStreamer
 
 
-class TransformersManualVoicGLM(TransformersBaseLLM):
+class TransformersManualSpeechStep1(TransformersBaseLLM):
     """
-    text / speech-tokens prompt -> glm -> (text/speech) output tokens
-    with TransformersLMArgs, if use int4, need to install bitsandbytes
+    text / speech-tokens prompt -> Step1ForCausalLM -> (text/speech) output tokens
+    with TransformersLMArgs
     """
 
-    TAG = "llm_transformers_manual_voice_glm"
-    DEFAULT_SYS_PROMPT = "User will provide you with a speech or text instruction. Do it step by step. First, think about the instruction and respond in a interleaved manner, with 13 text token followed by 26 audio tokens. "
+    TAG = "llm_transformers_manual_speech_step1"
 
     def __init__(self, **args):
         self.args = TransformersLMArgs(**args)
-        logging.info("TransformersManualVoicGLM args: %s", self.args)
-        # https://huggingface.co/docs/transformers/main_classes/quantization#transformers.BitsAndBytesConfig
-        self.bnb_config = (
-            BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_quant_type="nf4",
-                # load bfloat16 tensor to int-4bit tensor,
-                #  torch_dtype see: config.json
-                bnb_4bit_compute_dtype=torch.bfloat16,
-            )
-            if self.args.lm_bnb_quant_type == "int4"
-            else None
-        )
+        logging.info("args: %s", self.args)
 
         if self.args.lm_device_map:
-            self._model = AutoModel.from_pretrained(
+            self._model = AutoModelForCausalLM.from_pretrained(
                 self.args.lm_model_name_or_path,
                 torch_dtype=self.args.lm_torch_dtype,
                 attn_implementation=self.args.lm_attn_impl,
@@ -60,7 +52,7 @@ class TransformersManualVoicGLM(TransformersBaseLLM):
             ).eval()
         else:
             self._model = (
-                AutoModel.from_pretrained(
+                AutoModelForCausalLM.from_pretrained(
                     self.args.lm_model_name_or_path,
                     torch_dtype=self.args.lm_torch_dtype,
                     attn_implementation=self.args.lm_attn_impl,
@@ -75,32 +67,39 @@ class TransformersManualVoicGLM(TransformersBaseLLM):
             self.args.lm_model_name_or_path, trust_remote_code=True
         )
 
-        # self.warmup()
+        # inference token streamer
+        self.streamer = TokenStreamer(skip_prompt=True)
+
+        self.warmup()
 
     def warmup(self):
-        dummy_input_text = self.args.warnup_prompt.strip()
+        if self.args.warmup_steps < 1:
+            return
+        logging.info(f"Warming up {self.__class__.__name__} device: {self._model.device}")
+        # dummy_input_text = self.args.warnup_prompt.strip()
         # NOTE: must use system prompt.
-        inputs = f"<|system|>\n{self.DEFAULT_SYS_PROMPT}<|user|>\n{dummy_input_text}<|assistant|>streaming_transcription\n"
-        model_inputs = self._tokenizer([inputs], return_tensors="pt").to(self._model.device)
-
-        # inference token streamer
-        streamer = TokenStreamer(skip_prompt=True)
+        # model_inputs = self._tokenizer([inputs], return_tensors="pt").to(self._model.device)
+        model_inputs = (
+            torch.tensor([self.test_audio_token_ids]).to(torch.long).to(self._model.device)
+        )
         warmup_gen_kwargs = dict(
-            **model_inputs,
-            streamer=streamer,
+            input_ids=model_inputs,
+            eos_token_id=3,
+            streamer=self.streamer,
             min_new_tokens=self.args.lm_gen_min_new_tokens,
             max_new_tokens=self.args.lm_gen_max_new_tokens,
+            do_sample=True if self.args.lm_gen_temperature > 0.0 else False,
             top_k=self.args.lm_gen_top_k,
             top_p=self.args.lm_gen_top_p,
-            do_sample=self.args.lm_gen_do_sample,
             temperature=self.args.lm_gen_temperature,
+            logits_processor=LogitsProcessorList([RepetitionAwareLogitsProcessor()]),
             repetition_penalty=self.args.lm_gen_repetition_penalty,
         )
 
         self._warmup(
             target=self._model.generate,
             kwargs=warmup_gen_kwargs,
-            streamer=streamer,
+            streamer=self.streamer,
         )
 
     # @torch.no_grad()
