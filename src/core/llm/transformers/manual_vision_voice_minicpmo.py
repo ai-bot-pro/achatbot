@@ -175,16 +175,16 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
     def set_system_prompt(self, **kwargs):
         # session sys settings
         # language
-        self.language = kwargs.pop("language", self.language)
+        self.language = kwargs.get("language", self.language)
         # interation mode
         # "default": default system prompt and not refer to any task
         # "omni": input video and audio simultaneously
         # "audio_assistant": Default voice-only mode, the model will use the ref_audio's voice to reply user's question as a helpful assistant.
         # "audio_roleplay": Roleplay voice-only mode, the model will use the ref_audio's voice to reply, and also role-play the character based on the audio prompt.
         # "voice_cloning": TTS mode, the model will clone the voice of ref_audio.
-        self.interaction_mode = kwargs.pop("interaction_mode", self.interaction_mode)
+        self.interaction_mode = kwargs.get("interaction_mode", self.interaction_mode)
         # reference audio
-        ref_audio_path = kwargs.pop("ref_audio_path", None)
+        ref_audio_path = kwargs.get("ref_audio_path", None)
         if ref_audio_path is not None:
             self.ref_audio, _ = librosa.load(ref_audio_path, sr=16000, mono=True)
 

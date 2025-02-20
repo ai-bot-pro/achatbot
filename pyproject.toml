@@ -182,32 +182,14 @@ speech_vad_analyzer = [
 rms_recorder = []
 vad_recorder = ["achatbot[speech_vad]"]
 
-# asr module tag -> pkgs
-whisper_asr = ["openai-whisper==20231117"]
-whisper_timestamped_asr = ["whisper-timestamped~=1.14.2"]
-whisper_faster_asr = ["faster-whisper~=1.0.2"]
-whisper_transformers_asr = ["transformers[torch]>=4.40.2"]
-whisper_mlx_asr = [
-    "mlx_whisper~=0.2.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
-]
-whisper_groq_asr = ["groq~=0.9.0"]
-sense_voice_asr = [
-    "torch~=2.2.2",
-    "funasr~=1.1.8",
-    "onnx",
-    "onnxconverter-common",
-]
-speech_asr = [
-    "achatbot[whisper_asr,whisper_timestamped_asr,whisper_faster_asr,whisper_transformers_asr,whisper_mlx_asr,whisper_groq_asr,sense_voice_asr]",
-]
-
+# --------------------------------- llm --------------------------
 # llm module tag -> pkgs
 # init  use cpu Pre-built Wheel to install, 
 # if want to use other lib(cuda), see: https://github.com/abetlen/llama-cpp-python#installation-configuration
 llama_cpp = ["llama-cpp-python~=0.2.82"]
 llm_personalai_proxy = ["geocoder~=1.38.1"]
 
-# vision
+# vision llm
 llm_transformers_manual_vision = [
     #"transformers@git+https://github.com/huggingface/transformers",
     # https://github.com/huggingface/transformers/releases/tag/v4.45.0
@@ -245,8 +227,64 @@ llm_transformers_manual_vision_deepseekvl2 = [
     "timm>=0.9.16",
 ]
 
+# voice llm
+llm_transformers_manual_voice = [
+    #"transformers@git+https://github.com/huggingface/transformers",
+    # https://github.com/huggingface/transformers/releases/tag/v4.45.transformers~=4.45.2
+    "transformers~=4.45.2",
+    "torch~=2.2.2",
+    "torchaudio~=2.2.2",
+]
+llm_transformers_manual_voice_glm = [
+    "achatbot[llm_transformers_manual_voice,tts_cosy_voice,gdown,matplotlib,conf]",
+]
+llm_transformers_manual_voice_freeze_omni = [
+    "achatbot[llm_transformers_manual_voice,librosa,soundfile,yaml]",
+]
+# speech llm
+llm_transformers_manual_speech_llasa = [
+    "achatbot[llm_transformers_manual_voice]",
+]
+llm_transformers_manual_speech_step = [
+    "achatbot[llm_transformers_manual_voice]",
+]
+# vision voice llm
+llm_transformers_manual_vision_voice_minicpmo = [
+    "achatbot[accelerate,librosa,soundfile]",
+    "torch~=2.2.2",
+    "torchaudio~=2.2.2",
+    "torchvision~=0.17.2",
+    "transformers==4.44.2",
+    #"librosa==0.9.0",
+    #"soundfile==0.12.1",
+    "vector-quantize-pytorch~=1.18.5",
+    "vocos~=0.1.0",
+    "decord",
+    "moviepy",
+]
+
 # core llms
 core_llm = ["achatbot[llama_cpp,llm_personalai_proxy]"]
+
+# ----------------- asr ------------------
+# asr module tag -> pkgs
+whisper_asr = ["openai-whisper==20231117"]
+whisper_timestamped_asr = ["whisper-timestamped~=1.14.2"]
+whisper_faster_asr = ["faster-whisper~=1.0.2"]
+whisper_transformers_asr = ["transformers[torch]>=4.40.2"]
+whisper_mlx_asr = [
+    "mlx_whisper~=0.2.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
+]
+whisper_groq_asr = ["groq~=0.9.0"]
+sense_voice_asr = [
+    "torch~=2.2.2",
+    "funasr~=1.1.8",
+    "onnx",
+    "onnxconverter-common",
+]
+speech_asr = [
+    "achatbot[whisper_asr,whisper_timestamped_asr,whisper_faster_asr,whisper_transformers_asr,whisper_mlx_asr,whisper_groq_asr,sense_voice_asr]",
+]
 
 # -----------------codec------------------
 # https://huggingface.co/kyutai/mimi/blob/main/config.json transformers_version
@@ -357,7 +395,7 @@ tts_zonos_hybrid = [
     "mamba-ssm>=2.2.4",
     "causal-conv1d>=1.5.0.post8",
 ]
-tts_step_audio = [
+tts_step = [
     "torch==2.3.1",
     "torchaudio==2.3.1",
     "torchvision==0.18.1",
@@ -380,37 +418,6 @@ tts_step_audio = [
 # multi tts modules engine
 speech_tts = [
     "achatbot[tts_coqui,tts_edge,tts_g,tts_pyttsx3,tts_cosy_voice,tts_chat,tts_f5,tts_openvoicev2,tts_kokoro]",
-]
-
-# voice
-llm_transformers_manual_voice = [
-    #"transformers@git+https://github.com/huggingface/transformers",
-    # https://github.com/huggingface/transformers/releases/tag/v4.45.transformers~=4.45.2
-    "transformers~=4.45.2",
-    "torch~=2.2.2",
-    "torchaudio~=2.2.2",
-]
-llm_transformers_manual_voice_glm = [
-    "achatbot[llm_transformers_manual_voice,tts_cosy_voice,gdown,matplotlib,conf]",
-]
-llm_transformers_manual_voice_freeze_omni = [
-    "achatbot[llm_transformers_manual_voice,librosa,soundfile,yaml]",
-]
-llm_transformers_manual_speech_llasa = [
-    "achatbot[llm_transformers_manual_voice]",
-]
-llm_transformers_manual_vision_voice_minicpmo = [
-    "achatbot[accelerate,librosa,soundfile]",
-    "torch~=2.2.2",
-    "torchaudio~=2.2.2",
-    "torchvision~=0.17.2",
-    "transformers==4.44.2",
-    #"librosa==0.9.0",
-    #"soundfile==0.12.1",
-    "vector-quantize-pytorch~=1.18.5",
-    "vocos~=0.1.0",
-    "decord",
-    "moviepy",
 ]
 
 
