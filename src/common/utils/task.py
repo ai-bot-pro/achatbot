@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from concurrent.futures import ThreadPoolExecutor
 import logging
+import traceback
 from typing import Callable, Any
 import asyncio
 import queue
@@ -23,7 +24,9 @@ def fetch_async_items(queue: queue.Queue, asyncFunc, *args) -> None:
                 queue.put(item)
             queue.put(None)
         except Exception as e:
-            logging.error(f"erro: {e}")
+            error_message = traceback.format_exc()
+            logging.error(f"error:{e} trace: {error_message}")
+
             queue.put(None)
 
     loop = asyncio.new_event_loop()

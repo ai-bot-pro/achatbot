@@ -53,7 +53,6 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
         self._model = AutoModelForCausalLM.from_pretrained(self.args.lm_model_name_or_path)
         self._model.eval().to(self.args.lm_device)
         self._tokenizer = AutoTokenizer.from_pretrained(self.args.lm_model_name_or_path)
-        self._streamer = TokenStreamer(skip_prompt=True)
 
         # session ctx dict with lock, maybe need a session class
         self.session_lm_generat_lock = Lock()
@@ -82,10 +81,11 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
         input_ids = input_ids.to("cuda")
         speech_end_id = self._tokenizer.convert_tokens_to_ids("<|SPEECH_GENERATION_END|>")
 
+        streamer = TokenStreamer(skip_prompt=True)
         warmup_gen_kwargs = dict(
             input_ids=input_ids,
             eos_token_id=speech_end_id,
-            streamer=self._streamer,
+            streamer=streamer,
             min_new_tokens=self.args.lm_gen_min_new_tokens,
             max_new_tokens=self.args.lm_gen_max_new_tokens,
             top_k=self.args.lm_gen_top_k,
@@ -98,7 +98,7 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
         self._warmup(
             target=self._model.generate,
             kwargs=warmup_gen_kwargs,
-            streamer=self._streamer,
+            streamer=streamer,
         )
 
     # @torch.no_grad()
@@ -136,10 +136,11 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
         )
         input_ids = input_ids.to(self.args.lm_device)
         speech_end_id = self._tokenizer.convert_tokens_to_ids("<|SPEECH_GENERATION_END|>")
+        streamer = TokenStreamer(skip_prompt=True)
         generation_kwargs = dict(
             input_ids=input_ids,
             eos_token_id=speech_end_id,
-            streamer=self._streamer,
+            streamer=streamer,
             max_length=2048,  # We trained our model with a max length of 2048
             min_new_tokens=kwargs["min_new_tokens"]
             if "min_new_tokens" in kwargs
@@ -165,7 +166,7 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
         with self.session_lm_generat_lock:
             self.session_lm_generated_ids[session_id] = []
 
-        for token_id in self._streamer:
+        for token_id in streamer:
             # print(token_id, end=",", flush=True)
             self.session_lm_generated_ids[session_id].append(token_id)
 

@@ -16,6 +16,7 @@ except ModuleNotFoundError as e:
     )
     raise Exception(f"Missing module: {e}")
 
+from src.common.utils.helper import get_device
 from src.common.session import Session
 from src.types.llm.transformers import TransformersLMArgs
 from .base import TransformersBaseLLM
@@ -51,6 +52,7 @@ class TransformersManualSpeechStep(TransformersBaseLLM):
 
     def __init__(self, **args):
         self.args = TransformersLMArgs(**args)
+        self.args.lm_device = self.args.lm_device or get_device()
         logging.info("args: %s", self.args)
 
         if self.args.lm_device_map:
@@ -58,7 +60,6 @@ class TransformersManualSpeechStep(TransformersBaseLLM):
                 self.args.lm_model_name_or_path,
                 torch_dtype=self.args.lm_torch_dtype,
                 attn_implementation=self.args.lm_attn_impl,
-                quantization_config=self.bnb_config if self.bnb_config else None,
                 #!NOTE: https://github.com/huggingface/transformers/issues/20896
                 # device_map for multi cpu/gpu with accelerate
                 device_map=self.args.lm_device_map,
@@ -70,7 +71,6 @@ class TransformersManualSpeechStep(TransformersBaseLLM):
                     self.args.lm_model_name_or_path,
                     torch_dtype=self.args.lm_torch_dtype,
                     attn_implementation=self.args.lm_attn_impl,
-                    quantization_config=self.bnb_config if self.bnb_config else None,
                     trust_remote_code=True,
                 )
                 .eval()
@@ -80,12 +80,12 @@ class TransformersManualSpeechStep(TransformersBaseLLM):
         self._tokenizer = AutoTokenizer.from_pretrained(
             self.args.lm_model_name_or_path, trust_remote_code=True
         )
-        self.end_token_id = self._tokenizer.encode("<|EOT|>")
+        self.end_token_id = 3
+        end_token_ids = self._tokenizer.encode("<|EOT|>")
+        if len(end_token_ids) >= 1:
+            self.end_token_id = end_token_ids[-1]
 
         self.sys_prompt = self.DEFAULT_SYS_PROMPT
-
-        # inference token streamer
-        self.streamer = TokenStreamer(skip_prompt=True)
 
         self.warmup()
 
@@ -93,6 +93,7 @@ class TransformersManualSpeechStep(TransformersBaseLLM):
         # session sys settings
         self.sys_prompt = kwargs.get("sys_prompt", self.sys_prompt)
 
+    @torch.inference_mode()
     def warmup(self):
         if self.args.warmup_steps < 1:
             return
@@ -103,10 +104,18 @@ class TransformersManualSpeechStep(TransformersBaseLLM):
         prompt += "<|EOT|><|BOT|><s> assistant\n"
         token_ids = self._tokenizer.encode(prompt)
 
+        logging.debug(f"prompt:{prompt}")
+        logging.debug(f"token_ids:{token_ids}")
+        logging.debug(f"args:{self.args}")
+        logging.debug(f"end_token_id:{self.end_token_id}")
+
+        # inference token streamer
+        streamer = TokenStreamer(skip_prompt=True)
+
         warmup_gen_kwargs = dict(
             input_ids=torch.tensor([token_ids]).to(torch.long).to(self._model.device),
             eos_token_id=self.end_token_id,
-            streamer=self.streamer,
+            streamer=streamer,
             min_new_tokens=self.args.lm_gen_min_new_tokens,
             max_new_tokens=self.args.lm_gen_max_new_tokens,
             do_sample=True if self.args.lm_gen_temperature > 0.0 else False,
@@ -120,7 +129,7 @@ class TransformersManualSpeechStep(TransformersBaseLLM):
         self._warmup(
             target=self._model.generate,
             kwargs=warmup_gen_kwargs,
-            streamer=self.streamer,
+            streamer=streamer,
         )
 
     # @torch.no_grad()
@@ -138,13 +147,20 @@ class TransformersManualSpeechStep(TransformersBaseLLM):
         prompt += f"<|EOT|><|BOT|><s> human\n{tts_text}"
         prompt += "<|EOT|><|BOT|><s> assistant\n"
         token_ids = self._tokenizer.encode(prompt)
-        logging.debug(prompt, token_ids)
+        logging.debug(f"prompt:{prompt}")
+        logging.debug(f"token_ids:{token_ids}")
+        logging.debug(f"args:{self.args}")
+        logging.debug(f"kwargs:{kwargs}")
+        logging.debug(f"end_token_id:{self.end_token_id}")
+
+        # inference token streamer
+        streamer = TokenStreamer(skip_prompt=True)
 
         # inference token streamer
         generation_kwargs = dict(
             input_ids=torch.tensor([token_ids]).to(torch.long).to(self._model.device),
             eos_token_id=self.end_token_id,
-            streamer=self.streamer,
+            streamer=streamer,
             min_new_tokens=kwargs.get("min_new_tokens", self.args.lm_gen_min_new_tokens),
             max_new_tokens=kwargs.get("max_new_tokens", self.args.lm_gen_max_new_tokens),
             do_sample=True if self.args.lm_gen_temperature > 0.0 else False,
@@ -157,6 +173,5 @@ class TransformersManualSpeechStep(TransformersBaseLLM):
         thread = Thread(target=self._model.generate, kwargs=generation_kwargs)
         thread.start()
 
-        for token_id in self.streamer:
-            # print(token_id, end=',', flush=True)
+        for token_id in streamer:
             yield token_id

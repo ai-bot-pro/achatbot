@@ -265,7 +265,7 @@ class TTSEnvInit:
             ).__dict__,
             stream_factor=int(os.getenv("TTS_STREAM_FACTOR", "2")),
             tts_mode=os.getenv("TTS_MODE", "lm_gen"),
-            tokenizer_model_path=os.getenv(
+            speech_tokenizer_model_path=os.getenv(
                 "TTS_TOKENIZER_MODEL_PATH",
                 os.path.join(MODELS_DIR, "stepfun-ai/Step-Audio-Tokenizer"),
             ),

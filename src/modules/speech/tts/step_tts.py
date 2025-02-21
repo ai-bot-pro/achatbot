@@ -53,6 +53,8 @@ class StepTTS(BaseTTS, ITts):
             self.args.stream_factor >= 2
         ), "stream_factor must >=2 increase for better speech quality, but rtf slow (speech quality vs rtf)"
 
+        self.encoder = StepAudioTokenizer(self.args.speech_tokenizer_model_path)
+
         self.lm_args = TransformersSpeechLMArgs(**self.args.lm_args)
         self.lm_model = TransformersManualSpeechStep(**self.lm_args.__dict__)
         # session ctx dict with lock, maybe need a session class
@@ -65,7 +67,6 @@ class StepTTS(BaseTTS, ITts):
         self.music_cosy_model = CosyVoice(
             os.path.join(self.lm_args.lm_model_name_or_path, "CosyVoice-300M-25Hz-Music")
         )
-        self.encoder = StepAudioTokenizer(self.args.speech_tokenizer_model_path)
 
         self.sys_prompt_dict = {
             "sys_prompt_for_rap": "请参考对话历史里的音色，用RAP方式将文本内容大声说唱出来。",
@@ -255,7 +256,7 @@ class StepTTS(BaseTTS, ITts):
         session.ctx.state["prompt"] = text
         audio_vq_tokens = self.lm_model.generate(session, **kwargs)
         for token_id in audio_vq_tokens:
-            # print(token_id, end=",", flush=True)
+            print(token_id, end=",", flush=True)
             if token_id == self.lm_model.end_token_id:  # skip <|EOT|>, break
                 break
             self.session_lm_generated_ids[session_id].append(token_id)
@@ -266,6 +267,7 @@ class StepTTS(BaseTTS, ITts):
                     .to(cosy_model.model.device)
                     - 65536
                 )  # [T] -> [1,T]
+                print("\nbatch-->", batch)
                 # Process each batch
                 sub_tts_speech = cosy_model.token_to_wav_offline(
                     batch,
@@ -300,12 +302,12 @@ class StepTTS(BaseTTS, ITts):
     async def _inference(
         self, session: Session, text: str, **kwargs
     ) -> AsyncGenerator[bytes, None]:
-        if "cuda" in str(self.model.device):
+        if "cuda" in str(self.lm_model._model.device):
             torch.cuda.empty_cache()
-        seed = kwargs.get("seed", self.args.seed)
+        seed = kwargs.get("seed", self.lm_args.lm_gen_seed)
         set_all_random_seed(seed)
 
-        ref_speaker = kwargs.get("ref_speaker", "Tingting")
+        ref_speaker = kwargs.pop("ref_speaker", "Tingting")
         instruction_name = self.detect_instruction_name(text)
         cosy_model = self.common_cosy_model
         if instruction_name in ["RAP", "哼唱"]:
