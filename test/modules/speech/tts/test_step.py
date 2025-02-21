@@ -117,6 +117,9 @@ class TestStepTTS(unittest.TestCase):
             self.assertGreaterEqual(len(voices), 0)
             print(f"use default voices: {voices}")
 
+        if os.path.exists(self.src_audio_path):
+            self.session.ctx.state["src_audio_path"] = self.src_audio_path
+
         self.session.ctx.state["tts_text"] = self.tts_text
         print(self.session.ctx)
         iter = self.tts.synthesize_sync(self.session)
@@ -162,6 +165,9 @@ class TestStepTTS(unittest.TestCase):
             voices = self.tts.get_voices()
             self.assertGreaterEqual(len(voices), 0)
             print(f"use default voices: {voices}")
+
+        if os.path.exists(self.src_audio_path):
+            self.session.ctx.state["src_audio_path"] = self.src_audio_path
 
         self.session.ctx.state["tts_text"] = self.tts_text
         print(self.session.ctx)

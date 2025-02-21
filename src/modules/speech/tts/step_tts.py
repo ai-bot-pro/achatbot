@@ -218,12 +218,12 @@ class StepTTS(BaseTTS, ITts):
         - voice_clone: voice clone w/o lm gen, decode wav code:
         src+ref audio waveform -> speech tokenizer-> audio token ids (wav_code) -> flow(CFM) -> mel - vocoder(hifi) -> clone ref audio waveform
         """
-        src_audo_path = kwargs.get("src_audo_path", None)
-        if not src_audo_path or not os.path.exists(src_audo_path):
-            logging.error(f"{src_audo_path} is not exists")
-            return
+        src_audio_path = kwargs.get("src_audio_path", None)
+        if not src_audio_path or not os.path.exists(src_audio_path):
+            logging.error(f"{src_audio_path} is not exists")
+            return None
 
-        src_audio_code = self.wav2code(src_audo_path)
+        src_audio_code = self.wav2code(src_audio_path)
         tensor_audio_token_ids = torch.tensor([src_audio_code]).to(torch.long).to("cuda") - 65536
         tts_speech = cosy_model.token_to_wav_offline(
             tensor_audio_token_ids,
@@ -233,7 +233,7 @@ class StepTTS(BaseTTS, ITts):
             self.speakers_info[ref_speaker]["ref_audio_token_len"],
             self.speakers_info[ref_speaker]["ref_speech_embedding"].to(torch.bfloat16),
         )
-        return tts_speech
+        return tts_speech.float().numpy().tobytes()
 
     async def lm_gen(
         self,
