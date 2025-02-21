@@ -245,6 +245,31 @@ class TTSEnvInit:
         return kwargs
 
     @staticmethod
+    def get_tts_step_args() -> dict:
+        from src.types.speech.tts.step import StepTTSArgs
+        from src.types.llm.transformers import TransformersSpeechLMArgs
+
+        kwargs = StepTTSArgs(
+            lm_args=TransformersSpeechLMArgs(
+                lm_model_name_or_path=os.getenv(
+                    "TTS_LM_MODEL_PATH", os.path.join(MODELS_DIR, "stepfun-ai/Step-Audio-TTS-3B")
+                ),
+                lm_device=os.getenv("TTS_LM_DEVICE", None),
+                warmup_steps=int(os.getenv("TTS_WARMUP_STEPS", "1")),
+                lm_gen_top_k=int(os.getenv("TTS_LM_GEN_TOP_K", "10")),
+                lm_gen_top_p=float(os.getenv("TTS_LM_GEN_TOP_P", "1.0")),
+                lm_gen_temperature=float(os.getenv("TTS_LM_GEN_TEMPERATURE", "0.8")),
+                lm_gen_repetition_penalty=float(os.getenv("TTS_LM_GEN_REPETITION_PENALTY", "1.1")),
+            ).__dict__,
+            stream_factor=int(os.getenv("TTS_STREAM_FACTOR", "2")),
+            tokenizer_model_path=os.getenv(
+                "TTS_TOKENIZER_MODEL_PATH",
+                os.path.join(MODELS_DIR, "stepfun-ai/Step-Audio-Tokenizer"),
+            ),
+        ).__dict__
+        return kwargs
+
+    @staticmethod
     def get_tts_minicpmo_args() -> dict:
         kwargs = LLMEnvInit.get_llm_transformers_args()
         kwargs["tts_task"] = os.getenv("TTS_TASK", "voice_cloning")
@@ -286,4 +311,5 @@ class TTSEnvInit:
         "tts_g": get_tts_g_args,
         "tts_minicpmo": get_tts_minicpmo_args,
         "tts_zonos": get_tts_zonos_args,
+        "tts_step": get_tts_step_args,
     }

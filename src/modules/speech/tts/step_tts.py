@@ -28,9 +28,7 @@ except ModuleNotFoundError as e:
     raise Exception(f"Missing module: {e}")
 
 from src.common.random import set_all_random_seed
-from src.common.utils.audio_utils import AUDIO_EXTENSIONS
-from src.common.utils.helper import file_md5_hash
-from src.common.types import PYAUDIO_PAFLOAT32, RATE, ASSETS_DIR
+from src.common.types import PYAUDIO_PAFLOAT32, ASSETS_DIR
 from src.common.interface import ITts
 from src.common.session import Session
 from src.types.speech.tts.step import StepTTSArgs
@@ -187,6 +185,18 @@ class StepTTS(BaseTTS, ITts):
             instruction_name = instruction.strip("()（）")
         return instruction_name
 
+    def set_system_prompt(self, text, ref_speaker: str = "Tingting"):
+        sys_prompt = self.sys_prompt_dict["sys_prompt_wo_spk"]
+        instruction_name = self.detect_instruction_name(text)
+        if instruction_name:
+            if "哼唱" in text:
+                sys_prompt = self.sys_prompt_dict["sys_prompt_for_vocal"]
+            else:
+                sys_prompt = self.sys_prompt_dict["sys_prompt_for_rap"]
+        elif ref_speaker:
+            sys_prompt = self.sys_prompt_dict["sys_prompt_with_spk"].format(ref_speaker)
+        self.lm_model.set_system_prompt(sys_prompt=sys_prompt)
+
     async def _inference(
         self, session: Session, text: str, **kwargs
     ) -> AsyncGenerator[bytes, None]:
@@ -195,7 +205,6 @@ class StepTTS(BaseTTS, ITts):
         seed = kwargs.get("seed", self.args.seed)
         set_all_random_seed(seed)
 
-        input_text = text
         ref_speaker = kwargs.get("ref_speaker", "Tingting")
         instruction_name = self.detect_instruction_name(text)
         cosy_model = self.common_cosy_model
@@ -207,10 +216,11 @@ class StepTTS(BaseTTS, ITts):
         if ref_speaker and ref_speaker not in self.speakers_info:
             ref_speaker = "Tingting"
         logging.debug(f"use ref_speaker: {ref_speaker}")
+        self.set_system_prompt(text, ref_speaker=ref_speaker)
 
         session.ctx.state["ref_text"] = self.speakers_info[ref_speaker]["ref_text"]
         session.ctx.state["ref_audio_code"] = self.speakers_info[ref_speaker]["ref_audio_code"]
-        session.ctx.state["prompt"] = input_text
+        session.ctx.state["prompt"] = text
         audio_vq_tokens = self.lm_model.generate(session, **kwargs)
 
         assert (

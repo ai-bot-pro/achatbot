@@ -1,5 +1,5 @@
 import logging
-from threading import Thread
+from threading import Lock, Thread
 
 try:
     import torch
@@ -54,6 +54,10 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
         self._model.eval().to(self.args.lm_device)
         self._tokenizer = AutoTokenizer.from_pretrained(self.args.lm_model_name_or_path)
         self._streamer = TokenStreamer(skip_prompt=True)
+
+        # session ctx dict with lock, maybe need a session class
+        self.session_lm_generat_lock = Lock()
+        self.session_lm_generated_ids = {}  # session_id: ids(ptr)
 
         self.warmup()
 
@@ -157,32 +161,40 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
         thread = Thread(target=self._model.generate, kwargs=generation_kwargs)
         thread.start()
 
-        i, j = 0, 0
-        generated_ids = []
+        session_id = session.ctx.client_id
+        with self.session_lm_generat_lock:
+            self.session_lm_generated_ids[session_id] = []
+
         for token_id in self._streamer:
             # print(token_id, end=",", flush=True)
-            generated_ids.append(token_id)
-            i += 1
+            self.session_lm_generated_ids[session_id].append(token_id)
 
-            if i % self.args.lm_tokenizer_decode_batch_size == 0:
+            if (
+                len(self.session_lm_generated_ids[session_id])
+                % self.args.lm_tokenizer_decode_batch_size
+                == 0
+            ):
                 # print(generated_ids)
                 speech_tokens = self._tokenizer.batch_decode(
-                    torch.tensor(generated_ids).to(self.args.lm_device),
+                    torch.tensor(self.session_lm_generated_ids[session_id]).to(self.args.lm_device),
                     skip_special_tokens=True,
                 )
                 # Convert  token <|s_23456|> to int 23456
                 speech_tokens = extract_speech_ids(speech_tokens)
                 speech_vq_tokens = torch.tensor(speech_tokens).to(self.args.lm_device)
                 yield speech_vq_tokens
-                generated_ids = []
-                j += 1
+                with self.session_lm_generat_lock:
+                    self.session_lm_generated_ids[session_id] = []
 
-        if len(generated_ids) > 0:  # last batch
+        if len(self.session_lm_generated_ids[session_id]) > 0:  # last batch
             speech_tokens = self._tokenizer.batch_decode(
-                torch.tensor(generated_ids).to(self.args.lm_device),
+                torch.tensor(self.session_lm_generated_ids[session_id]).to(self.args.lm_device),
                 skip_special_tokens=True,
             )
             # Convert  token <|s_23456|> to int 23456
             speech_tokens = extract_speech_ids(speech_tokens)
             speech_vq_tokens = torch.tensor(speech_tokens).to(self.args.lm_device)
             yield speech_vq_tokens
+
+        with self.session_lm_generat_lock:
+            self.session_lm_generated_ids.pop(session_id)
