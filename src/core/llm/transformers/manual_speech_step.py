@@ -130,11 +130,11 @@ class TransformersManualSpeechStep(TransformersBaseLLM):
         system prompt + (one short: text->speech(audio code) prompt) + tts prompt -> tokenizer encode -> token ids -> step lm -> audio vq tokens
         """
         one_shot_ref_text = session.ctx.state.get("ref_text", "")
-        one_shot_ref_audio = session.ctx.state.get("ref_audio", "")
+        one_shot_ref_audio = self._tokenizer.decode(session.ctx.state.get("ref_audio_code", []))
         tts_text = session.ctx.state.get("prompt", "")
         prompt = f"<s><|BOT|><s> system\n{self.sys_prompt}"
-        prompt += f"<|EOT|><|BOT|><s> human\n{one_shot_ref_text}"
-        prompt += f"<|EOT|><|BOT|><s> assistant\n{one_shot_ref_audio}"
+        prompt += f"<|EOT|><|BOT|><s> human\n{one_shot_ref_text}" if one_shot_ref_text else ""
+        prompt += f"<|EOT|><|BOT|><s> assistant\n{one_shot_ref_audio}" if one_shot_ref_audio else ""
         prompt += f"<|EOT|><|BOT|><s> human\n{tts_text}"
         prompt += "<|EOT|><|BOT|><s> assistant\n"
         token_ids = self._tokenizer.encode(prompt)

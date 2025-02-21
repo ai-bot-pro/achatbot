@@ -216,7 +216,7 @@ class ITts(ABC):
         raise NotImplementedError("must be implemented in the child class")
 
     @abstractmethod
-    def set_voice(self, voice: str):
+    def set_voice(self, voice: str, **kwargs):
         """
         Note:
         - just simple voice set, don't support set voice with user id
