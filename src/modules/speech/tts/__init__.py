@@ -44,6 +44,8 @@ class TTSEnvInit:
             from . import minicpmo_tts
         elif "tts_zonos" == tag:
             from . import zonos_tts
+        elif "tts_step" == tag:
+            from . import step_tts
         # elif "tts_openai" in tag:
         # from . import openai_tts
 
@@ -245,6 +247,32 @@ class TTSEnvInit:
         return kwargs
 
     @staticmethod
+    def get_tts_step_args() -> dict:
+        from src.types.speech.tts.step import StepTTSArgs
+        from src.types.llm.transformers import TransformersSpeechLMArgs
+
+        kwargs = StepTTSArgs(
+            lm_args=TransformersSpeechLMArgs(
+                lm_model_name_or_path=os.getenv(
+                    "TTS_LM_MODEL_PATH", os.path.join(MODELS_DIR, "stepfun-ai/Step-Audio-TTS-3B")
+                ),
+                lm_device=os.getenv("TTS_LM_DEVICE", None),
+                warmup_steps=int(os.getenv("TTS_WARMUP_STEPS", "1")),
+                lm_gen_top_k=int(os.getenv("TTS_LM_GEN_TOP_K", "10")),
+                lm_gen_top_p=float(os.getenv("TTS_LM_GEN_TOP_P", "1.0")),
+                lm_gen_temperature=float(os.getenv("TTS_LM_GEN_TEMPERATURE", "0.8")),
+                lm_gen_repetition_penalty=float(os.getenv("TTS_LM_GEN_REPETITION_PENALTY", "1.1")),
+            ).__dict__,
+            stream_factor=int(os.getenv("TTS_STREAM_FACTOR", "2")),
+            tts_mode=os.getenv("TTS_MODE", "lm_gen"),
+            speech_tokenizer_model_path=os.getenv(
+                "TTS_TOKENIZER_MODEL_PATH",
+                os.path.join(MODELS_DIR, "stepfun-ai/Step-Audio-Tokenizer"),
+            ),
+        ).__dict__
+        return kwargs
+
+    @staticmethod
     def get_tts_minicpmo_args() -> dict:
         kwargs = LLMEnvInit.get_llm_transformers_args()
         kwargs["tts_task"] = os.getenv("TTS_TASK", "voice_cloning")
@@ -286,4 +314,21 @@ class TTSEnvInit:
         "tts_g": get_tts_g_args,
         "tts_minicpmo": get_tts_minicpmo_args,
         "tts_zonos": get_tts_zonos_args,
+        "tts_step": get_tts_step_args,
+    }
+
+
+    @staticmethod
+    def get_tts_step_synth_args() -> dict:
+        kwargs = {}
+        kwargs["src_audio_path"] = os.getenv("SRC_AUDIO_PATH", None)
+        return kwargs
+
+    @staticmethod
+    def get_tts_synth_args() -> dict:
+        kwargs = {}
+        return kwargs
+
+    map_synthesize_config_func = {
+        "tts_step": get_tts_step_synth_args,
     }

@@ -1,12 +1,9 @@
 import logging
-from threading import Thread
-from queue import Queue
-
+from threading import Lock, Thread
 
 try:
     import torch
     from transformers import AutoTokenizer, AutoModelForCausalLM
-    from transformers.generation.streamers import BaseStreamer
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
@@ -14,11 +11,11 @@ except ModuleNotFoundError as e:
     )
     raise Exception(f"Missing module: {e}")
 
-
 from src.common.utils.helper import get_device
 from src.common.session import Session
 from src.types.llm.transformers import TransformersSpeechLMArgs
 from .base import TransformersBaseLLM
+from .streamer import TokenStreamer
 
 
 def ids_to_speech_tokens(speech_ids):
@@ -41,43 +38,6 @@ def extract_speech_ids(speech_tokens_str):
     return speech_ids
 
 
-class TokenStreamer(BaseStreamer):
-    def __init__(self, skip_prompt: bool = False, timeout=None):
-        self.skip_prompt = skip_prompt
-
-        # variables used in the streaming process
-        self.token_queue = Queue()
-        self.stop_signal = None
-        self.next_tokens_are_prompt = True
-        self.timeout = timeout
-
-    def put(self, value):
-        if len(value.shape) > 1 and value.shape[0] > 1:
-            raise ValueError("TextStreamer only supports batch size 1")
-        elif len(value.shape) > 1:
-            value = value[0]
-
-        if self.skip_prompt and self.next_tokens_are_prompt:
-            self.next_tokens_are_prompt = False
-            return
-
-        for token in value.tolist():
-            self.token_queue.put(token)
-
-    def end(self):
-        self.token_queue.put(self.stop_signal)
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        value = self.token_queue.get(timeout=self.timeout)
-        if value == self.stop_signal:
-            raise StopIteration()
-        else:
-            return value
-
-
 class TransformersManualSpeechLlasa(TransformersBaseLLM):
     """
     TTS: text + ref audio -> llama2 -> vq code tokens
@@ -93,7 +53,10 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
         self._model = AutoModelForCausalLM.from_pretrained(self.args.lm_model_name_or_path)
         self._model.eval().to(self.args.lm_device)
         self._tokenizer = AutoTokenizer.from_pretrained(self.args.lm_model_name_or_path)
-        self._streamer = TokenStreamer(skip_prompt=True)
+
+        # session ctx dict with lock, maybe need a session class
+        self.session_lm_generat_lock = Lock()
+        self.session_lm_generated_ids = {}  # session_id: ids(ptr)
 
         self.warmup()
 
@@ -118,10 +81,11 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
         input_ids = input_ids.to("cuda")
         speech_end_id = self._tokenizer.convert_tokens_to_ids("<|SPEECH_GENERATION_END|>")
 
+        streamer = TokenStreamer(skip_prompt=True)
         warmup_gen_kwargs = dict(
             input_ids=input_ids,
             eos_token_id=speech_end_id,
-            streamer=self._streamer,
+            streamer=streamer,
             min_new_tokens=self.args.lm_gen_min_new_tokens,
             max_new_tokens=self.args.lm_gen_max_new_tokens,
             top_k=self.args.lm_gen_top_k,
@@ -134,7 +98,7 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
         self._warmup(
             target=self._model.generate,
             kwargs=warmup_gen_kwargs,
-            streamer=self._streamer,
+            streamer=streamer,
         )
 
     # @torch.no_grad()
@@ -172,10 +136,11 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
         )
         input_ids = input_ids.to(self.args.lm_device)
         speech_end_id = self._tokenizer.convert_tokens_to_ids("<|SPEECH_GENERATION_END|>")
+        streamer = TokenStreamer(skip_prompt=True)
         generation_kwargs = dict(
             input_ids=input_ids,
             eos_token_id=speech_end_id,
-            streamer=self._streamer,
+            streamer=streamer,
             max_length=2048,  # We trained our model with a max length of 2048
             min_new_tokens=kwargs["min_new_tokens"]
             if "min_new_tokens" in kwargs
@@ -197,32 +162,40 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
         thread = Thread(target=self._model.generate, kwargs=generation_kwargs)
         thread.start()
 
-        i, j = 0, 0
-        generated_ids = []
-        for token_id in self._streamer:
-            # print(token_id, end=",", flush=True)
-            generated_ids.append(token_id)
-            i += 1
+        session_id = session.ctx.client_id
+        with self.session_lm_generat_lock:
+            self.session_lm_generated_ids[session_id] = []
 
-            if i % self.args.lm_tokenizer_decode_batch_size == 0:
+        for token_id in streamer:
+            # print(token_id, end=",", flush=True)
+            self.session_lm_generated_ids[session_id].append(token_id)
+
+            if (
+                len(self.session_lm_generated_ids[session_id])
+                % self.args.lm_tokenizer_decode_batch_size
+                == 0
+            ):
                 # print(generated_ids)
                 speech_tokens = self._tokenizer.batch_decode(
-                    torch.tensor(generated_ids).to(self.args.lm_device),
+                    torch.tensor(self.session_lm_generated_ids[session_id]).to(self.args.lm_device),
                     skip_special_tokens=True,
                 )
                 # Convert  token <|s_23456|> to int 23456
                 speech_tokens = extract_speech_ids(speech_tokens)
                 speech_vq_tokens = torch.tensor(speech_tokens).to(self.args.lm_device)
                 yield speech_vq_tokens
-                generated_ids = []
-                j += 1
+                with self.session_lm_generat_lock:
+                    self.session_lm_generated_ids[session_id] = []
 
-        if len(generated_ids) > 0:  # last batch
+        if len(self.session_lm_generated_ids[session_id]) > 0:  # last batch
             speech_tokens = self._tokenizer.batch_decode(
-                torch.tensor(generated_ids).to(self.args.lm_device),
+                torch.tensor(self.session_lm_generated_ids[session_id]).to(self.args.lm_device),
                 skip_special_tokens=True,
             )
             # Convert  token <|s_23456|> to int 23456
             speech_tokens = extract_speech_ids(speech_tokens)
             speech_vq_tokens = torch.tensor(speech_tokens).to(self.args.lm_device)
             yield speech_vq_tokens
+
+        with self.session_lm_generat_lock:
+            self.session_lm_generated_ids.pop(session_id)
