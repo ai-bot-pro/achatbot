@@ -246,7 +246,7 @@ class StepTTS(BaseTTS, ITts):
     ) -> AsyncGenerator[bytes, None]:
         """
         - lm_gen: text+ref audio waveform lm gen audio wav code to gen waveform with static batch stream:
-        text+ref audio waveform -> tokenizer -> text+audio token ids -> step1 lm  -> audio token ids (wav_code) -> flow(CFM) -> mel - vocoder(hifi) -> waveform
+        text+ref audio waveform -> tokenizer -> text+audio token ids -> step1 lm -> audio token ids (wav_code) -> flow(CFM) -> mel - vocoder(hifi) -> waveform
         """
         session_id = session.ctx.client_id
 
@@ -256,7 +256,7 @@ class StepTTS(BaseTTS, ITts):
         session.ctx.state["prompt"] = text
         audio_vq_tokens = self.lm_model.generate(session, **kwargs)
         for token_id in audio_vq_tokens:
-            print(token_id, end=",", flush=True)
+            # print(token_id, end=",", flush=True)
             if token_id == self.lm_model.end_token_id:  # skip <|EOT|>, break
                 break
             self.session_lm_generated_ids[session_id].append(token_id)
@@ -267,7 +267,7 @@ class StepTTS(BaseTTS, ITts):
                     .to(cosy_model.model.device)
                     - 65536
                 )  # [T] -> [1,T]
-                print("\nbatch-->", batch)
+                logging.debug(f"batch: {batch}")
                 # Process each batch
                 sub_tts_speech = cosy_model.token_to_wav_offline(
                     batch,
@@ -288,6 +288,7 @@ class StepTTS(BaseTTS, ITts):
                 .to(cosy_model.model.device)
                 - 65536
             )  # [T] -> [1,T]
+            logging.debug(f"batch: {batch}")
             # Process each batch
             sub_tts_speech = cosy_model.token_to_wav_offline(
                 batch,

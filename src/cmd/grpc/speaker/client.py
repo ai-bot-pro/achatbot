@@ -62,7 +62,16 @@ def load_model(tts_stub: TTSStub):
 
 
 def synthesize_us(tts_stub: TTSStub):
-    request_data = SynthesizeRequest(tts_text="hello,你好，我是机器人")
+    tag = os.getenv("TTS_TAG", "tts_edge")
+    if tag not in TTSEnvInit.map_synthesize_config_func:
+        logging.warning(f"{tag} not in map_synthesize_config_func, use default config")
+        kwargs = TTSEnvInit.get_tts_synth_args()
+    else:
+        kwargs = TTSEnvInit.map_synthesize_config_func[tag]()
+    request_data = SynthesizeRequest(
+        tts_text="hello,你好，我是机器人", json_kwargs=json.dumps(kwargs)
+    )
+    logging.debug(request_data)
     response_iterator = tts_stub.SynthesizeUS(request_data)
     for response in response_iterator:
         yield response.tts_audio
@@ -134,6 +143,21 @@ TTS_TAG=tts_zonos \
     SPEAKER_EMBEDDING_MODEL_DIR=./models/Zyphra/Zonos-v0.1-speaker-embedding
     ZONOS_REF_AUDIO_PATH=./test/audio_files/asr_example_zh.wav \
     IS_SAVE=1 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+
+# tts lm gen
+TTS_TAG=tts_step IS_SAVE=1 IS_RELOAD=1 \
+    TTS_WARMUP_STEPS=2 TTS_LM_MODEL_PATH=./models/stepfun-ai/Step-Audio-TTS-3B \
+    TTS_TOKENIZER_MODEL_PATH=./models/stepfun-ai/Step-Audio-Tokenizer \
+    python -m src.cmd.grpc.speaker.client
+# tts voice clone
+TTS_TAG=tts_step IS_SAVE=1 IS_RELOAD=1 \
+    TTS_WARMUP_STEPS=2 TTS_LM_MODEL_PATH=/content/models/stepfun-ai/Step-Audio-TTS-3B \
+    TTS_TOKENIZER_MODEL_PATH=/content/models/stepfun-ai/Step-Audio-Tokenizer \
+    TTS_STREAM_FACTOR=2 \
+    TTS_MODE=voice_clone \
+    SRC_AUDIO_PATH=./test/audio_files/asr_example_zh.wav \
+    python -m src.cmd.grpc.speaker.client
+
 """
 if __name__ == "__main__":
     player = None

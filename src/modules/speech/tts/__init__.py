@@ -316,3 +316,19 @@ class TTSEnvInit:
         "tts_zonos": get_tts_zonos_args,
         "tts_step": get_tts_step_args,
     }
+
+
+    @staticmethod
+    def get_tts_step_synth_args() -> dict:
+        kwargs = {}
+        kwargs["src_audio_path"] = os.getenv("SRC_AUDIO_PATH", None)
+        return kwargs
+
+    @staticmethod
+    def get_tts_synth_args() -> dict:
+        kwargs = {}
+        return kwargs
+
+    map_synthesize_config_func = {
+        "tts_step": get_tts_step_synth_args,
+    }
