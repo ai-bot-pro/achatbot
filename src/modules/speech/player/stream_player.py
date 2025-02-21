@@ -255,6 +255,12 @@ class PlayStreamInit:
                 "rate": 44100,
                 "sample_width": 2,
             },
+            "tts_step": {
+                "format": PYAUDIO_PAFLOAT32,
+                "channels": 1,
+                "rate": 22050,
+                "sample_width": 2,
+            },
             "tts_daily_speaker": {
                 "format": PYAUDIO_PAINT16,
                 "channels": 1,

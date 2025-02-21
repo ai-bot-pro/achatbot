@@ -111,7 +111,7 @@ TTS_TAG=tts_cosy_voice2 \
     IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 
 TTS_TAG=tts_llasa IS_SAVE=1 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
-TTS_TAG=tts_llasa IS_SAVE=1 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
+TTS_TAG=tts_step IS_SAVE=1 IS_RELOAD=1 python -m src.cmd.grpc.speaker.client
 
 # instruct2speech
 TTS_TAG=tts_minicpmo \
