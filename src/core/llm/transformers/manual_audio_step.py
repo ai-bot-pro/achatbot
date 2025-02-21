@@ -11,13 +11,13 @@ from src.common.session import Session
 from src.types.llm.transformers import TransformersLMArgs
 
 
-class TransformersManualVoiceStep(TransformersManualSpeechStep):
+class TransformersManualAudioStep(TransformersManualSpeechStep):
     """
-    system prompt + (one short: text->speech(audio vq code) prompt) + chat prompt -> tokenizer encode -> token ids -> StepForCausalLM -> audio vq tokens
+    system prompt + (one short: text->speech(audio vq code) prompt) + chat prompt(text/audio) -> tokenizer encode -> token ids -> StepForCausalLM -> audio vq tokens
     with TransformersLMArgs
     """
 
-    TAG = "llm_transformers_manual_voice_step"
+    TAG = "llm_transformers_manual_audio_step"
     DEFAULT_SYS_PROMPT = "Convert the text to speech"
 
     def __init__(self, **args):
