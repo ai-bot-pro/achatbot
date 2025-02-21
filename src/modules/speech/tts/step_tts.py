@@ -37,6 +37,14 @@ from .base import BaseTTS
 
 
 class StepTTS(BaseTTS, ITts):
+    """
+    support tts mode:
+    - lm_gen: text+ref audio waveform lm gen audio wav code to gen waveform with static batch stream:
+        text+ref audio waveform -> tokenizer -> text+audio token ids -> step1 lm  -> audio token ids (wav_code) -> flow(CFM) -> mel - vocoder(hifi) -> waveform
+    - voice_clone: voice clone w/o lm gen, decode wav code:
+        src+ref audio waveform -> speech tokenizer-> audio token ids (wav_code) -> flow(CFM) -> mel - vocoder(hifi) -> clone ref audio waveform
+    """
+
     TAG = "tts_step"
 
     def __init__(self, **kwargs) -> None:
@@ -57,7 +65,7 @@ class StepTTS(BaseTTS, ITts):
         self.music_cosy_model = CosyVoice(
             os.path.join(self.lm_args.lm_model_name_or_path, "CosyVoice-300M-25Hz-Music")
         )
-        self.encoder = StepAudioTokenizer(self.args.tokenizer_model_name_or_path)
+        self.encoder = StepAudioTokenizer(self.args.speech_tokenizer_model_path)
 
         self.sys_prompt_dict = {
             "sys_prompt_for_rap": "请参考对话历史里的音色，用RAP方式将文本内容大声说唱出来。",
@@ -99,6 +107,13 @@ class StepTTS(BaseTTS, ITts):
                 "ref_audio_token_len": ref_audio_token_len,
             }
             logging.info(f"Registered speaker: {speaker_id}")
+
+    def wav2code(self, prompt_wav_path: str):
+        prompt_wav, prompt_wav_sr = torchaudio.load(prompt_wav_path)
+        if prompt_wav.shape[0] > 1:
+            prompt_wav = prompt_wav.mean(dim=0, keepdim=True)  # multi-channel to mono
+        prompt_code, _, _ = self.encoder.wav2token(prompt_wav, prompt_wav_sr)
+        return prompt_code
 
     def preprocess_prompt_wav(self, prompt_wav_path: str):
         prompt_wav, prompt_wav_sr = torchaudio.load(prompt_wav_path)
@@ -197,6 +212,91 @@ class StepTTS(BaseTTS, ITts):
             sys_prompt = self.sys_prompt_dict["sys_prompt_with_spk"].format(ref_speaker)
         self.lm_model.set_system_prompt(sys_prompt=sys_prompt)
 
+    def voice_clone(self, session: Session, ref_speaker: str, cosy_model, **kwargs):
+        """
+        - voice_clone: voice clone w/o lm gen, decode wav code:
+        src+ref audio waveform -> speech tokenizer-> audio token ids (wav_code) -> flow(CFM) -> mel - vocoder(hifi) -> clone ref audio waveform
+        """
+        src_audo_path = kwargs.get("src_audo_path", None)
+        if not src_audo_path or not os.path.exists(src_audo_path):
+            logging.error(f"{src_audo_path} is not exists")
+            return
+
+        src_audio_code = self.wav2code(src_audo_path)
+        tensor_audio_token_ids = torch.tensor([src_audio_code]).to(torch.long).to("cuda") - 65536
+        tts_speech = cosy_model.token_to_wav_offline(
+            tensor_audio_token_ids,
+            self.speakers_info[ref_speaker]["ref_speech_feat"].to(torch.bfloat16),
+            self.speakers_info[ref_speaker]["ref_speech_feat_len"],
+            self.speakers_info[ref_speaker]["ref_audio_token"],
+            self.speakers_info[ref_speaker]["ref_audio_token_len"],
+            self.speakers_info[ref_speaker]["ref_speech_embedding"].to(torch.bfloat16),
+        )
+        return tts_speech
+
+    async def lm_gen(
+        self,
+        session: Session,
+        text: str,
+        ref_speaker: str,
+        batch_size: int,
+        cosy_model,
+        **kwargs,
+    ) -> AsyncGenerator[bytes, None]:
+        """
+        - lm_gen: text+ref audio waveform lm gen audio wav code to gen waveform with static batch stream:
+        text+ref audio waveform -> tokenizer -> text+audio token ids -> step1 lm  -> audio token ids (wav_code) -> flow(CFM) -> mel - vocoder(hifi) -> waveform
+        """
+        session_id = session.ctx.client_id
+
+        self.set_system_prompt(text, ref_speaker=ref_speaker)
+        session.ctx.state["ref_text"] = self.speakers_info[ref_speaker]["ref_text"]
+        session.ctx.state["ref_audio_code"] = self.speakers_info[ref_speaker]["ref_audio_code"]
+        session.ctx.state["prompt"] = text
+        audio_vq_tokens = self.lm_model.generate(session, **kwargs)
+        for token_id in audio_vq_tokens:
+            # print(token_id, end=",", flush=True)
+            if token_id == self.lm_model.end_token_id:  # skip <|EOT|>, break
+                break
+            self.session_lm_generated_ids[session_id].append(token_id)
+            if len(self.session_lm_generated_ids[session_id]) % batch_size == 0:
+                batch = (
+                    torch.tensor(self.session_lm_generated_ids[session_id])
+                    .unsqueeze(0)
+                    .to(cosy_model.model.device)
+                    - 65536
+                )  # [T] -> [1,T]
+                # Process each batch
+                sub_tts_speech = cosy_model.token_to_wav_offline(
+                    batch,
+                    self.speakers_info[ref_speaker]["ref_speech_feat"].to(torch.bfloat16),
+                    self.speakers_info[ref_speaker]["ref_speech_feat_len"],
+                    self.speakers_info[ref_speaker]["ref_audio_token"],
+                    self.speakers_info[ref_speaker]["ref_audio_token_len"],
+                    self.speakers_info[ref_speaker]["ref_speech_embedding"].to(torch.bfloat16),
+                )
+                yield sub_tts_speech.float().numpy().tobytes()
+                with self.session_lm_generat_lock:
+                    self.session_lm_generated_ids[session_id] = []
+
+        if len(self.session_lm_generated_ids[session_id]) > 0:
+            batch = (
+                torch.tensor(self.session_lm_generated_ids[session_id])
+                .unsqueeze(0)
+                .to(cosy_model.model.device)
+                - 65536
+            )  # [T] -> [1,T]
+            # Process each batch
+            sub_tts_speech = cosy_model.token_to_wav_offline(
+                batch,
+                self.speakers_info[ref_speaker]["ref_speech_feat"].to(torch.bfloat16),
+                self.speakers_info[ref_speaker]["ref_speech_feat_len"],
+                self.speakers_info[ref_speaker]["ref_audio_token"],
+                self.speakers_info[ref_speaker]["ref_audio_token_len"],
+                self.speakers_info[ref_speaker]["ref_speech_embedding"].to(torch.bfloat16),
+            )
+            yield sub_tts_speech.float().numpy().tobytes()
+
     async def _inference(
         self, session: Session, text: str, **kwargs
     ) -> AsyncGenerator[bytes, None]:
@@ -216,12 +316,6 @@ class StepTTS(BaseTTS, ITts):
         if ref_speaker and ref_speaker not in self.speakers_info:
             ref_speaker = "Tingting"
         logging.debug(f"use ref_speaker: {ref_speaker}")
-        self.set_system_prompt(text, ref_speaker=ref_speaker)
-
-        session.ctx.state["ref_text"] = self.speakers_info[ref_speaker]["ref_text"]
-        session.ctx.state["ref_audio_code"] = self.speakers_info[ref_speaker]["ref_audio_code"]
-        session.ctx.state["prompt"] = text
-        audio_vq_tokens = self.lm_model.generate(session, **kwargs)
 
         assert (
             kwargs.get("stream_factor", self.args.stream_factor) >= 2
@@ -235,48 +329,15 @@ class StepTTS(BaseTTS, ITts):
         with self.session_lm_generat_lock:
             self.session_lm_generated_ids[session_id] = []
 
-        for token_id in audio_vq_tokens:
-            # print(token_id, end=",", flush=True)
-            if token_id == self.lm_model.end_token_id:  # skip <|EOT|>, break
-                break
-            self.session_lm_generated_ids[session_id].append(token_id)
-            if len(self.session_lm_generated_ids[session_id]) % batch_size == 0:
-                batch = (
-                    torch.tensor(self.session_lm_generated_ids[session_id])
-                    .unsqueeze(0)
-                    .to(cosy_model.model.device)
-                    - 65536
-                )  # [T] -> [1,T]
-                # Process each batch
-                sub_tts_speech = cosy_model.token_to_wav_offline(
-                    batch,
-                    self.speakers_info["ref_speech_feat"].to(torch.bfloat16),
-                    self.speakers_info["ref_speech_feat_len"],
-                    self.speakers_info["ref_audio_token"],
-                    self.speakers_info["ref_audio_token_len"],
-                    self.speakers_info["ref_speech_embedding"].to(torch.bfloat16),
-                )
-                yield sub_tts_speech.float().numpy().tobytes()
-                with self.session_lm_generat_lock:
-                    self.session_lm_generated_ids[session_id] = []
-
-        if len(self.session_lm_generated_ids[session_id]) > 0:
-            batch = (
-                torch.tensor(self.session_lm_generated_ids[session_id])
-                .unsqueeze(0)
-                .to(cosy_model.model.device)
-                - 65536
-            )  # [T] -> [1,T]
-            # Process each batch
-            sub_tts_speech = cosy_model.token_to_wav_offline(
-                batch,
-                self.speakers_info["ref_speech_feat"].to(torch.bfloat16),
-                self.speakers_info["ref_speech_feat_len"],
-                self.speakers_info["ref_audio_token"],
-                self.speakers_info["ref_audio_token_len"],
-                self.speakers_info["ref_speech_embedding"].to(torch.bfloat16),
-            )
-            yield sub_tts_speech.float().numpy().tobytes()
+        tts_mode = kwargs.get("tts_mode", self.args.tts_mode)
+        if tts_mode == "voice_clone":
+            tts_speech = self.voice_clone(session, ref_speaker, cosy_model, **kwargs)
+            yield tts_speech
+        else:  # lm_gen
+            async for item in self.lm_gen(
+                session, text, ref_speaker, batch_size, cosy_model, **kwargs
+            ):
+                yield item
 
         with self.session_lm_generat_lock:
             self.session_lm_generated_ids.pop(session_id)

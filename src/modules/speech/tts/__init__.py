@@ -44,6 +44,8 @@ class TTSEnvInit:
             from . import minicpmo_tts
         elif "tts_zonos" == tag:
             from . import zonos_tts
+        elif "tts_step" == tag:
+            from . import step_tts
         # elif "tts_openai" in tag:
         # from . import openai_tts
 
@@ -262,6 +264,7 @@ class TTSEnvInit:
                 lm_gen_repetition_penalty=float(os.getenv("TTS_LM_GEN_REPETITION_PENALTY", "1.1")),
             ).__dict__,
             stream_factor=int(os.getenv("TTS_STREAM_FACTOR", "2")),
+            tts_mode=os.getenv("TTS_MODE", "lm_gen"),
             tokenizer_model_path=os.getenv(
                 "TTS_TOKENIZER_MODEL_PATH",
                 os.path.join(MODELS_DIR, "stepfun-ai/Step-Audio-Tokenizer"),
