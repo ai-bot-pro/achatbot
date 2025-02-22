@@ -251,9 +251,18 @@ class StepTTS(BaseTTS, ITts):
         session_id = session.ctx.client_id
 
         self.set_system_prompt(text, ref_speaker=ref_speaker)
-        session.ctx.state["ref_text"] = self.speakers_info[ref_speaker]["ref_text"]
-        session.ctx.state["ref_audio_code"] = self.speakers_info[ref_speaker]["ref_audio_code"]
-        session.ctx.state["prompt"] = text
+
+        one_shot_ref_text = self.speakers_info[ref_speaker]["ref_text"]
+        one_shot_ref_audio = self._tokenizer.decode(
+            self.speakers_info[ref_speaker]["ref_audio_code"]
+        )
+        prompt = f"<s><|BOT|><s> system\n{self.sys_prompt}"
+        prompt += f"<|EOT|><|BOT|><s> human\n{one_shot_ref_text}" if one_shot_ref_text else ""
+        prompt += f"<|EOT|><|BOT|><s> assistant\n{one_shot_ref_audio}" if one_shot_ref_audio else ""
+        prompt += f"<|EOT|><|BOT|><s> human\n{text}"
+        prompt += "<|EOT|><|BOT|><s> assistant\n"
+
+        session.ctx.state["prompt"] = prompt
         audio_vq_tokens = self.lm_model.generate(session, **kwargs)
         for token_id in audio_vq_tokens:
             # print(token_id, end=",", flush=True)
