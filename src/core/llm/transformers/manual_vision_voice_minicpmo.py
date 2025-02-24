@@ -310,6 +310,7 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
                 if "<|tts_eos|>" in r.text:
                     r.text = r.text.replace("<|tts_eos|>", "")
                 text += r.text
+                time.sleep(0.05)
                 yield r.__dict__  # OmniOutput.__dict__
 
             if self.save_output is True:
@@ -327,6 +328,7 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
                 if "<|tts_eos|>" in r["text"]:
                     r["text"] = r["text"].replace("<|tts_eos|>", "")
                 text += r["text"]
+                time.sleep(0.05)
                 yield r
         # self._chat_history.append({"role": "assistant", "content": [text]})
         logging.info(f"gen text: {text}")

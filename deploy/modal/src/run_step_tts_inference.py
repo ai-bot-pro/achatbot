@@ -187,10 +187,25 @@ def tts_inference_stream(
 
 
 @app.local_entrypoint()
-def main(stream: bool = False, synthesis_type: str = "tts", text: str = "你好"):
+def main(
+    stream: bool = False,
+    synthesis_type: str = "tts",
+    text: str = "你好",
+    stream_factor: int = 2,
+    stream_scale_factor: float = 1.0,
+    max_stream_factor: int = 2,
+    token_overlap_len: int = 20,
+):
     if stream is True:
         print("run tts stream")
-        tts_inference_stream.remote(synthesis_type, text)
+        tts_inference_stream.remote(
+            synthesis_type,
+            text,
+            stream_factor,
+            stream_scale_factor,
+            max_stream_factor,
+            token_overlap_len,
+        )
     else:
         print("run tts")
         tts_inference.remote(synthesis_type, text)

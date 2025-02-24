@@ -50,9 +50,9 @@ class DailyChatToolsVisionBot(DailyRoomBot):
     !NOTE: need write system prompt to guide LLM to answer
 
     !THINKING: @weedge (gedigedix3) personal AI(agent)
-    - if want a system engine become more easy, need train a LWM(which can call tools with post training) to supporte e2e text,audio,vision (a big bang!);
+    - if want a system engine become more easy, need train a MLLM(which can call tools with post training) to supporte e2e text,audio,vision (a big bang!);
     - if not, need base text LLM(which can call tools with post training) and more engine pipeline with tools(agents) to support ~!
-    - if just develop app with using lm; prompt is all your need (zero or few shots), need know LWM/LLM can do what, follow lm capability.
+    - if just develop app with using lm; prompt is all your need (zero or few shots), need know MLLM/LLM can do what, follow lm capability.
     - all tool function need to async run and set task timeout with using LLM's Parallel Tool
     - multi async agent sync msg with connector(local pipe; async queue or sync rpc)
     — Think about logically rigorous scenarios:
