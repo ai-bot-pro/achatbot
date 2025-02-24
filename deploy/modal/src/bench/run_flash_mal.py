@@ -19,6 +19,23 @@ ds_flash_mal_image = (
 BENCH_DIR = "/data/bench"
 bench_dir = modal.Volume.from_name("bench", create_if_missing=True)
 
+# modal run src/bench/run_flash_mal.py::compute_cap
+@app.function(
+    # gpu=["T4", "L4", "A10G", "L40S", "A100", "A100-80GB", "H100"],
+    gpu="H100",
+    max_inputs=1,  # new container each input, so we re-roll the GPU dice every time
+)
+async def compute_cap():
+    import subprocess
+
+    gpu = subprocess.run(
+        ["nvidia-smi", "--query-gpu=name,compute_cap,memory.total", "--format=csv,noheader"],
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+    ).stdout.strip()
+    print(gpu)
+    return gpu
 
 @app.function(
     gpu="H100",
@@ -39,6 +56,7 @@ def flash_mal(bench_name="ds_flash_mal_bench") -> str:
         f.write(result.stdout)
 
 
+# modal run src/bench/run_flash_mal.py
 @app.local_entrypoint()
 def main(bench_name="ds_flash_mal_bench"):
     flash_mal.remote(bench_name)
