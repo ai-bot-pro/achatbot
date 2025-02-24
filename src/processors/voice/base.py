@@ -17,11 +17,14 @@ class VoiceProcessorBase(AsyncAIProcessor):
     VoiceProcessorBase is a base class for voice processors
     (just become a Monolith model with adpter and prompt to gen speech and text). e.g.:
     - A1-T1: (speech)-to-(text) (asr)
-    - T1-T2A2: (text)-to-(speech and text) ((text-llm)+tts)
-    - A1-T2A2: (speech)-to-(speech and text) (asr+(text-llm)+tts)
-    - T1-A2: (text)-to-(speech) (tts)
+    - A1-T2: (speech)-to-(text) (audio gen/chat to text)
+    - T1-T2A2: (text)-to-(speech and text) ((text-llm)+tts) (text gen/chat to text/audio)
+    - A1-T2A2: (speech)-to-(speech and text) (asr+(text-llm)+tts) (audio gen/chat to text/audio)
+    - T1-A1: (text)-to-(speech) (tts)
+    - T1-A2: (text)-to-(speech) (text gen/chat to audio)
 
     support streaming mode
+    # TODO: function call
     """
 
     def __init__(self, **kwargs):

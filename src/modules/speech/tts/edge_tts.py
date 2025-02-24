@@ -22,21 +22,28 @@ class EdgeTTS(BaseTTS, ITts):
 
     def __init__(self, **args) -> None:
         self.args = EdgeTTSArgs(**args)
-        self.file_path = os.path.join(RECORDS_DIR, EDGE_TTS_SYNTHESIS_FILE)
+        #self.file_path = os.path.join(RECORDS_DIR, EDGE_TTS_SYNTHESIS_FILE)
+        self.voice_name = None
 
     async def _inference(
         self, session: Session, text: str, **kwargs
     ) -> AsyncGenerator[bytes, None]:
         import edge_tts
 
-        if self.args.voice_name:
-            voices = await self._get_voices(ShortName=self.args.voice_name)
-            logging.debug(f"{self.TAG} voices: {voices}")
-            if len(voices) == 0:
-                raise Exception(f"{self.TAG} voice:{self.args.voice_name} don't support")
-        else:
-            voices = await self._get_voices(Gender=self.args.gender, Language=self.args.language)
-            self.args.voice_name = random.choice(voices)["ShotName"]
+        if self.voice_name is None:
+            if self.args.voice_name:
+                voices = await self._get_voices(ShortName=self.args.voice_name)
+                logging.debug(f"{self.TAG} voices: {voices}")
+                if len(voices) == 0:
+                    raise Exception(f"{self.TAG} voice:{self.args.voice_name} don't support")
+                self.voice_name = self.args.voice_name
+            else:
+                voices = await self._get_voices(
+                    Gender=self.args.gender, Language=self.args.language
+                )
+                self.args.voice_name = random.choice(voices)["ShotName"]
+                self.voice_name = self.args.voice_name
+            logging.info(f"{self.TAG} voice: {self.voice_name}")
 
         communicate: edge_tts.Communicate = edge_tts.Communicate(
             text,
