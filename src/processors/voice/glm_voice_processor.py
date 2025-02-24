@@ -8,10 +8,21 @@ import torch
 from transformers import WhisperFeatureExtractor, AutoTokenizer
 from apipeline.frames import *
 
-from deps.GLM4Voice.speech_tokenizer.modeling_whisper import WhisperVQEncoder
-from deps.GLM4Voice.audio_process import AudioStreamProcessor
-from deps.GLM4Voice.flow_inference import AudioDecoder
-from deps.GLM4Voice.speech_tokenizer.utils import extract_speech_token
+try:
+    cur_dir = os.path.dirname(__file__)
+    if bool(os.getenv("ACHATBOT_PKG", "")):
+        sys.path.insert(1, os.path.join(cur_dir, "../../GLM4Voice"))
+        sys.path.insert(2, os.path.join(cur_dir, "../../GLM4Voice/third_party/Matcha-TTS"))
+    else:
+        sys.path.insert(1, os.path.join(cur_dir, "../../../deps/GLM4Voice"))
+        sys.path.insert(2, os.path.join(cur_dir, "../../../deps/GLM4Voice/third_party/Matcha-TTS"))
+
+    from deps.GLM4Voice.speech_tokenizer.modeling_whisper import WhisperVQEncoder
+    from deps.GLM4Voice.audio_process import AudioStreamProcessor
+    from deps.GLM4Voice.flow_inference import AudioDecoder
+    from deps.GLM4Voice.speech_tokenizer.utils import extract_speech_token
+except ModuleNotFoundError as e:
+    raise Exception(f"Missing module: {e}")
 
 from src.core.llm.transformers.manual_voice_glm import TransformersManualVoicGLM
 from src.processors.voice.base import VoiceProcessorBase
@@ -51,16 +62,6 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
         **kwargs,
     ):
         super().__init__(**kwargs)
-
-        cur_dir = os.path.dirname(__file__)
-        if bool(os.getenv("ACHATBOT_PKG", "")):
-            sys.path.insert(1, os.path.join(cur_dir, "../../GLM4Voice"))
-            sys.path.insert(2, os.path.join(cur_dir, "../../GLM4Voice/third_party/Matcha-TTS"))
-        else:
-            sys.path.insert(1, os.path.join(cur_dir, "../../../deps/GLM4Voice"))
-            sys.path.insert(
-                2, os.path.join(cur_dir, "../../../deps/GLM4Voice/third_party/Matcha-TTS")
-            )
 
         self._voice_in_args = voice_in_args
         if isinstance(voice_in_args, dict):

@@ -55,6 +55,8 @@ class TransformersManualSpeechStep(TransformersBaseLLM):
         self.args.lm_device = self.args.lm_device or get_device()
         logging.info("args: %s", self.args)
 
+        self.load_torch_optimus()
+
         if self.args.lm_device_map:
             self._model = AutoModelForCausalLM.from_pretrained(
                 self.args.lm_model_name_or_path,
@@ -88,6 +90,35 @@ class TransformersManualSpeechStep(TransformersBaseLLM):
         self.sys_prompt = self.DEFAULT_SYS_PROMPT
 
         self.warmup()
+
+    def load_torch_optimus(self):
+        # load optimus_ths for flash attention, make sure LD_LIBRARY_PATH has `nvidia/cuda_nvrtc/lib`
+        # if not, please manually set LD_LIBRARY_PATH=xxx/python3.10/site-packages/nvidia/cuda_nvrtc/lib
+        try:
+            if torch.__version__ >= "2.5":
+                torch.ops.load_library(
+                    os.path.join(
+                        self.args.lm_model_name_or_path,
+                        "lib/liboptimus_ths-torch2.5-cu124.cpython-310-x86_64-linux-gnu.so",
+                    )
+                )
+            elif torch.__version__ >= "2.3":
+                torch.ops.load_library(
+                    os.path.join(
+                        self.args.lm_model_name_or_path,
+                        "lib/liboptimus_ths-torch2.3-cu121.cpython-310-x86_64-linux-gnu.so",
+                    )
+                )
+            elif torch.__version__ >= "2.2":
+                torch.ops.load_library(
+                    os.path.join(
+                        self.args.lm_model_name_or_path,
+                        "lib/liboptimus_ths-torch2.2-cu121.cpython-310-x86_64-linux-gnu.so",
+                    )
+                )
+            print("Load optimus_ths successfully and flash attn would be enabled")
+        except Exception as err:
+            print(f"Fail to load optimus_ths and flash attn is disabled: {err}")
 
     def set_system_prompt(self, **kwargs):
         # session sys settings
@@ -138,14 +169,7 @@ class TransformersManualSpeechStep(TransformersBaseLLM):
         """
         system prompt + (one short: text->speech(audio code) prompt) + tts prompt -> tokenizer encode -> token ids -> step lm -> audio vq tokens
         """
-        one_shot_ref_text = session.ctx.state.get("ref_text", "")
-        one_shot_ref_audio = self._tokenizer.decode(session.ctx.state.get("ref_audio_code", []))
-        tts_text = session.ctx.state.get("prompt", "")
-        prompt = f"<s><|BOT|><s> system\n{self.sys_prompt}"
-        prompt += f"<|EOT|><|BOT|><s> human\n{one_shot_ref_text}" if one_shot_ref_text else ""
-        prompt += f"<|EOT|><|BOT|><s> assistant\n{one_shot_ref_audio}" if one_shot_ref_audio else ""
-        prompt += f"<|EOT|><|BOT|><s> human\n{tts_text}"
-        prompt += "<|EOT|><|BOT|><s> assistant\n"
+        prompt = session.ctx.state.get("prompt", "")
         token_ids = self._tokenizer.encode(prompt)
         logging.debug(f"prompt:{prompt}")
         logging.debug(f"token_ids:{token_ids}")

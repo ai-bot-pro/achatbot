@@ -25,6 +25,7 @@ class TTSVoice:
 
 class BaseTTS(EngineClass, ITts):
     def synthesize_sync(self, session: Session) -> Generator[bytes, None, None]:
+        print("-->",session)
         is_stream = self.args.tts_stream if hasattr(self.args, "tts_stream") else False
         logging.debug(f"is_stream:{is_stream}")
         if is_stream is False:

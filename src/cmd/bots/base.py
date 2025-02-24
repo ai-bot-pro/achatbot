@@ -374,6 +374,38 @@ class AIBot(IBot):
             llm_processor = GLMAudioVoiceProcessor()
         return llm_processor
 
+    def get_text_step_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
+        from src.processors.voice.step_voice_processor import (
+            StepTextVoiceProcessor,
+            MockStepTextVoiceProcessor,
+        )
+
+        if not llm:
+            llm = self._bot_config.voice_llm
+        if "mock" in llm.tag:
+            return MockStepTextVoiceProcessor()
+        if llm.args:
+            llm_processor = StepTextVoiceProcessor(**llm.args)
+        else:
+            llm_processor = StepTextVoiceProcessor()
+        return llm_processor
+
+    def get_audio_step_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
+        from src.processors.voice.step_voice_processor import (
+            StepAudioVoiceProcessor,
+            MockStepAudioVoiceProcessor,
+        )
+
+        if not llm:
+            llm = self._bot_config.voice_llm
+        if "mock" in llm.tag:
+            return MockStepAudioVoiceProcessor()
+        if llm.args:
+            llm_processor = StepAudioVoiceProcessor(**llm.args)
+        else:
+            llm_processor = StepAudioVoiceProcessor()
+        return llm_processor
+
     def get_audio_freeze_omni_voice_processor(
         self, llm: LLMConfig | None = None
     ) -> VoiceProcessorBase:
@@ -416,7 +448,7 @@ class AIBot(IBot):
                 from src.processors.speech.tts.tts_processor import TTSProcessor
 
                 tts = TTSEnvInit.getEngine(self._bot_config.tts.tag, **self._bot_config.tts.args)
-                self._bot_config.tts.tag = (tts.SELECTED_TAG,)
+                self._bot_config.tts.tag = tts.SELECTED_TAG
                 self._bot_config.tts.args = tts.get_args_dict()
                 tts_processor = TTSProcessor(tts=tts, session=self.session)
         else:
