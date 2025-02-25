@@ -547,6 +547,15 @@ curl --location 'https://weedge-achatbot--fastapi-webrtc-minicpmo-omni-bot-srv-a
 }'
 ```
 
+### webrtc_step_voice_bot
+- run webrtc_step_voice_bot serve with task queue(redis)
+```shell
+# webrtc_audio_bot serve on default pip image
+# need create .env.example to modal Secrets for webrtc key
+IMAGE_NAME=default IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L40S:8 modal serve -e achatbot src/fastapi_webrtc_step_voice_bot_serve.py
+```
+- curl api to run chat room bot with webrtc (daily/livekit/agora)
+
 ## modal deploy (online)
 - deploy webrtc_audio_bot serve
 ```shell
