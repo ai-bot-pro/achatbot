@@ -47,7 +47,7 @@ class StepVoiceBaseProcessor(VoiceProcessorBase):
         self,
         *,
         voice_in_args: GLMVoiceInArgs | dict = GLMVoiceInArgs(),
-        lm_gen_args: TransformersLMArgs | dict = TransformersLMArgs(),
+        lm_gen_args: dict = {},
         voice_out_args: GLMVoiceOutArgs | dict = GLMVoiceOutArgs(),
         system_prompt: str = "",
         voice_tokenizer_path: str | None = None,  # audio encoder/ft extractor
@@ -63,8 +63,6 @@ class StepVoiceBaseProcessor(VoiceProcessorBase):
         if isinstance(voice_in_args, dict):
             self._voice_in_args = GLMVoiceInArgs(**voice_in_args)
         self._lm_gen_args = lm_gen_args
-        if isinstance(lm_gen_args, dict):
-            self._lm_gen_args = TransformersLMArgs(**lm_gen_args)
         self._voice_out_args = voice_out_args
         if isinstance(voice_out_args, dict):
             self._voice_out_args = GLMVoiceOutArgs(**voice_out_args)
