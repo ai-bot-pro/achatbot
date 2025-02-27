@@ -79,6 +79,12 @@ class AIBot(IBot):
     def bot_config(self):
         return self._bot_config
 
+    def load(self):
+        # !TODO: load model ckpt when bot start @weedge
+        # when deploy need load model ckpt, then run serve
+        # now just support one person with one bot agent
+        pass
+
     def run(self):
         asyncio.run(self.try_run())
 

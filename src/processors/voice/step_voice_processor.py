@@ -47,11 +47,10 @@ class StepVoiceBaseProcessor(VoiceProcessorBase):
         self,
         *,
         voice_in_args: GLMVoiceInArgs | dict = GLMVoiceInArgs(),
-        lm_gen_args: TransformersLMArgs | dict = TransformersLMArgs(),
+        lm_gen_args: dict = {},
         voice_out_args: GLMVoiceOutArgs | dict = GLMVoiceOutArgs(),
         system_prompt: str = "",
         voice_tokenizer_path: str | None = None,  # audio encoder/ft extractor
-        model_path: str | None = None,  # gen lm and text tokenizer
         voice_decoder_path: str | None = None,  # audio decoder
         device: str = "cuda",
         torch_dtype: str = "auto",  # auto,float16,bfloat16,float32
@@ -64,15 +63,12 @@ class StepVoiceBaseProcessor(VoiceProcessorBase):
         if isinstance(voice_in_args, dict):
             self._voice_in_args = GLMVoiceInArgs(**voice_in_args)
         self._lm_gen_args = lm_gen_args
-        if isinstance(lm_gen_args, dict):
-            self._lm_gen_args = TransformersLMArgs(**lm_gen_args)
         self._voice_out_args = voice_out_args
         if isinstance(voice_out_args, dict):
             self._voice_out_args = GLMVoiceOutArgs(**voice_out_args)
 
         self._sys_prompt = system_prompt or TransformersManualVoiceStep.DEFAULT_SYS_PROMPT
         self._voice_tokenizer_path = voice_tokenizer_path
-        self._model_path = model_path
         self._voice_decoder_path = voice_decoder_path
         self._torch_dtype = torch_dtype
         self._device = device
@@ -106,11 +102,6 @@ class StepVoiceBaseProcessor(VoiceProcessorBase):
             self._voice_decoder_path, self.encoder, max_stream_factor=4
         )
         logging.info("speech audio Flow & Hift decoder model state weight load")
-
-        # gen lm text tokenizer
-        self._glm_tokenizer = AutoTokenizer.from_pretrained(
-            self._model_path, trust_remote_code=True
-        )
 
         # gen lm
         self._glm_model = TransformersManualVoiceStep(**self._lm_gen_args)
@@ -193,7 +184,7 @@ class StepVoiceBaseProcessor(VoiceProcessorBase):
         # TODO: audio token decode -> flow -> hift -> audio frame
         texts = ""
         for token_id in iter_tokens:
-            complete_text = self._glm_tokenizer.decode(
+            complete_text = self._glm_model._tokenizer.decode(
                 [token_id], spaces_between_special_tokens=False
             )
             yield complete_text

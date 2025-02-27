@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 name = "achatbot"
 #dynamic = ["version"]
 # todo
-version = "0.0.8.12"
+version = "0.0.8.13"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -243,9 +243,6 @@ llm_transformers_manual_voice_freeze_omni = [
 ]
 # speech llm
 llm_transformers_manual_speech_llasa = [
-    "achatbot[llm_transformers_manual_voice]",
-]
-llm_transformers_manual_speech_step = [
     "achatbot[llm_transformers_manual_voice]",
 ]
 # vision voice llm
@@ -474,6 +471,7 @@ freeze_omni_voice_processor = [
     "achatbot[llm_transformers_manual_voice_freeze_omni]",
 ]
 moshi_voice_processor = ["moshi~=0.2.1"]
+step_voice_processor = ["achatbot[tts_step]"]
 
 
 #------------------------bot-------------------------

@@ -547,6 +547,65 @@ curl --location 'https://weedge-achatbot--fastapi-webrtc-minicpmo-omni-bot-srv-a
 }'
 ```
 
+### webrtc_step_voice_bot
+- run webrtc_step_voice_bot serve with task queue(redis)
+```shell
+# webrtc_audio_bot serve on default pip image
+# need create .env.example to modal Secrets for webrtc key
+IMAGE_NAME=default IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L40S:8 modal serve -e achatbot src/fastapi_webrtc_step_voice_bot_serve.py
+```
+- curl api to run chat room bot with webrtc (daily/livekit/agora)
+```shell
+curl --location 'https://weedge-achatbot--fastapi-webrtc-step-voice-bot-srv-app-dev.modal.run/bot_join/chat-room/DailyStepVoiceBot' \
+--header 'Content-Type: application/json' \
+--data '{
+    "chat_bot_name": "DailyStepVoiceBot",
+    "room_name": "chat-room",
+    "room_url": "",
+    "token": "",
+    "room_manager": {
+        "tag": "daily_room",
+        "args": {
+            "privacy": "public"
+        }
+    },
+    "services": {
+        "pipeline": "achatbot",
+        "vad": "silero",
+        "voice_llm": "step"
+    },
+    "config": {
+        "vad": {
+            "tag": "silero_vad_analyzer",
+            "args": {
+                "stop_secs": 0.7
+            }
+        },
+        "voice_llm": {
+            "tag": "step_voice_processor",
+            "args": {
+                "lm_gen_args": {
+                    "lm_device_map": "auto",
+                    "lm_torch_dtype": "bfloat16",
+                    "warmup_steps": 1,
+                    "lm_gen_temperature": 0.5,
+                    "lm_model_name_or_path": "/root/.achatbot/models/stepfun-ai/Step-Audio-Chat"
+                },
+                "voice_out_args": {
+                    "audio_sample_rate": 22050,
+                    "audio_channels": 1
+                },
+                "voice_tokenizer_path": "/root/.achatbot/models/stepfun-ai/Step-Audio-Tokenizer",
+                "voice_decoder_path": "/root/.achatbot/models/stepfun-ai/Step-Audio-TTS-3B",
+                "torch_dtype": "auto",
+                "device": "cuda"
+            }
+        }
+    },
+    "config_list": []
+}'
+```
+
 ## modal deploy (online)
 - deploy webrtc_audio_bot serve
 ```shell
