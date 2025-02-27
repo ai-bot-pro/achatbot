@@ -11,7 +11,9 @@ from dotenv import load_dotenv
 
 from demo.aws.upload import r2_upload
 from demo.cloudflare.rest_api import d1_table_query
+from demo.image_compression import compress_img
 from demo.together_ai import save_gen_image
+from demo.audio_length import get_audio_length
 
 
 # Load environment variables from .env file
@@ -43,7 +45,8 @@ CREATE TABLE IF NOT EXISTS podcast (
   status int DEFAULT 0,
   is_published boolean DEFAULT false,
   create_time text NOT NULL,
-  update_time text NOT NULL
+  update_time text NOT NULL,
+  audio_size int DEFAULT 0
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_podcast_pid ON podcast(pid);
 CREATE INDEX IF NOT EXISTS idx_podcast_ctime ON podcast(create_time);
@@ -66,6 +69,7 @@ class Podcast(BaseModel):
     status: int = 0
     category: int = 0
     is_published: bool = False
+    audio_size: int = 0
 
 
 @app.command("get_audio_duration")
@@ -94,6 +98,7 @@ def get_podcast(
     audio_content: str = "",
     pid: str = "",
     language: str = "en",
+    quality: int = 60,
 ) -> Podcast:
     cover_img_url = ""
     if title:
@@ -107,6 +112,10 @@ def get_podcast(
         gen_img_prompt = f"podcast cover image which content is about {en_title}"
         img_file = save_gen_image(gen_img_prompt, uuid.uuid4().hex)
         cover_img_url = r2_upload("podcast", img_file)
+
+        compress_img_path = compress_img(img_path=img_file, quality=quality)
+        compress_img_url = r2_upload("podcast", compress_img_path)
+        logging.info(f"compress {img_file} to {compress_img_path} upload to r2: {compress_img_url}")
 
     audio_url = ""
     duration = 0
@@ -123,6 +132,7 @@ def get_podcast(
         audio_url=audio_url,
         cover_img_url=cover_img_url,
         duration=duration,
+        audio_size=os.path.getsize(audio_file),
     )
     logging.info(f"podcast:{podcast}")
     return podcast
@@ -156,7 +166,7 @@ def insert_podcast_to_d1(
     now = datetime.now()
     formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
     db_id = os.getenv("PODCAST_D1_DB_ID")
-    sql = "replace into podcast(pid,title,description,author,speakers,source,audio_url,audio_content,cover_img_url,duration,is_published,status,category,create_time,update_time) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);"
+    sql = "replace into podcast(pid,title,description,author,speakers,source,audio_url,audio_content,cover_img_url,duration,is_published,status,category,create_time,update_time,audio_size) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);"
     sql_params = [
         podcast.pid,
         podcast.title,
@@ -173,8 +183,11 @@ def insert_podcast_to_d1(
         category,
         formatted_time,
         formatted_time,
+        podcast.audio_size,
     ]
     res = d1_table_query(db_id, sql, sql_params)
+    if res["success"] is True:
+        logging.info(f"insert podcast success, url: https://weedge.us.kg/podcast/{podcast.pid}")
     return res["success"]
 
 
@@ -194,6 +207,34 @@ def update_podcast_cover_to_d1(
     ]
     res = d1_table_query(db_id, sql, sql_params)
     return res["success"]
+
+
+@app.command("update_podcast_audio_size_to_d1")
+def update_podcast_audio_size_to_d1():
+    now = datetime.now()
+    db_id = os.getenv("PODCAST_D1_DB_ID")
+    select_sql = "select pid,audio_url,audio_size from podcast where audio_size=0;"
+    select_res = d1_table_query(db_id, select_sql)
+    # print(select_res["result"][0]["results"])
+    for item in select_res["result"][0]["results"]:
+        # print(item["audio_url"])
+        file_name = item["audio_url"].split("/")[-1]
+        file_path = f"./audios/podcast/{file_name}"
+        # print(file_path)
+        if os.path.exists(file_path):
+            audio_size = os.path.getsize(file_path)
+        else:
+            audio_size = get_audio_length(item["audio_url"])
+        sql = "update podcast set audio_size=?, update_time=? where pid=?;"
+        formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
+        sql_params = [
+            audio_size,
+            formatted_time,
+            item["pid"],
+        ]
+        res = d1_table_query(db_id, sql, sql_params)
+        if res["success"] is True:
+            logging.info(f"update podcast success, url: https://weedge.us.kg/podcast/{item['pid']}")
 
 
 r"""

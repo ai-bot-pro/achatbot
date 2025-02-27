@@ -204,3 +204,6 @@ runs
 
 #ruff
 .ruff_cache/
+
+# xml
+*.xml
