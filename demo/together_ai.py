@@ -43,7 +43,7 @@ def gen_image(
     return res
 
 
-@app.command("save_image")
+@app.command("save_gen_image")
 def save_gen_image(
     prompt: str,
     file_name: str,
@@ -67,7 +67,7 @@ def save_gen_image(
 
 r"""
 python -m demo.image_together_flux gen_image "llama, sitting in a field of flowers"
-python -m demo.image_together_flux save_image "llama, sitting in a field of flowers" 123 --n 2
+python -m demo.image_together_flux save_gen_image "llama, sitting in a field of flowers" 123 --n 2
 """
 if __name__ == "__main__":
     logging.basicConfig(
