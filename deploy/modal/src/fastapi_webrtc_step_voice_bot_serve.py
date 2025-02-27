@@ -97,42 +97,43 @@ app = modal.App("fastapi_webrtc_step_voice_bot")
     allow_concurrent_inputs=ContainerRuntimeConfig.get_allow_concurrent_inputs(),
 )
 class Srv:
-    @modal.build()
-    def setup(self):
-        Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
-        # https://huggingface.co/docs/huggingface_hub/guides/download
-        from huggingface_hub import snapshot_download
-        from achatbot.common.types import MODELS_DIR
+    # run download_models.py to download models to volume
+    # @modal.build()
+    # def setup(self):
+    #     Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
+    #     # https://huggingface.co/docs/huggingface_hub/guides/download
+    #     from huggingface_hub import snapshot_download
+    #     from achatbot.common.types import MODELS_DIR
 
-        os.makedirs(MODELS_DIR, exist_ok=True)
-        logging.info(f"start downloading model to dir:{MODELS_DIR}")
+    #     os.makedirs(MODELS_DIR, exist_ok=True)
+    #     logging.info(f"start downloading model to dir:{MODELS_DIR}")
 
-        # asr model repo
-        if "sense_voice_asr" in os.getenv("ASR_TAG", "sense_voice_asr"):
-            local_dir = os.path.join(MODELS_DIR, "FunAudioLLM/SenseVoiceSmall")
-            snapshot_download(
-                repo_id="FunAudioLLM/SenseVoiceSmall",
-                repo_type="model",
-                allow_patterns="*",
-                local_dir=local_dir,
-            )
-            logging.info(f"sense_voice_asr model to dir:{local_dir} done")
+    #     # asr model repo
+    #     if "sense_voice_asr" in os.getenv("ASR_TAG", "sense_voice_asr"):
+    #         local_dir = os.path.join(MODELS_DIR, "FunAudioLLM/SenseVoiceSmall")
+    #         snapshot_download(
+    #             repo_id="FunAudioLLM/SenseVoiceSmall",
+    #             repo_type="model",
+    #             allow_patterns="*",
+    #             local_dir=local_dir,
+    #         )
+    #         logging.info(f"sense_voice_asr model to dir:{local_dir} done")
 
-        for repo_id in [
-            "stepfun-ai/Step-Audio-Tokenizer",
-            "stepfun-ai/Step-Audio-TTS-3B",
-            "stepfun-ai/Step-Audio-Chat",
-        ]:
-            logging.info(f"{repo_id} model to dir:{MODEL_DIR}")
-            snapshot_download(
-                repo_id=repo_id,
-                repo_type="model",
-                allow_patterns="*",
-                local_dir=os.path.join(MODEL_DIR, repo_id),
-            )
-            logging.info(f"{repo_id} model to dir:{MODEL_DIR} done")
+    #     for repo_id in [
+    #         "stepfun-ai/Step-Audio-Tokenizer",
+    #         "stepfun-ai/Step-Audio-TTS-3B",
+    #         "stepfun-ai/Step-Audio-Chat",
+    #     ]:
+    #         logging.info(f"{repo_id} model to dir:{MODEL_DIR}")
+    #         snapshot_download(
+    #             repo_id=repo_id,
+    #             repo_type="model",
+    #             allow_patterns="*",
+    #             local_dir=os.path.join(MODEL_DIR, repo_id),
+    #         )
+    #         logging.info(f"{repo_id} model to dir:{MODEL_DIR} done")
 
-        print("download model done")
+    #     print("download model done")
 
     @modal.enter()
     def enter(self):

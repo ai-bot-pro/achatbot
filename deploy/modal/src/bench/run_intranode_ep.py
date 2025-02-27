@@ -1,6 +1,6 @@
 import modal
 
-app = modal.App("ds-flash-mla")
+app = modal.App("ds-intranode-ep")
 
 # We also define the dependencies for our Function by specifying an
 # [Image](https://modal.com/docs/guide/images).
@@ -14,7 +14,7 @@ ds_intranode_ep_image = (
     .run_commands(
         "nvcc --version",
         "ls /etc/",
-        #"lld /usr/local/gdrcopy/lib/libgdrapi.so",
+        # "lld /usr/local/gdrcopy/lib/libgdrapi.so",
     )
     .pip_install()
 )
