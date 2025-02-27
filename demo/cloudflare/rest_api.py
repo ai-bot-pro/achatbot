@@ -42,7 +42,7 @@ def d1_table_query(db_id: str, sql: str, sql_params: List[str] = []) -> dict:
     data = res.read().decode("utf-8")
     # print(data)
     json_data = json.loads(data)
-    logging.info(f"body:{body}, db_id:{db_id}, query res:{json_data}")
+    # logging.info(f"body:{body}, db_id:{db_id}, query res:{json_data}")
     return json_data
 
 
