@@ -16,13 +16,13 @@ class ContainerRuntimeConfig:
                     "sense_voice_asr,deepgram_asr_processor,"
                     "tts_edge,"
                     "queue"
-                    "]~=0.0.8.12.6",
+                    "]~=0.0.8.13",
                     "huggingface_hub[hf_transfer]==0.24.7",
                 ],
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
             )
             .run_commands(
-                f"pip install achatbot[step_voice_processor]==0.0.8.12.6 --extra-index-url {os.getenv('EXTRA_INDEX_URL', 'https://pypi.org/simple/')}"
+                f"pip install achatbot[step_voice_processor]==0.0.8.13 --extra-index-url {os.getenv('EXTRA_INDEX_URL', 'https://pypi.org/simple/')}"
             )
             .env(
                 {
