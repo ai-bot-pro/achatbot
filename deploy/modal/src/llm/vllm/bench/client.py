@@ -31,6 +31,7 @@ MINUTES = 60  # seconds
     retries=0,
     # how long should we stay up with no requests?
     container_idle_timeout=15 * MINUTES,
+    timeout=60 * MINUTES,
 )
 def bench(url: str, num_prompts: int = 2):
     import subprocess
@@ -67,6 +68,7 @@ def bench(url: str, num_prompts: int = 2):
 """
 modal run src/llm/vllm/bench/client.py --url https://weedge--vllm-bench-serve-dev.modal.run
 modal run src/llm/vllm/bench/client.py --url https://weedge--vllm-bench-serve-dev.modal.run --num-prompts 100
+modal run src/llm/vllm/bench/client.py --url https://weedge--vllm-bench-serve-dev.modal.run --num-prompts 1000
 """
 
 
