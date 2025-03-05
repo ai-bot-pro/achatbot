@@ -50,6 +50,11 @@ TP=1 PP=1 IMAGE_GPU=L40S modal serve src/llm/vllm/bench/serve.py
 VLLM_USE_V1=0 TP=2 PP=2 IMAGE_GPU=L4:4 modal serve src/llm/vllm/bench/serve.py
 VLLM_USE_V1=0 TP=4 PP=2 IMAGE_GPU=L4:8 modal serve src/llm/vllm/bench/serve.py
 
+# only scale TP
+TP=2 PP=1 IMAGE_GPU=L4 modal serve src/llm/vllm/bench/serve.py
+TP=4 PP=1 IMAGE_GPU=L4 modal serve src/llm/vllm/bench/serve.py
+TP=8 PP=1 IMAGE_GPU=L4 modal serve src/llm/vllm/bench/serve.py
+
 IS_PROFILE=1 modal serve src/llm/vllm/bench/serve.py
 
 curl -vv -X GET "https://weedge--vllm-bench-serve-dev.modal.run/health" -H  "accept: application/json"
