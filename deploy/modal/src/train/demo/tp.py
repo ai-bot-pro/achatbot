@@ -16,7 +16,7 @@ demo_image = modal.Image.debian_slim(python_version="3.12").pip_install("torch")
     # how long should we stay up with no requests?
     container_idle_timeout=15 * 60,
 )
-def run():
+def run(model_name="linear"):
     import torch
     import torch.multiprocessing as mp
 
@@ -25,21 +25,37 @@ def run():
         print("需要至少 2 个 GPU 来演示张量并行")
         return
 
-    print(f"Running Tensor Parallelism with {world_size} GPUs")
-    mp.spawn(train_tensor_parallel, args=(world_size,), nprocs=world_size, join=True)
+    print(f"Running model {model_name} Tensor Parallelism with {world_size} GPUs")
+    torch.multiprocessing.set_start_method("spawn", force=True)
+    mp.spawn(
+        train_tensor_parallel,
+        args=(
+            world_size,
+            model_name,
+        ),
+        nprocs=world_size,
+        join=True,
+    )
 
 
 # modal run src/train/demo/tp.py
 @app.local_entrypoint()
-def main():
-    run.remote()
+def main(model_name="linear"):
+    run.remote(model_name)
 
 
 # 训练函数
-def train_tensor_parallel(rank, world_size):
+def train_tensor_parallel(rank, world_size, model_name="linear"):
     import torch
     import torch.nn as nn
     import torch.optim as optim
+    from torch.distributed.tensor.parallel import (
+        parallelize_module,
+        ColwiseParallel,
+        RowwiseParallel,
+        PrepareModuleInput,
+        SequenceParallel,
+    )
     import torch.distributed as dist
     import os
 
@@ -56,7 +72,7 @@ def train_tensor_parallel(rank, world_size):
 
     # 张量并行的线性层
     class TensorParallelLinear(nn.Module):
-        def __init__(self, input_size, output_size, rank, world_size):
+        def __init__(self, seq_len, output_size, rank, world_size):
             super(TensorParallelLinear, self).__init__()
             self.rank = rank
             self.world_size = world_size
@@ -66,7 +82,7 @@ def train_tensor_parallel(rank, world_size):
             assert output_size % world_size == 0, "Output size must be divisible by world_size"
 
             # 每个设备只持有部分权重
-            self.weight = nn.Parameter(torch.randn(self.local_output_size, input_size))
+            self.weight = nn.Parameter(torch.randn(self.local_output_size, seq_len))
             self.bias = nn.Parameter(torch.randn(self.local_output_size))
 
         def forward(self, x):
@@ -82,7 +98,7 @@ def train_tensor_parallel(rank, world_size):
 
     # 张量并行的 MLP 层
     class TensorParallelMLP(nn.Module):
-        def __init__(self, input_size, hidden_size, output_size, rank, world_size):
+        def __init__(self, seq_len, hidden_size, output_size, rank, world_size):
             super(TensorParallelMLP, self).__init__()
             self.rank = rank
             self.world_size = world_size
@@ -90,7 +106,7 @@ def train_tensor_parallel(rank, world_size):
             # 第一层：按列分割隐藏维度
             assert hidden_size % world_size == 0, "hidden_size must be divisible by world_size"
             self.local_hidden_size = hidden_size // world_size
-            self.fc1_weight = nn.Parameter(torch.randn(self.local_hidden_size, input_size))
+            self.fc1_weight = nn.Parameter(torch.randn(self.local_hidden_size, seq_len))
             self.fc1_bias = nn.Parameter(torch.randn(self.local_hidden_size))
             self.relu = nn.ReLU()
 
@@ -125,6 +141,82 @@ def train_tensor_parallel(rank, world_size):
 
             return global_output
 
+    # 张量并行的多头注意力机制
+    class TensorParallelMultiheadAttention(nn.Module):
+        def __init__(self, embed_dim, num_heads, rank, world_size):
+            super(TensorParallelMultiheadAttention, self).__init__()
+            self.rank = rank
+            self.world_size = world_size
+            self.num_heads = num_heads
+            self.embed_dim = embed_dim
+
+            # 每个设备分担部分头
+            assert num_heads % world_size == 0, "num_heads must be divisible by world_size"
+            self.local_heads = num_heads // world_size
+            self.head_dim = embed_dim // num_heads
+
+            # 分片 Q, K, V 的线性层
+            self.qkv_dim = self.local_heads * self.head_dim  # 每个设备处理的维度
+            self.q_proj = nn.Linear(embed_dim, self.qkv_dim)
+            self.k_proj = nn.Linear(embed_dim, self.qkv_dim)
+            self.v_proj = nn.Linear(embed_dim, self.qkv_dim)
+            self.out_proj = nn.Linear(self.qkv_dim * world_size, embed_dim)
+
+        def forward(self, x):
+            batch_size, seq_len, _ = x.size()
+
+            # 计算 Q, K, V
+            q = self.q_proj(x)  # [batch_size, seq_len, local_heads * head_dim]
+            k = self.k_proj(x)
+            v = self.v_proj(x)
+
+            # 重塑为多头格式
+            q = q.view(batch_size, seq_len, self.local_heads, self.head_dim).transpose(1, 2)
+            k = k.view(batch_size, seq_len, self.local_heads, self.head_dim).transpose(1, 2)
+            v = v.view(batch_size, seq_len, self.local_heads, self.head_dim).transpose(1, 2)
+
+            # 注意力计算
+            scores = torch.matmul(q, k.transpose(-2, -1)) / (self.head_dim**0.5)
+            attn = torch.softmax(scores, dim=-1)
+            context = torch.matmul(attn, v)
+
+            # 重塑回原始维度
+            context = (
+                context.transpose(1, 2).contiguous().view(batch_size, seq_len, self.qkv_dim)
+            )  # [batch_size, seq_len, qkv_dim]
+
+            # All-Gather 收集所有设备的输出
+            global_context = [torch.zeros_like(context) for _ in range(self.world_size)]
+            dist.all_gather(global_context, context)  # [rank0_context, rank1_context, ...]
+            global_context = torch.cat(
+                global_context, dim=-1
+            )  # 拼接所有头的输出 [batch_size, seq_len, qkv_dim*world_size]
+
+            # 输出投影
+            output = self.out_proj(
+                global_context
+            )  # [batch_size, seq_len, qkv_dim*world_size] -> [batch_size, seq_len, embed_dim]
+
+            return output
+
+    # Transformer 层
+    class TPMHATransformerLayer(nn.Module):
+        def __init__(self, embed_dim, num_heads, rank, world_size):
+            super(TPMHATransformerLayer, self).__init__()
+            self.attn = TensorParallelMultiheadAttention(embed_dim, num_heads, rank, world_size)
+            self.ffn = nn.Sequential(
+                nn.Linear(embed_dim, embed_dim * 4),
+                nn.ReLU(),
+                nn.Linear(embed_dim * 4, embed_dim),
+            )
+            self.att_norm = nn.LayerNorm(embed_dim)
+            self.ffn_norm = nn.LayerNorm(embed_dim)
+
+        def forward(self, x):
+            x = x + self.attn(self.att_norm(x))
+            x = x + self.ffn(self.ffn_norm(x))
+            return x
+
     # 设置分布式环境
     print(f"setup_distributed rank:{rank} world_size:{world_size}")
     setup_distributed(rank, world_size)
@@ -132,19 +224,41 @@ def train_tensor_parallel(rank, world_size):
     device = torch.device(f"cuda:{rank}")
     print(f"Rank {rank} using device: {device}")
 
-    # 参数设置
-    input_size = 16
-    hidden_size = 32  # 必须能被 world_size 整除 # 线性层没有隐藏层
-    output_size = 8  # 必须能被 world_size 整除
     batch_size = 4
-
     # 初始化模型
-    model = TensorParallelLinear(input_size, output_size, rank, world_size).to(device)
-    # model = TensorParallelMLP(input_size, hidden_size, output_size, rank, world_size).to(device)
-
-    # 生成模拟输入数据
-    x = torch.randn(batch_size, input_size, requires_grad=True).to(device)
-    target = torch.randn(batch_size, output_size, requires_grad=True).to(device)
+    if model_name == "mlp":
+        # 参数设置
+        seq_len = 16
+        hidden_size = 32  # 必须能被 world_size 整除
+        output_size = 8  # 必须能被 world_size 整除
+        model = TensorParallelMLP(seq_len, hidden_size, output_size, rank, world_size).to(device)
+        # 生成模拟输入数据
+        x = torch.randn(batch_size, seq_len, requires_grad=True).to(device)
+        # target = torch.randn(batch_size, output_size, requires_grad=True).to(device)
+    elif model_name == "mha":
+        # 参数设置
+        embed_dim = 64  # hidden_size
+        num_heads = 8  # 必须能被 world_size 整除
+        seq_len = 10
+        model = TensorParallelMultiheadAttention(embed_dim, num_heads, rank, world_size).to(device)
+        # 生成模拟输入数据
+        x = torch.randn(batch_size, seq_len, embed_dim, requires_grad=True).to(device)
+    elif model_name == "mha_mlp":  # no embedding + tp mha + mlp no tp
+        # 参数设置
+        embed_dim = 64  # hidden_size
+        num_heads = 8  # 必须能被 world_size 整除
+        seq_len = 10
+        model = TPMHATransformerLayer(embed_dim, num_heads, rank, world_size).to(device)
+        # 生成模拟输入数据
+        x = torch.randn(batch_size, seq_len, embed_dim, requires_grad=True).to(device)
+    else:  # 默认线性层，线性层没有隐藏层
+        # 参数设置
+        seq_len = 16
+        output_size = 8  # 必须能被 world_size 整除
+        model = TensorParallelLinear(seq_len, output_size, rank, world_size).to(device)
+        # 生成模拟输入数据
+        x = torch.randn(batch_size, seq_len, requires_grad=True).to(device)
+        # target = torch.randn(batch_size, output_size, requires_grad=True).to(device)
 
     # 定义损失函数和优化器
     criterion = nn.MSELoss()  # 回归任务
@@ -153,19 +267,23 @@ def train_tensor_parallel(rank, world_size):
 
     # 训练步骤
     model.train()
-    optimizer.zero_grad()
+    for epoch in range(5):
+        optimizer.zero_grad()
 
-    # 前向传播
-    output = model(x)
-    loss = criterion(output, target)
+        # 前向传播
+        output = model(x)
+        target = torch.randn_like(output)  # 模拟目标
+        target.requires_grad = True
+        loss = criterion(output, target.to(device))
 
-    # 反向传播
-    loss.backward()
-    optimizer.step()
+        # 反向传播
+        loss.backward()
+        optimizer.step()
 
-    # 同步并打印损失
-    dist.barrier()
-    # if rank == 0:
-    print(f"rank {rank}, Loss: {loss.item():.4f}")
+        # 同步并打印损失
+        dist.barrier()
+        # print(f"rank {rank}, Loss: {loss.item():.4f}")
+        if rank == 0:
+            print(f"Epoch {epoch+1}, Loss: {loss.item():.4f}")
 
     cleanup()
