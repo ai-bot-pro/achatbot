@@ -49,13 +49,6 @@ def train_tensor_parallel(rank, world_size, model_name="linear"):
     import torch
     import torch.nn as nn
     import torch.optim as optim
-    from torch.distributed.tensor.parallel import (
-        parallelize_module,
-        ColwiseParallel,
-        RowwiseParallel,
-        PrepareModuleInput,
-        SequenceParallel,
-    )
     import torch.distributed as dist
     import os
 
@@ -98,22 +91,22 @@ def train_tensor_parallel(rank, world_size, model_name="linear"):
 
     # 张量并行的 MLP 层
     class TensorParallelMLP(nn.Module):
-        def __init__(self, seq_len, hidden_size, output_size, rank, world_size):
+        def __init__(self, seq_len, embed_dim, output_size, rank, world_size):
             super(TensorParallelMLP, self).__init__()
             self.rank = rank
             self.world_size = world_size
 
             # 第一层：按列分割隐藏维度
-            assert hidden_size % world_size == 0, "hidden_size must be divisible by world_size"
-            self.local_hidden_size = hidden_size // world_size
-            self.fc1_weight = nn.Parameter(torch.randn(self.local_hidden_size, seq_len))
-            self.fc1_bias = nn.Parameter(torch.randn(self.local_hidden_size))
+            assert embed_dim % world_size == 0, "embed_dim must be divisible by world_size"
+            self.local_embed_dim = embed_dim // world_size
+            self.fc1_weight = nn.Parameter(torch.randn(self.local_embed_dim, seq_len))
+            self.fc1_bias = nn.Parameter(torch.randn(self.local_embed_dim))
             self.relu = nn.ReLU()
 
             # 第二层：按行分割输出维度
             assert output_size % world_size == 0, "output_size must be divisible by world_size"
             self.local_output_size = output_size // world_size
-            self.fc2_weight = nn.Parameter(torch.randn(self.local_output_size, hidden_size))
+            self.fc2_weight = nn.Parameter(torch.randn(self.local_output_size, embed_dim))
             self.fc2_bias = nn.Parameter(torch.randn(self.local_output_size))
 
         # @torch.no_grad()
@@ -121,12 +114,12 @@ def train_tensor_parallel(rank, world_size, model_name="linear"):
             # 第一层计算：局部隐藏输出
             hidden = (
                 torch.matmul(x, self.fc1_weight.t()) + self.fc1_bias
-            )  # [batch_size, local_hidden_size]
+            )  # [batch_size, local_embed_dim]
 
             # All-Gather 收集所有设备的隐藏输出
             global_hidden = [torch.zeros_like(hidden) for _ in range(self.world_size)]
             dist.all_gather(global_hidden, hidden)
-            global_hidden = torch.cat(global_hidden, dim=-1)  # [batch_size, hidden_size]
+            global_hidden = torch.cat(global_hidden, dim=-1)  # [batch_size, embed_dim]
             global_hidden = self.relu(global_hidden)
 
             # 第二层计算：局部输出
@@ -217,6 +210,52 @@ def train_tensor_parallel(rank, world_size, model_name="linear"):
             x = x + self.ffn(self.ffn_norm(x))
             return x
 
+    # 张量并行的 Embedding 层
+    class TensorParallelEmbedding(nn.Module):
+        def __init__(self, num_embeddings, embedding_dim, rank, world_size):
+            super(TensorParallelEmbedding, self).__init__()
+            self.rank = rank
+            self.world_size = world_size
+            self.embedding_dim = embedding_dim
+
+            # 按词汇表维度分割
+            assert (
+                num_embeddings % world_size == 0
+            ), "num_embeddings must be divisible by world_size"
+            self.local_num_embeddings = num_embeddings // world_size
+
+            # 每个设备持有部分词汇的嵌入
+            self.embedding = nn.Embedding(self.local_num_embeddings, embedding_dim)
+
+            # 计算本地词汇的起始和结束索引
+            self.start_idx = rank * self.local_num_embeddings
+            self.end_idx = (rank + 1) * self.local_num_embeddings
+
+        def forward(self, input_ids):
+            # 将输入 ID 映射到本地范围
+            batch_size, seq_len = input_ids.size()
+            mask = (input_ids >= self.start_idx) & (input_ids < self.end_idx)
+            local_input_ids = input_ids.clone()
+            local_input_ids[~mask] = 0  # 非本地 ID 设为 0（假设 0 在本地范围）
+            local_input_ids[mask] -= self.start_idx  # 调整到本地索引
+
+            # 本地嵌入计算
+            local_output = self.embedding(local_input_ids)  # [batch_size, seq_len, embedding_dim]
+
+            # All-Gather 收集所有设备的输出
+            global_output = [torch.zeros_like(local_output) for _ in range(self.world_size)]
+            dist.all_gather(global_output, local_output)
+
+            # 根据输入 ID 选择正确的输出
+            output = torch.zeros_like(local_output)
+            for i in range(self.world_size):
+                start = i * self.local_num_embeddings
+                end = (i + 1) * self.local_num_embeddings
+                mask = (input_ids >= start) & (input_ids < end)
+                output[mask] = global_output[i][mask]
+
+            return output
+
     # 设置分布式环境
     print(f"setup_distributed rank:{rank} world_size:{world_size}")
     setup_distributed(rank, world_size)
@@ -225,35 +264,39 @@ def train_tensor_parallel(rank, world_size, model_name="linear"):
     print(f"Rank {rank} using device: {device}")
 
     batch_size = 4
+    seq_len = 10
     # 初始化模型
     if model_name == "mlp":
         # 参数设置
-        seq_len = 16
-        hidden_size = 32  # 必须能被 world_size 整除
+        embed_dim = 64  # 必须能被 world_size 整除
         output_size = 8  # 必须能被 world_size 整除
-        model = TensorParallelMLP(seq_len, hidden_size, output_size, rank, world_size).to(device)
+        model = TensorParallelMLP(seq_len, embed_dim, output_size, rank, world_size).to(device)
         # 生成模拟输入数据
         x = torch.randn(batch_size, seq_len, requires_grad=True).to(device)
         # target = torch.randn(batch_size, output_size, requires_grad=True).to(device)
     elif model_name == "mha":
         # 参数设置
-        embed_dim = 64  # hidden_size
+        embed_dim = 64  # embed_dim
         num_heads = 8  # 必须能被 world_size 整除
-        seq_len = 10
         model = TensorParallelMultiheadAttention(embed_dim, num_heads, rank, world_size).to(device)
         # 生成模拟输入数据
         x = torch.randn(batch_size, seq_len, embed_dim, requires_grad=True).to(device)
+    elif model_name == "embedding":
+        # 参数设置
+        embed_dim = 64
+        num_embeddings = 26  # 词汇表大小，必须能被 world_size 整除, 字母表大小
+        model = TensorParallelEmbedding(num_embeddings, embed_dim, rank, world_size).to(device)
+        # 生成模拟输入数据
+        x = torch.randint(0, num_embeddings, (batch_size, seq_len)).to(device)
     elif model_name == "mha_mlp":  # no embedding + tp mha + mlp no tp
         # 参数设置
-        embed_dim = 64  # hidden_size
+        embed_dim = 64  # embed_dim
         num_heads = 8  # 必须能被 world_size 整除
-        seq_len = 10
         model = TPMHATransformerLayer(embed_dim, num_heads, rank, world_size).to(device)
         # 生成模拟输入数据
         x = torch.randn(batch_size, seq_len, embed_dim, requires_grad=True).to(device)
     else:  # 默认线性层，线性层没有隐藏层
         # 参数设置
-        seq_len = 16
         output_size = 8  # 必须能被 world_size 整除
         model = TensorParallelLinear(seq_len, output_size, rank, world_size).to(device)
         # 生成模拟输入数据
