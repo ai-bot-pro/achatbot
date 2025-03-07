@@ -2,7 +2,7 @@ import os
 import modal
 
 
-app = modal.App("train-demo-ddp")
+app = modal.App("train-demo-fsdp")
 
 demo_image = modal.Image.debian_slim(python_version="3.12").pip_install("torch")
 
@@ -27,7 +27,7 @@ def run():
     mp.spawn(train_fsdp, args=(world_size,), nprocs=world_size, join=True)
 
 
-# modal run src/train/demo/dp.py
+# modal run src/train/demo/fsdp.py
 @app.local_entrypoint()
 def main():
     run.remote()
@@ -49,6 +49,8 @@ def train_fsdp(rank, world_size):
     def setup_distributed(rank, world_size):
         os.environ["MASTER_ADDR"] = "localhost"
         os.environ["MASTER_PORT"] = "12355"
+        # https://pytorch.org/docs/stable/distributed.html#torch.distributed.init_process_group
+        # https://pytorch.org/docs/stable/distributed.html gpu use nccl
         dist.init_process_group("nccl", rank=rank, world_size=world_size)
         torch.cuda.set_device(rank)
 

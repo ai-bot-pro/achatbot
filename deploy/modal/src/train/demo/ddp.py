@@ -30,7 +30,7 @@ def run():
     mp.spawn(train_ddp, args=(world_size,), nprocs=world_size, join=True)
 
 
-# modal run src/train/demo/dp.py
+# modal run src/train/demo/ddp.py
 @app.local_entrypoint()
 def main():
     run.remote()
@@ -50,6 +50,8 @@ def train_ddp(rank, world_size):
     def setup_distributed(rank, world_size):
         os.environ["MASTER_ADDR"] = "localhost"
         os.environ["MASTER_PORT"] = "12355"
+        # https://pytorch.org/docs/stable/distributed.html#torch.distributed.init_process_group
+        # https://pytorch.org/docs/stable/distributed.html gpu use nccl
         dist.init_process_group("nccl", rank=rank, world_size=world_size)
         torch.cuda.set_device(rank)
 
