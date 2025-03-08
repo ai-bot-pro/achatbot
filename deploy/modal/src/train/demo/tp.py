@@ -80,7 +80,7 @@ def train_tensor_parallel(rank, world_size, model_name="linear"):
 
         def forward(self, x):
             # 本地计算：每个设备处理部分输出
-            local_output = torch.matmul(x, self.weight.t()) + self.bias  # xw+b
+            local_output = torch.matmul(x, self.weight.t()) + self.bias  # XxW^T+B
 
             # 全局输出：通过 All-Gather 收集所有设备的输出
             global_output = [torch.zeros_like(local_output) for _ in range(self.world_size)]
@@ -89,42 +89,88 @@ def train_tensor_parallel(rank, world_size, model_name="linear"):
 
             return global_output
 
-    # 张量并行的 MLP 层
+    # 张量并行的 MLP 层(使用 all_gather/all_reduce)
     class TensorParallelMLP(nn.Module):
-        def __init__(self, seq_len, embed_dim, output_size, rank, world_size):
+        def __init__(
+            self,
+            seq_len,
+            embed_dim,
+            output_size,
+            rank,
+            world_size,
+            communication="all_reduce",
+        ):
             super(TensorParallelMLP, self).__init__()
             self.rank = rank
             self.world_size = world_size
+            self.communication = communication
 
-            # 第一层：按列分割隐藏维度
-            assert embed_dim % world_size == 0, "embed_dim must be divisible by world_size"
-            self.local_embed_dim = embed_dim // world_size
-            self.fc1_weight = nn.Parameter(torch.randn(self.local_embed_dim, seq_len))
-            self.fc1_bias = nn.Parameter(torch.randn(self.local_embed_dim))
-            self.relu = nn.ReLU()
+            if communication == "all_reduce":
+                # 第一层：按列分割隐藏维度
+                assert embed_dim % world_size == 0, "embed_dim must be divisible by world_size"
+                self.local_embed_dim = embed_dim // world_size
+                self.fc1_weight = nn.Parameter(torch.randn(seq_len, self.local_embed_dim))
+                self.fc1_bias = nn.Parameter(torch.randn(self.local_embed_dim))
+                self.relu = nn.ReLU()
 
-            # 第二层：按行分割输出维度
-            assert output_size % world_size == 0, "output_size must be divisible by world_size"
-            self.local_output_size = output_size // world_size
-            self.fc2_weight = nn.Parameter(torch.randn(self.local_output_size, embed_dim))
-            self.fc2_bias = nn.Parameter(torch.randn(self.local_output_size))
+                # 第二层：按行分割隐藏维度
+                self.fc2_weight = nn.Parameter(torch.randn(self.local_embed_dim, output_size))
+                self.fc2_bias = nn.Parameter(torch.randn(output_size))
+            else:  # default all_gather
+                # 第一层：按列分割隐藏维度
+                assert embed_dim % world_size == 0, "embed_dim must be divisible by world_size"
+                self.local_embed_dim = embed_dim // world_size
+                self.fc1_weight = nn.Parameter(torch.randn(seq_len, self.local_embed_dim))
+                self.fc1_bias = nn.Parameter(torch.randn(self.local_embed_dim))
+                self.relu = nn.ReLU()
 
-        # @torch.no_grad()
-        def forward(self, x):
+                # 第二层：按列分割输出维度
+                assert output_size % world_size == 0, "output_size must be divisible by world_size"
+                self.local_output_size = output_size // world_size
+                self.fc2_weight = nn.Parameter(torch.randn(embed_dim, self.local_output_size))
+                self.fc2_bias = nn.Parameter(torch.randn(self.local_output_size))
+
+        def forward(self, x):  # x: [batch_size, seq_len]
+            if self.communication == "all_reduce":
+                return self.all_reduce_forward(x)
+            return self.all_gather_forward(x)
+
+        def all_reduce_forward(self, x):
+            """
+            1次 all_reduce
+            减少通信量的场景，尤其在输入维度较大时
+            """
             # 第一层计算：局部隐藏输出
-            hidden = (
-                torch.matmul(x, self.fc1_weight.t()) + self.fc1_bias
+            local_hidden = (  # [batch_size, seq_len] x [seq_len, local_embed_dim] + [local_embed_dim]
+                torch.matmul(x, self.fc1_weight) + self.fc1_bias
+            )  # [batch_size, local_embed_dim]
+
+            # 第二层计算：局部输出
+            output = (  # [batch_size, local_embed_dim] x [local_embed_dim, output_size] + [output_size]
+                torch.matmul(local_hidden, self.fc2_weight) + self.fc2_bias
+            )  # [batch_size, output_size]
+
+            # All-Reduce 汇总所有设备的输出广播
+            dist.all_reduce(output, op=dist.ReduceOp.SUM)
+
+            return output
+
+        def all_gather_forward(self, x):
+            """2次 all_gather"""
+            # 第一层计算：局部隐藏输出
+            local_hidden = (  # [batch_size, seq_len] x [seq_len, local_embed_dim] + [local_embed_dim]
+                torch.matmul(x, self.fc1_weight) + self.fc1_bias
             )  # [batch_size, local_embed_dim]
 
             # All-Gather 收集所有设备的隐藏输出
-            global_hidden = [torch.zeros_like(hidden) for _ in range(self.world_size)]
-            dist.all_gather(global_hidden, hidden)
+            global_hidden = [torch.zeros_like(local_hidden) for _ in range(self.world_size)]
+            dist.all_gather(global_hidden, local_hidden)
             global_hidden = torch.cat(global_hidden, dim=-1)  # [batch_size, embed_dim]
             global_hidden = self.relu(global_hidden)
 
             # 第二层计算：局部输出
-            local_output = (
-                torch.matmul(global_hidden, self.fc2_weight.t()) + self.fc2_bias
+            local_output = (  # [batch_size, embed_dim] x [embed_dim, local_output_size] + [local_output_size]
+                torch.matmul(global_hidden, self.fc2_weight) + self.fc2_bias
             )  # [batch_size, local_output_size]
 
             # All-Gather 收集所有设备的输出
@@ -271,6 +317,16 @@ def train_tensor_parallel(rank, world_size, model_name="linear"):
         embed_dim = 64  # 必须能被 world_size 整除
         output_size = 8  # 必须能被 world_size 整除
         model = TensorParallelMLP(seq_len, embed_dim, output_size, rank, world_size).to(device)
+        # 生成模拟输入数据
+        x = torch.randn(batch_size, seq_len, requires_grad=True).to(device)
+        # target = torch.randn(batch_size, output_size, requires_grad=True).to(device)
+    elif model_name == "mlp_all_gater":
+        # 参数设置
+        embed_dim = 64  # 必须能被 world_size 整除
+        output_size = 8  # 必须能被 world_size 整除
+        model = TensorParallelMLP(
+            seq_len, embed_dim, output_size, rank, world_size, communication="all_gather"
+        ).to(device)
         # 生成模拟输入数据
         x = torch.randn(batch_size, seq_len, requires_grad=True).to(device)
         # target = torch.randn(batch_size, output_size, requires_grad=True).to(device)
