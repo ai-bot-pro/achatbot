@@ -320,7 +320,7 @@ def train_tensor_parallel(rank, world_size, model_name="linear"):
         # 生成模拟输入数据
         x = torch.randn(batch_size, seq_len, requires_grad=True).to(device)
         # target = torch.randn(batch_size, output_size, requires_grad=True).to(device)
-    elif model_name == "mlp_all_gater":
+    elif model_name == "mlp_all_gather":
         # 参数设置
         embed_dim = 64  # 必须能被 world_size 整除
         output_size = 8  # 必须能被 world_size 整除
