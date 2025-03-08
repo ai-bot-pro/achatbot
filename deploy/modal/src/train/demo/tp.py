@@ -38,7 +38,22 @@ def run(model_name="linear"):
     )
 
 
-# modal run src/train/demo/tp.py
+"""
+# linear
+modal run src/train/demo/tp.py
+# mlp use all_reduce
+modal run src/train/demo/tp.py --model-name mlp
+# mlp use all_gather
+modal run src/train/demo/tp.py --model-name mlp_all_gather
+# mha
+modal run src/train/demo/tp.py --model-name mha
+# embedding
+modal run src/train/demo/tp.py --model-name embedding
+# mha_mlp
+modal run src/train/demo/tp.py --model-name mha_mlp
+"""
+
+
 @app.local_entrypoint()
 def main(model_name="linear"):
     run.remote(model_name)
