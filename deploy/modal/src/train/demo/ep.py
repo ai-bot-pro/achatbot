@@ -76,11 +76,12 @@ def train_ep(world_size):
 
     # MoE 模型
     class MoE(nn.Module):
-        def __init__(self, input_size, hidden_size, num_experts, rank, world_size):
+        def __init__(self, input_size, hidden_size, num_experts, rank, world_size, top_k):
             super(MoE, self).__init__()
             self.rank = rank
             self.world_size = world_size
             self.num_experts = num_experts
+            self.top_k = top_k
 
             # 门控网络在所有设备上运行
             self.gating = GatingNetwork(input_size, num_experts)
@@ -92,36 +93,56 @@ def train_ep(world_size):
             # 门控网络计算每个专家的得分
             gate_scores = self.gating(x)  # [batch_size, num_experts]
 
-            # 选择得分最高的专家（top-1）
-            top_expert_idx = torch.argmax(gate_scores, dim=-1)  # [batch_size]
+            # 选择 Top-k 专家
+            topk_scores, topk_indices = torch.topk(
+                gate_scores, self.top_k, dim=-1
+            )  # [batch_size, k]
 
             # 当前设备的专家 ID
             local_expert_id = self.rank
 
-            # 初始化输出
+            # 初始化输出为具有梯度的张量
             batch_size = x.size(0)
-            output = torch.zeros(batch_size, self.expert.fc.out_features).to(x.device)
+            outputs = []  # 使用列表存储每个样本的输出
+            for i in range(batch_size):
+                sample_output = torch.zeros(
+                    self.expert.fc.out_features, device=x.device, requires_grad=True
+                )
+                if local_expert_id in topk_indices[i]:
+                    local_output = self.expert(x[i : i + 1])  # 处理单个样本
+                    idx = (topk_indices[i] == local_expert_id).nonzero(as_tuple=True)[0]
+                    score = topk_scores[i, idx]
+                    sample_output = local_output.squeeze(0) * score  # 加权输出
+                outputs.append(sample_output)
 
-            # 处理分配给当前设备的输入
-            mask = top_expert_idx == local_expert_id
-            if mask.any():
-                local_input = x[mask]
-                local_output = self.expert(local_input)
-                output[mask] = local_output
+            # 将输出堆叠成批次
+            output = torch.stack(outputs)
 
-            # 使用 All-Gather 收集所有专家的输出
-            global_output = [torch.zeros_like(output) for _ in range(self.world_size)]
-            dist.all_gather(global_output, output)
+            # 创建用于收集输出的列表
+            global_output = []
+            # 为每个进程创建一个副本
+            for _ in range(self.world_size):
+                global_output.append(torch.zeros_like(output))
 
-            # 根据门控得分加权合并输出
-            final_output = torch.zeros_like(output)
+            # 使用 broadcast 来收集所有专家的输出
             for i in range(self.world_size):
-                final_output += global_output[i] * gate_scores[:, i].unsqueeze(-1)
+                if self.rank == i:
+                    # 当前进程广播其输出
+                    broadcast_tensor = output
+                else:
+                    # 其他进程接收广播
+                    broadcast_tensor = torch.zeros_like(output)
+                # 广播操作
+                dist.broadcast(broadcast_tensor, src=i)
+                global_output[i] = broadcast_tensor
+
+            # 合并所有专家的加权输出
+            final_output = sum(global_output)  # 直接累加（已加权）
 
             return final_output
 
     # 专家并行训练函数
-    def train_expert_parallel(rank, world_size, input_size, hidden_size, data, labels):
+    def train_expert_parallel(rank, world_size, input_size, hidden_size, data, labels, top_k):
         # 设置分布式环境
         setup_distributed(rank, world_size)
 
@@ -133,10 +154,11 @@ def train_ep(world_size):
         data, labels = data.to(device), labels.to(device)
 
         # 初始化 MoE 模型
-        model = MoE(input_size, hidden_size, num_experts, rank, world_size).to(device)
+        model = MoE(input_size, hidden_size, num_experts, rank, world_size, top_k).to(device)
 
         # 定义损失函数和优化器
         criterion = nn.MSELoss()  # 假设回归任务
+        # criterion = nn.CrossEntropyLoss()  # 分类任务
         optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
 
         # 训练步骤
@@ -163,15 +185,16 @@ def train_ep(world_size):
     batch_size = 8
     input_size = 16
     hidden_size = 32
-    data = torch.randn(batch_size, input_size)
-    labels = torch.randn(batch_size, hidden_size)  # 假设回归任务
+    top_k = 2
+    data = torch.randn(batch_size, input_size, requires_grad=True)
+    labels = torch.randn(batch_size, hidden_size, requires_grad=True)  # 启用梯度
 
     # 启动进程
     processes = []
     for rank in range(world_size):
         p = Process(
             target=train_expert_parallel,
-            args=(rank, world_size, input_size, hidden_size, data, labels),
+            args=(rank, world_size, input_size, hidden_size, data, labels, top_k),
         )
         p.start()
         processes.append(p)
