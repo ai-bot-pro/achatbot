@@ -26,7 +26,7 @@ def run():
     train_sp(world_size)
 
 
-# modal run src/train/demo/ddp.py
+# modal run src/train/demo/sp.py
 @app.local_entrypoint()
 def main():
     run.remote()
@@ -71,23 +71,26 @@ def train_sp(world_size):
 
     # 定义简单的 Transformer 层（支持序列并行）
     class SequenceParallelTransformer(nn.Module):
-        def __init__(self, embed_dim, num_heads, rank, world_size):
+        def __init__(self, embed_dim, num_heads, rank, world_size, dropout=0.01):
             super(SequenceParallelTransformer, self).__init__()
             self.rank = rank
             self.world_size = world_size
             self.embed_dim = embed_dim
 
             # 自注意力层
+            self.attent_norm = nn.LayerNorm(embed_dim)
             self.attn = nn.MultiheadAttention(embed_dim, num_heads)
             self.norm = nn.LayerNorm(embed_dim)
             self.ffn = nn.Sequential(
                 nn.Linear(embed_dim, embed_dim * 4), nn.ReLU(), nn.Linear(embed_dim * 4, embed_dim)
             )
             self.norm_ffn = nn.LayerNorm(embed_dim)
+            self.attent_dropout = nn.Dropout(dropout)
 
         def forward(self, x):
             # x 的形状: [local_seq_len, batch_size, embed_dim]
             local_seq_len, batch_size, _ = x.size()
+            x = self.attent_norm(x)
 
             # 在序列并行中，每个 GPU 只处理部分序列
             # 使用 all_gather 收集完整的序列用于注意力计算
@@ -103,6 +106,7 @@ def train_sp(world_size):
             attn_output = attn_output[
                 self.rank * local_seq_len : (self.rank + 1) * local_seq_len
             ]  # 取回本地部分
+            self.attent_dropout(attn_output)
 
             # 残差连接和归一化
             x = self.norm(x + attn_output)

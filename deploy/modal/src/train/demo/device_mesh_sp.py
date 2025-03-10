@@ -63,6 +63,7 @@ def train_device_mesh_sequence_parallel(rank, world_size, model_name="linear"):
         parallelize_module,
         ColwiseParallel,
         RowwiseParallel,
+        SequenceParallel,  # 2.3.0+
     )
     from torch.distributed._tensor import Shard
 
@@ -79,40 +80,46 @@ def train_device_mesh_sequence_parallel(rank, world_size, model_name="linear"):
 
     # 定义单一线性层模型
     class SingleLinearModel(nn.Module):
-        def __init__(self, input_size, output_size):
+        def __init__(self, input_size, output_size, dropout=0.0):
             super(SingleLinearModel, self).__init__()
             # self.fc = nn.Linear(input_size, output_size)
             self.weight = nn.Parameter(torch.randn(output_size, input_size))
             self.bias = nn.Parameter(torch.randn(output_size))
+            self.dropout = nn.Dropout(dropout)
 
         def forward(self, x):  # [batch_size, input_size]
-            return torch.matmul(x, self.weight.t()) + self.bias  # X*W^T + b
+            return self.dropout(torch.matmul(x, self.weight.t()) + self.bias)  # X*W^T + b
             # return self.fc(x)
 
     # 定义 MLP 模型
     class MLP(nn.Module):
-        def __init__(self, input_size, hidden_size, output_size):
+        def __init__(self, input_size, hidden_size, output_size, dropout=0.0):
             super(MLP, self).__init__()
             self.fc1 = nn.Linear(input_size, hidden_size)  # X*W^T + b
             self.relu = nn.ReLU()
             self.fc2 = nn.Linear(hidden_size, output_size)
+            self.ffn_dropout = nn.Dropout(dropout)
 
         def forward(self, x):
             x = self.fc1(x)
             x = self.relu(x)
             x = self.fc2(x)
-            return x
+            return self.ffn_dropout(x)
 
     # 定义包含 MultiHeadAttention 的模型
     class AttentionModel(nn.Module):
-        def __init__(self, embed_dim, num_heads, output_dim):
+        def __init__(self, embed_dim, num_heads, output_dim, dropout=0.01):
             super(AttentionModel, self).__init__()
+            self.attent_norm = nn.LayerNorm(embed_dim)
             self.attn = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads)
             self.fc = nn.Linear(embed_dim, output_dim)  # 输出投影层
             self.norm = nn.LayerNorm(embed_dim)
+            self.attent_dropout = nn.Dropout(dropout)
 
         def forward(self, x):
+            x = self.attent_norm(x)
             attn_output, _ = self.attn(x, x, x)  # 自注意力
+            attn_output = self.attent_dropout(attn_output)
             x = self.norm(x + attn_output)  # 残差连接和归一化
             output = self.fc(x)  # 输出投影
             return output
