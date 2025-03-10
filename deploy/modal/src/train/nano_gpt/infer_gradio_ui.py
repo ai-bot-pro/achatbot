@@ -1,16 +1,9 @@
 import os
-import logging as L
-import urllib.request
-from dataclasses import dataclass
 from pathlib import Path, PosixPath
 
 import modal
-from pydantic import BaseModel
 
-MINUTES = 60  # seconds
-HOURS = 60 * MINUTES
-
-app = modal.App("train-nano-gpt")
+app = modal.App("infer-nano-gpt")
 
 base_image = (
     modal.Image.debian_slim(python_version="3.11")
@@ -64,13 +57,15 @@ def ui():
     # custom styles: an icon, a background, and a theme
     @web_app.get("/favicon.ico", include_in_schema=False)
     async def favicon():
-        return FileResponse("/assets/favicon.svg")
+        return FileResponse("/modal_examples/06_gpu_and_ml/hyperparameter-sweep/assets/favicon.svg")
 
     @web_app.get("/assets/background.svg", include_in_schema=False)
     async def background():
-        return FileResponse("/assets/background.svg")
+        return FileResponse(
+            "/modal_examples/06_gpu_and_ml/hyperparameter-sweep/assets/background.svg"
+        )
 
-    with open("/assets/index.css") as f:
+    with open("/modal_examples/06_gpu_and_ml/hyperparameter-sweep/assets/index.css") as f:
         css = f.read()
 
     n_last = 20
@@ -136,23 +131,16 @@ def ui():
 
 torch_image = base_image.pip_install(
     "torch==2.1.2",
-    "tensorboard==2.17.1",
-    "numpy<2",
 )
 
 with torch_image.imports():
     import glob
     import os
     import sys
-    from timeit import default_timer as timer
 
-    import tensorboard
     import torch
 
     sys.path.insert(1, "/modal_examples/06_gpu_and_ml/hyperparameter-sweep")
-
-    from src.dataset import Dataset
-    from src.logs_manager import LogsManager
     from src.model import AttentionModel
     from src.tokenizer import Tokenizer
 
@@ -183,9 +171,6 @@ class ModelInference:
         return [d.name for d in self.get_latest_available_model_dirs(n_last)]
 
     def load_model_impl(self):
-        from .src.model import AttentionModel
-        from .src.tokenizer import Tokenizer
-
         if self.experiment_name != "":  # user selected model
             use_model_dir = f"{model_save_path}/{self.experiment_name}"
         else:  # otherwise, pick latest

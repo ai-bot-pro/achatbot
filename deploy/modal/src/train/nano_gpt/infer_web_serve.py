@@ -7,7 +7,7 @@ from pathlib import Path, PosixPath
 import modal
 from pydantic import BaseModel
 
-app = modal.App("train-nano-gpt-web")
+app = modal.App("infer-nano-gpt")
 
 base_image = (
     modal.Image.debian_slim(python_version="3.11")
@@ -34,9 +34,6 @@ class GenerationRequest(BaseModel):
     prompt: str
 
 
-# This endpoint can be deployed on Modal with `modal deploy`.
-# That will allow us to generate text via a simple `curl` command like this:
-
 # ```bash
 # curl -X POST -H 'Content-Type: application/json' --data-binary '{"prompt": "\n"}' https://your-workspace-name--modal-nano-gpt-web-generate.modal.run
 # ```
@@ -55,19 +52,6 @@ class GenerationRequest(BaseModel):
 # }
 # ```
 
-# It's not exactly Shakespeare, but at least it shows our model learned something!
-
-# You can choose which model to use by specifying the `experiment_name` in the query parameters of the request URL.
-
-# ### Serving a Gradio UI with `asgi_app`
-
-# Second, we create a Gradio web app for generating text via a graphical user interface in the browser.
-# That way our fellow team members and stakeholders can easily interact with the model and give feedback,
-# even when we're still training the model.
-
-# You should see the URL for this UI in the output of `modal deploy`
-# or on your [Modal app dashboard](https://modal.com/apps) for this app.
-
 
 @app.function(image=web_image)
 @modal.fastapi_endpoint(method="POST", docs=True)  # v0.73.82
@@ -83,19 +67,18 @@ model_save_path = volume_path / "models"
 
 torch_image = base_image.pip_install(
     "torch==2.1.2",
-    "tensorboard==2.17.1",
-    "numpy<2",
 )
 
 with torch_image.imports():
     import glob
     import os
     import sys
-    from timeit import default_timer as timer
 
     import torch
 
     sys.path.insert(1, "/modal_examples/06_gpu_and_ml/hyperparameter-sweep")
+    from src.model import AttentionModel
+    from src.tokenizer import Tokenizer
 
 
 @app.cls(
@@ -124,9 +107,6 @@ class ModelInference:
         return [d.name for d in self.get_latest_available_model_dirs(n_last)]
 
     def load_model_impl(self):
-        from .src.model import AttentionModel
-        from .src.tokenizer import Tokenizer
-
         if self.experiment_name != "":  # user selected model
             use_model_dir = f"{model_save_path}/{self.experiment_name}"
         else:  # otherwise, pick latest
@@ -138,8 +118,13 @@ class ModelInference:
         if self.use_model_dir == use_model_dir and self.is_fully_trained:
             return  # already loaded fully trained model.
 
-        print(f"Loading experiment: {Path(use_model_dir).name}...")
-        checkpoint = torch.load(f"{use_model_dir}/{best_model_filename}")
+        ckpt_path = f"{use_model_dir}/{best_model_filename}"
+        if not os.path.exists(ckpt_path):
+            print(f"{ckpt_path} does not exist.")
+            raise ValueError(f"{ckpt_path} does not exist.")
+
+        print(f"Loading experiment: {ckpt_path}")
+        checkpoint = torch.load(ckpt_path)
 
         self.use_model_dir = use_model_dir
         hparams = checkpoint["hparams"]
