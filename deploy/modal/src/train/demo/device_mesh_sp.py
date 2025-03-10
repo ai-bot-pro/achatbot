@@ -1,10 +1,10 @@
-# https://pytorch.org/tutorials/intermediate/TP_tutorial.html
+# https://github.com/pytorch/examples/blob/main/distributed/tensor_parallelism/sequence_parallel_example.py
 
 import os
 import modal
 
 
-app = modal.App("train-demo-mesh-device-tp")
+app = modal.App("train-demo-mesh-device-sp")
 
 demo_image = modal.Image.debian_slim(python_version="3.12").pip_install("torch")
 
@@ -27,10 +27,10 @@ def run(model_name="linear"):
         print("需要至少 2 个 GPU 来演示张量并行")
         return
 
-    print(f"Running model {model_name} Tensor Parallelism with {world_size} GPUs")
+    print(f"Running model {model_name} Sequence Parallelism with {world_size} GPUs")
     torch.multiprocessing.set_start_method("spawn", force=True)
     mp.spawn(
-        train_device_mesh_tensor_parallel,
+        train_device_mesh_sequence_parallel,
         args=(
             world_size,
             model_name,
@@ -41,9 +41,9 @@ def run(model_name="linear"):
 
 
 """
-modal run src/train/demo/device_mesh_tp.py
-modal run src/train/demo/device_mesh_tp.py --model-name mlp
-modal run src/train/demo/device_mesh_tp.py --model-name mha
+modal run src/train/demo/device_mesh_sp.py
+modal run src/train/demo/device_mesh_sp.py --model-name mlp
+modal run src/train/demo/device_mesh_sp.py --model-name mha
 """
 
 
@@ -53,7 +53,7 @@ def main(model_name="linear"):
 
 
 # 训练函数
-def train_device_mesh_tensor_parallel(rank, world_size, model_name="linear"):
+def train_device_mesh_sequence_parallel(rank, world_size, model_name="linear"):
     import os
     import torch
     import torch.nn as nn
@@ -86,14 +86,14 @@ def train_device_mesh_tensor_parallel(rank, world_size, model_name="linear"):
             self.bias = nn.Parameter(torch.randn(output_size))
 
         def forward(self, x):  # [batch_size, input_size]
-            return torch.matmul(x, self.weight.t()) + self.bias  # XW^T + b
+            return torch.matmul(x, self.weight.t()) + self.bias  # X*W^T + b
             # return self.fc(x)
 
     # 定义 MLP 模型
     class MLP(nn.Module):
         def __init__(self, input_size, hidden_size, output_size):
             super(MLP, self).__init__()
-            self.fc1 = nn.Linear(input_size, hidden_size)
+            self.fc1 = nn.Linear(input_size, hidden_size)  # X*W^T + b
             self.relu = nn.ReLU()
             self.fc2 = nn.Linear(hidden_size, output_size)
 
@@ -118,7 +118,7 @@ def train_device_mesh_tensor_parallel(rank, world_size, model_name="linear"):
             return output
 
     # 训练函数
-    def train_tensor_parallel(rank, world_size):
+    def train_sequence_parallel(rank, world_size):
         # 设置分布式环境
         setup_distributed(rank, world_size)
 
@@ -140,10 +140,22 @@ def train_device_mesh_tensor_parallel(rank, world_size, model_name="linear"):
             # 初始化模型
             model = MLP(input_size, hidden_size, output_size).to(device)
 
-            # 定义张量并行策略
+            """
+            Like tensor parallel, we parallelize the first linear layer by column
+            and also parallelize the second linear layer by row. 
+            But the input in each rank now is different 
+            so that we need one all-gather for input 
+            and one reduce-scatter in the end of the second linear layer.
+            """
+            # 定义序列并行策略
+            # 常用于层的输入输出处理层，比如 LayerNorm,RSMNorm, Dropout, etc.
             parallel_plan = {
-                "fc1": ColwiseParallel(),  # 第一层按列分割（隐藏维度）
-                "fc2": RowwiseParallel(),  # 第二层按行分割（接收完整的隐藏层输出）
+                "fc1": ColwiseParallel(
+                    input_layouts=Shard(0)
+                ),  # 第一层按列分割（序列维度 input_size） all-gather
+                "fc2": RowwiseParallel(
+                    output_layouts=Shard(0)
+                ),  # 第二层按行分割（接收完整的隐藏层输出） reduce-scatter
             }
         elif model_name == "mha":
             # 参数设置
@@ -165,13 +177,9 @@ def train_device_mesh_tensor_parallel(rank, world_size, model_name="linear"):
             # 定义张量并行策略
             parallel_plan = {
                 # MultiheadAttention 内部的 QKV 投影按列分割（头数维度）
-                "attn.q_proj_weight": ColwiseParallel(),
-                "attn.k_proj_weight": ColwiseParallel(),
-                "attn.v_proj_weight": ColwiseParallel(),
-                # 输出投影按行分割（接收完整的注意力输出）
-                # "attn.out_proj": RowwiseParallel(),
-                # fc 层按列分割
-                # "fc": ColwiseParallel(),
+                "attn.q_proj_weight": ColwiseParallel(input_layouts=Shard(1)),
+                "attn.k_proj_weight": ColwiseParallel(input_layouts=Shard(1)),
+                "attn.v_proj_weight": ColwiseParallel(input_layouts=Shard(1)),
             }
         else:
             # 参数设置
@@ -189,10 +197,7 @@ def train_device_mesh_tensor_parallel(rank, world_size, model_name="linear"):
 
             # 定义张量并行策略
             parallel_plan = {
-                "weight": RowwiseParallel(
-                    input_layouts=Shard(0)
-                ),  # 按行分割线性层（output_size 维度）
-                "bias": RowwiseParallel(),  # 按行分割偏置(只有一个维度,output_size 维度)
+                "weight": RowwiseParallel(),  # 按行分割线性层（input_size 维度, 默认最后一个维度 all_gather）
             }
 
         # 使用 DeviceMesh 并行化模型
@@ -222,4 +227,4 @@ def train_device_mesh_tensor_parallel(rank, world_size, model_name="linear"):
 
         cleanup()
 
-    train_tensor_parallel(rank, world_size)
+    train_sequence_parallel(rank, world_size)
