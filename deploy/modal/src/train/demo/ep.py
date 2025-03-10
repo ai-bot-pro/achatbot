@@ -15,7 +15,7 @@ demo_image = modal.Image.debian_slim(python_version="3.12").pip_install("torch")
     # how long should we stay up with no requests?
     container_idle_timeout=15 * 60,
 )
-def run(num_experts=4, top_k=2, alpha=0.01):
+def run(num_experts=4, top_k=2, alpha=0.01, mode="brodcast"):
     import torch
 
     world_size = torch.cuda.device_count()  # 使用所有可用 GPU
@@ -27,28 +27,33 @@ def run(num_experts=4, top_k=2, alpha=0.01):
         return
 
     print(
-        f"Running Expert Parallelism with {world_size} GPUs, Experts/GPU: {num_experts//world_size}, top_k: {top_k}, load balance loss alpha: {alpha}"
+        f"Running Expert Parallelism mode {mode} with {world_size} GPUs, Experts/GPU: {num_experts//world_size}, top_k: {top_k}, load balance loss alpha: {alpha}"
     )
 
-    train_ep(world_size, num_experts, top_k, alpha)
+    train_ep(world_size, num_experts, top_k, alpha, mode)
 
 
 """
-# defualt num-experts=2, top-k=1, alpha=0.0 on 2 GPU
+# defualt mode=brodcast num-experts=2, top-k=1, alpha=0.0 on 2 GPU
 modal run src/train/demo/ep.py
 modal run src/train/demo/ep.py --num-experts 2 --top-k 2 --alpha 0.1
 modal run src/train/demo/ep.py --num-experts 2 --top-k 1 --alpha 0.1
 modal run src/train/demo/ep.py --num-experts 4 --top-k 2 --alpha 0.01
+
+modal run src/train/demo/ep.py --mode all2all
+modal run src/train/demo/ep.py --mode all2all --num-experts 2 --top-k 2 --alpha 0.1
+modal run src/train/demo/ep.py --mode all2all --num-experts 2 --top-k 1 --alpha 0.1
+modal run src/train/demo/ep.py --mode all2all --num-experts 4 --top-k 2 --alpha 0.01
 """
 
 
 @app.local_entrypoint()
-def main(num_experts: str = "2", top_k: str = "1", alpha: str = "0.0"):
-    run.remote(int(num_experts), int(top_k), float(alpha))
+def main(num_experts: str = "2", top_k: str = "1", alpha: str = "0.0", mode="brodcast"):
+    run.remote(int(num_experts), int(top_k), float(alpha), mode)
 
 
 # 训练函数
-def train_ep(world_size, num_experts=4, top_k=2, alpha=0.01):
+def train_ep(world_size, num_experts=4, top_k=2, alpha=0.01, mode="brodcast"):
     import os
     from multiprocessing import Process
     import torch
@@ -274,9 +279,108 @@ def train_ep(world_size, num_experts=4, top_k=2, alpha=0.01):
 
             return final_output, load_balance_loss
 
+    class All2AllMoE(MoE):
+        def forward(self, x):
+            batch_size = x.size(0)
+            gate_scores = self.gating(x)  # [batch_size, num_experts]
+            topk_scores, topk_indices = torch.topk(
+                gate_scores, self.top_k, dim=-1
+            )  # [batch_size, k]
+
+            # 计算负载均衡损失
+            load_balance_loss = self.compute_load_balance_loss(gate_scores, topk_indices)
+
+            # 统计每个 GPU 需要处理的样本数
+            counts_per_rank = torch.zeros(self.world_size, dtype=torch.long, device=self.device)
+            for i in range(batch_size):
+                for j in range(self.top_k):
+                    expert_idx = topk_indices[i, j].item()
+                    target_rank = expert_idx // self.experts_per_gpu
+                    counts_per_rank[target_rank] += 1
+
+            # 准备发送的输入张量和元数据
+            send_tensors = [[] for _ in range(self.world_size)]
+            send_indices = [[] for _ in range(self.world_size)]
+            send_scores = [[] for _ in range(self.world_size)]
+            for i in range(batch_size):
+                for j in range(self.top_k):
+                    expert_idx = topk_indices[i, j].item()
+                    target_rank = expert_idx // self.experts_per_gpu
+                    send_tensors[target_rank].append(x[i])
+                    send_indices[target_rank].append(i)
+                    send_scores[target_rank].append(topk_scores[i, j])
+
+            # 将列表转换为张量列表，并填充到最大长度
+            max_count = counts_per_rank.max().item()
+            send_list = [
+                torch.stack(send_tensors[r])
+                if len(send_tensors[r]) > 0
+                else torch.zeros(max_count, x.size(1), device=self.device)
+                for r in range(self.world_size)
+            ]
+            recv_list = [
+                torch.zeros(max_count, x.size(1), device=self.device)
+                for _ in range(self.world_size)
+            ]
+
+            # 使用 all_to_all 分发输入
+            dist.all_to_all(recv_list, send_list)
+
+            # 处理接收到的输入
+            local_outputs = torch.zeros(
+                batch_size, self.local_experts[0].fc.out_features, device=self.device
+            )
+            for i in range(counts_per_rank[self.rank]):
+                if i < recv_list[self.rank].size(0):
+                    expert_idx = topk_indices[
+                        send_indices[self.rank][i], i // counts_per_rank[self.rank] % self.top_k
+                    ].item()
+                    if self.start_expert_idx <= expert_idx < self.end_expert_idx:
+                        local_expert_idx = expert_idx - self.start_expert_idx
+                        output = self.local_experts[local_expert_idx](
+                            recv_list[self.rank][i : i + 1]
+                        )
+                        orig_idx = send_indices[self.rank][i]
+                        score = send_scores[self.rank][i]
+                        local_outputs[orig_idx] += output.squeeze(0) * score
+
+            # 使用 all_to_all 收集输出
+            send_output_list = [
+                torch.zeros(max_count, local_outputs.size(1), device=self.device)
+                for _ in range(self.world_size)
+            ]
+            for i in range(counts_per_rank[self.rank]):
+                if i < len(send_indices[self.rank]):
+                    send_output_list[self.rank][i] = local_outputs[send_indices[self.rank][i]]
+
+            recv_output_list = [
+                torch.zeros(max_count, local_outputs.size(1), device=self.device)
+                for _ in range(self.world_size)
+            ]
+            dist.all_to_all(recv_output_list, send_output_list)
+
+            # 聚合最终输出
+            final_output = torch.zeros(batch_size, local_outputs.size(1), device=self.device)
+            for r in range(self.world_size):
+                for i in range(counts_per_rank[r]):
+                    if i < len(send_indices[r]):
+                        orig_idx = send_indices[r][i]
+                        score = send_scores[r][i]
+                        final_output[orig_idx] += recv_output_list[r][i] * score
+            return final_output, load_balance_loss
+
     # 专家并行训练函数
     def train_expert_parallel(
-        rank, world_size, num_experts, input_size, hidden_size, data, labels, top_k, alpha=0.01
+        rank,
+        world_size,
+        num_experts,
+        input_size,
+        hidden_size,
+        data,
+        labels,
+        top_k,
+        alpha=0.01,
+        mode="brodcast",
     ):
         # 设置分布式环境
         setup_distributed(rank, world_size)
@@ -288,7 +392,14 @@ def train_ep(world_size, num_experts=4, top_k=2, alpha=0.01):
         data, labels = data.to(device), labels.to(device)
 
         # 初始化 MoE 模型
-        model = MoE(input_size, hidden_size, num_experts, rank, world_size, top_k, alpha).to(device)
+        if mode == "all2all":
+            model = All2AllMoE(
+                input_size, hidden_size, num_experts, rank, world_size, top_k, alpha
+            ).to(device)
+        else:
+            model = MoE(input_size, hidden_size, num_experts, rank, world_size, top_k, alpha).to(
+                device
+            )
 
         # 定义损失函数和优化器
         criterion = nn.MSELoss()  # 假设回归任务
@@ -342,6 +453,7 @@ def train_ep(world_size, num_experts=4, top_k=2, alpha=0.01):
                 labels,
                 top_k,
                 alpha,
+                mode,
             ),
         )
         p.start()
