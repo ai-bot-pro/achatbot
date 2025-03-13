@@ -33,7 +33,7 @@ assets_dir = modal.Volume.from_name("assets", create_if_missing=True)
     image=inference_image,
     volumes={MODEL_DIR: model_dir, ASSETS_DIR: assets_dir},
     timeout=1200,  # default 300s
-    container_idle_timeout=1200,
+    scaledown_window=1200,
 )
 def tts_inference(synthesis_type: str, text: str = "") -> str:
     import os
@@ -99,7 +99,7 @@ def tts_inference(synthesis_type: str, text: str = "") -> str:
     image=inference_image,
     volumes={MODEL_DIR: model_dir, ASSETS_DIR: assets_dir},
     timeout=1200,  # default 300s
-    container_idle_timeout=1200,
+    scaledown_window=1200,
 )
 def tts_inference_stream(
     synthesis_type: str,

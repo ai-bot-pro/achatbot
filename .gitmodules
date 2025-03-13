@@ -46,3 +46,6 @@
 [submodule "deps/StepAudio"]
 	path = deps/StepAudio
 	url = https://github.com/weedge/Step-Audio.git
+[submodule "deps/SparkTTS"]
+	path = deps/SparkTTS
+	url = https://github.com/weedge/Spark-TTS

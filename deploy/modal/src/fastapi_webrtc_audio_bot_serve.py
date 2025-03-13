@@ -68,7 +68,7 @@ app = modal.App(ContainerRuntimeConfig.get_app_name())
     image=ContainerRuntimeConfig.get_img(),
     secrets=[modal.Secret.from_name("achatbot")],
     cpu=2.0,
-    container_idle_timeout=300,
+    scaledown_window=300,
     timeout=600,
     allow_concurrent_inputs=100,
 )

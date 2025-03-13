@@ -56,7 +56,7 @@ modal run src/train/fsdp_tp_llama2.py
     gpu=os.getenv("IMAGE_GPU", "T4:4"),
     retries=0,
     # how long should we stay up with no requests?
-    container_idle_timeout=15 * 60,
+    scaledown_window=15 * 60,
 )
 def run():
     import torch

@@ -21,7 +21,7 @@ bench_dir = modal.Volume.from_name("bench", create_if_missing=True)
     image=download_image,
     volumes={BENCH_DIR: bench_dir},
     timeout=1200,
-    container_idle_timeout=1200,
+    scaledown_window=1200,
 )
 def download_ShareGPT() -> str:
     """
@@ -65,7 +65,7 @@ def download_ShareGPT() -> str:
     image=download_image,
     volumes={BENCH_DIR: bench_dir},
     # timeout=1200,
-    # container_idle_timeout=1200,
+    # scaledown_window=1200,
 )
 def download_ShareGPT4V() -> str:
     """
@@ -147,7 +147,7 @@ def download_ShareGPT4V() -> str:
     image=download_image,
     volumes={BENCH_DIR: bench_dir},
     timeout=1200,
-    container_idle_timeout=1200,
+    scaledown_window=1200,
 )
 def download_BurstGPT() -> str:
     """

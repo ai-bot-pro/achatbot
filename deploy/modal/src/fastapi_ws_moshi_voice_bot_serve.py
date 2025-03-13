@@ -81,7 +81,7 @@ volume = modal.Volume.from_name("bot_config", create_if_missing=True)
     # secrets=[modal.Secret.from_name("achatbot")],
     volumes={"/bots": volume},
     gpu=ContainerRuntimeConfig.get_gpu(),
-    container_idle_timeout=1200,
+    scaledown_window=1200,
     timeout=600,
     allow_concurrent_inputs=1,
 )
