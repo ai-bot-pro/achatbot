@@ -28,6 +28,7 @@ tritonserver_image = (
     .env(
         {
             "PYTHONPATH": os.getenv("IMAGE_PYTHONPATH", "/Spark-TTS/"),
+            "PYTHONIOENCODING": "utf-8",
         }
     )
 )
@@ -41,7 +42,7 @@ TRITONSERVER_DIR = "/root/tritonserver"
 tritonserver_vol = modal.Volume.from_name("tritonserver", create_if_missing=True)
 
 
-# see: https://github.com/triton-inference-server/python_backend/blob/main/README.md
+# ⭐️ https://github.com/triton-inference-server/python_backend/blob/main/README.md
 @app.function(
     gpu=os.getenv("IMAGE_GPU", "L4"),
     retries=0,
@@ -56,6 +57,12 @@ tritonserver_vol = modal.Volume.from_name("tritonserver", create_if_missing=True
 )
 def serve(app_name: str) -> str:
     import subprocess
+    import sys
+
+    cmd = f"pip show omegaconf".split(" ")
+    subprocess.run(cmd, cwd="/", check=True)
+    print(sys.path)
+    return
 
     cmd = f"which nvcc".split(" ")
     subprocess.run(cmd, cwd="/", check=True)
