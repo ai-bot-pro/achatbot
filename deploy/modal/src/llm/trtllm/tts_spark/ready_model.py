@@ -46,14 +46,14 @@ def ready_model(
         tag_or_hash = "main"
 
     cmd = f"git clone https://github.com/SparkAudio/Spark-TTS -b {tag_or_hash}".split(" ")
-    subprocess.run(cmd, cwd="/")
+    subprocess.run(cmd, cwd="/", check=True)
 
     model_repo = os.path.join(TRITONSERVER_DIR, app_name)
     cmd = f"rm -rf {model_repo}".split(" ")
-    subprocess.run(cmd, cwd="/")
+    subprocess.run(cmd, cwd="/", check=True)
 
     cmd = f"cp -r /Spark-TTS/runtime/triton_trtllm/model_repo {model_repo}".split(" ")
-    subprocess.run(cmd, cwd="/")
+    subprocess.run(cmd, cwd="/", check=True)
 
     hf_model_local_dir = os.path.join(
         HF_MODEL_DIR, os.getenv("HF_REPO_ID", "SparkAudio/Spark-TTS-0.5B")
@@ -65,34 +65,34 @@ def ready_model(
         f" {spark_tts_params},llm_tokenizer_dir:{hf_model_local_llm_dir}".strip(",")
     )
     print(cmd)
-    subprocess.run(cmd.split(" "), cwd="/Spark-TTS/runtime/triton_trtllm/")
+    subprocess.run(cmd.split(" "), cwd="/Spark-TTS/runtime/triton_trtllm/", check=True)
 
     # audio_tokenizer
     cmd = f"python3 scripts/fill_template.py -i {model_repo}/audio_tokenizer/config.pbtxt" + (
         f" {audio_tokenizer_params},model_dir:{hf_model_local_dir}".strip(",")
     )
     print(cmd)
-    subprocess.run(cmd.split(" "), cwd="/Spark-TTS/runtime/triton_trtllm/")
+    subprocess.run(cmd.split(" "), cwd="/Spark-TTS/runtime/triton_trtllm/", check=True)
 
-    # trt llm enginer
+    # trt llm engineer
     local_trt_build_dir = os.path.join(TRT_MODEL_DIR, app_name, f"trt_engines_{trt_dtype}")
     cmd = f"python3 scripts/fill_template.py -i {model_repo}/tensorrt_llm/config.pbtxt" + (
         f" {tensorrt_llm_params},engine_dir:{local_trt_build_dir }".strip(",")
     )
     print(cmd)
-    subprocess.run(cmd.split(" "), cwd="/Spark-TTS/runtime/triton_trtllm/")
+    subprocess.run(cmd.split(" "), cwd="/Spark-TTS/runtime/triton_trtllm/", check=True)
 
     # vocoder
     cmd = f"python3 scripts/fill_template.py -i {model_repo}/vocoder/config.pbtxt" + (
         f" {vocoder_params},model_dir:{hf_model_local_dir}".strip(",")
     )
     print(cmd)
-    subprocess.run(cmd.split(" "), cwd="/Spark-TTS/runtime/triton_trtllm/")
+    subprocess.run(cmd.split(" "), cwd="/Spark-TTS/runtime/triton_trtllm/", check=True)
 
 
 """
 # fill template with pbtext file for api params
-modal run src/llm/trtllm/bench/tts_spark/ready_model.py \
+modal run src/llm/trtllm/tts_spark/ready_model.py \
     --tag-or-hash "main" \
     --trt-dtype "bfloat16" \
     --spark-tts-params "bls_instance_num:4,triton_max_batch_size:16,max_queue_delay_microseconds:0" \

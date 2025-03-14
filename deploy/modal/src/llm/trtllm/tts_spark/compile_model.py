@@ -15,6 +15,7 @@ trtllm_image = (
     )  # OpenMPI for distributed communication
     .pip_install(
         "tensorrt-llm==0.17.0.post1",
+        "omegaconf==2.3.0",
         # "pynvml<12",  # avoid breaking change to pynvml version API for tensorrt_llm
         # "tensorrt==10.8.0.43",
         pre=True,
@@ -64,43 +65,43 @@ def trtllm_build(
     subprocess.run(cmd, cwd="/", check=True)
 
     cmd = f"ls {HF_MODEL_DIR}/{hf_repo_dir}".split(" ")
-    subprocess.run(cmd, cwd="/")
+    subprocess.run(cmd, cwd="/", check=True)
 
     cmd = f"wget {convert_script_url} -O /root/convert.py".split(" ")
-    subprocess.run(cmd, cwd="/")
+    subprocess.run(cmd, cwd="/", check=True)
 
-    local_hf_model_vol = os.path.join(HF_MODEL_DIR, hf_repo_dir)
-    local_trt_model_vol = os.path.join(TRT_MODEL_DIR, app_name, f"tllm_checkpoint_{trt_dtype}")
+    local_hf_model_dir = os.path.join(HF_MODEL_DIR, hf_repo_dir)
+    local_trt_model_dir = os.path.join(TRT_MODEL_DIR, app_name, f"tllm_checkpoint_{trt_dtype}")
 
     print("「Convert」 Converting checkpoint to TensorRT weights")
     cmd = (
-        f"python /root/convert.py --model_dir {local_hf_model_vol} "
-        + f"--output_dir {local_trt_model_vol} --dtype {trt_dtype} "
+        f"python /root/convert.py --model_dir {local_hf_model_dir} "
+        + f"--output_dir {local_trt_model_dir} --dtype {trt_dtype} "
         + f"{convert_other_args}"
     )
     print(cmd)
-    subprocess.run(cmd.strip().split(" "), cwd="/")
+    subprocess.run(cmd.strip().split(" "), cwd="/", check=True)
 
     print("「Compilation」Building TensorRT engines")
     local_trt_build_dir = os.path.join(TRT_MODEL_DIR, app_name, f"trt_engines_{trt_dtype}")
     cmd = (
-        f"trtllm-build --checkpoint_dir {local_trt_model_vol} --output_dir {local_trt_build_dir} "
+        f"trtllm-build --checkpoint_dir {local_trt_model_dir} --output_dir {local_trt_build_dir} "
         + f"--gemm_plugin {trt_dtype} "
         + f"{compile_other_args}"
     )
     print(cmd)
-    subprocess.run(cmd.strip().split(" "), cwd="/")
+    subprocess.run(cmd.strip().split(" "), cwd="/", check=True)
 
 
 """
-modal run src/llm/trtllm/compile_model.py \
+modal run src/llm/trtllm/tts_spark/compile_model.py \
     --app-name "tts-spark" \
     --hf-repo-dir "SparkAudio/Spark-TTS-0.5B/LLM" \
     --trt-dtype "bfloat16" \
     --convert-other-args "" \
     --compile-other-args "--max_batch_size 16 --max_num_tokens 32768"
 
-modal run src/llm/trtllm/compile_model.py \
+modal run src/llm/trtllm/tts_spark/compile_model.py \
     --app-name "tts-spark" \
     --hf-repo-dir "SparkAudio/Spark-TTS-0.5B/LLM" \
     --trt-dtype "bfloat16" \
