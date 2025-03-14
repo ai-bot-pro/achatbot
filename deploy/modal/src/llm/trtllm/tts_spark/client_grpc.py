@@ -1,102 +1,134 @@
+# https://github.com/triton-inference-server/client/tree/main/src/python/examples
+
 import os
 import modal
 
-app = modal.App("trtllm")
+app_name = "tts-spark"
+app = modal.App(f"{app_name}-http-client")
 
-trtllm_image = (
-    # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/tritonserver
-    modal.Image.from_registry(
-        "nvcr.io/nvidia/tritonserver:25.02-trtllm-python-py3",
-        # add_python="3.10",
-    )
-    .apt_install("git", "git-lfs", "cmake")
-    .run_commands("pip list")
-    .run_commands(
-        # "pip install torch",
-        "git clone https://github.com/pytorch/audio.git",
-        "cd audio && git checkout c670ad8 && PATH=/usr/local/cuda/bin:$PATH python3 setup.py develop",
-        "git clone https://github.com/SparkAudio/Spark-TTS.git",
-    )
-    .pip_install(
-        "einx==0.3.0",
-        "omegaconf==2.3.0",
-        "soundfile==0.12.1",
-        "soxr==0.5.0.post1",
-        "transformers==4.46.2",
-        "gradio",
-        "tritonclient",
-        "librosa",
-        "huggingface_hub[hf_transfer]==0.26.2",
-        # extra_index_url="https://pypi.nvidia.com",
-    )
-    .env({})  # faster model transfers
+# Define the dependencies for the function using a Modal Image.
+image = modal.Image.debian_slim(python_version="3.10").apt_install("git", "wget")
+image = image.pip_install("numpy", "soundfile", "tritonclient[grpc]")
+image = image.run_commands(
+    "wget 'https://raw.githubusercontent.com/SparkAudio/Spark-TTS/refs/heads/main/example/prompt_audio.wav' -O /prompt_audio.wav",
+    "ls -lh /prompt_audio.wav",
 )
+image = image.env({})
 
-BENCH_DIR = "/data/bench"
-bench_dir = modal.Volume.from_name("bench", create_if_missing=True)
+with image.imports():
+    import numpy as np
+    import soundfile as sf
 
-models_vol = modal.Volume.from_name("models", create_if_missing=True)
-triton_trtllm_vol = modal.Volume.from_name("triton_trtllm_models", create_if_missing=True)
+    import tritonclient
+    import tritonclient.grpc as grpcclient
+    from tritonclient.utils import np_to_triton_dtype
+    from tritonclient.utils import InferenceServerException
+
+
+TTS_GEN_AUDIO_DIR = "/tts_gen_audio"
+tts_gen_audio_vol = modal.Volume.from_name("tts_gen_audio", create_if_missing=True)
 
 
 @app.function(
-    # gpu="L4",
-    cpu=8.0,
+    cpu=2.0,
     retries=0,
-    image=trtllm_image,
+    image=image,
     volumes={
-        "/Spark-TTS/pretrained_models": models_vol,
-        "/Spark-TTS/runtime/triton_trtllm": triton_trtllm_vol,
+        TTS_GEN_AUDIO_DIR: tts_gen_audio_vol,
     },
     timeout=1200,  # default 300s
     scaledown_window=1200,
 )
-def compile_model() -> str:
-    import subprocess
-
-    cmd = "rm -rf Spark-TTS".split(" ")
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd="/")
-    print(result)
-
-    cmd = "git clone https://github.com/SparkAudio/Spark-TTS.git".split(" ")
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd="/")
-    print(result)
-
-    # triton_trtllm_vol.reload()
-
-    cmd = "bash run.sh 0 2".split(" ")
-    result = subprocess.run(
-        cmd, capture_output=True, text=True, cwd="/Spark-TTS/runtime/triton_trtllm"
-    )
-    print(result)
+def tts(
+    server_url: str = "localhost:8000",
+    reference_audio: str = "/prompt_audio.wav",
+    reference_text: str = "吃燕窝就选燕之屋，本节目由26年专注高品质燕窝的燕之屋冠名播出。豆奶牛奶换着喝，营养更均衡，本节目由豆本豆豆奶特约播出。",
+    target_text: str = "身临其境，换新体验。塑造开源语音合成新范式，让智能语音更自然。",
+    model_name: str = "spark_tts",
+    output_audio: str = "output.wav",
+):
+    if not server_url.startswith(("http://", "https://")):
+        server_url = f"http://{server_url}"
 
 
 @app.function(
-    gpu="L4",
+    cpu=2.0,
     retries=0,
-    image=trtllm_image,
+    image=image,
     timeout=1200,  # default 300s
     scaledown_window=1200,
 )
-def serve() -> str:
-    import subprocess
+def health(server_url: str, verbose: bool = False):
+    url = server_url
+    if not server_url.startswith(("http://", "https://")):
+        server_url = f"http://{server_url}"
 
-    cmd = "ls -lh".split(" ")
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd="/audio")
-    print(result)
+    try:
+        triton_client = grpcclient.InferenceServerClient(url=url, verbose=verbose)
+    except Exception as e:
+        print("context creation failed: " + str(e))
+        return
+
+    # Health
+    if not triton_client.is_server_live(headers={"test": "1", "dummy": "2"}):
+        print("FAILED : is_server_live")
+        return
+    if not triton_client.is_server_ready():
+        print("FAILED : is_server_ready")
+        return
+
+    # Metadata
+    metadata = triton_client.get_server_metadata()
+    if not (metadata.name == "triton"):
+        print("FAILED : get_server_metadata")
+        return
+    print(metadata)
+
+    # Health
+    for model_name in [
+        "audio_tokenizer",
+        "tensorrt_llm",
+        "vocoder",
+        "spark_tts",
+    ]:
+        if not triton_client.is_model_ready(model_name):
+            print("FAILED : is_model_ready")
+
+        print("-" * 20)
+
+        metadata = triton_client.get_model_metadata(model_name, headers={"test": "1", "dummy": "2"})
+        if not (metadata.name == model_name):
+            print("FAILED : get_model_metadata")
+            return
+        print(metadata)
 
 
 """
-# build image
-modal run src/llm/trtllm/bench/tts_spark.py 
-# run compile model from hf model to tensorrt model
-modal run src/llm/trtllm/bench/tts_spark.py --mode compile_model
+modal run src/llm/trtllm/tts_spark/client_grpc.py \
+    --action health \
+    --server-url "weedge--tritonserver-serve-dev.modal.run"
+
+modal run src/llm/trtllm/tts_spark/client_grpc.py \
+    --action tts \
+    --server-url "weedge--tritonserver-serve-dev.modal.run"
 """
 
 
 @app.local_entrypoint()
-def main(mode: str = ""):
-    if mode == "compile_model":
-        compile_model.remote()
-    elif mode == "serve":
-        serve.remote()
+def main(
+    server_url: str = "localhost:8000",
+    reference_audio: str = "/prompt_audio.wav",
+    reference_text: str = "吃燕窝就选燕之屋，本节目由26年专注高品质燕窝的燕之屋冠名播出。豆奶牛奶换着喝，营养更均衡，本节目由豆本豆豆奶特约播出。",
+    target_text: str = "身临其境，换新体验。塑造开源语音合成新范式，让智能语音更自然。",
+    model_name: str = "spark_tts",
+    output_audio: str = "output.wav",
+    action: str = "health",
+):
+    print("[!NOTE] grpc now don't to support for modal")
+    return
+    if action == "tts":
+        tts.remote(
+            server_url, reference_audio, reference_text, target_text, model_name, output_audio
+        )
+    else:
+        health.remote(server_url, verbose=True)

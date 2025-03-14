@@ -1,3 +1,5 @@
+# https://github.com/triton-inference-server/client/tree/main/src/python/examples
+
 import os
 import modal
 
@@ -6,7 +8,7 @@ app = modal.App(f"{app_name}-http-client")
 
 # Define the dependencies for the function using a Modal Image.
 image = modal.Image.debian_slim(python_version="3.10").apt_install("git", "wget")
-image = image.pip_install("numpy", "soundfile", "requests")
+image = image.pip_install("numpy", "soundfile", "requests", "tritonclient[http]")
 image = image.run_commands(
     "wget 'https://raw.githubusercontent.com/SparkAudio/Spark-TTS/refs/heads/main/example/prompt_audio.wav' -O /prompt_audio.wav",
     "ls -lh /prompt_audio.wav",
@@ -17,13 +19,18 @@ with image.imports():
     import numpy as np
     import soundfile as sf
     import requests
+    import json
+
+    # if use proxy, tritonclient.http don't ok, need use request
+    import tritonclient.http as httpclient
+    from tritonclient.utils import InferenceServerException
 
 TTS_GEN_AUDIO_DIR = "/tts_gen_audio"
 tts_gen_audio_vol = modal.Volume.from_name("tts_gen_audio", create_if_missing=True)
 
 
 @app.function(
-    cpu=8.0,
+    cpu=2.0,
     retries=0,
     image=image,
     volumes={
@@ -32,7 +39,7 @@ tts_gen_audio_vol = modal.Volume.from_name("tts_gen_audio", create_if_missing=Tr
     timeout=1200,  # default 300s
     scaledown_window=1200,
 )
-def http_cli(
+def tts(
     server_url: str = "localhost:8000",
     reference_audio: str = "/prompt_audio.wav",
     reference_text: str = "吃燕窝就选燕之屋，本节目由26年专注高品质燕窝的燕之屋冠名播出。豆奶牛奶换着喝，营养更均衡，本节目由豆本豆豆奶特约播出。",
@@ -69,8 +76,51 @@ def http_cli(
     sf.write(output_audio, audio, 16000, "PCM_16")
 
 
+@app.function(
+    cpu=2.0,
+    retries=0,
+    image=image,
+    timeout=1200,  # default 300s
+    scaledown_window=1200,
+)
+def health(server_url: str, verbose: bool = False):
+    if not server_url.startswith(("http://", "https://")):
+        server_url = f"http://{server_url}"
+
+    # Health
+    resp = requests.get(f"{server_url}/v2/health/live")
+    assert resp.status_code == 200, "don't live"
+
+    resp = requests.get(f"{server_url}/v2/health/ready")
+    assert resp.status_code == 200, "don't ready"
+
+    resp = requests.get(f"{server_url}/v2")
+    assert resp.status_code == 200, f"no serve meta info"
+    res = json.dumps(resp.json(), indent=2)
+    print(res)
+
+    for model_name in [
+        "audio_tokenizer",
+        "tensorrt_llm",
+        "vocoder",
+        "spark_tts",
+    ]:
+        resp = requests.get(f"{server_url}/v2/models/{model_name}/ready")
+        assert resp.status_code == 200, f"{model_name} don't ready"
+        print("-" * 20)
+        resp = requests.get(f"{server_url}/v2/models/{model_name}")
+        assert resp.status_code == 200, f"no {model_name} meta info"
+        res = json.dumps(resp.json(), indent=2)
+        print(res)
+
+
 """
 modal run src/llm/trtllm/tts_spark/client_http.py \
+    --action health \
+    --server-url "https://weedge--tritonserver-serve-dev.modal.run"
+
+modal run src/llm/trtllm/tts_spark/client_http.py \
+    --action tts \
     --server-url "https://weedge--tritonserver-serve-dev.modal.run"
 """
 
@@ -83,10 +133,14 @@ def main(
     target_text: str = "身临其境，换新体验。塑造开源语音合成新范式，让智能语音更自然。",
     model_name: str = "spark_tts",
     output_audio: str = "output.wav",
+    action: str = "health",
 ):
-    http_cli.remote(
-        server_url, reference_audio, reference_text, target_text, model_name, output_audio
-    )
+    if action == "tts":
+        tts.remote(
+            server_url, reference_audio, reference_text, target_text, model_name, output_audio
+        )
+    else:
+        health.remote(server_url, verbose=True)
 
 
 def prepare_request(

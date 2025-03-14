@@ -68,7 +68,7 @@ tritonserver_vol = modal.Volume.from_name("tritonserver", create_if_missing=True
     timeout=1200,  # default 300s
     scaledown_window=1200,
 )
-@modal.web_server(port=8000, startup_timeout=5 * 60)
+@modal.web_server(port=8001, startup_timeout=5 * 60)
 def serve():
     import subprocess
 
@@ -108,7 +108,7 @@ def serve():
 APP_NAME=tts-spark modal serve src/llm/trtllm/tts_spark/tritonserver.py 
 
 # curl health
-curl -vv -X GET "https://weedge--tritonserver-serve-dev.modal.run/health" -H  "accept: application/json"
+curl -vv -X GET "https://weedge--tritonserver-serve-dev.modal.run/v2/health/live" -H  "accept: application/json"
 """
 
 

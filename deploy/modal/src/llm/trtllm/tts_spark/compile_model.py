@@ -1,7 +1,7 @@
 import os
 import modal
 
-app = modal.App("trtllm")
+app = modal.App("trtllm-compile")
 
 trtllm_image = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
@@ -15,7 +15,6 @@ trtllm_image = (
     )  # OpenMPI for distributed communication
     .pip_install(
         "tensorrt-llm==0.17.0.post1",
-        "omegaconf==2.3.0",
         # "pynvml<12",  # avoid breaking change to pynvml version API for tensorrt_llm
         # "tensorrt==10.8.0.43",
         pre=True,
