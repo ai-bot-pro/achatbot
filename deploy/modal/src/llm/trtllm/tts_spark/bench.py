@@ -8,7 +8,14 @@ app = modal.App(f"{app_name}-http-client")
 
 # Define the dependencies for the function using a Modal Image.
 image = modal.Image.debian_slim(python_version="3.10").apt_install("git", "wget")
-image = image.pip_install("numpy", "soundfile", "requests", "tritonclient[all]")
+image = image.pip_install(
+    "numpy",
+    "librosa",
+    "soundfile",
+    "requests",
+    "tritonclient[all]",
+    "datasets",
+)
 image = image.run_commands(
     "wget 'https://raw.githubusercontent.com/SparkAudio/Spark-TTS/refs/heads/main/example/prompt_audio.wav' -O /prompt_audio.wav",
     "ls -lh /prompt_audio.wav",
@@ -16,6 +23,9 @@ image = image.run_commands(
 image = image.env(
     {
         "CLI_MODE": os.getenv("CLI_MODE", "http"),
+        # https://huggingface.co/docs/huggingface_hub/quick-start#login
+        # NOTE: need set in secret env, just for test, priority use secret env :) don't do this~
+        # "HF_TOKEN": os.getenv("HF_TOKEN", "set your hf token here"),
     }
 )
 
@@ -34,10 +44,15 @@ with image.imports():
     from tritonclient.utils import np_to_triton_dtype
     from tritonclient.utils import InferenceServerException
 
-    if os.getenv("CLI_MODE", "http") == "grpc":
+    cli_mode = os.getenv("CLI_MODE", "http")
+    print(f"cli_mode: {cli_mode}")
+    import tritonclient.http.aio as client
+
+    if cli_mode == "grpc":
         import tritonclient.grpc.aio as client
-    else:
-        import tritonclient.http.aio as client
+
+HF_CACHE_DIR = "/root/.cache/huggingface"
+hf_cache_vol = modal.Volume.from_name("huggingface-cache", create_if_missing=True)
 
 TTS_GEN_AUDIO_DIR = "/tts_gen_audio"
 tts_gen_audio_vol = modal.Volume.from_name("tts_gen_audio", create_if_missing=True)
@@ -47,11 +62,14 @@ bench_log_vol = modal.Volume.from_name("bench", create_if_missing=True)
 
 
 @app.function(
-    cpu=2.0,
+    cpu=8.0,  # for more concurrecy, need add more cpus
     retries=0,
     image=image,
+    secrets=[modal.Secret.from_name("achatbot")],
     volumes={
         BENCH_LOG_DIR: bench_log_vol,
+        HF_CACHE_DIR: hf_cache_vol,
+        TTS_GEN_AUDIO_DIR: tts_gen_audio_vol,
     },
     timeout=1200,  # default 300s
     scaledown_window=1200,
@@ -70,13 +88,8 @@ async def bench(
     compute_wer: bool = False,
     batch_size: int = 1,
 ):
-    triton_client = None
-    mode = os.get("CLI_MODE", "http")
+    mode = os.getenv("CLI_MODE", "http")
     triton_client = client.InferenceServerClient(url=server_url, verbose=False)
-    if mode == "http":
-        if not server_url.startswith(("http://", "https://")):
-            server_url = f"http://{server_url}"
-        triton_client = client.InferenceServerClient(url=server_url, verbose=False)
 
     if reference_audio:
         num_tasks = 1
@@ -174,13 +187,13 @@ async def bench(
 
     if mode == "grpc":
         stats = await triton_client.get_inference_statistics(model_name="", as_json=True)
-    if mode == "http":
+    if "http" in mode:
         stats = await triton_client.get_inference_statistics(model_name="")
     write_triton_stats(stats, f"{log_dir}/stats_summary-{name}.txt")
 
     if mode == "grpc":
         metadata = await triton_client.get_model_config(model_name=model_name, as_json=True)
-    if mode == "http":
+    if "http" in mode:
         metadata = await triton_client.get_model_config(model_name=model_name)
     with open(f"{log_dir}/model_config-{name}.json", "w") as f:
         json.dump(metadata, f, indent=4)
@@ -189,9 +202,42 @@ async def bench(
 
 
 """
-modal run src/llm/trtllm/tts_spark/client_bench.py \
-    --server-url "https://weedge--tritonserver-serve-dev.modal.run"
+# single test
+CLI_MODE=http modal run src/llm/trtllm/tts_spark/bench.py \
+    --server-url "weedge--tritonserver-serve-dev.modal.run" \
+    --reference-audio "/prompt_audio.wav" \
+    --huggingface-dataset ""
 
+# hf dataset with (wenetspeech4tts 26 rows) with concurrency 1 task to bench
+CLI_MODE=http modal run src/llm/trtllm/tts_spark/bench.py \
+    --server-url "weedge--tritonserver-serve-dev.modal.run" \
+    --reference-audio "" \
+    --huggingface-dataset "yuekai/seed_tts" \
+    --split-name wenetspeech4tts \
+    --num-tasks 1 
+
+# single test used by http client sdk
+CLI_MODE=cli_sdk_http modal run src/llm/trtllm/tts_spark/bench.py \
+    --server-url "weedge--tritonserver-serve-dev.modal.run" \
+    --reference-audio "/prompt_audio.wav" \
+    --huggingface-dataset ""
+
+# hf dataset with (wenetspeech4tts 26 rows) with concurrency 1 task to bench used by http client sdk
+CLI_MODE=cli_sdk_http modal run src/llm/trtllm/tts_spark/bench.py \
+    --server-url "weedge--tritonserver-serve-dev.modal.run" \
+    --reference-audio "" \
+    --huggingface-dataset "yuekai/seed_tts" \
+    --split-name wenetspeech4tts \
+    --num-tasks 1 
+
+# hf dataset with (wenetspeech4tts 26 rows) concurrency min(num_tasks,26) task to bench used by http client sdk
+# num-tasks: 2->4->8->16->26
+CLI_MODE=cli_sdk_http modal run src/llm/trtllm/tts_spark/bench.py \
+    --server-url "weedge--tritonserver-serve-dev.modal.run" \
+    --reference-audio "" \
+    --huggingface-dataset "yuekai/seed_tts" \
+    --split-name wenetspeech4tts \
+    --num-tasks 2
 """
 
 
@@ -203,8 +249,8 @@ def main(
     target_text: str = "身临其境，换新体验。塑造开源语音合成新范式，让智能语音更自然。",
     model_name: str = "spark_tts",
     huggingface_dataset: str = "yuekai/seed_tts",
-    split_name: str = "test",  # ["wenetspeech4tts", "test_zh", "test_en", "test_hard"]
-    manifest_path: str = None,
+    split_name: str = "wenetspeech4tts",  # ["wenetspeech4tts", "test_zh", "test_en", "test_hard"]
+    manifest_path: str = None,  # unuse
     num_tasks: str = "1",
     log_interval: str = "5",
     compute_wer: str = "",
@@ -302,7 +348,7 @@ def load_audio(wav_path, target_sample_rate=16000):
 async def send(
     manifest_item_list: list,
     name: str,
-    triton_client: tritonclient.grpc.aio.InferenceServerClient,
+    triton_client: object,
     log_interval: int,
     model_name: str,
     audio_save_dir: str = "./",
@@ -314,13 +360,13 @@ async def send(
     latency_data = []
     task_id = int(name[5:])
 
-    print(f"manifest_item_list: {manifest_item_list}")
+    print(f"manifest_item_list({len(manifest_item_list)}): {manifest_item_list}")
     for i, item in enumerate(manifest_item_list):
         if i % log_interval == 0:
             print(f"{name}: {i}/{len(manifest_item_list)}")
         sequence_id = 100000000 + i + task_id * 10
-        if mode == "grpc":
-            (audio, estimated_target_duration, end) = cli_sdk_tts(
+        if mode in ["grpc", "cli_sdk_http"]:
+            (audio, estimated_target_duration, end) = await cli_sdk_tts(
                 sequence_id,
                 triton_client,
                 reference_audio=item["audio_filepath"],
@@ -484,7 +530,7 @@ def http_tts(
         headers={"Content-Type": "application/json"},
         json=data,
         verify=False,
-        params={"request_id": "0"},
+        params={"request_id": str(sequence_id)},
     )
     end = time.time() - start
     result = rsp.json()
@@ -496,7 +542,7 @@ def http_tts(
 
 async def cli_sdk_tts(
     sequence_id: int,
-    triton_client: client.InferenceServerClient,
+    triton_client: object,
     reference_audio: str = "/prompt_audio.wav",
     reference_text: str = "吃燕窝就选燕之屋，本节目由26年专注高品质燕窝的燕之屋冠名播出。豆奶牛奶换着喝，营养更均衡，本节目由豆本豆豆奶特约播出。",
     target_text: str = "身临其境，换新体验。塑造开源语音合成新范式，让智能语音更自然。",

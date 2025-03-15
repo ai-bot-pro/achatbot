@@ -27,6 +27,7 @@ hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
     retries=0,
     cpu=8.0,
     image=download_image,
+    # secrets=[modal.Secret.from_name("achatbot")],
     volumes={HF_MODEL_DIR: hf_model_vol},
     timeout=1200,
     scaledown_window=1200,

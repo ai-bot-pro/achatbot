@@ -66,7 +66,7 @@ def tts(
         headers={"Content-Type": "application/json"},
         json=data,
         verify=False,
-        params={"request_id": "0"},
+        params={"request_id": uuid.uuid4()},
     )
     result = rsp.json()
     audio = result["outputs"][0]["data"]
@@ -259,6 +259,13 @@ modal run src/llm/trtllm/tts_spark/client_http.py \
 modal run src/llm/trtllm/tts_spark/client_http.py \
     --action cli_sdk_tts \
     --output-audio cli_sdk_tts_output.wav \
+    --server-url "weedge--tritonserver-serve-dev.modal.run"
+
+modal run src/llm/trtllm/tts_spark/client_http.py \
+    --action cli_sdk_tts \
+    --output-audio cli_sdk_tts_output.wav \
+    --target-text "你好，请将一个儿童故事，文字不少于200字，故事充满童趣和奇妙幻想。" \
+    --output-audio "child_story.wav" \
     --server-url "weedge--tritonserver-serve-dev.modal.run"
 """
 

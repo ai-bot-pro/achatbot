@@ -19,6 +19,7 @@ bench_dir = modal.Volume.from_name("bench", create_if_missing=True)
     retries=2,
     cpu=2.0,
     image=download_image,
+    # secrets=[modal.Secret.from_name("achatbot")],
     volumes={BENCH_DIR: bench_dir},
     timeout=1200,
     scaledown_window=1200,
