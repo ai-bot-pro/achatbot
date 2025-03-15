@@ -21,7 +21,7 @@ assets_dir = modal.Volume.from_name("assets", create_if_missing=True)
     image=download_image,
     volumes={ASSETS_DIR: assets_dir},
     timeout=1200,
-    container_idle_timeout=1200,
+    scaledown_window=1200,
 )
 def download_assets(asset_urls: str) -> str:
     """

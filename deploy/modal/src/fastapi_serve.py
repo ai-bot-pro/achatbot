@@ -31,7 +31,7 @@ app = modal.App("fastapi")
 @app.cls(
     image=ContainerRuntimeConfig.get_img(),
     # cpu=2.0,
-    container_idle_timeout=300,
+    scaledown_window=300,
     timeout=600,
     allow_concurrent_inputs=1,
 )

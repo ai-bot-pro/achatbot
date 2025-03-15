@@ -19,6 +19,7 @@ ds_flash_mla_image = (
 BENCH_DIR = "/data/bench"
 bench_dir = modal.Volume.from_name("bench", create_if_missing=True)
 
+
 # modal run src/bench/run_flash_mla.py::compute_cap
 @app.function(
     # gpu=["T4", "L4", "A10G", "L40S", "A100", "A100-80GB", "H100"],
@@ -37,13 +38,14 @@ async def compute_cap():
     print(gpu)
     return gpu
 
+
 @app.function(
     gpu="H100",
     retries=0,
     image=ds_flash_mla_image,
     volumes={BENCH_DIR: bench_dir},
     timeout=1200,  # default 300s
-    container_idle_timeout=1200,
+    scaledown_window=1200,
 )
 def flash_mla(bench_name="ds_flash_mla_bench") -> str:
     import subprocess
@@ -52,7 +54,7 @@ def flash_mla(bench_name="ds_flash_mla_bench") -> str:
     cmd = "python tests/test_flash_mla.py".split(" ")
     result = subprocess.run(cmd, capture_output=True, text=True, cwd="/FlashMLA")
     print(result)
-    with open(os.path.join(BENCH_DIR, f"{bench_name}.log"),"w") as f:
+    with open(os.path.join(BENCH_DIR, f"{bench_name}.log"), "w") as f:
         f.write(result.stdout)
 
 

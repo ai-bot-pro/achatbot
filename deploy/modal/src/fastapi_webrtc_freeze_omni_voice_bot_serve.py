@@ -85,7 +85,7 @@ app = modal.App("fastapi_webrtc_freeze_omni_voice_bot")
     gpu=ContainerRuntimeConfig.get_gpu(),
     secrets=[modal.Secret.from_name("achatbot")],
     cpu=2.0,
-    container_idle_timeout=300,
+    scaledown_window=300,
     timeout=600,
     allow_concurrent_inputs=ContainerRuntimeConfig.get_allow_concurrent_inputs(),
 )
@@ -99,7 +99,6 @@ class Srv:
 
         os.makedirs(MODELS_DIR, exist_ok=True)
         logging.info(f"start downloading model to dir:{MODELS_DIR}")
-
 
         repo_id = "VITA-MLLM/Freeze-Omni"
         local_dir = os.path.join(MODELS_DIR, repo_id)

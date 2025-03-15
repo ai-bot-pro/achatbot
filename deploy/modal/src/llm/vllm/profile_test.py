@@ -46,7 +46,7 @@ MINUTES = 60  # seconds
     },
     retries=0,
     # how long should we stay up with no requests?
-    container_idle_timeout=15 * MINUTES,
+    scaledown_window=15 * MINUTES,
 )
 def profile():
     import time

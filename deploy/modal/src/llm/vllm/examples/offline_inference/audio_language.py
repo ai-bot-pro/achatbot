@@ -35,7 +35,7 @@ vllm_image = vllm_image.env(
     },
     retries=0,
     # how long should we stay up with no requests?
-    container_idle_timeout=15 * 60,
+    scaledown_window=15 * 60,
 )
 def run_audio(model_type: str, num_prompts: int, num_audios: int):
     from transformers import AutoTokenizer
