@@ -21,8 +21,8 @@ with image.imports():
     import requests
     import json
 
-    # if use proxy, tritonclient.http don't ok, need use request
-    import tritonclient.http as httpclient
+    # import tritonclient.http as httpclient
+    import tritonclient.http.aio as httpclient
     from tritonclient.utils import InferenceServerException
 
 TTS_GEN_AUDIO_DIR = "/tts_gen_audio"
@@ -74,6 +74,7 @@ def tts(
     os.makedirs(audio_dir, exist_ok=True)
     output_audio = os.path.join(audio_dir, output_audio)
     sf.write(output_audio, audio, 16000, "PCM_16")
+    print(f"save audio to {output_audio}")
 
 
 @app.function(
@@ -83,7 +84,7 @@ def tts(
     timeout=1200,  # default 300s
     scaledown_window=1200,
 )
-def health(server_url: str, verbose: bool = False):
+def health_meta_statics(server_url: str, verbose: bool = False):
     if not server_url.startswith(("http://", "https://")):
         server_url = f"http://{server_url}"
 
@@ -107,16 +108,96 @@ def health(server_url: str, verbose: bool = False):
     ]:
         resp = requests.get(f"{server_url}/v2/models/{model_name}/ready")
         assert resp.status_code == 200, f"{model_name} don't ready"
-        print("-" * 20)
+        print(f"{model_name} meta" + ("-" * 20))
         resp = requests.get(f"{server_url}/v2/models/{model_name}")
         assert resp.status_code == 200, f"no {model_name} meta info"
         res = json.dumps(resp.json(), indent=2)
         print(res)
 
+        print(f"{model_name} statics" + ("-" * 20))
+        resp = requests.get(f"{server_url}/v2/models/{model_name}/stats")
+        assert resp.status_code == 200, f"no {model_name} statics info"
+        res = json.dumps(resp.json(), indent=2)
+        print(res)
+
+    print("all statics" + ("-" * 20))
+    resp = requests.get(f"{server_url}/v2/models/stats")
+    assert resp.status_code == 200, f"no statics info"
+    res = json.dumps(resp.json(), indent=2)
+    print(res)
+
+
+@app.function(
+    cpu=2.0,
+    retries=0,
+    image=image,
+    timeout=1200,  # default 300s
+    scaledown_window=1200,
+)
+async def cli_sdk_health_meta_statics(server_url: str, verbose: bool = False):
+    triton_client = httpclient.InferenceServerClient(url=server_url, verbose=verbose)
+
+    # Health
+    res = await triton_client.is_server_live(query_params={"test_1": 1, "test_2": 2})
+    assert res is True, print("FAILED : is_server_live")
+
+    res = await triton_client.is_server_ready()
+    assert res is True, print("FAILED : is_server_ready")
+
+    # Metadata
+    metadata = await triton_client.get_server_metadata()
+    assert metadata["name"] == "triton", print("FAILED : get_server_metadata")
+    # print(json.dumps(metadata, indent=2))
+
+    for model_name in [
+        "audio_tokenizer",
+        "tensorrt_llm",
+        "vocoder",
+        "spark_tts",
+    ]:
+        res = await triton_client.is_model_ready(model_name)
+        assert res is True, print("FAILED : is_model_ready")
+
+        metadata = await triton_client.get_model_metadata(
+            model_name, query_params={"test_1": 1, "test_2": 2}
+        )
+        assert metadata["name"] == model_name, print("FAILED : get_model_metadata")
+        print(json.dumps(metadata, indent=2))
+
+    # Passing incorrect model name
+    try:
+        metadata = await triton_client.get_model_metadata("wrong_model_name")
+    except InferenceServerException as ex:
+        assert "Request for unknown model" in ex.message(), print(
+            "FAILED : get_model_metadata wrong_model_name"
+        )
+    else:
+        print("FAILED : get_model_metadata wrong_model_name")
+        return
+
+    # inference statistics
+    stats = await triton_client.get_inference_statistics()
+    # print(json.dumps(stats, indent=2))
+
+    for model_name in [
+        "audio_tokenizer",
+        "tensorrt_llm",
+        "vocoder",
+        "spark_tts",
+    ]:
+        stats = await triton_client.get_inference_statistics(model_name=model_name)
+        print(json.dumps(stats, indent=2))
+
+    await triton_client.close()
+
 
 """
 modal run src/llm/trtllm/tts_spark/client_http.py \
-    --action health \
+    --action health_meta_statics \
+    --server-url "https://weedge--tritonserver-serve-dev.modal.run"
+
+modal run src/llm/trtllm/tts_spark/client_http.py \
+    --action cli_sdk_health_meta_statics \
     --server-url "https://weedge--tritonserver-serve-dev.modal.run"
 
 modal run src/llm/trtllm/tts_spark/client_http.py \
@@ -133,14 +214,16 @@ def main(
     target_text: str = "身临其境，换新体验。塑造开源语音合成新范式，让智能语音更自然。",
     model_name: str = "spark_tts",
     output_audio: str = "output.wav",
-    action: str = "health",
+    action: str = "health_meta_statics",
 ):
     if action == "tts":
         tts.remote(
             server_url, reference_audio, reference_text, target_text, model_name, output_audio
         )
+    elif action == "cli_sdk_health_meta_statics":
+        cli_sdk_health_meta_statics.remote(server_url, verbose=False)
     else:
-        health.remote(server_url, verbose=True)
+        health_meta_statics.remote(server_url, verbose=False)
 
 
 def prepare_request(
