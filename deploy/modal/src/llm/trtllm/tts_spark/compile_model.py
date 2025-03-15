@@ -30,7 +30,7 @@ TRT_MODEL_DIR = "/root/trt_models"
 trt_model_vol = modal.Volume.from_name("triton_trtllm_models", create_if_missing=True)
 
 
-GIT_TAG_OR_HASH = "v0.16.0"
+GIT_TAG_OR_HASH = "v0.17.0"
 CONVERSION_SCRIPT_URL = f"https://raw.githubusercontent.com/NVIDIA/TensorRT-LLM/{GIT_TAG_OR_HASH}/examples/qwen/convert_checkpoint.py"
 
 
