@@ -107,8 +107,8 @@ def serve():
 # run tritonserver
 APP_NAME=tts-spark modal serve src/llm/trtllm/tts_spark/tritonserver.py 
 
-# curl health
-curl -vv -X GET "https://weedge--tritonserver-serve-dev.modal.run/v2/health/live" -H  "accept: application/json"
+# curl server is ready
+curl -vv -X GET "https://weedge--tritonserver-serve-dev.modal.run/v2/health/ready" -H  "accept: application/json"
 """
 
 

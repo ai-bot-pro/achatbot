@@ -214,7 +214,7 @@ see trtllm-build build TensorRT Engine config(include convert to TensorRT-LLM Ch
 3. ready model repository
    - dev [python bacckend](https://github.com/triton-inference-server/python_backend) (spark_tts, audio_tokenizer, vocoder) like lambda function, u can see [example/add_sub](https://github.com/triton-inference-server/python_backend/tree/main/examples/add_sub) to do
    - tensorrtllm backend don't to dev, use qwen as backbone,use Triton backend [tensorrtllm_backend](https://github.com/triton-inference-server/tensorrtllm_backend) + [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM) to [Prepare the Model Repository](https://github.com/triton-inference-server/tensorrtllm_backend/blob/main/README.md#prepare-the-model-repository), use [**inflight_batcher_llm(Using the C++ TensorRT-LLM backend with the executor API, which includes the latest features including inflight batching) tensorrt_llm(This model is a wrapper of your TensorRT-LLM model and is used for inferencing.)**](https://github.com/triton-inference-server/tensorrtllm_backend/blob/main/all_models/inflight_batcher_llm/tensorrt_llm/config.pbtxt)
-   - fill params: 
+   - fill params (dynamic_batching, parameters, input/output etc..): 
      - tensorrtllm backend [Modify the Model Configuration](https://github.com/triton-inference-server/tensorrtllm_backend/blob/main/README.md#modify-the-model-configuration) to fill api params which used [`fill_template.py`](https://github.com/triton-inference-server/tensorrtllm_backend/blob/main/tools/fill_template.py)
      - python backends like tensorrtllm backend which used [`fill_template.py`](https://github.com/triton-inference-server/tensorrtllm_backend/blob/main/tools/fill_template.py) to do
 
@@ -316,7 +316,9 @@ CLI_MODE=cli_sdk_http modal run src/llm/trtllm/tts_spark/bench.py \
     --num-tasks 2
 ```
 
-other GPU cumput arch (Ampere+) bench
+todo:
+- other GPU cumput arch (Ampere+) bench
+- change params to do [Perf Analyzer](https://github.com/triton-inference-server/perf_analyzer/blob/main/README.md)
 
 ## reference
 - TensorRT-LLM:
@@ -324,7 +326,11 @@ other GPU cumput arch (Ampere+) bench
   - https://nvidia.github.io/TensorRT-LLM/reference/support-matrix.html
   - https://nvidia.github.io/TensorRT-LLM/performance/perf-benchmarking.html
 - triton-inference-server(tritonserver):
-  - ⭐️⭐️⭐️️ https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/index.html
+  - ⭐️ https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/index.html
+  - ⭐️⭐️ https://github.com/triton-inference-server/server/blob/main/docs/README.md
+- pb_stub:
+  - [InferenceRequest](https://github.com/triton-inference-server/python_backend/blob/r25.02/src/pb_stub.cc#L1736)
+  - [InferenceResponse](https://github.com/triton-inference-server/python_backend/blob/r25.02/src/pb_stub.cc#L1874)
 
 
 
