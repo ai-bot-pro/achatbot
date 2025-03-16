@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import List
 
 import torch
 
@@ -9,7 +10,7 @@ class ICodec(ABC):
         raise NotImplementedError("must be implemented in the child class")
 
     @abstractmethod
-    def encode_code(self, wav_tensor: torch.Tensor) -> torch.Tensor:
+    def encode_code(self, wav_tensor: torch.Tensor) -> torch.Tensor | List[torch.Tensor]:
         """
         Encode the given input tensor to quantized representation.
 
@@ -23,7 +24,7 @@ class ICodec(ABC):
         raise NotImplementedError("must be implemented in the child class")
 
     @abstractmethod
-    def decode_code(self, vq_codes: torch.Tensor) -> torch.Tensor:
+    def decode_code(self, vq_codes: torch.Tensor | List[torch.Tensor]) -> torch.Tensor:
         """Decode the given codes to a reconstructed representation.
 
         Args:
