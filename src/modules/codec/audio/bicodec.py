@@ -20,9 +20,9 @@ try:
 
 except ModuleNotFoundError as e:
     logging.error(
-        "In order to use transoformers bicodec, you need to `pip install achatbot[codec_bicodec]`."
+        "In order to use transformers bicodec, you need to `pip install achatbot[codec_bicodec]`.\nPlease install the missing modules: transformers, torchaudio, etc."
     )
-    raise Exception(f"Missing module: {e}")
+    raise Exception(f"Missing module: {e}. Please run `pip install achatbot[codec_bicodec]` to install the dependencies.")
 
 from src.common.utils.helper import get_device, print_model_params
 from src.common.factory import EngineClass
