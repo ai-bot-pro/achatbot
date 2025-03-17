@@ -256,6 +256,6 @@ class SparkTTS(BaseTTS, ITts):
                 session.ctx.state.get("global_fsq_indices", None),
             )  # one batch
             yield np.frombuffer(sub_tts_speech, dtype=float).tobytes()
-            logging.info(f"last bath len: {len(semantic_token_ids)}")
+            logging.info(f"last batch len: {len(semantic_token_ids)}")
 
         torch.cuda.empty_cache()

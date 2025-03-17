@@ -28,3 +28,10 @@ class SparkTTSArgs:
 
     ref_text: str = ""
     ref_audio_path: str = ""
+
+    # stream
+    tts_stream: bool = True
+    chunk_length_seconds: int = 1
+
+    # silence
+    add_silence_chunk: bool = False
