@@ -158,6 +158,10 @@ TTS_TAG=tts_step IS_SAVE=1 IS_RELOAD=1 \
     SRC_AUDIO_PATH=./test/audio_files/asr_example_zh.wav \
     python -m src.cmd.grpc.speaker.client
 
+TTS_TAG=tts_spark IS_SAVE=1 IS_RELOAD=1 \
+    TTS_MODEL_DIR=./models/SparkAudio/Spark-TTS-0.5B \
+    TTS_LM_MODEL_PATH=./models/SparkAudio/Spark-TTS-0.5B/LLM \
+    python -m src.cmd.grpc.speaker.client
 """
 if __name__ == "__main__":
     player = None

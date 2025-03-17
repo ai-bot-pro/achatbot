@@ -303,6 +303,7 @@ codec_bitokenizer = [
     "soxr==0.5.0.post1",
     "torch==2.5.1",
     "torchaudio==2.5.1",
+    "torchvision==0.20.1",
     "transformers==4.46.2",
 ]
 
