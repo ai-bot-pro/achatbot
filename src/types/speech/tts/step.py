@@ -8,10 +8,10 @@ from src.types.llm.transformers import TransformersSpeechLMArgs
 @dataclass
 class StepTTSArgs:
     """
-    TransformersManualSpeechLlasa LM + Linguistic and Semantic Tokenizer(ref audio encoder) -> Step-Audio TTS
+    TransformersManualSpeechStep LM (Step-1) + Linguistic and Semantic Tokenizer(ref audio encoder) -> Step-Audio TTS
     """
 
-    lm_args: dict = field(default_factory=TransformersSpeechLMArgs().__dict__)
+    lm_args: dict = field(default_factory=lambda: TransformersSpeechLMArgs().__dict__)
     # >=2 increase for better speech quality, but rtf slow (speech quality vs rtf)
     stream_factor: int = 2
 

@@ -22,6 +22,8 @@ CODEC_TAG=codec_transformers_dac CODEC_MODEL_DIR=./models/descript/dac_16khz \
     python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
 CODEC_TAG=codec_transformers_dac CODEC_MODEL_DIR=./models/descript/dac_44khz \
     python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
+CODEC_TAG=codec_bitokenizer CODEC_MODEL_DIR=./models/SparkAudio/Spark-TTS-0.5B \
+    python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
 """
 
 
@@ -54,7 +56,11 @@ class TestCodec(unittest.TestCase):
         wav_tensor = torch.from_numpy(wav).float()  # Shape: (T)
         print(f"encode to vq codes from wav_tensor: {wav_tensor.shape}, rate: {sr}")
         vq_code = self.codec.encode_code(wav_tensor)
-        print(f"vq_code: {vq_code.shape}")
+        if isinstance(vq_code, list):
+            for item in vq_code:
+                print(f"vq_code: {item.shape}")
+        else:
+            print(f"vq_code: {vq_code.shape}")
         wav_tensor = self.codec.decode_code(vq_code)  # Shape: (T)
         print(f"decode vq_code to wav_tensor: {wav_tensor.shape}")
 
