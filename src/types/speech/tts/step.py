@@ -8,7 +8,7 @@ from src.types.llm.transformers import TransformersSpeechLMArgs
 @dataclass
 class StepTTSArgs:
     """
-    TransformersManualSpeechLlasa LM + Linguistic and Semantic Tokenizer(ref audio encoder) -> Step-Audio TTS
+    TransformersManualSpeechStep LM (Step-1) + Linguistic and Semantic Tokenizer(ref audio encoder) -> Step-Audio TTS
     """
 
     lm_args: dict = field(default_factory=TransformersSpeechLMArgs().__dict__)

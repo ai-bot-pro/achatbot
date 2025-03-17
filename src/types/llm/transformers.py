@@ -66,6 +66,10 @@ class TransformersLMArgs:
         default=42,
         metadata={"help": "The seed to use for the language model. Default is 42."},
     )
+    lm_max_length: int = field(
+        default=2048,
+        metadata={"help": "The maximum length of the generated text. Default is 2048."},
+    )
     lm_gen_max_new_tokens: int = field(
         default=1024,
         metadata={

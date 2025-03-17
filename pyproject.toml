@@ -245,6 +245,9 @@ llm_transformers_manual_voice_freeze_omni = [
 llm_transformers_manual_speech_llasa = [
     "achatbot[llm_transformers_manual_voice]",
 ]
+llm_transformers_manual_speech_spark = [
+    "achatbot[llm_transformers_manual_voice]",
+]
 # vision voice llm
 llm_transformers_manual_vision_voice_minicpmo = [
     "achatbot[accelerate,librosa,soundfile]",
@@ -424,6 +427,7 @@ tts_step = [
     "protobuf==5.29.3",
     "achatbot[conf,librosa]",
 ]
+tts_spark = ["achatbot[codec_bitokenizer]"]
 
 # multi tts modules engine
 speech_tts = [
