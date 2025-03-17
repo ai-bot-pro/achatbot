@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 import math
 import random
@@ -6,7 +6,6 @@ import os
 import re
 import sys
 from typing import AsyncGenerator, List
-from importlib.resources import files
 
 from dotenv import load_dotenv
 import numpy as np
@@ -15,10 +14,9 @@ import torchaudio
 
 from src.common.random import set_all_random_seed
 from src.core.llm.transformers.manual_speech_spark import TransformersManualSpeechSpark
-from src.common.utils import audio_utils
 from src.common.interface import ITts
 from src.common.session import Session
-from src.common.types import ASSETS_DIR, PYAUDIO_PAINT16, PYAUDIO_PAFLOAT32
+from src.common.types import PYAUDIO_PAFLOAT32
 from src.types.speech.tts.spark import SparkTTSArgs
 from src.types.llm.transformers import TransformersSpeechLMArgs
 from .base import BaseTTS
@@ -46,10 +44,10 @@ except ModuleNotFoundError as e:
 
 @dataclass
 class RefAudioCodecInfo:
-    voice_name: str = ""
+    ref_speaker: str = ""
     ref_text: str = ""
     ref_path: str = ""
-    vq_indices: List[torch.Tensor] = []
+    vq_indices: List[torch.Tensor] = field(default_factory=list)
 
 
 class SparkTTS(BaseTTS, ITts):
@@ -73,7 +71,7 @@ class SparkTTS(BaseTTS, ITts):
             else "cpu"
         )
 
-        self.args.lm_args["lm_model_name_or_path"] = os.path.join(self.args.model_dir, "/LLM")
+        # self.args.lm_args["lm_model_name_or_path"] = os.path.join(self.args.model_dir, "/LLM")
         logging.debug(f"{SparkTTS.TAG} args: {self.args}")
 
         self.lm_args = TransformersSpeechLMArgs(**self.args.lm_args)
@@ -87,12 +85,12 @@ class SparkTTS(BaseTTS, ITts):
 
         self.configs = load_config(f"{self.args.model_dir}/config.yaml")
         self.sample_rate = self.configs["sample_rate"]
-        self.audio_tokenizer = BiCodecTokenizer(self.model_dir, device=self.device)
+        self.audio_tokenizer = BiCodecTokenizer(self.args.model_dir, device=self.args.device)
 
         self.voices = {}
         if self.args.ref_audio_path:
             self.set_voice(
-                self.args.ref_audio_path, ref_text=self.args.ref_text, voice_name="default"
+                self.args.ref_audio_path, ref_text=self.args.ref_text, ref_speaker="default"
             )
 
     def get_stream_info(self) -> dict:
@@ -108,10 +106,10 @@ class SparkTTS(BaseTTS, ITts):
 
     def set_voice(self, ref_file: str, **kwargs):
         ref_text = kwargs["ref_text"] if "ref_text" in kwargs else self.args.ref_text
-        voice_name = kwargs["voice_name"] if "voice_name" in kwargs else ref_file
+        ref_speaker = kwargs["ref_speaker"] if "ref_speaker" in kwargs else ref_file
         global_token_ids, semantic_token_ids = self.audio_tokenizer.tokenize(ref_file)
-        self.voices[voice_name] = RefAudioCodecInfo(
-            voice_name=voice_name,
+        self.voices[ref_speaker] = RefAudioCodecInfo(
+            ref_speaker=ref_speaker,
             ref_path=ref_file,
             ref_text=ref_text,
             vq_indices=[global_token_ids, semantic_token_ids],
@@ -126,7 +124,7 @@ class SparkTTS(BaseTTS, ITts):
         """
         # print("generated_ids", generated_ids)
         # Decode the generated tokens into text (just a mapping, so quick,don't worry)
-        predicts = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
+        predicts = self.lm_model.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
         # print("predicts", predicts)
 
         # Extract semantic token IDs from the generated text
@@ -149,8 +147,8 @@ class SparkTTS(BaseTTS, ITts):
 
         # Convert semantic tokens back to waveform
         wav = self.audio_tokenizer.detokenize(
-            global_token_ids.to(self.device).squeeze(0),
-            pred_semantic_ids.to(self.device),
+            global_token_ids.to(self.args.device).squeeze(0),
+            pred_semantic_ids.to(self.args.device),
         )
 
         return wav
@@ -178,14 +176,14 @@ class SparkTTS(BaseTTS, ITts):
         batch_size = math.ceil(stream_factor * input_frame_rate)
         logging.info(f"init batch_size: {batch_size} max_batch_size: {max_batch_size}")
 
-        voice_name = kwargs["voice_name"] if "voice_name" in kwargs else "default"
-        ref_voice: RefAudioCodecInfo = self.voices.get(voice_name)
+        ref_speaker = kwargs["ref_speaker"] if "ref_speaker" in kwargs else "default"
+        ref_voice: RefAudioCodecInfo = self.voices.get(ref_speaker)
         if ref_voice is None:
-            logging.warning(
-                f"Voice {voice_name} not found, use Controlled Generation inference with gender attribute."
-            )
             if "gender" not in kwargs:
                 kwargs["gender"] = "male" if random.random() > 0.5 else "female"
+            logging.warning(
+                f"Voice {ref_speaker} not found, use Controlled Generation inference with gender:{kwargs['gender']} attribute."
+            )
 
         session.ctx.state["prompt"] = text
         if ref_voice:
@@ -247,7 +245,7 @@ class SparkTTS(BaseTTS, ITts):
                 # increase token_hop_len for better speech quality
                 batch_size = min(max_batch_size, int(batch_size * stream_scale_factor))
                 logging.info(
-                    f"increase batch_size: {batch_size} token_overlap_len:{self.token_overlap_len}"
+                    f"increase batch_size: {batch_size} token_overlap_len:{token_overlap_len}"
                 )
 
         if len(semantic_token_ids) > 0:  # end to finalize

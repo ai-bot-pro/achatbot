@@ -226,7 +226,7 @@ class ITts(ABC):
         raise NotImplementedError("must be implemented in the child class")
 
     @abstractmethod
-    def get_voices(self, voice: str) -> list:
+    def get_voices(self) -> list:
         """
         Note:
         - just simple voice get, don't support get voice with user id

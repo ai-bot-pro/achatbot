@@ -12,8 +12,8 @@ class LlasaTTSArgs:
     TransformersManualSpeechLlasa LM + xcodec2 -> llasa TTS
     """
 
-    lm_args: dict = field(default_factory=TransformersSpeechLMArgs().__dict__)
-    xcode2_args: dict = field(default_factory=CodecArgs().__dict__)
+    lm_args: dict = field(default_factory=lambda: TransformersSpeechLMArgs().__dict__)
+    xcode2_args: dict = field(default_factory=lambda: CodecArgs().__dict__)
 
     # ref audio file path and prompt text
     ref_audio_file_path: str = ""

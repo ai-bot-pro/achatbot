@@ -7,6 +7,7 @@ import torch
 class TransformersLMArgs:
     r"""
     HF transformers language model args (tiny,small,large,huge)
+    https://huggingface.co/docs/transformers/main/en/main_classes/text_generation#transformers.GenerationConfig
     """
 
     lm_model_name_or_path: str = field(
@@ -68,7 +69,9 @@ class TransformersLMArgs:
     )
     lm_max_length: int = field(
         default=2048,
-        metadata={"help": "The maximum length of the generated text. Default is 2048."},
+        metadata={
+            "help": "Corresponds to the length of the input prompt + max_new_tokens. Its effect is overridden by max_new_tokens, if also set. Default is 2048."
+        },
     )
     lm_gen_max_new_tokens: int = field(
         default=1024,

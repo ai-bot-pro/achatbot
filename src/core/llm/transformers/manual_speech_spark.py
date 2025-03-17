@@ -145,7 +145,7 @@ class TransformersManualSpeechSpark(TransformersBaseLLM):
         prompt = self.process_prompt_control(
             "female", "moderate", "moderate", self.args.warnup_prompt
         )
-        model_inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
+        model_inputs = self.tokenizer([prompt], return_tensors="pt").to(self.args.lm_device)
 
         streamer = TokenStreamer(skip_prompt=True)
         warmup_gen_kwargs = dict(

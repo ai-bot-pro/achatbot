@@ -46,6 +46,8 @@ class TTSEnvInit:
             from . import zonos_tts
         elif "tts_step" == tag:
             from . import step_tts
+        elif "tts_spark" == tag:
+            from . import spark_tts
         # elif "tts_openai" in tag:
         # from . import openai_tts
 
@@ -273,6 +275,38 @@ class TTSEnvInit:
         return kwargs
 
     @staticmethod
+    def get_tts_spark_args() -> dict:
+        from src.types.speech.tts.spark import SparkTTSArgs
+        from src.types.llm.transformers import TransformersSpeechLMArgs
+
+        kwargs = SparkTTSArgs(
+            device=os.getenv("TTS_DEVICE", None),
+            model_dir=os.getenv(
+                "TTS_MODEL_DIR", os.path.join(MODELS_DIR, "SparkAudio/Spark-TTS-0.5B")
+            ),
+            lm_args=TransformersSpeechLMArgs(
+                lm_model_name_or_path=os.getenv(
+                    "TTS_LM_MODEL_PATH", os.path.join(MODELS_DIR, "SparkAudio/Spark-TTS-0.5B/LLM")
+                ),
+                lm_device=os.getenv("TTS_LM_DEVICE", None),
+                lm_gen_max_new_tokens=int(
+                    os.getenv("TTS_LM_GEN_MAX_NEW_TOKENS", "8192")
+                ),  # qwen2.5
+                warmup_steps=int(os.getenv("TTS_WARMUP_sparkS", "1")),
+                lm_gen_top_k=int(os.getenv("TTS_LM_GEN_TOP_K", "50")),
+                lm_gen_top_p=float(os.getenv("TTS_LM_GEN_TOP_P", "0.95")),
+                lm_gen_temperature=float(os.getenv("TTS_LM_GEN_TEMPERATURE", "0.8")),
+                lm_gen_repetition_penalty=float(os.getenv("TTS_LM_GEN_REPETITION_PENALTY", "1.1")),
+            ).__dict__,
+            stream_factor=int(os.getenv("TTS_STREAM_FACTOR", "2")),
+            stream_scale_factor=float(os.getenv("TTS_STREAM_SCALE_FACTOR", "1.0")),
+            max_stream_factor=int(os.getenv("TTS_MAX_STREAM_FACTOR", "2")),
+            token_overlap_len=int(os.getenv("TTS_TOKEN_OVERLAP_LEN", "0")),
+            input_frame_rate=int(os.getenv("TTS_INPUT_FRAME_RATE", "25")),
+        ).__dict__
+        return kwargs
+
+    @staticmethod
     def get_tts_minicpmo_args() -> dict:
         kwargs = LLMEnvInit.get_llm_transformers_args()
         kwargs["tts_task"] = os.getenv("TTS_TASK", "voice_cloning")
@@ -315,8 +349,8 @@ class TTSEnvInit:
         "tts_minicpmo": get_tts_minicpmo_args,
         "tts_zonos": get_tts_zonos_args,
         "tts_step": get_tts_step_args,
+        "tts_spark": get_tts_spark_args,
     }
-
 
     @staticmethod
     def get_tts_step_synth_args() -> dict:
