@@ -67,8 +67,58 @@ tritonserver_vol = modal.Volume.from_name("tritonserver", create_if_missing=True
     },
     timeout=1200,  # default 300s
     scaledown_window=1200,
+    max_containers=100,
 )
-@modal.web_server(port=8000, startup_timeout=5 * 60)
+def run():
+    import subprocess
+
+    print("--" * 20)
+    cmd = f"ldd /opt/tritonserver/backends/python/triton_python_backend_stub"
+    print(cmd)
+    subprocess.run(cmd, shell=True, check=True)
+
+    print("--" * 20)
+    cmd = f"ldd /python_backend/build/triton_python_backend_stub"
+    print(cmd)
+    subprocess.run(cmd, shell=True, check=True)
+
+    app_name: str = os.getenv("APP_NAME", "tts-spark")
+    model_repo = os.path.join(TRITONSERVER_DIR, app_name)
+
+    cmd = f"cp /python_backend/build/triton_python_backend_stub {model_repo}/audio_tokenizer"
+    print(cmd)
+    subprocess.run(cmd, shell=True, check=True)
+    cmd = f"cp /python_backend/build/triton_python_backend_stub {model_repo}/spark_tts"
+    print(cmd)
+    subprocess.run(cmd, shell=True, check=True)
+    cmd = f"cp /python_backend/build/triton_python_backend_stub {model_repo}/vocoder"
+    print(cmd)
+    subprocess.run(cmd, shell=True, check=True)
+    cmd = f"tree {model_repo}"
+    print(cmd)
+    subprocess.run(cmd, shell=True, check=True)
+
+    with modal.forward(8001, unencrypted=True) as tunnel:
+        print(f"use tunnel.tcp_socket = {tunnel.tcp_socket} to connect tritonserver with tcp(grpc)")
+        cmd = f"tritonserver --model-repository {model_repo}"
+        print(cmd)
+        subprocess.run(cmd, shell=True, check=True)
+
+
+# ⭐️ https://github.com/triton-inference-server/python_backend/blob/main/README.md
+@app.function(
+    gpu=os.getenv("IMAGE_GPU", "L4"),
+    image=tritonserver_image,
+    volumes={
+        HF_MODEL_DIR: hf_model_vol,
+        TRT_MODEL_DIR: trt_model_vol,
+        TRITONSERVER_DIR: tritonserver_vol,
+    },
+    timeout=1200,  # default 300s
+    scaledown_window=1200,
+    max_containers=100,
+)
+@modal.web_server(port=8000, startup_timeout=10 * 60)
 def serve():
     import subprocess
 
@@ -109,9 +159,12 @@ APP_NAME=tts-spark modal serve src/llm/trtllm/tts_spark/tritonserver.py
 
 # curl server is ready
 curl -vv -X GET "https://weedge--tritonserver-serve-dev.modal.run/v2/health/ready" -H  "accept: application/json"
+
+# run grpc tritonserver by tcp tunnel and http server
+APP_NAME=tts-spark modal run src/llm/trtllm/tts_spark/tritonserver.py 
 """
 
 
 @app.local_entrypoint()
 def main():
-    serve.remote()
+    run.remote()
