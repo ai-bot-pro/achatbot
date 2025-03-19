@@ -147,6 +147,7 @@ def main(
     model_name: str = "spark_tts",
     output_audio: str = "grpc_output.wav",
     action: str = "health",
+    verbose: bool = False,
 ):
     if action == "tts":
         tts.remote(
@@ -156,10 +157,10 @@ def main(
             target_text,
             model_name,
             output_audio,
-            verbose=True,
+            verbose=verbose,
         )
     else:
-        health.remote(server_url, verbose=True)
+        health.remote(server_url, verbose=verbose)
 
 
 def prepare_grpc_sdk_request(

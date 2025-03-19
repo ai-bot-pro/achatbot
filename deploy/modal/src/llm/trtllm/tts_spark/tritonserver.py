@@ -33,7 +33,7 @@ tritonserver_image = (
         "cd /python_backend/build && cmake -DPYBIND11_FINDPYTHON=ON -DPYTHON_EXECUTABLE=$(which python) -DTRITON_ENABLE_GPU=ON -DTRITON_BACKEND_REPO_TAG=r25.02 -DTRITON_COMMON_REPO_TAG=r25.02 -DTRITON_CORE_REPO_TAG=r25.02 -DCMAKE_INSTALL_PREFIX:PATH=/stub/ .. && make triton-python-backend-stub",
     )
     .run_commands(
-        f"git clone https://github.com/SparkAudio/Spark-TTS.git -b {os.getenv('TAG_OR_HASH', 'main')}",
+        f"git clone https://github.com/weedge/Spark-TTS.git -b {os.getenv('TAG_OR_HASH', 'feat/runtime-stream')}",
         "pip install -r Spark-TTS/requirements.txt",
         # "pip install torch==2.6.0 torchaudio==2.6.0 transformers safetensors==0.5.2 einx==0.3.0 omegaconf==2.3.0 soundfile==0.12.1 soxr==0.5.0.post1",
     )
@@ -43,6 +43,7 @@ tritonserver_image = (
             "CUDA_VISIBLE_DEVICES": os.getenv("CUDA_VISIBLE_DEVICES", "0"),
             "PYTHONIOENCODING": "utf-8",
             "APP_NAME": os.getenv("APP_NAME", "tts-spark"),
+            "STREAM": os.getenv("STREAM", ""),
         }
     )
 )
@@ -88,9 +89,14 @@ def run():
     cmd = f"cp /python_backend/build/triton_python_backend_stub {model_repo}/audio_tokenizer"
     print(cmd)
     subprocess.run(cmd, shell=True, check=True)
-    cmd = f"cp /python_backend/build/triton_python_backend_stub {model_repo}/spark_tts"
+
+    spark_dir = "spark_tts"
+    if bool(os.getenv("STREAM", "")):
+        spark_dir = "spark_tts_decoupled"
+    cmd = f"cp /python_backend/build/triton_python_backend_stub {model_repo}/{spark_dir}"
     print(cmd)
     subprocess.run(cmd, shell=True, check=True)
+
     cmd = f"cp /python_backend/build/triton_python_backend_stub {model_repo}/vocoder"
     print(cmd)
     subprocess.run(cmd, shell=True, check=True)
@@ -99,8 +105,10 @@ def run():
     subprocess.run(cmd, shell=True, check=True)
 
     with modal.forward(8001, unencrypted=True) as tunnel:
-        print(f"use tunnel.tcp_socket = {tunnel.tcp_socket} to connect tritonserver with tcp(grpc)")
-        cmd = f"tritonserver --model-repository {model_repo}"
+        print(
+            f"use tunnel.tcp_socket = {tunnel.tcp_socket[0]}:{tunnel.tcp_socket[1]} to connect tritonserver with tcp(grpc)"
+        )
+        cmd = f"tritonserver --model-repository {model_repo} --log-verbose 0 --log-info True"
         print(cmd)
         subprocess.run(cmd, shell=True, check=True)
 
@@ -138,7 +146,10 @@ def serve():
     cmd = f"cp /python_backend/build/triton_python_backend_stub {model_repo}/audio_tokenizer"
     print(cmd)
     subprocess.run(cmd, shell=True, check=True)
-    cmd = f"cp /python_backend/build/triton_python_backend_stub {model_repo}/spark_tts"
+    spark_dir = "spark_tts"
+    if bool(os.getenv("STREAM", "")):
+        spark_dir = "spark_tts_decoupled"
+    cmd = f"cp /python_backend/build/triton_python_backend_stub {model_repo}/{spark_dir}"
     print(cmd)
     subprocess.run(cmd, shell=True, check=True)
     cmd = f"cp /python_backend/build/triton_python_backend_stub {model_repo}/vocoder"
@@ -156,12 +167,14 @@ def serve():
 """
 # run tritonserver
 APP_NAME=tts-spark modal serve src/llm/trtllm/tts_spark/tritonserver.py 
+STREAM=1 APP_NAME=tts-spark modal serve src/llm/trtllm/tts_spark/tritonserver.py 
 
 # curl server is ready
 curl -vv -X GET "https://weedge--tritonserver-serve-dev.modal.run/v2/health/ready" -H  "accept: application/json"
 
 # run grpc tritonserver by tcp tunnel and http server
 APP_NAME=tts-spark modal run src/llm/trtllm/tts_spark/tritonserver.py 
+STREAM=1 APP_NAME=tts-spark modal run src/llm/trtllm/tts_spark/tritonserver.py 
 """
 
 

@@ -39,21 +39,37 @@ def ready_model(
     vocoder_params: str,
     trt_dtype: str,
     tag_or_hash: str,
+    stream: bool = False,
 ) -> str:
     import subprocess
 
     if tag_or_hash == "":
         tag_or_hash = "main"
 
-    cmd = f"git clone https://github.com/SparkAudio/Spark-TTS -b {tag_or_hash}".split(" ")
-    subprocess.run(cmd, cwd="/", check=True)
+    cmd = f"git clone https://github.com/weedge/Spark-TTS.git -b {tag_or_hash}"
+    subprocess.run(cmd, cwd="/", shell=True, check=True)
 
     model_repo = os.path.join(TRITONSERVER_DIR, app_name)
     cmd = f"rm -rf {model_repo}".split(" ")
     subprocess.run(cmd, cwd="/", check=True)
-
-    cmd = f"cp -r /Spark-TTS/runtime/triton_trtllm/model_repo {model_repo}".split(" ")
+    cmd = f"mkdir -p {model_repo}".split(" ")
     subprocess.run(cmd, cwd="/", check=True)
+
+    spark_dir = "spark_tts"
+    if stream is True:
+        spark_dir = "spark_tts_decoupled"
+    cmd = f"cp -r /Spark-TTS/runtime/triton_trtllm/model_repo/{spark_dir} {model_repo}"
+    print(cmd)
+    subprocess.run(cmd, shell=True, cwd="/", check=True)
+    cmd = f"cp -r /Spark-TTS/runtime/triton_trtllm/model_repo/audio_tokenizer {model_repo}"
+    print(cmd)
+    subprocess.run(cmd, shell=True, cwd="/", check=True)
+    cmd = f"cp -r /Spark-TTS/runtime/triton_trtllm/model_repo/tensorrt_llm {model_repo}"
+    print(cmd)
+    subprocess.run(cmd, shell=True, cwd="/", check=True)
+    cmd = f"cp -r /Spark-TTS/runtime/triton_trtllm/model_repo/vocoder {model_repo}"
+    print(cmd)
+    subprocess.run(cmd, shell=True, cwd="/", check=True)
 
     hf_model_local_dir = os.path.join(
         HF_MODEL_DIR, os.getenv("HF_REPO_ID", "SparkAudio/Spark-TTS-0.5B")
@@ -61,7 +77,7 @@ def ready_model(
 
     # spark tts (Combine 「 audio_tokenizer -> trt llm enginer -> vocoder 」 services)
     hf_model_local_llm_dir = os.path.join(hf_model_local_dir, "LLM")
-    cmd = f"python3 scripts/fill_template.py -i {model_repo}/spark_tts/config.pbtxt" + (
+    cmd = f"python3 scripts/fill_template.py -i {model_repo}/{spark_dir}/config.pbtxt" + (
         f" {spark_tts_params},llm_tokenizer_dir:{hf_model_local_llm_dir}".strip(",")
     )
     print(cmd)
@@ -92,12 +108,24 @@ def ready_model(
 
 """
 # fill template with pbtext file for api params
+
+# spark_tts | tensorrt_llm decoupled_mode:False
 modal run src/llm/trtllm/tts_spark/ready_model.py \
     --tag-or-hash "main" \
     --trt-dtype "bfloat16" \
     --spark-tts-params "bls_instance_num:4,triton_max_batch_size:16,max_queue_delay_microseconds:0" \
     --audio-tokenizer-params "triton_max_batch_size:16,max_queue_delay_microseconds:0" \
     --tensorrt-llm-params "triton_backend:tensorrtllm,triton_max_batch_size:16,decoupled_mode:False,max_beam_width:1,max_tokens_in_paged_kv_cache:2560,max_attention_window_size:2560,kv_cache_free_gpu_mem_fraction:0.5,exclude_input_in_output:True,enable_kv_cache_reuse:False,batching_strategy:inflight_fused_batching,max_queue_delay_microseconds:0,encoder_input_features_data_type:TYPE_FP16,logits_datatype:TYPE_FP32" \
+    --vocoder-params "triton_max_batch_size:16,max_queue_delay_microseconds:0" 
+
+# spark_tts_decoupled | tensorrt_llm decoupled_mode:True
+modal run src/llm/trtllm/tts_spark/ready_model.py \
+    --stream 1 \
+    --tag-or-hash "feat/runtime-stream" \
+    --trt-dtype "bfloat16" \
+    --spark-tts-params "bls_instance_num:4,triton_max_batch_size:16,max_queue_delay_microseconds:0,stream_factor:2,stream_scale_factor:1.0,max_stream_factor:2,token_overlap_len:0,input_frame_rate:25" \
+    --audio-tokenizer-params "triton_max_batch_size:16,max_queue_delay_microseconds:0" \
+    --tensorrt-llm-params "triton_backend:tensorrtllm,triton_max_batch_size:16,decoupled_mode:True,max_beam_width:1,max_tokens_in_paged_kv_cache:2560,max_attention_window_size:2560,kv_cache_free_gpu_mem_fraction:0.5,exclude_input_in_output:True,enable_kv_cache_reuse:False,batching_strategy:inflight_fused_batching,max_queue_delay_microseconds:0,encoder_input_features_data_type:TYPE_FP16,logits_datatype:TYPE_FP32" \
     --vocoder-params "triton_max_batch_size:16,max_queue_delay_microseconds:0" 
 """
 
@@ -110,6 +138,7 @@ def main(
     vocoder_params: str,
     trt_dtype: str = "bfloat16",
     tag_or_hash: str = "main",
+    stream: str = "",
 ):
     ready_model.remote(
         spark_tts_params,
@@ -118,4 +147,5 @@ def main(
         vocoder_params,
         trt_dtype,
         tag_or_hash,
+        bool(stream),
     )
