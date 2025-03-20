@@ -297,6 +297,9 @@ funcs = {
 
 """
 OP=repeat_int32 GRPC_SERVE_URL=r21.modal.host:40765 python src/llm/trtllm/decoupled/client_grpc.py
+OP=square_int32 GRPC_SERVE_URL=r21.modal.host:40765 python src/llm/trtllm/decoupled/client_grpc.py
+OP=bls_decoupled_sync GRPC_SERVE_URL=r21.modal.host:40765 python src/llm/trtllm/decoupled/client_grpc.py
+OP=bls_decoupled_async GRPC_SERVE_URL=r21.modal.host:40765 python src/llm/trtllm/decoupled/client_grpc.py
 """
 
 if __name__ == "__main__":
