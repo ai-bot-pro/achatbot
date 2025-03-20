@@ -123,7 +123,7 @@ modal run src/llm/trtllm/tts_spark/ready_model.py \
     --stream 1 \
     --tag-or-hash "feat/runtime-stream" \
     --trt-dtype "bfloat16" \
-    --spark-tts-params "bls_instance_num:1,triton_max_batch_size:16,max_queue_delay_microseconds:0,stream_factor:2,stream_scale_factor:1.0,max_stream_factor:2,semantic_tokens_chuck_size:25" \
+    --spark-tts-params "bls_instance_num:1,triton_max_batch_size:16,max_queue_delay_microseconds:0,stream_factor:1,stream_scale_factor:1.0,max_stream_factor:1,semantic_tokens_chunk_size:50" \
     --audio-tokenizer-params "triton_max_batch_size:16,max_queue_delay_microseconds:0" \
     --tensorrt-llm-params "triton_backend:tensorrtllm,triton_max_batch_size:16,decoupled_mode:True,max_beam_width:1,max_tokens_in_paged_kv_cache:2560,max_attention_window_size:2560,kv_cache_free_gpu_mem_fraction:0.5,exclude_input_in_output:True,enable_kv_cache_reuse:False,batching_strategy:inflight_fused_batching,max_queue_delay_microseconds:0,encoder_input_features_data_type:TYPE_FP16,logits_datatype:TYPE_FP32" \
     --vocoder-params "triton_max_batch_size:16,max_queue_delay_microseconds:0" 
