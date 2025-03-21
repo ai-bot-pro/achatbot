@@ -306,6 +306,7 @@ codec_bitokenizer = [
     "torchvision==0.20.1",
     "transformers==4.46.2",
 ]
+codec_snac = ["snac"]
 
 # ---------------TTS----------------------
 
