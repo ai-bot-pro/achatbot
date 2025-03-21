@@ -6,9 +6,9 @@ from typing import List
 try:
     import torch
     from snac import SNAC
-except ModuleNotFoundError as e:
+except ImportError as e:
     logging.error("In order to use SNAC-codec, you need to `pip install achatbot[codec_snac]`.")
-    raise Exception(f"Missing module: {e}")
+    raise ImportError(f"Missing module: {e}")
 
 from src.common.factory import EngineClass
 from src.common.utils.helper import get_device, print_model_params
