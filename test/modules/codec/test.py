@@ -2,8 +2,10 @@ import os
 import logging
 
 import unittest
+import librosa
 import soundfile
 import torch
+import torchaudio
 
 from src.common.logger import Logger
 from src.common.session import Session
@@ -16,19 +18,19 @@ CODEC_TAG=codec_xcodec2 CODEC_MODEL_DIR=./models/HKUSTAudio/xcodec2 \
     python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
 CODEC_TAG=codec_moshi_mimi CODEC_MODEL_DIR=./models/kyutai/moshiko-pytorch-bf16 \
     python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
-CODEC_TAG=codec_transformers_mimi CODEC_MODEL_DIR=./models/kyutai/mimi \
+SAMPLE_RATE=24000 CODEC_TAG=codec_transformers_mimi CODEC_MODEL_DIR=./models/kyutai/mimi \
     python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
 CODEC_TAG=codec_transformers_dac CODEC_MODEL_DIR=./models/descript/dac_16khz \
     python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
-CODEC_TAG=codec_transformers_dac CODEC_MODEL_DIR=./models/descript/dac_44khz \
+SAMPLE_RATE=44100 CODEC_TAG=codec_transformers_dac CODEC_MODEL_DIR=./models/descript/dac_44khz \
     python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
 CODEC_TAG=codec_bitokenizer CODEC_MODEL_DIR=./models/SparkAudio/Spark-TTS-0.5B \
     python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
-CODEC_TAG=codec_snac CODEC_MODEL_DIR=./models/hubertsiuzdak/snac_24khz \
+SAMPLE_RATE=24000 CODEC_TAG=codec_snac CODEC_MODEL_DIR=./models/hubertsiuzdak/snac_24khz \
     python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
-CODEC_TAG=codec_snac CODEC_MODEL_DIR=./models/hubertsiuzdak/snac_32khz \
+SAMPLE_RATE=32000 CODEC_TAG=codec_snac CODEC_MODEL_DIR=./models/hubertsiuzdak/snac_32khz \
     python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
-CODEC_TAG=codec_snac CODEC_MODEL_DIR=./models/hubertsiuzdak/snac_44khz \
+SAMPLE_RATE=44100 CODEC_TAG=codec_snac CODEC_MODEL_DIR=./models/hubertsiuzdak/snac_44khz \
     python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
 """
 
@@ -40,6 +42,7 @@ class TestCodec(unittest.TestCase):
         # https://isv-data.oss-cn-hangzhou.aliyuncs.com/ics/MaaS/ASR/test_audio/asr_example_zh.wav
         # -O records/asr_example_zh.wav
         audio_file = os.path.join(TEST_DIR, "audio_files/asr_example_zh.wav")
+        cls.sample_rate = int(os.getenv("SAMPLE_RATE", "16000"))
         cls.audio_file = os.getenv("AUDIO_FILE", audio_file)
         cls.codec_tag = os.getenv("CODEC_TAG", "codec_xcodec2")
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
@@ -54,13 +57,17 @@ class TestCodec(unittest.TestCase):
         self.codec: ICodec = CodecEnvInit.initCodecEngine(self.codec_tag, **kwargs)
         self.session = Session(**SessionCtx("test_codec_client_id").__dict__)
 
-    def tearDown(self):
         pass
 
     def test_encode_decode(self):
         wav, sr = soundfile.read(self.audio_file)
+        if sr != self.sample_rate:
+            # Resample the sound file
+            wav = librosa.resample(wav, orig_sr=sr, target_sr=self.sample_rate)
+            print(f"resample rate: {sr} -> target rate: {self.sample_rate}")
+
         wav_tensor = torch.from_numpy(wav).float()  # Shape: (T)
-        print(f"encode to vq codes from wav_tensor: {wav_tensor.shape}, rate: {sr}")
+        print(f"encode to vq codes from wav_tensor: {wav_tensor.shape}, rate: {self.sample_rate}")
         vq_code = self.codec.encode_code(wav_tensor)
         if isinstance(vq_code, list):
             for item in vq_code:
@@ -72,5 +79,5 @@ class TestCodec(unittest.TestCase):
 
         wav_np = wav_tensor.detach().cpu().numpy()
         output_path = f"{self.codec_tag}_test_codec.wav"
-        soundfile.write(output_path, wav_np, sr)
+        soundfile.write(output_path, wav_np, self.sample_rate)
         print(f"save to {output_path}")
