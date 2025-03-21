@@ -24,6 +24,12 @@ CODEC_TAG=codec_transformers_dac CODEC_MODEL_DIR=./models/descript/dac_44khz \
     python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
 CODEC_TAG=codec_bitokenizer CODEC_MODEL_DIR=./models/SparkAudio/Spark-TTS-0.5B \
     python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
+CODEC_TAG=codec_snac CODEC_MODEL_DIR=./models/hubertsiuzdak/snac_24khz \
+    python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
+CODEC_TAG=codec_snac CODEC_MODEL_DIR=./models/hubertsiuzdak/snac_32khz \
+    python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
+CODEC_TAG=codec_snac CODEC_MODEL_DIR=./models/hubertsiuzdak/snac_44khz \
+    python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
 """
 
 
