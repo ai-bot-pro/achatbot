@@ -248,6 +248,9 @@ llm_transformers_manual_speech_llasa = [
 llm_transformers_manual_speech_spark = [
     "achatbot[llm_transformers_manual_voice]",
 ]
+llm_transformers_manual_speech_llama = [
+    "achatbot[llm_transformers_manual_voice]",
+]
 # vision voice llm
 llm_transformers_manual_vision_voice_minicpmo = [
     "achatbot[accelerate,librosa,soundfile]",
@@ -430,6 +433,7 @@ tts_step = [
     "achatbot[conf,librosa]",
 ]
 tts_spark = ["achatbot[codec_bitokenizer]"]
+tts_orpheus = ["achatbot[codec_snac]"]
 
 # multi tts modules engine
 speech_tts = [
