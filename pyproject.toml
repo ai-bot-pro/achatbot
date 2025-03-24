@@ -348,8 +348,15 @@ tts_f5 = [
     "wandb",                       # for training
     "ema_pytorch",                 # for training
     "datasets",                    # for training
+    "accelerate>=0.33.0",
+    "bitsandbytes>0.37.0; platform_machine != 'arm64' and platform_system != 'Darwin'",
+    "tomli",
+    "cached_path",
+    "click",
     "torch~=2.2.2",
     "torchaudio~=2.2.2",
+    "matplotlib",
+    "numpy<=1.26.4",
     "torchdiffeq",
     "jieba",
     "pypinyin",

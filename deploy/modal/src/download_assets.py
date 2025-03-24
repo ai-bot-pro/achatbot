@@ -45,9 +45,7 @@ def download_assets(asset_urls: str) -> str:
             continue
 
         filenames = url.split("/assets/")
-        filename = "" if len(filenames) == 0 else filenames[-1]
-        if not filename:
-            filename = os.path.basename(url)
+        filename = os.path.basename(url) if len(filenames) < 2 else filenames[-1]
         local_path = os.path.join(ASSETS_DIR, filename)
         local_path = unquote(local_path)
         dir_path = os.path.dirname(local_path)
@@ -78,7 +76,15 @@ def download_assets(asset_urls: str) -> str:
     return "All asset downloads complete."
 
 
-# modal run -e achatbot src/download_assets.py --asset-urls "https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/src/cmd/bots/image/storytelling/assets/speakers/Tingting%E5%93%BC%E5%94%B1_prompt.wav"
+"""
+modal run -e achatbot src/download_assets.py --asset-urls "https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/src/cmd/bots/image/storytelling/assets/speakers/Tingting%E5%93%BC%E5%94%B1_prompt.wav"
+
+modal run src/download_assets.py --asset-urls "https://raw.githubusercontent.com/SWivid/F5-TTS/refs/heads/main/src/f5_tts/infer/examples/vocab.txt"
+modal run src/download_assets.py --asset-urls "https://raw.githubusercontent.com/SWivid/F5-TTS/refs/heads/main/src/f5_tts/infer/examples/basic/basic_ref_en.wav"
+modal run src/download_assets.py --asset-urls "https://raw.githubusercontent.com/SWivid/F5-TTS/refs/heads/main/src/f5_tts/infer/examples/basic/basic_ref_zh.wav"
+"""
+
+
 @app.local_entrypoint()
 def main(asset_urls: str):
     """

@@ -1,7 +1,5 @@
 from dataclasses import dataclass, field
 
-import torch
-
 
 @dataclass
 class TransformersLMArgs:

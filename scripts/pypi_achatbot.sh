@@ -26,8 +26,10 @@ cp -r deps/* pypi_build/app/achatbot/
 
 find pypi_build/app/achatbot/ | grep -E "(/__pycache__$|\.pyc$|\.pyo$)" | xargs rm -rf
 
-find pypi_build/app/achatbot/ -type f -print0 | xargs -0 perl -i -pe 's/src\./achatbot\./g'
-find pypi_build/app/achatbot/ -type f -print0 | xargs -0 perl -i -pe 's/deps\./achatbot\./g'
+find pypi_build/app/achatbot/ -type f -print0 | xargs -0 perl -i -pe 's/from src\./from achatbot\./g'
+find pypi_build/app/achatbot/ -type f -print0 | xargs -0 perl -i -pe 's/from deps\./from achatbot\./g'
+find pypi_build/app/achatbot/ -type f -print0 | xargs -0 perl -i -pe 's/import src\./import achatbot\./g'
+find pypi_build/app/achatbot/ -type f -print0 | xargs -0 perl -i -pe 's/import deps\./import achatbot\./g'
 
 
 if [ -n "$pypi" ]; then
