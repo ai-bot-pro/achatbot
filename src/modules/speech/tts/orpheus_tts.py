@@ -1,6 +1,6 @@
-from dataclasses import dataclass, field
 import logging
-from typing import AsyncGenerator, List
+import math
+from typing import AsyncGenerator
 
 from dotenv import load_dotenv
 import numpy as np
@@ -10,7 +10,7 @@ from src.core.llm.transformers.manual_speech_llama import TransformersManualSpee
 from src.common.random import set_all_random_seed
 from src.common.interface import ITts
 from src.common.session import Session
-from src.common.types import PYAUDIO_PAFLOAT32
+from src.common.types import PYAUDIO_PAFLOAT32, PYAUDIO_PAINT16
 from src.types.speech.tts.orpheus import OrpheusTTSArgs
 from src.types.llm.transformers import TransformersSpeechLMArgs
 from src.types.codec import CodecArgs
@@ -27,14 +27,6 @@ except ModuleNotFoundError as e:
     raise Exception(
         f"Missing module: {e}. Please run `pip install achatbot[tts_orpheus]` to install the dependencies."
     )
-
-
-@dataclass
-class RefAudioCodecInfo:
-    ref_speaker: str = ""
-    ref_text: str = ""
-    ref_path: str = ""
-    vq_indices: List[torch.Tensor] = field(default_factory=list)
 
 
 class OrpheusTTS(BaseTTS, ITts):
@@ -59,13 +51,13 @@ class OrpheusTTS(BaseTTS, ITts):
 
     def get_stream_info(self) -> dict:
         return {
-            # "format": PYAUDIO_PAINT16,
-            "format": PYAUDIO_PAFLOAT32,
+            "format": PYAUDIO_PAINT16,
+            # "format": PYAUDIO_PAFLOAT32,
             "channels": 1,
             "rate": 24000,  # target_sample_rate
             "sample_width": 2,
-            # "np_dtype": np.int16,
-            "np_dtype": np.float32,
+            "np_dtype": np.int16,
+            # "np_dtype": np.float32,
         }
 
     def set_voice(self, ref_file: str, **kwargs):
@@ -96,12 +88,15 @@ class OrpheusTTS(BaseTTS, ITts):
             layer_3.append(code_list[7 * i + 5] - (5 * 4096))
             layer_3.append(code_list[7 * i + 6] - (6 * 4096))
         codes = [
-            torch.tensor(layer_1, device=self.codec_model.device).unsqueeze(0),
-            torch.tensor(layer_2, device=self.codec_model.device).unsqueeze(0),
-            torch.tensor(layer_3, device=self.codec_model.device).unsqueeze(0),
+            torch.tensor(layer_1, device=self.codec_model.args.device).unsqueeze(0),
+            torch.tensor(layer_2, device=self.codec_model.args.device).unsqueeze(0),
+            torch.tensor(layer_3, device=self.codec_model.args.device).unsqueeze(0),
         ]
         audio_hat = self.codec_model.decode_code(codes)
-        return audio_hat.detach().cpu().numpy()
+
+        audio_np = audio_hat.detach().cpu().numpy()
+        audio_np = (audio_np * 32767).astype(np.int16)
+        return audio_np
 
     def turn_token_id_to_id(self, token_id):
         """
@@ -113,63 +108,49 @@ class OrpheusTTS(BaseTTS, ITts):
             return token_id - 128266
         return None
 
-    def turn_token_to_id(self, token_string):
-        """
-        turn token (<custom_token_1234>) to vq indices 1234 - 10
-        """
-        # Strip whitespace
-        token_string = token_string.strip()
-
-        # Find the last token in the string
-        last_token_start = token_string.rfind("<custom_token_")
-
-        if last_token_start == -1:
-            print("No token found in the string")
-            return None
-
-        # Extract the last token
-        last_token = token_string[last_token_start:]
-
-        # Process the last token
-        if last_token.startswith("<custom_token_") and last_token.endswith(">"):
-            try:
-                number_str = last_token[14:-1]
-                return int(number_str) - 10
-            except ValueError:
-                return None
-        else:
-            return None
-
     async def _inference(
         self, session: Session, text: str, **kwargs
     ) -> AsyncGenerator[bytes, None]:
         if "cuda" in str(self.lm_model._model.device):
             torch.cuda.empty_cache()
-        seed = kwargs.get("seed", self.lm_args.lm_gen_seed)
+        seed = kwargs.get("seed", self.args.lm_args.lm_gen_seed)
         set_all_random_seed(seed)
 
         session.ctx.state["prompt"] = f"{self.voice_name}: {text}"
         streamer = self.lm_model.generate(session, **kwargs)
 
-        buffer = []
-        count = 0
+        stream_factor = kwargs.get("stream_factor", self.args.stream_factor)
+        stream_scale_factor = kwargs.get("stream_scale_factor", self.args.stream_scale_factor)
+        max_stream_factor = kwargs.get("max_stream_factor", self.args.max_stream_factor)
+        token_overlap_len = kwargs.get("token_overlap_len", self.args.token_overlap_len)
+        input_frame_rate = kwargs.get("input_frame_rate", self.args.input_frame_rate)
+
+        max_batch_size = math.ceil(max_stream_factor * input_frame_rate)
+        batch_size = math.ceil(stream_factor * input_frame_rate)
+        logging.info(f"init batch_size: {batch_size} max_batch_size: {max_batch_size}")
+
+        semantic_token_ids = []
         for token_id in streamer:
-            # token = self.lm_model._tokenizer.decode(token_id)
-            # code_id = self.turn_token_to_id(token)
             code_id = self.turn_token_id_to_id(token_id)
             if code_id is not None:
-                buffer.append(code_id)
-                count += 1
-                if count % 7 == 0 and count >= 28:  # 28 tokens per sample
-                    buffer_to_proc = buffer[-28:]  # slice 28 token ,7 tokens + overlap 21 tokens
-                    audio_samples = self.token2wav(buffer_to_proc)
-                    if audio_samples is not None:
-                        yield audio_samples
+                semantic_token_ids.append(code_id)
+                # if len(semantic_token_ids) % batch_size == 0:
+                if len(semantic_token_ids) >= batch_size + token_overlap_len:
+                    waveform = self.token2wav(semantic_token_ids)
+                    if waveform is not None:
+                        yield waveform
 
-            """
-            - first < 28 tokens, no need to process
-            - left < 7 tokens, no need to process
-            """
-            pass
+                semantic_token_ids = semantic_token_ids[batch_size:]
+                # increase token_hop_len for better speech quality
+                batch_size = min(max_batch_size, int(batch_size * stream_scale_factor))
+                logging.info(
+                    f"increase batch_size: {batch_size} token_overlap_len:{token_overlap_len}"
+                )
+
+        if len(semantic_token_ids) > 0:  # end to finalize
+            waveform = self.token2wav(semantic_token_ids)
+            if waveform is not None:
+                yield waveform
+            logging.info(f"last batch len: {len(semantic_token_ids)}")
 
         torch.cuda.empty_cache()

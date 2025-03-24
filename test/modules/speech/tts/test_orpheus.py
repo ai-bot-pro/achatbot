@@ -11,10 +11,10 @@ from src.common.session import Session
 from src.common.types import RECORDS_DIR, SessionCtx, TEST_DIR
 
 r"""
-python -m unittest test.modules.speech.tts.test_orpheus.TestLlasaTTS.test_get_voices
-python -m unittest test.modules.speech.tts.test_orpheus.TestLlasaTTS.test_set_voice
-python -m unittest test.modules.speech.tts.test_orpheus.TestLlasaTTS.test_synthesize
-python -m unittest test.modules.speech.tts.test_orpheus.TestLlasaTTS.test_synthesize_speak
+python -m unittest test.modules.speech.tts.test_orpheus.TestOrpheusTTS.test_get_voices
+python -m unittest test.modules.speech.tts.test_orpheus.TestOrpheusTTS.test_set_voice
+python -m unittest test.modules.speech.tts.test_orpheus.TestOrpheusTTS.test_synthesize
+python -m unittest test.modules.speech.tts.test_orpheus.TestOrpheusTTS.test_synthesize_speak
 
 """
 

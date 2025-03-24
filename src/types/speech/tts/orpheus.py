@@ -15,6 +15,13 @@ class OrpheusTTSArgs:
     lm_args: dict = field(default_factory=lambda: TransformersSpeechLMArgs().__dict__)
     codec_args: dict = field(default_factory=lambda: CodecArgs().__dict__)
 
+    # defualt static batch
+    stream_factor: int = 2
+    stream_scale_factor: float = 1.0
+    max_stream_factor: int = 2
+    token_overlap_len: int = 0
+    input_frame_rate: int = 14
+
     # stream
     tts_stream: bool = True
     chunk_length_seconds: int = 1
