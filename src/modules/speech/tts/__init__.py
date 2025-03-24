@@ -48,6 +48,8 @@ class TTSEnvInit:
             from . import step_tts
         elif "tts_spark" == tag:
             from . import spark_tts
+        elif "tts_orpheus" == tag:
+            from . import orpheus_tts
         # elif "tts_openai" in tag:
         # from . import openai_tts
 
@@ -249,6 +251,36 @@ class TTSEnvInit:
         return kwargs
 
     @staticmethod
+    def get_tts_orpheus_args() -> dict:
+        from src.types.speech.tts.orpheus import OrpheusTTSArgs
+        from src.types.llm.transformers import TransformersSpeechLMArgs
+        from src.types.codec import CodecArgs
+
+        kwargs = OrpheusTTSArgs(
+            lm_args=TransformersSpeechLMArgs(
+                lm_model_name_or_path=os.getenv(
+                    "LM_MODEL_PATH", os.path.join(MODELS_DIR, "canopylabs/orpheus-3b-0.1-ft")
+                ),
+                lm_device=os.getenv("LM_DEVICE", None),
+                warmup_steps=int(os.getenv("WARMUP_STEPS", "0")),
+                lm_max_length=int(os.getenv("LM_MAX_LENGTH", "4096")),
+                lm_gen_max_new_tokens=int(os.getenv("LM_GEN_MAX_NEW_TOKENS", "2048")),
+                lm_gen_top_k=int(os.getenv("LM_GEN_TOP_K", "10")),
+                lm_gen_top_p=float(os.getenv("LM_GEN_TOP_P", "0.95")),
+                lm_gen_temperature=float(os.getenv("LM_GEN_TEMPERATURE", "0.6")),
+                lm_gen_repetition_penalty=float(os.getenv("LM_GEN_REPETITION_PENALTY", "1.1")),
+            ).__dict__,
+            codec_args=CodecArgs(
+                model_dir=os.getenv(
+                    "CODEC_MODEL_PATH", os.path.join(MODELS_DIR, "hubertsiuzdak/snac_24khz")
+                ),
+            ).__dict__,
+            stream_factor=int(os.getenv("TTS_STREAM_FACTOR", "1")),
+            token_overlap_len=int(os.getenv("TTS_TOKEN_OVERLAP_LEN", "0")),
+        ).__dict__
+        return kwargs
+
+    @staticmethod
     def get_tts_step_args() -> dict:
         from src.types.speech.tts.step import StepTTSArgs
         from src.types.llm.transformers import TransformersSpeechLMArgs
@@ -339,6 +371,7 @@ class TTSEnvInit:
         "tts_cosy_voice2": get_tts_cosy_voice_args,
         "tts_fishspeech": get_tts_fishspeech_args,
         "tts_llasa": get_tts_llasa_args,
+        "tts_orpheus": get_tts_orpheus_args,
         "tts_f5": get_tts_f5_args,
         "tts_openvoicev2": get_tts_openvoicev2_args,
         "tts_kokoro": get_tts_kokoro_args,

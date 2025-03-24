@@ -162,6 +162,11 @@ TTS_TAG=tts_spark IS_SAVE=1 IS_RELOAD=1 \
     TTS_MODEL_DIR=./models/SparkAudio/Spark-TTS-0.5B \
     TTS_LM_MODEL_PATH=./models/SparkAudio/Spark-TTS-0.5B/LLM \
     python -m src.cmd.grpc.speaker.client
+
+TTS_TAG=tts_orpheus IS_SAVE=1 IS_RELOAD=1 \
+    LM_MODEL_PATH=./models/canopylabs/orpheus-3b-0.1-ft \
+    CODEC_MODEL_PATH=./models/hubertsiuzdak/snac_24khz \
+    python -m src.cmd.grpc.speaker.client
 """
 if __name__ == "__main__":
     player = None
