@@ -16,7 +16,7 @@ class OrpheusTTSArgs:
     codec_args: dict = field(default_factory=lambda: CodecArgs().__dict__)
 
     # static batch
-    stream_factor: int = 4  # 4*chunk_size(7)
+    stream_factor: int = 1  # 1*chunk_size(28)
     token_overlap_len: int = 0
 
     # stream

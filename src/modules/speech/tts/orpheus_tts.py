@@ -122,7 +122,7 @@ class OrpheusTTS(BaseTTS, ITts):
         stream_factor = kwargs.get("stream_factor", self.args.stream_factor)
         token_overlap_len = kwargs.get("token_overlap_len", self.args.token_overlap_len)
 
-        chunk_size = math.ceil(stream_factor * 7)
+        chunk_size = math.ceil(stream_factor * 28)
         logging.info(f"init chunk_size: {chunk_size} token_overlap_len:{token_overlap_len}")
 
         semantic_token_ids = []

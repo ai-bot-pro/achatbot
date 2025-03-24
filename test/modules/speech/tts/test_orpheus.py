@@ -1,3 +1,4 @@
+import logging
 import os
 
 import numpy as np
@@ -66,7 +67,7 @@ class TestOrpheusTTS(unittest.TestCase):
         iter = self.tts.synthesize_sync(self.session)
         res = bytearray()
         for i, chunk in enumerate(iter):
-            print(i, len(chunk))
+            logging.info(f"{i} {len(chunk)}")
             res.extend(chunk)
 
         stream_info = self.tts.get_stream_info()

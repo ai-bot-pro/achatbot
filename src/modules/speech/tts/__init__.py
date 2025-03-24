@@ -275,7 +275,7 @@ class TTSEnvInit:
                     "CODEC_MODEL_PATH", os.path.join(MODELS_DIR, "hubertsiuzdak/snac_24khz")
                 ),
             ).__dict__,
-            stream_factor=int(os.getenv("TTS_STREAM_FACTOR", "2")),
+            stream_factor=int(os.getenv("TTS_STREAM_FACTOR", "1")),
             token_overlap_len=int(os.getenv("TTS_TOKEN_OVERLAP_LEN", "0")),
         ).__dict__
         return kwargs
