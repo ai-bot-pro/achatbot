@@ -120,37 +120,28 @@ class OrpheusTTS(BaseTTS, ITts):
         streamer = self.lm_model.generate(session, **kwargs)
 
         stream_factor = kwargs.get("stream_factor", self.args.stream_factor)
-        stream_scale_factor = kwargs.get("stream_scale_factor", self.args.stream_scale_factor)
-        max_stream_factor = kwargs.get("max_stream_factor", self.args.max_stream_factor)
         token_overlap_len = kwargs.get("token_overlap_len", self.args.token_overlap_len)
-        input_frame_rate = kwargs.get("input_frame_rate", self.args.input_frame_rate)
 
-        max_batch_size = math.ceil(max_stream_factor * input_frame_rate)
-        batch_size = math.ceil(stream_factor * input_frame_rate)
-        logging.info(f"init batch_size: {batch_size} max_batch_size: {max_batch_size}")
+        chunk_size = math.ceil(stream_factor * 7)
+        logging.info(f"init chunk_size: {chunk_size} token_overlap_len:{token_overlap_len}")
 
         semantic_token_ids = []
         for token_id in streamer:
             code_id = self.turn_token_id_to_id(token_id)
             if code_id is not None:
                 semantic_token_ids.append(code_id)
-                # if len(semantic_token_ids) % batch_size == 0:
-                if len(semantic_token_ids) >= batch_size + token_overlap_len:
+                # if len(semantic_token_ids) % chunk_size == 0:
+                if len(semantic_token_ids) >= chunk_size + token_overlap_len:
                     waveform = self.token2wav(semantic_token_ids)
                     if waveform is not None:
                         yield waveform
 
-                semantic_token_ids = semantic_token_ids[batch_size:]
-                # increase token_hop_len for better speech quality
-                batch_size = min(max_batch_size, int(batch_size * stream_scale_factor))
-                logging.info(
-                    f"increase batch_size: {batch_size} token_overlap_len:{token_overlap_len}"
-                )
+                    semantic_token_ids = semantic_token_ids[chunk_size:]
 
         if len(semantic_token_ids) > 0:  # end to finalize
             waveform = self.token2wav(semantic_token_ids)
             if waveform is not None:
                 yield waveform
-            logging.info(f"last batch len: {len(semantic_token_ids)}")
+            logging.info(f"last chunk len: {len(semantic_token_ids)}")
 
         torch.cuda.empty_cache()
