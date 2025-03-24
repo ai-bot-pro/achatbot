@@ -14,6 +14,7 @@ class OrpheusTTSArgs:
 
     lm_args: dict = field(default_factory=lambda: TransformersSpeechLMArgs().__dict__)
     codec_args: dict = field(default_factory=lambda: CodecArgs().__dict__)
+    voice_name: str = "tara"
 
     # static batch
     stream_factor: int = 1  # 1*chunk_size(28)

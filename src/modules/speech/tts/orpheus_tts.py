@@ -47,7 +47,7 @@ class OrpheusTTS(BaseTTS, ITts):
         self.lm_model = TransformersManualSpeechLlama(**self.args.lm_args.__dict__)
         self.codec_model = SNACCodec(**self.args.codec_args.__dict__)
 
-        self.voice_name = "tara"
+        self.voice_name = self.args.voice_name
 
     def get_stream_info(self) -> dict:
         return {
@@ -62,6 +62,7 @@ class OrpheusTTS(BaseTTS, ITts):
 
     def set_voice(self, ref_file: str, **kwargs):
         logging.info(f"now, un support voice clone ref")
+        self.voice_name = ref_file
 
     def get_voices(self):
         return [
