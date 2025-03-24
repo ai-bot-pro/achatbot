@@ -134,14 +134,14 @@ class OrpheusTTS(BaseTTS, ITts):
                 if len(semantic_token_ids) >= chunk_size + token_overlap_len:
                     waveform = self.token2wav(semantic_token_ids)
                     if waveform is not None:
-                        yield waveform
+                        yield waveform.tobytes()
 
                     semantic_token_ids = semantic_token_ids[chunk_size:]
 
         if len(semantic_token_ids) > 0:  # end to finalize
             waveform = self.token2wav(semantic_token_ids)
             if waveform is not None:
-                yield waveform
+                yield waveform.tobytes()
             logging.info(f"last chunk len: {len(semantic_token_ids)}")
 
         torch.cuda.empty_cache()
