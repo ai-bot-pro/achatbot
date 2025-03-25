@@ -36,7 +36,7 @@ def run_sync():
         model_path="/root/models/Qwen/Qwen2.5-0.5B",
     )
 
-    iterator = engine.generate(
+    iterator = engine.generate(  # no request_id param :(
         prompt="Hello, my name is",
         sampling_params={
             "n": 1,  # number of samples to generate
