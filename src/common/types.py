@@ -292,6 +292,10 @@ class LLamcppLLMArgs:
     llm_temperature: float = 0.8
     llm_top_p: float = 0.95
     llm_top_k: int = 40
+    # repeat penalty
+    llm_repeat_penalty: float = 1.0
+    llm_repeat_last_n: int = 64
+    # chat stream
     llm_stream: bool = False
     llm_chat_system: str = ""
     # "none" | "auto" | dict function like this: { "type": "function", "function": { "name": "get_current_weather" } },

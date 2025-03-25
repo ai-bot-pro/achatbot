@@ -6,7 +6,7 @@ try:
     from transformers import AutoTokenizer, AutoModelForCausalLM
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
-    logging.error("you need to `pip install achatbot[llm_transformers_manual_speech_llama]`,")
+    logging.error("you need to `pip install achatbot[llm_transformers_manual_speech_orpheus]`,")
     raise Exception(f"Missing module: {e}")
 
 from src.common.utils.helper import get_device
@@ -16,12 +16,12 @@ from .base import TransformersBaseLLM
 from .streamer import TokenStreamer
 
 
-class TransformersManualSpeechLlama(TransformersBaseLLM):
+class TransformersManualSpeechOrpheus(TransformersBaseLLM):
     """
     TTS: text -> llama3 -> vq code tokens
     """
 
-    TAG = "llm_transformers_manual_speech_llama"
+    TAG = "llm_transformers_manual_speech_orpheus"
     DEFAULT_SYS_PROMPT = ""
 
     def __init__(self, **args):
@@ -73,7 +73,7 @@ class TransformersManualSpeechLlama(TransformersBaseLLM):
     @torch.inference_mode()
     def generate(self, session: Session, **kwargs):
         """
-        TTS: text -> llama2 -> vq code tokens
+        TTS: text -> llama3 -> vq code tokens
         """
         prompt = session.ctx.state["prompt"]  # tts text
         if "vq_code_prompt" in session.ctx.state and isinstance(

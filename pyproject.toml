@@ -88,6 +88,10 @@ librosa = ["librosa~=0.10.2.post1"]
 soundfile = ["soundfile~=0.12.1"]
 silero-vad = ["silero-vad~=5.1.2"]
 
+# llm engine
+sglang = ["sglang[all]"]
+vllm = ["vllm"]
+
 
 # diffusers DiT with quantizing model
 diffusers = [
