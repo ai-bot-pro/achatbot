@@ -64,3 +64,15 @@ class LMGenerateArgs:
             "help": "Controls the token repetition pealty.  no repetition Default is 1.0, >1.0: low repetition, <1.0: high repetition"
         },
     )
+    lm_gen_stops: list[str] = field(
+        default_factory=list,
+        metadata={
+            "help": "A list of strings that will stop the generation. Default is []. If the stop word is a substring of the generated text, the generation will stop."
+        },
+    )
+    lm_gen_stop_ids: list[int] = field(
+        default_factory=list,
+        metadata={
+            "help": "A list of token ids that will stop the generation. Default is []. If the stop id is a substring token id of the generated text, the generation will stop."
+        },
+    )

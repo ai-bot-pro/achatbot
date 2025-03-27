@@ -18,7 +18,7 @@ class SGlangGenerator:
     token_ids -> llm generate stream -> token_ids
     use sglang llm engine frontend asyncio api to generate token_ids
     https://docs.sglang.ai/backend/offline_engine_api.html
-    todo: maybe use sglang llm engine backend method to generate token_ids
+    todo: maybe use sglang llm engine backend runtime method to generate token_ids
     """
 
     TAG = "llm_sglang_generator"
@@ -71,6 +71,8 @@ if __name__ == "__main__":
     from src.common.types import SessionCtx
     import uuid
     import asyncio
+    from transformers import AutoTokenizer
+
 
     parser = argparse.ArgumentParser()
     ServerArgs.add_cli_args(parser)
@@ -82,8 +84,11 @@ if __name__ == "__main__":
         ).__dict__
     )
 
+    tokenizer = AutoTokenizer.from_pretrained(server_args.model_path)
+
     async def run():
         session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
+        session.ctx.state["token_ids"] = tokenizer.encode("hello, my name is")
         async for token_id in generator.generate(session, max_new_tokens=3):
             print(token_id)
 

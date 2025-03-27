@@ -8,14 +8,12 @@ try:
 
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
-    logging.error(
-        "In order to use TTS spark, you need to `pip install achatbot[llm_transformers_manual_speech_spark]`,"
-    )
+    logging.error("you need to `pip install achatbot[transformers]`,")
     raise Exception(f"Missing module: {e}")
 
 from src.common.utils.helper import get_device
 from src.common.session import Session
-from src.types.llm.transformers import TransformersSpeechLMArgs
+from src.types.llm.transformers import TransformersLMArgs
 from .base import TransformersBaseLLM
 from .streamer import TokenStreamer
 
@@ -29,7 +27,7 @@ class TransformersGenerator(TransformersBaseLLM):
     TAG = "llm_transformers_generator"
 
     def __init__(self, **args):
-        self.args = TransformersSpeechLMArgs(**args)
+        self.args = TransformersLMArgs(**args)
         self.args.lm_device = self.args.lm_device or get_device()
         logging.info("TransformersLMArgs: %s", self.args)
         self._model = AutoModelForCausalLM.from_pretrained(self.args.lm_model_name_or_path)
@@ -51,8 +49,8 @@ class TransformersGenerator(TransformersBaseLLM):
         warmup_gen_kwargs = dict(
             **model_inputs,
             streamer=streamer,
-            min_new_tokens=self.args.lm_gen_min_new_tokens,
-            max_new_tokens=self.args.lm_gen_max_new_tokens,
+            min_new_tokens=0,
+            max_new_tokens=3,
             top_k=self.args.lm_gen_top_k,
             top_p=self.args.lm_gen_top_p,
             do_sample=self.args.lm_gen_do_sample,
@@ -73,13 +71,20 @@ class TransformersGenerator(TransformersBaseLLM):
         token_ids -> llm generate stream -> token_ids
         """
         assert session.ctx.state["token_ids"] is not None
-        assert isinstance(session.ctx.state["token_ids"], list)
-        token_ids = session.ctx.state["token_ids"]
-        input_ids = torch.IntTensor([token_ids]).to(self.device)
+        assert isinstance(session.ctx.state["token_ids"], (list, torch.Tensor))
+        input_ids = session.ctx.state["token_ids"]
+        if isinstance(session.ctx.state["token_ids"], list):
+            input_ids = torch.IntTensor(session.ctx.state["token_ids"]).to(self.args.lm_device)
 
         # https://huggingface.co/docs/transformers/v4.50.0/en/main_classes/text_generation
         streamer = TokenStreamer(skip_prompt=True)
-        kwargs["max_length"] = kwargs.get("max_length", self.args.lm_gen_max_length)
+        kwargs["input_ids"] = kwargs.get("input_ids", input_ids)
+        if "attention_mask" in kwargs:
+            assert isinstance(kwargs["attention_mask"], (list, torch.Tensor))
+            if isinstance(kwargs["attention_mask"], list):
+                kwargs["attention_mask"] = torch.IntTensor(kwargs["attention_mask"]).to(
+                    self.args.lm_device
+                )
         kwargs["max_new_tokens"] = kwargs.get("max_new_tokens", self.args.lm_gen_max_new_tokens)
         kwargs["top_k"] = kwargs.get("top_k", self.args.lm_gen_top_k)
         kwargs["top_p"] = kwargs.get("top_p", self.args.lm_gen_top_p)
@@ -91,8 +96,8 @@ class TransformersGenerator(TransformersBaseLLM):
             "repetition_penalty", self.args.lm_gen_repetition_penalty
         )
         kwargs["min_new_tokens"] = kwargs.get("min_new_tokens", self.args.lm_gen_min_new_tokens)
+        stop_ids = kwargs.pop("stop_ids", self.args.lm_gen_stop_ids)
         generation_kwargs = dict(
-            input_ids=input_ids,
             streamer=streamer,
             **kwargs,
         )
@@ -103,3 +108,53 @@ class TransformersGenerator(TransformersBaseLLM):
         for token_id in streamer:
             # print(token_id, end=",", flush=True)
             yield token_id
+            if token_id in stop_ids:
+                break
+
+
+"""
+MODEL=./models/Qwen/Qwen2.5-0.5B-Instruct python -m src.core.llm.transformers.generator
+"""
+if __name__ == "__main__":
+    from src.common.types import SessionCtx
+    import uuid
+    import os
+    import time
+
+    logging.basicConfig(level=logging.INFO)
+
+    model_path = os.getenv("MODEL", "./models/Qwen/Qwen2.5-0.5B")
+
+    # tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    # tokens = tokenizer(["hello, my name is"])
+    tokens = tokenizer(["hello, my name is"], return_tensors="pt")
+    input_ids = tokens["input_ids"]
+    attention_mask = tokens["attention_mask"]
+
+    # generator
+    generator = TransformersGenerator(
+        **TransformersLMArgs(lm_model_name_or_path=model_path).__dict__
+    )
+
+    # generation_config
+    generation_config = GenerationConfig.from_pretrained(model_path, "generation_config.json")
+    generation_config.max_new_tokens = 30
+    print(generation_config.to_dict())
+
+    session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
+    session.ctx.state["token_ids"] = input_ids
+    first = True
+    start_time = time.perf_counter()
+    for token_id in generator.generate(
+        session,
+        attention_mask=attention_mask,
+        stop_ids=[13],
+        **generation_config.to_dict(),
+    ):
+        if first:
+            ttft = time.perf_counter() - start_time
+            logging.info(f"generate TTFT time: {ttft} s")
+            first = False
+        gen_text = tokenizer.decode(token_id)
+        print(token_id, gen_text)

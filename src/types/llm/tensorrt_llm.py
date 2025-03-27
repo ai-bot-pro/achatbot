@@ -1,5 +1,7 @@
 from dataclasses import dataclass, field
 
+from tensorrt_llm.llmapi.llm_args import LlmArgs
+
 
 from .sampling import LMGenerateArgs
 
@@ -10,5 +12,5 @@ class TensorRTLLMEngineArgs:
     TensorRT-llm language model engine args
     """
 
-    serv_args: dict = {}
+    serv_args: dict = field(default_factory=lambda: LlmArgs().__dict__)
     gen_args: dict = field(default_factory=lambda: LMGenerateArgs().__dict__)

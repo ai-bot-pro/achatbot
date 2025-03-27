@@ -19,7 +19,7 @@ class VllmGenerator:
     token_ids -> llm generate stream -> token_ids
     use vllm llm engine frontend asyncio api to generate token_ids
     https://docs.vllm.ai/en/stable/models/generative_models.html
-    todo: maybe use backend method to generate token_ids
+    todo: maybe use backend runtime method to generate token_ids
     """
 
     TAG = "llm_vllm_generator"
@@ -78,15 +78,17 @@ if __name__ == "__main__":
     import uuid
     import os
     import asyncio
+    from transformers import AutoTokenizer
 
+    model = os.getenv("MODEL", "Qwen/Qwen2.5-0.5B")
     generator = VllmGenerator(
-        **VllmEngineArgs(
-            serv_args=AsyncEngineArgs(model=os.getenv("MODEL", "Qwen/Qwen2.5-0.5B")).__dict__
-        ).__dict__,
+        **VllmEngineArgs(serv_args=AsyncEngineArgs(model=model).__dict__).__dict__,
     )
+    tokenizer = AutoTokenizer.from_pretrained(model)
 
     async def run():
         session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
+        session.ctx.state["token_ids"] = tokenizer.encode("hello, my name is")
         async for token_id in generator.generate(session, max_new_tokens=3):
             print(token_id)
 

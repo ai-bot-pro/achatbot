@@ -11,6 +11,7 @@ from typing import (
     List,
     Any,
     Mapping,
+    Union,
 )
 import os
 from pathlib import Path
@@ -287,11 +288,14 @@ class LLamcppLLMArgs:
     flash_attn: bool = False
     # llm
     llm_prompt_tpl: str = "<|user|>\n{%s}<|end|>\n<|assistant|>"
-    llm_stop: Optional[List[str]] = None
+    llm_stop: Optional[Union[int, List[str]]] = field(default_factory=list)
+    llm_stop_ids: Optional[Union[int, List[int]]] = field(default_factory=list)
     llm_max_tokens: int = 1024
     llm_temperature: float = 0.8
     llm_top_p: float = 0.95
+    llm_min_p: float = 0.05
     llm_top_k: int = 40
+    llm_seed: Optional[int] = None
     # repeat penalty
     llm_repeat_penalty: float = 1.0
     llm_repeat_last_n: int = 64

@@ -88,10 +88,6 @@ librosa = ["librosa~=0.10.2.post1"]
 soundfile = ["soundfile~=0.12.1"]
 silero-vad = ["silero-vad~=5.1.2"]
 
-# llm engine
-sglang = ["sglang[all]"]
-vllm = ["vllm"]
-
 
 # diffusers DiT with quantizing model
 diffusers = [
@@ -187,11 +183,16 @@ rms_recorder = []
 vad_recorder = ["achatbot[speech_vad]"]
 
 # --------------------------------- llm --------------------------
+# llm engine
 # llm module tag -> pkgs
-# init  use cpu Pre-built Wheel to install, 
+# init use cpu Pre-built Wheel to install, 
 # if want to use other lib(cuda), see: https://github.com/abetlen/llama-cpp-python#installation-configuration
 llama_cpp = ["llama-cpp-python~=0.2.82"]
 llm_personalai_proxy = ["geocoder~=1.38.1"]
+sglang = ["sglang[all]"]
+vllm = ["vllm"]
+transformers = ["transformers[torch]"]
+
 
 # vision llm
 llm_transformers_manual_vision = [
