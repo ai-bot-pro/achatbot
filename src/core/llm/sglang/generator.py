@@ -47,6 +47,8 @@ class SGlangGenerator:
                 "repetition_penalty", self.gen_args.lm_gen_repetition_penalty
             ),
             "min_new_tokens": kwargs.get("min_new_tokens", self.gen_args.lm_gen_min_new_tokens),
+            "stop_token_ids": kwargs.get("stop_ids", self.gen_args.lm_gen_stop_ids),
+            "stop": kwargs.get("stop_tokens", self.gen_args.lm_gen_stops),
         }
         obj = GenerateReqInput(
             input_ids=token_ids,
@@ -66,13 +68,13 @@ class SGlangGenerator:
 
 """
 python -m src.core.llm.sglang.generator --model-path ./models/Qwen/Qwen2.5-0.5B
+python -m src.core.llm.sglang.generator --model-path ./models/Qwen/Qwen2.5-0.5B-Instruct
 """
 if __name__ == "__main__":
     from src.common.types import SessionCtx
     import uuid
     import asyncio
     from transformers import AutoTokenizer
-
 
     parser = argparse.ArgumentParser()
     ServerArgs.add_cli_args(parser)

@@ -57,6 +57,8 @@ class VllmGenerator:
                 self.gen_args.lm_gen_repetition_penalty,
             ),
             min_tokens=kwargs.get("min_new_tokens", self.gen_args.lm_gen_min_new),
+            stop_token_ids=kwargs.get("stop_ids", self.gen_args.lm_gen_stop_ids),
+            stop=kwargs.get("stop_tokens", self.gen_args.lm_gen_stops),
         )
         # https://docs.vllm.ai/en/stable/api/offline_inference/llm.html#vllm.LLM.generate
         iterator = self.engine.generate(
@@ -72,6 +74,8 @@ class VllmGenerator:
 
 """
 MODEL=./models/Qwen/Qwen2.5-0.5B python -m src.core.llm.vllm.generator 
+MODEL=./models/Qwen/Qwen2.5-0.5B-Instruct python -m src.core.llm.vllm.generator 
+
 """
 if __name__ == "__main__":
     from src.common.types import SessionCtx

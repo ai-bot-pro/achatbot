@@ -58,7 +58,9 @@ class TrtLLMGenerator:
                 self.gen_args.lm_gen_repetition_penalty,
             ),
             min_tokens=kwargs.get("min_new_tokens", self.gen_args.lm_gen_min_new),
-            detokenize=True,
+            stop_token_ids=kwargs.get("stop_ids", self.gen_args.lm_gen_stop_ids),
+            stop=kwargs.get("stop_tokens", self.gen_args.lm_gen_stops),
+            detokenize=False,
         )
         # https://nvidia.github.io/TensorRT-LLM/_modules/tensorrt_llm/llmapi/llm.html#LLM.generate_async
         generator = self.engine.generate_async(
