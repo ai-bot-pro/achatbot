@@ -23,6 +23,11 @@ vllm_image = vllm_image.env(
     }
 )
 
+achatbot_vllm_image = vllm_image.pip_install(
+    "achatbot[vllm]~=0.0.9.1.2",
+    "transformers~=4.50.0",
+    extra_index_url="https://test.pypi.org/simple/",
+)
 
 HF_MODEL_DIR = "/root/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
@@ -137,9 +142,56 @@ async def run_async():
         i += 1
 
 
+@app.function(
+    gpu=os.getenv("IMAGE_GPU", "L4"),
+    cpu=2.0,
+    retries=0,
+    image=achatbot_vllm_image,
+    volumes={
+        HF_MODEL_DIR: hf_model_vol,
+        VLLM_CACHE_DIR: vllm_cache_vol,
+    },
+    timeout=1200,  # default 300s
+    scaledown_window=1200,
+    max_containers=100,
+)
+async def run_achatbot_generator():
+    import uuid
+    import os
+    import asyncio
+    import time
+
+    from achatbot.core.llm.vllm.generator import VllmGenerator, VllmEngineArgs, AsyncEngineArgs
+    from achatbot.common.types import SessionCtx
+    from achatbot.common.session import Session
+    from transformers import AutoTokenizer
+
+    model = "/root/models/Qwen/Qwen2.5-0.5B"
+    generator = VllmGenerator(
+        **VllmEngineArgs(serv_args=AsyncEngineArgs(model=model).__dict__).__dict__,
+    )
+    tokenizer = AutoTokenizer.from_pretrained(model)
+
+    # async def run():
+    session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
+    session.ctx.state["token_ids"] = tokenizer.encode("hello, my name is")
+    first = True
+    start_time = time.perf_counter()
+    async for token_id in generator.generate(session, max_new_tokens=20, stop_ids=[13]):
+        if first:
+            ttft = time.perf_counter() - start_time
+            print(f"generate TTFT time: {ttft} s")
+            first = False
+        gen_text = tokenizer.decode(token_id)
+        print(token_id, gen_text)
+
+    # asyncio.run(run())
+
+
 """
 modal run src/llm/vllm/examples/generate.py::run_sync (no stream)
 modal run src/llm/vllm/examples/generate.py::run_async (stream)
+modal run src/llm/vllm/examples/generate.py::run_achatbot_generator (stream)
 """
 
 

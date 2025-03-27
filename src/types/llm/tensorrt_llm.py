@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from tensorrt_llm.llmapi.llm_args import LlmArgs
+from tensorrt_llm.llmapi.llm_utils import LlmArgs
 
 
 from .sampling import LMGenerateArgs

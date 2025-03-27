@@ -118,7 +118,70 @@ async def run_async():
         i += 1
 
 
+achatbot_sglang_image = sglang_image.pip_install(
+    "achatbot[sglang]~=0.0.9.1.7",
+    "transformers~=4.48.2",
+    extra_index_url="https://test.pypi.org/simple/",
+)
+
+
+@app.function(
+    gpu=os.getenv("IMAGE_GPU", "T4"),
+    cpu=2.0,
+    retries=0,
+    image=achatbot_sglang_image,
+    volumes={
+        HF_MODEL_DIR: hf_model_vol,
+    },
+    timeout=1200,  # default 300s
+    scaledown_window=1200,
+    max_containers=100,
+)
+async def run_achatbot_generator():
+    import uuid
+    import asyncio
+    import time
+
+    from transformers import AutoTokenizer
+
+    from achatbot.core.llm.sglang.generator import (
+        SGlangGenerator,
+        SGLangEngineArgs,
+        ServerArgs,
+        LMGenerateArgs,
+    )
+    from achatbot.common.session import Session
+    from achatbot.common.types import SessionCtx
+
+    model_path = "/root/models/Qwen/Qwen2.5-0.5B"
+    generator = SGlangGenerator(
+        **SGLangEngineArgs(
+            serv_args=ServerArgs(model_path=model_path).__dict__,
+        ).__dict__
+    )
+
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+
+    session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
+    session.ctx.state["token_ids"] = tokenizer.encode("hello, my name is")
+    first = True
+    start_time = time.perf_counter()
+    async for token_id in generator.generate(
+        session,
+        max_new_tokens=30,
+        stop_ids=[13],
+        repetition_penalty=1.1,
+    ):
+        if first:
+            ttft = time.perf_counter() - start_time
+            print(f"generate TTFT time: {ttft} s")
+            first = False
+        gen_text = tokenizer.decode(token_id)
+        print(token_id, gen_text)
+
+
 """
 modal run src/llm/sglang/examples/generate.py::run_sync (stream)
 modal run src/llm/sglang/examples/generate.py::run_async (stream)
+modal run src/llm/sglang/examples/generate.py::run_achatbot_generator (stream)
 """

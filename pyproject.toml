@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 name = "achatbot"
 #dynamic = ["version"]
 # todo
-version = "0.0.9"
+version = "0.0.9.1.7"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -192,6 +192,7 @@ llm_personalai_proxy = ["geocoder~=1.38.1"]
 sglang = ["sglang[all]"]
 vllm = ["vllm"]
 transformers = ["transformers[torch]"]
+trtllm = ["tensorrt-llm~=0.17.0.post1"]
 
 
 # vision llm

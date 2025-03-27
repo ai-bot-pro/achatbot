@@ -5,13 +5,13 @@ import uuid
 try:
     from src.types.llm.vllm import VllmEngineArgs, AsyncEngineArgs, LMGenerateArgs
     from vllm import AsyncLLMEngine, SamplingParams
+    from vllm.inputs import TokensPrompt
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error("you need to `pip install achatbot[vllm]`")
     raise Exception(f"Missing module: {e}")
 
 from src.common.session import Session
-from src.common.device_cuda import CUDAInfo
 
 
 class VllmGenerator:
@@ -56,13 +56,13 @@ class VllmGenerator:
                 "repetition_penalty",
                 self.gen_args.lm_gen_repetition_penalty,
             ),
-            min_tokens=kwargs.get("min_new_tokens", self.gen_args.lm_gen_min_new),
+            min_tokens=kwargs.get("min_new_tokens", self.gen_args.lm_gen_min_new_tokens),
             stop_token_ids=kwargs.get("stop_ids", self.gen_args.lm_gen_stop_ids),
             stop=kwargs.get("stop_tokens", self.gen_args.lm_gen_stops),
         )
         # https://docs.vllm.ai/en/stable/api/offline_inference/llm.html#vllm.LLM.generate
         iterator = self.engine.generate(
-            prompt_token_ids=token_ids,
+            prompt=TokensPrompt(prompt_token_ids=token_ids),
             sampling_params=sampling_params,
             request_id=session.ctx.client_id,
         )
@@ -78,11 +78,13 @@ MODEL=./models/Qwen/Qwen2.5-0.5B-Instruct python -m src.core.llm.vllm.generator
 
 """
 if __name__ == "__main__":
-    from src.common.types import SessionCtx
     import uuid
     import os
     import asyncio
+    import time
+
     from transformers import AutoTokenizer
+    from src.common.types import SessionCtx
 
     model = os.getenv("MODEL", "Qwen/Qwen2.5-0.5B")
     generator = VllmGenerator(
@@ -93,7 +95,14 @@ if __name__ == "__main__":
     async def run():
         session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
         session.ctx.state["token_ids"] = tokenizer.encode("hello, my name is")
-        async for token_id in generator.generate(session, max_new_tokens=3):
-            print(token_id)
+        first = True
+        start_time = time.perf_counter()
+        async for token_id in generator.generate(session, max_new_tokens=20, stop_ids=[13]):
+            if first:
+                ttft = time.perf_counter() - start_time
+                logging.info(f"generate TTFT time: {ttft} s")
+                first = False
+            gen_text = tokenizer.decode(token_id)
+            print(token_id, gen_text)
 
     asyncio.run(run())

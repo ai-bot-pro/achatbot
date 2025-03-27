@@ -39,6 +39,12 @@ trtllm_image = (
     .env({})
 )
 
+achatbot_trtllm_image = trtllm_image.pip_install(
+    "achatbot[]~=0.0.9.1.7",
+    "transformers~=4.47.0",
+    extra_index_url="https://test.pypi.org/simple/",
+)
+
 MAX_BATCH_SIZE = 1024  # better throughput at larger batch sizes, limited by GPU RAM
 MODEL_ID = "Qwen/Qwen2.5-0.5B"
 
@@ -212,6 +218,63 @@ async def runner_stream():
             print(output)
 
 
+@app.function(
+    gpu=os.getenv("IMAGE_GPU", "L4"),
+    cpu=2.0,
+    retries=0,
+    image=achatbot_trtllm_image.env({"TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.7 8.9 9.0"}),
+    volumes={
+        HF_MODEL_DIR: hf_model_vol,
+    },
+    timeout=1200,  # default 300s
+    scaledown_window=1200,
+    max_containers=100,
+)
+async def run_achatbot_generator():
+    import uuid
+    import os
+    import asyncio
+    import time
+
+    from achatbot.core.llm.tensorrt_llm.generator import (
+        TrtLLMGenerator,
+        TensorRTLLMEngineArgs,
+        LMGenerateArgs,
+        LlmArgs,
+    )
+    from achatbot.common.types import SessionCtx
+    from achatbot.common.session import Session
+    from transformers import AutoTokenizer
+
+    model = MODEL_ID
+    generator = TrtLLMGenerator(
+        **TensorRTLLMEngineArgs(serv_args=LlmArgs(model=model).to_dict()).__dict__,
+    )
+    tokenizer = AutoTokenizer.from_pretrained(model)
+
+    # async def run():
+    session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
+    session.ctx.state["token_ids"] = tokenizer.encode("hello, my name is")
+    first = True
+    start_time = time.perf_counter()
+    async for token_id in generator.generate(
+        session,
+        max_new_tokens=30,
+        stop_ids=[13],
+        # repetition_penalty=1.1,
+        temperature=0.8,
+        top_p=0.95,
+    ):
+        if first:
+            ttft = time.perf_counter() - start_time
+            print(f"generate TTFT time: {ttft} s")
+            first = False
+        gen_text = tokenizer.decode(token_id)
+        print(token_id, gen_text)
+
+    # asyncio.run(run())
+
+
 """
 # llmapi (LLM load hf model, convert to tensorrt, build tensorrt engine, load tensorrt engine)
 modal run src/llm/trtllm/examples/generator.py::run_sync (no stream | batch prompts processing | throughput)
@@ -219,5 +282,8 @@ modal run src/llm/trtllm/examples/generator.py::run_async_stream (stream | singl
 modal run src/llm/trtllm/examples/generator.py::run_async_batch_stream (stream | batch prompts async processing | latency+throughput) (multiple prompts/request or one prompt/request)
 
 # runner (load tensorrt engine to run generate)
+
+# achatbot
+modal run src/llm/trtllm/examples/generator.py::run_achatbot_generator
 
 """
