@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 name = "achatbot"
 #dynamic = ["version"]
 # todo
-version = "0.0.9"
+version = "0.0.9.post1"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -50,14 +50,14 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "requests~=2.32.3",
+    "requests",
     "apipeline~=0.1.32",
-    "python-dotenv~=1.0.1",
-    "pydub~=0.25.1",        # need install ffmpeg
-    "pillow~=10.4.0",
-    "aiohttp~=3.10.3",
+    "python-dotenv",
+    "pydub",             # need install ffmpeg
+    "pillow",
+    "aiohttp",
     "scipy",
-    "pyloudnorm~=0.1.1",
+    "pyloudnorm",
     "numpy>=1.22.0",
 ]
 
@@ -183,11 +183,22 @@ rms_recorder = []
 vad_recorder = ["achatbot[speech_vad]"]
 
 # --------------------------------- llm --------------------------
+# llm engine
 # llm module tag -> pkgs
-# init  use cpu Pre-built Wheel to install, 
+# init use cpu Pre-built Wheel to install, 
 # if want to use other lib(cuda), see: https://github.com/abetlen/llama-cpp-python#installation-configuration
 llama_cpp = ["llama-cpp-python~=0.2.82"]
 llm_personalai_proxy = ["geocoder~=1.38.1"]
+sglang = ["sglang[all]"]
+vllm = ["vllm==0.7.3"]
+transformers = ["transformers[torch]"]
+# --extra-index-url https://pypi.nvidia.com python3.10 and python3.12 | python3.11 unsupported
+trtllm = ["tensorrt-llm~=0.17.0.post1"]
+
+# llm backend
+# --extra-index-url "https://flashinfer.ai/whl/cu124/torch2.5",
+flashinfer-python = ["flashinfer-python~=0.2.3"]
+
 
 # vision llm
 llm_transformers_manual_vision = [

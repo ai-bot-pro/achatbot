@@ -152,10 +152,10 @@ class IHallucination(ABC):
         raise NotImplementedError("must be implemented in the child class")
 
 
-class IMultimodalLlm(ABC):
+class ILlmGenerator(ABC):
     @abstractmethod
-    async def generate_tokens(self, session) -> AsyncGenerator[Any, None]:
-        """return tensor tokens async generator"""
+    async def generate(self, session, **kwargs) -> AsyncGenerator[int, None]:
+        """return token ids async generator"""
         raise NotImplementedError("must be implemented in the child class")
 
 

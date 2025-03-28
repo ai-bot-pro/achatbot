@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 import numpy as np
 import torch
 
-from src.core.llm.transformers.manual_speech_llama import TransformersManualSpeechLlama
+from src.core.llm.transformers.manual_speech_orpheus import TransformersManualSpeechOrpheus
 from src.common.random import set_all_random_seed
 from src.common.interface import ITts
 from src.common.session import Session
@@ -44,7 +44,7 @@ class OrpheusTTS(BaseTTS, ITts):
         self.args = OrpheusTTSArgs(**kwargs)
         self.args.lm_args = TransformersSpeechLMArgs(**self.args.lm_args)
         self.args.codec_args = CodecArgs(**self.args.codec_args)
-        self.lm_model = TransformersManualSpeechLlama(**self.args.lm_args.__dict__)
+        self.lm_model = TransformersManualSpeechOrpheus(**self.args.lm_args.__dict__)
         self.codec_model = SNACCodec(**self.args.codec_args.__dict__)
 
         self.voice_name = self.args.voice_name

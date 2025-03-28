@@ -94,6 +94,13 @@ def trtllm_build(
 
 """
 modal run src/llm/trtllm/tts_spark/compile_model.py \
+    --app-name "qwen2.5-0.5B" \
+    --hf-repo-dir "Qwen/Qwen2.5-0.5B" \
+    --trt-dtype "bfloat16" \
+    --convert-other-args "" \
+    --compile-other-args "--max_batch_size 16 --max_num_tokens 32768"
+
+modal run src/llm/trtllm/tts_spark/compile_model.py \
     --app-name "tts-spark" \
     --hf-repo-dir "SparkAudio/Spark-TTS-0.5B/LLM" \
     --trt-dtype "bfloat16" \

@@ -1,5 +1,6 @@
 import re
 
+from src.common.interface import ILlm
 from src.common.factory import EngineClass
 
 

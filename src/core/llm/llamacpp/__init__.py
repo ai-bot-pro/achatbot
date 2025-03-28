@@ -9,7 +9,7 @@ from src.common.interface import ILlm
 from src.common.session import Session
 from src.common.types import DEFAULT_SYSTEM_PROMPT, LLamcppLLMArgs
 from src.modules.functions.function import FunctionManager
-from .base import BaseLLM
+from ..base import BaseLLM
 
 
 class PromptInit:
@@ -126,6 +126,11 @@ class LLamacppLLM(BaseLLM, ILlm):
                 chat_handler=self.get_chat_handler(),
             )
 
+        self.warmup()
+
+    def warmup(self):
+        pass
+
     def encode(self, text: str | bytes):
         return self.model.tokenize(text.encode() if isinstance(text, str) else text)
 
@@ -134,8 +139,10 @@ class LLamacppLLM(BaseLLM, ILlm):
 
     def generate(self, session: Session):
         prompt = session.ctx.state["prompt"]
-        prompt = self.args.llm_prompt_tpl % (prompt,)
-        output = self.model(
+        if isinstance(prompt, str) and self.args.llm_prompt_tpl:
+            prompt = self.args.llm_prompt_tpl % (prompt,)
+        # https://llama-cpp-python.readthedocs.io/en/latest/api-reference/#llama_cpp.Llama.create_completion
+        output = self.model.create_completion(
             prompt,
             max_tokens=self.args.llm_max_tokens,  # Generate up to 256 tokens
             stop=self.args.llm_stop,
@@ -144,6 +151,7 @@ class LLamacppLLM(BaseLLM, ILlm):
             temperature=self.args.llm_temperature,
             top_p=self.args.llm_top_p,
             top_k=self.args.llm_top_k,
+            seed=self.args.llm_seed,
         )
         logging.debug(f"llm generate: {output}")
         res = ""
@@ -184,6 +192,7 @@ class LLamacppLLM(BaseLLM, ILlm):
 
     def _chat_completion(self, session: Session):
         logging.debug(f"chat_history:{session.chat_history}")
+        # https://llama-cpp-python.readthedocs.io/en/latest/api-reference/#llama_cpp.Llama.create_chat_completion
         output = self.model.create_chat_completion(
             messages=[
                 {
@@ -235,6 +244,7 @@ class LLamacppLLM(BaseLLM, ILlm):
                 *session.chat_history,
             ]
             logging.info(f"messages: {messages}")
+            # https://llama-cpp-python.readthedocs.io/en/latest/api-reference/#llama_cpp.Llama.create_chat_completion
             output = self.model.create_chat_completion(
                 messages=messages,
                 max_tokens=self.args.llm_max_tokens,

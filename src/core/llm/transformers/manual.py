@@ -35,7 +35,7 @@ class TransformersManualLLM(TransformersBaseLLM):
 
         self._warmup(target=self._model.generate, kwargs=warmup_gen_kwargs, streamer=streamer)
 
-    def generate(self, session: Session):
+    def generate(self, session: Session, **kwargs):
         prompt = session.ctx.state["prompt"]
         if isinstance(prompt, tuple):
             prompt, language_code = prompt
