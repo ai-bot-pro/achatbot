@@ -29,8 +29,7 @@ vllm_image = vllm_image.env(
 )
 
 achatbot_vllm_image = vllm_image.pip_install(
-    "achatbot[vllm]~=0.0.9.1.2",
-    "transformers~=4.50.0",
+    "achatbot[vllm]~=0.0.9.1.9",
     extra_index_url="https://test.pypi.org/simple/",
 )
 
@@ -169,7 +168,7 @@ async def run_achatbot_generator():
     from achatbot.core.llm.vllm.generator import VllmGenerator, VllmEngineArgs, AsyncEngineArgs
     from achatbot.common.types import SessionCtx
     from achatbot.common.session import Session
-    from transformers import AutoTokenizer
+    from transformers import AutoTokenizer, GenerationConfig
 
     model = "/root/models/Qwen/Qwen2.5-0.5B"
     generator = VllmGenerator(
@@ -178,17 +177,43 @@ async def run_achatbot_generator():
     tokenizer = AutoTokenizer.from_pretrained(model)
 
     # async def run():
-    session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
-    session.ctx.state["token_ids"] = tokenizer.encode("hello, my name is")
-    first = True
-    start_time = time.perf_counter()
-    async for token_id in generator.generate(session, max_new_tokens=20, stop_ids=[13]):
-        if first:
-            ttft = time.perf_counter() - start_time
-            print(f"generate TTFT time: {ttft} s")
-            first = False
-        gen_text = tokenizer.decode(token_id)
-        print(token_id, gen_text)
+    generation_config = {}
+    if os.path.exists(os.path.join(model, "generation_config.json")):
+        generation_config = GenerationConfig.from_pretrained(
+            model, "generation_config.json"
+        ).to_dict()
+    # async def run():
+    prompt_cases = [
+        {"prompt": "hello, my name is", "kwargs": {"max_new_tokens": 30, "stop_ids": []}},
+        {
+            "prompt": "hello, my name is",
+            "kwargs": {"max_new_tokens": 30, "stop_ids": [13]},
+        },  # prefill cache token test
+        {"prompt": "hello, what your name?", "kwargs": {"max_new_tokens": 30, "stop_ids": [13]}},
+    ]
+
+    # test the same session
+    # session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
+    for case in prompt_cases:
+        session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
+        session.ctx.state["token_ids"] = tokenizer.encode("hello, my name is")
+        tokens = tokenizer(case["prompt"])
+        session.ctx.state["token_ids"] = tokens["input_ids"]
+        # gen_kwargs = {**generation_config, **case["kwargs"], **tokens} # hack test, vllm have some bug :)
+        gen_kwargs = {**case["kwargs"], **tokens}
+        print("gen_kwargs:", gen_kwargs)
+        first = True
+        start_time = time.perf_counter()
+        gen_texts = ""
+        async for token_id in generator.generate(session, **gen_kwargs):
+            if first:
+                ttft = time.perf_counter() - start_time
+                print(f"generate TTFT time: {ttft} s")
+                first = False
+            gen_text = tokenizer.decode(token_id)
+            gen_texts += gen_text
+            print(session.ctx.client_id, token_id, gen_text)
+        print(session.ctx.client_id, gen_texts)
 
     # asyncio.run(run())
 

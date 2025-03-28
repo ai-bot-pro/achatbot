@@ -16,6 +16,9 @@ from src.core.llm import LLMEnvInit
 load_dotenv(override=True)
 
 r"""
+# flashinfer needs to define TORCH_CUDA_ARCH_LIST
+export TORCH_CUDA_ARCH_LIST="7.5 8.0 8.6 8.7 8.9 9.0"
+
 LLM_MODEL_NAME_OR_PATH=./models/Qwen/Qwen2.5-0.5B-Instruct \
     LLM_TAG=llm_transformers_generator \
     python -m unittest test.core.llm.test_generator.TestGenerator.test_generate
@@ -80,15 +83,23 @@ class TestGenerator(unittest.IsolatedAsyncioTestCase):
 
     async def test_generate(self):
         prompt_cases = [
-            {"prompt": self.prompt, "kwargs": {"max_new_tokens": 20, "stop_ids": []}},
-            {"prompt": self.prompt, "kwargs": {"max_new_tokens": 20, "stop_ids": [13]}},
+            {"prompt": "hello, my name is", "kwargs": {"max_new_tokens": 30, "stop_ids": []}},
+            {
+                "prompt": "hello, my name is",
+                "kwargs": {"max_new_tokens": 30, "stop_ids": [13]},
+            },  # prefill cache token test (trtllm default no cache, vllm and sglang default cache)
+            {
+                "prompt": "hello, what your name?",
+                "kwargs": {"max_new_tokens": 30, "stop_ids": [13]},
+            },
         ]
 
         for case in prompt_cases:
             with self.subTest(case=case):
                 tokens = self.tokenizer(case["prompt"])
                 self.session.ctx.state["token_ids"] = tokens["input_ids"]
-                gen_kwargs = {**self.generation_config, **case["kwargs"], **tokens}
+                # gen_kwargs = {**self.generation_config, **case["kwargs"], **tokens}# hack test, vllm have some bug :)
+                gen_kwargs = {**case["kwargs"], **tokens}
                 logging.debug(gen_kwargs)
                 iter = self.engine.generate(self.session, **gen_kwargs)
 

@@ -4,11 +4,11 @@ import modal
 app = modal.App("sglang-generate")
 
 sglang_image = (
-    modal.Image.debian_slim(python_version="3.11")
+    modal.Image.debian_slim(python_version="3.10")
     .pip_install(  # add sglang and some Python dependencies
         # as per sglang website: https://sgl-project.github.io/start/install.html
         "flashinfer-python",
-        "sglang[all]>=0.4.4.post1",
+        "sglang[all]==0.4.4.post1",
         extra_options="--find-links https://flashinfer.ai/whl/cu124/torch2.5/flashinfer/",
         extra_index_url="https://flashinfer.ai/whl/cu124/torch2.5/",
     )
@@ -125,8 +125,7 @@ async def run_async():
 
 
 achatbot_sglang_image = sglang_image.pip_install(
-    "achatbot[sglang]~=0.0.9.1.7",
-    "transformers~=4.48.2",
+    "achatbot[sglang]~=0.0.9.1.9",
     extra_index_url="https://test.pypi.org/simple/",
 )
 
@@ -148,7 +147,7 @@ async def run_achatbot_generator():
     import asyncio
     import time
 
-    from transformers import AutoTokenizer
+    from transformers import AutoTokenizer, GenerationConfig
 
     from achatbot.core.llm.sglang.generator import (
         SGlangGenerator,
@@ -166,23 +165,42 @@ async def run_achatbot_generator():
     )
 
     tokenizer = AutoTokenizer.from_pretrained(model_path)
+    generation_config = {}
+    if os.path.exists(os.path.join(model_path, "generation_config.json")):
+        generation_config = GenerationConfig.from_pretrained(
+            model_path, "generation_config.json"
+        ).to_dict()
+    # async def run():
+    prompt_cases = [
+        {"prompt": "hello, my name is", "kwargs": {"max_new_tokens": 30, "stop_ids": []}},
+        {
+            "prompt": "hello, my name is",
+            "kwargs": {"max_new_tokens": 30, "stop_ids": [13]},
+        },  # prefill cache token test
+        {"prompt": "hello, what your name?", "kwargs": {"max_new_tokens": 30, "stop_ids": [13]}},
+    ]
 
-    session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
-    session.ctx.state["token_ids"] = tokenizer.encode("hello, my name is")
-    first = True
-    start_time = time.perf_counter()
-    async for token_id in generator.generate(
-        session,
-        max_new_tokens=30,
-        stop_ids=[13],
-        repetition_penalty=1.1,
-    ):
-        if first:
-            ttft = time.perf_counter() - start_time
-            print(f"generate TTFT time: {ttft} s")
-            first = False
-        gen_text = tokenizer.decode(token_id)
-        print(token_id, gen_text)
+    # test the same session
+    # session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
+    for case in prompt_cases:
+        session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
+        session.ctx.state["token_ids"] = tokenizer.encode("hello, my name is")
+        tokens = tokenizer(case["prompt"])
+        session.ctx.state["token_ids"] = tokens["input_ids"]
+        gen_kwargs = {**generation_config, **case["kwargs"], **tokens}
+        print("gen_kwargs:", gen_kwargs)
+        first = True
+        start_time = time.perf_counter()
+        gen_texts = ""
+        async for token_id in generator.generate(session, **gen_kwargs):
+            if first:
+                ttft = time.perf_counter() - start_time
+                print(f"generate TTFT time: {ttft} s")
+                first = False
+            gen_text = tokenizer.decode(token_id)
+            gen_texts += gen_text
+            print(session.ctx.client_id, token_id, gen_text)
+        print(session.ctx.client_id, gen_texts)
 
 
 """
