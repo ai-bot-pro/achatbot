@@ -1,7 +1,6 @@
 import logging
 import uuid
 
-
 try:
     from src.types.llm.tensorrt_llm import TensorRTLLMEngineArgs, LMGenerateArgs, LlmArgs
     from tensorrt_llm import LLM, SamplingParams
@@ -44,24 +43,19 @@ class TrtLLMGenerator(BaseLLM, ILlmGenerator):
         # https://github.com/NVIDIA/TensorRT-LLM/blob/v0.17.0/tensorrt_llm/sampling_params.py
         sampling_params = SamplingParams(
             n=1,
-            seed=kwargs.get("seed", self.gen_args.lm_gen_seed),
-            max_tokens=kwargs.get(
-                "max_new_tokens",
-                self.gen_args.lm_gen_max_new_tokens,
-            ),
-            temperature=kwargs.get("temperature", self.gen_args.lm_gen_temperature),
-            top_p=kwargs.get("top_p", self.gen_args.lm_gen_top_p),
-            top_k=kwargs.get("top_k", self.gen_args.lm_gen_top_k),
+            seed=kwargs.get("seed") or self.gen_args.lm_gen_seed,
+            max_tokens=kwargs.get("max_new_tokens") or self.gen_args.lm_gen_max_new_tokens,
+            temperature=kwargs.get("temperature") or self.gen_args.lm_gen_temperature,
+            top_p=kwargs.get("top_p") or self.gen_args.lm_gen_top_p,
+            top_k=kwargs.get("top_k") or self.gen_args.lm_gen_top_k,
             # min_p need version > 0.17.0
-            # min_p=kwargs.get("min_p", self.gen_args.lm_gen_min_p),
+            # min_p=kwargs.get("min_p") or self.gen_args.lm_gen_min_p,
             # Penalizers,
-            repetition_penalty=kwargs.get(
-                "repetition_penalty",
-                self.gen_args.lm_gen_repetition_penalty,
-            ),
-            min_tokens=kwargs.get("min_new_tokens", self.gen_args.lm_gen_min_new_tokens),
-            stop_token_ids=kwargs.get("stop_ids", self.gen_args.lm_gen_stop_ids),
-            stop=kwargs.get("stop_tokens", self.gen_args.lm_gen_stops),
+            repetition_penalty=kwargs.get("repetition_penalty")
+            or self.gen_args.lm_gen_repetition_penalty,
+            min_tokens=kwargs.get("min_new_tokens") or self.gen_args.lm_gen_min_new_tokens,
+            stop_token_ids=kwargs.get("stop_ids") or self.gen_args.lm_gen_stop_ids,
+            stop=kwargs.get("stop_tokens") or self.gen_args.lm_gen_stops,
             detokenize=False,
         )
         # https://nvidia.github.io/TensorRT-LLM/_modules/tensorrt_llm/llmapi/llm.html#LLM.generate_async

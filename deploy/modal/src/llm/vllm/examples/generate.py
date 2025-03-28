@@ -11,7 +11,12 @@ vllm_image = (
         "flashinfer-python==0.2.0.post2",
         extra_index_url="https://flashinfer.ai/whl/cu124/torch2.5",
     )
-    .env({"HF_HUB_ENABLE_HF_TRANSFER": "1"})  # faster model transfers
+    .env(
+        {
+            "HF_HUB_ENABLE_HF_TRANSFER": "1",
+            "TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.7 8.9 9.0",
+        }
+    )  # faster model transfers
 )
 
 hf_cache_vol = modal.Volume.from_name("huggingface-cache", create_if_missing=True)

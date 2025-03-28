@@ -44,23 +44,29 @@ class VllmGenerator(BaseLLM, ILlmGenerator):
         # https://docs.vllm.ai/en/stable/api/inference_params.html#vllm.SamplingParams
         sampling_params = SamplingParams(
             n=1,
-            seed=kwargs.get("seed", self.gen_args.lm_gen_seed),
-            max_tokens=kwargs.get(
-                "max_new_tokens",
-                self.gen_args.lm_gen_max_new_tokens,
-            ),
-            temperature=kwargs.get("temperature", self.gen_args.lm_gen_temperature),
-            top_p=kwargs.get("top_p", self.gen_args.lm_gen_top_p),
-            top_k=kwargs.get("top_k", self.gen_args.lm_gen_top_k),
-            min_p=kwargs.get("min_p", self.gen_args.lm_gen_min_p),
+            seed=kwargs.get("seed") if kwargs.get("seed") else self.gen_args.lm_gen_seed,
+            max_tokens=kwargs.get("max_new_tokens")
+            if kwargs.get("max_new_tokens")
+            else self.gen_args.lm_gen_max_new_tokens,
+            temperature=kwargs.get("temperature")
+            if kwargs.get("temperature")
+            else self.gen_args.lm_gen_temperature,
+            top_p=kwargs.get("top_p") if kwargs.get("top_p") else self.gen_args.lm_gen_top_p,
+            top_k=kwargs.get("top_k") if kwargs.get("top_k") else self.gen_args.lm_gen_top_k,
+            min_p=kwargs.get("min_p") if kwargs.get("min_p") else self.gen_args.lm_gen_min_p,
             # Penalizers,
-            repetition_penalty=kwargs.get(
-                "repetition_penalty",
-                self.gen_args.lm_gen_repetition_penalty,
-            ),
-            min_tokens=kwargs.get("min_new_tokens", self.gen_args.lm_gen_min_new_tokens),
-            stop_token_ids=kwargs.get("stop_ids", self.gen_args.lm_gen_stop_ids),
-            stop=kwargs.get("stop_tokens", self.gen_args.lm_gen_stops),
+            repetition_penalty=kwargs.get("repetition_penalty")
+            if kwargs.get("repetition_penalty")
+            else self.gen_args.lm_gen_repetition_penalty,
+            min_tokens=kwargs.get("min_new_tokens")
+            if kwargs.get("min_new_tokens")
+            else self.gen_args.lm_gen_min_new_tokens,
+            stop_token_ids=kwargs.get("stop_ids")
+            if kwargs.get("stop_ids")
+            else self.gen_args.lm_gen_stop_ids,
+            stop=kwargs.get("stop_tokens")
+            if kwargs.get("stop_tokens")
+            else self.gen_args.lm_gen_stops,
         )
         # https://docs.vllm.ai/en/stable/api/offline_inference/llm.html#vllm.LLM.generate
         iterator = self.engine.generate(

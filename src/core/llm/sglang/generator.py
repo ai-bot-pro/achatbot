@@ -39,18 +39,19 @@ class SGlangGenerator(BaseLLM, ILlmGenerator):
         # https://docs.sglang.ai/backend/sampling_params.html
         sampling_params = {
             "n": 1,  # number of samples to generate
-            "max_new_tokens": kwargs.get("max_new_tokens", self.gen_args.lm_gen_max_new_tokens),
-            "temperature": kwargs.get("temperature", self.gen_args.lm_gen_temperature),
-            "top_p": kwargs.get("top_p", self.gen_args.lm_gen_top_p),
-            "top_k": kwargs.get("top_k", self.gen_args.lm_gen_top_k),
-            "min_p": kwargs.get("min_p", self.gen_args.lm_gen_min_p),
+            "max_new_tokens": kwargs.get("max_new_tokens")
+            if kwargs.get("max_new_tokens")
+            else self.gen_args.lm_gen_max_new_tokens,
+            "temperature": kwargs.get("temperature") or self.gen_args.lm_gen_temperature,
+            "top_p": kwargs.get("top_p") or self.gen_args.lm_gen_top_p,
+            "top_k": kwargs.get("top_k") or self.gen_args.lm_gen_top_k,
+            "min_p": kwargs.get("min_p") or self.gen_args.lm_gen_min_p,
             # Penalizers
-            "repetition_penalty": kwargs.get(
-                "repetition_penalty", self.gen_args.lm_gen_repetition_penalty
-            ),
-            "min_new_tokens": kwargs.get("min_new_tokens", self.gen_args.lm_gen_min_new_tokens),
-            "stop_token_ids": kwargs.get("stop_ids", self.gen_args.lm_gen_stop_ids),
-            "stop": kwargs.get("stop_tokens", self.gen_args.lm_gen_stops),
+            "repetition_penalty": kwargs.get("repetition_penalty")
+            or self.gen_args.lm_gen_repetition_penalty,
+            "min_new_tokens": kwargs.get("min_new_tokens") or self.gen_args.lm_gen_min_new_tokens,
+            "stop_token_ids": kwargs.get("stop_ids") or self.gen_args.lm_gen_stop_ids,
+            "stop": kwargs.get("stop_tokens") or self.gen_args.lm_gen_stops,
         }
         obj = GenerateReqInput(
             input_ids=token_ids,

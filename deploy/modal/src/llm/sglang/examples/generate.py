@@ -3,14 +3,20 @@ import modal
 
 app = modal.App("sglang-generate")
 
-sglang_image = modal.Image.debian_slim(
-    python_version="3.11"
-).pip_install(  # add sglang and some Python dependencies
-    # as per sglang website: https://sgl-project.github.io/start/install.html
-    "flashinfer-python",
-    "sglang[all]>=0.4.4.post1",
-    extra_options="--find-links https://flashinfer.ai/whl/cu124/torch2.5/flashinfer/",
-    extra_index_url="https://flashinfer.ai/whl/cu124/torch2.5/",
+sglang_image = (
+    modal.Image.debian_slim(python_version="3.11")
+    .pip_install(  # add sglang and some Python dependencies
+        # as per sglang website: https://sgl-project.github.io/start/install.html
+        "flashinfer-python",
+        "sglang[all]>=0.4.4.post1",
+        extra_options="--find-links https://flashinfer.ai/whl/cu124/torch2.5/flashinfer/",
+        extra_index_url="https://flashinfer.ai/whl/cu124/torch2.5/",
+    )
+    .env(
+        {
+            "TORCH_CUDA_ARCH_LIST": "7.5,8.0 8.6 8.7 8.9 9.0",
+        }
+    )
 )
 
 HF_MODEL_DIR = "/root/models"

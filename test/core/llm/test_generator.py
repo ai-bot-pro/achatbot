@@ -51,6 +51,9 @@ class TestGenerator(unittest.IsolatedAsyncioTestCase):
     def tearDownClass(cls):
         pass
 
+    async def asyncSetUp(self):
+        pass
+
     def setUp(self):
         from transformers import AutoTokenizer, GenerationConfig
 
@@ -70,6 +73,9 @@ class TestGenerator(unittest.IsolatedAsyncioTestCase):
         self.session = Session(**SessionCtx(f"{self.llm_tag}_" + str(uuid.uuid4().hex)).__dict__)
 
     def tearDown(self):
+        pass
+
+    async def asyncTearDown(self):
         pass
 
     async def test_generate(self):
