@@ -43,6 +43,10 @@ achatbot_trtllm_image = trtllm_image.pip_install(
     "achatbot[]~=0.0.9.1.7",
     "transformers~=4.47.0",
     extra_index_url="https://test.pypi.org/simple/",
+).env(
+    {
+        "TLLM_LLMAPI_BUILD_CACHE": "1",
+    }
 )
 
 MAX_BATCH_SIZE = 1024  # better throughput at larger batch sizes, limited by GPU RAM
@@ -53,6 +57,9 @@ hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
 TRT_MODEL_DIR = "/root/trt_models"
 trt_model_vol = modal.Volume.from_name("triton_trtllm_models", create_if_missing=True)
 
+TRT_MODEL_CACHE_DIR = "/tmp/.cache/tensorrt_llm/llmapi/"
+trt_model_cache_vol = modal.Volume.from_name("triton_trtllm_cache_models", create_if_missing=True)
+
 
 @app.function(
     gpu=os.getenv("IMAGE_GPU", "L4"),
@@ -61,6 +68,7 @@ trt_model_vol = modal.Volume.from_name("triton_trtllm_models", create_if_missing
     image=trtllm_image.env({"TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.7 8.9 9.0"}),
     volumes={
         HF_MODEL_DIR: hf_model_vol,
+        TRT_MODEL_CACHE_DIR: trt_model_cache_vol,
     },
     timeout=1200,  # default 300s
     scaledown_window=1200,
@@ -98,6 +106,7 @@ def run_sync():
     image=trtllm_image.env({"TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.7 8.9 9.0"}),
     volumes={
         HF_MODEL_DIR: hf_model_vol,
+        TRT_MODEL_CACHE_DIR: trt_model_cache_vol,
     },
     timeout=1200,  # default 300s
     scaledown_window=1200,
@@ -134,6 +143,7 @@ async def run_async_stream():
     image=trtllm_image.env({"TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.7 8.9 9.0"}),
     volumes={
         HF_MODEL_DIR: hf_model_vol,
+        TRT_MODEL_CACHE_DIR: trt_model_cache_vol,
     },
     timeout=1200,  # default 300s
     scaledown_window=1200,
@@ -189,6 +199,7 @@ async def run_async_batch_stream():
     image=trtllm_image.env({"TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.7 8.9 9.0"}),
     volumes={
         HF_MODEL_DIR: hf_model_vol,
+        TRT_MODEL_CACHE_DIR: trt_model_cache_vol,
     },
     timeout=1200,  # default 300s
     scaledown_window=1200,
@@ -225,6 +236,7 @@ async def runner_stream():
     image=achatbot_trtllm_image.env({"TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.7 8.9 9.0"}),
     volumes={
         HF_MODEL_DIR: hf_model_vol,
+        TRT_MODEL_CACHE_DIR: trt_model_cache_vol,
     },
     timeout=1200,  # default 300s
     scaledown_window=1200,
@@ -246,7 +258,7 @@ async def run_achatbot_generator():
     from achatbot.common.session import Session
     from transformers import AutoTokenizer
 
-    model = MODEL_ID
+    model = os.path.join(HF_MODEL_DIR, MODEL_ID)
     generator = TrtLLMGenerator(
         **TensorRTLLMEngineArgs(serv_args=LlmArgs(model=model).to_dict()).__dict__,
     )
@@ -261,7 +273,7 @@ async def run_achatbot_generator():
         session,
         max_new_tokens=30,
         stop_ids=[13],
-        # repetition_penalty=1.1,
+        repetition_penalty=1.1,
         temperature=0.8,
         top_p=0.95,
     ):
