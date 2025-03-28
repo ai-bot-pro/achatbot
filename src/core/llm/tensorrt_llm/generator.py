@@ -10,11 +10,11 @@ except ModuleNotFoundError as e:
     logging.error("you need to `pip install achatbot[trtllm]`")
     raise Exception(f"Missing module: {e}")
 
+from src.core.llm.base import BaseLLM
 from src.common.session import Session
-from src.common.device_cuda import CUDAInfo
 
 
-class TrtLLMGenerator:
+class TrtLLMGenerator(BaseLLM):
     """
     token_ids -> llm generate stream -> token_ids
     use trtllm engine frontend asyncio api to generate token_ids

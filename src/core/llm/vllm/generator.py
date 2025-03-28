@@ -12,9 +12,10 @@ except ModuleNotFoundError as e:
     raise Exception(f"Missing module: {e}")
 
 from src.common.session import Session
+from src.core.llm.base import BaseLLM  
 
 
-class VllmGenerator:
+class VllmGenerator(BaseLLM):
     """
     token_ids -> llm generate stream -> token_ids
     use vllm llm engine frontend asyncio api to generate token_ids

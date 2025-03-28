@@ -10,10 +10,11 @@ except ModuleNotFoundError as e:
     logging.error("you need to `pip install achatbot[sglang]`")
     raise Exception(f"Missing module: {e}")
 
+from src.core.llm.base import BaseLLM
 from src.common.session import Session
 
 
-class SGlangGenerator:
+class SGlangGenerator(BaseLLM):
     """
     token_ids -> llm generate stream -> token_ids
     use sglang llm engine frontend asyncio api to generate token_ids

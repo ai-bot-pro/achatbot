@@ -19,17 +19,32 @@ class LlamacppGenerator(LLamacppLLM):
         # AR generate model
         generator = self.model.generate(
             token_ids,
-            temp=kwargs.get("temperature", self.args.llm_temperature),
-            top_k=kwargs.get("top_k", self.args.llm_top_k),
-            top_p=kwargs.get("top_p", self.args.llm_top_p),
-            min_p=kwargs.get("min_p", self.args.llm_min_p),
-            repeat_penalty=kwargs.get("repetition_penalty", self.args.llm_repeat_penalty),
+            temp=kwargs.get("temperature", self.args.llm_temperature)
+            if kwargs.get("temperature", self.args.llm_temperature)
+            else 0.80,
+            top_k=kwargs.get("top_k", self.args.llm_top_k)
+            if kwargs.get("top_k", self.args.llm_top_k)
+            else 50,
+            top_p=kwargs.get("top_p", self.args.llm_top_p)
+            if kwargs.get("top_p", self.args.llm_top_p)
+            else 0.9,
+            min_p=kwargs.get("min_p", self.args.llm_min_p)
+            if kwargs.get("min_p", self.args.llm_min_p)
+            else 0.0,
+            repeat_penalty=kwargs.get("repetition_penalty", self.args.llm_repeat_penalty)
+            if kwargs.get("repetition_penalty", self.args.llm_repeat_penalty)
+            else 1.0,
         )
 
-        # todo: cache
+        # todo: cache for multi generate on the same session,
+        # once generate like tts(speech lm) don't use cache
 
         stop_ids = kwargs.get("stop_ids", self.args.llm_stop_ids)
-        max_new_tokens = kwargs.get("max_new_tokens", self.args.llm_max_tokens)
+        max_new_tokens = (
+            kwargs.get("max_new_tokens", self.args.llm_max_tokens)
+            if kwargs.get("max_new_tokens", self.args.llm_max_tokens)
+            else 20
+        )
         if max_new_tokens > self.args.n_ctx - len(token_ids):
             max_new_tokens = self.args.n_ctx - len(token_ids)
         token_cn = 0

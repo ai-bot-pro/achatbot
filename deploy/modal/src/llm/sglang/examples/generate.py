@@ -148,7 +148,6 @@ async def run_achatbot_generator():
         SGlangGenerator,
         SGLangEngineArgs,
         ServerArgs,
-        LMGenerateArgs,
     )
     from achatbot.common.session import Session
     from achatbot.common.types import SessionCtx

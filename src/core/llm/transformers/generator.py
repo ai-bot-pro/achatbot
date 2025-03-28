@@ -73,18 +73,24 @@ class TransformersGenerator(TransformersBaseLLM):
         assert session.ctx.state["token_ids"] is not None
         assert isinstance(session.ctx.state["token_ids"], (list, torch.Tensor))
         input_ids = session.ctx.state["token_ids"]
-        if isinstance(session.ctx.state["token_ids"], list):
-            input_ids = torch.IntTensor(session.ctx.state["token_ids"]).to(self.args.lm_device)
+        input_ids = kwargs.pop("input_ids", input_ids)
+        if isinstance(input_ids, list):
+            input_ids = torch.LongTensor(session.ctx.state["token_ids"])
+            assert input_ids.dim() <= 2
+            if input_ids.dim() == 1:
+                input_ids = input_ids.unsqueeze(0)
+        input_ids = input_ids.to(self.args.lm_device)
 
         # https://huggingface.co/docs/transformers/v4.50.0/en/main_classes/text_generation
         streamer = TokenStreamer(skip_prompt=True)
-        kwargs["input_ids"] = kwargs.get("input_ids", input_ids)
         if "attention_mask" in kwargs:
             assert isinstance(kwargs["attention_mask"], (list, torch.Tensor))
             if isinstance(kwargs["attention_mask"], list):
-                kwargs["attention_mask"] = torch.IntTensor(kwargs["attention_mask"]).to(
-                    self.args.lm_device
-                )
+                kwargs["attention_mask"] = torch.IntTensor(kwargs["attention_mask"])
+                assert kwargs["attention_mask"].dim() <= 2
+                if kwargs["attention_mask"].dim() == 1:
+                    kwargs["attention_mask"] = kwargs["attention_mask"].unsqueeze(0)
+            kwargs["attention_mask"] = kwargs["attention_mask"].to(self.args.lm_device)
         kwargs["max_new_tokens"] = kwargs.get("max_new_tokens", self.args.lm_gen_max_new_tokens)
         kwargs["top_k"] = kwargs.get("top_k", self.args.lm_gen_top_k)
         kwargs["top_p"] = kwargs.get("top_p", self.args.lm_gen_top_p)
@@ -98,6 +104,7 @@ class TransformersGenerator(TransformersBaseLLM):
         kwargs["min_new_tokens"] = kwargs.get("min_new_tokens", self.args.lm_gen_min_new_tokens)
         stop_ids = kwargs.pop("stop_ids", self.args.lm_gen_stop_ids)
         generation_kwargs = dict(
+            input_ids=input_ids,
             streamer=streamer,
             **kwargs,
         )
@@ -127,8 +134,10 @@ if __name__ == "__main__":
 
     # tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_path)
+    tokens = tokenizer("hello, my name is")
+    # tokens = tokenizer("hello, my name is", return_tensors="pt")
     # tokens = tokenizer(["hello, my name is"])
-    tokens = tokenizer(["hello, my name is"], return_tensors="pt")
+    # tokens = tokenizer(["hello, my name is"], return_tensors="pt")
     input_ids = tokens["input_ids"]
     attention_mask = tokens["attention_mask"]
 
