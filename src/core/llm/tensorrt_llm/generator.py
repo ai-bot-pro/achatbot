@@ -10,11 +10,12 @@ except ModuleNotFoundError as e:
     logging.error("you need to `pip install achatbot[trtllm]`")
     raise Exception(f"Missing module: {e}")
 
+from src.common.interface import ILlmGenerator
 from src.core.llm.base import BaseLLM
 from src.common.session import Session
 
 
-class TrtLLMGenerator(BaseLLM):
+class TrtLLMGenerator(BaseLLM, ILlmGenerator):
     """
     token_ids -> llm generate stream -> token_ids
     use trtllm engine frontend asyncio api to generate token_ids
@@ -94,6 +95,7 @@ if __name__ == "__main__":
     import uuid
     import os
     import asyncio
+    import time
     from transformers import AutoTokenizer
 
     model = os.getenv("MODEL", "Qwen/Qwen2.5-0.5B")
@@ -105,7 +107,14 @@ if __name__ == "__main__":
     async def run():
         session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
         session.ctx.state["token_ids"] = tokenizer.encode("hello, my name is")
+        start_time = time.perf_counter()
+        first = True
         async for token_id in generator.generate(session, max_new_tokens=3):
-            print(token_id)
+            if first:
+                ttft = time.perf_counter() - start_time
+                logging.info(f"generate TTFT time: {ttft} s")
+                first = False
+            gen_text = tokenizer.decode(token_id)
+            print(token_id, gen_text)
 
     asyncio.run(run())

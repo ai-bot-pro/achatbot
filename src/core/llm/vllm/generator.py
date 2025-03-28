@@ -11,11 +11,12 @@ except ModuleNotFoundError as e:
     logging.error("you need to `pip install achatbot[vllm]`")
     raise Exception(f"Missing module: {e}")
 
+from src.common.interface import ILlmGenerator
 from src.common.session import Session
-from src.core.llm.base import BaseLLM  
+from src.core.llm.base import BaseLLM
 
 
-class VllmGenerator(BaseLLM):
+class VllmGenerator(BaseLLM, ILlmGenerator):
     """
     token_ids -> llm generate stream -> token_ids
     use vllm llm engine frontend asyncio api to generate token_ids

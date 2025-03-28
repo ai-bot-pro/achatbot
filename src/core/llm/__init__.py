@@ -201,16 +201,14 @@ class LLMEnvInit:
     def get_llm_vllm_generator_args() -> dict:
         from src.core.llm.vllm.generator import VllmEngineArgs, AsyncEngineArgs
 
-        kwargs = (
-            VllmEngineArgs(
-                serv_args=AsyncEngineArgs(
-                    model=os.getenv(
-                        "LLM_MODEL_NAME_OR_PATH", os.path.join(MODELS_DIR, "Qwen/Qwen2.5-0.5B")
-                    )
-                ).__dict__,
-                gen_args=LLMEnvInit._get_llm_generate_args(),
+        kwargs = VllmEngineArgs(
+            serv_args=AsyncEngineArgs(
+                model=os.getenv(
+                    "LLM_MODEL_NAME_OR_PATH", os.path.join(MODELS_DIR, "Qwen/Qwen2.5-0.5B")
+                )
             ).__dict__,
-        )
+            gen_args=LLMEnvInit._get_llm_generate_args(),
+        ).__dict__
         return kwargs
 
     @staticmethod

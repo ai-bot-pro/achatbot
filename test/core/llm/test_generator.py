@@ -6,6 +6,7 @@ import unittest
 import uuid
 from dotenv import load_dotenv
 
+from src.common.interface import ILlmGenerator
 from src.core.llm.base import BaseLLM
 from src.common.logger import Logger
 from src.common.session import Session
@@ -38,7 +39,7 @@ LLM_MODEL_NAME_OR_PATH=./models/Qwen/Qwen2.5-0.5B-Instruct \
 """
 
 
-class TestGenerator(unittest.TestCase):
+class TestGenerator(unittest.IsolatedAsyncioTestCase):
     @classmethod
     def setUpClass(cls):
         cls.llm_tag = os.getenv("LLM_TAG", "llm_transformers_generator")
@@ -55,7 +56,8 @@ class TestGenerator(unittest.TestCase):
 
         engine = LLMEnvInit.initLLMEngine(self.llm_tag)
         self.assertIsInstance(engine, BaseLLM)
-        self.engine: BaseLLM = engine
+        self.assertIsInstance(engine, ILlmGenerator)
+        self.engine: ILlmGenerator = engine
         logging.debug(self.engine.args)
 
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_path)
@@ -70,7 +72,7 @@ class TestGenerator(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_generate(self):
+    async def test_generate(self):
         prompt_cases = [
             {"prompt": self.prompt, "kwargs": {"max_new_tokens": 20, "stop_ids": []}},
             {"prompt": self.prompt, "kwargs": {"max_new_tokens": 20, "stop_ids": [13]}},
@@ -87,7 +89,7 @@ class TestGenerator(unittest.TestCase):
                 generated_token_ids = []
                 times = []
                 start_time = perf_counter()
-                for item in iter:
+                async for item in iter:
                     # print(item)
                     generated_token_ids.append(item)
                     times.append(perf_counter() - start_time)

@@ -13,12 +13,13 @@ except ModuleNotFoundError as e:
 
 from src.common.utils.helper import get_device
 from src.common.session import Session
+from src.common.interface import ILlmGenerator
 from src.types.llm.transformers import TransformersLMArgs
 from .base import TransformersBaseLLM
 from .streamer import TokenStreamer
 
 
-class TransformersGenerator(TransformersBaseLLM):
+class TransformersGenerator(TransformersBaseLLM, ILlmGenerator):
     """
     token_ids -> llm generate stream -> token_ids
     use transformers llm engine to generate token_ids
@@ -66,7 +67,7 @@ class TransformersGenerator(TransformersBaseLLM):
 
     # @torch.no_grad()
     @torch.inference_mode()
-    def generate(self, session: Session, **kwargs):
+    async def generate(self, session: Session, **kwargs):
         """
         token_ids -> llm generate stream -> token_ids
         """
@@ -127,6 +128,7 @@ if __name__ == "__main__":
     import uuid
     import os
     import time
+    import asyncio
 
     logging.basicConfig(level=logging.INFO)
 
@@ -151,19 +153,22 @@ if __name__ == "__main__":
     generation_config.max_new_tokens = 30
     print(generation_config.to_dict())
 
-    session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
-    session.ctx.state["token_ids"] = input_ids
-    first = True
-    start_time = time.perf_counter()
-    for token_id in generator.generate(
-        session,
-        attention_mask=attention_mask,
-        stop_ids=[13],
-        **generation_config.to_dict(),
-    ):
-        if first:
-            ttft = time.perf_counter() - start_time
-            logging.info(f"generate TTFT time: {ttft} s")
-            first = False
-        gen_text = tokenizer.decode(token_id)
-        print(token_id, gen_text)
+    async def run():
+        session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
+        session.ctx.state["token_ids"] = input_ids
+        first = True
+        start_time = time.perf_counter()
+        async for token_id in generator.generate(
+            session,
+            attention_mask=attention_mask,
+            stop_ids=[13],
+            **generation_config.to_dict(),
+        ):
+            if first:
+                ttft = time.perf_counter() - start_time
+                logging.info(f"generate TTFT time: {ttft} s")
+                first = False
+            gen_text = tokenizer.decode(token_id)
+            print(token_id, gen_text)
+
+    asyncio.run(run())

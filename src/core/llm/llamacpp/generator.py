@@ -1,17 +1,19 @@
 import logging
 
+from src.common.interface import ILlmGenerator
+
 from . import LLamacppLLM
 from src.common.session import Session
 
 
-class LlamacppGenerator(LLamacppLLM):
+class LlamacppGenerator(LLamacppLLM, ILlmGenerator):
     """
     token_ids -> llm generate stream -> token_ids
     """
 
     TAG = "llm_llamacpp_generator"
 
-    def generate(self, session: Session, **kwargs):
+    async def generate(self, session: Session, **kwargs):
         assert session.ctx.state["token_ids"] is not None
         assert isinstance(session.ctx.state["token_ids"], list)
         token_ids = session.ctx.state["token_ids"]
@@ -66,6 +68,7 @@ if __name__ == "__main__":
     import uuid
     import os
     import time
+    import asyncio
 
     from transformers import AutoTokenizer
     from src.common.types import SessionCtx
@@ -79,16 +82,19 @@ if __name__ == "__main__":
     model_path = os.getenv("MODEL", "./models/qwen2.5-0.5b-instruct-q8_0.gguf")
     generator = LlamacppGenerator(**LLamcppLLMArgs(model_path=model_path).__dict__)
 
-    session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
-    session.ctx.state["token_ids"] = tokenizer.encode("hello, my name is")
-    # test max_new_tokens>n_ctx-len(token_ids)
-    gen_iter = generator.generate(session, max_new_tokens=100, stop_ids=[13])
-    start_time = time.perf_counter()
-    first = True
-    for token_id in gen_iter:
-        if first:
-            ttft = time.perf_counter() - start_time
-            logging.info(f"generate TTFT time: {ttft} s")
-            first = False
-        gen_text = tokenizer.decode(token_id)
-        print(token_id, gen_text)
+    async def run():
+        session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
+        session.ctx.state["token_ids"] = tokenizer.encode("hello, my name is")
+        # test max_new_tokens>n_ctx-len(token_ids)
+        gen_iter = generator.generate(session, max_new_tokens=100, stop_ids=[13])
+        start_time = time.perf_counter()
+        first = True
+        async for token_id in gen_iter:
+            if first:
+                ttft = time.perf_counter() - start_time
+                logging.info(f"generate TTFT time: {ttft} s")
+                first = False
+            gen_text = tokenizer.decode(token_id)
+            print(token_id, gen_text)
+
+    asyncio.run(run())

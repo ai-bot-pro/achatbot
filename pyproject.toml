@@ -190,9 +190,13 @@ vad_recorder = ["achatbot[speech_vad]"]
 llama_cpp = ["llama-cpp-python~=0.2.82"]
 llm_personalai_proxy = ["geocoder~=1.38.1"]
 sglang = ["sglang[all]"]
-vllm = ["vllm"]
+vllm = ["vllm==0.7.3"]
 transformers = ["transformers[torch]"]
 trtllm = ["tensorrt-llm~=0.17.0.post1"]
+
+# llm backend
+# extra_index_url="https://flashinfer.ai/whl/cu124/torch2.5",
+flashinfer-python = ["flashinfer-python==0.2.0.post2"]
 
 
 # vision llm
