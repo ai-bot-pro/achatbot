@@ -40,8 +40,8 @@ trtllm_image = (
 )
 
 achatbot_trtllm_image = trtllm_image.pip_install(
-    "achatbot[]~=0.0.9.1.9",
-    extra_index_url="https://test.pypi.org/simple/",
+    "achatbot~=0.0.9.post1",
+    extra_index_url="https://pypi.org/simple/",
 ).env(
     {
         "TLLM_LLMAPI_BUILD_CACHE": "1",
