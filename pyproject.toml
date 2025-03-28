@@ -192,11 +192,12 @@ llm_personalai_proxy = ["geocoder~=1.38.1"]
 sglang = ["sglang[all]~=0.4.4.post1"]
 vllm = ["vllm==0.7.3"]
 transformers = ["transformers[torch]"]
+# --extra-index-url https://pypi.nvidia.com python3.10 and python3.12 | python3.11 unsupported
 trtllm = ["tensorrt-llm~=0.17.0.post1"]
 
 # llm backend
-# extra_index_url="https://flashinfer.ai/whl/cu124/torch2.5",
-flashinfer-python = ["flashinfer-python==0.2.0.post2"]
+# --extra-index-url "https://flashinfer.ai/whl/cu124/torch2.5",
+flashinfer-python = ["flashinfer-python~=0.2.3"]
 
 
 # vision llm
