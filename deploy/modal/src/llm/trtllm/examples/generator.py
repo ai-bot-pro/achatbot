@@ -34,11 +34,11 @@ trtllm_image = (
         pre=True,
         extra_index_url="https://pypi.nvidia.com",
     )
-    .env({})
+    .env({"TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.7 8.9 9.0"})
 )
 
 achatbot_trtllm_image = trtllm_image.pip_install(
-    "achatbot~=0.0.9.post1",
+    "achatbot~=0.0.9.post2",
     extra_index_url="https://pypi.org/simple/",
 ).env(
     {
@@ -62,7 +62,7 @@ trt_model_cache_vol = modal.Volume.from_name("triton_trtllm_cache_models", creat
     gpu=os.getenv("IMAGE_GPU", "L4"),
     cpu=2.0,
     retries=0,
-    image=trtllm_image.env({"TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.7 8.9 9.0"}),
+    image=trtllm_image,
     volumes={
         HF_MODEL_DIR: hf_model_vol,
         TRT_MODEL_CACHE_DIR: trt_model_cache_vol,
@@ -100,7 +100,7 @@ def run_sync():
     gpu=os.getenv("IMAGE_GPU", "L4"),
     cpu=2.0,
     retries=0,
-    image=trtllm_image.env({"TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.7 8.9 9.0"}),
+    image=trtllm_image.env({}),
     volumes={
         HF_MODEL_DIR: hf_model_vol,
         TRT_MODEL_CACHE_DIR: trt_model_cache_vol,
@@ -137,7 +137,7 @@ async def run_async_stream():
     gpu=os.getenv("IMAGE_GPU", "L4"),
     cpu=2.0,
     retries=0,
-    image=trtllm_image.env({"TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.7 8.9 9.0"}),
+    image=trtllm_image,
     volumes={
         HF_MODEL_DIR: hf_model_vol,
         TRT_MODEL_CACHE_DIR: trt_model_cache_vol,
@@ -193,7 +193,7 @@ async def run_async_batch_stream():
     gpu=os.getenv("IMAGE_GPU", "L4"),
     cpu=2.0,
     retries=0,
-    image=trtllm_image.env({"TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.7 8.9 9.0"}),
+    image=trtllm_image,
     volumes={
         HF_MODEL_DIR: hf_model_vol,
         TRT_MODEL_DIR: trt_model_vol,
@@ -247,7 +247,7 @@ def runner_stream():
         engine_dir=os.path.join(TRT_MODEL_DIR, "qwen2.5-0.5B", "trt_engines_bfloat16"),
         rank=tensorrt_llm.mpi_rank(),  # this will need to be adjusted to use multiple GPUs
         max_output_len=100,
-        debug_mode=False,
+        debug_mode=True,
     )
 
     init_duration_s = (time.monotonic_ns() - init_start) / 1e9
@@ -297,7 +297,7 @@ def runner_stream():
     gpu=os.getenv("IMAGE_GPU", "L4"),
     cpu=2.0,
     retries=0,
-    image=trtllm_image.env({"TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.7 8.9 9.0"}),
+    image=trtllm_image,
     volumes={
         HF_MODEL_DIR: hf_model_vol,
         TRT_MODEL_DIR: trt_model_vol,
@@ -563,7 +563,7 @@ def runner_batch_stream():
     gpu=os.getenv("IMAGE_GPU", "L4"),
     cpu=2.0,
     retries=0,
-    image=achatbot_trtllm_image.env({"TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.7 8.9 9.0"}),
+    image=achatbot_trtllm_image,
     volumes={
         HF_MODEL_DIR: hf_model_vol,
         TRT_MODEL_CACHE_DIR: trt_model_cache_vol,
@@ -612,10 +612,85 @@ async def run_achatbot_generator():
     # session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
     for case in prompt_cases:
         session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
-        session.ctx.state["token_ids"] = tokenizer.encode("hello, my name is")
         tokens = tokenizer(case["prompt"])
         session.ctx.state["token_ids"] = tokens["input_ids"]
         gen_kwargs = {**generation_config, **case["kwargs"], **tokens}
+        print("gen_kwargs:", gen_kwargs)
+        first = True
+        start_time = time.perf_counter()
+        gen_texts = ""
+        async for token_id in generator.generate(session, **gen_kwargs):
+            if first:
+                ttft = time.perf_counter() - start_time
+                print(f"generate TTFT time: {ttft} s")
+                first = False
+            gen_text = tokenizer.decode(token_id)
+            gen_texts += gen_text
+            print(session.ctx.client_id, token_id, gen_text)
+        print(session.ctx.client_id, gen_texts)
+    # asyncio.run(run())
+
+
+@app.function(
+    gpu=os.getenv("IMAGE_GPU", "L4"),
+    cpu=2.0,
+    retries=0,
+    image=achatbot_trtllm_image,
+    volumes={
+        HF_MODEL_DIR: hf_model_vol,
+        TRT_MODEL_DIR: trt_model_vol,
+    },
+    timeout=1200,  # default 300s
+    scaledown_window=1200,
+    max_containers=100,
+)
+async def run_achatbot_runner_generator():
+    import uuid
+    import os
+    import asyncio
+    import time
+
+    from achatbot.core.llm.tensorrt_llm.generator import (
+        TrtLLMRunnerGenerator,
+        TensorRTLLMRunnerArgs,
+        TensorRTLLMRunnerEngineArgs,
+        LMGenerateArgs,
+    )
+    from achatbot.common.types import SessionCtx
+    from achatbot.common.session import Session
+    from transformers import AutoTokenizer, GenerationConfig
+
+    model = os.path.join(HF_MODEL_DIR, MODEL_ID)
+    engine_dir = os.path.join(TRT_MODEL_DIR, "qwen2.5-0.5B", "trt_engines_bfloat16")
+    generator = TrtLLMRunnerGenerator(
+        **TensorRTLLMRunnerEngineArgs(
+            serv_args=TensorRTLLMRunnerArgs(engine_dir=engine_dir).__dict__
+        ).__dict__,
+    )
+    tokenizer = AutoTokenizer.from_pretrained(model)
+    generation_config = {}
+    if os.path.exists(os.path.join(model, "generation_config.json")):
+        generation_config = GenerationConfig.from_pretrained(
+            model, "generation_config.json"
+        ).to_dict()
+    # async def run():
+    prompt_cases = [
+        {"prompt": "hello, my name is", "kwargs": {"max_new_tokens": 30, "stop_ids": []}},
+        {
+            "prompt": "hello, my name is",
+            "kwargs": {"max_new_tokens": 30, "stop_ids": [13]},
+        },  # prefill cache token test (default no cache)
+        {"prompt": "hello, what your name?", "kwargs": {"max_new_tokens": 30, "stop_ids": [13]}},
+    ]
+
+    # test the same session
+    # session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
+    for case in prompt_cases:
+        session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
+        tokens = tokenizer(case["prompt"])
+        session.ctx.state["token_ids"] = tokens["input_ids"]
+        # gen_kwargs = {**generation_config, **case["kwargs"], **tokens}
+        gen_kwargs = {**case["kwargs"], **tokens}
         print("gen_kwargs:", gen_kwargs)
         first = True
         start_time = time.perf_counter()
@@ -644,5 +719,6 @@ modal run src/llm/trtllm/examples/generator.py::runner_batch_stream
 
 # achatbot
 modal run src/llm/trtllm/examples/generator.py::run_achatbot_generator
+modal run src/llm/trtllm/examples/generator.py::run_achatbot_runner_generator
 
 """

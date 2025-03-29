@@ -39,6 +39,11 @@ LLM_MODEL_NAME_OR_PATH=./models/Qwen/Qwen2.5-0.5B-Instruct \
 LLM_MODEL_NAME_OR_PATH=./models/Qwen/Qwen2.5-0.5B-Instruct \
     LLM_TAG=llm_trtllm_generator \
     python -m unittest test.core.llm.test_generator.TestGenerator.test_generate
+
+LLM_MODEL_NAME_OR_PATH=./models/Qwen/Qwen2.5-0.5B-Instruct-trtllm \
+    LLM_DEBUG_MODE=1 \
+    LLM_TAG=llm_trtllm_runner_generator \
+    python -m unittest test.core.llm.test_generator.TestGenerator.test_generate
 """
 
 
@@ -98,7 +103,8 @@ class TestGenerator(unittest.IsolatedAsyncioTestCase):
             with self.subTest(case=case):
                 tokens = self.tokenizer(case["prompt"])
                 self.session.ctx.state["token_ids"] = tokens["input_ids"]
-                # gen_kwargs = {**self.generation_config, **case["kwargs"], **tokens}# hack test, vllm have some bug :)
+                # gen_kwargs = {**self.generation_config, **case["kwargs"], **tokens}# hack test,
+                # trtllm_runner, vllm  generate have some bug :)
                 gen_kwargs = {**case["kwargs"], **tokens}
                 logging.debug(gen_kwargs)
                 iter = self.engine.generate(self.session, **gen_kwargs)

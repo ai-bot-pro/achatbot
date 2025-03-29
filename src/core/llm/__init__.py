@@ -23,6 +23,8 @@ class LLMEnvInit:
             from .vllm.generator import VllmGenerator
         if "llm_trtllm_generator" == tag:
             from .tensorrt_llm.generator import TrtLLMGenerator
+        if "llm_trtllm_runner_generator" == tag:
+            from .tensorrt_llm.generator import TrtLLMRunnerGenerator
         if "llm_sglang_generator" == tag:
             from .sglang.generator import SGlangGenerator
         elif "llm_personalai_proxy" == tag:
@@ -239,6 +241,21 @@ class LLMEnvInit:
         ).__dict__
         return kwargs
 
+    @staticmethod
+    def get_llm_trtllm_runner_generator_args() -> dict:
+        from src.types.llm.tensorrt_llm import TensorRTLLMRunnerEngineArgs, TensorRTLLMRunnerArgs
+
+        kwargs = TensorRTLLMRunnerEngineArgs(
+            serv_args=TensorRTLLMRunnerArgs(
+                engine_dir=os.getenv(
+                    "LLM_MODEL_NAME_OR_PATH", os.path.join(MODELS_DIR, "Qwen/Qwen2.5-0.5B-trtllm")
+                ),
+                debug_mode=bool(os.getenv("LLM_DEBUG_MODE", "")),
+            ).__dict__,
+            gen_args=LLMEnvInit._get_llm_generate_args(),
+        ).__dict__
+        return kwargs
+
     # TAG : config
     map_config_func = {
         "llm_llamacpp": get_llm_llamacpp_args,
@@ -259,4 +276,5 @@ class LLMEnvInit:
         "llm_vllm_generator": get_llm_vllm_generator_args,
         "llm_sglang_generator": get_llm_sglang_generator_args,
         "llm_trtllm_generator": get_llm_trtllm_generator_args,
+        "llm_trtllm_runner_generator": get_llm_trtllm_runner_generator_args,
     }
