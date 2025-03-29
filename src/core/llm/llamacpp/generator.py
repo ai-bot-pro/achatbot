@@ -38,8 +38,8 @@ class LlamacppGenerator(LLamacppLLM, ILlmGenerator):
             else 1.0,
         )
 
-        # todo: cache for multi generate on the same session,
-        # once generate like tts(speech lm) don't use cache
+        # todo: cache for multi generate, or use `create_completion`` metod
+        # https://llama-cpp-python.readthedocs.io/en/latest/api-reference/#llama_cpp.Llama.create_completion
 
         stop_ids = kwargs.get("stop_ids", self.args.llm_stop_ids)
         max_new_tokens = (
