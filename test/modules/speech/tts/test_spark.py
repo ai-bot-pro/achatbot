@@ -269,8 +269,8 @@ class TestSparkTTS(unittest.TestCase):
         self.session.ctx.state["temperature"] = 0.1
         print(self.session.ctx)
         iter = self.tts.synthesize_sync(self.session)
-        times = []
         res = bytearray()
+        times = []
         start_time = perf_counter()
         for i, chunk in enumerate(iter):
             print(i, len(chunk))

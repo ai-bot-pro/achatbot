@@ -234,6 +234,7 @@ class SparkGeneratroTTS(SparkTTS):
         gen_kwargs = {**kwargs, **model_inputs}
         streamer = self.lm_model.generate(session, **gen_kwargs)
 
+        pre_sub_tts_speech_size = 0
         async for token_id in streamer:
             if gender is not None:
                 # Inference Overview of Controlled Generation
@@ -284,6 +285,10 @@ class SparkGeneratroTTS(SparkTTS):
                 if sub_tts_speech.size == 0:
                     break
                 yield np.frombuffer(sub_tts_speech, dtype=float).tobytes()
+                if pre_sub_tts_speech_size > sub_tts_speech.size:  # for llamacpp quants cases
+                    logging.info(f"break by empty wav size: {sub_tts_speech.size}")
+                    break
+                pre_sub_tts_speech_size = sub_tts_speech.size
                 # increase token_hop_len for better speech quality
                 chunk_size = min(max_chunk_size, int(chunk_size * stream_scale_factor))
                 logging.info(

@@ -1,6 +1,7 @@
 import os
 import random
 import sys
+from time import perf_counter
 import uuid
 import json
 import logging
@@ -10,6 +11,7 @@ import grpc
 from dotenv import load_dotenv
 import numpy as np
 import soundfile
+import librosa
 
 try:
     cur_dir = os.path.dirname(__file__)
@@ -44,7 +46,7 @@ from src.common.session import Session
 load_dotenv(override=True)
 
 Logger.init(
-    os.getenv("LOG_LEVEL", "debug").upper(),
+    os.getenv("LOG_LEVEL", "info").upper(),
     app_name="chat-bot-tts-client",
     is_file=False,
     is_console=True,
@@ -163,6 +165,63 @@ TTS_TAG=tts_spark IS_SAVE=1 IS_RELOAD=1 \
     TTS_LM_MODEL_PATH=./models/SparkAudio/Spark-TTS-0.5B/LLM \
     python -m src.cmd.grpc.speaker.client
 
+TTS_TAG=tts_generator_spark IS_SAVE=1 IS_RELOAD=1 \
+    TTS_LM_GENERATOR_TAG=llm_llamacpp_generator \
+    TTS_MODEL_DIR=./models/SparkAudio/Spark-TTS-0.5B \
+    LLM_MODEL_PATH=./models/SparkTTS-LLM.Q2_K.gguf \
+    TTS_LM_TOKENIZER_DIR=./models/SparkAudio/Spark-TTS-0.5B/LLM \
+    python -m src.cmd.grpc.speaker.client
+TTS_TAG=tts_generator_spark IS_SAVE=1 IS_RELOAD=1 \
+    TTS_LM_GENERATOR_TAG=llm_llamacpp_generator \
+    TTS_MODEL_DIR=./models/SparkAudio/Spark-TTS-0.5B \
+    LLM_MODEL_PATH=./models/SparkTTS-LLM.Q3_K_L.gguf \
+    TTS_LM_TOKENIZER_DIR=./models/SparkAudio/Spark-TTS-0.5B/LLM \
+    python -m src.cmd.grpc.speaker.client
+TTS_TAG=tts_generator_spark IS_SAVE=1 IS_RELOAD=1 \
+    TTS_LM_GENERATOR_TAG=llm_llamacpp_generator \
+    TTS_MODEL_DIR=./models/SparkAudio/Spark-TTS-0.5B \
+    LLM_MODEL_PATH=./models/SparkTTS-LLM.Q4_K_M.gguf \
+    TTS_LM_TOKENIZER_DIR=./models/SparkAudio/Spark-TTS-0.5B/LLM \
+    python -m src.cmd.grpc.speaker.client
+TTS_TAG=tts_generator_spark IS_SAVE=1 IS_RELOAD=1 \
+    TTS_LM_GENERATOR_TAG=llm_llamacpp_generator \
+    TTS_MODEL_DIR=./models/SparkAudio/Spark-TTS-0.5B \
+    LLM_MODEL_PATH=./models/SparkTTS-LLM.Q8_0.gguf \
+    TTS_LM_TOKENIZER_DIR=./models/SparkAudio/Spark-TTS-0.5B/LLM \
+    python -m src.cmd.grpc.speaker.client
+TTS_TAG=tts_generator_spark IS_SAVE=1 IS_RELOAD=1 \
+    TTS_LM_GENERATOR_TAG=llm_llamacpp_generator \
+    TTS_MODEL_DIR=./models/SparkAudio/Spark-TTS-0.5B \
+    LLM_MODEL_PATH=./models/SparkTTS-LLM.f16.gguf \
+    TTS_LM_TOKENIZER_DIR=./models/SparkAudio/Spark-TTS-0.5B/LLM \
+    python -m src.cmd.grpc.speaker.client
+
+TTS_TAG=tts_generator_spark IS_SAVE=1 IS_RELOAD=1 \
+    TTS_LM_GENERATOR_TAG=llm_transformers_generator \
+    TTS_MODEL_DIR=./models/SparkAudio/Spark-TTS-0.5B \
+    LLM_MODEL_NAME_OR_PATH=./models/SparkAudio/Spark-TTS-0.5B/LLM \
+    TTS_LM_TOKENIZER_DIR=./models/SparkAudio/Spark-TTS-0.5B/LLM \
+    python -m src.cmd.grpc.speaker.client
+
+TTS_TAG=tts_generator_spark IS_SAVE=1 IS_RELOAD=1 \
+    TTS_LM_GENERATOR_TAG=llm_vllm_generator \
+    TTS_MODEL_DIR=/content/models/SparkAudio/Spark-TTS-0.5B \
+    LLM_MODEL_NAME_OR_PATH=/content/models/SparkAudio/Spark-TTS-0.5B/LLM \
+    TTS_LM_TOKENIZER_DIR=/content/models/SparkAudio/Spark-TTS-0.5B/LLM \
+    python -m src.cmd.grpc.speaker.client
+TTS_TAG=tts_generator_spark IS_SAVE=1 IS_RELOAD=1 \
+    TTS_LM_GENERATOR_TAG=llm_sglang_generator \
+    TTS_MODEL_DIR=/content/models/SparkAudio/Spark-TTS-0.5B \
+    LLM_MODEL_NAME_OR_PATH=/content/models/SparkAudio/Spark-TTS-0.5B/LLM \
+    TTS_LM_TOKENIZER_DIR=/content/models/SparkAudio/Spark-TTS-0.5B/LLM \
+    python -m src.cmd.grpc.speaker.client
+TTS_TAG=tts_generator_spark IS_SAVE=1 IS_RELOAD=1 \
+    TTS_LM_GENERATOR_TAG=llm_trtllm_generator \
+    TTS_MODEL_DIR=/content/models/SparkAudio/Spark-TTS-0.5B \
+    LLM_MODEL_NAME_OR_PATH=/content/models/SparkAudio/Spark-TTS-0.5B/LLM \
+    TTS_LM_TOKENIZER_DIR=/content/models/SparkAudio/Spark-TTS-0.5B/LLM \
+    python -m src.cmd.grpc.speaker.client
+
 TTS_TAG=tts_orpheus IS_SAVE=1 IS_RELOAD=1 \
     LM_MODEL_PATH=./models/canopylabs/orpheus-3b-0.1-ft \
     CODEC_MODEL_PATH=./models/hubertsiuzdak/snac_24khz \
@@ -209,8 +268,12 @@ if __name__ == "__main__":
             player.open()
             player.start(session)
 
-        for tts_audio in tts_audio_iter:
-            logging.debug(f"play tts_chunk len:{len(tts_audio)}")
+        times = []
+        start_time = perf_counter()
+        for i, tts_audio in enumerate(tts_audio_iter):
+            times.append(perf_counter() - start_time)
+            start_time = perf_counter()
+            logging.info(f"{i} play tts_chunk len:{len(tts_audio)}")
             session.ctx.state["tts_chunk"] = tts_audio
             if is_save is False:
                 player.play_audio(session)
@@ -233,8 +296,13 @@ if __name__ == "__main__":
             if stream_info.format == PYAUDIO_PAINT16:
                 np_dtype = np.int16
             data = np.frombuffer(res, dtype=np_dtype)
+            data, _ = librosa.effects.trim(data, top_db=60)
             soundfile.write(file_path, data, stream_info.rate)
             logging.info(f"save audio stream to {file_path}")
+            info = soundfile.info(file_path, verbose=True)
+            print(
+                f"tts cost time {sum(times)} s, wav duration {info.duration} s, RTF: {sum(times)/info.duration}"
+            )
 
         if is_save is False:
             channel and channel.close()
