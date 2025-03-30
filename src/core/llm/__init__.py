@@ -60,7 +60,7 @@ class LLMEnvInit:
     @staticmethod
     def initLLMEngine(
         tag: str | None = None, kwargs: dict | None = None
-    ) -> interface.ILlm | EngineClass:
+    ) -> interface.ILlmGenerator | interface.ILlm | EngineClass:
         # llm
         tag = tag if tag else os.getenv("LLM_TAG", "llm_llamacpp")
         if kwargs is None:

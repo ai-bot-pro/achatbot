@@ -222,7 +222,7 @@ def runner_stream():
     pad_id = tokenizer.pad_token_id
     end_id = tokenizer.eos_token_id
     print(f"pad {tokenizer.pad_token} {pad_id}")
-    print(f"pad {tokenizer.eos_token} {end_id}")
+    print(f"eos {tokenizer.eos_token} {end_id}")
 
     prompt_cases = [
         {"prompt": "hello, my name is", "kwargs": {"max_new_tokens": 10, "stop_words_list": None}},
@@ -286,10 +286,10 @@ def runner_stream():
                 print(f"generate TTFT time: {ttft} s")
                 first = False
             print(output)
-            output = output[:, 0]
-            mask = output != pad_id
-            output = output[mask]
-            outputs_text = tokenizer.decode(output)
+            output = output[:, 0][0]
+            # mask = output != pad_id
+            # output = output[mask]
+            outputs_text = tokenizer.decode(output, skip_special_tokens=True)
             print(output, outputs_text)
 
 

@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 import os
 
 from src.common.types import MODELS_DIR
-from src.types.llm.transformers import TransformersSpeechLMArgs
+from src.types.llm.transformers import TransformersSpeechLMArgs, TransformersLMArgs
 
 
 @dataclass
@@ -35,3 +35,15 @@ class SparkTTSArgs:
 
     # silence
     add_silence_chunk: bool = False
+
+
+@dataclass
+class SparkGeneratorTTSArgs(SparkTTSArgs):
+    """
+    Spark LM (qwen2.5) Generator + LM Tokenizer + Global and Semantic Tokenizer(ref audio encoder) -> Spark-Audio TTS
+    """
+
+    lm_generator_tag: str = "llm_transformers_generator"
+    lm_args: dict = field(default_factory=lambda: TransformersLMArgs().__dict__)
+
+    lm_tokenzier_dir: str = os.path.join(MODELS_DIR, "SparkAudio/Spark-TTS-0.5B/LLM")

@@ -88,3 +88,12 @@ class LMGenerateArgs:
             "help": "The pad token id. Default is 0. If the pad id is a substring token id of the generated text, the generation will stop."
         },
     )
+
+    def update(self, **kwargs):
+        unused_kwargs = dict()
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+            else:
+                unused_kwargs[key] = value
+        return unused_kwargs

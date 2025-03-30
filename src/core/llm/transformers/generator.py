@@ -82,7 +82,6 @@ class TransformersGenerator(TransformersBaseLLM, ILlmGenerator):
                 input_ids = input_ids.unsqueeze(0)
         input_ids = input_ids.to(self.args.lm_device)
 
-        # https://huggingface.co/docs/transformers/v4.50.0/en/main_classes/text_generation
         streamer = TokenStreamer(skip_prompt=True)
         if "attention_mask" in kwargs:
             assert isinstance(kwargs["attention_mask"], (list, torch.Tensor))
@@ -104,12 +103,26 @@ class TransformersGenerator(TransformersBaseLLM, ILlmGenerator):
         )
         kwargs["min_new_tokens"] = kwargs.get("min_new_tokens", self.args.lm_gen_min_new_tokens)
         stop_ids = kwargs.pop("stop_ids", self.args.lm_gen_stop_ids)
+        # notice: attention_mask is not used in generation_config
+        attention_mask = kwargs.pop("attention_mask", None)
+        generation_config = GenerationConfig(**kwargs)
+        logging.debug(f"generation_config: {generation_config.to_dict()}")
+
+        # https://huggingface.co/docs/transformers/v4.50.0/en/main_classes/text_generation
         generation_kwargs = dict(
             input_ids=input_ids,
             streamer=streamer,
-            **kwargs,
+            attention_mask=attention_mask,
+            generation_config=generation_config,
+            logits_processor=kwargs.get("logits_processor", None),
+            stopping_criteria=kwargs.get("stopping_criteria", None),
+            prefix_allowed_tokens_fn=kwargs.get("prefix_allowed_tokens_fn", None),
+            synced_gpus=kwargs.get("synced_gpus", None),
+            assistant_model=kwargs.get("assistant_model", None),
+            negative_prompt_ids=kwargs.get("negative_prompt_ids", None),
+            negative_prompt_attention_mask=kwargs.get("negative_prompt_attention_mask", None),
+            use_model_defaults=kwargs.get("use_model_defaults", None),
         )
-        logging.debug("generation_kwargs", generation_kwargs)
         thread = Thread(target=self._model.generate, kwargs=generation_kwargs)
         thread.start()
 
@@ -130,7 +143,7 @@ if __name__ == "__main__":
     import time
     import asyncio
 
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
 
     model_path = os.getenv("MODEL", "./models/Qwen/Qwen2.5-0.5B")
 

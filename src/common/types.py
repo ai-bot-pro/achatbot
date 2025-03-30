@@ -279,7 +279,7 @@ class LLamcppLLMArgs:
     n_threads: int = 1
     n_batch: int = 8
     n_gpu_layers: int = 0
-    n_ctx: int = 2048
+    n_ctx: int = 4096
     # chatml | chatml-function-calling | functionary-v2 | minicpm-v-2.6 ..
     chat_format: Optional[str] = None
     tokenizer_path: Optional[str] = None
@@ -290,14 +290,14 @@ class LLamcppLLMArgs:
     llm_prompt_tpl: str = "<|user|>\n{%s}<|end|>\n<|assistant|>"
     llm_stop: Optional[Union[int, List[str]]] = field(default_factory=list)
     llm_stop_ids: Optional[Union[int, List[int]]] = field(default_factory=list)
-    llm_max_tokens: int = 1024
+    llm_max_tokens: int = 2048
     llm_temperature: float = 0.8
     llm_top_p: float = 0.95
     llm_min_p: float = 0.05
     llm_top_k: int = 40
     llm_seed: Optional[int] = None
     # repeat penalty
-    llm_repeat_penalty: float = 1.0
+    llm_repeat_penalty: float = 1.1
     llm_repeat_last_n: int = 64
     # chat stream
     llm_stream: bool = False

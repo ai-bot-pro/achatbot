@@ -158,6 +158,7 @@ class TransformersManualSpeechSpark(TransformersBaseLLM):
             do_sample=self.args.lm_gen_do_sample,
             temperature=self.args.lm_gen_temperature,
             repetition_penalty=self.args.lm_gen_repetition_penalty,
+            pad_token_id=self.tokenizer.pad_token_id,
         )
 
         self._warmup(
@@ -214,6 +215,7 @@ class TransformersManualSpeechSpark(TransformersBaseLLM):
             repetition_penalty=kwargs["repetition_penalty"]
             if "repetition_penalty" in kwargs
             else self.args.lm_gen_repetition_penalty,
+            pad_token_id=self.tokenizer.pad_token_id,
         )
         logging.debug("generation_kwargs", generation_kwargs)
         thread = Thread(target=self._model.generate, kwargs=generation_kwargs)

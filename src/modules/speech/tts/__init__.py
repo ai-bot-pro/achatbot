@@ -48,6 +48,8 @@ class TTSEnvInit:
             from . import step_tts
         elif "tts_spark" == tag:
             from . import spark_tts
+        elif "tts_generator_spark" == tag:
+            from . import spark_generator_tts
         elif "tts_orpheus" == tag:
             from . import orpheus_tts
         # elif "tts_openai" in tag:
@@ -339,6 +341,16 @@ class TTSEnvInit:
         ).__dict__
         return kwargs
 
+    def get_tts_generator_spark_args() -> dict:
+        kwargs = TTSEnvInit.get_tts_spark_args()
+        kwargs["lm_generator_tag"] = os.getenv("TTS_LM_GENERATOR_TAG", "llm_transformers_generator")
+        # notice: lm_args use LLMEnvInit env params
+        kwargs["lm_args"] = LLMEnvInit.map_config_func[kwargs["lm_generator_tag"]]()
+        kwargs["lm_tokenzier_dir"] = os.getenv(
+            "TTS_LM_TOKENIZER_DIR", os.path.join(MODELS_DIR, "SparkAudio/Spark-TTS-0.5B/LLM")
+        )
+        return kwargs
+
     @staticmethod
     def get_tts_minicpmo_args() -> dict:
         kwargs = LLMEnvInit.get_llm_transformers_args()
@@ -384,6 +396,7 @@ class TTSEnvInit:
         "tts_zonos": get_tts_zonos_args,
         "tts_step": get_tts_step_args,
         "tts_spark": get_tts_spark_args,
+        "tts_generator_spark": get_tts_generator_spark_args,
     }
 
     @staticmethod
