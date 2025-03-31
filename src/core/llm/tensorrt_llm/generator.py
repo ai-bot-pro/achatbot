@@ -82,7 +82,7 @@ class TrtLLMGenerator(BaseLLM, ILlmGenerator):
                 yield token_id
 
 
-class TrtLLMRunnerGenerator:
+class TrtLLMRunnerGenerator(BaseLLM, ILlmGenerator):
     """
     token_ids -> llm generate stream -> token_ids
     use trtllm engine runtime runner to generate token_ids
@@ -97,6 +97,9 @@ class TrtLLMRunnerGenerator:
         self.gen_args = LMGenerateArgs(**self.args.gen_args)
         self.serv_args = TensorRTLLMRunnerArgs(**self.args.serv_args)
         self.serv_args.rank = mpi_rank()  # for multi gpu
+        logging.info(
+            f"server args: {self.serv_args.__dict__} | default generate args: {self.gen_args.__dict__}"
+        )
         # load tensorrt engine
         # https://nvidia.github.io/TensorRT-LLM/python-api/tensorrt_llm.runtime.html#tensorrt_llm.runtime.ModelRunner.from_dir
         self.engine = ModelRunner.from_dir(**self.serv_args.__dict__)

@@ -20,8 +20,9 @@ tts_grpc_image = (
     .env(
         {
             "ACHATBOT_PKG": "1",
-            "LOG_LEVEL": os.getenv("LOG_LEVEL", "debug"),
-            "TORCH_CUDA_ARCH_LIST": "7.5 8.0 8.6 8.7 8.9 9.0",
+            "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
+            "TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.7 8.9 9.0",
+            "PORT": os.getenv("GRPC_PORT", "50052"),
         }
     )
     # .pip_install("numpy==1.26.4", "transformers==4.48.3")
@@ -48,13 +49,14 @@ assets_dir = modal.Volume.from_name("assets", create_if_missing=True)
 def run():
     import subprocess
 
-    with modal.forward(50052, unencrypted=True) as tunnel:
+    from achatbot.cmd.grpc.speaker.server.serve import serve
+
+    port = int(os.getenv("PORT", "50052"))
+    with modal.forward(port, unencrypted=True) as tunnel:
         print(
             f"use tunnel.tcp_socket = {tunnel.tcp_socket[0]}:{tunnel.tcp_socket[1]} to connect tritonserver with tcp(grpc)"
         )
-        cmd = f"python -m achatbot.cmd.grpc.speaker.server.serve"
-        print(cmd)
-        subprocess.run(cmd, shell=True, check=True)
+        serve()
 
 
 """

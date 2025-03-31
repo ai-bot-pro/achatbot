@@ -240,6 +240,7 @@ class LLMEnvInit:
                 model=os.getenv(
                     "LLM_MODEL_NAME_OR_PATH", os.path.join(MODELS_DIR, "Qwen/Qwen2.5-0.5B")
                 ),
+                dtype=os.getenv("LLM_TORCH_DTYPE", "auto"),
             ),
             gen_args=LLMEnvInit._get_llm_generate_args(),
         )
@@ -253,7 +254,7 @@ class LLMEnvInit:
             serv_args=dict(
                 engine_dir=os.getenv(
                     "LLM_MODEL_NAME_OR_PATH", os.path.join(MODELS_DIR, "Qwen/Qwen2.5-0.5B-trtllm")
-                ),
+                ),  # build dtype engine
                 debug_mode=bool(os.getenv("LLM_DEBUG_MODE", "")),
             ),
             gen_args=LLMEnvInit._get_llm_generate_args(),

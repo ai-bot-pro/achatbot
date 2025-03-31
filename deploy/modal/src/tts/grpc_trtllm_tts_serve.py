@@ -39,7 +39,7 @@ HF_MODEL_DIR = "/root/.achatbot/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
 ASSETS_DIR = "/root/.achatbot/assets"
 assets_dir = modal.Volume.from_name("assets", create_if_missing=True)
-TRT_MODEL_DIR = "/root/trt_models"
+TRT_MODEL_DIR = "/root/.achatbot/trt_models"
 trt_model_vol = modal.Volume.from_name("triton_trtllm_models", create_if_missing=True)
 
 TRT_MODEL_CACHE_DIR = "/tmp/.cache/tensorrt_llm/llmapi/"
@@ -53,7 +53,8 @@ trt_model_cache_vol = modal.Volume.from_name("triton_trtllm_cache_models", creat
     volumes={
         HF_MODEL_DIR: hf_model_vol,
         ASSETS_DIR: assets_dir,
-        TRT_MODEL_CACHE_DIR: trt_model_cache_vol,
+        TRT_MODEL_CACHE_DIR: trt_model_cache_vol,  # for auto trtllm-build engine
+        TRT_MODEL_DIR: trt_model_vol,  # for mannual trtllm-build engine, use runner
     },
     timeout=1200,  # default 300s
     scaledown_window=1200,

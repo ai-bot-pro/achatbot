@@ -22,7 +22,7 @@ tts_grpc_image = (
         {
             "ACHATBOT_PKG": "1",
             "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
-            "TORCH_CUDA_ARCH_LIST": "7.5 8.0 8.6 8.7 8.9 9.0",
+            "TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.7 8.9 9.0",
             "VLLM_USE_V1": os.getenv("VLLM_USE_V1", "1"),
             "PORT": os.getenv("GRPC_PORT", "50052"),
             "VLLM_WORKER_MULTIPROC_METHOD": "spawn",
