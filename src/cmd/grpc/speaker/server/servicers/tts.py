@@ -1,5 +1,8 @@
 import logging
 import json
+import os
+import threading
+import queue
 
 import grpc
 import uuid
@@ -31,33 +34,67 @@ def get_session_id(context: grpc.ServicerContext):
 
 
 class TTS(TTSServicer):
-    def __init__(
-        self,
-    ) -> None:
+    def __init__(self) -> None:
         super().__init__()
-        self.tts = None
+        self._tts_instance: EngineClass | ITts = None
+        self._is_initializing = False
+        self._lock = threading.Lock()
+        self.init_queue = queue.Queue()
+
+    def get_tts_instance(self):
+        """获取当前的 TTS 实例"""
+        with self._lock:
+            return self._tts_instance
 
     def LoadModel(self, request: LoadModelRequest, context: grpc.ServicerContext):
         logging.debug(f"LoadModel request: {request}")
         kwargs = json.loads(request.json_kwargs)
         logging.debug(f"LoadModel kwargs: {kwargs}")
-        if self.tts is not None and not request.is_reload:
-            logging.debug(f"Already initialized {self.tts.TAG} args: {self.tts.args} -> {self.tts}")
+
+        # print("--->", self.get_tts_instance(), request.is_reload)
+        if self.get_tts_instance() and request.is_reload is False:
+            logging.info("TTS is already initializing un reload, ignoring this signal.")
             return LoadModelResponse()
-        self.tts: EngineClass | ITts = TTSEnvInit.getEngine(request.tts_tag, **kwargs)
-        logging.debug(f"init {self.tts.TAG} args:{self.tts.args} -> {self.tts}")
+
+        with self._lock:
+            if self._is_initializing:
+                logging.info("TTS is already initializing, ignoring this signal.")
+                return LoadModelResponse()
+
+        init_event = threading.Event()
+        init_result = {"success": False, "error": None}
+
+        init_signal = {
+            "tts_tag": request.tts_tag,
+            "kwargs": kwargs,
+            "event": init_event,
+            "result": init_result,
+        }
+        self.init_queue.put(init_signal)
+        # logging.info(f"Initialization signal added to queue: {init_signal}")
+
+        if not init_event.wait(timeout=int(os.getenv("INIT_TIMEOUT", "600"))):
+            # default wait 10 minutes
+            logging.error("Initialization timed out.")
+            raise Exception("TTS initialization timed out.")
+
+        if not init_result["success"]:
+            logging.error(f"Initialization failed: {init_result['error']}")
+            raise Exception(f"TTS initialization failed: {init_result['error']}")
+
+        logging.info("TTS initialization completed successfully.")
         return LoadModelResponse()
 
     def GetVoices(self, request: GetVoicesRequest, context: grpc.ServicerContext):
-        voices = self.tts.get_voices()
+        voices = self.get_tts_instance().get_voices()
         return GetVoicesResponse(voices=voices)
 
     def SetVoice(self, request: SetVoiceRequest, context: grpc.ServicerContext):
-        self.tts.set_voice(request.voice)
+        self.get_tts_instance().set_voice(request.voice)
         return SetVoiceResponse()
 
     def GetStreamInfo(self, request: GetStreamInfoRequest, context: grpc.ServicerContext):
-        info = self.tts.get_stream_info()
+        info = self.get_tts_instance().get_stream_info()
         return GetStreamInfoReponse(
             format=info["format"],
             rate=info["rate"],
@@ -73,7 +110,44 @@ class TTS(TTSServicer):
             logging.debug(f"SynthesizeUS kwargs: {kwargs}")
             session.ctx.state = kwargs
         session.ctx.state["tts_text"] = request.tts_text
-        iter = self.tts.synthesize_sync(session)
+        iter = self.get_tts_instance().synthesize_sync(session)
         for i, chunk in enumerate(iter):
             logging.debug(f"get {i} chunk {len(chunk)}")
             yield SynthesizeResponse(tts_audio=chunk)
+
+
+def main_thread_init(tts_service: TTS):
+    logging.info("Main thread initializing TTS engine.")
+    while True:
+        try:
+            init_signal = tts_service.init_queue.get()
+            logging.debug(f"Main thread received initialization signal: {init_signal}")
+            tts_tag = init_signal["tts_tag"]
+            kwargs = init_signal["kwargs"]
+            init_event = init_signal["event"]
+            init_result = init_signal["result"]
+
+            with tts_service._lock:
+                if tts_service._is_initializing:
+                    logging.info("Duplicate initialization signal detected, skipping.")
+                    continue
+                tts_service._is_initializing = True
+
+            try:
+                tts_instance = TTSEnvInit.getEngine(tts_tag, **kwargs)
+                logging.info(f"Main thread initialized TTS engine: {tts_instance.TAG}")
+                with tts_service._lock:
+                    tts_service._tts_instance = tts_instance
+                init_result["success"] = True
+            except Exception as e:
+                logging.error(f"Failed to initialize TTS engine: {e}")
+                init_result["success"] = False
+                init_result["error"] = str(e)
+            finally:
+                with tts_service._lock:
+                    tts_service._is_initializing = False
+
+            init_event.set()
+
+        except Exception as e:
+            logging.error(f"Error in main thread initialization loop: {e}")

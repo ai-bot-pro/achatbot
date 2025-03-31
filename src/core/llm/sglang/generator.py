@@ -1,5 +1,6 @@
 import argparse
 import logging
+import threading
 
 try:
     from sglang import Engine
@@ -29,6 +30,14 @@ class SGlangGenerator(BaseLLM, ILlmGenerator):
         self.args = SGLangEngineArgs(**kwargs)
         self.gen_args = LMGenerateArgs(**self.args.gen_args)
         self.serv_args = ServerArgs(**self.args.serv_args)
+
+        logging.info(
+            f"server args: {self.serv_args.__dict__} | default generate args: {self.gen_args.__dict__}"
+        )
+
+        # check if the current thread is the main thread,
+        # engine must be initialized in the main thread with signal
+        assert threading.current_thread() == threading.main_thread()
         self.engine = Engine(**self.serv_args.__dict__)
 
     async def generate(self, session: Session, **kwargs):

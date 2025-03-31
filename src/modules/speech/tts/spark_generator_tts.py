@@ -232,6 +232,7 @@ class SparkGeneratroTTS(SparkTTS):
         session.ctx.state["token_ids"] = model_inputs["input_ids"]
         kwargs["pad_token_id"] = kwargs.get("pad_token_id", None) or self.lm_tokenizer.pad_token_id
         gen_kwargs = {**kwargs, **model_inputs}
+        logging.info(f"gen_kwargs: {gen_kwargs}")
         streamer = self.lm_model.generate(session, **gen_kwargs)
 
         pre_sub_tts_speech_size = 0

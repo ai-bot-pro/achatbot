@@ -38,7 +38,7 @@ trtllm_image = (
 )
 
 achatbot_trtllm_image = trtllm_image.pip_install(
-    "achatbot~=0.0.9.post2",
+    "achatbot==0.0.9.post2",
     extra_index_url="https://pypi.org/simple/",
 ).env(
     {

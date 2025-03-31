@@ -29,7 +29,7 @@ vllm_image = vllm_image.env(
 )
 
 achatbot_vllm_image = vllm_image.pip_install(
-    "achatbot~=0.0.9.post1",
+    "achatbot==0.0.9.post1",
     extra_index_url="https://pypi.org/simple/",
 )
 

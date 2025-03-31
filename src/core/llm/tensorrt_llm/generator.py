@@ -37,6 +37,9 @@ class TrtLLMGenerator(BaseLLM, ILlmGenerator):
         self.gen_args = LMGenerateArgs(**self.args.gen_args)
         # https://github.com/NVIDIA/TensorRT-LLM/blob/v0.17.0/tensorrt_llm/llmapi/llm_utils.py#L368
         self.serv_args = LlmArgs.from_kwargs(**self.args.serv_args)
+        logging.info(
+            f"server args: {self.serv_args.__dict__} | default generate args: {self.gen_args.__dict__}"
+        )
         # https://nvidia.github.io/TensorRT-LLM/_modules/tensorrt_llm/llmapi/llm.html#LLM.__init__
         # Load HF model, convert to TensorRT, build TensorRT engine, load TensorRT engine
         self.engine = LLM(**self.serv_args.to_dict())

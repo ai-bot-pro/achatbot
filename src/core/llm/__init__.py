@@ -201,59 +201,63 @@ class LLMEnvInit:
 
     @staticmethod
     def get_llm_vllm_generator_args() -> dict:
-        from src.core.llm.vllm.generator import VllmEngineArgs, AsyncEngineArgs
+        # from src.types.llm.vllm import VllmEngineArgs, AsyncEngineArgs
 
-        kwargs = VllmEngineArgs(
-            serv_args=AsyncEngineArgs(
+        kwargs = dict(
+            serv_args=dict(
                 model=os.getenv(
                     "LLM_MODEL_NAME_OR_PATH", os.path.join(MODELS_DIR, "Qwen/Qwen2.5-0.5B")
-                )
-            ).__dict__,
+                ),
+                dtype=os.getenv("LLM_TORCH_DTYPE", "auto"),
+                kv_cache_dtype=os.getenv("LLM_KV_CACHE_DTYPE", "auto"),
+            ),
             gen_args=LLMEnvInit._get_llm_generate_args(),
-        ).__dict__
+        )
         return kwargs
 
     @staticmethod
     def get_llm_sglang_generator_args() -> dict:
-        from src.core.llm.sglang.generator import SGLangEngineArgs, ServerArgs
+        # from src.types.llm.sglang import SGLangEngineArgs, ServerArgs
 
-        kwargs = SGLangEngineArgs(
-            serv_args=ServerArgs(
+        kwargs = dict(
+            serv_args=dict(
                 model_path=os.getenv(
                     "LLM_MODEL_NAME_OR_PATH", os.path.join(MODELS_DIR, "Qwen/Qwen2.5-0.5B")
-                )
-            ).__dict__,
+                ),
+                dtype=os.getenv("LLM_TORCH_DTYPE", "auto"),
+                kv_cache_dtype=os.getenv("LLM_KV_CACHE_DTYPE", "auto"),
+            ),
             gen_args=LLMEnvInit._get_llm_generate_args(),
-        ).__dict__
+        )
         return kwargs
 
     @staticmethod
     def get_llm_trtllm_generator_args() -> dict:
-        from src.types.llm.tensorrt_llm import TensorRTLLMEngineArgs, LlmArgs
+        # from src.types.llm.tensorrt_llm import TensorRTLLMEngineArgs, LlmArgs
 
-        kwargs = TensorRTLLMEngineArgs(
-            serv_args=LlmArgs(
+        kwargs = dict(
+            serv_args=dict(
                 model=os.getenv(
                     "LLM_MODEL_NAME_OR_PATH", os.path.join(MODELS_DIR, "Qwen/Qwen2.5-0.5B")
                 ),
-            ).to_dict(),
+            ),
             gen_args=LLMEnvInit._get_llm_generate_args(),
-        ).__dict__
+        )
         return kwargs
 
     @staticmethod
     def get_llm_trtllm_runner_generator_args() -> dict:
-        from src.types.llm.tensorrt_llm import TensorRTLLMRunnerEngineArgs, TensorRTLLMRunnerArgs
+        # from src.types.llm.tensorrt_llm import TensorRTLLMRunnerEngineArgs, TensorRTLLMRunnerArgs
 
-        kwargs = TensorRTLLMRunnerEngineArgs(
-            serv_args=TensorRTLLMRunnerArgs(
+        kwargs = dict(
+            serv_args=dict(
                 engine_dir=os.getenv(
                     "LLM_MODEL_NAME_OR_PATH", os.path.join(MODELS_DIR, "Qwen/Qwen2.5-0.5B-trtllm")
                 ),
                 debug_mode=bool(os.getenv("LLM_DEBUG_MODE", "")),
-            ).__dict__,
+            ),
             gen_args=LLMEnvInit._get_llm_generate_args(),
-        ).__dict__
+        )
         return kwargs
 
     # TAG : config
