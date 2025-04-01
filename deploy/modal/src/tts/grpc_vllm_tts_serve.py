@@ -26,6 +26,7 @@ tts_grpc_image = (
             "VLLM_USE_V1": os.getenv("VLLM_USE_V1", "1"),
             "PORT": os.getenv("GRPC_PORT", "50052"),
             "VLLM_WORKER_MULTIPROC_METHOD": "spawn",
+            "TTS_TAG": os.getenv("TTS_TAG", "tts_generator_spark"),
         }
     )
     # .pip_install("numpy==1.26.4", "transformers==4.48.3")

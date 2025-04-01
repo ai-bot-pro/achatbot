@@ -120,8 +120,8 @@ class LLMEnvInit:
             kwargs["model_path"] = os.getenv(
                 "LLM_MODEL_NAME_OR_PATH", os.path.join(MODELS_DIR, "qwen2-1_5b-instruct-q8_0.gguf")
             )
-        kwargs["n_threads"] = os.cpu_count()
-        kwargs["verbose"] = False
+        kwargs["n_threads"] = os.getenv("N_THREADS", os.cpu_count())
+        kwargs["verbose"] = bool(os.getenv("LLM_VERBOSE", ""))
         kwargs["n_gpu_layers"] = int(os.getenv("N_GPU_LAYERS", "0"))
         kwargs["flash_attn"] = bool(os.getenv("FLASH_ATTN", ""))
         # if logger.getEffectiveLevel() != logging.DEBUG:
@@ -170,7 +170,7 @@ class LLMEnvInit:
                 "LLM_MODEL_NAME_OR_PATH", os.path.join(MODELS_DIR, "Qwen/Qwen2-0.5B-Instruct")
             ),
             lm_attn_impl=os.getenv("LLM_ATTN_IMPL", None),
-            lm_device=os.getenv("LLM_DEVICE", "cpu"),
+            lm_device=os.getenv("LLM_DEVICE", None),
             lm_torch_dtype=os.getenv("LLM_TORCH_DTYPE", "auto"),
             lm_stream=bool(os.getenv("LLM_STREAM", "1")),
             init_chat_prompt=os.getenv("LLM_INIT_CHAT_PROMPT", ""),

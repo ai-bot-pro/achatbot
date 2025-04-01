@@ -94,6 +94,7 @@ class SparkTTS(BaseTTS, ITts):
             self.set_voice(
                 self.args.ref_audio_path, ref_text=self.args.ref_text, ref_speaker="default"
             )
+        self.default_gender = "male" if random.random() > 0.5 else "female"
 
     def get_stream_info(self) -> dict:
         return {
@@ -202,7 +203,7 @@ class SparkTTS(BaseTTS, ITts):
         ref_voice: RefAudioCodecInfo = self.voices.get(ref_speaker)
         if ref_voice is None:
             if "gender" not in kwargs:
-                kwargs["gender"] = "male" if random.random() > 0.5 else "female"
+                kwargs["gender"] = self.default_gender
             logging.warning(
                 f"Voice {ref_speaker} not found, use Controlled Generation inference with gender:{kwargs['gender']} attribute."
             )

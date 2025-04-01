@@ -207,20 +207,22 @@ TTS_TAG=tts_generator_spark IS_SAVE=1 \
     TTS_LM_TOKENIZER_DIR=./models/SparkAudio/Spark-TTS-0.5B/LLM \
     python -m src.cmd.grpc.speaker.client
 
-TTS_TAG=tts_generator_spark IS_SAVE=1 \
+TTS_TAG=tts_generator_spark SERVE_ADDR=r21.modal.host:43783 IS_SAVE=1 \
     TTS_LM_GENERATOR_TAG=llm_vllm_generator \
+    LLM_TORCH_DTYPE=bfloat16 \
     TTS_MODEL_DIR=/root/.achatbot/models/SparkAudio/Spark-TTS-0.5B \
     LLM_MODEL_NAME_OR_PATH=/root/.achatbot/models/SparkAudio/Spark-TTS-0.5B/LLM \
     TTS_LM_TOKENIZER_DIR=/root/.achatbot/models/SparkAudio/Spark-TTS-0.5B/LLM \
     python -m src.cmd.grpc.speaker.client
 
-TTS_TAG=tts_generator_spark IS_SAVE=1 \
+TTS_TAG=tts_generator_spark SERVE_ADDR=r21.modal.host:43783 IS_SAVE=1 \
     TTS_LM_GENERATOR_TAG=llm_sglang_generator \
+    LLM_TORCH_DTYPE=bfloat16 \
     TTS_MODEL_DIR=/root/.achatbot/models/SparkAudio/Spark-TTS-0.5B \
     LLM_MODEL_NAME_OR_PATH=/root/.achatbot/models/SparkAudio/Spark-TTS-0.5B/LLM \
     TTS_LM_TOKENIZER_DIR=/root/.achatbot/models/SparkAudio/Spark-TTS-0.5B/LLM \
     python -m src.cmd.grpc.speaker.client
-    
+
 TTS_TAG=tts_generator_spark SERVE_ADDR=r21.modal.host:43783 IS_SAVE=1 \
     TTS_LM_GENERATOR_TAG=llm_trtllm_generator \
     TTS_MODEL_DIR=/root/.achatbot/models/SparkAudio/Spark-TTS-0.5B \

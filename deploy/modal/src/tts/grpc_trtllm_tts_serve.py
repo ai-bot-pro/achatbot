@@ -30,6 +30,7 @@ tts_grpc_image = (
             "TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.7 8.9 9.0",
             "PORT": os.getenv("GRPC_PORT", "50052"),
             "TLLM_LLMAPI_BUILD_CACHE": "1",
+            "TTS_TAG": os.getenv("TTS_TAG", "tts_generator_spark"),
         }
     )
     # .pip_install("numpy==1.26.4", "transformers==4.48.3")

@@ -23,6 +23,7 @@ tts_grpc_image = (
             "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
             "TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.7 8.9 9.0",
             "PORT": os.getenv("GRPC_PORT", "50052"),
+            "TTS_TAG": os.getenv("TTS_TAG", "tts_generator_spark"),
         }
     )
     # .pip_install("numpy==1.26.4", "transformers==4.48.3")
@@ -47,8 +48,6 @@ assets_dir = modal.Volume.from_name("assets", create_if_missing=True)
     max_containers=100,
 )
 def run():
-    import subprocess
-
     from achatbot.cmd.grpc.speaker.server.serve import serve
 
     port = int(os.getenv("PORT", "50052"))
@@ -63,8 +62,7 @@ def run():
 # run tts grpc serve with llm generator by tcp tunnel
 
 # tts_generator_spark
-TTS_TAG=tts_generator_spark IMAGE_GPU=T4 modal run src/tts/grpc_sglang_tts_serve.py
-
+TTS_TAG=tts_generator_spark IMAGE_GPU=L4 modal run src/tts/grpc_sglang_tts_serve.py
 """
 
 

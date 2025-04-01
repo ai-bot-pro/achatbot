@@ -84,6 +84,7 @@ class SparkGeneratroTTS(SparkTTS):
             self.set_voice(
                 self.args.ref_audio_path, ref_text=self.args.ref_text, ref_speaker="default"
             )
+        self.default_gender = "male" if random.random() > 0.5 else "female"
 
     def process_prompt_control(
         self,
@@ -211,7 +212,7 @@ class SparkGeneratroTTS(SparkTTS):
         ref_speaker = kwargs.pop("ref_speaker", "default")
         ref_voice: RefAudioCodecInfo = self.voices.get(ref_speaker)
         if ref_voice is None:
-            gender = kwargs.pop("gender", "male" if random.random() > 0.5 else "female")
+            gender = self.default_gender
             logging.warning(
                 f"Voice {ref_speaker} not found, use Controlled Generation inference with gender:{gender} attribute."
             )
