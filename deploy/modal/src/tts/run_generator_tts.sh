@@ -5,7 +5,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/../.." || exit
 
-export EXTRA_INDEX_URL="https://test.pypi.org/simple/"
+export EXTRA_INDEX_URL="https://pypi.org/simple/"
 export TTS_TAG="tts_generator_spark"
 export ACHATBOT_VERSION="0.0.9.post3"
 
