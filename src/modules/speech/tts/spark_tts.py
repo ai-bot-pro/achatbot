@@ -9,8 +9,6 @@ from typing import AsyncGenerator, List
 
 from dotenv import load_dotenv
 import numpy as np
-import torch
-import torchaudio
 
 from src.common.random import set_all_random_seed
 from src.core.llm.transformers.manual_speech_spark import TransformersManualSpeechSpark
@@ -30,6 +28,8 @@ try:
     else:
         sys.path.insert(1, os.path.join(cur_dir, "../../../../deps/SparkTTS"))
 
+    import torch
+
     from deps.SparkTTS.sparktts.models.audio_tokenizer import BiCodecTokenizer
     from deps.SparkTTS.sparktts.utils.file import load_config
 
@@ -47,6 +47,7 @@ class RefAudioCodecInfo:
     ref_speaker: str = ""
     ref_text: str = ""
     ref_path: str = ""
+    # [global_token_ids, semantic_token_ids]
     vq_indices: List[torch.Tensor] = field(default_factory=list)
 
 
@@ -76,9 +77,10 @@ class SparkTTS(BaseTTS, ITts):
 
         self.lm_args = TransformersSpeechLMArgs(**self.args.lm_args)
         self.lm_model = TransformersManualSpeechSpark(**self.lm_args.__dict__)
+        self.lm_tokenizer = self.lm_model.tokenizer
 
-        self.start_global_token_id = self.lm_model.tokenizer.encode("<|start_global_token|>")[0]
-        self.start_semantic_token_id = self.lm_model.tokenizer.encode("<|start_semantic_token|>")[0]
+        self.start_global_token_id = self.lm_tokenizer.encode("<|start_global_token|>")[0]
+        self.start_semantic_token_id = self.lm_tokenizer.encode("<|start_semantic_token|>")[0]
         logging.debug(
             f"start_global_token_id:{self.start_global_token_id} start_semantic_token_id:{self.start_semantic_token_id}"
         )
@@ -92,6 +94,7 @@ class SparkTTS(BaseTTS, ITts):
             self.set_voice(
                 self.args.ref_audio_path, ref_text=self.args.ref_text, ref_speaker="default"
             )
+        self.default_gender = "male" if random.random() > 0.5 else "female"
 
     def get_stream_info(self) -> dict:
         return {
@@ -124,7 +127,7 @@ class SparkTTS(BaseTTS, ITts):
         """
         # print("generated_ids", generated_ids)
         # Decode the generated tokens into text (just a mapping, so quick,don't worry)
-        predicts = self.lm_model.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
+        predicts = self.lm_tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
         # print("predicts", predicts)
 
         # Extract semantic token IDs from the generated text
@@ -132,7 +135,20 @@ class SparkTTS(BaseTTS, ITts):
             torch.tensor([int(token) for token in re.findall(r"bicodec_semantic_(\d+)", predicts)])
             .long()
             .unsqueeze(0)
-        )
+        ).to(self.args.device)
+
+        # Check if pred_semantic_ids is empty
+        if pred_semantic_ids.numel() == 0:
+            logging.warning(f"No semantic tokens found, return empty waveform.")
+            return np.array([])
+
+        if pred_semantic_ids.dim() == 2 and pred_semantic_ids.numel() > 0:
+            # print(pred_semantic_ids)
+            # Check if all generated tokens are the same
+            mask = pred_semantic_ids == pred_semantic_ids[0][0].item()
+            if mask.all():
+                logging.warning(f"All silence tokens, return empty waveform.")
+                return np.array([])
 
         if gender is not None:
             # Tips: generated_id - global_vq_index = 151665
@@ -145,10 +161,17 @@ class SparkTTS(BaseTTS, ITts):
                 .unsqueeze(0)
             )
 
+        # Check if global_token_ids is empty
+        if global_token_ids.numel() == 0:
+            logging.warning(f"No global tokens found, return empty waveform.")
+            return np.array([])
+
+        # print("global_token_ids", global_token_ids.shape)
+        # print("pred_semantic_ids", pred_semantic_ids.shape)
         # Convert semantic tokens back to waveform
         wav = self.audio_tokenizer.detokenize(
             global_token_ids.to(self.args.device).squeeze(0),
-            pred_semantic_ids.to(self.args.device),
+            pred_semantic_ids,
         )
 
         return wav
@@ -180,7 +203,7 @@ class SparkTTS(BaseTTS, ITts):
         ref_voice: RefAudioCodecInfo = self.voices.get(ref_speaker)
         if ref_voice is None:
             if "gender" not in kwargs:
-                kwargs["gender"] = "male" if random.random() > 0.5 else "female"
+                kwargs["gender"] = self.default_gender
             logging.warning(
                 f"Voice {ref_speaker} not found, use Controlled Generation inference with gender:{kwargs['gender']} attribute."
             )
@@ -240,8 +263,10 @@ class SparkTTS(BaseTTS, ITts):
                     gender,
                     session.ctx.state.get("global_fsq_indices", None),
                 )  # one batch
-                yield np.frombuffer(sub_tts_speech, dtype=float).tobytes()
                 semantic_token_ids = semantic_token_ids[batch_size:]
+                if sub_tts_speech.size == 0:
+                    break
+                yield np.frombuffer(sub_tts_speech, dtype=float).tobytes()
                 # increase token_hop_len for better speech quality
                 batch_size = min(max_batch_size, int(batch_size * stream_scale_factor))
                 logging.info(

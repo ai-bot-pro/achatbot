@@ -82,6 +82,8 @@ modal run -e achatbot src/download_assets.py --asset-urls "https://raw.githubuse
 modal run src/download_assets.py --asset-urls "https://raw.githubusercontent.com/SWivid/F5-TTS/refs/heads/main/src/f5_tts/infer/examples/vocab.txt"
 modal run src/download_assets.py --asset-urls "https://raw.githubusercontent.com/SWivid/F5-TTS/refs/heads/main/src/f5_tts/infer/examples/basic/basic_ref_en.wav"
 modal run src/download_assets.py --asset-urls "https://raw.githubusercontent.com/SWivid/F5-TTS/refs/heads/main/src/f5_tts/infer/examples/basic/basic_ref_zh.wav"
+
+modal run src/download_assets.py --asset-urls "https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/test/audio_files/asr_example_zh.wav"
 """
 
 

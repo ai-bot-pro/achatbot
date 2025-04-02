@@ -1,9 +1,18 @@
 import logging
 import uuid
 
+import torch
+
 try:
-    from src.types.llm.tensorrt_llm import TensorRTLLMEngineArgs, LMGenerateArgs, LlmArgs
-    from tensorrt_llm import LLM, SamplingParams
+    from src.types.llm.tensorrt_llm import (
+        TensorRTLLMEngineArgs,
+        TensorRTLLMRunnerArgs,
+        TensorRTLLMRunnerEngineArgs,
+        LMGenerateArgs,
+        LlmArgs,
+    )
+    from tensorrt_llm import LLM, SamplingParams, mpi_rank
+    from tensorrt_llm.runtime import ModelRunner, SamplingConfig
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error("you need to `pip install achatbot[trtllm]`")
@@ -28,6 +37,9 @@ class TrtLLMGenerator(BaseLLM, ILlmGenerator):
         self.gen_args = LMGenerateArgs(**self.args.gen_args)
         # https://github.com/NVIDIA/TensorRT-LLM/blob/v0.17.0/tensorrt_llm/llmapi/llm_utils.py#L368
         self.serv_args = LlmArgs.from_kwargs(**self.args.serv_args)
+        logging.info(
+            f"server args: {self.serv_args.__dict__} | default generate args: {self.gen_args.__dict__}"
+        )
         # https://nvidia.github.io/TensorRT-LLM/_modules/tensorrt_llm/llmapi/llm.html#LLM.__init__
         # Load HF model, convert to TensorRT, build TensorRT engine, load TensorRT engine
         self.engine = LLM(**self.serv_args.to_dict())
@@ -70,7 +82,7 @@ class TrtLLMGenerator(BaseLLM, ILlmGenerator):
                 yield token_id
 
 
-class TrtLLMRunnerGenerator:
+class TrtLLMRunnerGenerator(BaseLLM, ILlmGenerator):
     """
     token_ids -> llm generate stream -> token_ids
     use trtllm engine runtime runner to generate token_ids
@@ -80,9 +92,68 @@ class TrtLLMRunnerGenerator:
 
     TAG = "llm_trtllm_runner_generator"
 
+    def __init__(self, **kwargs):
+        self.args = TensorRTLLMRunnerEngineArgs(**kwargs)
+        self.gen_args = LMGenerateArgs(**self.args.gen_args)
+        self.serv_args = TensorRTLLMRunnerArgs(**self.args.serv_args)
+        self.serv_args.rank = mpi_rank()  # for multi gpu
+        logging.info(
+            f"server args: {self.serv_args.__dict__} | default generate args: {self.gen_args.__dict__}"
+        )
+        # load tensorrt engine
+        # https://nvidia.github.io/TensorRT-LLM/python-api/tensorrt_llm.runtime.html#tensorrt_llm.runtime.ModelRunner.from_dir
+        self.engine = ModelRunner.from_dir(**self.serv_args.__dict__)
+
+    async def generate(self, session: Session, **kwargs):
+        """
+        Generate new tokens using the LLM model.
+        """
+        assert session.ctx.state["token_ids"] is not None
+        assert isinstance(session.ctx.state["token_ids"], list)
+        input_ids = session.ctx.state["token_ids"]
+        input_ids = kwargs.pop("input_ids", input_ids)
+        if isinstance(input_ids, list):
+            input_ids = torch.LongTensor(session.ctx.state["token_ids"])
+            assert input_ids.dim() <= 2
+            if input_ids.dim() == 1:
+                input_ids = input_ids.unsqueeze(0)
+        input_ids = input_ids.to("cuda")
+        # https://nvidia.github.io/TensorRT-LLM/_modules/tensorrt_llm/runtime/generation.html#SamplingConfig
+        sampling_config = SamplingConfig(
+            end_id=self.gen_args.lm_gen_end_id,
+            pad_id=self.gen_args.lm_gen_pad_id,
+            temperature=self.gen_args.lm_gen_temperature,
+            repetition_penalty=self.gen_args.lm_gen_repetition_penalty,
+            max_new_tokens=self.gen_args.lm_gen_max_new_tokens,
+            top_k=self.gen_args.lm_gen_top_k,
+            top_p=self.gen_args.lm_gen_top_p,
+            # min_p version > 0.17.0
+            # min_p=self.gen_args.lm_gen_min_p,
+        )
+        sampling_config.update(**kwargs)
+        logging.debug(f"sampling_config:{sampling_config}")
+        # https://nvidia.github.io/TensorRT-LLM/python-api/tensorrt_llm.runtime.html#tensorrt_llm.runtime.ModelRunner.generate
+        generator = self.engine.generate(
+            input_ids,
+            streaming=True,
+            sampling_config=sampling_config,
+        )
+        stop_ids = kwargs.get("stop_ids", self.gen_args.lm_gen_stop_ids)
+        for output in generator:
+            output = output[:, 0]
+            mask = output != sampling_config.pad_id
+            output = output[mask]
+            token_id = output[-1].item()
+            yield token_id
+            if token_id in stop_ids:
+                break
+
 
 """
 MODEL=./models/Qwen/Qwen2.5-0.5B python -m src.core.llm.tensorrt_llm.generator 
+
+ENGINE=llm_trtllm_runner_generator ENGINE_DIR=./models/Qwen/Qwen2.5-0.5B-trtllm \
+    python -m src.core.llm.tensorrt_llm.generator 
 """
 if __name__ == "__main__":
     from src.common.types import SessionCtx
@@ -92,10 +163,19 @@ if __name__ == "__main__":
     import time
     from transformers import AutoTokenizer
 
-    model = os.getenv("MODEL", "Qwen/Qwen2.5-0.5B")
-    generator = TrtLLMGenerator(
-        **TensorRTLLMEngineArgs(serv_args=LlmArgs(model=model).to_dict()).__dict__,
-    )
+    engine_name = os.getenv("ENGINE", "llm_trtllm_generator")
+    if engine_name == "llm_trtllm_generator":
+        model = os.getenv("MODEL", "Qwen/Qwen2.5-0.5B")
+        generator = TrtLLMGenerator(
+            **TensorRTLLMEngineArgs(serv_args=LlmArgs(model=model).to_dict()).__dict__,
+        )
+    if engine_name == "llm_trtllm_runner_generator":
+        engine_dir = os.getenv("ENGINE_DIR", "./models/Qwen/Qwen2.5-0.5B-trtllm")
+        generator = TrtLLMRunnerGenerator(
+            **TensorRTLLMRunnerEngineArgs(
+                serv_args=TensorRTLLMRunnerArgs(engine_dir=engine_dir)
+            ).__dict__,
+        )
     tokenizer = AutoTokenizer.from_pretrained(model)
 
     async def run():

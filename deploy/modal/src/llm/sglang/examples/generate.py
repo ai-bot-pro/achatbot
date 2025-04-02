@@ -125,7 +125,7 @@ async def run_async():
 
 
 achatbot_sglang_image = sglang_image.pip_install(
-    "achatbot~=0.0.9.post1",
+    "achatbot==0.0.9.post1",
     extra_index_url="https://pypi.org/simple/",
 )
 

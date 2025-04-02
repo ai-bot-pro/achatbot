@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 name = "achatbot"
 #dynamic = ["version"]
 # todo
-version = "0.0.9.post1"
+version = "0.0.9.post3"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -189,15 +189,15 @@ vad_recorder = ["achatbot[speech_vad]"]
 # if want to use other lib(cuda), see: https://github.com/abetlen/llama-cpp-python#installation-configuration
 llama_cpp = ["llama-cpp-python~=0.2.82"]
 llm_personalai_proxy = ["geocoder~=1.38.1"]
-sglang = ["sglang[all]"]
+sglang = ["sglang[all]==0.4.4.post1"]
 vllm = ["vllm==0.7.3"]
 transformers = ["transformers[torch]"]
 # --extra-index-url https://pypi.nvidia.com python3.10 and python3.12 | python3.11 unsupported
-trtllm = ["tensorrt-llm~=0.17.0.post1"]
+trtllm = ["tensorrt-llm==0.17.0.post1"]
 
 # llm backend
 # --extra-index-url "https://flashinfer.ai/whl/cu124/torch2.5",
-flashinfer-python = ["flashinfer-python~=0.2.3"]
+flashinfer-python = ["flashinfer-python==0.2.3"]
 
 
 # vision llm
@@ -451,6 +451,7 @@ tts_step = [
     "achatbot[conf,librosa]",
 ]
 tts_spark = ["achatbot[codec_bitokenizer]"]
+tts_generator_spark = ["achatbot[tts_spark]"]
 tts_orpheus = [
     "achatbot[codec_snac]",
     "numpy==1.26.4",

@@ -39,6 +39,12 @@ LLM_MODEL_NAME_OR_PATH=./models/Qwen/Qwen2.5-0.5B-Instruct \
 LLM_MODEL_NAME_OR_PATH=./models/Qwen/Qwen2.5-0.5B-Instruct \
     LLM_TAG=llm_trtllm_generator \
     python -m unittest test.core.llm.test_generator.TestGenerator.test_generate
+
+LLM_MODEL_NAME_OR_PATH=./models/Qwen/Qwen2.5-0.5B-Instruct-trtllm \
+    LLM_TOKENIZER_PATH=/models/Qwen/Qwen2.5-0.5B-Instruct \
+    LLM_DEBUG_MODE=1 \
+    LLM_TAG=llm_trtllm_runner_generator \
+    python -m unittest test.core.llm.test_generator.TestGenerator.test_generate
 """
 
 
@@ -48,6 +54,7 @@ class TestGenerator(unittest.IsolatedAsyncioTestCase):
         cls.llm_tag = os.getenv("LLM_TAG", "llm_transformers_generator")
         cls.prompt = os.getenv("LLM_PROMPT", "what's your name?")
         cls.model_path = os.getenv("LLM_MODEL_NAME_OR_PATH", "./models/Qwen/Qwen2.5-0.5B")
+        cls.tokenizer_path = os.getenv("LLM_TOKENIZER_PATH", cls.model_path)
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 
     @classmethod
@@ -66,7 +73,7 @@ class TestGenerator(unittest.IsolatedAsyncioTestCase):
         self.engine: ILlmGenerator = engine
         logging.debug(self.engine.args)
 
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_path)
         self.generation_config = {}
         if os.path.exists(os.path.join(self.model_path, "generation_config.json")):
             self.generation_config = GenerationConfig.from_pretrained(
@@ -98,7 +105,8 @@ class TestGenerator(unittest.IsolatedAsyncioTestCase):
             with self.subTest(case=case):
                 tokens = self.tokenizer(case["prompt"])
                 self.session.ctx.state["token_ids"] = tokens["input_ids"]
-                # gen_kwargs = {**self.generation_config, **case["kwargs"], **tokens}# hack test, vllm have some bug :)
+                # gen_kwargs = {**self.generation_config, **case["kwargs"], **tokens}# hack test,
+                # trtllm_runner, vllm  generate have some bug :)
                 gen_kwargs = {**case["kwargs"], **tokens}
                 logging.debug(gen_kwargs)
                 iter = self.engine.generate(self.session, **gen_kwargs)
@@ -111,7 +119,9 @@ class TestGenerator(unittest.IsolatedAsyncioTestCase):
                     generated_token_ids.append(item)
                     times.append(perf_counter() - start_time)
                     start_time = perf_counter()
-                logging.debug(f"chat_completion TTFT time: {times[0]} s")
+                logging.debug(
+                    f"generate TTFT time: {times[0]} s, {len(generated_token_ids)} tokens cost time: {sum(times)} s, avg cost time: {sum(times)/len(generated_token_ids)}"
+                )
                 self.assertGreater(len(generated_token_ids), 0)
                 if "max_new_tokens" in case["kwargs"]:
                     max_new_tokens = case["kwargs"]["max_new_tokens"]

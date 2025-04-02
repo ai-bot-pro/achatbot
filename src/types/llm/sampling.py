@@ -76,3 +76,24 @@ class LMGenerateArgs:
             "help": "A list of token ids that will stop the generation. Default is []. If the stop id is a substring token id of the generated text, the generation will stop."
         },
     )
+    lm_gen_end_id: int = field(
+        default=0,
+        metadata={
+            "help": "The end token id. Default is 0. If the end id is a substring token id of the generated text, the generation will stop."
+        },
+    )
+    lm_gen_pad_id: int = field(
+        default=0,
+        metadata={
+            "help": "The pad token id. Default is 0. If the pad id is a substring token id of the generated text, the generation will stop."
+        },
+    )
+
+    def update(self, **kwargs):
+        unused_kwargs = dict()
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+            else:
+                unused_kwargs[key] = value
+        return unused_kwargs

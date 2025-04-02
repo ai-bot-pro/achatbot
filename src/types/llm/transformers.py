@@ -23,9 +23,9 @@ class TransformersLMArgs(LMGenerateArgs):
         },
     )
     lm_device: str = field(
-        default="cpu",
+        default=None,
         metadata={
-            "help": "The device for single cpu/mps/gpu. use 'cuda' for GPU acceleration, 'mps'(apple), 'cpu'. default cuda"
+            "help": "The device for single cpu/mps/gpu. use 'cuda' for GPU acceleration, 'mps'(apple), 'cpu'. default None"
         },
     )
     lm_torch_dtype: str = field(

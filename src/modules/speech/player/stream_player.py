@@ -267,6 +267,12 @@ class PlayStreamInit:
                 "rate": 16000,
                 "sample_width": 2,
             },
+            "tts_generator_spark": {
+                "format": PYAUDIO_PAFLOAT32,
+                "channels": 1,
+                "rate": 16000,
+                "sample_width": 2,
+            },
             "tts_orpheus": {
                 "format": PYAUDIO_PAINT16,
                 "channels": 1,

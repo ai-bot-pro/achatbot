@@ -31,6 +31,9 @@ class VllmGenerator(BaseLLM, ILlmGenerator):
         self.gen_args = LMGenerateArgs(**self.args.gen_args)
         # https://docs.vllm.ai/en/stable/serving/engine_args.html#engine-args
         self.serv_args = AsyncEngineArgs(**self.args.serv_args)
+        logging.info(
+            f"server args: {self.serv_args.__dict__} | default generate args: {self.gen_args.__dict__}"
+        )
         self.engine = AsyncLLMEngine.from_engine_args(self.serv_args)
 
     async def generate(self, session: Session, **kwargs):

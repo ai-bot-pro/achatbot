@@ -2,6 +2,8 @@ from concurrent import futures
 import logging
 import os
 import sys
+import threading
+import queue
 
 import grpc
 from dotenv import load_dotenv
@@ -14,7 +16,7 @@ except ModuleNotFoundError as e:
     raise Exception(f"grpc import error: {e}")
 
 from src.common.grpc.interceptors.authentication_server import AuthenticationInterceptor
-from src.cmd.grpc.speaker.server.servicers.tts import TTS
+from src.cmd.grpc.speaker.server.servicers.tts import TTS, main_thread_init
 from src.common.logger import Logger
 
 load_dotenv(override=True)
@@ -27,7 +29,8 @@ Logger.init(
 )
 
 
-def serve() -> None:
+def start_grpc_server(tts_service: TTS):
+    # start grpc server
     port = os.getenv("PORT", "50052")
     max_workers = int(os.getenv("MAX_WORKERS", "10"))
     logging.info(f"serve port: {port} max_workers: {max_workers}")
@@ -39,11 +42,25 @@ def serve() -> None:
         futures.ThreadPoolExecutor(max_workers=max_workers),
         interceptors=(authenticator,),
     )
-    add_TTSServicer_to_server(TTS(), server)
+    add_TTSServicer_to_server(tts_service, server)
     server.add_insecure_port(f"[::]:{port}")
     server.start()
     logging.info(f"Server started port: {port}")
     server.wait_for_termination()
+
+
+def serve() -> None:
+    # run tts init
+    tts_service = TTS()
+
+    grpc_thread = threading.Thread(
+        target=start_grpc_server,
+        args=(tts_service,),
+        daemon=True,
+    )
+    grpc_thread.start()
+
+    main_thread_init(tts_service)
 
 
 # python -m src.cmd.grpc.speaker.server.serve
