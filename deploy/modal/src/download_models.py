@@ -59,6 +59,7 @@ modal run src/download_models.py --repo-ids "SWivid/F5-TTS"
 modal run src/download_models.py --repo-ids "charactr/vocos-mel-24khz"
 
 modal run src/download_models.py --repo-ids "SparkAudio/Spark-TTS-0.5B"
+modal run src/download_models.py --repo-ids "mradermacher/SparkTTS-LLM-GGUF"
 
 modal run src/download_models.py --repo-ids "canopylabs/orpheus-3b-0.1-ft"
 modal run src/download_models.py --repo-ids "hubertsiuzdak/snac_24khz"

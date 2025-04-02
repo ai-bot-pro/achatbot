@@ -152,7 +152,7 @@ trt_model_cache_vol = modal.Volume.from_name("triton_trtllm_cache_models", creat
 @app.function(
     gpu=os.getenv("IMAGE_GPU", None),
     cpu=2.0,
-    image=tts_grpc_image,
+    image=tts_grpc_image.pip_install("psutil"),
     volumes={
         HF_MODEL_DIR: hf_model_vol,
         ASSETS_DIR: assets_dir,
@@ -176,14 +176,23 @@ async def run_generator():
     import librosa
     import soundfile
     import torch
+    import platform
 
     import uuid
     import subprocess
 
     subprocess.run("nvidia-smi --version", shell=True)
     subprocess.run("nvcc --version", shell=True)
-    print("cude is_available:", torch.cuda.is_available())
     device = get_device()
+    cpu = get_cup_info()
+    gpu_arch = ""
+    gpu_prop = None
+    if torch.cuda.is_available():
+        gpu_prop = torch.cuda.get_device_properties(device)
+        print(gpu_prop)
+        gpu_arch = f"{gpu_prop.major}.{gpu_prop.minor}"
+    else:
+        print("CUDA is not available.")
 
     Logger.init(
         os.getenv("LOG_LEVEL", "info").upper(),
@@ -196,6 +205,9 @@ async def run_generator():
     quant = os.getenv("QUANT", "")
     tts_engine: ITts = TTSEnvInit.initTTSEngine()
 
+    os.makedirs(ASSETS_DIR, exist_ok=True)
+    result = f"cpu:{cpu}\ngpu:{gpu_prop}\n"
+    file_name = f"test_{tts_engine.TAG}_{generator_tag}_{quant}_{device}_{gpu_arch}"
     texts = os.getenv("TTS_TEXT").split("|")
     for idx, text in enumerate(texts):
         if text == "":
@@ -225,9 +237,7 @@ async def run_generator():
         stream_info = tts_engine.get_stream_info()
         print(f"stream_info:{stream_info}")
 
-        file_name = f"test_{tts_engine.TAG}_{generator_tag}_{quant}_{device}_{idx}"
-        os.makedirs(ASSETS_DIR, exist_ok=True)
-        file_path = os.path.join(ASSETS_DIR, f"{file_name}.wav")
+        file_path = os.path.join(ASSETS_DIR, f"{file_name}_{idx}.wav")
         data = np.frombuffer(res, dtype=stream_info["np_dtype"])
 
         # 去除静音部分
@@ -238,12 +248,39 @@ async def run_generator():
         info = soundfile.info(file_path, verbose=True)
         print(info)
 
-        result = f"generate fisrt chunk time: {times[0]} s, tts cost time {sum(times)} s, wav duration {info.duration} s, RTF: {sum(times)/info.duration}"
-        print(result)
+        res = f"\n{text}\n"
+        res += f"generate fisrt chunk time: {times[0]} s, tts cost time {sum(times)} s, wav duration {info.duration} s, RTF: {sum(times)/info.duration}\n"
+        res += "\n" + "--" * 10 + "\n"
+        print(res)
+        result += res
 
-        file_path = os.path.join(ASSETS_DIR, f"{file_name}.log")
-        with open(file_path, "w") as f:
-            f.write(result)
+    file_path = os.path.join(ASSETS_DIR, f"{file_name}.log")
+    with open(file_path, "w") as f:
+        f.write(result)
+
+
+def get_cup_info():
+    import psutil
+    import platform
+
+    # 获取CPU信息
+    cpu_count = psutil.cpu_count(logical=False)
+    cpu_count_logical = psutil.cpu_count(logical=True)
+    cpu_freq = psutil.cpu_freq()
+    cpu_times = psutil.cpu_times()
+
+    cpu_info = {
+        "cpu_arch": platform.machine(),
+        "cpu_count_physical": cpu_count,
+        "cpu_count_logical": cpu_count_logical,
+        "cpu_freq_current": cpu_freq.current,
+        "cpu_freq_min": cpu_freq.min,
+        "cpu_freq_max": cpu_freq.max,
+        "cpu_times_user": cpu_times.user,
+        "cpu_times_system": cpu_times.system,
+        "cpu_times_idle": cpu_times.idle,
+    }
+    return cpu_info
 
 
 """
@@ -272,10 +309,15 @@ GENERATOR_ENGINE=llamacpp TTS_TAG=tts_generator_spark QUANT=Q2_K ACHATBOT_VERSIO
 GENERATOR_ENGINE=vllm TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post3 IMAGE_GPU=L4 modal run src/tts/run_generator_tts.py
 GENERATOR_ENGINE=vllm TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post3 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
 
-# tensorrt-llm with gpu cuda | bf16 | Using FlashInfer Attention backend (flashinfer.jit)
+# sglang with gpu cuda | bf16 | Using FlashInfer Attention backend (flashinfer.jit)
+GENERATOR_ENGINE=sglang TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post3 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
+
+# tensorrt-llm with gpu cuda | bf16
 GENERATOR_ENGINE=trtllm TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post3 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
-# tensorrt-llm runner with gpu cuda | bf16 | Using FlashInfer Attention backend (flashinfer.jit)
+# tensorrt-llm runner with gpu cuda | bf16
 GENERATOR_ENGINE=trtllm_runner TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post3 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
+
+Tips: run trtllm_runner generator engine, if use diff gpu arch, need rebuild engine 
 """
 
 
