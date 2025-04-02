@@ -206,7 +206,12 @@ async def run_generator():
     tts_engine: ITts = TTSEnvInit.initTTSEngine()
 
     os.makedirs(ASSETS_DIR, exist_ok=True)
-    result = f"cpu:{cpu}\ngpu:{gpu_prop}\n"
+    result = (
+        f"tts:{tts_engine.TAG}\n"
+        + f"llm generator:{generator_tag}\n"
+        + f"quant:{quant}\n"
+        + f"cpu:{cpu}\ngpu:{gpu_prop}\n"
+    )
     file_name = f"test_{tts_engine.TAG}_{generator_tag}_{quant}_{device}_{gpu_arch}"
     texts = os.getenv("TTS_TEXT").split("|")
     for idx, text in enumerate(texts):
