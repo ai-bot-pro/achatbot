@@ -32,6 +32,7 @@ except ModuleNotFoundError as e:
     )
 
 
+from src.common.utils.helper import get_device
 from src.common.interface import ILlmGenerator
 from src.core.llm import LLMEnvInit
 from src.common.random import set_all_random_seed
@@ -53,14 +54,7 @@ class SparkGeneratroTTS(SparkTTS):
 
     def __init__(self, **args) -> None:
         self.args = SparkGeneratorTTSArgs(**args)
-        self.args.device = self.args.device or (
-            "cuda"
-            if torch.cuda.is_available()
-            else "mps"
-            if torch.backends.mps.is_available()
-            else "cpu"
-        )
-
+        self.args.device = self.args.device or get_device()
         # self.args.lm_args["lm_model_name_or_path"] = os.path.join(self.args.model_dir, "/LLM")
         logging.debug(f"{self.TAG} args: {self.args}")
 
@@ -77,7 +71,9 @@ class SparkGeneratroTTS(SparkTTS):
 
         self.configs = load_config(f"{self.args.model_dir}/config.yaml")
         self.sample_rate = self.configs["sample_rate"]
-        self.audio_tokenizer = BiCodecTokenizer(self.args.model_dir, device=self.args.device)
+        self.audio_tokenizer = BiCodecTokenizer(
+            self.args.model_dir, device=torch.device(self.args.device)
+        )
 
         self.voices = {}
         if self.args.ref_audio_path:
@@ -275,15 +271,14 @@ class SparkGeneratroTTS(SparkTTS):
 
             semantic_token_ids.append(token_id)
             # if len(semantic_token_ids) % chunk_size == 0:
-            if len(semantic_token_ids) >= chunk_size + token_overlap_len:
-                batch = semantic_token_ids[: chunk_size + token_overlap_len]
+            if len(semantic_token_ids) >= chunk_size:
+                batch = semantic_token_ids[:chunk_size]
                 # Process each batch
                 sub_tts_speech = self.token2wav(
                     [controll_gen_global_token_ids + batch],
                     gender,
                     global_fsq_indices,
                 )  # one batch
-                semantic_token_ids = semantic_token_ids[chunk_size:]
                 if sub_tts_speech.size == 0:
                     break
                 yield np.frombuffer(sub_tts_speech, dtype=float).tobytes()
@@ -291,6 +286,7 @@ class SparkGeneratroTTS(SparkTTS):
                     logging.info(f"break by empty wav size: {sub_tts_speech.size}")
                     break
                 pre_sub_tts_speech_size = sub_tts_speech.size
+                semantic_token_ids = semantic_token_ids[chunk_size - token_overlap_len :]
                 # increase token_hop_len for better speech quality
                 chunk_size = min(max_chunk_size, int(chunk_size * stream_scale_factor))
                 logging.info(

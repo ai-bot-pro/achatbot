@@ -168,9 +168,9 @@ def instruct_content_tts(
             extraction = instruct_podcast_tts(content, tmp_dir, role_tts_voices, language)
             p_tmp_dir = os.path.join(tmp_dir, "0")
             merge_audio_files(input_dir=p_tmp_dir, output_file=output_file)
+            res.append((source, extraction, output_file))
         except Exception as e:
             logging.error(f"An error occurred while processing {source}: {str(e)}", exc_info=True)
-        res.append((source, extraction, output_file))
 
     return res
 
