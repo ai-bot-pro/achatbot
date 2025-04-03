@@ -254,7 +254,7 @@ async def run_generator():
 
         # 去除静音部分
         # data, _ = librosa.effects.trim(data, top_db=60)
-        # todo: need eval (SIM)
+        # todo: need eval (WER|SIM)
 
         soundfile.write(file_path, data, stream_info["rate"])
         info = soundfile.info(file_path, verbose=True)
@@ -267,6 +267,13 @@ async def run_generator():
         result += res
 
         if torch.cuda.is_available():
+            total_memory = gpu_prop.total_memory
+            allocated_memory = torch.cuda.memory_allocated(device)
+            memory_usage_percent = (allocated_memory / total_memory) * 100
+            print(
+                f"GPU Memory Usage: {allocated_memory / (1024 ** 2):.2f} MB / {total_memory / (1024 ** 2):.2f} MB ({memory_usage_percent:.2f}%)"
+            )
+
             print(torch.cuda.memory_summary(device=device, abbreviated=True))
 
     file_path = os.path.join(ASSETS_DIR, f"{file_name}.log")
