@@ -58,6 +58,7 @@ run() {
       echo "src/tts/run_generator_tts.py exists"
       cd src/tts
     else
+      cd $SCRIPT_DIR
       wget -q https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/deploy/modal/src/tts/run_generator_tts.py -O run_generator_tts.py
     fi
     # return
@@ -113,7 +114,8 @@ download() {
       echo "src/download_models.py exists"
       cd src
     else
-      wget -q https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/deploy/modal/src/download_models.py -O download_models.py 
+      cd $SCRIPT_DIR
+      wget -q https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/deploy/modal/src/download_models.py -O download_models.py
     fi
     modal run download_models.py --repo-ids "SparkAudio/Spark-TTS-0.5B"
     modal run download_models.py --repo-ids "mradermacher/SparkTTS-LLM-GGUF"
