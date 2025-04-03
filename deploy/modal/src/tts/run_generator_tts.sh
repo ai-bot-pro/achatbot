@@ -12,6 +12,7 @@ else
   pip install -q modal
   modal setup
 fi
+modal --version
 
 set -e
 
