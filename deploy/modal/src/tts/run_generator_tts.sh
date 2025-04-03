@@ -4,7 +4,14 @@
 # bash src/tts/run_generator_tts.sh
 
 # https://modal.com/docs/guide
-pip install -q modal
+if command -v modal &> /dev/null
+then
+  echo "modal command found. start to run ..."
+else
+  echo "pip install modal ..."
+  pip install -q modal
+  modal setup
+fi
 
 set -e
 
@@ -34,13 +41,13 @@ usage() {
   echo "  -a TTS_TAG         Set the TTS tag (default: tts_generator_spark)."
   echo "  -q QUANTS          Set llamapcpp gguf quants (default: ${ALLOWED_QUANTS[*]})."
   echo "e.g.: "
-  echo "bash src/tts/run_generator_tts.sh -s download "
-  echo "bash src/tts/run_generator_tts.sh -s run -t 'hello,你好，我是机器人。' -g transformers -d T4 -a tts_generator_spark "
-  echo "bash src/tts/run_generator_tts.sh -s run -t 'hello,你好，我是机器人。' -g llamacpp -d T4 -a tts_generator_spark -q 'Q8_0' "
-  echo "bash src/tts/run_generator_tts.sh -s run -t 'hello,你好，我是机器人。' -g llamacpp -d T4 -a tts_generator_spark -q 'Q8_0 Q4_K_M Q2_K' "
-  echo "bash src/tts/run_generator_tts.sh -s run -t 'hello,你好，我是机器人。' -g vllm -d L4 -a tts_generator_spark "
-  echo "bash src/tts/run_generator_tts.sh -s run -t 'hello,你好，我是机器人。' -g sglang -d L4 -a tts_generator_spark "
-  echo "bash src/tts/run_generator_tts.sh -s run -t 'hello,你好，我是机器人。' -g trtllm -d L40s -a tts_generator_spark "
+  echo "bash run_generator_tts.sh -s download "
+  echo "bash run_generator_tts.sh -s run -t 'hello,你好，我是机器人。' -g transformers -d T4 -a tts_generator_spark "
+  echo "bash run_generator_tts.sh -s run -t 'hello,你好，我是机器人。' -g llamacpp -d T4 -a tts_generator_spark -q 'Q8_0' "
+  echo "bash run_generator_tts.sh -s run -t 'hello,你好，我是机器人。' -g llamacpp -d T4 -a tts_generator_spark -q 'Q8_0 Q4_K_M Q2_K' "
+  echo "bash run_generator_tts.sh -s run -t 'hello,你好，我是机器人。' -g vllm -d L4 -a tts_generator_spark "
+  echo "bash run_generator_tts.sh -s run -t 'hello,你好，我是机器人。' -g sglang -d L4 -a tts_generator_spark "
+  echo "bash run_generator_tts.sh -s run -t 'hello,你好，我是机器人。' -g trtllm -d L40s -a tts_generator_spark "
 }
 
 run() {
