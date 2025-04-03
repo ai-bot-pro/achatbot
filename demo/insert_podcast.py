@@ -119,6 +119,7 @@ def get_podcast(
                 except TranslationNotFound as e:
                     retries += 1
                     logging.warning(f"Translation failed, retrying ({retries}/{max_retries}): {e}")
+                    time.sleep(1)  # Add a 1-second delay
                     if retries == max_retries:
                         logging.error("Max retries reached, translation failed.")
                         raise  # 如果达到最大重试次数，抛出异常
