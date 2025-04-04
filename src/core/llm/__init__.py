@@ -255,6 +255,12 @@ class LLMEnvInit:
                     "LLM_MODEL_NAME_OR_PATH", os.path.join(MODELS_DIR, "Qwen/Qwen2.5-0.5B")
                 ),
                 dtype=os.getenv("LLM_TORCH_DTYPE", "auto"),
+                kv_cache_config=dict(
+                    # The fraction of GPU memory fraction that should be allocated for the KV cache. Default is 90%. If both `max_tokens` and `free_gpu_memory_fraction` are specified, memory corresponding to the minimum will be used.
+                    free_gpu_memory_fraction=float(
+                        os.getenv("LLM_GPU_MEMORY_UTILIZATION", "0.7")
+                    ),  # default 0.9
+                ),
             ),
             gen_args=LLMEnvInit._get_llm_generate_args(),
         )

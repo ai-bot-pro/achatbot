@@ -56,7 +56,7 @@ usage() {
 
 run() {
     local GENERATOR_ENGINE=$1
-    echo "run $TTS_TAG $GENERATOR_ENGINE $IMAGE_GPU $QUANTS"
+    echo "run $TTS_TAG $GENERATOR_ENGINE $IMAGE_GPU"
     if [ -e "src/tts/run_generator_tts.py" ]; then
       echo "src/tts/run_generator_tts.py exists"
       cd src/tts
@@ -187,7 +187,7 @@ if [[ ! " ${ALLOWED_GPUS[@]} " =~ " ${IMAGE_GPU} " ]]; then
 fi
 
 export EXTRA_INDEX_URL="https://pypi.org/simple/"
-export ACHATBOT_VERSION="0.0.9.post3"
+export ACHATBOT_VERSION="0.0.9.post4"
 export TTS_TAG=$TTS_TAG
 export TTS_TEXT=$TTS_TEXT
 

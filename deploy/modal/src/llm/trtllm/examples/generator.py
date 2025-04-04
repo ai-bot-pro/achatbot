@@ -76,6 +76,7 @@ def run_sync():
     https://nvidia.github.io/TensorRT-LLM/_modules/tensorrt_llm/llmapi/llm.html#LLM.generate
     """
     from tensorrt_llm import LLM, SamplingParams
+    from tensorrt_llm.bindings.executor import KvCacheConfig
 
     prompts = [
         "Hello, my name is",
@@ -86,8 +87,10 @@ def run_sync():
     # https://nvidia.github.io/TensorRT-LLM/llm-api/reference.html#tensorrt_llm.llmapi.SamplingParams
     sampling_params = SamplingParams(temperature=0.8, top_p=0.95)
 
+    # https://github.com/NVIDIA/TensorRT-LLM/blob/main/tensorrt_llm/llmapi/llm_args.py#L520
+    kv_cache_config=KvCacheConfig(free_gpu_memory_fraction=0.5)
     # load hf model, convert to tensorrt, build tensorrt engine, load tensorrt engine
-    llm = LLM(model=MODEL_ID)
+    llm = LLM(model=MODEL_ID, kv_cache_config=kv_cache_config)
 
     outputs = llm.generate(prompts, sampling_params, use_tqdm=False)
 

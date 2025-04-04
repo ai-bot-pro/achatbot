@@ -5,7 +5,7 @@ import modal
 
 app = modal.App("tts-grpc")
 
-achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.9.post3")
+achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.9.post4")
 
 tts_grpc_image = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
@@ -114,9 +114,10 @@ if generator == "trtllm" or generator == "trtllm_runner":
     if generator == "trtllm":
         tts_grpc_image = tts_grpc_image.env(
             {
-                "TLLM_LLMAPI_BUILD_CACHE": "1",
+                # "TLLM_LLMAPI_BUILD_CACHE": "1",
                 "TTS_LM_GENERATOR_TAG": "llm_trtllm_generator",
                 "LLM_TORCH_DTYPE": os.getenv("DTYPE", "bfloat16"),
+                "LLM_GPU_MEMORY_UTILIZATION": os.getenv("LLM_GPU_MEMORY_UTILIZATION", "0.7"),
             }
         )
     if generator == "trtllm_runner":
@@ -271,7 +272,7 @@ async def run_generator():
             allocated_memory = torch.cuda.memory_allocated(device)
             memory_usage_percent = (allocated_memory / total_memory) * 100
             print(
-                f"GPU Memory Usage: {allocated_memory / (1024 ** 2):.2f} MB / {total_memory / (1024 ** 2):.2f} MB ({memory_usage_percent:.2f}%)"
+                f"PyTorch(exclude llm generator) GPU Memory Usage: {allocated_memory / (1024 ** 2):.2f} MB / {total_memory / (1024 ** 2):.2f} MB ({memory_usage_percent:.2f}%)"
             )
 
             print(torch.cuda.memory_summary(device=device, abbreviated=True))
@@ -279,6 +280,8 @@ async def run_generator():
     file_path = os.path.join(ASSETS_DIR, f"{file_name}.log")
     with open(file_path, "w") as f:
         f.write(result)
+
+    return (result, file_name)
 
 
 def get_cup_info():
@@ -345,4 +348,6 @@ Tips: run trtllm_runner generator engine, if use diff gpu arch, need rebuild eng
 
 @app.local_entrypoint()
 def main():
-    run_generator.remote()
+    result, file_name = run_generator.remote()
+    with open(f"{file_name}.log", "w") as f:
+        f.write(result)
