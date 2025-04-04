@@ -4,6 +4,8 @@ import logging
 import uuid
 
 from deep_translator import GoogleTranslator
+from deep_translator.exceptions import TranslationNotFound
+
 from pydub import AudioSegment
 from pydantic import BaseModel
 import typer
@@ -105,10 +107,23 @@ def get_podcast(
         en_title = title
         if language != "en":
             language = "zh-CN" if language == "zh" else language
-            en_title = GoogleTranslator(
-                source=language,
-                target="en",
-            ).translate(title)
+            max_retries = 10
+            retries = 0
+            while retries < max_retries:
+                try:
+                    en_title = GoogleTranslator(
+                        source=language,
+                        target="en",
+                    ).translate(title)
+                    break  # 翻译成功，退出循环
+                except TranslationNotFound as e:
+                    retries += 1
+                    logging.warning(f"Translation failed, retrying ({retries}/{max_retries}): {e}")
+                    time.sleep(1)  # Add a 1-second delay
+                    if retries == max_retries:
+                        logging.error("Max retries reached, translation failed.")
+                        raise  # 如果达到最大重试次数，抛出异常
+
         gen_img_prompt = f"podcast cover image which content is about {en_title}"
         img_file = save_gen_image(gen_img_prompt, uuid.uuid4().hex)
         cover_img_url = r2_upload("podcast", img_file)

@@ -10,6 +10,7 @@ from typing import AsyncGenerator, List
 from dotenv import load_dotenv
 import numpy as np
 
+from src.common.utils.helper import get_device
 from src.common.random import set_all_random_seed
 from src.core.llm.transformers.manual_speech_spark import TransformersManualSpeechSpark
 from src.common.interface import ITts
@@ -64,14 +65,7 @@ class SparkTTS(BaseTTS, ITts):
 
     def __init__(self, **args) -> None:
         self.args = SparkTTSArgs(**args)
-        self.args.device = self.args.device or (
-            "cuda"
-            if torch.cuda.is_available()
-            else "mps"
-            if torch.backends.mps.is_available()
-            else "cpu"
-        )
-
+        self.args.device = self.args.device or get_device()
         # self.args.lm_args["lm_model_name_or_path"] = os.path.join(self.args.model_dir, "/LLM")
         logging.debug(f"{SparkTTS.TAG} args: {self.args}")
 
@@ -87,7 +81,9 @@ class SparkTTS(BaseTTS, ITts):
 
         self.configs = load_config(f"{self.args.model_dir}/config.yaml")
         self.sample_rate = self.configs["sample_rate"]
-        self.audio_tokenizer = BiCodecTokenizer(self.args.model_dir, device=self.args.device)
+        self.audio_tokenizer = BiCodecTokenizer(
+            self.args.model_dir, device=torch.device(self.args.device)
+        )
 
         self.voices = {}
         if self.args.ref_audio_path:

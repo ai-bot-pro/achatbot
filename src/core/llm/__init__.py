@@ -210,6 +210,13 @@ class LLMEnvInit:
                 ),
                 dtype=os.getenv("LLM_TORCH_DTYPE", "auto"),
                 kv_cache_dtype=os.getenv("LLM_KV_CACHE_DTYPE", "auto"),
+                gpu_memory_utilization=float(
+                    os.getenv(
+                        # The fraction of GPU memory to be used for the model executor, which can range from 0 to 1. For example, a value of 0.5 would imply 50% GPU memory utilization. If unspecified, will use the default value of 0.9. This is a per-instance limit, and only applies to the current vLLM instance.It does not matter if you have another vLLM instance running on the same GPU. For example, if you have two vLLM instances running on the same GPU, you can set the GPU memory utilization to 0.5 for each instance.
+                        "LLM_GPU_MEMORY_UTILIZATION",
+                        "0.9",  # default 0.9
+                    )
+                ),  # diff verl(rlfh inference)
             ),
             gen_args=LLMEnvInit._get_llm_generate_args(),
         )
@@ -226,6 +233,13 @@ class LLMEnvInit:
                 ),
                 dtype=os.getenv("LLM_TORCH_DTYPE", "auto"),
                 kv_cache_dtype=os.getenv("LLM_KV_CACHE_DTYPE", "auto"),
+                mem_fraction_static=float(
+                    os.getenv(
+                        # Fraction of the free GPU memory used for static memory like model weights and KV cache. If building KV cache fails, it should be increased. If CUDA runs out of memory, it should be decreased.
+                        "LLM_GPU_MEMORY_UTILIZATION",
+                        "0.6",  # default 0.88
+                    )
+                ),  # from vllm defined gpu_memory_utilization, diff verl(rlfh inference)
             ),
             gen_args=LLMEnvInit._get_llm_generate_args(),
         )
@@ -241,6 +255,12 @@ class LLMEnvInit:
                     "LLM_MODEL_NAME_OR_PATH", os.path.join(MODELS_DIR, "Qwen/Qwen2.5-0.5B")
                 ),
                 dtype=os.getenv("LLM_TORCH_DTYPE", "auto"),
+                kv_cache_config=dict(
+                    # The fraction of GPU memory fraction that should be allocated for the KV cache. Default is 90%. If both `max_tokens` and `free_gpu_memory_fraction` are specified, memory corresponding to the minimum will be used.
+                    free_gpu_memory_fraction=float(
+                        os.getenv("LLM_GPU_MEMORY_UTILIZATION", "0.7")
+                    ),  # default 0.9
+                ),
             ),
             gen_args=LLMEnvInit._get_llm_generate_args(),
         )

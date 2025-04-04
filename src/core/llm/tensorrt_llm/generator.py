@@ -12,6 +12,7 @@ try:
         LlmArgs,
     )
     from tensorrt_llm import LLM, SamplingParams, mpi_rank
+    from tensorrt_llm.bindings.executor import KvCacheConfig
     from tensorrt_llm.runtime import ModelRunner, SamplingConfig
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
@@ -38,8 +39,15 @@ class TrtLLMGenerator(BaseLLM, ILlmGenerator):
         # https://github.com/NVIDIA/TensorRT-LLM/blob/v0.17.0/tensorrt_llm/llmapi/llm_utils.py#L368
         self.serv_args = LlmArgs.from_kwargs(**self.args.serv_args)
         logging.info(
-            f"server args: {self.serv_args.__dict__} | default generate args: {self.gen_args.__dict__}"
+            f"before server args: {self.serv_args.to_dict()} | default generate args: {self.gen_args.__dict__}"
         )
+        # https://github.com/NVIDIA/TensorRT-LLM/blob/main/tensorrt_llm/llmapi/llm_args.py#L520
+        kv_cache_config = KvCacheConfig()
+        for key, value in self.serv_args.kv_cache_config.items():
+            if hasattr(KvCacheConfig, key):
+                setattr(kv_cache_config, key, value)
+        self.serv_args.kv_cache_config = kv_cache_config
+        logging.info(f"after server args: {self.serv_args.to_dict()}")
         # https://nvidia.github.io/TensorRT-LLM/_modules/tensorrt_llm/llmapi/llm.html#LLM.__init__
         # Load HF model, convert to TensorRT, build TensorRT engine, load TensorRT engine
         self.engine = LLM(**self.serv_args.to_dict())

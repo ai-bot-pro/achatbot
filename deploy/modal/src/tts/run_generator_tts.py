@@ -5,7 +5,7 @@ import modal
 
 app = modal.App("tts-grpc")
 
-achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.9.post3")
+achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.9.post4")
 
 tts_grpc_image = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
@@ -27,14 +27,6 @@ tts_grpc_image = (
     )
     .env(
         {
-            "ACHATBOT_PKG": "1",
-            "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
-            "TORCH_CUDA_ARCH_LIST": "7.5 8.0 8.6 8.7 8.9 9.0",
-            "TTS_TAG": os.getenv("TTS_TAG", "tts_generator_spark"),
-            "TTS_TEXT": os.getenv(
-                "TTS_TEXT",
-                "hello,你好，我是机器人。|万物之始,大道至简,衍化至繁。|君不见黄河之水天上来，奔流到海不复回。君不见高堂明镜悲白发，朝如青丝暮成雪。人生得意须尽欢，莫使金樽空对月。天生我材必有用，千金散尽还复来。",
-            ),
             "TTS_MODEL_DIR": "/root/.achatbot/models/SparkAudio/Spark-TTS-0.5B",
             "TTS_LM_TOKENIZER_DIR": "/root/.achatbot/models/SparkAudio/Spark-TTS-0.5B/LLM",
             "LLM_MODEL_NAME_OR_PATH": "/root/.achatbot/models/SparkAudio/Spark-TTS-0.5B/LLM",
@@ -95,18 +87,20 @@ if generator == "vllm":
             "VLLM_WORKER_MULTIPROC_METHOD": "spawn",
             "TTS_LM_GENERATOR_TAG": "llm_vllm_generator",
             "LLM_TORCH_DTYPE": os.getenv("DTYPE", "bfloat16"),
+            "LLM_GPU_MEMORY_UTILIZATION": os.getenv("LLM_GPU_MEMORY_UTILIZATION", "0.9"),
         }
     )
 
 if generator == "sglang":
     tts_grpc_image = tts_grpc_image.pip_install(
         f"achatbot[sglang]=={achatbot_version}",
-        extra_options="--find-links https://flashinfer.ai/whl/cu124/torch2.5/flashinfer/",
+        extra_options="--find-links https://flashinfer.ai/whl/cu125/torch2.5/flashinfer/",
         extra_index_url="https://flashinfer.ai/whl/cu125/torch2.5/",
     ).env(
         {
             "TTS_LM_GENERATOR_TAG": "llm_sglang_generator",
             "LLM_TORCH_DTYPE": os.getenv("DTYPE", "bfloat16"),
+            "LLM_GPU_MEMORY_UTILIZATION": os.getenv("LLM_GPU_MEMORY_UTILIZATION", "0.6"),
         }
     )
 
@@ -120,9 +114,10 @@ if generator == "trtllm" or generator == "trtllm_runner":
     if generator == "trtllm":
         tts_grpc_image = tts_grpc_image.env(
             {
-                "TLLM_LLMAPI_BUILD_CACHE": "1",
+                # "TLLM_LLMAPI_BUILD_CACHE": "1",
                 "TTS_LM_GENERATOR_TAG": "llm_trtllm_generator",
                 "LLM_TORCH_DTYPE": os.getenv("DTYPE", "bfloat16"),
+                "LLM_GPU_MEMORY_UTILIZATION": os.getenv("LLM_GPU_MEMORY_UTILIZATION", "0.7"),
             }
         )
     if generator == "trtllm_runner":
@@ -152,7 +147,19 @@ trt_model_cache_vol = modal.Volume.from_name("triton_trtllm_cache_models", creat
 @app.function(
     gpu=os.getenv("IMAGE_GPU", None),
     cpu=2.0,
-    image=tts_grpc_image.pip_install("psutil"),
+    image=tts_grpc_image.pip_install("psutil").env(
+        {
+            "ACHATBOT_PKG": "1",
+            "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
+            "TORCH_CUDA_ARCH_LIST": "7.5 8.0 8.6 8.7 8.9 9.0",
+            "TTS_TAG": os.getenv("TTS_TAG", "tts_generator_spark"),
+            "TTS_TEXT": os.getenv(
+                "TTS_TEXT",
+                # "hello,你好，我是机器人。|万物之始,大道至简,衍化至繁。|君不见黄河之水天上来，奔流到海不复回。君不见高堂明镜悲白发，朝如青丝暮成雪。人生得意须尽欢，莫使金樽空对月。天生我材必有用，千金散尽还复来。",
+                "hello,你好，我是机器人。|万物之始,大道至简,衍化至繁。|君不见黄河之水天上来，奔流到海不复回。君不见高堂明镜悲白发，朝如青丝暮成雪。人生得意须尽欢，莫使金樽空对月。天生我材必有用，千金散尽还复来。|PyTorch 将值组织成Tensor ， Tensor是具有丰富数据操作操作的通用 n 维数组。|Module 定义从输入值到输出值的转换，其在正向传递期间的行为由其forward成员函数指定。Module 可以包含Tensor作为参数。|例如，线性模块包含权重参数和偏差参数，其正向函数通过将输入与权重相乘并添加偏差来生成输出。|应用程序通过在自定义正向函数中将本机Module （*例如*线性、卷积等）和Function （例如relu、pool 等）拼接在一起来组成自己的Module 。|典型的训练迭代包含使用输入和标签生成损失的前向传递、用于计算参数梯度的后向传递以及使用梯度更新参数的优化器步骤。|更具体地说，在正向传递期间，PyTorch 会构建一个自动求导图来记录执行的操作。|然后，在反向传播中，它使用自动梯度图进行反向传播以生成梯度。最后，优化器应用梯度来更新参数。训练过程重复这三个步骤，直到模型收敛。",
+            ),
+        }
+    ),
     volumes={
         HF_MODEL_DIR: hf_model_vol,
         ASSETS_DIR: assets_dir,
@@ -191,6 +198,7 @@ async def run_generator():
         gpu_prop = torch.cuda.get_device_properties(device)
         print(gpu_prop)
         gpu_arch = f"{gpu_prop.major}.{gpu_prop.minor}"
+        print(torch.cuda.memory_summary(device=device, abbreviated=True))
     else:
         print("CUDA is not available.")
 
@@ -236,7 +244,7 @@ async def run_generator():
             print(f"no result")
             continue
         print(
-            f"generate fisrt chunk time: {times[0]} s, {len(res)} waveform cost time: {sum(times)} s, avg cost time: {sum(times)/len(res)}"
+            f"generate first chunk time: {times[0]} s, {len(res)} waveform cost time: {sum(times)} s, avg cost time: {sum(times)/len(res)}"
         )
 
         stream_info = tts_engine.get_stream_info()
@@ -247,21 +255,33 @@ async def run_generator():
 
         # 去除静音部分
         # data, _ = librosa.effects.trim(data, top_db=60)
-        # todo: need eval (SIM)
+        # todo: need eval (WER|SIM)
 
         soundfile.write(file_path, data, stream_info["rate"])
         info = soundfile.info(file_path, verbose=True)
         print(info)
 
         res = f"\n{text}\n"
-        res += f"generate fisrt chunk time: {times[0]} s, tts cost time {sum(times)} s, wav duration {info.duration} s, RTF: {sum(times)/info.duration}\n"
+        res += f"generate first chunk time: {times[0]} s, tts cost time {sum(times)} s, wav duration {info.duration} s, RTF: {sum(times)/info.duration}\n"
         res += "\n" + "--" * 10 + "\n"
         print(res)
         result += res
 
+        if torch.cuda.is_available():
+            total_memory = gpu_prop.total_memory
+            allocated_memory = torch.cuda.memory_allocated(device)
+            memory_usage_percent = (allocated_memory / total_memory) * 100
+            print(
+                f"PyTorch(exclude llm generator) GPU Memory Usage: {allocated_memory / (1024 ** 2):.2f} MB / {total_memory / (1024 ** 2):.2f} MB ({memory_usage_percent:.2f}%)"
+            )
+
+            print(torch.cuda.memory_summary(device=device, abbreviated=True))
+
     file_path = os.path.join(ASSETS_DIR, f"{file_name}.log")
     with open(file_path, "w") as f:
         f.write(result)
+
+    return (result, file_name)
 
 
 def get_cup_info():
@@ -328,4 +348,6 @@ Tips: run trtllm_runner generator engine, if use diff gpu arch, need rebuild eng
 
 @app.local_entrypoint()
 def main():
-    run_generator.remote()
+    result, file_name = run_generator.remote()
+    with open(f"{file_name}.log", "w") as f:
+        f.write(result)

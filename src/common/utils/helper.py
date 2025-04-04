@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+import platform
 
 import pyloudnorm as pyln
 import numpy as np
@@ -58,7 +59,7 @@ def print_model_params(model: torch.nn.Module, extra_info=""):
 def get_device():
     if torch.cuda.is_available():
         return "cuda"
-    if torch.backends.mps.is_available():
+    if platform.system() == "Darwin" and torch.backends.mps.is_available():
         return "mps"
     else:
         return "cpu"
