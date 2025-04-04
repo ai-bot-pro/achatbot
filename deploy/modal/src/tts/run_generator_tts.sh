@@ -51,6 +51,7 @@ usage() {
   echo "bash run_generator_tts.sh -s run -t 'hello,你好，我是机器人。' -g llamacpp -d T4 -a tts_generator_spark -q 'Q8_0 Q4_K_M Q2_K' "
   echo "bash run_generator_tts.sh -s run -t 'hello,你好，我是机器人。|万物之始,大道至简,衍化至繁。|君不见黄河之水天上来，奔流到海不复回。君不见高堂明镜悲白发，朝如青丝暮成雪。人生得意须尽欢，莫使金樽空对月。天生我材必有用，千金散尽还复来。' -g vllm -d L4 -a tts_generator_spark "
   echo "bash run_generator_tts.sh -s run -t 'hello,你好，我是机器人。|万物之始,大道至简,衍化至繁。|君不见黄河之水天上来，奔流到海不复回。君不见高堂明镜悲白发，朝如青丝暮成雪。人生得意须尽欢，莫使金樽空对月。天生我材必有用，千金散尽还复来。' -g sglang -d L4 -a tts_generator_spark "
+  echo "bash run_generator_tts.sh -s run -t 'hello,你好，我是机器人。|万物之始,大道至简,衍化至繁。|君不见黄河之水天上来，奔流到海不复回。君不见高堂明镜悲白发，朝如青丝暮成雪。人生得意须尽欢，莫使金樽空对月。天生我材必有用，千金散尽还复来。' -g trtllm -d L4 -a tts_generator_spark "
   echo "bash run_generator_tts.sh -s run -t 'hello,你好，我是机器人。|万物之始,大道至简,衍化至繁。|君不见黄河之水天上来，奔流到海不复回。君不见高堂明镜悲白发，朝如青丝暮成雪。人生得意须尽欢，莫使金樽空对月。天生我材必有用，千金散尽还复来。' -g trtllm -d L40s -a tts_generator_spark "
 }
 
