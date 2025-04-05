@@ -31,8 +31,28 @@ class TransformersGenerator(TransformersBaseLLM, ILlmGenerator):
         self.args = TransformersLMArgs(**args)
         self.args.lm_device = self.args.lm_device or get_device()
         logging.info("TransformersLMArgs: %s", self.args)
-        self._model = AutoModelForCausalLM.from_pretrained(self.args.lm_model_name_or_path)
-        self._model.eval().to(self.args.lm_device)
+        # https://huggingface.co/docs/transformers/v4.50.0/en/main_classes/model#transformers.PreTrainedModel.from_pretrained
+        if self.args.lm_device_map:
+            self._model = AutoModelForCausalLM.from_pretrained(
+                self.args.lm_model_name_or_path,
+                torch_dtype=self.args.lm_torch_dtype,
+                attn_implementation=self.args.lm_attn_impl,
+                #!NOTE: https://github.com/huggingface/transformers/issues/20896
+                # device_map for multi cpu/gpu with accelerate
+                device_map=self.args.lm_device_map,
+                trust_remote_code=True,
+            ).eval()
+        else:
+            self._model = (
+                AutoModelForCausalLM.from_pretrained(
+                    self.args.lm_model_name_or_path,
+                    torch_dtype=self.args.lm_torch_dtype,
+                    attn_implementation=self.args.lm_attn_impl,
+                    trust_remote_code=True,
+                )
+                .eval()
+                .to(self.args.lm_device)
+            )
 
         self.warmup()
 

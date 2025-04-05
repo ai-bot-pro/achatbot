@@ -171,6 +171,7 @@ class LLMEnvInit:
             ),
             lm_attn_impl=os.getenv("LLM_ATTN_IMPL", None),
             lm_device=os.getenv("LLM_DEVICE", None),
+            lm_device_map=os.getenv("LLM_DEVICE_MAP", None),
             lm_torch_dtype=os.getenv("LLM_TORCH_DTYPE", "auto"),
             lm_stream=bool(os.getenv("LLM_STREAM", "1")),
             init_chat_prompt=os.getenv("LLM_INIT_CHAT_PROMPT", ""),
