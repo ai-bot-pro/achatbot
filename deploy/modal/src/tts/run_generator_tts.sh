@@ -25,6 +25,7 @@ TTS_TAG="tts_generator_spark"
 STAGE="all"
 ALLOWED_QUANTS=("Q8_0" "Q6_K" "Q5_K_S" "Q5_K_M" "Q4_K_M" "Q4_K_S" "IQ4_XS" "Q3_K_L" "Q3_K_M" "Q3_K_S" "Q2_K")
 QUANTS=${ALLOWED_QUANTS[*]}
+CONCURRENCE=1
 
 
 #----- function -------
