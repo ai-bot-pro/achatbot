@@ -172,19 +172,7 @@ trt_model_cache_vol = modal.Volume.from_name("triton_trtllm_cache_models", creat
             "TTS_TEXT": os.getenv(
                 "TTS_TEXT",
                 # "hello,你好，我是机器人。|万物之始,大道至简,衍化至繁。|君不见黄河之水天上来，奔流到海不复回。君不见高堂明镜悲白发，朝如青丝暮成雪。人生得意须尽欢，莫使金樽空对月。天生我材必有用，千金散尽还复来。",
-                # "hello,你好，我是机器人。|万物之始,大道至简,衍化至繁。|君不见黄河之水天上来，奔流到海不复回。君不见高堂明镜悲白发，朝如青丝暮成雪。人生得意须尽欢，莫使金樽空对月。天生我材必有用，千金散尽还复来。|PyTorch 将值组织成Tensor ， Tensor是具有丰富数据操作操作的通用 n 维数组。|Module 定义从输入值到输出值的转换，其在正向传递期间的行为由其forward成员函数指定。Module 可以包含Tensor作为参数。|例如，线性模块包含权重参数和偏差参数，其正向函数通过将输入与权重相乘并添加偏差来生成输出。|应用程序通过在自定义正向函数中将本机Module （*例如*线性、卷积等）和Function （例如relu、pool 等）拼接在一起来组成自己的Module 。|典型的训练迭代包含使用输入和标签生成损失的前向传递、用于计算参数梯度的后向传递以及使用梯度更新参数的优化器步骤。|更具体地说，在正向传递期间，PyTorch 会构建一个自动求导图来记录执行的操作。|然后，在反向传播中，它使用自动梯度图进行反向传播以生成梯度。最后，优化器应用梯度来更新参数。训练过程重复这三个步骤，直到模型收敛。",
-                "今日是二零二五年三月十九日，国内外热点事件聚焦于国际局势、经济政策及社会民生领域。|"
-                "国际局势中，某国领导人围绕地区冲突停火问题展开对话，双方同意停止攻击对方能源设施并推动谈判，但对全面停火提议的落实仍存分歧。|"
-                "某地区持续军事行动导致数百人伤亡，引发民众抗议，质疑冲突背后的政治动机。另有一方宣称对连续袭击军事目标负责，称此为对前期打击的回应。|"
-                "欧洲某国通过争议性财政草案，计划放宽债务限制以支持国防与环保项目，引发经济政策讨论。|"
-                "国内动态方面，新修订的市场竞争管理条例将于四月二十日施行，重点规范市场秩序。|"
-                "多部门联合推出机动车排放治理新规，加强对高污染车辆的监管。|"
-                "社会层面，某地涉及非法集资的大案持续引发关注，受害人数以万计，涉案金额高达数百亿元，暴露出特定领域投资风险。|"
-                "经济与科技领域，某科技企业公布年度营收突破三千六百五十九亿元，并上调智能汽车交付目标至三十五万台。|"
-                "另一巨头宣布全面推动人工智能转型，要求各部门绩效与人工智能应用深度绑定，计划年内推出多项相关产品。|"
-                "充电基础设施建设加速，公共充电桩总量已接近四百万个，同比增长超六成。 |"
-                "民生政策方面，多地推出新举措：某地限制顺风车单日接单次数以规范运营，另一地启动职工数字技能培训计划，目标三年内覆盖十万女性从业者。|"
-                "整体来看，今日热点呈现国际博弈复杂化、国内经济科技加速转型、民生政策精准化调整的特点。",
+                "hello,你好，我是机器人。|万物之始,大道至简,衍化至繁。|君不见黄河之水天上来，奔流到海不复回。君不见高堂明镜悲白发，朝如青丝暮成雪。人生得意须尽欢，莫使金樽空对月。天生我材必有用，千金散尽还复来。|PyTorch 将值组织成Tensor ， Tensor是具有丰富数据操作操作的通用 n 维数组。|Module 定义从输入值到输出值的转换，其在正向传递期间的行为由其forward成员函数指定。Module 可以包含Tensor作为参数。|例如，线性模块包含权重参数和偏差参数，其正向函数通过将输入与权重相乘并添加偏差来生成输出。|应用程序通过在自定义正向函数中将本机Module （*例如*线性、卷积等）和Function （例如relu、pool 等）拼接在一起来组成自己的Module 。|典型的训练迭代包含使用输入和标签生成损失的前向传递、用于计算参数梯度的后向传递以及使用梯度更新参数的优化器步骤。|更具体地说，在正向传递期间，PyTorch 会构建一个自动求导图来记录执行的操作。|然后，在反向传播中，它使用自动梯度图进行反向传播以生成梯度。最后，优化器应用梯度来更新参数。训练过程重复这三个步骤，直到模型收敛。",
             ),
             "CONCURRENCY_CN": os.getenv("CONCURRENCY_CN", "1"),
         }
@@ -239,6 +227,7 @@ async def run_generator():
     )
 
     generator_tag = os.getenv("TTS_LM_GENERATOR_TAG", "")
+    concurrency_cn = int(os.getenv("CONCURRENCY_CN", "1"))
     quant = os.getenv("QUANT", "")
     tts_engine: ITts = TTSEnvInit.initTTSEngine()
 
@@ -248,6 +237,7 @@ async def run_generator():
         + f"llm generator:{generator_tag}\n"
         + f"quant:{quant}\n"
         + f"cpu:{cpu}\ngpu:{gpu_prop}\n"
+        + f"concurrency_cn:{concurrency_cn}\n"
     )
     file_name = f"test_{tts_engine.TAG}_{generator_tag}_{quant}_{device}_{gpu_arch}"
     stream_info = tts_engine.get_stream_info()
@@ -297,7 +287,6 @@ async def run_generator():
         gen_global_token_ids = warmup_res.get("gen_global_token_ids")
 
     texts = os.getenv("TTS_TEXT").split("|")
-    concurrency_cn = int(os.getenv("CONCURRENCY_CN", "1"))
     iter_cn = math.ceil(len(texts) / concurrency_cn)
     for idx in range(iter_cn):
         texts_chunk = texts[idx * concurrency_cn : (idx + 1) * concurrency_cn]
@@ -389,37 +378,37 @@ TTS_TAG=tts_generator_spark IMAGE_GPU=L4 LLM_ATTN_IMPL=flash_attention_2 LLM_DEV
 
 # f16 don't support
 # llamacpp with cpu, quant Q8_0
-GENERATOR_ENGINE=llamacpp TTS_TAG=tts_generator_spark QUANT=Q8_0 ACHATBOT_VERSION=0.0.9.post5 modal run src/tts/run_generator_tts.py
+GENERATOR_ENGINE=llamacpp TTS_TAG=tts_generator_spark QUANT=Q8_0 ACHATBOT_VERSION=0.0.9.post6 modal run src/tts/run_generator_tts.py
 # llamacpp with cpu, quant Q4_K_M
-GENERATOR_ENGINE=llamacpp TTS_TAG=tts_generator_spark QUANT=Q4_K_M ACHATBOT_VERSION=0.0.9.post5 modal run src/tts/run_generator_tts.py
+GENERATOR_ENGINE=llamacpp TTS_TAG=tts_generator_spark QUANT=Q4_K_M ACHATBOT_VERSION=0.0.9.post6 modal run src/tts/run_generator_tts.py
 # llamacpp with cpu, quant Q2_K
-GENERATOR_ENGINE=llamacpp TTS_TAG=tts_generator_spark QUANT=Q2_K ACHATBOT_VERSION=0.0.9.post5 modal run src/tts/run_generator_tts.py
+GENERATOR_ENGINE=llamacpp TTS_TAG=tts_generator_spark QUANT=Q2_K ACHATBOT_VERSION=0.0.9.post6 modal run src/tts/run_generator_tts.py
 # llamacpp with gpu cuda, quant Q8_0 flash attention
-GENERATOR_ENGINE=llamacpp TTS_TAG=tts_generator_spark QUANT=Q8_0 ACHATBOT_VERSION=0.0.9.post5 IMAGE_GPU=L4 modal run src/tts/run_generator_tts.py
+GENERATOR_ENGINE=llamacpp TTS_TAG=tts_generator_spark QUANT=Q8_0 ACHATBOT_VERSION=0.0.9.post6 IMAGE_GPU=L4 modal run src/tts/run_generator_tts.py
 # llamacpp with gpu cuda, quant Q4_K_M flash attention
-GENERATOR_ENGINE=llamacpp TTS_TAG=tts_generator_spark QUANT=Q4_K_M ACHATBOT_VERSION=0.0.9.post5 IMAGE_GPU=L4 modal run src/tts/run_generator_tts.py
+GENERATOR_ENGINE=llamacpp TTS_TAG=tts_generator_spark QUANT=Q4_K_M ACHATBOT_VERSION=0.0.9.post6 IMAGE_GPU=L4 modal run src/tts/run_generator_tts.py
 # llamacpp with gpu cuda, quant Q2_K
-GENERATOR_ENGINE=llamacpp TTS_TAG=tts_generator_spark QUANT=Q2_K ACHATBOT_VERSION=0.0.9.post5 IMAGE_GPU=T4 modal run src/tts/run_generator_tts.py
+GENERATOR_ENGINE=llamacpp TTS_TAG=tts_generator_spark QUANT=Q2_K ACHATBOT_VERSION=0.0.9.post6 IMAGE_GPU=T4 modal run src/tts/run_generator_tts.py
 
 # vllm with gpu cuda | bf16 | Using Flash Attention backend | Using FlashInfer for top-p & top-k sampling
-GENERATOR_ENGINE=vllm TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post5 IMAGE_GPU=L4 modal run src/tts/run_generator_tts.py
-GENERATOR_ENGINE=vllm TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post5 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
+GENERATOR_ENGINE=vllm TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post6 IMAGE_GPU=L4 modal run src/tts/run_generator_tts.py
+GENERATOR_ENGINE=vllm TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post6 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
 
 # sglang with gpu cuda | bf16 | Using FlashInfer Attention backend (flashinfer.jit)
-GENERATOR_ENGINE=sglang TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post5 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
+GENERATOR_ENGINE=sglang TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post6 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
 
 # tensorrt-llm with gpu cuda | bf16
-GENERATOR_ENGINE=trtllm TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post5 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
+GENERATOR_ENGINE=trtllm TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post6 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
 # tensorrt-llm runner with gpu cuda | bf16
-GENERATOR_ENGINE=trtllm_runner TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post5 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
+GENERATOR_ENGINE=trtllm_runner TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post6 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
 
 Tips: run trtllm_runner generator engine, if use diff gpu arch, need rebuild engine 
 
 # CONCURRENCY_CN=4
-CONCURRENCY_CN=4 GENERATOR_ENGINE=vllm TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post5 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
-CONCURRENCY_CN=4 GENERATOR_ENGINE=sglang TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post5 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
-CONCURRENCY_CN=4 GENERATOR_ENGINE=trtllm TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post5 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
-CONCURRENCY_CN=4 GENERATOR_ENGINE=trtllm_runner TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post5 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
+CONCURRENCY_CN=4 GENERATOR_ENGINE=vllm TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post6 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
+CONCURRENCY_CN=4 GENERATOR_ENGINE=sglang TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post6 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
+CONCURRENCY_CN=4 GENERATOR_ENGINE=trtllm TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post6 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
+CONCURRENCY_CN=4 GENERATOR_ENGINE=trtllm_runner TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post6 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
 """
 
 

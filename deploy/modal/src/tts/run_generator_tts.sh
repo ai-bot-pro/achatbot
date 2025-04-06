@@ -30,7 +30,7 @@ QUANTS=${ALLOWED_QUANTS[*]}
 #----- function -------
 
 usage() {
-  echo "Usage: $0 [-h] [-s STAGE] [-t TTS_TEXT] [-g GENERATOR_ENGINE] [-d IMAGE_GPU] [-a TTS_TAG] [-q QUANTS]"
+  echo "Usage: $0 [-h] [-s STAGE] [-t TTS_TEXT] [-g GENERATOR_ENGINE] [-d IMAGE_GPU] [-a TTS_TAG] [-q QUANTS] [-c CONCURRENCE]"
   echo "  -h                 Show this help message and exit."
   echo "  -s STAGE           Set the stage (default: all)."
   echo "                     Valid options: download, run, run_all, all"
@@ -41,6 +41,7 @@ usage() {
   echo "                     Valid options: T4 A10G A100 L4 L40S H100 https://fullstackdeeplearning.com/cloud-gpus/"
   echo "  -a TTS_TAG         Set the TTS tag (default: tts_generator_spark)."
   echo "  -q QUANTS          Set llamapcpp gguf quants (default: ${ALLOWED_QUANTS[*]})."
+  echo "  -c CONCURRENCE     Set concurrency cn (default: 1)."
   echo "e.g.: "
   echo "bash run_generator_tts.sh -s all"
   echo "bash run_generator_tts.sh -s download "
@@ -53,11 +54,18 @@ usage() {
   echo "bash run_generator_tts.sh -s run -t 'hello,你好，我是机器人。|万物之始,大道至简,衍化至繁。|君不见黄河之水天上来，奔流到海不复回。君不见高堂明镜悲白发，朝如青丝暮成雪。人生得意须尽欢，莫使金樽空对月。天生我材必有用，千金散尽还复来。' -g sglang -d L4 -a tts_generator_spark "
   echo "bash run_generator_tts.sh -s run -t 'hello,你好，我是机器人。|万物之始,大道至简,衍化至繁。|君不见黄河之水天上来，奔流到海不复回。君不见高堂明镜悲白发，朝如青丝暮成雪。人生得意须尽欢，莫使金樽空对月。天生我材必有用，千金散尽还复来。' -g trtllm -d L4 -a tts_generator_spark "
   echo "bash run_generator_tts.sh -s run -t 'hello,你好，我是机器人。|万物之始,大道至简,衍化至繁。|君不见黄河之水天上来，奔流到海不复回。君不见高堂明镜悲白发，朝如青丝暮成雪。人生得意须尽欢，莫使金樽空对月。天生我材必有用，千金散尽还复来。' -g trtllm -d L40s -a tts_generator_spark "
+  echo "bash run_generator_tts.sh -s run -t 'hello,你好，我是机器人。|万物之始,大道至简,衍化至繁。|君不见黄河之水天上来，奔流到海不复回。君不见高堂明镜悲白发，朝如青丝暮成雪。人生得意须尽欢，莫使金樽空对月。天生我材必有用，千金散尽还复来。' -g trtllm -d L40s -a tts_generator_spark -c 2 "
+  echo "bash run_generator_tts.sh -s run -g vllm -d L40s -a tts_generator_spark -c 4 "
+  echo "bash run_generator_tts.sh -s run -g sglang -d L40s -a tts_generator_spark -c 4 "
+  echo "bash run_generator_tts.sh -s run -g trtllm -d L40s -a tts_generator_spark -c 4 "
+  echo "bash run_generator_tts.sh -s run -g vllm -d L40s -a tts_generator_spark -c 12 "
+  echo "bash run_generator_tts.sh -s run -g sglang -d L40s -a tts_generator_spark -c 12 "
+  echo "bash run_generator_tts.sh -s run -g trtllm -d L40s -a tts_generator_spark -c 12 "
 }
 
 run() {
     local GENERATOR_ENGINE=$1
-    echo "run $TTS_TAG $GENERATOR_ENGINE $IMAGE_GPU"
+    echo "run $TTS_TAG $GENERATOR_ENGINE $IMAGE_GPU $CONCURRENCY_CN"
     if [ -e "src/tts/run_generator_tts.py" ]; then
       echo "src/tts/run_generator_tts.py exists"
       cd src/tts
@@ -132,7 +140,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/../.." || exit
 
 # 处理命令行参数
-while getopts ":t:g:d:a:s:q:h" opt; do
+while getopts ":t:g:d:a:s:q:c:h" opt; do
   case ${opt} in
     t )
       TTS_TEXT=$OPTARG
@@ -151,6 +159,9 @@ while getopts ":t:g:d:a:s:q:h" opt; do
       ;;
     q )
       QUANTS=$OPTARG
+      ;;
+    c )
+      CONCURRENCE=$OPTARG
       ;;
     h )
       usage
@@ -188,9 +199,10 @@ if [[ ! " ${ALLOWED_GPUS[@]} " =~ " ${IMAGE_GPU} " ]]; then
 fi
 
 export EXTRA_INDEX_URL="https://pypi.org/simple/"
-export ACHATBOT_VERSION="0.0.9.post4"
+export ACHATBOT_VERSION="0.0.9.post6"
 export TTS_TAG=$TTS_TAG
 export TTS_TEXT=$TTS_TEXT
+export CONCURRENCY_CN=$CONCURRENCE
 
 
 case $STAGE in
