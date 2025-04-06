@@ -267,6 +267,8 @@ class SparkGeneratroTTS(SparkTTS):
                     and token_id != self.start_semantic_token_id
                 ):
                     # print(controll_gen_global_token_ids)
+                    if session.ctx.state.get("gen_global_token_ids") is None:
+                        session.ctx.state["gen_global_token_ids"] = controll_gen_global_token_ids
                     pass
 
             semantic_token_ids.append(token_id)
@@ -275,16 +277,16 @@ class SparkGeneratroTTS(SparkTTS):
                 batch = semantic_token_ids[:chunk_size]
                 # Process each batch
                 sub_tts_speech = self.token2wav(
-                    [controll_gen_global_token_ids + batch],
+                    [session.ctx.state["gen_global_token_ids"] + batch],
                     gender,
                     global_fsq_indices,
                 )  # one batch
                 if sub_tts_speech.size == 0:
-                    break
+                    return
                 yield np.frombuffer(sub_tts_speech, dtype=float).tobytes()
                 if pre_sub_tts_speech_size > sub_tts_speech.size:  # for llamacpp quants cases
                     logging.info(f"break by empty wav size: {sub_tts_speech.size}")
-                    break
+                    return
                 pre_sub_tts_speech_size = sub_tts_speech.size
                 semantic_token_ids = semantic_token_ids[chunk_size - token_overlap_len :]
                 # increase token_hop_len for better speech quality
@@ -296,7 +298,7 @@ class SparkGeneratroTTS(SparkTTS):
         if len(semantic_token_ids) > 0:  # end to finalize
             # Process each batch
             sub_tts_speech = self.token2wav(
-                [controll_gen_global_token_ids + semantic_token_ids],
+                [session.ctx.state["gen_global_token_ids"] + semantic_token_ids],
                 gender,
                 global_fsq_indices,
             )  # one batch

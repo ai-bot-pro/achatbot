@@ -266,8 +266,16 @@ class TestSparkTTS(unittest.TestCase):
             self.session.ctx.state["src_audio_path"] = self.src_audio_path
 
         self.session.ctx.state["tts_text"] = self.tts_text
-        self.session.ctx.state["temperature"] = 0.1
+        self.session.ctx.state["temperature"] = 0.9
         print(self.session.ctx)
+        # warmup
+        iter = self.tts.synthesize_sync(self.session)
+        for i, chunk in enumerate(iter):
+            pass
+        print(self.session.ctx)
+        if self.tts_tag == "tts_generator_spark":
+            assert "gen_global_token_ids" in self.session.ctx.state
+
         iter = self.tts.synthesize_sync(self.session)
         res = bytearray()
         times = []
@@ -280,6 +288,9 @@ class TestSparkTTS(unittest.TestCase):
         print(
             f"generate fisrt chunk({len(chunk)}) time: {times[0]} s, {len(res)} waveform cost time: {sum(times)} s, avg cost time: {sum(times)/len(res)}"
         )
+        print(self.session.ctx)
+        if self.tts_tag == "tts_generator_spark":
+            assert "gen_global_token_ids" in self.session.ctx.state
 
         stream_info = self.tts.get_stream_info()
         print(f"stream_info:{stream_info}")
