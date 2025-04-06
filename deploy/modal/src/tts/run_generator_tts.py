@@ -416,7 +416,10 @@ GENERATOR_ENGINE=trtllm_runner TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.
 Tips: run trtllm_runner generator engine, if use diff gpu arch, need rebuild engine 
 
 # CONCURRENCY_CN=4
+CONCURRENCY_CN=4 GENERATOR_ENGINE=vllm TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post5 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
 CONCURRENCY_CN=4 GENERATOR_ENGINE=sglang TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post5 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
+CONCURRENCY_CN=4 GENERATOR_ENGINE=trtllm TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post5 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
+CONCURRENCY_CN=4 GENERATOR_ENGINE=trtllm_runner TTS_TAG=tts_generator_spark ACHATBOT_VERSION=0.0.9.post5 IMAGE_GPU=L40S modal run src/tts/run_generator_tts.py
 """
 
 
