@@ -26,6 +26,8 @@ class CodecEnvInit:
             from .audio import bicodec
         elif "codec_snac" == tag:
             from .audio import snac
+        elif "codec_wavtokenizer" == tag:
+            from .audio import wavtokenizer
 
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         return engine
@@ -46,6 +48,7 @@ class CodecEnvInit:
 
     # TAG : config
     map_config_func = {
+        "codec_wavtokenizer": get_args,
         "codec_snac": get_args,
         "codec_bitokenizer": get_args,
         "codec_xcodec2": get_args,

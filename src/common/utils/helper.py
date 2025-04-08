@@ -53,7 +53,7 @@ def print_model_params(model: torch.nn.Module, extra_info=""):
     # print the number of parameters in the model
     model_million_params = sum(p.numel() for p in model.parameters()) / 1e6
     logging.debug(model)
-    logging.debug(f"{extra_info} {model_million_params} M parameters")
+    logging.info(f"{extra_info} {model_million_params} M parameters")
 
 
 def get_device():

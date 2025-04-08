@@ -32,6 +32,37 @@ SAMPLE_RATE=32000 CODEC_TAG=codec_snac CODEC_MODEL_DIR=./models/hubertsiuzdak/sn
     python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
 SAMPLE_RATE=44100 CODEC_TAG=codec_snac CODEC_MODEL_DIR=./models/hubertsiuzdak/snac_44khz \
     python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
+
+
+# WavTokenizer small for speech 40 tokens/s
+SAMPLE_RATE=24000 CODEC_TAG=codec_wavtokenizer \
+    CODEC_MODEL_PATH=./models/novateur/WavTokenizer/WavTokenizer_small_600_24k_4096.ckpt \
+    CODEC_CONFIG_PATH=./models/novateur/WavTokenizer/wavtokenizer_smalldata_frame40_3s_nq1_code4096_dim512_kmeans200_attn.yaml \
+    python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
+
+# WavTokenizer small for speech 75 tokens/s
+SAMPLE_RATE=24000 CODEC_TAG=codec_wavtokenizer \
+    CODEC_MODEL_PATH=./models/novateur/WavTokenizer/WavTokenizer_small_320_24k_4096.ckpt \
+    CODEC_CONFIG_PATH=./models/novateur/WavTokenizer/wavtokenizer_smalldata_frame75_3s_nq1_code4096_dim512_kmeans200_attn.yaml\
+    python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
+
+# WavTokenizer medium for speech 75 tokens/s
+SAMPLE_RATE=24000 CODEC_TAG=codec_wavtokenizer \
+    CODEC_MODEL_PATH=./models/novateur/WavTokenizer-medium-speech-75token/wavtokenizer_medium_speech_320_24k_v2.ckpt \
+            CODEC_CONFIG_PATH=./models/novateur/WavTokenizer-medium-speech-75token/wavtokenizer_mediumdata_frame75_3s_nq1_code4096_dim512_kmeans200_attn.yaml \
+    python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
+
+# WavTokenizer large for speech 40 tokens/s
+SAMPLE_RATE=24000 CODEC_TAG=codec_wavtokenizer \
+    CODEC_MODEL_PATH=./models/novateur/WavTokenizer-large-unify-40token/wavtokenizer_large_unify_600_24k.ckpt \
+    CODEC_CONFIG_PATH=./models/novateur/WavTokenizer/wavtokenizer_smalldata_frame40_3s_nq1_code4096_dim512_kmeans200_attn.yaml \
+    python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
+
+# ⭐️ WavTokenizer large for speech 75 tokens/s
+SAMPLE_RATE=24000 CODEC_TAG=codec_wavtokenizer \
+    CODEC_MODEL_PATH=./models/novateur/WavTokenizer-large-speech-75token/wavtokenizer_large_speech_320_v2.ckpt \
+    CODEC_CONFIG_PATH=./models/novateur/WavTokenizer-medium-speech-75token/wavtokenizer_mediumdata_frame75_3s_nq1_code4096_dim512_kmeans200_attn.yaml \
+    python -m unittest test.modules.codec.test.TestCodec.test_encode_decode
 """
 
 
@@ -53,7 +84,11 @@ class TestCodec(unittest.TestCase):
 
     def setUp(self):
         model_dir = os.path.join(MODELS_DIR, "HKUSTAudio/xcodec2")
-        kwargs = CodecArgs(model_dir=os.getenv("CODEC_MODEL_DIR", model_dir)).__dict__
+        kwargs = CodecArgs(
+            model_dir=os.getenv("CODEC_MODEL_DIR", model_dir),
+            model_path=os.getenv("CODEC_MODEL_PATH", ""),
+            config_path=os.getenv("CODEC_CONFIG_PATH", ""),
+        ).__dict__
         self.codec: ICodec = CodecEnvInit.initCodecEngine(self.codec_tag, **kwargs)
         self.session = Session(**SessionCtx("test_codec_client_id").__dict__)
 
