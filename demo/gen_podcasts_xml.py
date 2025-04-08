@@ -62,10 +62,10 @@ def generate_podcast_feed_xml(podcasts: List[Dict]) -> str:
 
     channel_title = "AI Podcast"  # Replace with your podcast name
     channel_description = "Latest podcasts about AI Technology and Papers."  # Replace with your podcast description  # Replace with your podcast description
-    channel_link = "https://weedge.us.kg"  # Replace with your website URL
+    channel_link = "https://podcast-997.pages.dev"  # Replace with your website URL
     channel_language = "en-us"
     channel_image_url = (
-        "https://weedge.us.kg/an_AI_podcast_1400.jpg"  # Replace with your podcast image
+        "https://podcast-997.pages.dev/an_AI_podcast_1400.jpg"  # Replace with your podcast image
     )
 
     # <rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:podcast="https://podcastindex.org/namespace/1.0" version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
@@ -109,7 +109,7 @@ def generate_podcast_feed_xml(podcasts: List[Dict]) -> str:
         item_author = escape_xml(podcast["author"])
         item_description = escape_xml(podcast["description"])
 
-        item_link = f"https://weedge.us.kg/podcast/{podcast['pid']}"
+        item_link = f"https://podcast-997.pages.dev/podcast/{podcast['pid']}"
 
         item_pub_date = format_date_to_rfc822(podcast["create_time"])
         item_audio_url = escape_xml(podcast["audio_url"])

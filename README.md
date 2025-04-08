@@ -17,7 +17,7 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
 # Features
 - demo
   
-  - [podcast](https://github.com/ai-bot-pro/achatbot/blob/main/demo/content_parser_tts.py)  AI Podcast：[https://weedge.us.kg/](https://podcast-997.pages.dev/) :)
+  - [podcast](https://github.com/ai-bot-pro/achatbot/blob/main/demo/content_parser_tts.py)  AI Podcast：[https://podcast-997.pages.dev/](https://podcast-997.pages.dev/) :)
   
     ```shell
     # need GOOGLE_API_KEY in environment variables

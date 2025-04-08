@@ -1,6 +1,7 @@
 from datetime import datetime
 import os
 import logging
+import time
 import uuid
 
 from deep_translator import GoogleTranslator
@@ -202,7 +203,9 @@ def insert_podcast_to_d1(
     ]
     res = d1_table_query(db_id, sql, sql_params)
     if res["success"] is True:
-        logging.info(f"insert podcast success, url: https://weedge.us.kg/podcast/{podcast.pid}")
+        logging.info(
+            f"insert podcast success, url: https://podcast-997.pages.dev/podcast/{podcast.pid}"
+        )
     return res["success"]
 
 
@@ -249,7 +252,9 @@ def update_podcast_audio_size_to_d1():
         ]
         res = d1_table_query(db_id, sql, sql_params)
         if res["success"] is True:
-            logging.info(f"update podcast success, url: https://weedge.us.kg/podcast/{item['pid']}")
+            logging.info(
+                f"update podcast success, url: https://podcast-997.pages.dev/podcast/{item['pid']}"
+            )
 
 
 r"""
