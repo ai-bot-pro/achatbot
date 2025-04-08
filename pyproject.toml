@@ -321,6 +321,13 @@ codec_bitokenizer = [
     "transformers==4.46.2",
 ]
 codec_snac = ["snac"]
+codec_wavtokenizer = [
+    "numpy==1.23.5",
+    "encodec",
+    "pyyaml",
+    "huggingface_hub",
+    "achatbot[einops,librosa,matplotlib,soundfile]",
+]
 
 # ---------------TTS----------------------
 
@@ -393,7 +400,6 @@ tts_kokoro = [
     "torch~=2.2.2",
     "transformers~=4.40.2",
     "phonemizer",
-    "scipy",
     "munch",
 ]
 tts_onnx_kokoro = ["kokoro-onnx~=0.2.5"]

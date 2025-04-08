@@ -49,3 +49,9 @@
 [submodule "deps/SparkTTS"]
 	path = deps/SparkTTS
 	url = https://github.com/weedge/Spark-TTS
+[submodule "deps/MegaTTS3"]
+	path = deps/MegaTTS3
+	url = https://github.com/weedge/MegaTTS3.git
+[submodule "deps/WavTokenizer"]
+	path = deps/WavTokenizer
+	url = https://github.com/weedge/WavTokenizer.git
