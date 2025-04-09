@@ -1,10 +1,8 @@
 from dataclasses import dataclass, field
 import logging
-import math
-import random
 import os
-import re
 import sys
+import time
 from typing import AsyncGenerator, List
 
 from dotenv import load_dotenv
@@ -14,7 +12,7 @@ from src.common.utils.helper import get_device, print_model_params
 from src.common.random import set_all_random_seed
 from src.common.interface import ITts
 from src.common.session import Session
-from src.common.types import PYAUDIO_PAFLOAT32
+from src.common.types import PYAUDIO_PAFLOAT32, PYAUDIO_PAINT16
 from src.types.speech.tts.mega3 import Mega3TTSArgs
 from .base import BaseTTS
 
@@ -35,7 +33,7 @@ try:
     from deps.MegaTTS3.tts.utils.text_utils.split_text import chunk_text_chinese, chunk_text_english
 
 except ModuleNotFoundError as e:
-    logging.error("In order to use mega tts, you need to `pip install achatbot[tts_mege3]`.")
+    logging.error("In order to use mega tts, you need to `pip install achatbot[tts_mega3]`.")
     raise Exception(
         f"Missing module: {e}. Please run `pip install achatbot[tts_mega3]` to install the dependencies."
     )
@@ -48,7 +46,7 @@ class RefAudioCtxInfo:
     mel2ph_ref: torch.Tensor = None
     vae_latent: torch.Tensor = None
     ctx_dur_tokens: torch.Tensor = None
-    incremental_state_dur_prompt: dict = {}
+    incremental_state_dur_prompt: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -84,34 +82,70 @@ class MegaTTS(BaseTTS, ITts):
         print_model_params(
             self.model.dit, "dit"
         )  # txt embedding(phone,tone,dur), speaker embedding(wavevae encode audio vq latent feats), local conditioning(latent feats with mask), TimestepEmbedding (timestep with Sway sampling), transformer decoder
-        print_model_params(
-            self.model.wavvae, "wavevae" if self.model.has_vae_encoder else "wavevae_decoder"
-        )
+        print_model_params(self.model.wavvae, "wavevae")
 
-        assert os.path.exists(self.args.ref_audio_file), f"{self.args.ref_audio_file} not found"
-        # wavevae encoder ckpt don't open so just use existing ref latent file
-        # download from https://drive.google.com/drive/folders/1QhcHWcy20JfqWjgqZX1YM3I6i9u4oNlr
-        assert os.path.exists(self.args.ref_latent_file), f"{self.args.ref_latent_file} not found"
-
+        self.voices = {}
         self.set_voice(
             self.args.ref_audio_file, latents_file=self.args.ref_latent_file, ref_speaker="default"
         )
 
+        self._warm_up()
+
+    def _warm_up(self):
+        """
+        Warm up the model with a dummy input to ensure it's ready for real-time processing.
+        """
+        logging.info(f"Warming up the {self.TAG} model...")
+        gen_text = "Warm-up text for the model."
+
+        ref_voice: RefAudioCodecInfo = self.voices.get("default")
+        # reference audio context info(phone tone mel2ph vae_latent, dur_tokens and incremental_state)
+        ph_ref = ref_voice.resource_context.ph_ref.to(self.args.device)
+        tone_ref = ref_voice.resource_context.tone_ref.to(self.args.device)
+        mel2ph_ref = ref_voice.resource_context.mel2ph_ref.to(self.args.device)
+        vae_latent = ref_voice.resource_context.vae_latent.to(self.args.device)
+        ctx_dur_tokens = ref_voice.resource_context.ctx_dur_tokens.to(self.args.device)
+        incremental_state_dur_prompt = ref_voice.resource_context.incremental_state_dur_prompt
+
+        start_time = time.perf_counter()
+        _ = self.model.gen(
+            gen_text,
+            ctx_dur_tokens,
+            incremental_state_dur_prompt,
+            ph_ref,
+            tone_ref,
+            mel2ph_ref,
+            vae_latent,
+            self.args.time_step,
+            self.args.p_w,
+            self.args.t_w,
+            is_first=True,
+            is_final=True,
+            dur_disturb=self.args.dur_disturb,
+            dur_alpha=self.args.dur_alpha,
+        )
+        del _
+        logging.info(f"Warm-up completed. cost: {(time.perf_counter() - start_time):.3f} s")
+
     def get_stream_info(self) -> dict:
         return {
-            # "format": PYAUDIO_PAINT16,
-            "format": PYAUDIO_PAFLOAT32,
+            "format": PYAUDIO_PAINT16,
+            # "format": PYAUDIO_PAFLOAT32,
             "channels": 1,
             "rate": self.model.sr,  # 24000
             "sample_width": 2,
-            # "np_dtype": np.int16,
-            "np_dtype": np.float32,
+            "np_dtype": np.int16,
+            # "np_dtype": np.float32,
         }
 
     def set_voice(self, ref_file: str, **kwargs):
         ref_text = kwargs.get("ref_text", "")
         ref_speaker = kwargs.get("ref_speaker", ref_file)
         latent_file = kwargs.get("latent_file", self.args.ref_latent_file)
+        assert os.path.exists(ref_file), f"{ref_file} not found"
+        # wavevae encoder ckpt don't open so just use existing ref latent file
+        # download from https://drive.google.com/drive/folders/1QhcHWcy20JfqWjgqZX1YM3I6i9u4oNlr
+        assert os.path.exists(latent_file), f"{latent_file} not found"
 
         with open(ref_file, "rb") as file:
             file_content = file.read()
@@ -127,12 +161,11 @@ class MegaTTS(BaseTTS, ITts):
     def get_voices(self):
         return list(self.voices.keys())
 
+    @torch.inference_mode()
     async def _inference(
         self, session: Session, text: str, **kwargs
     ) -> AsyncGenerator[bytes, None]:
-        if "cuda" in str(self.lm_model._model.device):
-            torch.cuda.empty_cache()
-        seed = kwargs.get("seed", self.lm_args.lm_gen_seed)
+        seed = kwargs.get("seed", self.args.lm_gen_seed)
         set_all_random_seed(seed)
 
         time_step = kwargs.get("time_step", self.args.time_step)
@@ -159,14 +192,14 @@ class MegaTTS(BaseTTS, ITts):
             language_type = classify_language(text)
             if language_type == "en":
                 input_text = self.model.en_normalizer.normalize(text)
-                text_segs = chunk_text_english(input_text, max_chars=130)
+                text_segs = chunk_text_english(input_text, max_chars=20)
             else:
                 input_text = self.model.zh_normalizer.normalize(text)
-                text_segs = chunk_text_chinese(input_text, limit=60)
+                text_segs = chunk_text_chinese(input_text, limit=10)
             logging.debug(f"| Text Segments: {text_segs}")
 
             for seg_i, text in enumerate(text_segs):
-                wav_pred = self.gen(
+                wav_pred = self.model.gen(
                     text,
                     ctx_dur_tokens,
                     incremental_state_dur_prompt,
@@ -183,7 +216,6 @@ class MegaTTS(BaseTTS, ITts):
                     dur_alpha=dur_alpha,
                     **kwargs,
                 )
-                yield to_wav_bytes(wav_pred, self.sr)
+                yield to_wav_bytes(wav_pred, self.model.sr)
 
-        if "cuda" in str(self.lm_model._model.device):
-            torch.cuda.empty_cache()
+        torch.cuda.empty_cache()

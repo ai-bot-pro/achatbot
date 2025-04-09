@@ -15,6 +15,7 @@ class Mega3TTSArgs:
     ref_latent_file: str = ""
 
     # infer params
+    lm_gen_seed: int = 42
     time_step: int = 32  # Inference steps of Diffusion Transformer (DiT)
     p_w: float = 1.6  # Intelligibility Weight
     t_w: float = 2.5  # Similarity Weight

@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 
 from src.core.llm import LLMEnvInit
-from src.common.types import MODELS_DIR, RECORDS_DIR
+from src.common.types import ASSETS_DIR, MODELS_DIR, RECORDS_DIR
 from src.common import interface
 from src.common.factory import EngineClass, EngineFactory
 
@@ -363,10 +363,10 @@ class TTSEnvInit:
                 "TTS_MEGA3_CKPT_DIR", os.path.join(MODELS_DIR, "ByteDance/MegaTTS3")
             ),
             ref_audio_file=os.getenv(
-                "TTS_REF_AUDIO_FILE", os.path.join(RECORDS_DIR, "Chinese_prompt.wav")
+                "TTS_REF_AUDIO_FILE", os.path.join(ASSETS_DIR, "Chinese_prompt.wav")
             ),
             ref_latent_file=os.getenv(
-                "TTS_REF_LATENT_FILE", os.path.join(RECORDS_DIR, "Chinese_prompt.npy")
+                "TTS_REF_LATENT_FILE", os.path.join(ASSETS_DIR, "Chinese_prompt.npy")
             ),
             time_step=int(os.getenv("TTS_TIME_STEP", "32")),
             dur_alpha=float(os.getenv("TTS_DUR_ALPHA", "1.0")),

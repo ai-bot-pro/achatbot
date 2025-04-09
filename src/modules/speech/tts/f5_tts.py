@@ -153,6 +153,7 @@ class F5TTS(BaseTTS, ITts):
     def get_voices(self):
         return [self.args.ref_text]
 
+    @torch.inference_mode()
     async def _inference(
         self, session: Session, text: str, **kwargs
     ) -> AsyncGenerator[bytes, None]:
