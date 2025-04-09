@@ -2,12 +2,13 @@ import os
 import modal
 
 app = modal.App("tts-grpc")
+achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.9.post7")
 
 tts_grpc_image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install("git", "git-lfs", "ffmpeg")
     .pip_install(
-        f"achatbot[{os.getenv('TTS_TAG', 'tts_edge')},grpc]~=0.0.9",
+        f"achatbot[{os.getenv('TTS_TAG', 'tts_edge')},grpc]=={achatbot_version}",
         extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
     )
     .env(

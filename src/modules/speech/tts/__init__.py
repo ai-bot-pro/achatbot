@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 
 from src.core.llm import LLMEnvInit
-from src.common.types import MODELS_DIR, RECORDS_DIR
+from src.common.types import ASSETS_DIR, MODELS_DIR, RECORDS_DIR
 from src.common import interface
 from src.common.factory import EngineClass, EngineFactory
 
@@ -52,6 +52,8 @@ class TTSEnvInit:
             from . import spark_generator_tts
         elif "tts_orpheus" == tag:
             from . import orpheus_tts
+        elif "tts_mega3" == tag:
+            from . import mega3_tts
         # elif "tts_openai" in tag:
         # from . import openai_tts
 
@@ -352,6 +354,29 @@ class TTSEnvInit:
         return kwargs
 
     @staticmethod
+    def get_tts_mega3_args() -> dict:
+        from src.types.speech.tts.mega3 import Mega3TTSArgs
+
+        kwargs = Mega3TTSArgs(
+            device=os.getenv("TTS_DEVICE", None),
+            ckpt_dir=os.getenv(
+                "TTS_MEGA3_CKPT_DIR", os.path.join(MODELS_DIR, "ByteDance/MegaTTS3")
+            ),
+            ref_audio_file=os.getenv(
+                "TTS_REF_AUDIO_FILE", os.path.join(ASSETS_DIR, "Chinese_prompt.wav")
+            ),
+            ref_latent_file=os.getenv(
+                "TTS_REF_LATENT_FILE", os.path.join(ASSETS_DIR, "Chinese_prompt.npy")
+            ),
+            time_step=int(os.getenv("TTS_TIME_STEP", "32")),
+            dur_alpha=float(os.getenv("TTS_DUR_ALPHA", "1.0")),
+            dur_disturb=float(os.getenv("TTS_DUR_DISTURB", "0.1")),
+            p_w=float(os.getenv("TTS_P_WOS", "1.6")),
+            t_w=float(os.getenv("TTS_T_WOS", "2.5")),
+        ).__dict__
+        return kwargs
+
+    @staticmethod
     def get_tts_minicpmo_args() -> dict:
         kwargs = LLMEnvInit.get_llm_transformers_args()
         kwargs["tts_task"] = os.getenv("TTS_TASK", "voice_cloning")
@@ -397,6 +422,7 @@ class TTSEnvInit:
         "tts_step": get_tts_step_args,
         "tts_spark": get_tts_spark_args,
         "tts_generator_spark": get_tts_generator_spark_args,
+        "tts_mega3": get_tts_mega3_args,
     }
 
     @staticmethod

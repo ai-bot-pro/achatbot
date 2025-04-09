@@ -240,6 +240,12 @@ TTS_TAG=tts_orpheus IS_SAVE=1 \
     LM_MODEL_PATH=./models/canopylabs/orpheus-3b-0.1-ft \
     CODEC_MODEL_PATH=./models/hubertsiuzdak/snac_24khz \
     python -m src.cmd.grpc.speaker.client
+
+TTS_TAG=tts_mega3 IS_SAVE=1 \
+    TTS_MEGA3_CKPT_DIR=./models/ByteDance/MegaTTS3 \
+    TTS_REF_AUDIO_FILE=./assets/Chinese_prompt.wav \
+    TTS_REF_LATENT_FILE=./assets/Chinese_prompt.npy\
+    python -m src.cmd.grpc.speaker.client
 """
 if __name__ == "__main__":
     player = None
