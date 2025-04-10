@@ -12,7 +12,7 @@ from apipeline.processors.frame_processor import FrameDirection
 from apipeline.processors.aggregators.sentence import SentenceAggregator
 from apipeline.processors.logger import FrameLogger
 
-from src.processors.tranlate.google_translate_processor import GoogleTranslateProcessor
+from src.processors.translation.google_translate_processor import GoogleTranslateProcessor
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.cmd.bots.base_daily import DailyRoomBot
 from src.common.types import DailyParams

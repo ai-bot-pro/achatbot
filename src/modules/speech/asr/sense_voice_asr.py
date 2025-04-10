@@ -2,7 +2,7 @@ from typing import AsyncGenerator
 import asyncio
 import re
 
-from src.common.device_cuda import CUDAInfo
+from src.common.utils.helper import get_device
 from src.common.utils.audio_utils import bytes2TorchTensorWith16
 from src.common.session import Session
 from src.modules.speech.asr.base import ASRBase
@@ -15,16 +15,11 @@ class SenseVoiceAsr(ASRBase):
         from deps.SenseVoice.model import SenseVoiceSmall
 
         super().__init__(**args)
-        device = "cpu"
-        if self.args.device:
-            device = self.args.device
-        else:
-            info = CUDAInfo()
-            if info.is_cuda:
-                device = "cuda:0"
         self.model: SenseVoiceSmall = None
+        self.args.device = get_device()
         self.model, self.kwargs = SenseVoiceSmall.from_pretrained(
-            model=self.args.model_name_or_path, device=device
+            model=self.args.model_name_or_path,
+            device=self.args.device,
         )
         self.model.eval()
 

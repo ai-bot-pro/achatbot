@@ -61,7 +61,7 @@ class LivekitRoom(EngineClass, IRoomManager):
             name=room.name,
             ttl_s=room.empty_timeout,
             creation_time=str(room.creation_time),
-            # NOTE: room.__dict__, python3.10 don't ok,python.3.11 ok
+            # NOTE: room.__dict__, python3.11.0<=version don't ok,python.3.11.7 ok
             extra_data={
                 "enabled_codecs": room.enabled_codecs,
                 "departure_timeout": room.departure_timeout,
@@ -110,7 +110,15 @@ class LivekitRoom(EngineClass, IRoomManager):
             sid=room.sid,
             name=room.name,
             creation_time=str(room.creation_time),
-            extra_data=room.__dict__,
+            extra_data={
+                "enabled_codecs": room.enabled_codecs,
+                "departure_timeout": room.departure_timeout,
+                "max_participants": room.max_participants,
+                "num_participants": room.num_participants,
+                "num_publishers": room.num_publishers,
+                "active_recording": room.active_recording,
+                "version": room.version,
+            },
         )
 
         return g_room

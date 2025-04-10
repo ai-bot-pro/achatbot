@@ -21,6 +21,18 @@ modal volume create -e achatbot bot_config
 - run serverless remote function call like local to dev, so nice~ (auto schedule)
 - crob jobs to run schedule task
 
+## dowload models and assets
+- download models and assets to modal volume
+  - modal run -e achatbot src/download_models.py --repo-id $repo_id
+  - modal run -e achatbot src/download_assets.py --asset-urls $asset_urls
+
+e.g.:
+```
+modal run src/download_models.py --repo-ids "Qwen/Qwen2.5-0.5B"
+
+modal run src/download_assets.py --asset-urls "https://raw.githubusercontent.com/bytedance/MegaTTS3/refs/heads/main/tts/utils/text_utils/dict.json"
+```
+
 ## modal serve
 - use fastapi(ASGI modal app) to run serverless web service
 - web server endpoint: `https://{profile}-{environment}--{app_name}-{class_name}-app-dev.modal.run` (if app_name + class_name is so long, hash tag name to replace)
@@ -160,6 +172,8 @@ IMAGE_NAME=deepseekvl2 IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4:4 LLM_MODEL_NAME_OR_PA
 # https://www.nvidia.com/en-us/data-center/l4/ 24GB 
 IMAGE_NAME=minicpmo IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
 
+# moonshotai/Kimi-VL-A3B-Instruct (or Thinking) use 2xL4 like deepseek-ai/deepseek-vl2-small
+IMAGE_NAME=kimi IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4:2 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
 ```
 - curl api to run chat room bot with webrtc (daily/livekit/agora)
 ```shell
@@ -644,6 +658,11 @@ endpoint: https://weedge-achatbot--fastapi-webrtc-vision-janus-bot-srv-app.modal
 IMAGE_NAME=deepseekvl2 IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
 ```
 endpoint: https://weedge-achatbot--fastapi-webrtc-vision-deepseekvl2-bot-srv-app.modal.run/
+
+```shell
+IMAGE_NAME=kimi IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L40s modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+```
+endpoint: https://weedge-achatbot--fastapi-webrtc-vision-kimi-bot-srv-app.modal.run/
 
 - deploy webrtc_glm_voice_bot serve
 ```shell
