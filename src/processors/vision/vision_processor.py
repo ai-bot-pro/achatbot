@@ -47,11 +47,24 @@ class VisionProcessor(VisionProcessorBase):
         logging.debug(f"Analyzing image: {frame}")
 
         if (
-            "llm_transformers" in self._llm.SELECTED_TAG and "vision" in self._llm.SELECTED_TAG
-        ):  # transformers vision
+            "llm_transformers" in self._llm.SELECTED_TAG
+            and "vision_janus" in self._llm.SELECTED_TAG
+        ):  # transformers vision janus pro
             async for item in self._run_imgs_text_vision(frame):
                 yield item
-        else:
+        elif (
+            "llm_transformers" in self._llm.SELECTED_TAG
+            and "vision_deepseek" in self._llm.SELECTED_TAG
+        ):  # transformers vision deepseekvl2
+            async for item in self._run_imgs_text_vision(frame):
+                yield item
+        elif (
+            "llm_transformers" in self._llm.SELECTED_TAG
+            and "vision_minicpmo" in self._llm.SELECTED_TAG
+        ):  # transformers vision MiniCPM-o
+            async for item in self._run_imgs_text_vision(frame):
+                yield item
+        else:  # qwen vision (kimi vision) is default, nice vision prompt
             async for item in self._run_vision(frame):
                 yield item
 
