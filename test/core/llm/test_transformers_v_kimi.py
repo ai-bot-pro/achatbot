@@ -16,10 +16,10 @@ load_dotenv(override=True)
 
 r"""
 LLM_DEVICE=cuda LLM_MODEL_NAME_OR_PATH=./models/moonshotai/Kimi-VL-A3B-Instruct \
-    python -m unittest test.core.llm.test_transformers_v_deepseek.TestTransformersVKimi.test_chat_completion_prompts
+    python -m unittest test.core.llm.test_transformers_v_kimi.TestTransformersVKimi.test_chat_completion_prompts
 
 LLM_DEVICE=cuda LLM_MODEL_NAME_OR_PATH=./models/moonshotai/Kimi-VL-A3B-Thinking \
-    python -m unittest test.core.llm.test_transformers_v_deepseek.TestTransformersVKimi.test_chat_completion_prompts
+    python -m unittest test.core.llm.test_transformers_v_kimi.TestTransformersVKimi.test_chat_completion_prompts
 """
 
 
@@ -48,7 +48,32 @@ class TestTransformersVKimi(unittest.TestCase):
 
     def test_chat_completion_prompts(self):
         prompt_cases = [
-            [Image.open(self.img_file), self.prompt],
+            self.prompt,
+            (self.prompt, "en"),
+            (self.prompt, "zh"),
+            [
+                {"type": "image", "image": self.img_file},
+                {
+                    "type": "text",
+                    "text": "Describe this video. Please reply to my message in chinese",
+                },
+            ],
+            [
+                {
+                    "type": "video",
+                    "video": [
+                        "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
+                        "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
+                        "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
+                        "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
+                    ],
+                    "fps": 1.0,
+                },
+                {
+                    "type": "text",
+                    "text": "Describe this video. Please reply to my message in chinese",
+                },
+            ],
         ]
 
         for prompt in prompt_cases:

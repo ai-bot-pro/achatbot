@@ -182,15 +182,18 @@ class TransformersManualVisionKimi(TransformersBaseLLM):
         chat_history = self._chat_history.to_list()
         logging.debug(f"chat_history:{chat_history}")
         text = self._tokenizer.apply_chat_template(
-            chat_history,
-            tokenize=False,
-            add_generation_prompt=True,
+            chat_history, add_generation_prompt=True, return_tensors="pt"
         )
         image_inputs, video_inputs = process_vision_info(chat_history)
         logging.debug(f"image_inputs:{image_inputs},video_inputs:{video_inputs}")
         # https://huggingface.co/moonshotai/Kimi-VL-A3B-Instruct/blob/main/processing_kimi_vl.py#L73
         model_inputs = self._tokenizer(
-            images=image_inputs, text=[text], videos=video_inputs, padding=True, return_tensors="pt"
+            images=image_inputs,
+            text=text,
+            videos=video_inputs,
+            padding=True,
+            truncation=True,
+            return_tensors="pt",
         ).to(self._model.device)
 
         streamer = TextIteratorStreamer(self._tokenizer, skip_prompt=True, skip_special_tokens=True)

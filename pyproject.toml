@@ -243,8 +243,9 @@ llm_transformers_manual_vision_kimi = [
     "qwen-vl-utils",
     "torch~=2.2.2",
     "torchvision~=0.17.2",
+    "numpy==1.26",
     "blobfile",
-    "achatbot[ltiktoken,accelerate]",
+    "achatbot[tiktoken,accelerate]",
 ]
 
 # voice llm
