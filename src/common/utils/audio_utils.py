@@ -1,3 +1,4 @@
+from typing import List
 from scipy import signal
 from scipy.io.wavfile import read, write
 
@@ -110,3 +111,26 @@ def convert_sampling_rate_to_16k(input_file, output_file):
     down = original_rate
     resampled_data = signal.resample_poly(data, up, down)
     write(output_file, 16000, resampled_data.astype(np.int16))
+
+
+""" Smoothly combine audio segments using crossfade transitions." """
+
+
+def combine_audio_segments(
+    segments: List[np.ndarray], crossfade_duration=0.16, sr=24000
+) -> np.ndarray:
+    window_length = int(sr * crossfade_duration)
+    hanning_window = np.hanning(2 * window_length)
+    # Combine
+    for i, segment in enumerate(segments):
+        if i == 0:
+            combined_audio = segment
+        else:
+            overlap = (
+                combined_audio[-window_length:] * hanning_window[window_length:]
+                + segment[:window_length] * hanning_window[:window_length]
+            )
+            combined_audio = np.concatenate(
+                [combined_audio[:-window_length], overlap, segment[window_length:]]
+            )
+    return combined_audio

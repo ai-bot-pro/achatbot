@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 import os
 
-from src.common.types import MODELS_DIR
+from src.common.types import ASSETS_DIR, MODELS_DIR
 
 
 @dataclass
@@ -9,6 +9,7 @@ class Mega3TTSArgs:
     device: str = None
 
     ckpt_dir: str = os.path.join(MODELS_DIR, "ByteDance/MegaTTS3")
+    dict_file: str = os.path.join(ASSETS_DIR, "dict.json")
 
     ref_audio_file: str = ""
     # .npy ref_latent_file np.save np.darray from wavevae encoder encode audio

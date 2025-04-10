@@ -32,6 +32,7 @@ try:
 except ModuleNotFoundError as e:
     raise Exception(f"grpc import error: {e}")
 
+from src.common.utils.audio_utils import combine_audio_segments
 from src.common.factory import EngineClass
 from src.common.interface import IAudioStream
 from src.modules.speech.audio_stream import AudioStreamEnvInit
@@ -243,6 +244,7 @@ TTS_TAG=tts_orpheus IS_SAVE=1 \
 
 TTS_TAG=tts_mega3 IS_SAVE=1 \
     TTS_MEGA3_CKPT_DIR=./models/ByteDance/MegaTTS3 \
+    TTS_MEGA3_DICT_FILE=./assets/dict.json \
     TTS_REF_AUDIO_FILE=./assets/Chinese_prompt.wav \
     TTS_REF_LATENT_FILE=./assets/Chinese_prompt.npy\
     python -m src.cmd.grpc.speaker.client
@@ -266,10 +268,13 @@ if __name__ == "__main__":
         load_model(tts_stub)
 
         stream_info = get_stream_info(tts_stub)
-        logging.debug(f"stream_info:{stream_info}")
+        logging.info(f"stream_info:{stream_info}")
+        np_dtype = np.float32
+        if stream_info.format == PYAUDIO_PAINT16:
+            np_dtype = np.int16
 
         voices = get_voices(tts_stub)
-        logging.debug(f"voices:{voices}")
+        logging.info(f"voices:{voices}")
 
         # voice must match language to select
         # voice = random.choice(voices)
@@ -288,30 +293,31 @@ if __name__ == "__main__":
         for idx, tts_text in enumerate(TTS_TEXT_LIST):
             tts_audio_iter = synthesize_us(tts_stub, tts_text=tts_text)
             times = []
-            res = bytearray()
+            tts_audio_segments = []
             start_time = perf_counter()
             for i, tts_audio in enumerate(tts_audio_iter):
                 times.append(perf_counter() - start_time)
                 start_time = perf_counter()
-                logging.info(f"{i} play tts_chunk len:{len(tts_audio)}")
-                session.ctx.state["tts_chunk"] = tts_audio
+                logging.info(f"{i} get tts_chunk len:{len(tts_audio)}")
                 if is_save is False:
+                    session.ctx.state["tts_chunk"] = tts_audio
                     player.play_audio(session)
                 else:
-                    res.extend(tts_audio)
+                    tts_audio_np = np.frombuffer(tts_audio, dtype=np_dtype)
+                    tts_audio_segments.append(tts_audio_np)
+            tts_audio_data = combine_audio_segments(tts_audio_segments, sr=stream_info.rate).astype(
+                np_dtype
+            )
+            print(tts_audio_data.dtype)
 
             if is_save is False:
                 player.stop(session)
 
-            if len(res) > 0:
+            if len(tts_audio_data) > 0:
                 file_name = f"grpc_{tts_tag}_{idx}.wav"
                 os.makedirs(RECORDS_DIR, exist_ok=True)
                 file_path = os.path.join(RECORDS_DIR, file_name)
-                np_dtype = np.float32
-                if stream_info.format == PYAUDIO_PAINT16:
-                    np_dtype = np.int16
-                data = np.frombuffer(res, dtype=np_dtype)
-                data, _ = librosa.effects.trim(data, top_db=60)
+                data, _ = librosa.effects.trim(tts_audio_data, top_db=60)
                 soundfile.write(file_path, data, stream_info.rate)
                 logging.info(f"[ {tts_text} ] save audio stream to {file_path}")
                 info = soundfile.info(file_path, verbose=True)

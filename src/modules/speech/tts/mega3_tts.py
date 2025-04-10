@@ -73,7 +73,7 @@ class MegaTTS(BaseTTS, ITts):
         self.args = Mega3TTSArgs(**args)
         self.args.device = self.args.device or get_device()
         logging.debug(f"{MegaTTS.TAG} args: {self.args}")
-        self.model = MegaTTS3DiTInfer(ckpt_root=self.args.ckpt_dir)
+        self.model = MegaTTS3DiTInfer(ckpt_root=self.args.ckpt_dir, dict_file=self.args.dict_file)
         print_model_params(self.model.g2p_model, "g2p_llm_ar_decoder_model")  # transformer decoder
         print_model_params(
             self.model.aligner_lm, "aligner_whisper_audioEncoder_textDecoder"

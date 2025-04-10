@@ -362,6 +362,7 @@ class TTSEnvInit:
             ckpt_dir=os.getenv(
                 "TTS_MEGA3_CKPT_DIR", os.path.join(MODELS_DIR, "ByteDance/MegaTTS3")
             ),
+            dict_file=os.getenv("TTS_MEGA3_DICT_FILE", os.path.join(ASSETS_DIR, "dict.json")),
             ref_audio_file=os.getenv(
                 "TTS_REF_AUDIO_FILE", os.path.join(ASSETS_DIR, "Chinese_prompt.wav")
             ),
