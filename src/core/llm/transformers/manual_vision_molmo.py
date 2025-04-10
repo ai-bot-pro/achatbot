@@ -22,6 +22,7 @@ except ModuleNotFoundError as e:
     raise Exception(f"Missing module: {e}")
 
 
+from src.common.random import set_all_random_seed
 from src.common.session import Session
 from src.types.speech.language import TO_LLM_LANGUAGE
 from src.types.llm.transformers import TransformersLMArgs
@@ -121,7 +122,11 @@ class TransformersManualVisionMolmoLLM(TransformersBaseLLM):
             streamer=streamer,
         )
 
-    def generate(self, session: Session):
+    def generate(self, session: Session, **kwargs):
+        torch.cuda.empty_cache()
+        seed = kwargs.get("seed", self.args.lm_gen_seed)
+        set_all_random_seed(seed)
+
         prompt = session.ctx.state["prompt"]
         text = ""
         image_inputs = None
@@ -185,3 +190,5 @@ class TransformersManualVisionMolmoLLM(TransformersBaseLLM):
         for new_text in streamer:
             generated_text += new_text
             yield new_text
+
+        torch.cuda.empty_cache()

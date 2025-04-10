@@ -28,7 +28,7 @@ class TestTransformersVKimi(unittest.TestCase):
     def setUpClass(cls):
         img_file = os.path.join(TEST_DIR, "img_files", "03-Confusing-Pictures.jpg")
         cls.img_file = os.getenv("IMG_FILE", img_file)
-        cls.prompt = os.getenv("PROMPT", "描述下图片中的内容")
+        cls.prompt = os.getenv("PROMPT", "讲一个故事")
         cls.llm_tag = os.getenv("LLM_TAG", "llm_transformers_manual_vision_kimi")
         Logger.init(os.getenv("LOG_LEVEL", "debug").upper(), is_file=False)
 

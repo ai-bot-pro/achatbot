@@ -15,6 +15,7 @@ except ModuleNotFoundError as e:
     raise Exception(f"Missing module: {e}")
 
 
+from src.common.random import set_all_random_seed
 from src.common.chat_history import ChatHistory
 from src.common.session import Session
 from src.types.speech.language import TO_LLM_LANGUAGE
@@ -112,7 +113,11 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
             streamer=streamer,
         )
 
-    def generate(self, session: Session):
+    def generate(self, session: Session, **kwargs):
+        torch.cuda.empty_cache()
+        seed = kwargs.get("seed", self.args.lm_gen_seed)
+        set_all_random_seed(seed)
+
         prompt = session.ctx.state["prompt"]
         if isinstance(prompt, tuple):
             prompt, language_code = prompt
@@ -158,3 +163,5 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
             generated_text += new_text
             yield new_text
         self._chat_history.append({"role": "assistant", "content": generated_text})
+
+        torch.cuda.empty_cache()

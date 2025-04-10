@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from PIL import Image
 import numpy as np
 
+from src.common.random import set_all_random_seed
 from src.common.chat_history import ChatHistory
 from src.common.session import Session
 from src.common.utils.helper import get_device, print_model_params
@@ -169,6 +170,10 @@ class TransformersManualVisionKimi(TransformersBaseLLM):
 
     @torch.inference_mode()
     def generate(self, session: Session, **kwargs):
+        torch.cuda.empty_cache()
+        seed = kwargs.get("seed", self.args.lm_gen_seed)
+        set_all_random_seed(seed)
+
         prompt = session.ctx.state["prompt"]
         if isinstance(prompt, tuple):
             prompt, language_code = prompt
@@ -221,3 +226,5 @@ class TransformersManualVisionKimi(TransformersBaseLLM):
             generated_text += new_text
             yield new_text
         self._chat_history.append({"role": "assistant", "content": generated_text})
+
+        torch.cuda.empty_cache()

@@ -235,3 +235,5 @@ class TransformersManualVisionDeepSeekVL2(TransformersBaseLLM):
             generated_text += new_text
             yield new_text
         self._chat_history.append({"role": "<|Assistant|>", "content": generated_text})
+
+        torch.cuda.empty_cache()
