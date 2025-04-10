@@ -63,6 +63,9 @@ TTS_TAG=tts_spark IMAGE_GPU=T4 modal run src/grpc_tts_serve.py
 
 # tts_orpheus 
 TTS_TAG=tts_orpheus IMAGE_GPU=T4 modal run src/grpc_tts_serve.py
+
+# tts_mega3
+TTS_TAG=tts_mega3 IMAGE_GPU=T4 modal run src/grpc_tts_serve.py
 """
 
 
