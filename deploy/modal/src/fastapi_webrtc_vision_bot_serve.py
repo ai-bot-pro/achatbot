@@ -3,261 +3,122 @@ import os
 
 achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.9.post8")
 
+vision_bot_img = (
+    # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
+    modal.Image.from_registry(
+        "nvidia/cuda:12.5.1-cudnn-devel-ubuntu22.04",
+        add_python="3.10",
+    )
+    .apt_install("git", "git-lfs", "ffmpeg", "cmake")
+    .pip_install(
+        [
+            "achatbot["
+            "fastapi_bot_server,"
+            "livekit,livekit-api,daily,agora,"
+            "silero_vad_analyzer,daily_langchain_rag_bot,"
+            "sense_voice_asr,deepgram_asr_processor,"
+            "openai_llm_processor,google_llm_processor,litellm_processor,"
+            "tts_edge,"
+            "deep_translator,together_ai,"
+            "queue"
+            f"]=={achatbot_version}",
+        ],
+        extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+    )
+    .pip_install("wheel")
+    .pip_install("flash-attn", extra_options="--no-build-isolation")
+    .env(
+        {
+            "ACHATBOT_PKG": "1",
+            "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
+            # asr module engine TAG, default whisper_timestamped_asr
+            "ASR_TAG": "sense_voice_asr",
+            "ASR_LANG": "zn",
+            # "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
+            # llm processor model, default:google gemini_flash_latest
+            "GOOGLE_LLM_MODEL": "gemini-2.0-flash",
+            # tts module engine TAG,default tts_edge
+            "TTS_TAG": "tts_edge",
+        }
+    )
+)
+
+# NOTE:
+# LLM_MODEL_NAME_OR_PATH now is not used in the image
+# use download_model.py to download model to models volume mount to /root/.achatbot/models
+
 
 class ContainerRuntimeConfig:
     images = {
-        # image key name is shot, lenght less 10
-        "default": (
-            modal.Image.debian_slim(python_version="3.11")
-            .apt_install("git", "git-lfs", "ffmpeg")
-            .pip_install(
-                [
-                    "achatbot["
-                    "fastapi_bot_server,"
-                    "livekit,livekit-api,daily,agora,"
-                    "silero_vad_analyzer,daily_langchain_rag_bot,"
-                    "sense_voice_asr,deepgram_asr_processor,"
-                    "openai_llm_processor,google_llm_processor,litellm_processor,"
-                    "tts_edge,"
-                    "deep_translator,together_ai,"
-                    "queue"
-                    f"]=={achatbot_version}",
-                ],
-                extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
-            )
-            .env(
-                {
-                    "HF_HUB_ENABLE_HF_TRANSFER": "1",
-                    "ACHATBOT_PKG": "1",
-                    "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
-                    "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
-                    # asr module engine TAG, default whisper_timestamped_asr
-                    "ASR_TAG": "sense_voice_asr",
-                    "ASR_LANG": "zn",
-                    "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
-                    # llm processor model, default:google gemini_flash_latest
-                    "GOOGLE_LLM_MODEL": "gemini-2.0-flash",
-                    # tts module engine TAG,default tts_edge
-                    "TTS_TAG": "tts_edge",
-                }
-            )
-        ),
+        "default": vision_bot_img,
         "qwen": (
-            modal.Image.debian_slim(python_version="3.11")
-            .apt_install("git", "git-lfs", "ffmpeg")
-            .pip_install(
+            vision_bot_img.pip_install(
                 [
-                    "achatbot["
-                    "fastapi_bot_server,"
-                    "livekit,livekit-api,daily,agora,"
-                    "silero_vad_analyzer,daily_langchain_rag_bot,"
-                    "sense_voice_asr,deepgram_asr_processor,"
-                    "llm_transformers_manual_vision_qwen,"
-                    "openai_llm_processor,google_llm_processor,litellm_processor,"
-                    "tts_edge,"
-                    "deep_translator,together_ai,"
-                    "queue"
-                    f"]=={achatbot_version}",
+                    f"achatbot[llm_transformers_manual_vision_qwen]=={achatbot_version}",
                 ],
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
-            )
-            .env(
+            ).env(
                 {
-                    "HF_HUB_ENABLE_HF_TRANSFER": "1",
-                    "ACHATBOT_PKG": "1",
-                    "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
-                    "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
-                    # asr module engine TAG, default whisper_timestamped_asr
-                    "ASR_TAG": "sense_voice_asr",
-                    "ASR_LANG": "zn",
-                    "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
-                    # llm processor model, default:google gemini_flash_latest
-                    "GOOGLE_LLM_MODEL": "gemini-2.0-flash",
                     "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "Qwen/Qwen2-VL-2B-Instruct")}',
-                    # tts module engine TAG,default tts_edge
-                    "TTS_TAG": "tts_edge",
                 }
             )
         ),
         "llama": (
-            modal.Image.debian_slim(python_version="3.11")
-            .apt_install("git", "git-lfs", "ffmpeg")
-            .pip_install(
+            vision_bot_img.pip_install(
                 [
-                    "achatbot["
-                    "fastapi_bot_server,"
-                    "livekit,livekit-api,daily,agora,"
-                    "silero_vad_analyzer,daily_langchain_rag_bot,"
-                    "sense_voice_asr,deepgram_asr_processor,"
-                    "llm_transformers_manual_vision_llama,"
-                    "openai_llm_processor,google_llm_processor,litellm_processor,"
-                    "tts_edge,"
-                    "deep_translator,together_ai,"
-                    "queue"
-                    f"]=={achatbot_version}",
+                    f"achatbot[llm_transformers_manual_vision_llama]=={achatbot_version}",
                 ],
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
-            )
-            .env(
+            ).env(
                 {
-                    "HF_HUB_ENABLE_HF_TRANSFER": "1",
-                    "ACHATBOT_PKG": "1",
-                    "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
-                    "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
-                    # asr module engine TAG, default whisper_timestamped_asr
-                    "ASR_TAG": "sense_voice_asr",
-                    "ASR_LANG": "zn",
-                    "ASR_MODEL_NAME_OR_PATH": "FunAudioLLM/SenseVoiceSmall",
-                    # llm processor model, default:google gemini_flash_latest
-                    "GOOGLE_LLM_MODEL": "gemini-2.0-flash",
                     "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "unsloth/Llama-3.2-11B-Vision-Instruct")}',
-                    # tts module engine TAG,default tts_edge
-                    "TTS_TAG": "tts_edge",
                 }
             )
         ),
         "janus": (
-            modal.Image.debian_slim(python_version="3.11")
-            .apt_install("git", "git-lfs", "ffmpeg")
-            .pip_install(
+            vision_bot_img.pip_install(
                 [
-                    "achatbot["
-                    "fastapi_bot_server,"
-                    "livekit,livekit-api,daily,agora,"
-                    "silero_vad_analyzer,daily_langchain_rag_bot,"
-                    "sense_voice_asr,deepgram_asr_processor,"
-                    "llm_transformers_manual_vision_img_janus,"
-                    "openai_llm_processor,google_llm_processor,litellm_processor,"
-                    "tts_edge,"
-                    "deep_translator,together_ai,"
-                    "queue"
-                    f"]=={achatbot_version}",
+                    f"achatbot[llm_transformers_manual_vision_img_janus]=={achatbot_version}",
                 ],
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
-            )
-            .env(
+            ).env(
                 {
-                    "HF_HUB_ENABLE_HF_TRANSFER": "1",
-                    "ACHATBOT_PKG": "1",
-                    "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
-                    "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
-                    # asr module engine TAG, default whisper_timestamped_asr
-                    "ASR_TAG": "sense_voice_asr",
-                    "ASR_LANG": "zn",
-                    "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
-                    # llm processor model, default:google gemini_flash_latest
-                    "GOOGLE_LLM_MODEL": "gemini-2.0-flash",
                     "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "deepseek-ai/Janus-Pro-1B")}',
-                    # tts module engine TAG,default tts_edge
-                    "TTS_TAG": "tts_edge",
                 }
             )
         ),
         "deepseekvl2": (
-            modal.Image.debian_slim(python_version="3.11")
-            .apt_install("git", "git-lfs", "ffmpeg")
-            .pip_install(
+            vision_bot_img.pip_install(
                 [
-                    "achatbot["
-                    "fastapi_bot_server,"
-                    "livekit,livekit-api,daily,agora,"
-                    "silero_vad_analyzer,daily_langchain_rag_bot,"
-                    "sense_voice_asr,deepgram_asr_processor,"
-                    "llm_transformers_manual_vision_deepseekvl2,"
-                    "openai_llm_processor,google_llm_processor,litellm_processor,"
-                    "tts_edge,"
-                    "deep_translator,together_ai,"
-                    "queue"
-                    f"]=={achatbot_version}",
+                    f"achatbot[llm_transformers_manual_vision_deepseekvl2]=={achatbot_version}",
                 ],
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
-            )
-            .env(
+            ).env(
                 {
-                    "HF_HUB_ENABLE_HF_TRANSFER": "1",
-                    "ACHATBOT_PKG": "1",
-                    "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
-                    "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
-                    # asr module engine TAG, default whisper_timestamped_asr
-                    "ASR_TAG": "sense_voice_asr",
-                    "ASR_LANG": "zn",
-                    "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
-                    # llm processor model, default:google gemini_flash_latest
-                    "GOOGLE_LLM_MODEL": "gemini-2.0-flash",
                     "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "deepseek-ai/deepseek-vl2-tiny")}',
-                    # tts module engine TAG,default tts_edge
-                    "TTS_TAG": "tts_edge",
                 }
             )
         ),
         "minicpmo": (
-            modal.Image.debian_slim(python_version="3.11")
-            .apt_install("git", "git-lfs", "ffmpeg")
-            .pip_install(
+            vision_bot_img.pip_install(
                 [
-                    "achatbot["
-                    "fastapi_bot_server,"
-                    "livekit,livekit-api,daily,agora,"
-                    "silero_vad_analyzer,daily_langchain_rag_bot,"
-                    "sense_voice_asr,deepgram_asr_processor,"
-                    "llm_transformers_manual_vision_voice_minicpmo,"
-                    "openai_llm_processor,google_llm_processor,litellm_processor,"
-                    "tts_edge,"
-                    "deep_translator,together_ai,"
-                    "queue"
-                    f"]=={achatbot_version}",
+                    f"achatbot[llm_transformers_manual_vision_voice_minicpmo]=={achatbot_version}",
                 ],
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
-            )
-            .env(
+            ).env(
                 {
-                    "HF_HUB_ENABLE_HF_TRANSFER": "1",
-                    "ACHATBOT_PKG": "1",
-                    "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
-                    "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
-                    # asr module engine TAG, default whisper_timestamped_asr
-                    "ASR_TAG": "sense_voice_asr",
-                    "ASR_LANG": "zn",
-                    "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
-                    # llm processor model, default:google gemini_flash_latest
-                    "GOOGLE_LLM_MODEL": "gemini-2.0-flash",
                     "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "openbmb/MiniCPM-o-2_6")}',
-                    # tts module engine TAG,default tts_edge
-                    "TTS_TAG": "tts_edge",
                 }
             )
         ),
         "kimi": (
-            modal.Image.debian_slim(python_version="3.11")
-            .apt_install("git", "git-lfs", "ffmpeg")
-            .pip_install(
+            vision_bot_img.pip_install(
                 [
-                    "achatbot["
-                    "fastapi_bot_server,"
-                    "livekit,livekit-api,daily,agora,"
-                    "silero_vad_analyzer,daily_langchain_rag_bot,"
-                    "sense_voice_asr,deepgram_asr_processor,"
-                    "llm_transformers_manual_vision_kimi,"
-                    "openai_llm_processor,google_llm_processor,litellm_processor,"
-                    "tts_edge,"
-                    "deep_translator,together_ai,"
-                    "queue"
-                    f"]=={achatbot_version}",
+                    f"achatbot[llm_transformers_manual_vision_kimi]=={achatbot_version}",
                 ],
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
-            )
-            .env(
+            ).env(
                 {
-                    "ACHATBOT_PKG": "1",
-                    "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
-                    # asr module engine TAG, default whisper_timestamped_asr
-                    "ASR_TAG": "sense_voice_asr",
-                    "ASR_LANG": "zn",
-                    "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
-                    # llm processor model, default:google gemini_flash_latest
-                    "GOOGLE_LLM_MODEL": "gemini-2.0-flash",
-                    # tts module engine TAG,default tts_edge
-                    "TTS_TAG": "tts_edge",
                     "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
                 }
             )

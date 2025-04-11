@@ -237,7 +237,7 @@ llm_transformers_manual_vision_deepseekvl2 = [
     "timm>=0.9.16",
 ]
 llm_transformers_manual_vision_kimi = [
-    "numpy==1.26",
+    "numpy==1.26.2",
     "blobfile",
     "achatbot[llm_transformers_manual_vision,tiktoken,accelerate]",
 ]
