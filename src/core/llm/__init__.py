@@ -33,6 +33,8 @@ class LLMEnvInit:
             from .transformers.generator import TransformersGenerator
         elif "llm_transformers_manual_vision_qwen" == tag:
             from .transformers import manual_vision_qwen
+        elif "llm_transformers_manual_vision_qwen2_5" == tag:
+            from .transformers import manual_vision_qwen
         elif "llm_transformers_manual_vision_llama" == tag:
             from .transformers import manual_vision_llama
         elif "llm_transformers_manual_vision_molmo" == tag:
@@ -291,6 +293,7 @@ class LLMEnvInit:
         "llm_transformers_manual": get_llm_transformers_args,
         "llm_transformers_pipeline": get_llm_transformers_args,
         "llm_transformers_manual_vision_qwen": get_llm_transformers_args,
+        "llm_transformers_manual_vision_qwen2_5": get_llm_transformers_args,
         "llm_transformers_manual_vision_llama": get_llm_transformers_args,
         "llm_transformers_manual_vision_molmo": get_llm_transformers_args,
         "llm_transformers_manual_vision_deepseek": get_llm_transformers_args,
