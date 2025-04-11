@@ -267,10 +267,9 @@ class ContainerRuntimeConfig:
                 }
             )
             .pip_install(
-                "achatbot[llm_transformers_manual_vision_kimi]==0.0.9.30",
+                "achatbot[llm_transformers_manual_vision_kimi]==0.0.9.31",
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
             )
-            .pip_install("transformers==4.50.3")
         ),
     }
 

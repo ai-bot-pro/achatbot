@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 name = "achatbot"
 #dynamic = ["version"]
 # todo
-version = "0.0.9.30"
+version = "0.0.9.31"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -203,8 +203,7 @@ flashinfer-python = ["flashinfer-python==0.2.3"]
 # vision llm
 llm_transformers_manual_vision = [
     #"transformers@git+https://github.com/huggingface/transformers",
-    # https://github.com/huggingface/transformers/releases/tag/v4.45.0
-    "transformers~=4.45.2",
+    "transformers~=4.50.3",
     "qwen-vl-utils",
     "av",
     "torch~=2.2.2",
@@ -238,14 +237,9 @@ llm_transformers_manual_vision_deepseekvl2 = [
     "timm>=0.9.16",
 ]
 llm_transformers_manual_vision_kimi = [
-    "torchvision~=0.17.2",
-    "transformers==4.50.3",
-    "qwen-vl-utils",
-    "torch~=2.2.2",
-    "torchvision~=0.17.2",
     "numpy==1.26",
     "blobfile",
-    "achatbot[tiktoken,accelerate]",
+    "achatbot[llm_transformers_manual_vision,tiktoken,accelerate]",
 ]
 
 # voice llm

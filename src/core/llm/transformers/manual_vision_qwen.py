@@ -5,7 +5,7 @@ import torch
 
 try:
     from qwen_vl_utils import process_vision_info
-    from transformers import Qwen2VLForConditionalGeneration, AutoProcessor, TextIteratorStreamer
+    from transformers import AutoProcessor, TextIteratorStreamer
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
@@ -27,11 +27,12 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
     TAG = "llm_transformers_manual_vision_qwen"
 
     def __init__(self, **args) -> None:
-        self.args = TransformersLMArgs(**args)
-        if self.args.lm_torch_dtype != "auto":
-            self.torch_dtype = getattr(torch, self.args.lm_torch_dtype)
+        if self.TAG == "llm_transformers_manual_vision_qwen2_5":
+            from transformers import Qwen2_5_VLForConditionalGeneration
         else:
-            self.torch_dtype = "auto"
+            from transformers import Qwen2VLForConditionalGeneration
+
+        self.args = TransformersLMArgs(**args)
 
         if self.args.lm_device_map:
             self._model = Qwen2VLForConditionalGeneration.from_pretrained(
@@ -165,3 +166,10 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
         self._chat_history.append({"role": "assistant", "content": generated_text})
 
         torch.cuda.empty_cache()
+
+
+class TransformersManualVisionQwen2_5LLM(TransformersManualVisionQwenLLM):
+    TAG = "llm_transformers_manual_vision_qwen2_5"
+
+    def __init__(self, **args) -> None:
+        super().__init__(**args)
