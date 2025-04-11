@@ -36,9 +36,9 @@ class TransformersLMArgs(LMGenerateArgs):
     )
     # https://huggingface.co/docs/transformers/perf_infer_gpu_one
     lm_attn_impl: str | None = field(
-        default=None,
+        default="eager",
         metadata={
-            "help": "The attention implementation to use. One of 'sdpa', 'flash_attention_2', default no attention implementation."
+            "help": "The attention implementation to use. One of 'sdpa', 'flash_attention_2', default no attention implementation, use eager."
         },
     )
     user_role: str = field(

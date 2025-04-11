@@ -65,6 +65,8 @@ modal run src/download_models.py --repo-ids "canopylabs/orpheus-3b-0.1-ft"
 modal run src/download_models.py --repo-ids "hubertsiuzdak/snac_24khz"
 
 modal run src/download_models.py --repo-ids "Qwen/Qwen2.5-0.5B"
+
+modal run src/download_models.py --repo-ids "FunAudioLLM/SenseVoiceSmall"
 """
 
 

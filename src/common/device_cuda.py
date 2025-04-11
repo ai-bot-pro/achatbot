@@ -101,7 +101,6 @@ class CUDAInfo:
             self.verbose and print(
                 "cuInit failed with error code %d: %s" % (result, error_str.value.decode())
             )
-            return 1
         result = cuda.cuDeviceGetCount(ctypes.byref(nGpus))
         if result != CUDA_SUCCESS:
             cuda.cuGetErrorString(result, ctypes.byref(error_str))
@@ -109,7 +108,7 @@ class CUDAInfo:
                 "cuDeviceGetCount failed with error code %d: %s"
                 % (result, error_str.value.decode())
             )
-            return 1
+            return
         self.verbose and print("Found %d device(s)." % nGpus.value)
         for i in range(nGpus.value):
             result = cuda.cuDeviceGet(ctypes.byref(device), i)
@@ -118,7 +117,7 @@ class CUDAInfo:
                 self.verbose and print(
                     "cuDeviceGet failed with error code %d: %s" % (result, error_str.value.decode())
                 )
-                return 1
+                return
             self.verbose and print("Device: %d" % i)
             if cuda.cuDeviceGetName(ctypes.c_char_p(name), len(name), device) == CUDA_SUCCESS:
                 self.verbose and print("  Name: %s" % (name.split(b"\0", 1)[0].decode()))

@@ -14,7 +14,7 @@ from src.processors.app_message_processor import (
     BotTTSTextProcessor,
     UserTranscriptionProcessor,
 )
-from src.processors.tranlate.google_translate_processor import GoogleTranslateProcessor
+from src.processors.translation.google_translate_processor import GoogleTranslateProcessor
 from src.processors.aggregators.llm_response import (
     LLMAssistantResponseAggregator,
     LLMUserResponseAggregator,

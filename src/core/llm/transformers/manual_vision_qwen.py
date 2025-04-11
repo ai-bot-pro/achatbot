@@ -5,7 +5,7 @@ import torch
 
 try:
     from qwen_vl_utils import process_vision_info
-    from transformers import Qwen2VLForConditionalGeneration, AutoProcessor, TextIteratorStreamer
+    from transformers import AutoProcessor, TextIteratorStreamer
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
@@ -15,6 +15,7 @@ except ModuleNotFoundError as e:
     raise Exception(f"Missing module: {e}")
 
 
+from src.common.random import set_all_random_seed
 from src.common.chat_history import ChatHistory
 from src.common.session import Session
 from src.types.speech.language import TO_LLM_LANGUAGE
@@ -26,14 +27,19 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
     TAG = "llm_transformers_manual_vision_qwen"
 
     def __init__(self, **args) -> None:
-        self.args = TransformersLMArgs(**args)
-        if self.args.lm_torch_dtype != "auto":
-            self.torch_dtype = getattr(torch, self.args.lm_torch_dtype)
+        if self.TAG == "llm_transformers_manual_vision_qwen2_5":
+            from transformers import (
+                Qwen2_5_VLForConditionalGeneration as QwenVLForConditionalGeneration,
+            )
         else:
-            self.torch_dtype = "auto"
+            from transformers import (
+                Qwen2VLForConditionalGeneration as QwenVLForConditionalGeneration,
+            )
+
+        self.args = TransformersLMArgs(**args)
 
         if self.args.lm_device_map:
-            self._model = Qwen2VLForConditionalGeneration.from_pretrained(
+            self._model = QwenVLForConditionalGeneration.from_pretrained(
                 self.args.lm_model_name_or_path,
                 torch_dtype=self.args.lm_torch_dtype,
                 #!NOTE: https://github.com/huggingface/transformers/issues/20896
@@ -44,7 +50,7 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
             ).eval()
         else:
             self._model = (
-                Qwen2VLForConditionalGeneration.from_pretrained(
+                QwenVLForConditionalGeneration.from_pretrained(
                     self.args.lm_model_name_or_path,
                     torch_dtype=self.args.lm_torch_dtype,
                     attn_implementation=self.args.lm_attn_impl,
@@ -112,7 +118,11 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
             streamer=streamer,
         )
 
-    def generate(self, session: Session):
+    def generate(self, session: Session, **kwargs):
+        torch.cuda.empty_cache()
+        seed = kwargs.get("seed", self.args.lm_gen_seed)
+        set_all_random_seed(seed)
+
         prompt = session.ctx.state["prompt"]
         if isinstance(prompt, tuple):
             prompt, language_code = prompt
@@ -158,3 +168,12 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
             generated_text += new_text
             yield new_text
         self._chat_history.append({"role": "assistant", "content": generated_text})
+
+        torch.cuda.empty_cache()
+
+
+class TransformersManualVisionQwen2_5LLM(TransformersManualVisionQwenLLM):
+    TAG = "llm_transformers_manual_vision_qwen2_5"
+
+    def __init__(self, **args) -> None:
+        super().__init__(**args)
