@@ -41,22 +41,22 @@ def split_model(model_name):
         "moonshotai/Kimi-VL-A3B-Thinking": [13, 14],  # 2 GPU for 16b
     }
     num_layers_per_gpu = model_splits[model_name]
-    num_layers = sum(num_layers_per_gpu)
+    # num_layers = sum(num_layers_per_gpu)
     layer_cnt = 0
     for i, num_layer in enumerate(num_layers_per_gpu):
         for j in range(num_layer):
-            device_map[f"language.model.layers.{layer_cnt}"] = i
+            device_map[f"language_model.model.layers.{layer_cnt}"] = i
             layer_cnt += 1
 
-    # exlude layer and last layer on cuda 0
-    device_map["vision"] = 0
-    device_map["projector"] = 0
-    device_map["image_newline"] = 0
-    device_map["view_seperator"] = 0
-    device_map["language.model.embed_tokens"] = 0
-    device_map["language.model.norm"] = 0
-    device_map["language.lm_head"] = 0
-    device_map[f"language.model.layers.{num_layers - 1}"] = 0
+    # exlude layer and first layer on cuda 0
+    device_map["vision_tower"] = 0
+    device_map["multi_modal_projector"] = 0
+    # device_map["image_newline"] = 0
+    # device_map["view_seperator"] = 0
+    device_map["language_model.model.embed_tokens"] = 0
+    device_map["language_model.model.norm"] = 0
+    device_map["language_model.lm_head"] = 0
+    device_map[f"language_model.model.layers.0"] = 0
     return device_map
 
 
