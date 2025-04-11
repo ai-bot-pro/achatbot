@@ -162,4 +162,4 @@ class BotTaskRunnerBE(BotTaskRunner):
                     logging.info(f"bot {bot_info.chat_bot_name} running")
                     await self.run_bot(bot_info)
                 case _:
-                    logging.warn(f"{msg} unsupport")
+                    logging.warning(f"{msg} unsupport")

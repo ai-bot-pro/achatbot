@@ -28,14 +28,18 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
 
     def __init__(self, **args) -> None:
         if self.TAG == "llm_transformers_manual_vision_qwen2_5":
-            from transformers import Qwen2_5_VLForConditionalGeneration
+            from transformers import (
+                Qwen2_5_VLForConditionalGeneration as QwenVLForConditionalGeneration,
+            )
         else:
-            from transformers import Qwen2VLForConditionalGeneration
+            from transformers import (
+                Qwen2VLForConditionalGeneration as QwenVLForConditionalGeneration,
+            )
 
         self.args = TransformersLMArgs(**args)
 
         if self.args.lm_device_map:
-            self._model = Qwen2VLForConditionalGeneration.from_pretrained(
+            self._model = QwenVLForConditionalGeneration.from_pretrained(
                 self.args.lm_model_name_or_path,
                 torch_dtype=self.args.lm_torch_dtype,
                 #!NOTE: https://github.com/huggingface/transformers/issues/20896
@@ -46,7 +50,7 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
             ).eval()
         else:
             self._model = (
-                Qwen2VLForConditionalGeneration.from_pretrained(
+                QwenVLForConditionalGeneration.from_pretrained(
                     self.args.lm_model_name_or_path,
                     torch_dtype=self.args.lm_torch_dtype,
                     attn_implementation=self.args.lm_attn_impl,

@@ -22,7 +22,6 @@ class ContainerRuntimeConfig:
                     "deep_translator,together_ai,"
                     "queue"
                     f"]=={achatbot_version}",
-                    "huggingface_hub[hf_transfer]==0.24.7",
                 ],
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
             )
@@ -59,7 +58,6 @@ class ContainerRuntimeConfig:
                     "deep_translator,together_ai,"
                     "queue"
                     f"]=={achatbot_version}",
-                    "huggingface_hub[hf_transfer]==0.24.7",
                 ],
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
             )
@@ -97,7 +95,6 @@ class ContainerRuntimeConfig:
                     "deep_translator,together_ai,"
                     "queue"
                     f"]=={achatbot_version}",
-                    "huggingface_hub[hf_transfer]==0.24.7",
                 ],
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
             )
@@ -135,7 +132,6 @@ class ContainerRuntimeConfig:
                     "deep_translator,together_ai,"
                     "queue"
                     f"]=={achatbot_version}",
-                    "huggingface_hub[hf_transfer]==0.24.7",
                 ],
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
             )
@@ -173,7 +169,6 @@ class ContainerRuntimeConfig:
                     "deep_translator,together_ai,"
                     "queue"
                     f"]=={achatbot_version}",
-                    "huggingface_hub[hf_transfer]==0.24.7",
                 ],
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
             )
@@ -211,7 +206,6 @@ class ContainerRuntimeConfig:
                     "deep_translator,together_ai,"
                     "queue"
                     f"]=={achatbot_version}",
-                    "huggingface_hub[hf_transfer]==0.24.7",
                 ],
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
             )
@@ -264,11 +258,8 @@ class ContainerRuntimeConfig:
                     "GOOGLE_LLM_MODEL": "gemini-2.0-flash",
                     # tts module engine TAG,default tts_edge
                     "TTS_TAG": "tts_edge",
+                    "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
                 }
-            )
-            .pip_install(
-                "achatbot[llm_transformers_manual_vision_kimi]==0.0.9.31",
-                extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
             )
         ),
     }
@@ -331,6 +322,7 @@ app = modal.App(ContainerRuntimeConfig.get_app_name())
 class Srv:
     @modal.enter()
     def enter(self):
+        # run container runtime to enter when container is starting
         import subprocess
         import torch
 
@@ -339,7 +331,7 @@ class Srv:
         if torch.cuda.is_available():
             gpu_prop = torch.cuda.get_device_properties("cuda:0")
             print(gpu_prop)
-            torch.multiprocessing.set_start_method("spawn")
+            torch.multiprocessing.set_start_method("spawn", force=True)
         else:
             print("CUDA is not available.")
 

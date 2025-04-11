@@ -36,10 +36,13 @@ from src.common.types import BotRunArgs
 from src.common.interface import IBot, IVisionDetector
 from src.common.session import Session
 from src.common.types import SessionCtx
+from src.common.logger import Logger
 
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
+
+Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
 
 
 class AIBot(IBot):
