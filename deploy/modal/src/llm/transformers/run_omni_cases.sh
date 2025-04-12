@@ -64,7 +64,7 @@ run() {
       cd src/llm/transformers/
     else
       cd $SCRIPT_DIR
-      wget -q https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/deploy/modal/src/llm/transformers/$MODEL_TYPE.py -O $MODEL_TYPE.py
+      wget -q https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/feat/vision_voice/deploy/modal/src/llm/transformers/$MODEL_TYPE.py -O $MODEL_TYPE.py
     fi
     all_cases=(
       "universal_audio_understanding"
