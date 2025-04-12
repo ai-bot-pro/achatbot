@@ -37,6 +37,9 @@ assets_dir = modal.Volume.from_name("assets", create_if_missing=True)
 
 # NOTE: if want to generate speech, need use this system prompt to generate speech
 SPEECH_SYS_PROMPT = "You are Qwen, a virtual human developed by the Qwen Team, Alibaba Group, capable of perceiving auditory and visual inputs, as well as generating text and speech."
+# Voice settings
+SPEAKER_LIST = ["Chelsie", "Ethan"]
+DEFAULT_SPEAKER = "Ethan"
 
 with omni_img.imports():
     import torch, torchaudio
@@ -68,7 +71,13 @@ with omni_img.imports():
 
     subprocess.run("nvidia-smi", shell=True)
 
-    def inference(messages, return_audio=False, use_audio_in_video=False, thinker_do_sample=False):
+    def inference(
+        messages,
+        return_audio=False,
+        use_audio_in_video=False,
+        thinker_do_sample=False,
+        speaker=DEFAULT_SPEAKER,
+    ):
         text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         # image_inputs, video_inputs = process_vision_info([messages])
         audios, images, videos = process_mm_info(messages, use_audio_in_video=use_audio_in_video)
@@ -87,6 +96,7 @@ with omni_img.imports():
             **inputs,
             use_audio_in_video=use_audio_in_video,
             return_audio=return_audio,
+            speaker=speaker,
             thinker_do_sample=thinker_do_sample,
         )
         print("\n====generate use memory=====\n")
@@ -96,14 +106,14 @@ with omni_img.imports():
         )
         print("\n=========\n")
         # print(output)
-        text = output
+        text_token_ids = output
         audio = None
         if return_audio and len(output) > 1:
-            text = output[0].detach()
+            text_token_ids = output[0].detach()
             audio = output[1].unsqueeze(0).detach()
 
         text = processor.batch_decode(
-            text, skip_special_tokens=True, clean_up_tokenization_spaces=False
+            text_token_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False
         )
 
         torch.cuda.empty_cache()
