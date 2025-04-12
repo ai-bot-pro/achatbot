@@ -10,7 +10,7 @@ omni_img = (
         add_python="3.10",
     )
     .apt_install("git", "git-lfs", "ffmpeg", "cmake")
-    .pip_install("wheel", "openai", "qwen-omni-utils")
+    .pip_install("wheel", "openai", "qwen-omni-utils[decord]")
     .run_commands(
         f"pip install git+https://github.com/huggingface/transformers@{tag_or_commit}",
     )
@@ -56,7 +56,10 @@ with omni_img.imports():
 
     processor = Qwen2_5OmniProcessor.from_pretrained(model_path)
 
+    subprocess.run("nvidia-smi", shell=True)
+
     def inference(messages, return_audio=False, use_audio_in_video=False, thinker_do_sample=False):
+        print("starting inference")
         text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         # image_inputs, video_inputs = process_vision_info([messages])
         audios, images, videos = process_mm_info(messages, use_audio_in_video=use_audio_in_video)
@@ -77,16 +80,21 @@ with omni_img.imports():
             return_audio=return_audio,
             thinker_do_sample=thinker_do_sample,
         )
+        print("generate done")
+        subprocess.run("nvidia-smi", shell=True)
         # print(output)
         text = output
         audio = None
         if return_audio and len(output) > 1:
-            text = output[0]
-            audio = output[1].unsqueeze(0)
+            text = output[0].detach()
+            audio = output[1].unsqueeze(0).detach()
 
         text = processor.batch_decode(
             text, skip_special_tokens=True, clean_up_tokenization_spaces=False
         )
+
+        torch.cuda.empty_cache()
+        subprocess.run("nvidia-smi", shell=True)
 
         return text, audio
 
@@ -311,7 +319,7 @@ IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task omni_chattin
 IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_for_music
 
 # vision(video with audio) to text and speech with multi rounds chat, but need more GPU memory
-IMAGE_GPU=A100-80G modal run src/llm/transformers/qwen2_5omni.py --task multi_round_omni_chatting
+IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen2_5omni.py --task multi_round_omni_chatting
 """
 
 

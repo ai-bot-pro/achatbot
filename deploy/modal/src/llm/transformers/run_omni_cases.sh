@@ -40,7 +40,7 @@ usage() {
   echo "                       video_information_extracting, screen_recording_interaction"
   echo "                       omni_chatting_for_math, omni_chatting_for_music, multi_round_omni_chatting"
   echo "  -d IMAGE_GPU       Set the GPU image (default: L40S)."
-  echo "                     Valid options: A10G A100 L4 L40S H100 or multi-gpu: L4:3 L40S:2 https://fullstackdeeplearning.com/cloud-gpus/"
+  echo "                     Valid options: A10G A100 A100-80GB L4 L40S H100 https://fullstackdeeplearning.com/cloud-gpus/"
   echo "  -t TAG_OR_COMMIT   transformers tag or commit (default: 21dbefaa54e5bf180464696aa70af0bfc7a61d53)."
   echo "e.g.: "
   echo "bash run_omni_cases.sh -s all"
@@ -79,11 +79,13 @@ run() {
     case $CASE in
       all)
         for CASE in "${all_cases[@]}"; do
+          [[ $CASE == "multi_round_omni_chatting" ]] && IMAGE_GPU="A100-80GB"
           IMAGE_GPU=$IMAGE_GPU modal run $MODEL_TYPE.py --task $CASE
         done
         ;;
       *)
         if [[ " ${all_cases[@]} " =~ " ${CASE} " ]]; then
+          [[ $CASE == "multi_round_omni_chatting" ]] && IMAGE_GPU="A100-80GB"
           echo "IMAGE_GPU=$IMAGE_GPU modal run $MODEL_TYPE.py --task $CASE"
           IMAGE_GPU=$IMAGE_GPU modal run $MODEL_TYPE.py --task $CASE
         else
@@ -159,7 +161,7 @@ if [[ ! " ${ALLOWED_MODEL_TYPE[@]} " =~ " ${MODEL_TYPE} " ]]; then
   exit 1
 fi
 
-ALLOWED_GPUS=("A100" "A100-80G" "A10G" "L4" "L40S" "H100")
+ALLOWED_GPUS=("A100" "A100-80GB" "A10G" "L4" "L40S" "H100")
 if [[ ! " ${ALLOWED_GPUS[@]} " =~ " ${IMAGE_GPU} " ]]; then
   echo "if use flash attention, need gpu arch >= 8.0 e.g.:  A100 A100-80G A10G L4 L40S H100"
 fi
