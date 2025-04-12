@@ -97,16 +97,28 @@ run() {
     esac
 }
 
-download() {
-    if [ -e "src/download_models.py" ]; then
-      echo "src/download_models.py exists"
-      cd src
-    else
-      cd $SCRIPT_DIR
-      wget -q https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/deploy/modal/src/download_models.py -O download_models.py
-    fi
-    modal run download_models.py --repo-ids "Qwen/Qwen2.5-Omni-7B"
-    modal run download_assets.py --asset-urls "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-Audio/audio/guess_age_gender.wav,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-Audio/audio/translate_to_chinese.wav,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/draw1.mp4,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/draw2.mp4,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/draw3.mp4,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/screen.mp4,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/music.mp4,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/math.mp4,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-Audio/audio/1272-128104-0000.flac,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/BAC009S0764W0121.wav,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/10000611681338527501.wav,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/7105431834829365765.wav,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/cough.wav,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/shopping.mp4"
+download_models() {
+  if [ -e "src/download_models.py" ]; then
+    echo "src/download_models.py exists"
+    cd src
+  else
+    cd $SCRIPT_DIR
+    wget -q https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/deploy/modal/src/download_models.py -O download_models.py
+  fi
+
+  modal run download_models.py --repo-ids "Qwen/Qwen2.5-Omni-7B"
+}
+
+download_assets() {
+  if [ -e "src/download_assets.py" ]; then
+    echo "src/download_assets.py exists"
+    cd src
+  else
+    cd $SCRIPT_DIR
+    wget -q https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/deploy/modal/src/download_assets.py -O download_assets.py
+  fi
+
+  modal run download_assets.py --asset-urls "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-Audio/audio/guess_age_gender.wav,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-Audio/audio/translate_to_chinese.wav,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/draw1.mp4,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/draw2.mp4,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/draw3.mp4,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/screen.mp4,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/music.mp4,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/math.mp4,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-Audio/audio/1272-128104-0000.flac,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/BAC009S0764W0121.wav,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/10000611681338527501.wav,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/7105431834829365765.wav,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/cough.wav,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/shopping.mp4"
 }
 
 
@@ -175,14 +187,16 @@ case $STAGE in
         run
         ;;
     download)
-        download
+        download_models
+        download_assets
         ;;
     run_all)
         CASE=all
         run
         ;;
     all)
-        download
+        download_models
+        download_assets
         CASE=all
         run
         ;;
