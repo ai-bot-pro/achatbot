@@ -14,8 +14,14 @@ omni_img = (
     .run_commands(
         f"pip install git+https://github.com/huggingface/transformers@{tag_or_commit}",
     )
-    .pip_install("accelerate")
-    .pip_install("torch", "torchvision", "torchaudio")
+    .pip_install(
+        "accelerate",
+        "torch",
+        "torchvision",
+        "torchaudio",
+        "soundfile==0.13.0",
+        "librosa==0.11.0",
+    )
     .pip_install("flash-attn", extra_options="--no-build-isolation")
     .env(
         {
@@ -50,6 +56,10 @@ with omni_img.imports():
         device_map="auto",
         attn_implementation="flash_attention_2",
     ).eval()
+
+    # NOTE: when disable talker, generate must set return_audio=False
+    # model.disable_talker()
+
     model_million_params = sum(p.numel() for p in model.parameters()) / 1e6
     # print(model)
     print(f"{model_million_params} M parameters")
@@ -59,7 +69,6 @@ with omni_img.imports():
     subprocess.run("nvidia-smi", shell=True)
 
     def inference(messages, return_audio=False, use_audio_in_video=False, thinker_do_sample=False):
-        print("starting inference")
         text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         # image_inputs, video_inputs = process_vision_info([messages])
         audios, images, videos = process_mm_info(messages, use_audio_in_video=use_audio_in_video)
@@ -80,8 +89,12 @@ with omni_img.imports():
             return_audio=return_audio,
             thinker_do_sample=thinker_do_sample,
         )
-        print("generate done")
-        subprocess.run("nvidia-smi", shell=True)
+        print("\n====generate use memory=====\n")
+        subprocess.run(
+            """nvidia-smi --query-gpu=index,memory.used,memory.total --format=csv,noheader,nounits | awk -F',' '{print "GPU "$1": "$2"/"$3" MiB\\n"}'""",
+            shell=True,
+        )
+        print("\n=========\n")
         # print(output)
         text = output
         audio = None
@@ -94,7 +107,6 @@ with omni_img.imports():
         )
 
         torch.cuda.empty_cache()
-        subprocess.run("nvidia-smi", shell=True)
 
         return text, audio
 
@@ -301,6 +313,59 @@ def video_information_extracting():
         print(texts[0])
 
 
+def batch_requests():
+    """need return_audio=False"""
+    # Conversation with video only
+    conversation1 = [
+        {"role": "system", "content": SPEECH_SYS_PROMPT},
+        {
+            "role": "user",
+            "content": [
+                {"type": "video", "video": os.path.join(ASSETS_DIR, "draw1.mp4")},
+            ],
+        },
+    ]
+
+    # Conversation with audio only
+    conversation2 = [
+        {"role": "system", "content": SPEECH_SYS_PROMPT},
+        {
+            "role": "user",
+            "content": [
+                {"type": "audio", "audio": os.path.join(ASSETS_DIR, "1272-128104-0000.flac")},
+            ],
+        },
+    ]
+
+    # Conversation with pure text
+    conversation3 = [
+        {"role": "system", "content": SPEECH_SYS_PROMPT},
+        {"role": "user", "content": "who are you?"},
+    ]
+
+    # Conversation with mixed media
+    conversation4 = [
+        {"role": "system", "content": SPEECH_SYS_PROMPT},
+        {
+            "role": "user",
+            "content": [
+                {"type": "image", "image": os.path.join(ASSETS_DIR, "03-Confusing-Pictures.jpg")},
+                {"type": "video", "video": os.path.join(ASSETS_DIR, "music.mp4")},
+                {"type": "audio", "audio": os.path.join(ASSETS_DIR, "1272-128104-0000.flac")},
+                {
+                    "type": "text",
+                    "text": "What are the elements can you see and hear in these medias?",
+                },
+            ],
+        },
+    ]
+
+    # Combine messages for batch processing
+    conversations = [conversation1, conversation2, conversation3, conversation4]
+    texts, _ = inference(conversations, return_audio=False, use_audio_in_video=True)
+    print(texts)
+
+
 """
 # NOTE: if want to generate speech, need use SPEECH_SYS_PROMPT to generate speech
 
@@ -320,6 +385,9 @@ IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task omni_chattin
 
 # vision(video with audio) to text and speech with multi rounds chat, but need more GPU memory
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen2_5omni.py --task multi_round_omni_chatting
+
+# batch requests
+IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen2_5omni.py --task batch_requests
 """
 
 
@@ -333,6 +401,7 @@ def main(task: str = "universal_audio_understanding"):
         "omni_chatting_for_math": omni_chatting_for_math,
         "omni_chatting_for_music": omni_chatting_for_music,
         "multi_round_omni_chatting": multi_round_omni_chatting,
+        "batch_requests": batch_requests,
     }
     if task not in tasks:
         raise ValueError(f"task {task} not found")
