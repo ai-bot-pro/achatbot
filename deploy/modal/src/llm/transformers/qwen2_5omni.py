@@ -1,5 +1,7 @@
+from time import perf_counter
 import modal
 import os
+from transformers.generation.streamers import BaseStreamer
 
 app = modal.App("qwen2_5_omni")
 tag_or_commit = os.getenv("TAG_OR_COMMIT", "21dbefaa54e5bf180464696aa70af0bfc7a61d53")
@@ -42,10 +44,17 @@ SPEAKER_LIST = ["Chelsie", "Ethan"]
 DEFAULT_SPEAKER = "Ethan"
 
 with omni_img.imports():
-    import torch, torchaudio
-    from transformers import Qwen2_5OmniForConditionalGeneration, Qwen2_5OmniProcessor
-    from qwen_omni_utils import process_mm_info
     import subprocess
+    from threading import Thread
+    from queue import Queue
+
+    import torch, torchaudio
+    from transformers import (
+        Qwen2_5OmniForConditionalGeneration,
+        Qwen2_5OmniProcessor,
+        TextIteratorStreamer,
+    )
+    from qwen_omni_utils import process_mm_info
 
     subprocess.run("nvidia-smi --version", shell=True)
     subprocess.run("nvcc --version", shell=True)
@@ -119,6 +128,68 @@ with omni_img.imports():
         torch.cuda.empty_cache()
 
         return text, audio
+
+    def inference_stream(
+        messages,
+        return_audio=False,
+        use_audio_in_video=False,
+        thinker_do_sample=False,
+        speaker=DEFAULT_SPEAKER,
+    ):
+        text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        # image_inputs, video_inputs = process_vision_info([messages])
+        audios, images, videos = process_mm_info(messages, use_audio_in_video=use_audio_in_video)
+        inputs = processor(
+            text=text,
+            audio=audios,
+            images=images,
+            videos=videos,
+            return_tensors="pt",
+            padding=True,
+            use_audio_in_video=use_audio_in_video,
+        )
+        inputs = inputs.to(model.device).to(model.dtype)
+
+        streamer = TextIteratorStreamer(processor, skip_prompt=True, skip_special_tokens=True)
+        streamer = TokenStreamer(skip_prompt=True)
+
+        generation_kwargs = dict(
+            **inputs,
+            streamer=streamer,
+            use_audio_in_video=use_audio_in_video,
+            return_audio=return_audio,
+            speaker=speaker,
+            thinker_do_sample=thinker_do_sample,
+            # do_sample=True,
+            top_k=10,
+            top_p=0.9,
+            temperature=0.95,
+            repetition_penalty=1.1,
+            min_new_tokens=0,
+            max_new_tokens=2048,
+        )
+        thread = Thread(target=model.generate, kwargs=generation_kwargs)
+        thread.start()
+
+        # text_token_ids = output
+        # audio = None
+        # if return_audio and len(output) > 1:
+        #    text_token_ids = output[0].detach()
+        #    audio = output[1].unsqueeze(0).detach()
+
+        generated_text = ""
+        times = []
+        start_time = perf_counter()
+        for new_text in streamer:
+            print(new_text)
+            times.append(perf_counter() - start_time)
+            start_time = perf_counter()
+            generated_text += new_text
+            yield new_text
+        print(
+            f"generate first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s"
+        )
+        torch.cuda.empty_cache()
 
 
 @app.function(
@@ -376,6 +447,98 @@ def batch_requests():
     print(texts)
 
 
+def asr_stream():
+    for case in [
+        {
+            "audio_path": "1272-128104-0000.flac",
+            "prompt": "Listen to the provided English speech and produce a translation in Chinese text.",
+            "sys_prompt": "You are a speech translation model.",
+        },
+        {
+            "audio_path": "BAC009S0764W0121.wav",
+            "prompt": "请将这段中文语音转换为纯文本，去掉标点符号。",
+            "sys_prompt": "You are a speech recognition model.",
+        },
+    ]:
+        audio_path = os.path.join(ASSETS_DIR, case["audio_path"])
+        messages = [
+            {"role": "system", "content": case["sys_prompt"]},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": case["prompt"]},
+                    {"type": "audio", "audio": audio_path},
+                ],
+            },
+        ]
+        text_streamer = inference_stream(
+            messages, use_audio_in_video=True, return_audio=False, thinker_do_sample=True
+        )
+        for text in text_streamer:
+            print(text)
+
+
+def omni_chatting_for_music_stream():
+    video_path = os.path.join(ASSETS_DIR, "music.mp4")
+    messages = [
+        {
+            "role": "system",
+            "content": SPEECH_SYS_PROMPT,
+        },
+        {
+            "role": "user",
+            "content": [
+                {"type": "video", "video": video_path},
+            ],
+        },
+    ]
+    response, audio = inference_stream(
+        messages, return_audio=True, use_audio_in_video=True, thinker_do_sample=True
+    )
+    print(response[0])
+
+    save_audio_path = os.path.join(ASSETS_DIR, f"generated_{os.path.basename(video_path)}")
+    torchaudio.save(save_audio_path, audio, sample_rate=24000)
+    print(f"Audio saved to {save_audio_path}")
+
+
+
+class TokenStreamer(BaseStreamer):
+    def __init__(self, skip_prompt: bool = False, timeout=None):
+        self.skip_prompt = skip_prompt
+
+        # variables used in the streaming process
+        self.token_queue = Queue()
+        self.stop_signal = None
+        self.next_tokens_are_prompt = True
+        self.timeout = timeout
+
+    def put(self, value):
+        if len(value.shape) > 1 and value.shape[0] > 1:
+            raise ValueError("TextStreamer only supports batch size 1")
+        elif len(value.shape) > 1:
+            value = value[0]
+
+        if self.skip_prompt and self.next_tokens_are_prompt:
+            self.next_tokens_are_prompt = False
+            return
+
+        for token in value.tolist():
+            self.token_queue.put(token)
+
+    def end(self):
+        self.token_queue.put(self.stop_signal)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        value = self.token_queue.get(timeout=self.timeout)
+        if value == self.stop_signal:
+            raise StopIteration()
+        else:
+            return value
+
 """
 # NOTE: if want to generate speech, need use SPEECH_SYS_PROMPT to generate speech
 
@@ -398,6 +561,9 @@ IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen2_5omni.py --task multi_r
 
 # batch requests
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen2_5omni.py --task batch_requests
+
+# stream
+IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task asr_stream
 """
 
 
@@ -412,6 +578,8 @@ def main(task: str = "universal_audio_understanding"):
         "omni_chatting_for_music": omni_chatting_for_music,
         "multi_round_omni_chatting": multi_round_omni_chatting,
         "batch_requests": batch_requests,
+        "asr_stream": asr_stream,
+        #"omni_chatting_for_music_stream": omni_chatting_for_music_stream,
     }
     if task not in tasks:
         raise ValueError(f"task {task} not found")
