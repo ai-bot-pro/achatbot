@@ -129,11 +129,9 @@ with omni_img.imports():
 
         return text, audio
 
-    def inference_stream(
+    def thinker_inference_stream(
         messages,
-        return_audio=False,
         use_audio_in_video=False,
-        thinker_do_sample=False,
         speaker=DEFAULT_SPEAKER,
     ):
         text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
@@ -151,15 +149,14 @@ with omni_img.imports():
         inputs = inputs.to(model.device).to(model.dtype)
 
         streamer = TextIteratorStreamer(processor, skip_prompt=True, skip_special_tokens=True)
-        streamer = TokenStreamer(skip_prompt=True)
 
         generation_kwargs = dict(
             **inputs,
             streamer=streamer,
             use_audio_in_video=use_audio_in_video,
-            return_audio=return_audio,
+            return_audio=False,
             speaker=speaker,
-            thinker_do_sample=thinker_do_sample,
+            thinker_do_sample=True,
             # do_sample=True,
             top_k=10,
             top_p=0.9,
@@ -181,7 +178,64 @@ with omni_img.imports():
         times = []
         start_time = perf_counter()
         for new_text in streamer:
-            print(new_text)
+            times.append(perf_counter() - start_time)
+            start_time = perf_counter()
+            generated_text += new_text
+            yield new_text
+        print(
+            f"generate [{generated_text}] first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s"
+        )
+        torch.cuda.empty_cache()
+
+    def thinker_talker_inference_stream(
+        messages,
+        use_audio_in_video=False,
+        speaker=DEFAULT_SPEAKER,
+    ):
+        text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        # image_inputs, video_inputs = process_vision_info([messages])
+        audios, images, videos = process_mm_info(messages, use_audio_in_video=use_audio_in_video)
+        inputs = processor(
+            text=text,
+            audio=audios,
+            images=images,
+            videos=videos,
+            return_tensors="pt",
+            padding=True,
+            use_audio_in_video=use_audio_in_video,
+        )
+        inputs = inputs.to(model.device).to(model.dtype)
+
+        streamer = TokenStreamer(skip_prompt=True)
+
+        generation_kwargs = dict(
+            **inputs,
+            streamer=streamer,
+            use_audio_in_video=use_audio_in_video,
+            return_audio=True,
+            speaker=speaker,
+            thinker_do_sample=True,
+            # do_sample=True,
+            top_k=10,
+            top_p=0.9,
+            temperature=0.95,
+            repetition_penalty=1.1,
+            min_new_tokens=0,
+            max_new_tokens=2048,
+        )
+        thread = Thread(target=model.generate, kwargs=generation_kwargs)
+        thread.start()
+
+        # text_token_ids = output
+        # audio = None
+        # if return_audio and len(output) > 1:
+        #    text_token_ids = output[0].detach()
+        #    audio = output[1].unsqueeze(0).detach()
+
+        generated_text = ""
+        times = []
+        start_time = perf_counter()
+        for new_text in streamer:
             times.append(perf_counter() - start_time)
             start_time = perf_counter()
             generated_text += new_text
@@ -471,9 +525,7 @@ def asr_stream():
                 ],
             },
         ]
-        text_streamer = inference_stream(
-            messages, use_audio_in_video=True, return_audio=False, thinker_do_sample=True
-        )
+        text_streamer = thinker_inference_stream(messages, use_audio_in_video=True)
         for text in text_streamer:
             print(text)
 
@@ -492,15 +544,12 @@ def omni_chatting_for_music_stream():
             ],
         },
     ]
-    response, audio = inference_stream(
-        messages, return_audio=True, use_audio_in_video=True, thinker_do_sample=True
-    )
+    response, audio = thinker_talker_inference_stream(messages, use_audio_in_video=True)
     print(response[0])
 
     save_audio_path = os.path.join(ASSETS_DIR, f"generated_{os.path.basename(video_path)}")
     torchaudio.save(save_audio_path, audio, sample_rate=24000)
     print(f"Audio saved to {save_audio_path}")
-
 
 
 class TokenStreamer(BaseStreamer):
@@ -514,6 +563,7 @@ class TokenStreamer(BaseStreamer):
         self.timeout = timeout
 
     def put(self, value):
+        print(value)
         if len(value.shape) > 1 and value.shape[0] > 1:
             raise ValueError("TextStreamer only supports batch size 1")
         elif len(value.shape) > 1:
@@ -538,6 +588,7 @@ class TokenStreamer(BaseStreamer):
             raise StopIteration()
         else:
             return value
+
 
 """
 # NOTE: if want to generate speech, need use SPEECH_SYS_PROMPT to generate speech
@@ -564,6 +615,7 @@ IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen2_5omni.py --task batch_r
 
 # stream
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task asr_stream
+IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_for_music_stream
 """
 
 
@@ -579,7 +631,7 @@ def main(task: str = "universal_audio_understanding"):
         "multi_round_omni_chatting": multi_round_omni_chatting,
         "batch_requests": batch_requests,
         "asr_stream": asr_stream,
-        #"omni_chatting_for_music_stream": omni_chatting_for_music_stream,
+        "omni_chatting_for_music_stream": omni_chatting_for_music_stream,
     }
     if task not in tasks:
         raise ValueError(f"task {task} not found")
