@@ -22,7 +22,7 @@ IMAGE_GPU="L40S"
 STAGE="all"
 CASE="all"
 MODEL_TYPE="qwen2_5omni"
-TAG_OR_COMMIT="21dbefaa54e5bf180464696aa70af0bfc7a61d53"
+TAG_OR_COMMIT="d308f221df8405dd5195d61ead02126fb52da66d"
 
 
 #----- function -------
@@ -38,10 +38,10 @@ usage() {
   echo "                       universal_audio_understanding"
   echo "                       voice_chatting"
   echo "                       video_information_extracting, screen_recording_interaction"
-  echo "                       omni_chatting_for_math, omni_chatting_for_music, multi_round_omni_chatting"
+  echo "                       omni_chatting_for_math, omni_chatting_for_music, multi_round_omni_chatting,asr_stream"
   echo "  -d IMAGE_GPU       Set the GPU image (default: L40S)."
   echo "                     Valid options: A10G A100 A100-80GB L4 L40S H100 https://fullstackdeeplearning.com/cloud-gpus/"
-  echo "  -t TAG_OR_COMMIT   transformers tag or commit (default: 21dbefaa54e5bf180464696aa70af0bfc7a61d53)."
+  echo "  -t TAG_OR_COMMIT   transformers tag or commit (default: d308f221df8405dd5195d61ead02126fb52da66d)."
   echo "e.g.: "
   echo "bash run_omni_cases.sh -s all"
   echo "bash run_omni_cases.sh -s download "
@@ -54,6 +54,7 @@ usage() {
   echo "bash run_omni_cases.sh -s run -m qwen2_5omni -c omni_chatting_for_math"
   echo "bash run_omni_cases.sh -s run -m qwen2_5omni -c omni_chatting_for_music"
   echo "bash run_omni_cases.sh -s run -m qwen2_5omni -c multi_round_omni_chatting -d A100-80G"
+  echo "bash run_omni_cases.sh -s run -m qwen2_5omni -c asr_stream -d L4"
 }
 
 run() {
@@ -74,6 +75,7 @@ run() {
       "omni_chatting_for_math"
       "omni_chatting_for_music"
       "multi_round_omni_chatting"
+      "asr_stream"
     )
     #return
     case $CASE in

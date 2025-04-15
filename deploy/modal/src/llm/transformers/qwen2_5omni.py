@@ -4,7 +4,7 @@ import os
 from transformers.generation.streamers import BaseStreamer
 
 app = modal.App("qwen2_5_omni")
-tag_or_commit = os.getenv("TAG_OR_COMMIT", "21dbefaa54e5bf180464696aa70af0bfc7a61d53")
+tag_or_commit = os.getenv("TAG_OR_COMMIT", "d308f221df8405dd5195d61ead02126fb52da66d")
 omni_img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
     modal.Image.from_registry(
@@ -14,7 +14,7 @@ omni_img = (
     .apt_install("git", "git-lfs", "ffmpeg", "cmake")
     .pip_install("wheel", "openai", "qwen-omni-utils[decord]")
     .run_commands(
-        f"pip install git+https://github.com/huggingface/transformers@{tag_or_commit}",
+        f"pip install git+https://github.com/weedge/transformers@{tag_or_commit}",
     )
     .pip_install(
         "accelerate",
@@ -168,12 +168,6 @@ with omni_img.imports():
         thread = Thread(target=model.generate, kwargs=generation_kwargs)
         thread.start()
 
-        # text_token_ids = output
-        # audio = None
-        # if return_audio and len(output) > 1:
-        #    text_token_ids = output[0].detach()
-        #    audio = output[1].unsqueeze(0).detach()
-
         generated_text = ""
         times = []
         start_time = perf_counter()
@@ -212,7 +206,6 @@ with omni_img.imports():
             **inputs,
             streamer=streamer,
             use_audio_in_video=use_audio_in_video,
-            return_audio=True,
             speaker=speaker,
             thinker_do_sample=True,
             # do_sample=True,
@@ -223,7 +216,7 @@ with omni_img.imports():
             min_new_tokens=0,
             max_new_tokens=2048,
         )
-        thread = Thread(target=model.generate, kwargs=generation_kwargs)
+        thread = Thread(target=model.thinker.generate, kwargs=generation_kwargs)
         thread.start()
 
         # text_token_ids = output
@@ -232,17 +225,17 @@ with omni_img.imports():
         #    text_token_ids = output[0].detach()
         #    audio = output[1].unsqueeze(0).detach()
 
-        generated_text = ""
+        generated_text_token_ids = ""
         times = []
         start_time = perf_counter()
-        for new_text in streamer:
+        for token_id in streamer:
             times.append(perf_counter() - start_time)
             start_time = perf_counter()
-            generated_text += new_text
-            yield new_text
+            generated_text_token_ids += token_id
         print(
             f"generate first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s"
         )
+
         torch.cuda.empty_cache()
 
 
@@ -511,7 +504,7 @@ def asr_stream():
         {
             "audio_path": "BAC009S0764W0121.wav",
             "prompt": "请将这段中文语音转换为纯文本，去掉标点符号。",
-            "sys_prompt": "You are a speech recognition model.",
+            "sys_prompt": [{"type": "text", "text": "You are a speech recognition model."}],
         },
     ]:
         audio_path = os.path.join(ASSETS_DIR, case["audio_path"])
