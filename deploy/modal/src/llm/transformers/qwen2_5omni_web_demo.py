@@ -3,7 +3,6 @@ import os
 import io
 
 app = modal.App("qwen2_5_omni_web_demo")
-tag_or_commit = os.getenv("TAG_OR_COMMIT", "21dbefaa54e5bf180464696aa70af0bfc7a61d53")
 omni_img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
     modal.Image.from_registry(
@@ -13,7 +12,7 @@ omni_img = (
     .apt_install("git", "git-lfs", "ffmpeg", "cmake")
     .pip_install("wheel", "openai", "qwen-omni-utils[decord]")
     .run_commands(
-        f"pip install git+https://github.com/huggingface/transformers@{tag_or_commit}",
+        f"pip install git+https://github.com/huggingface/transformers",
     )
     .pip_install("accelerate", "torch", "torchvision", "torchaudio")
     .pip_install("flash-attn", extra_options="--no-build-isolation")
@@ -110,7 +109,7 @@ def _launch_demo(model, processor, ui_language, share, inbrowser, server_port, s
 
     def format_history(history: list, system_prompt: str):
         messages = []
-        messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "system", "content": [{"type": "text", "text": system_prompt}]})
         for item in history:
             if isinstance(item["content"], str):
                 messages.append({"role": item["role"], "content": item["content"]})

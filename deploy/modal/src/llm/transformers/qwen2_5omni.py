@@ -4,7 +4,6 @@ import os
 from transformers.generation.streamers import BaseStreamer
 
 app = modal.App("qwen2_5_omni")
-tag_or_commit = os.getenv("TAG_OR_COMMIT", "d308f221df8405dd5195d61ead02126fb52da66d")
 omni_img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
     modal.Image.from_registry(
@@ -14,7 +13,7 @@ omni_img = (
     .apt_install("git", "git-lfs", "ffmpeg", "cmake")
     .pip_install("wheel", "openai", "qwen-omni-utils[decord]")
     .run_commands(
-        f"pip install git+https://github.com/weedge/transformers@{tag_or_commit}",
+        f"pip install git+https://github.com/huggingface/transformers",
     )
     .pip_install(
         "accelerate",
@@ -206,32 +205,26 @@ with omni_img.imports():
             **inputs,
             streamer=streamer,
             use_audio_in_video=use_audio_in_video,
-            speaker=speaker,
-            thinker_do_sample=True,
-            # do_sample=True,
+            do_sample=True,
             top_k=10,
             top_p=0.9,
             temperature=0.95,
             repetition_penalty=1.1,
             min_new_tokens=0,
             max_new_tokens=2048,
+            output_hidden_states=True,
+            return_dict_in_generate=True,
         )
         thread = Thread(target=model.thinker.generate, kwargs=generation_kwargs)
         thread.start()
 
-        # text_token_ids = output
-        # audio = None
-        # if return_audio and len(output) > 1:
-        #    text_token_ids = output[0].detach()
-        #    audio = output[1].unsqueeze(0).detach()
-
-        generated_text_token_ids = ""
+        generated_text_token_ids = []
         times = []
         start_time = perf_counter()
         for token_id in streamer:
             times.append(perf_counter() - start_time)
             start_time = perf_counter()
-            generated_text_token_ids += token_id
+            generated_text_token_ids.append(token_id)
         print(
             f"generate first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s"
         )
@@ -259,7 +252,7 @@ def run(func):
 def voice_chatting():
     sys_msg = {
         "role": "system",
-        "content": SPEECH_SYS_PROMPT,
+        "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}],
     }
 
     for audio_path in ["guess_age_gender.wav", "translate_to_chinese.wav"]:
@@ -286,7 +279,7 @@ def multi_round_omni_chatting():
     conversations = [
         {
             "role": "system",
-            "content": SPEECH_SYS_PROMPT,
+            "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}],
         },
     ]
     for video_path in ["draw1.mp4", "draw2.mp4", "draw3.mp4"]:
@@ -304,7 +297,7 @@ def omni_chatting_for_math():
     messages = [
         {
             "role": "system",
-            "content": SPEECH_SYS_PROMPT,
+            "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}],
         },
         {
             "role": "user",
@@ -327,7 +320,7 @@ def omni_chatting_for_music():
     messages = [
         {
             "role": "system",
-            "content": SPEECH_SYS_PROMPT,
+            "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}],
         },
         {
             "role": "user",
@@ -352,7 +345,10 @@ def screen_recording_interaction():
         "这篇论文主要解决什么问题呢？",
     ]:
         messages = [
-            {"role": "system", "content": "You are a helpful assistant."},
+            {
+                "role": "system",
+                "content": [{"type": "text", "text": "You are a helpful assistant."}],
+            },
             {
                 "role": "user",
                 "content": [
@@ -401,7 +397,7 @@ def universal_audio_understanding():
     ]:
         audio_path = os.path.join(ASSETS_DIR, case["audio_path"])
         messages = [
-            {"role": "system", "content": case["sys_prompt"]},
+            {"role": "system", "content": [{"type": "text", "text": case["sys_prompt"]}]},
             {
                 "role": "user",
                 "content": [
@@ -418,7 +414,7 @@ def video_information_extracting():
     video_path = os.path.join(ASSETS_DIR, "shopping.mp4")
     sys_msg = {
         "role": "system",
-        "content": "You are a helpful assistant.",
+        "content": [{"type": "text", "text": "You are a helpful assistant."}],
     }
     for prompt in [
         "How many kind of drinks can you see in the video?",
@@ -445,7 +441,7 @@ def batch_requests():
     """need return_audio=False"""
     # Conversation with video only
     conversation1 = [
-        {"role": "system", "content": SPEECH_SYS_PROMPT},
+        {"role": "system", "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}]},
         {
             "role": "user",
             "content": [
@@ -456,7 +452,7 @@ def batch_requests():
 
     # Conversation with audio only
     conversation2 = [
-        {"role": "system", "content": SPEECH_SYS_PROMPT},
+        {"role": "system", "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}]},
         {
             "role": "user",
             "content": [
@@ -467,13 +463,13 @@ def batch_requests():
 
     # Conversation with pure text
     conversation3 = [
-        {"role": "system", "content": SPEECH_SYS_PROMPT},
-        {"role": "user", "content": "who are you?"},
+        {"role": "system", "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}]},
+        {"role": "user", "content": [{"type": "text", "text": "who are you?"}]},
     ]
 
     # Conversation with mixed media
     conversation4 = [
-        {"role": "system", "content": SPEECH_SYS_PROMPT},
+        {"role": "system", "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}]},
         {
             "role": "user",
             "content": [
@@ -504,12 +500,12 @@ def asr_stream():
         {
             "audio_path": "BAC009S0764W0121.wav",
             "prompt": "请将这段中文语音转换为纯文本，去掉标点符号。",
-            "sys_prompt": [{"type": "text", "text": "You are a speech recognition model."}],
+            "sys_prompt": "You are a speech recognition model.",
         },
     ]:
         audio_path = os.path.join(ASSETS_DIR, case["audio_path"])
         messages = [
-            {"role": "system", "content": case["sys_prompt"]},
+            {"role": "system", "content": [{"type": "text", "text": case["sys_prompt"]}]},
             {
                 "role": "user",
                 "content": [
@@ -523,24 +519,15 @@ def asr_stream():
             print(text)
 
 
-def omni_chatting_for_music_stream():
-    video_path = os.path.join(ASSETS_DIR, "music.mp4")
+def omni_chatting_stream():
     messages = [
-        {
-            "role": "system",
-            "content": SPEECH_SYS_PROMPT,
-        },
-        {
-            "role": "user",
-            "content": [
-                {"type": "video", "video": video_path},
-            ],
-        },
+        {"role": "system", "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}]},
+        {"role": "user", "content": [{"type": "text", "text": "who are you?"}]},
     ]
-    response, audio = thinker_talker_inference_stream(messages, use_audio_in_video=True)
+    response, audio = thinker_talker_inference_stream(messages, use_audio_in_video=False)
     print(response[0])
 
-    save_audio_path = os.path.join(ASSETS_DIR, f"generated_{os.path.basename(video_path)}")
+    save_audio_path = os.path.join(ASSETS_DIR, f"generated_omni_chatting_stream.wav")
     torchaudio.save(save_audio_path, audio, sample_rate=24000)
     print(f"Audio saved to {save_audio_path}")
 
@@ -608,7 +595,7 @@ IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen2_5omni.py --task batch_r
 
 # stream
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task asr_stream
-IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_for_music_stream
+IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_stream
 """
 
 
@@ -624,7 +611,7 @@ def main(task: str = "universal_audio_understanding"):
         "multi_round_omni_chatting": multi_round_omni_chatting,
         "batch_requests": batch_requests,
         "asr_stream": asr_stream,
-        "omni_chatting_for_music_stream": omni_chatting_for_music_stream,
+        "omni_chatting_stream": omni_chatting_stream,
     }
     if task not in tasks:
         raise ValueError(f"task {task} not found")

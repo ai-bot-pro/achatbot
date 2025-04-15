@@ -171,7 +171,7 @@ def thinker2talker2wav(**kwargs):
 # - talker LM: model weights take 2.55GiB; non_torch_memory takes 0.08GiB; PyTorch activation peak memory takes 4.36GiB; the rest of the memory reserved for KV Cache, so the total memory reserved for the model is 6.9 GiB. must talker-gpu-memory-utilization * total_gpu_memory > 6.9 GiB
 
 IMAGE_GPU=L40s modal run src/llm/vllm/qwen2_5omni.py --task thinker_only
-# need use tp pp
+# use tp
 IMAGE_GPU=L4:2 modal run src/llm/vllm/qwen2_5omni.py --task thinker_only
 
 

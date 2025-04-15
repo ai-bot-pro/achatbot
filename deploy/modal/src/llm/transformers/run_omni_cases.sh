@@ -22,13 +22,12 @@ IMAGE_GPU="L40S"
 STAGE="all"
 CASE="all"
 MODEL_TYPE="qwen2_5omni"
-TAG_OR_COMMIT="d308f221df8405dd5195d61ead02126fb52da66d"
 
 
 #----- function -------
 
 usage() {
-  echo "Usage: $0 [-h] [-s STAGE] [-d IMAGE_GPU] [-m MODEL_TYPE] [-c CASE] [-t TAG_OR_COMMIT]"
+  echo "Usage: $0 [-h] [-s STAGE] [-d IMAGE_GPU] [-m MODEL_TYPE] [-c CASE]"
   echo "  -h                 Show this help message and exit."
   echo "  -s STAGE           Set the stage (default: all)."
   echo "                     Valid options: download, run, run_all, all"
@@ -41,7 +40,6 @@ usage() {
   echo "                       omni_chatting_for_math, omni_chatting_for_music, multi_round_omni_chatting,asr_stream"
   echo "  -d IMAGE_GPU       Set the GPU image (default: L40S)."
   echo "                     Valid options: A10G A100 A100-80GB L4 L40S H100 https://fullstackdeeplearning.com/cloud-gpus/"
-  echo "  -t TAG_OR_COMMIT   transformers tag or commit (default: d308f221df8405dd5195d61ead02126fb52da66d)."
   echo "e.g.: "
   echo "bash run_omni_cases.sh -s all"
   echo "bash run_omni_cases.sh -s download "
@@ -82,6 +80,7 @@ run() {
       all)
         for CASE in "${all_cases[@]}"; do
           [[ $CASE == "multi_round_omni_chatting" ]] && IMAGE_GPU="A100-80GB"
+          echo "IMAGE_GPU=$IMAGE_GPU modal run $MODEL_TYPE.py --task $CASE"
           IMAGE_GPU=$IMAGE_GPU modal run $MODEL_TYPE.py --task $CASE
         done
         ;;
@@ -109,6 +108,7 @@ download_models() {
   fi
 
   modal run download_models.py --repo-ids "Qwen/Qwen2.5-Omni-7B"
+  cd -
 }
 
 download_assets() {
@@ -121,6 +121,7 @@ download_assets() {
   fi
 
   modal run download_assets.py --asset-urls "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-Audio/audio/guess_age_gender.wav,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-Audio/audio/translate_to_chinese.wav,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/draw1.mp4,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/draw2.mp4,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/draw3.mp4,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/screen.mp4,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/music.mp4,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/math.mp4,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-Audio/audio/1272-128104-0000.flac,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/BAC009S0764W0121.wav,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/10000611681338527501.wav,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/7105431834829365765.wav,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/cough.wav,https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2.5-Omni/shopping.mp4"
+  cd -
 }
 
 
@@ -132,7 +133,7 @@ cd "$SCRIPT_DIR/../../.." || exit
 export TAG_OR_COMMIT=$TAG_OR_COMMIT
 
 # 处理命令行参数
-while getopts ":d:s:m:c:t:h" opt; do
+while getopts ":d:s:m:c:h" opt; do
   case ${opt} in
     d )
       IMAGE_GPU=$OPTARG
@@ -145,9 +146,6 @@ while getopts ":d:s:m:c:t:h" opt; do
       ;;
     m )
       MODEL_TYPE=$OPTARG
-      ;;
-    t )
-      TAG_OR_COMMIT=$OPTARG
       ;;
     h )
       usage
