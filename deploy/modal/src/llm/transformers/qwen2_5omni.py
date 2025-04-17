@@ -1,8 +1,11 @@
 from time import perf_counter
+import time
 from typing import Optional
 import modal
 import os
+import numpy as np
 from transformers.generation.streamers import BaseStreamer
+import soundfile as sf
 
 app = modal.App("qwen2_5_omni")
 omni_img = (
@@ -642,55 +645,79 @@ with omni_img.imports():
             min_new_tokens=0,
             max_new_tokens=8192,
         )
-        print(talker_kwargs.keys())
+        # print(talker_kwargs.keys())
         thread = Thread(target=model.talker.generate, kwargs=talker_kwargs)
         thread.start()
-
-        talker_generate_codes = []
-        times = []
-        start_time = perf_counter()
-        for token_id in streamer:
-            times.append(perf_counter() - start_time)
-            start_time = perf_counter()
-            talker_generate_codes.append(token_id)
-        print(
-            f"generate first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s"
-        )
-        talker_generate_codes = torch.tensor(
-            [talker_generate_codes[:-1]],  # skip last token id talker_eos_token_id
-            dtype=torch.long,
-            device=model.talker.device,
-        )
-        # print(f"talker_generate_codes:{talker_generate_codes.shape} {talker_generate_codes}")
 
         # 3. Generate wavs from code
         if model.token2wav.dtype != torch.float:
             model.token2wav.float()
 
-        # print(model.token2wav.device)
-        model_token2wav_device = model.token2wav.device
-        # model_token2wav_device = "cpu"
-        # model.token2wav.to(model_token2wav_device)
+        talker_generate_codes = []
+        times = []
+        start_time = perf_counter()
+        pre_offset = 0
+        for token_id in streamer:
+            times.append(perf_counter() - start_time)
+            start_time = perf_counter()
+            if token_id in talker_eos_token_id:
+                break
+            talker_generate_codes.append(token_id)
+            chunk_code_length = len(talker_generate_codes) * 2 - 24
+            if chunk_code_length > 0 and chunk_code_length % 48 == 0:
+                codes_tensor = torch.tensor(
+                    [talker_generate_codes[pre_offset:]],
+                    dtype=torch.long,
+                    device=model.talker.device,
+                )
+                pre_offset = len(talker_generate_codes)
+                wav = (
+                    model.token2wav(
+                        codes_tensor.to(model.token2wav.device),
+                        conditioning=model.speaker_map[speaker]["cond"]
+                        .to(model.token2wav.device)
+                        .float(),
+                        reference_mel=model.speaker_map[speaker]["ref_mel"]
+                        .to(model.token2wav.device)
+                        .float(),
+                        num_steps=10,
+                        guidance_scale=0.5,
+                        sway_coefficient=-1.0,
+                    )
+                    .unsqueeze(0)
+                    .detach()
+                )
+                yield (gen_text, wav)
 
-        # print(model.token2wav.device, model.speaker_map[speaker])
-
-        wav = (
-            model.token2wav(
-                talker_generate_codes.to(model_token2wav_device),
-                conditioning=model.speaker_map[speaker]["cond"].to(model_token2wav_device).float(),
-                reference_mel=model.speaker_map[speaker]["ref_mel"]
-                .to(model_token2wav_device)
-                .float(),
-                num_steps=10,
-                guidance_scale=0.5,
-                sway_coefficient=-1.0,
-            )
-            .unsqueeze(0)
-            .detach()
+        print(
+            f"generate first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s"
         )
 
+        if len(talker_generate_codes) > pre_offset:
+            codes_tensor = torch.tensor(
+                [talker_generate_codes[pre_offset:]],
+                dtype=torch.long,
+                device=model.talker.device,
+            )
+            wav = (
+                model.token2wav(
+                    codes_tensor.to(model.token2wav.device),
+                    conditioning=model.speaker_map[speaker]["cond"]
+                    .to(model.token2wav.device)
+                    .float(),
+                    reference_mel=model.speaker_map[speaker]["ref_mel"]
+                    .to(model.token2wav.device)
+                    .float(),
+                    num_steps=10,
+                    guidance_scale=0.5,
+                    sway_coefficient=-1.0,
+                )
+                .unsqueeze(0)
+                .detach()
+            )
+            yield (gen_text, wav)
+
         torch.cuda.empty_cache()
-        return gen_text, wav.float()
 
 
 @app.function(
@@ -988,12 +1015,31 @@ def omni_chatting_stream():
     # response, audio = inference(
     #    messages, return_audio=True, use_audio_in_video=False, thinker_do_sample=True
     # )
-    response, audio = thinker_talker_inference_stream(messages, use_audio_in_video=False)
-    print(response[0])
+    # print(response[0])
+    # save_audio_path = os.path.join(ASSETS_DIR, f"generated_omni_chatting_stream.wav")
+    # torchaudio.save(save_audio_path, audio, sample_rate=24000)
+    # print(f"Audio saved to {save_audio_path}")
+    # return
 
+    streamer = thinker_talker_inference_stream(messages, use_audio_in_video=False)
+    audios = []
+    times = []
+    start_time = time.perf_counter()
+    for i, (texts, audio) in enumerate(streamer):
+        if i == 0:
+            print(texts[0])
+        times.append(time.perf_counter() - start_time)
+        start_time = time.perf_counter()
+        audios.append(audio.squeeze().cpu().numpy())
+        save_audio_path = os.path.join(ASSETS_DIR, f"generated_omni_chatting_stream_{i}.wav")
+        torchaudio.save(save_audio_path, audio, sample_rate=24000)
+        print(f"Audio saved to {save_audio_path}")
     save_audio_path = os.path.join(ASSETS_DIR, f"generated_omni_chatting_stream.wav")
-    torchaudio.save(save_audio_path, audio, sample_rate=24000)
-    print(f"Audio saved to {save_audio_path}")
+    sf.write(save_audio_path, np.concatenate(audios), samplerate=24000)
+    info = sf.info(save_audio_path, verbose=True)
+    print(
+        f"first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+    )
 
 
 class TokenStreamer(BaseStreamer):

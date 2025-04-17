@@ -40,8 +40,8 @@ vllm_image = (
     )
     .run_commands(
         "git lfs install",
-        "git clone -b qwen2_omni_public https://github.com/fyabc/vllm.git",
-        "cd /vllm && git checkout 729feed3ec2beefe63fda30a345ef363d08062f8",
+        "git clone -b new_qwen2_omni_public https://github.com/ai-bot-pro/vllm.git",
+        "cd /vllm && git checkout 50952d6e2b954063a7cfee9cb436aa57db065738",
         "cd /vllm && pip install -r requirements/cuda.txt",
         "cd /vllm && pip install . --no-build-isolation",  # u can see a little film
     )
@@ -67,6 +67,9 @@ vllm_image = vllm_image.env(
     {
         "VLLM_USE_V1": os.getenv("VLLM_USE_V1", "0"),
     }
+).run_commands(
+    "rm -rf /vllm && git clone -b new_qwen2_omni_public https://github.com/ai-bot-pro/vllm.git",
+    "cd /vllm && git checkout 50952d6e2b954063a7cfee9cb436aa57db065738",
 )
 
 HF_MODEL_DIR = "/root/models"
@@ -102,7 +105,7 @@ with vllm_image.imports():
     scaledown_window=1200,
     max_containers=100,
 )
-def run(func, thinker_gpu_memory_utilization, talker_gpu_memory_utilization):
+def run(func, thinker_gpu_memory_utilization, talker_gpu_memory_utilization, other_cmd_args):
     subprocess.run("nvidia-smi --version", shell=True)
     subprocess.run("nvcc --version", shell=True)
     gpu_prop = None
@@ -117,6 +120,7 @@ def run(func, thinker_gpu_memory_utilization, talker_gpu_memory_utilization):
     func(
         thinker_gpu_memory_utilization=thinker_gpu_memory_utilization,
         talker_gpu_memory_utilization=talker_gpu_memory_utilization,
+        other_cmd_args=other_cmd_args,
     )
 
 
@@ -165,6 +169,21 @@ def thinker2talker2wav(**kwargs):
     )
 
 
+def code2wav(**kwargs):
+    """
+    vq code --> cfm dit -> mel --> bigvgan -> waveforms streaming
+    """
+
+    other_cmd_args = kwargs.get("other_cmd_args", "")
+    model_dir = os.path.join(HF_MODEL_DIR, "Qwen/Qwen2.5-Omni-7B")
+    code_file = os.path.join(ASSETS_DIR, "code2wav.json")
+    cmd = f"python code2wav.py --code2wav-model {model_dir} --input-json {code_file} --output-dir {ASSETS_DIR} {other_cmd_args}"
+    print(cmd)
+    subprocess.run(
+        cmd, shell=True, cwd="/vllm/examples/offline_inference/qwen2_5_omni/", env=os.environ
+    )
+
+
 """
 # NOTE: 
 # - thinker LM: model weights take 16.73GiB; non_torch_memory takes 0.09GiB; PyTorch activation peak memory takes 5.48GiB; the rest of the memory reserved for KV Cache, so the total memory reserved for the model is 22.3 GiB. must thinker-gpu-memory-utilization * total_gpu_memory > 22.3 GiB
@@ -178,6 +197,15 @@ IMAGE_GPU=L4:2 modal run src/llm/vllm/qwen2_5omni.py --task thinker_only
 IMAGE_GPU=L40s modal run src/llm/vllm/qwen2_5omni.py --task thinker2talker2wav
 IMAGE_GPU=L40s:2 modal run src/llm/vllm/qwen2_5omni.py --task thinker2talker2wav --thinker-gpu-memory-utilization 0.9 --talker-gpu-memory-utilization 0.7
 
+# slow with no torch compile
+IMAGE_GPU=T4 modal run src/llm/vllm/qwen2_5omni.py --task code2wav
+IMAGE_GPU=L4 modal run src/llm/vllm/qwen2_5omni.py --task code2wav
+
+# fast with torch compile
+IMAGE_GPU=L4 modal run src/llm/vllm/qwen2_5omni.py --task code2wav --other-cmd-args "--enable-torch-compile"
+IMAGE_GPU=L40s modal run src/llm/vllm/qwen2_5omni.py --task code2wav --other-cmd-args "--enable-torch-compile"
+IMAGE_GPU=L4 modal run src/llm/vllm/qwen2_5omni.py --task code2wav --other-cmd-args "--enable-torch-compile --odeint-method euler"
+IMAGE_GPU=L4 modal run src/llm/vllm/qwen2_5omni.py --task code2wav --other-cmd-args "--enable-torch-compile --multi-waveforms"
 """
 
 
@@ -186,12 +214,16 @@ def main(
     task: str = "thinker_only",
     thinker_gpu_memory_utilization: str = "0.6",  # thinker-gpu-memory-utilization * total_gpu_memory > 22.3GB
     talker_gpu_memory_utilization: str = "0.3",  # talker-gpu-memory-utilization * total_gpu_memory  > 6.9 GB
+    other_cmd_args: str = "",
 ):
     tasks = {
         "thinker_only": thinker_only,
         "thinker2talker2wav": thinker2talker2wav,
+        "code2wav": code2wav,
     }
     if task not in tasks:
         raise ValueError(f"task {task} not found")
     print(f"running task {task}")
-    run.remote(tasks[task], thinker_gpu_memory_utilization, talker_gpu_memory_utilization)
+    run.remote(
+        tasks[task], thinker_gpu_memory_utilization, talker_gpu_memory_utilization, other_cmd_args
+    )

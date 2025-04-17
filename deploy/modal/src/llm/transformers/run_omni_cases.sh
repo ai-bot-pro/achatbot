@@ -53,6 +53,7 @@ usage() {
   echo "bash run_omni_cases.sh -s run -m qwen2_5omni -c omni_chatting_for_music"
   echo "bash run_omni_cases.sh -s run -m qwen2_5omni -c multi_round_omni_chatting -d A100-80G"
   echo "bash run_omni_cases.sh -s run -m qwen2_5omni -c asr_stream -d L4"
+  echo "bash run_omni_cases.sh -s run -m qwen2_5omni -c omni_chatting_stream -d L4"
 }
 
 run() {
@@ -74,6 +75,7 @@ run() {
       "omni_chatting_for_music"
       "multi_round_omni_chatting"
       "asr_stream"
+      "omni_chatting_stream"
     )
     #return
     case $CASE in

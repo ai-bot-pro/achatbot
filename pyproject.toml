@@ -624,7 +624,7 @@ line-length = 100
 [tool.ruff.format]
 exclude = ["*.pyi", "*.ipynb"]
 [tool.ruff.lint]
-ignore = ["F401", "F403", "F405", "F541"]
+ignore = ["F401", "F403", "F405", "F541", "E741"]
 
 # uv
 [tool.uv]
