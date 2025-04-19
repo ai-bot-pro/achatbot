@@ -539,6 +539,8 @@ with omni_img.imports():
 
         total_new_tokens_generated = 0
         generated_text = ""
+        is_first = True
+        hidden_states = None
 
         times = []
         while total_new_tokens_generated < max_new_tokens:
@@ -579,14 +581,16 @@ with omni_img.imports():
                 print("Warning: generate produced 0 new tokens in this step.")
                 break
 
+            if is_first is True:
+                is_first = False
+                hidden_states = outputs.hidden_states if output_hidden_states else None
+
             # Decode and print only the text generated in this step
             step_new_text = processor.decode(step_new_ids[0], skip_special_tokens=True)
             yield {
                 "thinker_generate_text": step_new_text,
                 "thinker_generate_ids": step_new_ids,
-                "thinker_generate_hidden_states": outputs.hidden_states
-                if output_hidden_states
-                else None,
+                "thinker_generate_hidden_states": hidden_states,
             }  # TODO: put async queue here
             generated_text += step_new_text
             total_new_tokens_generated += num_step_new_tokens
@@ -647,6 +651,13 @@ with omni_img.imports():
             print(
                 f"[{thinker_generate_text}] len(thinker_generate_hidden_states):{len(thinker_generate_hidden_states)}"
             )
+            for i in range(len(thinker_generate_hidden_states)):
+                print(
+                    f"[{thinker_generate_text}] thinker_generate_hidden_states[{i}]:{thinker_generate_hidden_states[i][0].shape}, {thinker_generate_hidden_states[i][-1].shape}"
+                )
+            # print(
+            #    f"[{thinker_generate_text}] thinker_generate_hidden_states[0]:{thinker_generate_hidden_states[0][0][:,:5,:]}, {thinker_generate_hidden_states[0][-1][:,:5,:]}"
+            # )
 
             talker_text_bos_token = model.speaker_map[speaker]["bos_token"]
             talker_input_text_ids = torch.cat(
@@ -696,6 +707,9 @@ with omni_img.imports():
             talker_text_bos_embed = thinker_embed_tokens(talker_text_bos_token).to(
                 model.talker.device
             )
+            print(
+                f"[{thinker_generate_text}] talker_inputs_embeds.shape {talker_inputs_embeds.shape} talker_text_bos_embed.shape {talker_text_bos_embed.shape} thinker_reply_part.shape {thinker_reply_part.shape}"
+            )
             talker_inputs_embeds = torch.cat(
                 [
                     talker_inputs_embeds,
@@ -703,6 +717,9 @@ with omni_img.imports():
                     thinker_reply_part[:, :1, :],
                 ],
                 dim=1,
+            )
+            print(
+                f"[{thinker_generate_text}] talker_inputs_embeds.shape {talker_inputs_embeds.shape} talker_text_bos_embed.shape {talker_text_bos_embed.shape}"
             )
 
             eos_embedding = thinker_embed_tokens(
@@ -716,7 +733,6 @@ with omni_img.imports():
                     [[model.talker.text_pad_token]], dtype=torch.long, device=model.thinker.device
                 )
             ).to(model.talker.device)
-
             thinker_reply_part = torch.cat(
                 [
                     thinker_reply_part[:, 1:, :],
@@ -725,7 +741,7 @@ with omni_img.imports():
                 ],
                 dim=1,
             )
-            # print(f"thinker_reply_part.shape:{thinker_reply_part.shape}")
+            print(f"[{thinker_generate_text}] thinker_reply_part.shape:{thinker_reply_part.shape}")
 
             talker_attention_mask = None
             if attention_mask is not None:
