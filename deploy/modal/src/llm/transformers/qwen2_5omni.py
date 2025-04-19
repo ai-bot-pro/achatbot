@@ -644,6 +644,9 @@ with omni_img.imports():
                 token_hidden_states[-1].to(model.talker.device)
                 for token_hidden_states in thinker_generate_hidden_states
             ]
+            print(
+                f"[{thinker_generate_text}] len(thinker_generate_hidden_states):{len(thinker_generate_hidden_states)}"
+            )
 
             talker_text_bos_token = model.speaker_map[speaker]["bos_token"]
             talker_input_text_ids = torch.cat(
@@ -795,40 +798,40 @@ with omni_img.imports():
                     yield (thinker_generate_text, wav)
                     start_time = perf_counter()
 
-                    print(
-                        f"[{thinker_generate_text}] generate first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s"
+            print(
+                f"[{thinker_generate_text}] generate first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s"
+            )
+
+            if len(talker_generate_codes) > pre_offset:
+                codes_tensor = torch.tensor(
+                    [talker_generate_codes[pre_offset:]],
+                    dtype=torch.long,
+                    device=model.talker.device,
+                )
+                wav = (
+                    model.token2wav(
+                        codes_tensor.to(model.token2wav.device),
+                        conditioning=model.speaker_map[speaker]["cond"]
+                        .to(model.token2wav.device)
+                        .float(),
+                        reference_mel=model.speaker_map[speaker]["ref_mel"]
+                        .to(model.token2wav.device)
+                        .float(),
+                        num_steps=10,
+                        guidance_scale=0.5,
+                        sway_coefficient=-1.0,
                     )
+                    .unsqueeze(0)
+                    .detach()
+                )
+                code2wav_times.append(perf_counter() - start_time)
+                yield (thinker_generate_text, wav)
 
-                    if len(talker_generate_codes) > pre_offset:
-                        codes_tensor = torch.tensor(
-                            [talker_generate_codes[pre_offset:]],
-                            dtype=torch.long,
-                            device=model.talker.device,
-                        )
-                        wav = (
-                            model.token2wav(
-                                codes_tensor.to(model.token2wav.device),
-                                conditioning=model.speaker_map[speaker]["cond"]
-                                .to(model.token2wav.device)
-                                .float(),
-                                reference_mel=model.speaker_map[speaker]["ref_mel"]
-                                .to(model.token2wav.device)
-                                .float(),
-                                num_steps=10,
-                                guidance_scale=0.5,
-                                sway_coefficient=-1.0,
-                            )
-                            .unsqueeze(0)
-                            .detach()
-                        )
-                        code2wav_times.append(perf_counter() - start_time)
-                        yield (thinker_generate_text, wav)
+            print(
+                f"[{thinker_generate_text}] code2wav streaming first chunk time: {code2wav_times[0]} s | cost: {sum(code2wav_times)} s"
+            )
 
-                    print(
-                        f"[{thinker_generate_text}] code2wav streaming first chunk time: {code2wav_times[0]} s | cost: {sum(code2wav_times)} s"
-                    )
-
-        torch.cuda.empty_cache()
+            torch.cuda.empty_cache()
 
     def generate_stream(
         messages,
