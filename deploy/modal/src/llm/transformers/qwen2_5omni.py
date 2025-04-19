@@ -3,9 +3,6 @@ import time
 from typing import Optional
 import modal
 import os
-import numpy as np
-from transformers.generation.streamers import BaseStreamer
-import soundfile as sf
 
 app = modal.App("qwen2_5_omni")
 omni_img = (
@@ -50,6 +47,8 @@ with omni_img.imports():
     import subprocess
     from threading import Thread
     from queue import Queue
+    import numpy as np
+    from transformers.generation.streamers import BaseStreamer
 
     import torch, torchaudio
     from transformers import (
@@ -57,6 +56,7 @@ with omni_img.imports():
         Qwen2_5OmniProcessor,
         TextIteratorStreamer,
         AutoConfig,
+        AutoProcessor,
     )
     from qwen_omni_utils import process_mm_info
 
@@ -369,7 +369,13 @@ with omni_img.imports():
 
     print_model_params(model, "Qwen2.5Omni")
 
-    processor = Qwen2_5OmniProcessor.from_pretrained(model_path)
+    # processor = Qwen2_5OmniProcessor.from_pretrained(model_path)
+    processor = AutoProcessor.from_pretrained(
+        model_path,
+        min_pixels=256 * 28 * 28,
+        max_pixels=1280 * 28 * 28,
+        trust_remote_code=True,
+    )
 
     subprocess.run("nvidia-smi", shell=True)
 
@@ -425,7 +431,6 @@ with omni_img.imports():
     def thinker_inference_stream(
         messages,
         use_audio_in_video=False,
-        speaker=DEFAULT_SPEAKER,
     ):
         text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         # image_inputs, video_inputs = process_vision_info([messages])
@@ -448,7 +453,6 @@ with omni_img.imports():
             streamer=streamer,
             use_audio_in_video=use_audio_in_video,
             return_audio=False,
-            speaker=speaker,
             thinker_do_sample=True,
             # do_sample=True,
             top_k=10,
@@ -473,6 +477,396 @@ with omni_img.imports():
             f"generate [{generated_text}] first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s"
         )
         torch.cuda.empty_cache()
+
+    def thinker_inference_chunk_stream(
+        messages,
+        use_audio_in_video=False,
+        max_new_tokens=2048,
+        max_tokens_per_step=3,  # Controls how many tokens to generate *per step*
+        eos_token_ids=[151644, 151645],  # Define EOS tokens
+        output_hidden_states=False,
+    ):
+        text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        # image_inputs, video_inputs = process_vision_info([messages])
+        audios, images, videos = process_mm_info(messages, use_audio_in_video=use_audio_in_video)
+        inputs = processor(
+            text=text,
+            audio=audios,
+            images=images,
+            videos=videos,
+            return_tensors="pt",
+            padding=True,
+            use_audio_in_video=use_audio_in_video,
+        )
+        inputs = inputs.to(model.device).to(model.dtype)
+        # print(text, inputs)
+        return thinker_generate_chunk(
+            input_ids=inputs["input_ids"],
+            attention_mask=inputs["attention_mask"],
+            max_new_tokens=max_new_tokens,
+            max_tokens_per_step=max_tokens_per_step,
+            use_audio_in_video=use_audio_in_video,
+            eos_token_ids=eos_token_ids,
+            output_hidden_states=output_hidden_states,
+        )
+
+    @torch.no_grad()
+    def thinker_generate_chunk(
+        input_ids,
+        attention_mask,
+        max_new_tokens=2048,
+        max_tokens_per_step=3,  # Controls how many tokens to generate *per step*
+        use_audio_in_video=False,
+        eos_token_ids=[151644, 151645],  # Define EOS tokens
+        output_hidden_states=False,
+    ):
+        # Keep track of the full generated sequence full_generated_ids = input_ids.clone()
+        # Ensure full_attention_mask is correctly initialized and expanded
+        full_attention_mask = (
+            attention_mask.clone()
+            if attention_mask is not None
+            else torch.ones_like(input_ids, device=input_ids.device)
+        )
+        full_generated_ids = input_ids.clone()
+
+        # KV cache
+        # past_key_values = None
+
+        # Inputs for the current step
+        current_input_ids = full_generated_ids
+        # The attention mask passed to generate should cover the sequence length for the current step
+        current_attention_mask = full_attention_mask
+
+        total_new_tokens_generated = 0
+        generated_text = ""
+
+        times = []
+        while total_new_tokens_generated < max_new_tokens:
+            # Prepare inputs for generate call
+            # print(current_input_ids, current_attention_mask.shape)
+            model_inputs = {
+                "input_ids": current_input_ids,
+                "attention_mask": current_attention_mask,
+                # "past_key_values": past_key_values,
+                "use_cache": True,
+                "use_audio_in_video": use_audio_in_video,
+                "do_sample": True,
+                "top_k": 10,
+                "top_p": 0.9,
+                "temperature": 0.95,
+                "repetition_penalty": 1.1,
+                "min_new_tokens": 1,  # Ensure at least one token is generated if possible
+                "max_new_tokens": max_tokens_per_step,  # Generate in smaller steps
+                # output_hidden_states/scores can consume memory,
+                # enable if needed downstream(talker)
+                "output_hidden_states": output_hidden_states,
+                "return_dict_in_generate": True,
+                # "output_scores": True,
+                "eos_token_id": eos_token_ids,
+                "pad_token_id": processor.tokenizer.pad_token_id,
+            }
+
+            start_time = perf_counter()
+            outputs = model.thinker.generate(**model_inputs)
+            times.append(perf_counter() - start_time)
+
+            # Extract newly generated token IDs *for this step*
+            # `outputs.sequences` contains the input_ids for this step + new tokens generated in this step
+            step_new_ids = outputs.sequences[:, current_input_ids.shape[1] :]
+            num_step_new_tokens = step_new_ids.shape[1]
+
+            if num_step_new_tokens == 0:  # Handle case where generate stops early
+                print("Warning: generate produced 0 new tokens in this step.")
+                break
+
+            # Decode and print only the text generated in this step
+            step_new_text = processor.decode(step_new_ids[0], skip_special_tokens=True)
+            yield {
+                "thinker_generate_text": step_new_text,
+                "thinker_generate_ids": step_new_ids,
+                "thinker_generate_hidden_states": outputs.hidden_states
+                if output_hidden_states
+                else None,
+            }  # TODO: put async queue here
+            generated_text += step_new_text
+            total_new_tokens_generated += num_step_new_tokens
+
+            # Update the full sequence
+            full_generated_ids = torch.cat([full_generated_ids, step_new_ids], dim=1)
+
+            # Prepare for the next iteration:
+            # Input is only the last generated token
+            # NOTE: need use past_key_values to keep the context by manually,
+            # current_input_ids = step_new_ids[:, -1:]
+            # so we can't use the last generated token, use cache instead
+            # input ids need to be the full sequence for next generation
+            current_input_ids = full_generated_ids
+
+            # Update past_key_values
+            # past_key_values = outputs.past_key_values
+
+            # Update attention mask by appending 1s for the new tokens
+            full_attention_mask = torch.cat(
+                [full_attention_mask, torch.ones_like(step_new_ids)], dim=1
+            )
+            current_attention_mask = full_attention_mask
+
+            # Check if EOS token was generated in this step
+            if step_new_ids[0, -1].item() in eos_token_ids:
+                print("EOS token generated.")
+                break
+
+            # Check if max_new_tokens limit is reached (after processing the step)
+            if total_new_tokens_generated >= max_new_tokens:
+                print("Max new tokens limit reached.")
+                break
+
+        print(f"Total generated text: {generated_text}")
+        print(f"Total new tokens generated: {total_new_tokens_generated}")
+        print(f"first chunk generated cost: {times[0]} s | total cost: {sum(times)} s")
+
+    def talker_generate_chunk(
+        input_ids,
+        attention_mask,
+        thinker_chunk_stream,
+        speaker=DEFAULT_SPEAKER,
+        talker_eos_token_id: list[int] = [8292, 8294],
+    ):
+        for chunk in thinker_chunk_stream:
+            thinker_generate_text = chunk["thinker_generate_text"]
+            thinker_generate_hidden_states = chunk["thinker_generate_hidden_states"]
+            thinker_generate_ids = chunk["thinker_generate_ids"].to(model.talker.device)
+            thinker_token_embeds = [
+                token_hidden_states[0].to(model.talker.device)
+                for token_hidden_states in thinker_generate_hidden_states
+            ]
+            thinker_hidden_states = [
+                token_hidden_states[-1].to(model.talker.device)
+                for token_hidden_states in thinker_generate_hidden_states
+            ]
+
+            talker_text_bos_token = model.speaker_map[speaker]["bos_token"]
+            talker_input_text_ids = torch.cat(
+                [
+                    input_ids.to(model.talker.device),
+                    torch.tensor(
+                        [[talker_text_bos_token]], dtype=torch.long, device=model.talker.device
+                    ),
+                    thinker_generate_ids[:, :1],
+                ],
+                dim=-1,
+            )
+            print(
+                f"[{thinker_generate_text}] talker_input_text_ids.shape:{talker_input_text_ids.shape}"
+            )
+
+            talker_input_ids = torch.cat(
+                [
+                    torch.full_like(
+                        input_ids,
+                        fill_value=model.talker.codec_mask_token,
+                        device=model.talker.device,
+                    ),
+                    torch.tensor(
+                        [[model.talker.codec_pad_token]],
+                        dtype=torch.long,
+                        device=model.talker.device,
+                    ),
+                    torch.tensor(
+                        [[model.talker.codec_bos_token]],
+                        dtype=torch.long,
+                        device=model.talker.device,
+                    ),
+                ],
+                dim=1,
+            )
+            print(f"[{thinker_generate_text}] talker_input_ids.shape:{talker_input_ids.shape}")
+
+            thinker_embed_tokens = model.thinker.get_input_embeddings()
+            thinker_reply_part = torch.cat(thinker_hidden_states[1:], dim=1) + torch.cat(
+                thinker_token_embeds[1:], dim=1
+            )
+            talker_inputs_embeds = thinker_hidden_states[0] + thinker_token_embeds[0]
+            talker_text_bos_token = torch.tensor(
+                [[talker_text_bos_token]], dtype=torch.long, device=model.thinker.device
+            )
+            talker_text_bos_embed = thinker_embed_tokens(talker_text_bos_token).to(
+                model.talker.device
+            )
+            talker_inputs_embeds = torch.cat(
+                [
+                    talker_inputs_embeds,
+                    talker_text_bos_embed,
+                    thinker_reply_part[:, :1, :],
+                ],
+                dim=1,
+            )
+
+            eos_embedding = thinker_embed_tokens(
+                torch.tensor(
+                    [[model.talker.text_eos_token]], dtype=torch.long, device=model.thinker.device
+                )
+            ).to(model.talker.device)
+
+            pad_embedding = thinker_embed_tokens(
+                torch.tensor(
+                    [[model.talker.text_pad_token]], dtype=torch.long, device=model.thinker.device
+                )
+            ).to(model.talker.device)
+
+            thinker_reply_part = torch.cat(
+                [
+                    thinker_reply_part[:, 1:, :],
+                    eos_embedding,
+                    pad_embedding,
+                ],
+                dim=1,
+            )
+            # print(f"thinker_reply_part.shape:{thinker_reply_part.shape}")
+
+            talker_attention_mask = None
+            if attention_mask is not None:
+                talker_attention_mask = torch.cat(
+                    [attention_mask, attention_mask.new_ones((1, 2))], dim=1
+                ).to(model.talker.device)
+
+            streamer = TokenStreamer(skip_prompt=True)
+            talker_kwargs = dict(
+                input_ids=talker_input_ids,
+                streamer=streamer,
+                input_text_ids=talker_input_text_ids,
+                thinker_reply_part=thinker_reply_part,
+                inputs_embeds=talker_inputs_embeds,
+                attention_mask=talker_attention_mask,
+                suppress_tokens=[model.talker.codec_bos_token],
+                eos_token_id=talker_eos_token_id,
+                do_sample=True,
+                top_k=10,
+                top_p=0.9,
+                temperature=0.95,
+                repetition_penalty=1.1,
+                min_new_tokens=0,
+                max_new_tokens=8192,
+            )
+            # print(talker_kwargs.keys())
+            thread = Thread(target=model.talker.generate, kwargs=talker_kwargs)
+            thread.start()
+
+            # 3. Generate wavs from code
+            if model.token2wav.dtype != torch.float:
+                model.token2wav.float()
+
+            code2wav_times = []
+            talker_generate_codes = []
+            times = []
+            start_time = perf_counter()
+            pre_offset = 0
+            for token_id in streamer:
+                times.append(perf_counter() - start_time)
+                start_time = perf_counter()
+                if token_id in talker_eos_token_id:
+                    break
+                talker_generate_codes.append(token_id)
+                chunk_code_length = len(talker_generate_codes) * 2 - 24
+                if chunk_code_length > 0 and chunk_code_length % 48 == 0:
+                    codes_tensor = torch.tensor(
+                        [talker_generate_codes[pre_offset:]],
+                        dtype=torch.long,
+                        device=model.talker.device,
+                    )
+                    pre_offset = len(talker_generate_codes)
+                    wav = (
+                        model.token2wav(
+                            codes_tensor.to(model.token2wav.device),
+                            conditioning=model.speaker_map[speaker]["cond"]
+                            .to(model.token2wav.device)
+                            .float(),
+                            reference_mel=model.speaker_map[speaker]["ref_mel"]
+                            .to(model.token2wav.device)
+                            .float(),
+                            num_steps=10,
+                            guidance_scale=0.5,
+                            sway_coefficient=-1.0,
+                        )
+                        .unsqueeze(0)
+                        .detach()
+                    )
+                    code2wav_times.append(perf_counter() - start_time)
+                    yield (thinker_generate_text, wav)
+                    start_time = perf_counter()
+
+                    print(
+                        f"[{thinker_generate_text}] generate first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s"
+                    )
+
+                    if len(talker_generate_codes) > pre_offset:
+                        codes_tensor = torch.tensor(
+                            [talker_generate_codes[pre_offset:]],
+                            dtype=torch.long,
+                            device=model.talker.device,
+                        )
+                        wav = (
+                            model.token2wav(
+                                codes_tensor.to(model.token2wav.device),
+                                conditioning=model.speaker_map[speaker]["cond"]
+                                .to(model.token2wav.device)
+                                .float(),
+                                reference_mel=model.speaker_map[speaker]["ref_mel"]
+                                .to(model.token2wav.device)
+                                .float(),
+                                num_steps=10,
+                                guidance_scale=0.5,
+                                sway_coefficient=-1.0,
+                            )
+                            .unsqueeze(0)
+                            .detach()
+                        )
+                        code2wav_times.append(perf_counter() - start_time)
+                        yield (thinker_generate_text, wav)
+
+                    print(
+                        f"[{thinker_generate_text}] code2wav streaming first chunk time: {code2wav_times[0]} s | cost: {sum(code2wav_times)} s"
+                    )
+
+        torch.cuda.empty_cache()
+
+    def generate_stream(
+        messages,
+        use_audio_in_video=False,
+        speaker=DEFAULT_SPEAKER,
+        thinker_max_new_tokens=2048,
+        thinker_max_tokens_per_step=3,  # Controls how many tokens to generate *per step*
+        thinker_eos_token_ids=[151644, 151645],  # Define EOS tokens
+    ):
+        text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        # image_inputs, video_inputs = process_vision_info([messages])
+        audios, images, videos = process_mm_info(messages, use_audio_in_video=use_audio_in_video)
+        inputs = processor(
+            text=text,
+            audio=audios,
+            images=images,
+            videos=videos,
+            return_tensors="pt",
+            padding=True,
+            use_audio_in_video=use_audio_in_video,
+        )
+        inputs = inputs.to(model.device).to(model.dtype)
+        print(text, inputs)
+        thinker_chunk_stream = thinker_generate_chunk(
+            input_ids=inputs["input_ids"],
+            attention_mask=inputs["attention_mask"],
+            max_new_tokens=thinker_max_new_tokens,
+            max_tokens_per_step=thinker_max_tokens_per_step,
+            use_audio_in_video=use_audio_in_video,
+            eos_token_ids=thinker_eos_token_ids,
+            output_hidden_states=True,
+        )
+        return talker_generate_chunk(
+            input_ids=inputs["input_ids"],
+            attention_mask=inputs["attention_mask"],
+            thinker_chunk_stream=thinker_chunk_stream,
+            speaker=speaker,
+        )
 
     @torch.no_grad()
     def thinker_talker_inference_stream(
@@ -653,6 +1047,7 @@ with omni_img.imports():
         if model.token2wav.dtype != torch.float:
             model.token2wav.float()
 
+        code2wav_times = []
         talker_generate_codes = []
         times = []
         start_time = perf_counter()
@@ -687,7 +1082,9 @@ with omni_img.imports():
                     .unsqueeze(0)
                     .detach()
                 )
+                code2wav_times.append(perf_counter() - start_time)
                 yield (gen_text, wav)
+                start_time = perf_counter()
 
         print(
             f"generate first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s"
@@ -715,7 +1112,12 @@ with omni_img.imports():
                 .unsqueeze(0)
                 .detach()
             )
+            code2wav_times.append(perf_counter() - start_time)
             yield (gen_text, wav)
+
+        print(
+            f"code2wav streaming first chunk time: {code2wav_times[0]} s | cost: {sum(code2wav_times)} s"
+        )
 
         torch.cuda.empty_cache()
 
@@ -1007,7 +1409,24 @@ def asr_stream():
             print(text)
 
 
+def thinker_chunk_stream():
+    messages = [
+        {"role": "system", "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}]},
+        {"role": "user", "content": [{"type": "text", "text": "who are you?"}]},
+    ]
+    chunk_stream = thinker_inference_chunk_stream(
+        messages,
+        use_audio_in_video=False,
+        output_hidden_states=False,
+        max_new_tokens=100,
+    )
+    for chunk in chunk_stream:
+        print(chunk)
+
+
 def omni_chatting_stream():
+    import soundfile as sf
+
     messages = [
         {"role": "system", "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}]},
         {"role": "user", "content": [{"type": "text", "text": "who are you?"}]},
@@ -1021,25 +1440,40 @@ def omni_chatting_stream():
     # print(f"Audio saved to {save_audio_path}")
     # return
 
-    streamer = thinker_talker_inference_stream(messages, use_audio_in_video=False)
-    audios = []
-    times = []
-    start_time = time.perf_counter()
-    for i, (texts, audio) in enumerate(streamer):
-        if i == 0:
-            print(texts[0])
-        times.append(time.perf_counter() - start_time)
+    for _ in range(1):  # warmup and test
+        streamer = thinker_talker_inference_stream(messages, use_audio_in_video=False)
+        audios = []
+        times = []
         start_time = time.perf_counter()
-        audios.append(audio.squeeze().cpu().numpy())
-        save_audio_path = os.path.join(ASSETS_DIR, f"generated_omni_chatting_stream_{i}.wav")
-        torchaudio.save(save_audio_path, audio, sample_rate=24000)
-        print(f"Audio saved to {save_audio_path}")
-    save_audio_path = os.path.join(ASSETS_DIR, f"generated_omni_chatting_stream.wav")
-    sf.write(save_audio_path, np.concatenate(audios), samplerate=24000)
-    info = sf.info(save_audio_path, verbose=True)
-    print(
-        f"first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+        for i, (texts, audio) in enumerate(streamer):
+            if i == 0:
+                print(texts[0])
+            times.append(time.perf_counter() - start_time)
+            start_time = time.perf_counter()
+            audios.append(audio.squeeze().cpu().numpy())
+            save_audio_path = os.path.join(ASSETS_DIR, f"generated_omni_chatting_stream_{i}.wav")
+            torchaudio.save(save_audio_path, audio, sample_rate=24000)
+            print(f"Audio saved to {save_audio_path}")
+        save_audio_path = os.path.join(ASSETS_DIR, f"generated_omni_chatting_stream.wav")
+        sf.write(save_audio_path, np.concatenate(audios), samplerate=24000)
+        info = sf.info(save_audio_path, verbose=True)
+        print(
+            f"thinker->talker->code2wav streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+        )
+
+
+def omni_chatting_segment_stream():
+    messages = [
+        {"role": "system", "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}]},
+        {"role": "user", "content": [{"type": "text", "text": "who are you?"}]},
+    ]
+    chunk_stream = generate_stream(
+        messages,
+        use_audio_in_video=False,
+        thinker_max_new_tokens=100,
     )
+    for text, wav in chunk_stream:
+        print(text, wav.shape)
 
 
 class TokenStreamer(BaseStreamer):
@@ -1104,7 +1538,9 @@ IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen2_5omni.py --task batch_r
 
 # stream
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task asr_stream
+IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task thinker_chunk_stream 
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_stream
+IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_segment_stream
 """
 
 
@@ -1120,7 +1556,9 @@ def main(task: str = "universal_audio_understanding"):
         "multi_round_omni_chatting": multi_round_omni_chatting,
         "batch_requests": batch_requests,
         "asr_stream": asr_stream,
+        "thinker_chunk_stream": thinker_chunk_stream,
         "omni_chatting_stream": omni_chatting_stream,
+        "omni_chatting_segment_stream": omni_chatting_segment_stream,
     }
     if task not in tasks:
         raise ValueError(f"task {task} not found")

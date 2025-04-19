@@ -69,7 +69,7 @@ vllm_image = vllm_image.env(
     }
 ).run_commands(
     "rm -rf /vllm && git clone -b new_qwen2_omni_public https://github.com/ai-bot-pro/vllm.git",
-    "cd /vllm && git checkout 50952d6e2b954063a7cfee9cb436aa57db065738",
+    "cd /vllm && git checkout 5f1e0a13966089876b5138bc1bce0c4a7b918b11",
 )
 
 HF_MODEL_DIR = "/root/models"
