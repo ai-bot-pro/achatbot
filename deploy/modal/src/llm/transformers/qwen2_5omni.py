@@ -1559,7 +1559,7 @@ IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen2_5omni.py --task batch_r
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task asr_stream
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task thinker_chunk_stream 
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_stream
-IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_segment_stream
+IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_segment_stream
 """
 
 
