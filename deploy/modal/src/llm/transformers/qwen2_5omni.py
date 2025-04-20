@@ -50,7 +50,7 @@ with omni_img.imports():
     import numpy as np
     from transformers.generation.streamers import BaseStreamer
 
-    import torch, torchaudio
+    import torch
     from transformers import (
         Qwen2_5OmniForConditionalGeneration,
         Qwen2_5OmniProcessor,
@@ -515,11 +515,14 @@ with omni_img.imports():
         input_ids,
         attention_mask,
         max_new_tokens=2048,
-        max_tokens_per_step=3,  # Controls how many tokens to generate *per step*
+        max_tokens_per_step=10,  # Controls how many tokens to generate *per step*
         use_audio_in_video=False,
         eos_token_ids=[151644, 151645],  # Define EOS tokens
         output_hidden_states=False,
     ):
+        if max_tokens_per_step > max_new_tokens:
+            max_tokens_per_step = max_new_tokens
+
         # Keep track of the full generated sequence full_generated_ids = input_ids.clone()
         # Ensure full_attention_mask is correctly initialized and expanded
         full_attention_mask = (
@@ -539,7 +542,6 @@ with omni_img.imports():
 
         total_new_tokens_generated = 0
         generated_text = ""
-        is_first = True
         hidden_states = None
 
         times = []
@@ -581,9 +583,18 @@ with omni_img.imports():
                 print("Warning: generate produced 0 new tokens in this step.")
                 break
 
-            if is_first is True:
-                is_first = False
-                hidden_states = outputs.hidden_states if output_hidden_states else None
+            if output_hidden_states is True:
+                hidden_states = outputs.hidden_states
+                # new generate thinker_token_embeds
+                thinker_new_token_embeds = hidden_states[0][0][:, :52, :]
+                hidden_states = (
+                    (thinker_new_token_embeds,) + hidden_states[0][1:],
+                ) + hidden_states[1:]
+                # new generate thinker_hidden_states
+                thinker_new_hidden_states = hidden_states[0][-1][:, :52, :]
+                hidden_states = (
+                    hidden_states[0][:-1] + (thinker_new_hidden_states,),
+                ) + hidden_states[1:]
 
             # Decode and print only the text generated in this step
             step_new_text = processor.decode(step_new_ids[0], skip_special_tokens=True)
@@ -615,8 +626,10 @@ with omni_img.imports():
             )
             current_attention_mask = full_attention_mask
 
+            # torch.cuda.empty_cache()
+
             # Check if EOS token was generated in this step
-            if step_new_ids[0, -1].item() in eos_token_ids:
+            if step_new_ids[0, -1].item() in [151644, 151645]:
                 print("EOS token generated.")
                 break
 
@@ -854,7 +867,7 @@ with omni_img.imports():
         use_audio_in_video=False,
         speaker=DEFAULT_SPEAKER,
         thinker_max_new_tokens=2048,
-        thinker_max_tokens_per_step=3,  # Controls how many tokens to generate *per step*
+        thinker_max_tokens_per_step=10,  # Controls how many tokens to generate *per step*
         thinker_eos_token_ids=[151644, 151645],  # Define EOS tokens
     ):
         text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
@@ -921,12 +934,12 @@ with omni_img.imports():
             output_hidden_states=True,
             return_dict_in_generate=True,
         )
-        # print(
-        #    thinker_result.sequences.shape,
-        #    thinker_result.hidden_states[0][0].shape,
-        #    thinker_result.hidden_states[0][-1].shape,
-        #    len(thinker_result.hidden_states),
-        # )
+        print(
+            thinker_result.sequences.shape,
+            thinker_result.hidden_states[0][0].shape,
+            thinker_result.hidden_states[0][-1].shape,
+            len(thinker_result.hidden_states),
+        )
 
         # 2. Generate speech tokens from talker module
         input_ids = inputs["input_ids"]
@@ -1159,6 +1172,8 @@ def run(func):
 
 
 def voice_chatting():
+    import torchaudio
+
     sys_msg = {
         "role": "system",
         "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}],
@@ -1185,6 +1200,8 @@ def voice_chatting():
 
 
 def multi_round_omni_chatting():
+    import torchaudio
+
     conversations = [
         {
             "role": "system",
@@ -1202,6 +1219,8 @@ def multi_round_omni_chatting():
 
 
 def omni_chatting_for_math():
+    import torchaudio
+
     video_path = os.path.join(ASSETS_DIR, "math.mp4")
     messages = [
         {
@@ -1225,6 +1244,8 @@ def omni_chatting_for_math():
 
 
 def omni_chatting_for_music():
+    import torchaudio
+
     video_path = os.path.join(ASSETS_DIR, "music.mp4")
     messages = [
         {
@@ -1444,6 +1465,7 @@ def thinker_chunk_stream():
 
 
 def omni_chatting_stream():
+    import torchaudio
     import soundfile as sf
 
     messages = [
@@ -1468,11 +1490,12 @@ def omni_chatting_stream():
             if i == 0:
                 print(texts[0])
             times.append(time.perf_counter() - start_time)
-            start_time = time.perf_counter()
             audios.append(audio.squeeze().cpu().numpy())
             save_audio_path = os.path.join(ASSETS_DIR, f"generated_omni_chatting_stream_{i}.wav")
             torchaudio.save(save_audio_path, audio, sample_rate=24000)
             print(f"Audio saved to {save_audio_path}")
+            start_time = time.perf_counter()
+
         save_audio_path = os.path.join(ASSETS_DIR, f"generated_omni_chatting_stream.wav")
         sf.write(save_audio_path, np.concatenate(audios), samplerate=24000)
         info = sf.info(save_audio_path, verbose=True)
@@ -1482,17 +1505,58 @@ def omni_chatting_stream():
 
 
 def omni_chatting_segment_stream():
+    import torchaudio
+    import soundfile as sf
+
     messages = [
         {"role": "system", "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}]},
         {"role": "user", "content": [{"type": "text", "text": "who are you?"}]},
     ]
+    thinker_eos_token_ids = [151644, 151645] + tokenizer_sentences()
+    print(thinker_eos_token_ids)
     chunk_stream = generate_stream(
         messages,
         use_audio_in_video=False,
         thinker_max_new_tokens=100,
+        thinker_max_tokens_per_step=10,
+        thinker_eos_token_ids=thinker_eos_token_ids,
     )
-    for text, wav in chunk_stream:
+
+    gen_text = ""
+    gen_all_text = ""
+    audios = []
+    times = []
+    start_time = time.perf_counter()
+    for i, (text, wav) in enumerate(chunk_stream):
+        times.append(time.perf_counter() - start_time)
+        if gen_text != text:
+            gen_text = text
+            gen_all_text += gen_text
         print(text, wav.shape)
+        audios.append(wav.squeeze().cpu().numpy())
+        save_audio_path = os.path.join(ASSETS_DIR, f"omni_chatting_segment_stream-{i}-{text}.wav")
+        # torchaudio.save(save_audio_path, wav, sample_rate=24000)
+        # print(f"Audio saved to {save_audio_path}")
+        start_time = time.perf_counter()
+
+    print(f"gen all text: {gen_all_text}")
+    save_audio_path = os.path.join(ASSETS_DIR, f"omni_chatting_segment_stream.wav")
+    sf.write(save_audio_path, np.concatenate(audios), samplerate=24000)
+    print(f"All Audio saved to {save_audio_path}")
+    info = sf.info(save_audio_path, verbose=True)
+    print(
+        f"thinker->talker->code2wav chunk streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+    )
+
+
+def tokenizer_sentences():
+    # NOTE: don't use single character to tokenizer
+    # token_ids = []
+    # for i in ",;.?!，；。？！":
+    # for i in ",.":
+    #    token_id = processor.tokenizer.encode(i)
+    #    token_ids.extend(token_id)
+    return processor.tokenizer.encode(";.?!；。？！")
 
 
 class TokenStreamer(BaseStreamer):
@@ -1560,6 +1624,8 @@ IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task asr_stream
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task thinker_chunk_stream 
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_stream
 IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_segment_stream
+
+IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task tokenizer
 """
 
 
