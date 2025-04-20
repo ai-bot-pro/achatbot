@@ -651,7 +651,12 @@ with omni_img.imports():
     ):
         for chunk in thinker_chunk_stream:
             thinker_generate_text = chunk["thinker_generate_text"]
+            if thinker_generate_text in " \n\r,;.?!，；。？！":
+                yield (thinker_generate_text, torch.empty([1, 0]))
+                continue
             thinker_generate_hidden_states = chunk["thinker_generate_hidden_states"]
+            if thinker_generate_hidden_states is None:
+                continue
             thinker_generate_ids = chunk["thinker_generate_ids"].to(model.talker.device)
             thinker_token_embeds = [
                 token_hidden_states[0].to(model.talker.device)
@@ -1518,7 +1523,7 @@ def omni_chatting_segment_stream():
         messages,
         use_audio_in_video=False,
         thinker_max_new_tokens=100,
-        thinker_max_tokens_per_step=10,
+        thinker_max_tokens_per_step=15,
         thinker_eos_token_ids=thinker_eos_token_ids,
     )
 
