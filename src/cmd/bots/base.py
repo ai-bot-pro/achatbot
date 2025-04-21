@@ -387,6 +387,19 @@ class AIBot(IBot):
             llm_processor = MiniCPMoVisionVoiceProcessor()
         return llm_processor
 
+    def get_qwen2_5omni_vision_voice_processor(
+        self, llm: LLMConfig | None = None
+    ) -> VisionVoiceProcessorBase:
+        from src.processors.omni.qwen2_5omni_vision_voice import Qwen2_5OmnVisionVoiceProcessor
+
+        if not llm:
+            llm = self._bot_config.omni_llm
+        if llm.args:
+            llm_processor = Qwen2_5OmnVisionVoiceProcessor(**llm.args)
+        else:
+            llm_processor = Qwen2_5OmnVisionVoiceProcessor()
+        return llm_processor
+
     def get_text_glm_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
         from src.processors.voice.glm_voice_processor import GLMTextVoiceProcessor
 

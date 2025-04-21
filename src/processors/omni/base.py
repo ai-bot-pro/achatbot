@@ -18,7 +18,6 @@ from src.processors.ai_processor import AsyncAIProcessor
 class VisionVoiceProcessorBase(AsyncAIProcessor):
     """
     VisionVoiceProcessorBase is a base class for vision+voice processors.
-    j
     input: vision + voice frame
     use omni lm to process vision + voice frames
     output: text+audio frame
@@ -80,7 +79,6 @@ class VisionVoiceProcessorBase(AsyncAIProcessor):
         for item in tensor_audio_stream:
             logging.debug(f"generate data: {item}")
             tensor_audio = item.pop("audio_wav", None)
-            rate = item.pop("sampling_rate", RATE)
             text = item.pop("text", "").strip()
             if text != "":
                 await self.push_frame(TextFrame(text=text))
@@ -95,7 +93,7 @@ class VisionVoiceProcessorBase(AsyncAIProcessor):
                 await self.queue_frame(
                     AudioRawFrame(
                         audio=audio_bytes,
-                        sample_rate=rate,
+                        sample_rate=self.stream_info["sample_rate"],
                     )
                 )
             yield None

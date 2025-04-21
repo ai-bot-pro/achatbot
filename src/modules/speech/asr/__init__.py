@@ -61,7 +61,7 @@ class ASREnvInit:
 
     @staticmethod
     def get_asr_qwen2_5omni_args() -> dict:
-        kwargs = LLMEnvInit.get_llm_transformers_args()
+        kwargs = LLMEnvInit.get_qwen2_5omni_transformers_args()
         return kwargs
 
     map_config_func = {

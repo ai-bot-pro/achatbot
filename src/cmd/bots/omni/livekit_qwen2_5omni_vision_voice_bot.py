@@ -42,7 +42,7 @@ class LivekitQwen2_5OmniVisionVoiceBot(LivekitRoomBot):
             vad_audio_passthrough=True,
         )
 
-        self._vision_voice_processor = self.get_minicpmo_vision_voice_processor()
+        self._vision_voice_processor = self.get_qwen2_5omni_vision_voice_processor()
         stream_info = self._vision_voice_processor.stream_info
         self.params.audio_out_sample_rate = stream_info["sample_rate"]
         self.params.audio_out_channels = stream_info["channels"]
