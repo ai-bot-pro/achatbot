@@ -432,6 +432,7 @@ with omni_img.imports():
         messages,
         use_audio_in_video=False,
     ):
+        print(messages)
         text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         # image_inputs, video_inputs = process_vision_info([messages])
         audios, images, videos = process_mm_info(messages, use_audio_in_video=use_audio_in_video)
@@ -444,6 +445,7 @@ with omni_img.imports():
             padding=True,
             use_audio_in_video=use_audio_in_video,
         )
+        print(text, audios, images, videos)
         inputs = inputs.to(model.device).to(model.dtype)
 
         streamer = TextIteratorStreamer(processor, skip_prompt=True, skip_special_tokens=True)
@@ -455,12 +457,12 @@ with omni_img.imports():
             return_audio=False,
             thinker_do_sample=True,
             # do_sample=True,
-            top_k=10,
-            top_p=0.9,
-            temperature=0.95,
-            repetition_penalty=1.1,
+            top_k=20,
+            top_p=0.8,
+            temperature=0.1,
+            repetition_penalty=1.0,
             min_new_tokens=0,
-            max_new_tokens=2048,
+            max_new_tokens=1024,
         )
         thread = Thread(target=model.generate, kwargs=generation_kwargs)
         thread.start()
@@ -1434,7 +1436,12 @@ def asr_stream():
         },
         {
             "audio_path": "BAC009S0764W0121.wav",
-            "prompt": "请将这段中文语音转换为纯文本，去掉标点符号。",
+            "prompt": "请将这段中文语音转换为纯文本",
+            "sys_prompt": "You are a speech recognition model.",
+        },
+        {
+            "audio_path": "asr_example_zh.wav",
+            "prompt": "请将这段中文语音转换为纯文本",
             "sys_prompt": "You are a speech recognition model.",
         },
     ]:

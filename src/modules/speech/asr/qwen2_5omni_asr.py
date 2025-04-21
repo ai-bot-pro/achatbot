@@ -19,6 +19,7 @@ class Qwen2_5OmniAsr(ASRBase):
         return kwargs
 
     def __init__(self, **args) -> None:
+        args["init_chat_prompt"] = "You are a speech recognition model"
         self.model = TransformersManualAudioQwen2_5OmniLLM(**args)
         self.args = args
 
@@ -28,9 +29,13 @@ class Qwen2_5OmniAsr(ASRBase):
         if isinstance(audio_data, str):  # path
             audio_nparr, _ = librosa.load(audio_data, sr=16000, mono=True)
             self.asr_audio = audio_nparr
+            self.asr_audio = audio_data
 
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
-        prompt = [{"type": "audio", "audio": self.asr_audio}]
+        prompt = [
+            {"type": "text", "text": "请将这段中文语音转换为纯文本"},
+            {"type": "audio", "audio": self.asr_audio},
+        ]
         session.ctx.state["prompt"] = session.ctx.state.get("prompt", prompt)
         transcription = self.model.generate(session)
         for item in transcription:
