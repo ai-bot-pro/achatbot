@@ -21,7 +21,7 @@ load_dotenv(override=True)
 @register_ai_room_bots.register
 class LivekitAsrQwen2_5OmniVoiceBot(LivekitRoomBot):
     """
-    use livekit audio stream(bytes) ---> qwen2.5omni voice processor -->text/audio_bytes
+    use livekit audio stream(bytes) --> asr --> text ---> qwen2.5omni voice processor -->text/audio_bytes
     - don't support tools call, need sft
     """
 

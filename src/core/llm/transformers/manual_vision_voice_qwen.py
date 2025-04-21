@@ -11,13 +11,14 @@ import torch
 try:
     from qwen_omni_utils import process_mm_info
     from transformers import (
-        Qwen2_5OmniProcessor,
-        TextIteratorStreamer,
         AutoConfig,
         AutoProcessor,
     )
     from src.thirdparty.qwen2_code2wav.engine import Code2WavEngine
     from src.thirdparty.qwen2_code2wav import Code2WavEngineConfig, Code2WavGenerationConfig
+    from src.core.llm.transformers.models.qwen2_5_omni import (
+        Qwen2_5OmniForConditionalGenerationStreaming,
+    )
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
@@ -26,10 +27,7 @@ except ModuleNotFoundError as e:
     raise Exception(f"Missing module: {e}")
 
 
-from src.core.llm.transformers.models.qwen2_5_omni import (
-    Qwen2_5OmniForConditionalGenerationStreaming,
-)
-from src.common.utils.helper import ThreadSafeDict, print_model_params
+from src.common.utils.helper import ThreadSafeDict
 from src.core.llm.transformers.streamer import TokenStreamer
 from src.common.random import set_all_random_seed
 from src.common.chat_history import ChatHistory

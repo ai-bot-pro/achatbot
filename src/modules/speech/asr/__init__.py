@@ -57,6 +57,12 @@ class ASREnvInit:
         kwargs["use_gptq_ckpt"] = bool(os.getenv("USE_GPTQ_CKPT", ""))
         return kwargs
 
+    @staticmethod
+    def get_asr_qwen2_5omni_args() -> dict:
+        kwargs = LLMEnvInit.get_llm_transformers_args()
+        return kwargs
+
     map_config_func = {
         "minicpmo_asr": get_asr_minicpmo_args,
+        "qwen2_5omni_asr": get_asr_minicpmo_args,
     }
