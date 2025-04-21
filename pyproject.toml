@@ -288,7 +288,11 @@ llm_transformers_manual_vision_voice_qwen =[
     "torch~=2.2.2",
     "torchaudio~=2.2.2",
     "torchvision~=0.17.2",
+    "numpy==1.26.2",
     "qwen-omni-utils[decord]",
+    # code2wav
+    "torchdiffeq",
+    "x_transformers",
 ]
 
 # core llms

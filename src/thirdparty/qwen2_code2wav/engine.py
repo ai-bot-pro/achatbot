@@ -1,8 +1,7 @@
-from ast import Tuple
 import glob
 import logging
 import os
-from typing import List, Union
+from typing import List, Union, Tuple
 
 import numpy as np
 import torch

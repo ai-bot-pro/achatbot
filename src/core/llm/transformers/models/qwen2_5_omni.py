@@ -26,9 +26,9 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         print_model_params(self.thinker, "qwen2.5omni_thinker")
-        print_model_params(self.talker, "qwen2.5omni_talker")
-        print_model_params(self.token2wav, "qwen2.5omni_token2wav")
-        if self.token2wav.dtype != torch.float:
+        if self.has_talker:
+            print_model_params(self.talker, "qwen2.5omni_talker")
+            print_model_params(self.token2wav, "qwen2.5omni_token2wav")
             self.token2wav.float()
 
     @torch.no_grad()

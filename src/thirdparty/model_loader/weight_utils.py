@@ -1,5 +1,4 @@
-from ast import Tuple
-from typing import Generator, List
+from typing import Generator, List, Tuple
 
 from safetensors import safe_open
 import torch

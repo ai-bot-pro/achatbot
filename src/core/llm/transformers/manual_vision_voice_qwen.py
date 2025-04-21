@@ -48,15 +48,19 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
     RATE = 24000
 
     def __init__(self, **args) -> None:
-        super().__init__(**args)
         self.args = Qwen2_5TransformersVisionVoiceLMArgs(**args)
         self.thinker_args = TransformersLMArgs(**self.args.thinker_args)
         self.talker_args = TransformersLMArgs(**self.args.talker_args)
         self.code2wav_args = Code2WavEngineConfig(**self.args.code2wav_args)
+        logging.info(f"Model args: {args}")
+        logging.info(f"Model thinker_args: {self.thinker_args}")
+        logging.info(f"Model talker_args: {self.talker_args}")
+        logging.info(f"Model code2wav_args: {self.code2wav_args}")
         config = AutoConfig.from_pretrained(self.args.lm_model_name_or_path)
         config.enable_audio_output = True
         if self.args.disable_talker is True:
             config.enable_audio_output = False
+        logging.info(f"Model config: {config}")
 
         if self.args.lm_device_map:
             self._model: Qwen2_5OmniForConditionalGenerationStreaming = (
@@ -362,13 +366,17 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
             if gen_text != text:
                 gen_text = text
                 all_gen_text += text
-            # audio_bytes = (
-            #    (chunk["talker_wav"].float().detach().cpu().numpy() * 32768)
-            #    .astype(np.int16)
-            #    .tobytes()
-            # )
 
-            yield {"text": text, "audio_wav": chunk["talker_wav"]}
+            if "talker_wav" not in chunk:
+                yield {"text": text}
+            else:
+                # audio_bytes = (
+                #    (chunk["talker_wav"].float().detach().cpu().numpy() * 32768)
+                #    .astype(np.int16)
+                #    .tobytes()
+                # )
+
+                yield {"text": text, "audio_wav": chunk["talker_wav"]}
 
         # un save audio
         session_chat_history.append({"role": "assistant", "content": [{"text": all_gen_text}]})

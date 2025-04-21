@@ -34,8 +34,9 @@ class Qwen2_5OmniAsr(ASRBase):
         session.ctx.state["prompt"] = session.ctx.state.get("prompt", prompt)
         transcription = self.model.generate(session)
         for item in transcription:
-            clean_text = re.sub(r"<\|.*?\|>", "", item)
-            yield clean_text
+            if "text" in item:
+                clean_text = re.sub(r"<\|.*?\|>", "", item["text"])
+                yield clean_text
 
     async def transcribe(self, session: Session) -> dict:
         res = ""

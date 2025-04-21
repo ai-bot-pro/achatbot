@@ -14,6 +14,8 @@ load_dotenv(override=True)
 class ASREnvInit:
     @staticmethod
     def getEngine(tag, **kwargs) -> interface.IAsr | EngineClass:
+        if "qwen2_5omni_asr" in tag:
+            from . import qwen2_5omni_asr
         if "minicpmo_asr" in tag:
             from . import minicpmo_asr
         if "sense_voice" in tag:
@@ -64,5 +66,5 @@ class ASREnvInit:
 
     map_config_func = {
         "minicpmo_asr": get_asr_minicpmo_args,
-        "qwen2_5omni_asr": get_asr_minicpmo_args,
+        "qwen2_5omni_asr": get_asr_qwen2_5omni_args,
     }
