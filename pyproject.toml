@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 name = "achatbot"
 #dynamic = ["version"]
 # todo
-version = "0.0.9.post8"
+version = "0.0.9.post9"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -279,6 +279,16 @@ llm_transformers_manual_vision_voice_minicpmo = [
     "vocos~=0.1.0",
     "decord",
     "moviepy",
+]
+llm_transformers_manual_vision_voice_qwen =[
+    # https://github.com/huggingface/transformers/releases/tag/v4.51.3-Qwen2.5-Omni-preview
+    #"git+https://github.com/huggingface/transformers@v4.51.3-Qwen2.5-Omni-preview",
+    #"transformers==4.52.0",
+    "achatbot[accelerate,librosa,soundfile]",
+    "torch~=2.2.2",
+    "torchaudio~=2.2.2",
+    "torchvision~=0.17.2",
+    "qwen-omni-utils[decord]",
 ]
 
 # core llms
