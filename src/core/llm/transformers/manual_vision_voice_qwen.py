@@ -278,6 +278,15 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
 
     @torch.inference_mode()
     def generate(self, session: Session, **kwargs):
+        """
+        prompt:
+        [
+            {"type": "text", "text": str},
+            {"type": "image", "image": url / path / base64},
+            {"type": "video", "video": url / path / base64},
+            {"type": "audio", "audio": url / path / base64},
+        ]
+        """
         seed = kwargs.get("seed", self.args.lm_gen_seed)
         set_all_random_seed(seed)
 
