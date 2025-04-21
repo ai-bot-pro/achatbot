@@ -31,7 +31,7 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
             from transformers import (
                 Qwen2_5_VLForConditionalGeneration as QwenVLForConditionalGeneration,
             )
-        else:
+        if self.TAG == "llm_transformers_manual_vision_qwen":
             from transformers import (
                 Qwen2VLForConditionalGeneration as QwenVLForConditionalGeneration,
             )

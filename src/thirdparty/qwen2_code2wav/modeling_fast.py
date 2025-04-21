@@ -367,8 +367,23 @@ class Qwen2Code2wav(torch.nn.Module):
         )
 
     @torch.inference_mode()
-    def forward(self, cond, ref_mel, codec):
-        generated_mel = self.code2wav_dit_model.sample(cond, ref_mel, codec)
+    def forward(
+        self,
+        cond,
+        ref_mel,
+        codec,
+        steps=10,
+        cfg_strength=0.5,
+        sway_sampling_coef=-1.0,
+    ):
+        generated_mel = self.code2wav_dit_model.sample(
+            cond,
+            ref_mel,
+            codec,
+            steps=steps,
+            cfg_strength=cfg_strength,
+            sway_sampling_coef=sway_sampling_coef,
+        )
         generated_mel = generated_mel.permute(0, 2, 1)
         waveform = self.code2wav_bigvgan_model(generated_mel)
         return waveform
@@ -412,12 +427,21 @@ class Qwen2Code2wav(torch.nn.Module):
         steps,
         prev_generated: torch.Tensor,
         finished: bool = False,
+        cfg_strength=0.5,
+        sway_sampling_coef=-1.0,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         # mask to prevent codec from being out of range (the eos token)
         if self.codec_embed_size > 0:
             codec_all[codec_all >= self.codec_embed_size] = 0
 
-        return None, self.forward(cond, ref_mel, codec_all)
+        return None, self.forward(
+            cond,
+            ref_mel,
+            codec_all,
+            steps=steps,
+            cfg_strength=cfg_strength,
+            sway_sampling_coef=sway_sampling_coef,
+        )
 
     @torch.inference_mode()
     def process_chunk(
@@ -430,6 +454,8 @@ class Qwen2Code2wav(torch.nn.Module):
         steps,
         prev_generated: Union[torch.Tensor, List[torch.Tensor]],
         finished: bool = False,
+        cfg_strength=0.5,
+        sway_sampling_coef=-1.0,
     ) -> Tuple[Union[torch.Tensor, List[torch.Tensor]], torch.Tensor]:
         start_index = max(i * self.chunk_size - self.past_cache_size, 0)
         end_index = min(
@@ -468,8 +494,8 @@ class Qwen2Code2wav(torch.nn.Module):
                 ref_mel=ref_mel,
                 y0=y0,
                 steps=steps,
-                cfg_strength=0.5,
-                sway_sampling_coef=-1.0,
+                cfg_strength=cfg_strength,
+                sway_sampling_coef=sway_sampling_coef,
             )
 
         if self.frequency == "50hz":

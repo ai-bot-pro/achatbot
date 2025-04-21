@@ -7,23 +7,25 @@ from typing import List, Union
 import numpy as np
 import torch
 
+from . import Code2WavEngineConfig, Code2WavGenerationConfig
+
 from ..model_loader.weight_utils import safetensors_weights_iterator
 from .modeling_fast import Qwen2Code2wav
 
 
 class Code2WavEngine:
-    def __init__(
-        self,
-        model_path: str,
-        enable_torch_compile: bool,
-        enable_torch_compile_first_chunk: bool,
-        odeint_method: str = "euler",
-        odeint_method_relaxed: bool = False,
-        batched_chunk: int = 3,
-        frequency: str = "50hz",
-        device: Union[int, str] = "cuda",
-        code2wav_dynamic_batch: bool = False,  # todo batch chunk
-    ) -> None:
+    def __init__(self, **kwargs) -> None:
+        self.args = Code2WavEngineConfig(**kwargs)
+        model_path = self.args.model_path
+        enable_torch_compile = self.args.enable_torch_compile
+        enable_torch_compile_first_chunk = self.args.enable_torch_compile_first_chunk
+        odeint_method = self.args.odeint_method
+        odeint_method_relaxed = self.args.odeint_method_relaxed
+        batched_chunk = self.args.batched_chunk
+        frequency: str = self.args.frequency
+        device: Union[int, str] = self.args.frequency
+        code2wav_dynamic_batch: bool = self.args.code2wav_dynamic_batch  # todo batch chunk
+
         if isinstance(device, int):
             device = f"cuda:{device}"
         self.device = torch.device(device)
@@ -149,17 +151,17 @@ class Code2WavEngine:
     def step_generate_waveform(
         self,
         code: List[int],
-        code2wav_cond: torch.Tensor,
-        code2wav_ref_mel: torch.Tensor,
-        code2wav_y_all: torch.Tensor,
         prev_generated: Union[torch.Tensor, List[torch.Tensor]],
         progress: int,
-        code2wav_steps: int = 10,
         finished: bool = False,
+        y_all: torch.Tensor = None,
+        voice_type: str = "default",
+        gen_args: Code2WavGenerationConfig = Code2WavGenerationConfig(),
     ) -> Tuple[Union[torch.Tensor, List[torch.Tensor]], torch.Tensor]:
         """
         Generate waveform from code list step by step.
         """
+        cond, ref_mel = self.get_voice(voice_type)
         chunk_code_length = len(code) * self.factor - self.code2wav.future_cache_size
         if (
             chunk_code_length > 0 and chunk_code_length % self.code2wav.chunk_size == 0
@@ -171,12 +173,16 @@ class Code2WavEngine:
                 process_chunk = self.code2wav.process_chunk
 
             return process_chunk(
-                code2wav_cond,
-                code2wav_ref_mel,
+                cond,
+                ref_mel,
                 codec_all=code,
-                y_all=code2wav_y_all,
+                y_all=self.code2wav_y_all if y_all is None else y_all,
                 i=progress,
-                steps=code2wav_steps,
+                steps=gen_args.steps,
                 prev_generated=prev_generated,
                 finished=finished,
+                cfg_strength=gen_args.cfg_strength,
+                sway_sampling_coef=gen_args.sway_sampling_coef,
             )
+        else:
+            return prev_generated, None

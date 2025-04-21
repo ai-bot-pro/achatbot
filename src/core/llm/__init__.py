@@ -53,6 +53,8 @@ class LLMEnvInit:
             from .transformers import manual_vision_img_janus_pro
         elif "llm_transformers_manual_vision_minicpmo" == tag:
             from .transformers import manual_vision_voice_minicpmo
+        elif "llm_transformers_manual_qwen2_5omni" in tag:
+            from .transformers import manual_vision_voice_qwen
         elif "llm_transformers_manual" == tag:
             from .transformers import manual
         elif "llm_transformers_pipeline" == tag:
@@ -303,6 +305,7 @@ class LLMEnvInit:
         "llm_transformers_manual_vision_janus_flow": get_llm_transformers_args,
         "llm_transformers_manual_image_janus_flow": get_llm_transformers_manual_image_janus_flow_args,
         "llm_transformers_manual_vision_minicpmo": get_llm_transformers_args,
+        "llm_transformers_manual_vision_qwen2_5omni": get_llm_transformers_args,
         "llm_transformers_generator": get_llm_transformers_args,
         "llm_llamacpp_generator": get_llm_llamacpp_generator_args,
         "llm_vllm_generator": get_llm_vllm_generator_args,

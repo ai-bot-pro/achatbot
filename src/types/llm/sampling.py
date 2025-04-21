@@ -88,6 +88,10 @@ class LMGenerateArgs:
             "help": "The pad token id. Default is 0. If the pad id is a substring token id of the generated text, the generation will stop."
         },
     )
+    lm_gen_max_tokens_per_step: int = field(
+        default=3,
+        metadata={"help": "The maximum number of tokens to generate per step. Default is 3."},
+    )
 
     def update(self, **kwargs):
         unused_kwargs = dict()
