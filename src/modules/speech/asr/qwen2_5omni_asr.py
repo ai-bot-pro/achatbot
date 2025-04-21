@@ -29,7 +29,6 @@ class Qwen2_5OmniAsr(ASRBase):
         if isinstance(audio_data, str):  # path
             audio_nparr, _ = librosa.load(audio_data, sr=16000, mono=True)
             self.asr_audio = audio_nparr
-            self.asr_audio = audio_data
 
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
         prompt = [

@@ -12,7 +12,7 @@ class Code2WavGenerationConfig:
 
 @dataclass
 class Code2WavEngineConfig(Code2WavGenerationConfig):
-    model_path: str
+    model_path: str = ""
     enable_torch_compile: bool = True
     enable_torch_compile_first_chunk: bool = False
     odeint_method: str = "euler"

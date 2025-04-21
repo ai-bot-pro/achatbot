@@ -299,7 +299,7 @@ class LLMEnvInit:
 
         kwargs = Qwen2_5TransformersVisionVoiceLMArgs(
             lm_model_name_or_path=os.getenv(
-                "LLM_MODEL_NAME_OR_PATH", os.path.join(MODELS_DIR, "Qwen/Qwen2-0.5B-Instruct")
+                "LLM_MODEL_NAME_OR_PATH", os.path.join(MODELS_DIR, "Qwen/Qwen2.5-Omni-7B")
             ),
             lm_attn_impl=os.getenv("LLM_ATTN_IMPL", None),
             lm_device=os.getenv("LLM_DEVICE", None),
@@ -325,6 +325,19 @@ class LLMEnvInit:
                 **LLMEnvInit._get_llm_generate_args(prefix="TALKER_"),
             ).__dict__,
             code2wav_args=Code2WavEngineConfig(
+                model_path=os.getenv(
+                    "CODE2WAV_MODEL_PATH", os.path.join(MODELS_DIR, "Qwen/Qwen2.5-Omni-7B")
+                ),
+                enable_torch_compile=bool(os.getenv("CODE2WAV_ENABLE_TORCH_COMPILE", "1")),
+                enable_torch_compile_first_chunk=bool(
+                    os.getenv("CODE2WAV_ENABLE_TORCH_COMPILE_FIRST_CHUNK", "")
+                ),
+                odeint_method=os.getenv("CODE2WAV_ODEINT_METHOD", "euler"),
+                odeint_method_relaxed=bool(os.getenv("CODE2WAV_ODEINT_METHOD_RELAXED", "")),
+                batched_chunk=int(os.getenv("CODE2WAV_BATCHED_CHUNK", "3")),
+                frequency=os.getenv("CODE2WAV_FREQUENCY", "50hz"),
+                device=os.getenv("CODE2WAV_DEVICE", "cuda"),
+                code2wav_dynamic_batch=bool(os.getenv("CODE2WAV_DYNAMIC_BATCHING", "")),
                 num_steps=int(os.getenv("CODE2WAV_NUM_STEPS", "10")),
                 guidance_scale=float(os.getenv("CODE2WAV_GUIDANCE_SCALE", "0.5")),
                 sway_coefficient=float(os.getenv("CODE2WAV_SWAY_COEFFICIENT", "-1.0")),
@@ -352,7 +365,15 @@ class LLMEnvInit:
         "llm_transformers_manual_vision_janus_flow": get_llm_transformers_args,
         "llm_transformers_manual_image_janus_flow": get_llm_transformers_manual_image_janus_flow_args,
         "llm_transformers_manual_vision_minicpmo": get_llm_transformers_args,
-        "llm_transformers_manual_vision_qwen2_5omni": get_llm_transformers_args,
+        "llm_transformers_manual_qwen2_5omni": get_qwen2_5omni_transformers_args,
+        "llm_transformers_manual_qwen2_5omni_vision": get_qwen2_5omni_transformers_args,
+        "llm_transformers_manual_qwen2_5omni_audio": get_qwen2_5omni_transformers_args,
+        "llm_transformers_manual_qwen2_5omni_audio_asr": get_qwen2_5omni_transformers_args,
+        "llm_transformers_manual_qwen2_5omni_audio_translation": get_qwen2_5omni_transformers_args,
+        "llm_transformers_manual_qwen2_5omni_audio_classification": get_qwen2_5omni_transformers_args,
+        "llm_transformers_manual_qwen2_5omni_vision_voice": get_qwen2_5omni_transformers_args,
+        "llm_transformers_manual_qwen2_5omni_text_voice": get_qwen2_5omni_transformers_args,
+        "llm_transformers_manual_qwen2_5omni_audio_voice": get_qwen2_5omni_transformers_args,
         "llm_transformers_generator": get_llm_transformers_args,
         "llm_llamacpp_generator": get_llm_llamacpp_generator_args,
         "llm_vllm_generator": get_llm_vllm_generator_args,
