@@ -284,21 +284,21 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
         prompt:
         [
             {"type": "text", "text": str},
-            {"type": "image", "image": url / path / base64},
-            {"type": "video", "video": url / path / base64},
-            {"type": "audio", "audio": url / path / base64},
+            {"type": "image", "image": url / path / base64 / nparray},
+            {"type": "video", "video": url / path / base64 / nparray},
+            {"type": "audio", "audio": url / path / base64 / nparray},
         ]
         """
         seed = kwargs.get("seed", self.args.lm_gen_seed)
         set_all_random_seed(seed)
 
         prompt = self.get_prompt(session)
-        logging.debug(f"prompt: {prompt}")
 
         message = {"role": "user", "content": prompt}
         session_chat_history = self.chat_history(session, **kwargs)
         session_chat_history.append(message)
         messages = session_chat_history.to_list()
+        logging.info(f"messages: {messages}")
 
         text = self._tokenizer.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True
@@ -306,7 +306,7 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
         audios, images, videos = process_mm_info(
             messages, use_audio_in_video=kwargs.get("use_audio_in_video", False)
         )
-        print(text, audios, images, videos)
+        logging.info(f"{text}, {audios}, {images}, {videos}")
         inputs = self._tokenizer(
             text=text,
             audio=audios,
@@ -318,9 +318,9 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
         )
         inputs = inputs.to(self._model.device).to(self._model.dtype)
 
-        # stream = self.thinker_inference_stream(inputs)
-        # for output in stream:
-        #    yield output
+        return_audio = kwargs.get("return_audio", self._model.has_talker)
+        if not return_audio:
+            return self.thinker_inference_stream(inputs)
 
         gen_args = dict(
             use_audio_in_video=kwargs.get("use_audio_in_video", False),
@@ -358,7 +358,6 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
             code2wav_sway_coefficient=kwargs.get("code2wav_sway_coefficient", None)
             or self.code2wav_args.sway_coefficient,
         )
-        print(gen_args)
         stream = self._model.generate_stream(
             **inputs,
             **gen_args,
@@ -391,24 +390,31 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
 
     def thinker_inference_stream(
         self,
-        inputs,
-        use_audio_in_video=False,
+        input_ids: Optional[torch.Tensor] = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        use_audio_in_video: bool = False,
+        thinker_top_k: int = 40,
+        thinker_top_p: float = 0.8,
+        thinker_temperature: float = 0.9,
+        thinker_repetition_penalty: float = 1.05,
+        thinker_min_new_tokens: int = 1,
+        thinker_max_new_tokens: int = 1024,
     ):
         streamer = TextIteratorStreamer(self._tokenizer, skip_prompt=True, skip_special_tokens=True)
 
         generation_kwargs = dict(
-            **inputs,
+            input_ids,
+            attention_mask=attention_mask,
             streamer=streamer,
             use_audio_in_video=use_audio_in_video,
             return_audio=False,
-            thinker_do_sample=True,
-            # do_sample=True,
-            top_k=20,
-            top_p=0.8,
-            temperature=0.1,
-            repetition_penalty=1.0,
-            min_new_tokens=0,
-            max_new_tokens=1024,
+            thinker_do_sample=True if thinker_temperature > 0.0 else False,
+            temperature=thinker_temperature,
+            top_k=thinker_top_k,
+            top_p=thinker_top_p,
+            repetition_penalty=thinker_repetition_penalty,
+            min_new_tokens=thinker_min_new_tokens,
+            max_new_tokens=thinker_max_new_tokens,
         )
         thread = Thread(target=self._model.generate, kwargs=generation_kwargs)
         thread.start()
@@ -418,11 +424,12 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
         start_time = perf_counter()
         for new_text in streamer:
             times.append(perf_counter() - start_time)
-            start_time = perf_counter()
             generated_text += new_text
             yield {"text": new_text}
-        print(
-            f"generate [{generated_text}] first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s"
+            start_time = perf_counter()
+
+        logging.info(
+            f"thinker generate [{generated_text}] TTFT: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s"
         )
 
 
