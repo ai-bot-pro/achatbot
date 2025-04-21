@@ -347,8 +347,14 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
             if self.args.is_use_sliding_window_code2wav
             else None,
         )
+
+        gen_text = ""
+        all_gen_text = ""
         for chunk in stream:
             text = self._tokenizer.decode(chunk["thinker_ids"][0], skip_special_tokens=True)
+            if gen_text != text:
+                gen_text = text
+                all_gen_text += text
             # audio_bytes = (
             #    (chunk["talker_wav"].float().detach().cpu().numpy() * 32768)
             #    .astype(np.int16)
@@ -356,6 +362,10 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
             # )
 
             yield {"text": text, "audio_wav": chunk["talker_wav"]}
+
+        # un save audio
+        session_chat_history.append({"role": "assistant", "content": [{"text": all_gen_text}]})
+        self.chat_history_dict.set(session.ctx.client_id, session_chat_history)
 
 
 class TransformersManualAudioQwen2_5OmniLLM(TransformersManualQwen2_5OmniLLM):
