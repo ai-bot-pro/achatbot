@@ -516,6 +516,7 @@ with omni_img.imports():
             attention_mask torch.Size([1, 20174])
 
             pixel_values_videos torch.Size([77760, 1176])
+            image_grid_thw torch.Size([1, 3]) # just image only
 
             video_grid_thw torch.Size([1, 3])
             video_second_per_grid torch.Size([1])
@@ -665,7 +666,9 @@ with omni_img.imports():
 
         print(f"Total generated text: {generated_text}")
         print(f"Total new tokens generated: {total_new_tokens_generated}")
-        print(f"first chunk generated cost: {times[0]} s | total cost: {sum(times)} s")
+        print(
+            f"max_tokens_per_step: {max_tokens_per_step} | first chunk generated cost: {times[0]} s | total cost: {sum(times)} s"
+        )
 
     def talker_generate_chunk(
         input_ids,
@@ -1473,7 +1476,36 @@ def image_stream():
                 ],
             },
         ]
-        text_streamer = thinker_inference_stream(messages, use_audio_in_video=True)
+        text_streamer = thinker_inference_stream(messages, use_audio_in_video=False)
+        for text in text_streamer:
+            print(text)
+
+
+def image_chunk_stream():
+    for case in [
+        {
+            "image_path": "03-Confusing-Pictures.jpg",
+            "prompt": "请描述一下图片中的内容",
+            "sys_prompt": "You are a vision recognition model.",
+        },
+    ]:
+        image_path = os.path.join(ASSETS_DIR, case["image_path"])
+        messages = [
+            {"role": "system", "content": [{"type": "text", "text": case["sys_prompt"]}]},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": case["prompt"]},
+                    {"type": "image", "image": image_path},
+                ],
+            },
+        ]
+        text_streamer = thinker_inference_chunk_stream(
+            messages,
+            use_audio_in_video=False,
+            output_hidden_states=False,
+            max_new_tokens=1024,
+        )
         for text in text_streamer:
             print(text)
 
@@ -1707,6 +1739,8 @@ IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen2_5omni.py --task multi_r
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen2_5omni.py --task batch_requests
 
 # stream
+IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task image_stream
+IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task image_chunk_stream
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task asr_stream
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task asr_chunk_stream
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task thinker_chunk_stream 
@@ -1729,6 +1763,8 @@ def main(task: str = "universal_audio_understanding"):
         "multi_round_omni_chatting": multi_round_omni_chatting,
         "batch_requests": batch_requests,
         "thinker_chunk_stream": thinker_chunk_stream,
+        "image_stream": image_stream,
+        "image_chunk_stream": image_chunk_stream,
         "asr_stream": asr_stream,
         "asr_chunk_stream": asr_chunk_stream,
         "omni_chatting_stream": omni_chatting_stream,
