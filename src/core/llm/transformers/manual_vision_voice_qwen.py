@@ -317,81 +317,100 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
             use_audio_in_video=kwargs.get("use_audio_in_video", False),
         )
         inputs = inputs.to(self._model.device).to(self._model.dtype)
+        for k, v in inputs.items():
+            logging.debug(f"{k}: {v.shape}")
 
         return_audio = kwargs.get("return_audio", self._model.has_talker)
+        gen_assistant_text = ""
         if not return_audio:
-            return self.thinker_inference_stream(inputs)
+            for item in self.thinker_inference_stream(
+                inputs,
+                use_audio_in_video=kwargs.get("use_audio_in_video", False),
+                thinker_top_k=kwargs.get("thinker_top_k", None) or self.thinker_args.lm_gen_top_k,
+                thinker_top_p=kwargs.get("thinker_top_p", None) or self.thinker_args.lm_gen_top_p,
+                thinker_temperature=kwargs.get("thinker_temperature", None)
+                or self.thinker_args.lm_gen_temperature,
+                thinker_repetition_penalty=kwargs.get("thinker_eos_token_ids", None)
+                or self.thinker_args.lm_gen_repetition_penalty,
+                thinker_min_new_tokens=kwargs.get("thinker_min_new_tokens", None)
+                or self.thinker_args.lm_gen_min_new_tokens,
+                thinker_max_new_tokens=kwargs.get("thinker_max_new_tokens", None)
+                or self.thinker_args.lm_gen_max_new_tokens,
+            ):
+                gen_assistant_text += item["text"]
+                yield item
+            return
+        else:
+            gen_args = dict(
+                use_audio_in_video=kwargs.get("use_audio_in_video", False),
+                thinker_max_tokens_per_step=kwargs.get("thinker_max_tokens_per_step", None)
+                or self.thinker_args.lm_gen_max_tokens_per_step,
+                thinker_max_new_tokens=kwargs.get("thinker_max_new_tokens", None)
+                or self.thinker_args.lm_gen_max_new_tokens,
+                thinker_top_k=kwargs.get("thinker_top_k", None) or self.thinker_args.lm_gen_top_k,
+                thinker_top_p=kwargs.get("thinker_top_p", None) or self.thinker_args.lm_gen_top_p,
+                thinker_temperature=kwargs.get("thinker_temperature", None)
+                or self.thinker_args.lm_gen_temperature,
+                thinker_repetition_penalty=kwargs.get("thinker_eos_token_ids", None)
+                or self.thinker_args.lm_gen_repetition_penalty,
+                thinker_eos_token_ids=kwargs.get("thinker_eos_token_ids", None)
+                or self.args.thinker_eos_token_ids,
+                return_audio=kwargs.get("return_audio", self._model.has_talker),
+                speaker=kwargs.get("speaker", None) or self.args.speaker,
+                talker_top_k=kwargs.get("talker_top_k", None) or self.talker_args.lm_gen_top_k,
+                talker_top_p=kwargs.get("talker_top_p", None) or self.talker_args.lm_gen_top_p,
+                talker_temperature=kwargs.get("talker_temperature", None)
+                or self.talker_args.lm_gen_temperature,
+                talker_repetition_penalty=kwargs.get("talker_repetition_penalty", None)
+                or self.talker_args.lm_gen_repetition_penalty,
+                talker_min_new_tokens=kwargs.get("talker_min_new_tokens", None)
+                or self.talker_args.lm_gen_min_new_tokens,
+                talker_max_new_tokens=kwargs.get("talker_max_new_tokens", None)
+                or self.talker_args.lm_gen_max_new_tokens,
+                talker_eos_token_ids=kwargs.get("talker_eos_token_ids", None)
+                or self.args.talker_eos_token_ids,
+                talker_skip_thinker_token_ids=kwargs.get("talker_skip_thinker_token_ids", None)
+                or [],
+                code2wav_num_steps=kwargs.get("code2wav_num_steps", None)
+                or self.code2wav_args.num_steps,
+                code2wav_guidance_scale=kwargs.get("code2wav_guidance_scale", None)
+                or self.code2wav_args.guidance_scale,
+                code2wav_sway_coefficient=kwargs.get("code2wav_sway_coefficient", None)
+                or self.code2wav_args.sway_coefficient,
+            )
+            stream = self._model.generate_stream(
+                inputs,
+                **gen_args,
+                code2wav_chunk_stream_func=self.code2wav_sliding_window_chunk_stream
+                if self.args.is_use_sliding_window_code2wav
+                else None,
+            )
 
-        gen_args = dict(
-            use_audio_in_video=kwargs.get("use_audio_in_video", False),
-            thinker_max_tokens_per_step=kwargs.get("thinker_max_tokens_per_step", None)
-            or self.thinker_args.lm_gen_max_tokens_per_step,
-            thinker_max_new_tokens=kwargs.get("thinker_max_new_tokens", None)
-            or self.thinker_args.lm_gen_max_new_tokens,
-            thinker_top_k=kwargs.get("thinker_top_k", None) or self.thinker_args.lm_gen_top_k,
-            thinker_top_p=kwargs.get("thinker_top_p", None) or self.thinker_args.lm_gen_top_p,
-            thinker_temperature=kwargs.get("thinker_temperature", None)
-            or self.thinker_args.lm_gen_temperature,
-            thinker_repetition_penalty=kwargs.get("thinker_eos_token_ids", None)
-            or self.thinker_args.lm_gen_repetition_penalty,
-            thinker_eos_token_ids=kwargs.get("thinker_eos_token_ids", None)
-            or self.args.thinker_eos_token_ids,
-            return_audio=kwargs.get("return_audio", self._model.has_talker),
-            speaker=kwargs.get("speaker", None) or self.args.speaker,
-            talker_top_k=kwargs.get("talker_top_k", None) or self.talker_args.lm_gen_top_k,
-            talker_top_p=kwargs.get("talker_top_p", None) or self.talker_args.lm_gen_top_p,
-            talker_temperature=kwargs.get("talker_temperature", None)
-            or self.talker_args.lm_gen_temperature,
-            talker_repetition_penalty=kwargs.get("talker_repetition_penalty", None)
-            or self.talker_args.lm_gen_repetition_penalty,
-            talker_min_new_tokens=kwargs.get("talker_min_new_tokens", None)
-            or self.talker_args.lm_gen_min_new_tokens,
-            talker_max_new_tokens=kwargs.get("talker_max_new_tokens", None)
-            or self.talker_args.lm_gen_max_new_tokens,
-            talker_eos_token_ids=kwargs.get("talker_eos_token_ids", None)
-            or self.args.talker_eos_token_ids,
-            talker_skip_thinker_token_ids=kwargs.get("talker_skip_thinker_token_ids", None) or [],
-            code2wav_num_steps=kwargs.get("code2wav_num_steps", None)
-            or self.code2wav_args.num_steps,
-            code2wav_guidance_scale=kwargs.get("code2wav_guidance_scale", None)
-            or self.code2wav_args.guidance_scale,
-            code2wav_sway_coefficient=kwargs.get("code2wav_sway_coefficient", None)
-            or self.code2wav_args.sway_coefficient,
+            gen_text = ""
+            for chunk in stream:
+                text = self._tokenizer.decode(chunk["thinker_ids"][0], skip_special_tokens=True)
+                if gen_text != text:
+                    gen_text = text
+                    gen_assistant_text += text
+
+                if "talker_wav" not in chunk:
+                    yield {"text": text}
+                else:
+                    # audio_bytes = (
+                    #    (chunk["talker_wav"].float().detach().cpu().numpy() * 32768)
+                    #    .astype(np.int16)
+                    #    .tobytes()
+                    # )
+                    yield {"text": text, "audio_wav": chunk["talker_wav"]}
+
+        session_chat_history.append(
+            {"role": "assistant", "content": [{"text": gen_assistant_text}]}
         )
-        stream = self._model.generate_stream(
-            **inputs,
-            **gen_args,
-            code2wav_chunk_stream_func=self.code2wav_sliding_window_chunk_stream
-            if self.args.is_use_sliding_window_code2wav
-            else None,
-        )
-
-        gen_text = ""
-        all_gen_text = ""
-        for chunk in stream:
-            text = self._tokenizer.decode(chunk["thinker_ids"][0], skip_special_tokens=True)
-            if gen_text != text:
-                gen_text = text
-                all_gen_text += text
-
-            if "talker_wav" not in chunk:
-                yield {"text": text}
-            else:
-                # audio_bytes = (
-                #    (chunk["talker_wav"].float().detach().cpu().numpy() * 32768)
-                #    .astype(np.int16)
-                #    .tobytes()
-                # )
-
-                yield {"text": text, "audio_wav": chunk["talker_wav"]}
-
-        session_chat_history.append({"role": "assistant", "content": [{"text": all_gen_text}]})
         self.chat_history_dict.set(session.ctx.client_id, session_chat_history)
 
     def thinker_inference_stream(
         self,
-        input_ids: Optional[torch.Tensor] = None,
-        attention_mask: Optional[torch.Tensor] = None,
+        inputs: dict,
         use_audio_in_video: bool = False,
         thinker_top_k: int = 40,
         thinker_top_p: float = 0.8,
@@ -403,8 +422,7 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
         streamer = TextIteratorStreamer(self._tokenizer, skip_prompt=True, skip_special_tokens=True)
 
         generation_kwargs = dict(
-            input_ids,
-            attention_mask=attention_mask,
+            **inputs,
             streamer=streamer,
             use_audio_in_video=use_audio_in_video,
             return_audio=False,

@@ -399,6 +399,8 @@ with omni_img.imports():
             use_audio_in_video=use_audio_in_video,
         )
         inputs = inputs.to(model.device).to(model.dtype)
+        for k, v in inputs.items():
+            print(k, v.shape)
 
         output = model.generate(
             **inputs,
@@ -436,6 +438,8 @@ with omni_img.imports():
         text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         # image_inputs, video_inputs = process_vision_info([messages])
         audios, images, videos = process_mm_info(messages, use_audio_in_video=use_audio_in_video)
+        print(text, audios, images, videos)
+
         inputs = processor(
             text=text,
             audio=audios,
@@ -445,8 +449,9 @@ with omni_img.imports():
             padding=True,
             use_audio_in_video=use_audio_in_video,
         )
-        print(text, audios, images, videos)
         inputs = inputs.to(model.device).to(model.dtype)
+        for k, v in inputs.items():
+            print(k, v.shape)
 
         streamer = TextIteratorStreamer(processor, skip_prompt=True, skip_special_tokens=True)
 
@@ -488,9 +493,11 @@ with omni_img.imports():
         eos_token_ids=[151644, 151645],  # Define EOS tokens
         output_hidden_states=False,
     ):
+        print(messages)
         text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         # image_inputs, video_inputs = process_vision_info([messages])
         audios, images, videos = process_mm_info(messages, use_audio_in_video=use_audio_in_video)
+        print(text, audios, images, videos)
         inputs = processor(
             text=text,
             audio=audios,
@@ -501,10 +508,23 @@ with omni_img.imports():
             use_audio_in_video=use_audio_in_video,
         )
         inputs = inputs.to(model.device).to(model.dtype)
-        # print(text, inputs)
+        for k, v in inputs.items():
+            print(k, v.shape)
+        """
+        e.g.:
+            input_ids torch.Size([1, 20174])
+            attention_mask torch.Size([1, 20174])
+
+            pixel_values_videos torch.Size([77760, 1176])
+
+            video_grid_thw torch.Size([1, 3])
+            video_second_per_grid torch.Size([1])
+
+            feature_attention_mask torch.Size([1, 30000])
+            input_features torch.Size([1, 128, 30000])
+        """
         return thinker_generate_chunk(
-            input_ids=inputs["input_ids"],
-            attention_mask=inputs["attention_mask"],
+            inputs,
             max_new_tokens=max_new_tokens,
             max_tokens_per_step=max_tokens_per_step,
             use_audio_in_video=use_audio_in_video,
@@ -514,14 +534,16 @@ with omni_img.imports():
 
     @torch.no_grad()
     def thinker_generate_chunk(
-        input_ids,
-        attention_mask,
+        inputs: dict,
         max_new_tokens=2048,
         max_tokens_per_step=10,  # Controls how many tokens to generate *per step*
         use_audio_in_video=False,
         eos_token_ids=[151644, 151645],  # Define EOS tokens
         output_hidden_states=False,
     ):
+        input_ids = inputs.pop("input_ids")
+        attention_mask = inputs.pop("attention_mask", None)
+
         if max_tokens_per_step > max_new_tokens:
             max_tokens_per_step = max_new_tokens
 
@@ -571,6 +593,7 @@ with omni_img.imports():
                 "eos_token_id": eos_token_ids,
                 "pad_token_id": processor.tokenizer.pad_token_id,
             }
+            model_inputs = {**inputs, **model_inputs}
 
             start_time = perf_counter()
             outputs = model.thinker.generate(**model_inputs)
@@ -658,6 +681,7 @@ with omni_img.imports():
                 continue
             thinker_generate_hidden_states = chunk["thinker_generate_hidden_states"]
             if thinker_generate_hidden_states is None:
+                yield (thinker_generate_text, torch.empty([1, 0]))
                 continue
             thinker_generate_ids = chunk["thinker_generate_ids"].to(model.talker.device)
             thinker_token_embeds = [
@@ -877,9 +901,12 @@ with omni_img.imports():
         thinker_max_tokens_per_step=10,  # Controls how many tokens to generate *per step*
         thinker_eos_token_ids=[151644, 151645],  # Define EOS tokens
     ):
+        print(messages)
         text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         # image_inputs, video_inputs = process_vision_info([messages])
         audios, images, videos = process_mm_info(messages, use_audio_in_video=use_audio_in_video)
+        print(text, audios, images, videos)
+
         inputs = processor(
             text=text,
             audio=audios,
@@ -890,10 +917,10 @@ with omni_img.imports():
             use_audio_in_video=use_audio_in_video,
         )
         inputs = inputs.to(model.device).to(model.dtype)
-        print(text, inputs)
+        for k, v in inputs.items():
+            print(k, v.shape)
         thinker_chunk_stream = thinker_generate_chunk(
-            input_ids=inputs["input_ids"],
-            attention_mask=inputs["attention_mask"],
+            inputs,
             max_new_tokens=thinker_max_new_tokens,
             max_tokens_per_step=thinker_max_tokens_per_step,
             use_audio_in_video=use_audio_in_video,
@@ -1427,6 +1454,30 @@ def batch_requests():
     print(texts)
 
 
+def image_stream():
+    for case in [
+        {
+            "image_path": "03-Confusing-Pictures.jpg",
+            "prompt": "请描述一下图片中的内容",
+            "sys_prompt": "You are a vision recognition model.",
+        },
+    ]:
+        image_path = os.path.join(ASSETS_DIR, case["image_path"])
+        messages = [
+            {"role": "system", "content": [{"type": "text", "text": case["sys_prompt"]}]},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": case["prompt"]},
+                    {"type": "image", "image": image_path},
+                ],
+            },
+        ]
+        text_streamer = thinker_inference_stream(messages, use_audio_in_video=True)
+        for text in text_streamer:
+            print(text)
+
+
 def asr_stream():
     for case in [
         {
@@ -1459,6 +1510,30 @@ def asr_stream():
         text_streamer = thinker_inference_stream(messages, use_audio_in_video=True)
         for text in text_streamer:
             print(text)
+
+
+def asr_chunk_stream():
+    for case in [
+        {
+            "audio_path": "asr_example_zh.wav",
+            "prompt": "请将这段中文语音转换为纯文本",
+            "sys_prompt": "You are a speech recognition model.",
+        },
+    ]:
+        audio_path = os.path.join(ASSETS_DIR, case["audio_path"])
+        messages = [
+            {"role": "system", "content": [{"type": "text", "text": case["sys_prompt"]}]},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": case["prompt"]},
+                    {"type": "audio", "audio": audio_path},
+                ],
+            },
+        ]
+        chunk_streamer = thinker_inference_chunk_stream(messages, use_audio_in_video=False)
+        for chunk in chunk_streamer:
+            print(chunk)
 
 
 def thinker_chunk_stream():
@@ -1633,6 +1708,7 @@ IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen2_5omni.py --task batch_r
 
 # stream
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task asr_stream
+IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task asr_chunk_stream
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task thinker_chunk_stream 
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_stream
 IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_segment_stream
@@ -1652,8 +1728,9 @@ def main(task: str = "universal_audio_understanding"):
         "omni_chatting_for_music": omni_chatting_for_music,
         "multi_round_omni_chatting": multi_round_omni_chatting,
         "batch_requests": batch_requests,
-        "asr_stream": asr_stream,
         "thinker_chunk_stream": thinker_chunk_stream,
+        "asr_stream": asr_stream,
+        "asr_chunk_stream": asr_chunk_stream,
         "omni_chatting_stream": omni_chatting_stream,
         "omni_chatting_segment_stream": omni_chatting_segment_stream,
     }

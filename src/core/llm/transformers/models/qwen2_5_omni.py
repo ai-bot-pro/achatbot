@@ -286,8 +286,7 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
     @torch.no_grad()
     def thinker_generate_chunk(
         self,
-        input_ids: Optional[torch.Tensor] = None,
-        attention_mask: Optional[torch.Tensor] = None,
+        inputs: dict,
         use_audio_in_video: bool = False,
         thinker_max_tokens_per_step=10,  # Controls how many tokens to generate *per step*
         thinker_max_new_tokens: int = 1024,
@@ -299,6 +298,9 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
         thinker_output_hidden_states=False,
         **kwargs,
     ):
+        input_ids = inputs.pop("input_ids")
+        attention_mask = inputs.pop("attention_mask", None)
+
         # Keep track of the full generated sequence full_generated_ids = input_ids.clone()
         # Ensure full_attention_mask is correctly initialized and expanded
         full_attention_mask = (
@@ -344,6 +346,7 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
                 "eos_token_id": thinker_eos_token_ids,
                 "pad_token_id": kwargs.get("thinker_pad_token_id", -1),
             }
+            model_inputs = {**inputs, **model_inputs}
 
             start_time = perf_counter()
             outputs = self.thinker.generate(**model_inputs)
@@ -414,8 +417,8 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
     def talker_generate_chunk(
         self,
         input_ids,
-        attention_mask,
         thinker_chunk_stream,
+        attention_mask: Optional[torch.Tensor] = None,
         speaker: str = "Chelsie",
         talker_eos_token_ids: list[int] = [8292, 8294],
         talker_top_k: int = 10,
@@ -673,8 +676,7 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
     @torch.no_grad()
     def generate_stream(
         self,
-        input_ids: Optional[torch.Tensor] = None,
-        attention_mask: Optional[torch.Tensor] = None,
+        inputs: dict,
         use_audio_in_video: bool = False,
         thinker_max_tokens_per_step=10,  # Controls how many tokens to generate *per step*
         thinker_max_new_tokens: int = 1024,
@@ -700,8 +702,7 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
         **kwargs,
     ) -> Generator[dict, None, None]:
         thinker_chunk_stream = self.thinker_generate_chunk(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
+            inputs,
             use_audio_in_video=use_audio_in_video,
             thinker_max_tokens_per_step=thinker_max_tokens_per_step,
             thinker_max_new_tokens=thinker_max_new_tokens,
@@ -718,8 +719,8 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
                 yield {"thinker_ids": thinker_chunk["thinker_generate_ids"]}
         else:
             talker_streamer = self.talker_generate_chunk(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
+                inputs["input_ids"],
+                attention_mask=inputs.get("attention_mask", None),
                 thinker_chunk_stream=thinker_chunk_stream,
                 speaker=speaker,
                 talker_eos_token_ids=talker_eos_token_ids,
