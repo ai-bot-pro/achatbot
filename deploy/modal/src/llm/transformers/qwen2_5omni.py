@@ -438,7 +438,16 @@ with omni_img.imports():
         text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         # image_inputs, video_inputs = process_vision_info([messages])
         audios, images, videos = process_mm_info(messages, use_audio_in_video=use_audio_in_video)
-        print(text, audios, images, videos)
+        print(text)
+        {print(f"audios[{i}]: {item.shape}") for i, item in enumerate(audios)} if audios else print(
+            audios
+        )
+        {print(f"images[{i}]: {item.shape}") for i, item in enumerate(images)} if images else print(
+            images
+        )
+        {print(f"videos[{i}]: {item.shape}") for i, item in enumerate(videos)} if videos else print(
+            videos
+        )
 
         inputs = processor(
             text=text,
@@ -497,7 +506,17 @@ with omni_img.imports():
         text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         # image_inputs, video_inputs = process_vision_info([messages])
         audios, images, videos = process_mm_info(messages, use_audio_in_video=use_audio_in_video)
-        print(text, audios, images, videos)
+        print(text)
+        {print(f"audios[{i}]: {item.shape}") for i, item in enumerate(audios)} if audios else print(
+            audios
+        )
+        {print(f"images[{i}]: {item.shape}") for i, item in enumerate(images)} if images else print(
+            images
+        )
+        {print(f"videos[{i}]: {item.shape}") for i, item in enumerate(videos)} if videos else print(
+            videos
+        )
+
         inputs = processor(
             text=text,
             audio=audios,
@@ -568,6 +587,7 @@ with omni_img.imports():
         total_new_tokens_generated = 0
         generated_text = ""
         hidden_states = None
+        hidden_states_len = 0
 
         times = []
         while total_new_tokens_generated < max_new_tokens:
@@ -611,13 +631,17 @@ with omni_img.imports():
 
             if output_hidden_states is True:
                 hidden_states = outputs.hidden_states
+                hidden_states_len = (
+                    hidden_states_len if hidden_states_len > 0 else hidden_states[0][0].shape[1]
+                )
+                print(f"hidden_states_len: {hidden_states_len}")
                 # new generate thinker_token_embeds
-                thinker_new_token_embeds = hidden_states[0][0][:, :52, :]
+                thinker_new_token_embeds = hidden_states[0][0][:, :hidden_states_len, :]
                 hidden_states = (
                     (thinker_new_token_embeds,) + hidden_states[0][1:],
                 ) + hidden_states[1:]
                 # new generate thinker_hidden_states
-                thinker_new_hidden_states = hidden_states[0][-1][:, :52, :]
+                thinker_new_hidden_states = hidden_states[0][-1][:, :hidden_states_len, :]
                 hidden_states = (
                     hidden_states[0][:-1] + (thinker_new_hidden_states,),
                 ) + hidden_states[1:]
@@ -908,7 +932,16 @@ with omni_img.imports():
         text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         # image_inputs, video_inputs = process_vision_info([messages])
         audios, images, videos = process_mm_info(messages, use_audio_in_video=use_audio_in_video)
-        print(text, audios, images, videos)
+        print(text)
+        {print(f"audios[{i}]: {item.shape}") for i, item in enumerate(audios)} if audios else print(
+            audios
+        )
+        {print(f"images[{i}]: {item.shape}") for i, item in enumerate(images)} if images else print(
+            images
+        )
+        {print(f"videos[{i}]: {item.shape}") for i, item in enumerate(videos)} if videos else print(
+            videos
+        )
 
         inputs = processor(
             text=text,
@@ -944,9 +977,20 @@ with omni_img.imports():
         speaker=DEFAULT_SPEAKER,
         talker_eos_token_id: list[int] = [8292, 8294],
     ):
+        print(messages)
         text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         # image_inputs, video_inputs = process_vision_info([messages])
         audios, images, videos = process_mm_info(messages, use_audio_in_video=use_audio_in_video)
+        print(text)
+        {print(f"audios[{i}]: {item.shape}") for i, item in enumerate(audios)} if audios else print(
+            audios
+        )
+        {print(f"images[{i}]: {item.shape}") for i, item in enumerate(images)} if images else print(
+            images
+        )
+        {print(f"videos[{i}]: {item.shape}") for i, item in enumerate(videos)} if videos else print(
+            videos
+        )
         inputs = processor(
             text=text,
             audio=audios,
@@ -971,13 +1015,11 @@ with omni_img.imports():
             output_hidden_states=True,
             return_dict_in_generate=True,
         )
-        print(
-            thinker_result.sequences.shape,
-            thinker_result.hidden_states[0][0].shape,
-            thinker_result.hidden_states[0][-1].shape,
-            len(thinker_result.hidden_states),
-        )
-
+        print(f" len(thinker_generate_hidden_states):{len(thinker_result.hidden_states)}")
+        for i in range(len(thinker_result.hidden_states)):
+            print(
+                f"thinker_generate_hidden_states[{i}]:{thinker_result.hidden_states[i][0].shape}, {thinker_result.hidden_states[i][-1].shape}"
+            )
         # 2. Generate speech tokens from talker module
         input_ids = inputs["input_ids"]
         thinker_generate_ids = thinker_result.sequences[:, input_ids.size(1) :].to(
@@ -1009,6 +1051,7 @@ with omni_img.imports():
             ],
             dim=-1,
         )
+        print(f"talker_input_text_ids.shape:{talker_input_text_ids.shape}")
 
         talker_input_ids = torch.cat(
             [
@@ -1024,7 +1067,7 @@ with omni_img.imports():
             ],
             dim=1,
         )
-        # print(f"talker_input_ids.shape:{talker_input_ids.shape}")
+        print(f"talker_input_ids.shape:{talker_input_ids.shape}")
 
         thinker_embed_tokens = model.thinker.get_input_embeddings()
         thinker_reply_part = torch.cat(thinker_hidden_states[1:], dim=1) + torch.cat(
@@ -1035,6 +1078,9 @@ with omni_img.imports():
             [[talker_text_bos_token]], dtype=torch.long, device=model.thinker.device
         )
         talker_text_bos_embed = thinker_embed_tokens(talker_text_bos_token).to(model.talker.device)
+        print(
+            f"talker_inputs_embeds.shape {talker_inputs_embeds.shape} talker_text_bos_embed.shape {talker_text_bos_embed.shape} thinker_reply_part.shape {thinker_reply_part.shape}"
+        )
         talker_inputs_embeds = torch.cat(
             [
                 talker_inputs_embeds,
@@ -1042,6 +1088,9 @@ with omni_img.imports():
                 thinker_reply_part[:, :1, :],
             ],
             dim=1,
+        )
+        print(
+            f"talker_inputs_embeds.shape {talker_inputs_embeds.shape} talker_text_bos_embed.shape {talker_text_bos_embed.shape}"
         )
 
         eos_embedding = thinker_embed_tokens(
@@ -1064,7 +1113,7 @@ with omni_img.imports():
             ],
             dim=1,
         )
-        # print(f"thinker_reply_part.shape:{thinker_reply_part.shape}")
+        print(f"thinker_reply_part.shape:{thinker_reply_part.shape}")
 
         talker_attention_mask = None
         if "attention_mask" in inputs:
@@ -1280,6 +1329,103 @@ def omni_chatting_for_math():
     print(f"Audio saved to {save_audio_path}")
 
 
+def omni_chatting_for_math_stream():
+    import torchaudio
+    import soundfile as sf
+
+    video_path = os.path.join(ASSETS_DIR, "math.mp4")
+    messages = [
+        {
+            "role": "system",
+            "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}],
+        },
+        {
+            "role": "user",
+            "content": [
+                {"type": "video", "video": video_path},
+            ],
+        },
+    ]
+
+    for _ in range(1):  # warmup and test
+        streamer = thinker_talker_inference_stream(messages, use_audio_in_video=True)
+        audios = []
+        times = []
+        start_time = time.perf_counter()
+        for i, (texts, audio) in enumerate(streamer):
+            if i == 0:
+                print(texts[0])
+            times.append(time.perf_counter() - start_time)
+            audios.append(audio.squeeze().cpu().numpy())
+            # save_audio_path = os.path.join(ASSETS_DIR, f"omni_chatting_for_math_stream_{i}.wav")
+            # torchaudio.save(save_audio_path, audio, sample_rate=24000)
+            # print(f"Audio saved to {save_audio_path}")
+            start_time = time.perf_counter()
+
+        save_audio_path = os.path.join(ASSETS_DIR, f"omni_chatting_for_math_stream.wav")
+        sf.write(save_audio_path, np.concatenate(audios), samplerate=24000)
+        print(f"Audio saved to {save_audio_path}")
+        info = sf.info(save_audio_path, verbose=True)
+        print(
+            f"thinker->talker->code2wav streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+        )
+
+
+def omni_chatting_for_math_chunk_stream():
+    import torchaudio
+    import soundfile as sf
+
+    video_path = os.path.join(ASSETS_DIR, "math.mp4")
+    messages = [
+        {
+            "role": "system",
+            "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}],
+        },
+        {
+            "role": "user",
+            "content": [
+                {"type": "video", "video": video_path},
+            ],
+        },
+    ]
+
+    thinker_eos_token_ids = [151644, 151645] + tokenizer_sentences()
+    print(thinker_eos_token_ids)
+    for _ in range(1):  # warmup and test
+        streamer = generate_stream(
+            messages,
+            use_audio_in_video=True,
+            thinker_max_new_tokens=100,
+            thinker_max_tokens_per_step=15,
+            thinker_eos_token_ids=thinker_eos_token_ids,
+        )
+        gen_text = ""
+        gen_all_text = ""
+        audios = []
+        times = []
+        start_time = time.perf_counter()
+        for i, (text, wav) in enumerate(streamer):
+            times.append(time.perf_counter() - start_time)
+            if gen_text != text:
+                gen_text = text
+                gen_all_text += gen_text
+            print(text, wav.shape)
+            audios.append(wav.squeeze().cpu().numpy())
+            # save_audio_path = os.path.join(ASSETS_DIR, f"omni_chatting_for_math_chunk_stream-{i}-{text}.wav")
+            # torchaudio.save(save_audio_path, wav, sample_rate=24000)
+            # print(f"Audio saved to {save_audio_path}")
+            start_time = time.perf_counter()
+
+        print(f"gen all text: {gen_all_text}")
+        save_audio_path = os.path.join(ASSETS_DIR, f"omni_chatting_for_math_chunk_stream.wav")
+        sf.write(save_audio_path, np.concatenate(audios), samplerate=24000)
+        print(f"All Audio saved to {save_audio_path}")
+        info = sf.info(save_audio_path, verbose=True)
+        print(
+            f"thinker->talker->code2wav chunk streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+        )
+
+
 def omni_chatting_for_music():
     import torchaudio
 
@@ -1302,6 +1448,101 @@ def omni_chatting_for_music():
     save_audio_path = os.path.join(ASSETS_DIR, f"generated_{os.path.basename(video_path)}")
     torchaudio.save(save_audio_path, audio, sample_rate=24000)
     print(f"Audio saved to {save_audio_path}")
+
+
+def omni_chatting_for_music_stream():
+    import torchaudio
+    import soundfile as sf
+
+    video_path = os.path.join(ASSETS_DIR, "music.mp4")
+    messages = [
+        {
+            "role": "system",
+            "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}],
+        },
+        {
+            "role": "user",
+            "content": [
+                {"type": "video", "video": video_path},
+            ],
+        },
+    ]
+    for _ in range(1):  # warmup and test
+        streamer = thinker_talker_inference_stream(messages, use_audio_in_video=True)
+        audios = []
+        times = []
+        start_time = time.perf_counter()
+        for i, (texts, audio) in enumerate(streamer):
+            if i == 0:
+                print(texts[0])
+            times.append(time.perf_counter() - start_time)
+            audios.append(audio.squeeze().cpu().numpy())
+            # save_audio_path = os.path.join(ASSETS_DIR, f"omni_chatting_for_math_stream_{i}.wav")
+            # torchaudio.save(save_audio_path, audio, sample_rate=24000)
+            # print(f"Audio saved to {save_audio_path}")
+            start_time = time.perf_counter()
+
+        save_audio_path = os.path.join(ASSETS_DIR, f"omni_chatting_for_music_stream.wav")
+        sf.write(save_audio_path, np.concatenate(audios), samplerate=24000)
+        print(f"Audio saved to {save_audio_path}")
+        info = sf.info(save_audio_path, verbose=True)
+        print(
+            f"thinker->talker->code2wav streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+        )
+
+
+def omni_chatting_for_music_chunk_stream():
+    import torchaudio
+    import soundfile as sf
+
+    video_path = os.path.join(ASSETS_DIR, "music.mp4")
+    messages = [
+        {
+            "role": "system",
+            "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}],
+        },
+        {
+            "role": "user",
+            "content": [
+                {"type": "video", "video": video_path},
+            ],
+        },
+    ]
+    thinker_eos_token_ids = [151644, 151645] + tokenizer_sentences()
+    print(thinker_eos_token_ids)
+    for _ in range(1):  # warmup and test
+        streamer = generate_stream(
+            messages,
+            use_audio_in_video=True,
+            thinker_max_new_tokens=100,
+            thinker_max_tokens_per_step=15,
+            thinker_eos_token_ids=thinker_eos_token_ids,
+        )
+        gen_text = ""
+        gen_all_text = ""
+        audios = []
+        times = []
+        start_time = time.perf_counter()
+        for i, (text, wav) in enumerate(streamer):
+            times.append(time.perf_counter() - start_time)
+            if gen_text != text:
+                gen_text = text
+                gen_all_text += gen_text
+            print(text, wav.shape)
+            audios.append(wav.squeeze().cpu().numpy())
+            # save_audio_path = os.path.join(ASSETS_DIR, f"omni_chatting_for_music_chunk_stream-{i}-{text}.wav")
+            # torchaudio.save(save_audio_path, wav, sample_rate=24000)
+            # print(f"Audio saved to {save_audio_path}")
+            start_time = time.perf_counter()
+
+        print(f"gen all text: {gen_all_text}")
+        save_audio_path = os.path.join(ASSETS_DIR, f"omni_chatting_for_music_chunk_stream.wav")
+        sf.write(save_audio_path, np.concatenate(audios), samplerate=24000)
+        print(f"All Audio saved to {save_audio_path}")
+        info = sf.info(save_audio_path, verbose=True)
+        print(
+            f"thinker->talker->code2wav chunk streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+        )
 
 
 def screen_recording_interaction():
@@ -1327,6 +1568,58 @@ def screen_recording_interaction():
 
         response, _ = inference(messages, return_audio=False, use_audio_in_video=False)
         print(response[0])
+
+
+def screen_recording_interaction_stream():
+    video_path = os.path.join(ASSETS_DIR, "screen.mp4")
+    for prompt in [
+        "What the browser is used in this video?",
+        "浏览器中的论文叫什么名字?",
+        "这篇论文主要解决什么问题呢？",
+    ]:
+        messages = [
+            {
+                "role": "system",
+                "content": [{"type": "text", "text": "You are a helpful assistant."}],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "video", "video": video_path},
+                ],
+            },
+        ]
+
+        text_stream = thinker_inference_stream(messages, use_audio_in_video=False)
+        for text in text_stream:
+            print(text)
+
+
+def screen_recording_interaction_chunk_stream():
+    video_path = os.path.join(ASSETS_DIR, "screen.mp4")
+    for prompt in [
+        "What the browser is used in this video?",
+        "浏览器中的论文叫什么名字?",
+        "这篇论文主要解决什么问题呢？",
+    ]:
+        messages = [
+            {
+                "role": "system",
+                "content": [{"type": "text", "text": "You are a helpful assistant."}],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "video", "video": video_path},
+                ],
+            },
+        ]
+
+        text_stream = thinker_inference_chunk_stream(messages, use_audio_in_video=False)
+        for text in text_stream:
+            print(text)
 
 
 def universal_audio_understanding():
@@ -1402,6 +1695,62 @@ def video_information_extracting():
         ]
         texts, _ = inference(messages, return_audio=False, use_audio_in_video=False)
         print(texts[0])
+
+
+def video_information_extracting_stream():
+    video_path = os.path.join(ASSETS_DIR, "shopping.mp4")
+    sys_msg = {
+        "role": "system",
+        "content": [{"type": "text", "text": "You are a helpful assistant."}],
+    }
+    for prompt in [
+        "How many kind of drinks can you see in the video?",
+        "How many bottles of drinks have I picked up?",
+        "How many milliliters are there in the bottle I picked up second time?",
+        "视屏中的饮料叫什么名字呢？",
+        "跑步🏃🏻累了，适合喝什么饮料补充体力呢？",
+    ]:
+        messages = [
+            sys_msg,
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "video", "video": video_path},
+                ],
+            },
+        ]
+        text_stream = thinker_inference_stream(messages, use_audio_in_video=False)
+        for text in text_stream:
+            print(text)
+
+
+def video_information_extracting_chunk_stream():
+    video_path = os.path.join(ASSETS_DIR, "shopping.mp4")
+    sys_msg = {
+        "role": "system",
+        "content": [{"type": "text", "text": "You are a helpful assistant."}],
+    }
+    for prompt in [
+        "How many kind of drinks can you see in the video?",
+        "How many bottles of drinks have I picked up?",
+        "How many milliliters are there in the bottle I picked up second time?",
+        "视屏中的饮料叫什么名字呢？",
+        "跑步🏃🏻累了，适合喝什么饮料补充体力呢？",
+    ]:
+        messages = [
+            sys_msg,
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "video", "video": video_path},
+                ],
+            },
+        ]
+        text_stream = thinker_inference_chunk_stream(messages, use_audio_in_video=False)
+        for text in text_stream:
+            print(text)
 
 
 def batch_requests():
@@ -1669,13 +2018,13 @@ def omni_chatting_segment_stream():
 
 
 def tokenizer_sentences():
-    # NOTE: don't use single character to tokenizer
-    # token_ids = []
-    # for i in ",;.?!，；。？！":
-    # for i in ",.":
-    #    token_id = processor.tokenizer.encode(i)
-    #    token_ids.extend(token_id)
-    return processor.tokenizer.encode(";.?!；。？！")
+    # return processor.tokenizer.encode(";.?!；。？！")
+    token_ids = []
+    for i in ",;.?!，；。？！":
+        # for i in ",.":
+        token_id = processor.tokenizer.encode(i)
+        token_ids.extend(token_id)
+    return token_ids
 
 
 class TokenStreamer(BaseStreamer):
@@ -1739,13 +2088,34 @@ IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen2_5omni.py --task multi_r
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen2_5omni.py --task batch_requests
 
 # stream
+# text -> text stream
+IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task thinker_chunk_stream 
+# image -> text stream
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task image_stream
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task image_chunk_stream
+# audio -> text stream
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task asr_stream
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task asr_chunk_stream
-IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task thinker_chunk_stream 
+# video -> text stream
+IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task screen_recording_interaction_stream
+IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task video_information_extracting_stream
+IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task video_information_extracting_chunk_stream
+IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task screen_recording_interaction_chunk_stream
+
+# text -> text + chunk speech stream
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_stream
+
+# text -> chunk text+speech stream
 IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_segment_stream
+
+# vision(video with audio) -> text + chunk speech stream
+IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_for_math_stream
+IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_for_music_stream
+
+# vision(video with audio) -> chunk text+speech stream
+IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_for_math_chunk_stream
+IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_for_music_chunk_stream
+
 
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task tokenizer
 """
@@ -1757,9 +2127,17 @@ def main(task: str = "universal_audio_understanding"):
         "universal_audio_understanding": universal_audio_understanding,
         "voice_chatting": voice_chatting,
         "video_information_extracting": video_information_extracting,
+        "video_information_extracting_stream": video_information_extracting_stream,
+        "video_information_extracting_chunk_stream": video_information_extracting_chunk_stream,
         "screen_recording_interaction": screen_recording_interaction,
+        "screen_recording_interaction_stream": screen_recording_interaction_stream,
+        "screen_recording_interaction_chunk_stream": screen_recording_interaction_chunk_stream,
         "omni_chatting_for_math": omni_chatting_for_math,
+        "omni_chatting_for_math_stream": omni_chatting_for_math_stream,
+        "omni_chatting_for_math_chunk_stream": omni_chatting_for_math_chunk_stream,
         "omni_chatting_for_music": omni_chatting_for_music,
+        "omni_chatting_for_music_stream": omni_chatting_for_music_stream,
+        "omni_chatting_for_music_chunk_stream": omni_chatting_for_music_chunk_stream,
         "multi_round_omni_chatting": multi_round_omni_chatting,
         "batch_requests": batch_requests,
         "thinker_chunk_stream": thinker_chunk_stream,

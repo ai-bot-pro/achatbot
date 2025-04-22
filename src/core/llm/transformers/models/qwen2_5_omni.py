@@ -320,6 +320,7 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
 
         total_new_tokens_generated = 0
         hidden_states = None
+        hidden_states_len = 0
 
         times = []
         while total_new_tokens_generated < thinker_max_new_tokens:
@@ -363,13 +364,17 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
 
             if thinker_output_hidden_states is True:
                 hidden_states = outputs.hidden_states
+                hidden_states_len = (
+                    hidden_states_len if hidden_states_len > 0 else hidden_states[0][0].shape[1]
+                )
+                logging.debug(f"hidden_states_len: {hidden_states_len}")
                 # new generate thinker_token_embeds
-                thinker_new_token_embeds = hidden_states[0][0][:, :52, :]
+                thinker_new_token_embeds = hidden_states[0][0][:, :hidden_states_len, :]
                 hidden_states = (
                     (thinker_new_token_embeds,) + hidden_states[0][1:],
                 ) + hidden_states[1:]
                 # new generate thinker_hidden_states
-                thinker_new_hidden_states = hidden_states[0][-1][:, :52, :]
+                thinker_new_hidden_states = hidden_states[0][-1][:, :hidden_states_len, :]
                 hidden_states = (
                     hidden_states[0][:-1] + (thinker_new_hidden_states,),
                 ) + hidden_states[1:]
