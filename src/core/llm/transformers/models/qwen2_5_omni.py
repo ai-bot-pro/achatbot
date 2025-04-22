@@ -704,8 +704,16 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
         code2wav_guidance_scale: float = 0.5,
         code2wav_sway_coefficient: float = -1.0,
         code2wav_chunk_stream_func: Callable = None,
+        only_return_audio:bool=False,
         **kwargs,
     ) -> Generator[dict, None, None]:
+        """
+        - return Generator[dict, None, None]
+        {
+            "thinker_ids": torch.Tensor, # (1,T)
+            "talker_wav": torch.Tensor, # (T,)
+        }
+        """
         thinker_chunk_stream = self.thinker_generate_chunk(
             inputs,
             use_audio_in_video=use_audio_in_video,
@@ -727,6 +735,90 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
                 inputs["input_ids"],
                 attention_mask=inputs.get("attention_mask", None),
                 thinker_chunk_stream=thinker_chunk_stream,
+                speaker=speaker,
+                talker_eos_token_ids=talker_eos_token_ids,
+                talker_top_k=talker_top_k,
+                talker_top_p=talker_top_p,
+                talker_temperature=talker_temperature,
+                talker_repetition_penalty=talker_repetition_penalty,
+                talker_min_new_tokens=talker_min_new_tokens,
+                talker_max_new_tokens=talker_max_new_tokens,
+                talker_skip_thinker_token_ids=talker_skip_thinker_token_ids,
+                code2wav_num_steps=code2wav_num_steps,
+                code2wav_guidance_scale=code2wav_guidance_scale,
+                code2wav_sway_coefficient=code2wav_sway_coefficient,
+                code2wav_chunk_stream_func=code2wav_chunk_stream_func,
+                **kwargs,
+            )
+
+            return talker_streamer
+
+    @torch.no_grad()
+    def thinker_all_talker_stream(
+        self,
+        inputs: dict,
+        use_audio_in_video: bool = False,
+        thinker_max_new_tokens: int = 1024,
+        thinker_top_k: int = 40,
+        thinker_top_p: float = 0.8,
+        thinker_temperature: float = 0.9,
+        thinker_repetition_penalty: float = 1.05,
+        thinker_eos_token_ids=[151644, 151645],
+        return_audio=True,
+        speaker="Chelsie",
+        talker_top_k: int = 10,
+        talker_top_p: float = 0.9,
+        talker_temperature: float = 0.95,
+        talker_repetition_penalty: float = 1.1,
+        talker_min_new_tokens: int = 0,
+        talker_max_new_tokens: int = 8192,
+        talker_eos_token_ids: list[int] = [8292, 8294],
+        talker_skip_thinker_token_ids: list[int] = [],
+        code2wav_num_steps: int = 10,
+        code2wav_guidance_scale: float = 0.5,
+        code2wav_sway_coefficient: float = -1.0,
+        code2wav_chunk_stream_func: Callable = None,
+        **kwargs,
+    ) -> Generator[dict, None, None]:
+        """
+        - return Generator[dict, None, None]
+        {
+            "thinker_ids": torch.Tensor, # (1,T)
+            "talker_wav": torch.Tensor, # (T,)
+        }
+        """
+
+        def to_generator(item):
+            yield item
+
+        thinker_result = self.thinker.generate(
+            **inputs,
+            use_audio_in_video=use_audio_in_video,
+            do_sample=True if thinker_temperature > 0 else False,
+            top_k=thinker_top_k,
+            top_p=thinker_top_p,
+            temperature=thinker_temperature,
+            repetition_penalty=thinker_repetition_penalty,
+            min_new_tokens=1,
+            max_new_tokens=thinker_max_new_tokens,
+            eos_token_id=thinker_eos_token_ids,
+            output_hidden_states=return_audio,
+            return_dict_in_generate=True,
+        )
+        input_ids = inputs["input_ids"]
+        thinker_generate_ids = thinker_result.sequences[:, input_ids.size(1) :]
+        if not return_audio:
+            yield {"thinker_ids": thinker_generate_ids}
+        else:
+            talker_streamer = self.talker_generate_chunk(
+                input_ids,
+                thinker_chunk_stream=to_generator(
+                    {
+                        "thinker_generate_ids": thinker_generate_ids,
+                        "thinker_generate_hidden_states": thinker_result.hidden_states,
+                    }
+                ),
+                attention_mask=inputs.get("attention_mask", None),
                 speaker=speaker,
                 talker_eos_token_ids=talker_eos_token_ids,
                 talker_top_k=talker_top_k,

@@ -281,13 +281,19 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
     @torch.inference_mode()
     def generate(self, session: Session, **kwargs):
         """
-        prompt:
+        - prompt:
         [
             {"type": "text", "text": str},
             {"type": "image", "image": url / path / base64 / nparray},
             {"type": "video", "video": url / path / base64 / nparray},
             {"type": "audio", "audio": url / path / base64 / nparray},
         ]
+
+        - return Generator[dict, None, None]:
+        {
+            "text": str,
+            "audio_wav": torch.Tensor,# (T,)
+        }
         """
         seed = kwargs.get("seed", self.args.lm_gen_seed)
         set_all_random_seed(seed)
@@ -298,7 +304,7 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
         session_chat_history = self.chat_history(session, **kwargs)
         session_chat_history.append(message)
         messages = session_chat_history.to_list()
-        logging.info(f"messages: {messages}")
+        logging.debug(f"messages: {messages}")
 
         text = self._tokenizer.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True
@@ -306,7 +312,17 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
         audios, images, videos = process_mm_info(
             messages, use_audio_in_video=kwargs.get("use_audio_in_video", False)
         )
-        logging.info(f"{text}, {audios}, {images}, {videos}")
+        logging.debug(text)
+        {
+            logging.debug(f"audios[{i}]: {item.shape}") for i, item in enumerate(audios)
+        } if audios else logging.debug(audios)
+        {
+            logging.debug(f"images[{i}]: {item.shape}") for i, item in enumerate(images)
+        } if images else logging.debug(images)
+        {
+            logging.debug(f"videos[{i}]: {item.shape}") for i, item in enumerate(videos)
+        } if videos else logging.debug(videos)
+
         inputs = self._tokenizer(
             text=text,
             audio=audios,
@@ -321,9 +337,10 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
             logging.debug(f"{k}: {v.shape}")
 
         return_audio = kwargs.get("return_audio", self._model.has_talker)
+        only_return_audio = kwargs.get("only_return_audio", self._model.has_talker)
         gen_assistant_text = ""
         if not return_audio:
-            for item in self.thinker_inference_stream(
+            for item in self.thinker_stream(
                 inputs,
                 use_audio_in_video=kwargs.get("use_audio_in_video", False),
                 thinker_top_k=kwargs.get("thinker_top_k", None) or self.thinker_args.lm_gen_top_k,
@@ -337,9 +354,9 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
                 thinker_max_new_tokens=kwargs.get("thinker_max_new_tokens", None)
                 or self.thinker_args.lm_gen_max_new_tokens,
             ):
-                gen_assistant_text += item["text"]
+                text = self._tokenizer.decode(item["thinker_ids"][0], skip_special_tokens=True)
+                gen_assistant_text += text
                 yield item
-            return
         else:
             gen_args = dict(
                 use_audio_in_video=kwargs.get("use_audio_in_video", False),
@@ -378,7 +395,11 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
                 code2wav_sway_coefficient=kwargs.get("code2wav_sway_coefficient", None)
                 or self.code2wav_args.sway_coefficient,
             )
-            stream = self._model.generate_stream(
+            gen_stream_func = self._model.generate_stream
+            if only_return_audio is True:
+                gen_stream_func = self._model.thinker_all_talker_stream
+
+            stream = gen_stream_func(
                 inputs,
                 **gen_args,
                 code2wav_chunk_stream_func=self.code2wav_sliding_window_chunk_stream
@@ -408,7 +429,7 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
         )
         self.chat_history_dict.set(session.ctx.client_id, session_chat_history)
 
-    def thinker_inference_stream(
+    def thinker_stream(
         self,
         inputs: dict,
         use_audio_in_video: bool = False,
