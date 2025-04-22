@@ -604,7 +604,7 @@ with omni_img.imports():
                 "top_p": 0.9,
                 "temperature": 0.95,
                 "repetition_penalty": 1.1,
-                "min_new_tokens": 1,  # Ensure at least one token is generated if possible
+                "min_new_tokens": 0,  # Ensure at least one token is generated if possible
                 "max_new_tokens": max_tokens_per_step,  # Generate in smaller steps
                 # output_hidden_states/scores can consume memory,
                 # enable if needed downstream(talker)

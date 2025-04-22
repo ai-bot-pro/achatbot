@@ -15,17 +15,17 @@ from src.modules.speech.asr import ASREnvInit
 
 r"""
 LLM_MODEL_NAME_OR_PATH=./models/Qwen/Qwen2.5-Omni-7B \
-    THINKER_LLM_GEN_TEMPERATURE=0.0 \
+    THINKER_LLM_GEN_TEMPERATURE=0.9 \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
     python -m unittest test.modules.speech.asr.test_qwen2_5omni_asr.TestQwen2_5OmniASR.test_transcribe_stream
 
 LLM_MODEL_NAME_OR_PATH=./models/Qwen/Qwen2.5-Omni-7B \
-    THINKER_LLM_GEN_TEMPERATURE=0.0 \
+    THINKER_LLM_GEN_TEMPERATURE=0.9 \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
     python -m unittest test.modules.speech.asr.test_qwen2_5omni_asr.TestQwen2_5OmniASR.test_transcribe
 
 LLM_MODEL_NAME_OR_PATH=./models/Qwen/Qwen2.5-Omni-7B \
-    THINKER_LLM_GEN_TEMPERATURE=0.0 \
+    THINKER_LLM_GEN_TEMPERATURE=0.9 \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
     python -m unittest test.modules.speech.asr.test_qwen2_5omni_asr.TestQwen2_5OmniASR.test_transcribe_with_bytes
 """

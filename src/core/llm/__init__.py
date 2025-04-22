@@ -167,7 +167,7 @@ class LLMEnvInit:
             lm_gen_repetition_penalty=float(
                 os.getenv(f"{prefix}LLM_GEN_REPETITION_PENALTY", "1.1")
             ),
-            lm_gen_min_new_tokens=int(os.getenv(f"{prefix}LLM_GEN_MIN_NEW_TOKENS", "0")),
+            lm_gen_min_new_tokens=int(os.getenv(f"{prefix}LLM_GEN_MIN_NEW_TOKENS", "1")),
         ).__dict__
 
     @staticmethod

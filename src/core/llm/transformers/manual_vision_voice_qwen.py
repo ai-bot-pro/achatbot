@@ -178,7 +178,7 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
 
         for step in range(self.args.warmup_steps):
             streamer = self._model.generate_stream(
-                **inputs,
+                inputs,
                 use_audio_in_video=False,
                 thinker_max_tokens_per_step=self.thinker_args.lm_gen_max_tokens_per_step,
                 thinker_max_new_tokens=self.thinker_args.lm_gen_max_new_tokens,
@@ -339,7 +339,7 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
         return_audio = kwargs.get("return_audio", self._model.has_talker)
         only_return_audio = kwargs.get("only_return_audio", self._model.has_talker)
         gen_assistant_text = ""
-        if not return_audio:
+        if not return_audio:  # text / vision(image/video) / audio / text + image -> text
             for item in self.thinker_stream(
                 inputs,
                 use_audio_in_video=kwargs.get("use_audio_in_video", False),
@@ -354,10 +354,9 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
                 thinker_max_new_tokens=kwargs.get("thinker_max_new_tokens", None)
                 or self.thinker_args.lm_gen_max_new_tokens,
             ):
-                text = self._tokenizer.decode(item["thinker_ids"][0], skip_special_tokens=True)
-                gen_assistant_text += text
+                gen_assistant_text += item["text"]
                 yield item
-        else:
+        else:  # text / vision(image/video) / audio / text + image -> text + audio
             gen_args = dict(
                 use_audio_in_video=kwargs.get("use_audio_in_video", False),
                 thinker_max_tokens_per_step=kwargs.get("thinker_max_tokens_per_step", None)
@@ -396,7 +395,9 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
                 or self.code2wav_args.sway_coefficient,
             )
             gen_stream_func = self._model.generate_stream
-            if only_return_audio is True:
+            if (
+                only_return_audio is True
+            ):  # text / vision(image/video) / audio / text + image -> all text + chunk audio
                 gen_stream_func = self._model.thinker_all_talker_stream
 
             stream = gen_stream_func(
@@ -464,6 +465,8 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
         for new_text in streamer:
             times.append(perf_counter() - start_time)
             generated_text += new_text
+            if new_text == "":
+                continue
             yield {"text": new_text}
             start_time = perf_counter()
 

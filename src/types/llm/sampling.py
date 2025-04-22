@@ -22,9 +22,9 @@ class LMGenerateArgs:
         },
     )
     lm_gen_min_new_tokens: int = field(
-        default=0,
+        default=1,
         metadata={
-            "help": "Minimum number of new tokens to generate in a single completion. Default is 0."
+            "help": "Minimum number of new tokens to generate in a single completion. Default is 1."
         },
     )
     lm_gen_do_sample: bool = field(
