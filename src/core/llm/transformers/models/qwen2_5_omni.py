@@ -345,7 +345,7 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
                 "return_dict_in_generate": True,
                 # "output_scores": True,
                 "eos_token_id": thinker_eos_token_ids,
-                "pad_token_id": kwargs.get("thinker_pad_token_id", -1),
+                "pad_token_id": kwargs.get("thinker_pad_token_id", 151643),
             }
             model_inputs = {**inputs, **model_inputs}
 
@@ -704,7 +704,7 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
         code2wav_guidance_scale: float = 0.5,
         code2wav_sway_coefficient: float = -1.0,
         code2wav_chunk_stream_func: Callable = None,
-        only_return_audio:bool=False,
+        only_return_audio: bool = False,
         **kwargs,
     ) -> Generator[dict, None, None]:
         """
@@ -751,7 +751,8 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
                 **kwargs,
             )
 
-            return talker_streamer
+            for talker_chunk in talker_streamer:
+                yield talker_chunk
 
     @torch.no_grad()
     def thinker_all_talker_stream(

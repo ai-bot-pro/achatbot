@@ -174,6 +174,9 @@ IMAGE_NAME=minicpmo IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot s
 
 # moonshotai/Kimi-VL-A3B-Instruct (or Thinking) use 2xL4 like deepseek-ai/deepseek-vl2-small
 IMAGE_NAME=kimi IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4:2 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+
+# webrtc_vision_bot serve on qwen2.5omni vision llm pip image
+IMAGE_NAME=qwen2.5omni IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
 ```
 - curl api to run chat room bot with webrtc (daily/livekit/agora)
 ```shell
@@ -559,6 +562,13 @@ curl --location 'https://weedge-achatbot--fastapi-webrtc-minicpmo-omni-bot-srv-a
   },
   "config_list": []
 }'
+```
+### webrtc_qwen2_5omni_vision_voice_bot
+- run webrtc_qwen2_5omni_vision_voice_bot serve with task queue(redis)
+```shell
+# webrtc_audio_bot serve on default pip image
+# need create .env.example to modal Secrets for webrtc key
+IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L40s modal serve -e achatbot src/fastapi_webrtc_qwen2_5omni_vision_voice_bot_serve.py
 ```
 
 ### webrtc_step_voice_bot

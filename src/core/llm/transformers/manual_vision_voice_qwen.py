@@ -208,7 +208,10 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
             for _ in streamer:
                 times.append(time.perf_counter() - start_time)
                 start_time = time.perf_counter()
-            logging.info(f"step {step} warnup TTFT(chunk) time: {times[0]} s")
+            if len(times) > 0:
+                logging.info(f"step {step} warnup TTFT(chunk) time: {times[0]} s")
+            else:
+                logging.warning(f"step {step} warnup no generate stream")
             step += 1
 
         if "cuda" in str(self._model.device):
@@ -317,7 +320,7 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
             logging.debug(f"audios[{i}]: {item.shape}") for i, item in enumerate(audios)
         } if audios else logging.debug(audios)
         {
-            logging.debug(f"images[{i}]: {item.shape}") for i, item in enumerate(images)
+            logging.debug(f"images[{i}]: {item}") for i, item in enumerate(images)
         } if images else logging.debug(images)
         {
             logging.debug(f"videos[{i}]: {item.shape}") for i, item in enumerate(videos)
@@ -337,7 +340,9 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
             logging.debug(f"{k}: {v.shape}")
 
         return_audio = kwargs.get("return_audio", self._model.has_talker)
-        only_return_audio = kwargs.get("only_return_audio", self._model.has_talker)
+        only_return_audio = kwargs.get(
+            "only_return_audio", self._model.has_talker and self.args.only_return_audio
+        )
         gen_assistant_text = ""
         if not return_audio:  # text / vision(image/video) / audio / text + image -> text
             for item in self.thinker_stream(
@@ -386,7 +391,7 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
                 talker_eos_token_ids=kwargs.get("talker_eos_token_ids", None)
                 or self.args.talker_eos_token_ids,
                 talker_skip_thinker_token_ids=kwargs.get("talker_skip_thinker_token_ids", None)
-                or [],
+                or self.args.talker_skip_thinker_token_ids,
                 code2wav_num_steps=kwargs.get("code2wav_num_steps", None)
                 or self.code2wav_args.num_steps,
                 code2wav_guidance_scale=kwargs.get("code2wav_guidance_scale", None)
@@ -502,6 +507,14 @@ class TransformersManualAudioQwen2_5OmniLLM(TransformersManualQwen2_5OmniLLM):
 
         super().__init__(**args)
 
+    @torch.inference_mode()
+    def generate(self, session: Session, **kwargs):
+        for item in super().generate(session, **kwargs):
+            text = item.pop("text", "")
+            if text == "":
+                continue
+            yield text
+
 
 class TransformersManualVisionQwen2_5OmniLLM(TransformersManualQwen2_5OmniLLM):
     """
@@ -516,6 +529,29 @@ class TransformersManualVisionQwen2_5OmniLLM(TransformersManualQwen2_5OmniLLM):
         args["disable_talker"] = True
         args["init_chat_prompt"] = args.get("init_chat_prompt", "You are a helpful assistant.")
         super().__init__(**args)
+
+    @torch.inference_mode()
+    def generate(self, session: Session, **kwargs):
+        for item in super().generate(session, **kwargs):
+            yield item["text"]
+
+
+class TransformersManualInstructSpeechQwen2_5OmniLLM(TransformersManualQwen2_5OmniLLM):
+    """
+    text --> thinker lm -> gen hidden stats --> talker lm -> vq codes --> flow -> mel --> bigvgan -> speech
+    """
+
+    TAG = "llm_transformers_manual_qwen2_5omni_speech"
+
+    def __init__(self, **args) -> None:
+        args["disable_talker"] = False
+        super().__init__(**args)
+
+    @torch.inference_mode()
+    def generate(self, session: Session, **kwargs):
+        for item in super().generate(session, **kwargs):
+            audio_wav = item.pop("audio_wav", None)
+            yield audio_wav
 
 
 class TransformersManualVisionVoiceQwen2_5OmniLLM(TransformersManualQwen2_5OmniLLM):

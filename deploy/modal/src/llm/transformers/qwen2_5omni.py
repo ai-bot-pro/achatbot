@@ -442,7 +442,7 @@ with omni_img.imports():
         {print(f"audios[{i}]: {item.shape}") for i, item in enumerate(audios)} if audios else print(
             audios
         )
-        {print(f"images[{i}]: {item.shape}") for i, item in enumerate(images)} if images else print(
+        {print(f"images[{i}]: {item}") for i, item in enumerate(images)} if images else print(
             images
         )
         {print(f"videos[{i}]: {item.shape}") for i, item in enumerate(videos)} if videos else print(
@@ -510,7 +510,7 @@ with omni_img.imports():
         {print(f"audios[{i}]: {item.shape}") for i, item in enumerate(audios)} if audios else print(
             audios
         )
-        {print(f"images[{i}]: {item.shape}") for i, item in enumerate(images)} if images else print(
+        {print(f"images[{i}]: {item}") for i, item in enumerate(images)} if images else print(
             images
         )
         {print(f"videos[{i}]: {item.shape}") for i, item in enumerate(videos)} if videos else print(
@@ -936,7 +936,7 @@ with omni_img.imports():
         {print(f"audios[{i}]: {item.shape}") for i, item in enumerate(audios)} if audios else print(
             audios
         )
-        {print(f"images[{i}]: {item.shape}") for i, item in enumerate(images)} if images else print(
+        {print(f"images[{i}]: {item}") for i, item in enumerate(images)} if images else print(
             images
         )
         {print(f"videos[{i}]: {item.shape}") for i, item in enumerate(videos)} if videos else print(
@@ -985,7 +985,7 @@ with omni_img.imports():
         {print(f"audios[{i}]: {item.shape}") for i, item in enumerate(audios)} if audios else print(
             audios
         )
-        {print(f"images[{i}]: {item.shape}") for i, item in enumerate(images)} if images else print(
+        {print(f"images[{i}]: {item}") for i, item in enumerate(images)} if images else print(
             images
         )
         {print(f"videos[{i}]: {item.shape}") for i, item in enumerate(videos)} if videos else print(
@@ -1917,6 +1917,16 @@ def asr_chunk_stream():
             print(chunk)
 
 
+def thinker_stream():
+    messages = [
+        {"role": "system", "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}]},
+        {"role": "user", "content": [{"type": "text", "text": "who are you?"}]},
+    ]
+    chunk_stream = thinker_inference_stream(messages)
+    for chunk in chunk_stream:
+        print(chunk)
+
+
 def thinker_chunk_stream():
     messages = [
         {"role": "system", "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}]},
@@ -2089,6 +2099,7 @@ IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen2_5omni.py --task batch_r
 
 # stream
 # text -> text stream
+IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task thinker_stream 
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task thinker_chunk_stream 
 # image -> text stream
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task image_stream
@@ -2140,6 +2151,7 @@ def main(task: str = "universal_audio_understanding"):
         "omni_chatting_for_music_chunk_stream": omni_chatting_for_music_chunk_stream,
         "multi_round_omni_chatting": multi_round_omni_chatting,
         "batch_requests": batch_requests,
+        "thinker_stream": thinker_stream,
         "thinker_chunk_stream": thinker_chunk_stream,
         "image_stream": image_stream,
         "image_chunk_stream": image_chunk_stream,

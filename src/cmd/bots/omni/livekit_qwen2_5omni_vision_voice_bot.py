@@ -10,7 +10,7 @@ from src.processors.user_image_request_processor import UserImageRequestProcesso
 from src.processors.aggregators.vision_image_audio_frame import VisionImageAudioFrameAggregator
 from src.processors.speech.audio_save_processor import AudioSaveProcessor
 from src.processors.aggregators.user_audio_response import UserAudioResponseAggregator
-from src.cmd.bots.base_livekit import LivekitRoomBot
+from src.cmd.bots.base_livekit import LivekitRoomBot, rtc
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.common.types import LivekitParams
 from src.transports.livekit import LivekitTransport
@@ -51,6 +51,7 @@ class LivekitQwen2_5OmniVisionVoiceBot(LivekitRoomBot):
             self.args.token,
             params=self.params,
         )
+        self.regisiter_room_event(transport)
 
         in_audio_aggr = UserAudioResponseAggregator()
         self.image_requester = UserImageRequestProcessor(request_frame_cls=AudioRawFrame)
@@ -84,18 +85,25 @@ class LivekitQwen2_5OmniVisionVoiceBot(LivekitRoomBot):
             ),
         )
 
-        transport.add_event_handlers(
-            "on_first_participant_joined",
-            [self.on_first_participant_joined, self.on_first_participant_say_hi],
-        )
-        transport.add_event_handler("on_participant_left", self.on_participant_left)
-        transport.add_event_handler("on_call_state_updated", self.on_call_state_updated)
-
         await PipelineRunner().run(self.task)
 
-    async def on_first_participant_say_hi(self, transport: LivekitTransport, participant):
-        transport.capture_participant_video(participant["id"], framerate=0)
-        self.image_requester.set_participant_id(participant["id"])
-        self._vision_voice_processor.say(
-            "你好，欢迎使用 Vision Voice Omni Bot. 我是一名虚拟助手，可以结合视频进行提问。"
+    async def on_first_participant_joined(
+        self,
+        transport: LivekitTransport,
+        participant: rtc.RemoteParticipant,
+    ):
+        # subscribed the first participant
+        transport.capture_participant_video(participant.sid, framerate=0)
+        self.image_requester.set_participant_id(participant.sid)
+
+        participant_name = participant.name if participant.name else participant.identity
+        await self._vision_voice_processor.say(
+            f"你好，{participant_name} 欢迎使用 Vision Voice Omni Bot. 我是一名虚拟助手，可以结合视频进行提问。"
         )
+
+    async def on_video_track_subscribed(
+        self,
+        transport: LivekitTransport,
+        participant: rtc.RemoteParticipant,
+    ):
+        transport.capture_participant_video(participant.sid, framerate=0)

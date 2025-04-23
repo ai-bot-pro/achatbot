@@ -50,6 +50,7 @@ class LivekitQwen2_5OmniVoiceBot(LivekitRoomBot):
             self.args.token,
             params=self.params,
         )
+        self.regisiter_room_event(transport)
 
         # messages = []
         # if self._bot_config.llm.messages:
@@ -80,8 +81,6 @@ class LivekitQwen2_5OmniVoiceBot(LivekitRoomBot):
             "on_first_participant_joined",
             [self.on_first_participant_joined, self.on_first_participant_say_hi],
         )
-        transport.add_event_handler("on_participant_left", self.on_participant_left)
-        transport.add_event_handler("on_call_state_updated", self.on_call_state_updated)
 
         await PipelineRunner().run(self.task)
 

@@ -45,6 +45,7 @@ class VisionVoiceProcessorBase(AsyncAIProcessor):
         yield frame
 
     async def say(self, text: str):
+        logging.info(f"say: {text}")
         pass
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):

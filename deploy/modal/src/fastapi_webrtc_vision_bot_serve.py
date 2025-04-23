@@ -1,7 +1,7 @@
 import modal
 import os
 
-achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.9.post8")
+achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.9.post9")
 
 vision_bot_img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
@@ -10,6 +10,7 @@ vision_bot_img = (
         add_python="3.10",
     )
     .apt_install("git", "git-lfs", "ffmpeg", "cmake")
+    .pip_install("wheel")
     .pip_install(
         [
             "achatbot["
@@ -25,7 +26,6 @@ vision_bot_img = (
         ],
         extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
     )
-    .pip_install("wheel")
     .pip_install("flash-attn", extra_options="--no-build-isolation")
     .env(
         {
@@ -120,6 +120,21 @@ class ContainerRuntimeConfig:
             ).env(
                 {
                     "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+                }
+            )
+        ),
+        "qwen2_5omni": (
+            vision_bot_img.pip_install(
+                [
+                    f"achatbot[llm_transformers_manual_vision_voice_qwen]=={achatbot_version}",
+                ],
+                extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+            )
+            .run_commands("pip install git+https://github.com/huggingface/transformers@v4.51.3-Qwen2.5-Omni-preview")
+            .env(
+                {
+                    "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+                    "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "Qwen/Qwen2.5-Omni-7B")}',
                 }
             )
         ),

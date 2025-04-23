@@ -98,6 +98,6 @@ class DailyMiniCPMoVisionVoiceBot(DailyRoomBot):
     async def on_first_participant_say_hi(self, transport: DailyTransport, participant):
         transport.capture_participant_video(participant["id"], framerate=0)
         self.image_requester.set_participant_id(participant["id"])
-        self._vision_voice_processor.say(
+        await self._vision_voice_processor.say(
             "你好，欢迎使用 Vision Voice Omni Bot. 我是一名虚拟助手，可以结合视频进行提问。"
         )
