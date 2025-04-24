@@ -141,7 +141,9 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
     def warmup(self):
         if self.args.warmup_steps <= 0:
             return
-        logging.info(f"Warming up {self.__class__.__name__} device: {self._model.device}")
+        logging.info(
+            f"Warming up {self.__class__.__name__} device: {self._model.device} with {self.args.warmup_steps} steps"
+        )
 
         dummy_msgs = [
             {
@@ -156,7 +158,7 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
             {
                 "role": self.args.user_role,
                 "content": [
-                    {"type": "text", "text": self.args.warnup_prompt or "what's your name?"}
+                    {"type": "text", "text": self.args.warnup_prompt or "请简单介绍下自己"}
                 ],
             },
         ]
@@ -164,6 +166,7 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
         text = self._tokenizer.apply_chat_template(
             dummy_msgs, tokenize=False, add_generation_prompt=True
         )
+        logging.info(f"Warmup text: {text}")
         audios, images, videos = process_mm_info(dummy_msgs, use_audio_in_video=False)
         inputs = self._tokenizer(
             text=text,
@@ -187,7 +190,7 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
                 inputs,
                 use_audio_in_video=False,
                 thinker_max_tokens_per_step=self.thinker_args.lm_gen_max_tokens_per_step,
-                thinker_max_new_tokens=30,
+                thinker_max_new_tokens=15,
                 thinker_top_k=self.thinker_args.lm_gen_top_k,
                 thinker_top_p=self.thinker_args.lm_gen_top_p,
                 thinker_temperature=self.thinker_args.lm_gen_temperature,
@@ -213,15 +216,28 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
             )
             times = []
             start_time = time.perf_counter()
-            for _, _ in enumerate(streamer):
+            for i, chunk in enumerate(streamer):
                 times.append(time.perf_counter() - start_time)
+                text = self._tokenizer.decode(chunk["thinker_ids"][0], skip_special_tokens=True)
+                if "talker_wav" in chunk:
+                    logging.info(
+                        f"{i} chunk: {text} | {chunk['talker_wav'].shape} , warmup time: {times[i]} s"
+                    )
+                else:
+                    logging.info(f"{i} chunk: {text} , warmup time: {times[i]} s")
+                # if (
+                #    self.args.is_use_sliding_window_code2wav
+                #    and self.code2wav_args.enable_torch_compile is True
+                # ):
+                #    logging.info(f"torch.compile code2wav warmup finish")
+                #    break
                 start_time = time.perf_counter()
             if len(times) > 0:
                 logging.info(
-                    f"step {step} warnup TTFT(chunk) time: {times[0]} s | total: {sum(times)} s"
+                    f"step {step} warmup TTFT(chunk) time: {times[0]} s | total: {sum(times)} s"
                 )
             else:
-                logging.warning(f"step {step} warnup no generate stream")
+                logging.warning(f"step {step} warmup no generate stream")
             step += 1
 
         if "cuda" in str(self._model.device):
@@ -230,6 +246,14 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
             logging.info(
                 f"{self.__class__.__name__}:  warmed up! time: {start_event.elapsed_time(end_event) * 1e-3:.3f} s"
             )
+
+    def skip_token_ids(self):
+        token_ids = []
+        for i in ",;.?，；。？！":
+            # for i in ",.":
+            token_id = self._tokenizer.tokenizer.encode(i)
+            token_ids.extend(token_id)
+        return token_ids
 
     def code2wav_sliding_window_chunk_stream(
         self,
@@ -416,7 +440,8 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
                     talker_eos_token_ids=kwargs.get("talker_eos_token_ids", None)
                     or self.args.talker_eos_token_ids,
                     talker_skip_thinker_token_ids=kwargs.get("talker_skip_thinker_token_ids", None)
-                    or self.args.talker_skip_thinker_token_ids,
+                    or self.args.talker_skip_thinker_token_ids
+                    or self.skip_token_ids(),
                     code2wav_num_steps=kwargs.get("code2wav_num_steps", None)
                     or self.code2wav_args.num_steps,
                     code2wav_guidance_scale=kwargs.get("code2wav_guidance_scale", None)

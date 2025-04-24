@@ -3,10 +3,13 @@ import os
 
 achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.9.post9")
 qwen2_5omni_img = (
-    # https://hub.docker.com/r/pytorch/pytorch/tags
-    modal.Image.from_registry("pytorch/pytorch:2.2.2-cuda12.1-cudnn8-devel", add_python="3.11")
-    .apt_install("git", "git-lfs", "ffmpeg")
-    .pip_install("flash-attn", extra_options="--no-build-isolation")
+    # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
+    modal.Image.from_registry(
+        "nvidia/cuda:12.6.1-cudnn-devel-ubuntu22.04",
+        add_python="3.10",
+    )
+    .apt_install("git", "git-lfs", "ffmpeg", "clang", "cmake")
+    .pip_install("wheel")
     .pip_install(
         [
             "achatbot["
@@ -22,6 +25,7 @@ qwen2_5omni_img = (
     .run_commands(
         "pip install git+https://github.com/huggingface/transformers@v4.51.3-Qwen2.5-Omni-preview"
     )
+    .pip_install("flash-attn", extra_options="--no-build-isolation")
     .env(
         {
             "ACHATBOT_PKG": "1",
@@ -54,7 +58,7 @@ assets_dir = modal.Volume.from_name("assets", create_if_missing=True)
     cpu=2.0,
     timeout=1200,  # default 300s
     scaledown_window=1200,
-    max_containers=100,
+    max_containers=1,
     allow_concurrent_inputs=int(os.getenv("IMAGE_CONCURRENT_CN", "1")),
 )
 class Srv:

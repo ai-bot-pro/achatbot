@@ -11,27 +11,24 @@ omni_img = (
         "nvidia/cuda:12.6.1-cudnn-devel-ubuntu22.04",
         add_python="3.10",
     )
-    .apt_install("git", "git-lfs", "ffmpeg", "cmake")
+    .apt_install("git", "git-lfs", "ffmpeg", "clang", "cmake")
     .pip_install("wheel", "openai", "qwen-omni-utils[decord]")
-    .run_commands(
-        f"pip install git+https://github.com/huggingface/transformers",
-    )
     .pip_install(
         "accelerate",
-        "torch",
-        "torchvision",
-        "torchaudio",
+        "torch==2.6.0",
+        "torchaudio==2.6.0",
+        "torchvision==0.21.0",
         "soundfile==0.13.0",
         "librosa==0.11.0",
+    )
+    .run_commands(
+        "pip install git+https://github.com/huggingface/transformers@v4.51.3-Qwen2.5-Omni-preview"
     )
     .pip_install("flash-attn", extra_options="--no-build-isolation")
     .env(
         {
             "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
         }
-    )
-    .run_commands(
-        "pip install git+https://github.com/huggingface/transformers@v4.51.3-Qwen2.5-Omni-preview"
     )
 )
 
@@ -42,12 +39,7 @@ if achatbot_version:
             f"achatbot[llm_transformers_manual_vision_voice_qwen]=={achatbot_version}",
             extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
         )
-        # .pip_install(
-        #    "torch~=2.3.0",
-        #    "torchaudio~=2.3.0",
-        #    "torchvision~=0.18.0",
-        # )
-        .pip_install("flash-attn==2.5.8", extra_options="--no-build-isolation")
+        # .pip_install("flash-attn==2.5.8", extra_options="--no-build-isolation")
         .env(
             {
                 "ACHATBOT_PKG": "1",
@@ -1289,7 +1281,7 @@ with omni_img.imports():
     },
     timeout=1200,  # default 300s
     scaledown_window=1200,
-    max_containers=100,
+    max_containers=1,
 )
 def run(func):
     func()
@@ -2336,12 +2328,17 @@ def achatbot_generate():
 
     session = Session(**SessionCtx("test_client_id", 16000, 2).__dict__)
     args = LLMEnvInit.get_qwen2_5omni_transformers_args()
+    args["speaker"] = "Ethan"
     args["lm_attn_impl"] = "flash_attention_2"
     args["warmup_steps"] = 1
-    args["warnup_prompt"] = ""
+    args["warnup_prompt"] = "你叫什么名字？"
     args["is_use_sliding_window_code2wav"] = True
-    args["thinker_all_talker_stream"] = True
+    args["thinker_all_talker_stream"] = False
+    args["code2wav_args"]["enable_torch_compile"] = False
+    args["code2wav_args"]["enable_torch_compile_first_chunk"] = False
     llm = TransformersManualQwen2_5OmniLLM(**args)
+
+    print("----start generate stream----")
 
     session.ctx.state["prompt"] = [
         {"type": "text", "text": "请描述一下图片中的内容"},
@@ -2357,13 +2354,9 @@ def achatbot_generate():
         "thinker_repetition_penalty": 1.1,
         "thinker_min_new_tokens": 1,
         "thinker_max_tokens_per_step": 15,
-        "thinker_max_new_tokens": 100,
+        "thinker_stop_strings_per_step": [",", ".", "，", "。"],
+        "thinker_max_new_tokens": 150,
         "thinker_eos_token_ids": [
-            151644,
-            151645,
-        ]
-        if args["thinker_all_talker_stream"] is True
-        else [
             151644,
             151645,
         ],
@@ -2467,6 +2460,7 @@ IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task omni_chattin
 IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_for_music_chunk_stream
 
 
+# text/vision/audio -> chunk text+speech stream  use sliding window code2wav
 ACHATBOT_VERSION=0.0.9.post9 IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task achatbot_generate
 
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task tokenizer

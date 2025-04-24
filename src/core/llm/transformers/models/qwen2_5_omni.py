@@ -414,8 +414,8 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
             current_attention_mask = full_attention_mask
 
             # Check if EOS token was generated in this step
-            if step_new_ids[0, -1].item() in [151644, 151645]:
-                logging.debug("EOS token generated.")
+            if step_new_ids[0, -1].item() in thinker_eos_token_ids:
+                logging.info("EOS token generated.")
                 break
 
             # Check if max_new_tokens limit is reached (after processing the step)
@@ -451,12 +451,16 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
             thinker_generate_ids = chunk["thinker_generate_ids"].to(self.talker.device)
             # skip talk
             if thinker_generate_ids[0, -1].item() in talker_skip_thinker_token_ids:
-                logging.debug(f"skip token {thinker_generate_ids} to talk")
-                yield {"thinker_ids": talker_skip_thinker_token_ids, "talker_wav": torch.empty([0])}
+                logging.info(f"skip token {thinker_generate_ids} to talk")
+                yield {"thinker_ids": thinker_generate_ids, "talker_wav": torch.empty([0])}
                 continue
             thinker_generate_hidden_states = chunk["thinker_generate_hidden_states"]
-            if thinker_generate_hidden_states is None:
-                yield {"thinker_ids": talker_skip_thinker_token_ids, "talker_wav": torch.empty([0])}
+            if thinker_generate_hidden_states is None or len(thinker_generate_hidden_states) < 2:
+                if len(thinker_generate_hidden_states) < 2:
+                    logging.warning(
+                        f"thinker_generate_ids: {thinker_generate_ids} | len(thinker_generate_hidden_states): {len(thinker_generate_hidden_states)} < 2"
+                    )
+                yield {"thinker_ids": thinker_generate_ids, "talker_wav": torch.empty([0])}
                 continue
             thinker_token_embeds = [
                 token_hidden_states[0].to(self.talker.device)
@@ -473,9 +477,6 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
                 logging.debug(
                     f"thinker_generate_hidden_states[{i}]:{thinker_generate_hidden_states[i][0].shape}, {thinker_generate_hidden_states[i][-1].shape}"
                 )
-            # logging.debug(
-            #    f"thinker_generate_hidden_states[0]:{thinker_generate_hidden_states[0][0][:,:5,:]}, {thinker_generate_hidden_states[0][-1][:,:5,:]}"
-            # )
 
             talker_text_bos_token = self.speaker_map[speaker]["bos_token"]
             talker_input_text_ids = torch.cat(
@@ -653,8 +654,8 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
                 yield wav  # (T,)
                 start_time = perf_counter()
 
-        logging.debug(
-            f"generate first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s"
+        logging.info(
+            f"talker generate first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s"
         )
 
         if len(talker_generate_codes) > pre_offset:
@@ -676,7 +677,7 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
             code2wav_times.append(perf_counter() - start_time)
             yield wav  # (T,)
 
-        logging.debug(
+        logging.info(
             f"code2wav streaming first chunk time: {code2wav_times[0]} s | cost: {sum(code2wav_times)} s"
         )
 

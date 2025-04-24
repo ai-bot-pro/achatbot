@@ -147,6 +147,7 @@ class Code2WavEngine:
 
         logging.info("Code2Wav model torch compiled")
 
+    @torch.inference_mode()
     def step_generate_waveform(
         self,
         code: List[int],
