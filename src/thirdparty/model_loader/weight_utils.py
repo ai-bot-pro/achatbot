@@ -1,8 +1,8 @@
 from typing import Generator, List, Tuple
 
-from safetensors import safe_open
+from safetensors.torch import safe_open
 import torch
-import tqdm
+from tqdm.auto import tqdm
 
 # explicitly use pure text format, with a newline at the end
 # this makes it impossible to see the animation in the progress bar

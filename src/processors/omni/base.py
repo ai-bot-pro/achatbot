@@ -11,7 +11,7 @@ from src.common.factory import EngineClass
 from src.common.interface import ILlm
 from src.common.session import Session
 from src.common.types import CHANNELS, RATE, SessionCtx
-from src.types.frames.data_frames import Frame, VisionImageVoiceRawFrame
+from src.types.frames.data_frames import Frame, VisionImageVoiceRawFrame, PathAudioRawFrame
 from src.processors.ai_processor import AsyncAIProcessor
 
 
@@ -98,3 +98,24 @@ class VisionVoiceProcessorBase(AsyncAIProcessor):
                     )
                 )
             yield None
+
+
+class MockVisionVoiceProcessor(VisionVoiceProcessorBase):
+    async def run(self, frame: VisionImageVoiceRawFrame) -> AsyncGenerator[Frame, None]:
+        logging.debug(f"VisionImageVoiceRawFrame: {frame}")
+        self._session.ctx.state["prompt"] = []
+
+        # frame.text and self._session.ctx.state["prompt"].append(frame.text)
+
+        if frame.text:
+            yield TextFrame(text=f"{frame.text}")
+
+        if frame.images:
+            for image_frame in frame.images:
+                yield TextFrame(text=f"{image_frame}")
+
+        if frame.audio and frame.audio.audio:
+            yield AudioRawFrame(
+                audio=frame.audio.audio,
+                sample_rate=frame.audio.sample_rate,
+            )

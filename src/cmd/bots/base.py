@@ -378,9 +378,12 @@ class AIBot(IBot):
         self, llm: LLMConfig | None = None
     ) -> VisionVoiceProcessorBase:
         from src.processors.omni.minicpmo_vision_voice import MiniCPMoVisionVoiceProcessor
+        from src.processors.omni.base import MockVisionVoiceProcessor
 
         if not llm:
             llm = self._bot_config.omni_llm
+        if "mock" in llm.tag:
+            return MockVisionVoiceProcessor()
         if llm.args:
             llm_processor = MiniCPMoVisionVoiceProcessor(**llm.args)
         else:
@@ -391,9 +394,12 @@ class AIBot(IBot):
         self, llm: LLMConfig | None = None
     ) -> VisionVoiceProcessorBase:
         from src.processors.omni.qwen2_5omni_vision_voice import Qwen2_5OmnVisionVoiceProcessor
+        from src.processors.omni.base import MockVisionVoiceProcessor
 
         if not llm:
             llm = self._bot_config.omni_llm
+        if "mock" in llm.tag:
+            return MockVisionVoiceProcessor()
         if llm.args:
             llm_processor = Qwen2_5OmnVisionVoiceProcessor(**llm.args)
         else:

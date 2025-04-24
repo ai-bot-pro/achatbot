@@ -296,10 +296,15 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
         thinker_eos_token_ids=[151644, 151645],  # Define EOS tokens
         thinker_repetition_penalty: float = 1.05,
         thinker_output_hidden_states=False,
+        thinker_stop_strings_per_step=[],
+        tokenizer=None,
         **kwargs,
     ):
         input_ids = inputs.pop("input_ids")
         attention_mask = inputs.pop("attention_mask", None)
+
+        if thinker_max_tokens_per_step > thinker_max_new_tokens:
+            thinker_max_tokens_per_step = thinker_max_new_tokens
 
         # Keep track of the full generated sequence full_generated_ids = input_ids.clone()
         # Ensure full_attention_mask is correctly initialized and expanded
@@ -348,6 +353,9 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
                 "pad_token_id": kwargs.get("thinker_pad_token_id", 151643),
             }
             model_inputs = {**inputs, **model_inputs}
+            if len(thinker_stop_strings_per_step) > 0:
+                model_inputs["stop_strings"] = thinker_stop_strings_per_step
+                model_inputs["tokenizer"] = tokenizer
 
             start_time = perf_counter()
             outputs = self.thinker.generate(**model_inputs)
@@ -406,7 +414,7 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
             current_attention_mask = full_attention_mask
 
             # Check if EOS token was generated in this step
-            if step_new_ids[0, -1].item() in thinker_eos_token_ids:
+            if step_new_ids[0, -1].item() in [151644, 151645]:
                 logging.debug("EOS token generated.")
                 break
 
@@ -415,8 +423,9 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
                 logging.info("Max new tokens limit reached.")
                 break
 
-        logging.debug(f"Total new tokens generated: {total_new_tokens_generated}")
-        logging.debug(f"first chunk generated cost: {times[0]} s | total cost: {sum(times)} s")
+        logging.info(
+            f"Total new tokens generated: {total_new_tokens_generated} | thinker_max_tokens_per_step: {thinker_max_tokens_per_step} | first chunk generated cost: {times[0]} s | total cost: {sum(times)} s"
+        )
 
     @torch.no_grad()
     def talker_generate_chunk(
@@ -566,6 +575,7 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
                 attention_mask=talker_attention_mask,
                 suppress_tokens=[self.talker.codec_bos_token],
                 eos_token_id=talker_eos_token_ids,
+                pad_token_id=8292,
                 do_sample=True if talker_temperature > 0.0 else False,
                 top_k=talker_top_k,
                 top_p=talker_top_p,
@@ -653,30 +663,22 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
                 dtype=torch.long,
                 device=self.talker.device,
             )
-            wav = (
-                self.token2wav(
-                    codes_tensor.to(self.token2wav.device),
-                    conditioning=self.speaker_map[speaker]["cond"]
-                    .to(self.token2wav.device)
-                    .float(),
-                    reference_mel=self.speaker_map[speaker]["ref_mel"]
-                    .to(self.token2wav.device)
-                    .float(),
-                    num_steps=code2wav_num_steps,
-                    guidance_scale=code2wav_guidance_scale,
-                    sway_coefficient=code2wav_sway_coefficient,
-                )
-                .unsqueeze(0)
-                .detach()
-            )
+            wav = self.token2wav(
+                codes_tensor.to(self.token2wav.device),
+                conditioning=self.speaker_map[speaker]["cond"].to(self.token2wav.device).float(),
+                reference_mel=self.speaker_map[speaker]["ref_mel"]
+                .to(self.token2wav.device)
+                .float(),
+                num_steps=code2wav_num_steps,
+                guidance_scale=code2wav_guidance_scale,
+                sway_coefficient=code2wav_sway_coefficient,
+            ).detach()
             code2wav_times.append(perf_counter() - start_time)
             yield wav  # (T,)
 
         logging.debug(
             f"code2wav streaming first chunk time: {code2wav_times[0]} s | cost: {sum(code2wav_times)} s"
         )
-
-        torch.cuda.empty_cache()
 
     @torch.no_grad()
     def generate_stream(
@@ -690,6 +692,8 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
         thinker_temperature: float = 0.9,
         thinker_repetition_penalty: float = 1.05,
         thinker_eos_token_ids=[151644, 151645],
+        thinker_stop_strings_per_step=[],
+        tokenizer=None,
         return_audio=True,
         speaker="Chelsie",
         talker_top_k: int = 10,
@@ -704,7 +708,6 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
         code2wav_guidance_scale: float = 0.5,
         code2wav_sway_coefficient: float = -1.0,
         code2wav_chunk_stream_func: Callable = None,
-        only_return_audio: bool = False,
         **kwargs,
     ) -> Generator[dict, None, None]:
         """
@@ -725,6 +728,8 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
             thinker_eos_token_ids=thinker_eos_token_ids,
             thinker_repetition_penalty=thinker_repetition_penalty,
             thinker_output_hidden_states=return_audio,
+            thinker_stop_strings_per_step=thinker_stop_strings_per_step,
+            tokenizer=tokenizer,
             **kwargs,
         )
         if not return_audio:
@@ -748,7 +753,6 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
                 code2wav_guidance_scale=code2wav_guidance_scale,
                 code2wav_sway_coefficient=code2wav_sway_coefficient,
                 code2wav_chunk_stream_func=code2wav_chunk_stream_func,
-                **kwargs,
             )
 
             for talker_chunk in talker_streamer:
@@ -765,6 +769,8 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
         thinker_temperature: float = 0.9,
         thinker_repetition_penalty: float = 1.05,
         thinker_eos_token_ids=[151644, 151645],
+        thinker_stop_strings_per_step=[],
+        tokenizer=None,
         return_audio=True,
         speaker="Chelsie",
         talker_top_k: int = 10,
@@ -833,7 +839,7 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
                 code2wav_guidance_scale=code2wav_guidance_scale,
                 code2wav_sway_coefficient=code2wav_sway_coefficient,
                 code2wav_chunk_stream_func=code2wav_chunk_stream_func,
-                **kwargs,
             )
 
-            return talker_streamer
+            for talker_chunk in talker_streamer:
+                yield talker_chunk

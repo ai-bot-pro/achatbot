@@ -40,6 +40,7 @@ class LivekitQwen2_5OmniVisionVoiceBot(LivekitRoomBot):
             vad_enabled=True,
             vad_analyzer=self._vad_analyzer,
             vad_audio_passthrough=True,
+            camera_in_enabled=True,
         )
 
         self._vision_voice_processor = self.get_qwen2_5omni_vision_voice_processor()
@@ -56,10 +57,6 @@ class LivekitQwen2_5OmniVisionVoiceBot(LivekitRoomBot):
         in_audio_aggr = UserAudioResponseAggregator()
         self.image_requester = UserImageRequestProcessor(request_frame_cls=AudioRawFrame)
         image_audio_aggr = VisionImageAudioFrameAggregator()
-
-        # messages = []
-        # if self._bot_config.llm.messages:
-        #     messages = self._bot_config.llm.messages
 
         self.task = PipelineTask(
             Pipeline(

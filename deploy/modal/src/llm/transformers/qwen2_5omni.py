@@ -30,11 +30,35 @@ omni_img = (
             "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
         }
     )
+    .run_commands(
+        "pip install git+https://github.com/huggingface/transformers@v4.51.3-Qwen2.5-Omni-preview"
+    )
 )
 
-HF_MODEL_DIR = "/root/models"
+achatbot_version = os.getenv("ACHATBOT_VERSION", "")
+if achatbot_version:
+    omni_img = (
+        omni_img.pip_install(
+            f"achatbot[llm_transformers_manual_vision_voice_qwen]=={achatbot_version}",
+            extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+        )
+        # .pip_install(
+        #    "torch~=2.3.0",
+        #    "torchaudio~=2.3.0",
+        #    "torchvision~=0.18.0",
+        # )
+        .pip_install("flash-attn==2.5.8", extra_options="--no-build-isolation")
+        .env(
+            {
+                "ACHATBOT_PKG": "1",
+                "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
+            }
+        )
+    )
+
+HF_MODEL_DIR = "/root/.achatbot/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
-ASSETS_DIR = "/root/assets"
+ASSETS_DIR = "/root/.achatbot/assets"
 assets_dir = modal.Volume.from_name("assets", create_if_missing=True)
 
 # NOTE: if want to generate speech, need use this system prompt to generate speech
@@ -354,30 +378,31 @@ with omni_img.imports():
     gpu_prop = torch.cuda.get_device_properties("cuda")
     print(gpu_prop)
 
-    model_path = os.path.join(HF_MODEL_DIR, "Qwen/Qwen2.5-Omni-7B")
-    config = AutoConfig.from_pretrained(model_path)
-    model = Qwen2_5OmniForConditionalGenerationNew.from_pretrained(
-        model_path,
-        torch_dtype=torch.bfloat16,
-        device_map={"": 0},
-        attn_implementation="flash_attention_2",
-        config=config,
-    ).eval()
+    if not os.getenv("ACHATBOT_PKG"):
+        model_path = os.path.join(HF_MODEL_DIR, "Qwen/Qwen2.5-Omni-7B")
+        config = AutoConfig.from_pretrained(model_path)
+        model = Qwen2_5OmniForConditionalGenerationNew.from_pretrained(
+            model_path,
+            torch_dtype=torch.bfloat16,
+            device_map={"": 0},
+            attn_implementation="flash_attention_2",
+            config=config,
+        ).eval()
 
-    # NOTE: when disable talker, generate must set return_audio=False
-    # model.disable_talker()
+        # NOTE: when disable talker, generate must set return_audio=False
+        # model.disable_talker()
 
-    print_model_params(model, "Qwen2.5Omni")
+        print_model_params(model, "Qwen2.5Omni")
 
-    # processor = Qwen2_5OmniProcessor.from_pretrained(model_path)
-    processor = AutoProcessor.from_pretrained(
-        model_path,
-        min_pixels=256 * 28 * 28,
-        max_pixels=1280 * 28 * 28,
-        trust_remote_code=True,
-    )
+        # processor = Qwen2_5OmniProcessor.from_pretrained(model_path)
+        processor = AutoProcessor.from_pretrained(
+            model_path,
+            min_pixels=256 * 28 * 28,
+            max_pixels=1280 * 28 * 28,
+            trust_remote_code=True,
+        )
 
-    subprocess.run("nvidia-smi", shell=True)
+    # subprocess.run("nvidia-smi", shell=True)
 
     def inference(
         messages,
@@ -560,6 +585,7 @@ with omni_img.imports():
         use_audio_in_video=False,
         eos_token_ids=[151644, 151645],  # Define EOS tokens
         output_hidden_states=False,
+        stop_strings_per_step=[".", "。"],
     ):
         input_ids = inputs.pop("input_ids")
         attention_mask = inputs.pop("attention_mask", None)
@@ -593,6 +619,7 @@ with omni_img.imports():
         while total_new_tokens_generated < max_new_tokens:
             # Prepare inputs for generate call
             # print(current_input_ids, current_attention_mask.shape)
+            # https://huggingface.co/docs/transformers/v4.51.3/en/main_classes/text_generation#transformers.GenerationMixin.generate
             model_inputs = {
                 "input_ids": current_input_ids,
                 "attention_mask": current_attention_mask,
@@ -604,7 +631,7 @@ with omni_img.imports():
                 "top_p": 0.9,
                 "temperature": 0.95,
                 "repetition_penalty": 1.1,
-                "min_new_tokens": 0,  # Ensure at least one token is generated if possible
+                "min_new_tokens": 1,  # Ensure at least one token is generated if possible
                 "max_new_tokens": max_tokens_per_step,  # Generate in smaller steps
                 # output_hidden_states/scores can consume memory,
                 # enable if needed downstream(talker)
@@ -615,6 +642,14 @@ with omni_img.imports():
                 "pad_token_id": processor.tokenizer.pad_token_id,
             }
             model_inputs = {**inputs, **model_inputs}
+            for k, v in model_inputs.items():
+                if isinstance(v, torch.Tensor):
+                    print(k, v.shape)
+                else:
+                    print(k, v)
+            if len(stop_strings_per_step) > 0:
+                model_inputs["stop_strings"] = stop_strings_per_step
+                model_inputs["tokenizer"] = processor.tokenizer
 
             start_time = perf_counter()
             outputs = model.thinker.generate(**model_inputs)
@@ -631,6 +666,7 @@ with omni_img.imports():
 
             if output_hidden_states is True:
                 hidden_states = outputs.hidden_states
+                print(hidden_states[0][0].shape)
                 hidden_states_len = (
                     hidden_states_len if hidden_states_len > 0 else hidden_states[0][0].shape[1]
                 )
@@ -679,7 +715,7 @@ with omni_img.imports():
             # torch.cuda.empty_cache()
 
             # Check if EOS token was generated in this step
-            if step_new_ids[0, -1].item() in [151644, 151645]:
+            if step_new_ids[0, -1].item() in eos_token_ids:
                 print("EOS token generated.")
                 break
 
@@ -926,6 +962,7 @@ with omni_img.imports():
         speaker=DEFAULT_SPEAKER,
         thinker_max_new_tokens=2048,
         thinker_max_tokens_per_step=10,  # Controls how many tokens to generate *per step*
+        thinker_stop_strings_per_step=[".", "。"],
         thinker_eos_token_ids=[151644, 151645],  # Define EOS tokens
     ):
         print(messages)
@@ -959,6 +996,7 @@ with omni_img.imports():
             inputs,
             max_new_tokens=thinker_max_new_tokens,
             max_tokens_per_step=thinker_max_tokens_per_step,
+            stop_strings_per_step=thinker_stop_strings_per_step,
             use_audio_in_video=use_audio_in_video,
             eos_token_ids=thinker_eos_token_ids,
             output_hidden_states=True,
@@ -1389,7 +1427,7 @@ def omni_chatting_for_math_chunk_stream():
         },
     ]
 
-    thinker_eos_token_ids = [151644, 151645] + tokenizer_sentences()
+    thinker_eos_token_ids = [151644, 151645]
     print(thinker_eos_token_ids)
     for _ in range(1):  # warmup and test
         streamer = generate_stream(
@@ -1397,6 +1435,7 @@ def omni_chatting_for_math_chunk_stream():
             use_audio_in_video=True,
             thinker_max_new_tokens=100,
             thinker_max_tokens_per_step=15,
+            thinker_stop_strings_per_step=[".", "。"],
             thinker_eos_token_ids=thinker_eos_token_ids,
         )
         gen_text = ""
@@ -1508,7 +1547,7 @@ def omni_chatting_for_music_chunk_stream():
             ],
         },
     ]
-    thinker_eos_token_ids = [151644, 151645] + tokenizer_sentences()
+    thinker_eos_token_ids = [151644, 151645]
     print(thinker_eos_token_ids)
     for _ in range(1):  # warmup and test
         streamer = generate_stream(
@@ -1516,6 +1555,7 @@ def omni_chatting_for_music_chunk_stream():
             use_audio_in_video=True,
             thinker_max_new_tokens=100,
             thinker_max_tokens_per_step=15,
+            thinker_stop_strings_per_step=[".", "。"],
             thinker_eos_token_ids=thinker_eos_token_ids,
         )
         gen_text = ""
@@ -1969,9 +2009,9 @@ def omni_chatting_stream():
                 print(texts[0])
             times.append(time.perf_counter() - start_time)
             audios.append(audio.squeeze().cpu().numpy())
-            save_audio_path = os.path.join(ASSETS_DIR, f"generated_omni_chatting_stream_{i}.wav")
-            torchaudio.save(save_audio_path, audio, sample_rate=24000)
-            print(f"Audio saved to {save_audio_path}")
+            # save_audio_path = os.path.join(ASSETS_DIR, f"generated_omni_chatting_stream_{i}.wav")
+            # torchaudio.save(save_audio_path, audio, sample_rate=24000)
+            # print(f"Audio saved to {save_audio_path}")
             start_time = time.perf_counter()
 
         save_audio_path = os.path.join(ASSETS_DIR, f"generated_omni_chatting_stream.wav")
@@ -1990,13 +2030,14 @@ def omni_chatting_segment_stream():
         {"role": "system", "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}]},
         {"role": "user", "content": [{"type": "text", "text": "who are you?"}]},
     ]
-    thinker_eos_token_ids = [151644, 151645] + tokenizer_sentences()
+    thinker_eos_token_ids = [151644, 151645]
     print(thinker_eos_token_ids)
     chunk_stream = generate_stream(
         messages,
         use_audio_in_video=False,
         thinker_max_new_tokens=100,
         thinker_max_tokens_per_step=15,
+        thinker_stop_strings_per_step=[".", "。"],
         thinker_eos_token_ids=thinker_eos_token_ids,
     )
 
@@ -2027,10 +2068,217 @@ def omni_chatting_segment_stream():
     )
 
 
+def image_chatting_stream():
+    import torchaudio
+    import soundfile as sf
+
+    messages = [
+        {"role": "system", "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}]},
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "请描述一下图片中的内容"},
+                {"type": "image", "image": os.path.join(ASSETS_DIR, "03-Confusing-Pictures.jpg")},
+            ],
+        },
+    ]
+    # response, audio = inference(
+    #    messages, return_audio=True, use_audio_in_video=False, thinker_do_sample=True
+    # )
+    # print(response[0])
+    # save_audio_path = os.path.join(ASSETS_DIR, f"generated_image_chatting_stream.wav")
+    # torchaudio.save(save_audio_path, audio, sample_rate=24000)
+    # print(f"Audio saved to {save_audio_path}")
+    # return
+
+    for _ in range(1):  # warmup and test
+        streamer = thinker_talker_inference_stream(messages, use_audio_in_video=False)
+        audios = []
+        times = []
+        start_time = time.perf_counter()
+        for i, (texts, audio) in enumerate(streamer):
+            if i == 0:
+                print(texts[0])
+            times.append(time.perf_counter() - start_time)
+            audios.append(audio.squeeze().cpu().numpy())
+            # save_audio_path = os.path.join(ASSETS_DIR, f"generated_image_chatting_stream_{i}.wav")
+            # torchaudio.save(save_audio_path, audio, sample_rate=24000)
+            # print(f"Audio saved to {save_audio_path}")
+            start_time = time.perf_counter()
+
+        save_audio_path = os.path.join(ASSETS_DIR, f"generated_image_chatting_stream.wav")
+        sf.write(save_audio_path, np.concatenate(audios), samplerate=24000)
+        info = sf.info(save_audio_path, verbose=True)
+        print(
+            f"thinker->talker->code2wav streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+        )
+
+
+def image_chatting_segment_stream():
+    import torchaudio
+    import soundfile as sf
+
+    messages = [
+        {"role": "system", "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}]},
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "请描述一下图片中的内容"},
+                {"type": "image", "image": os.path.join(ASSETS_DIR, "03-Confusing-Pictures.jpg")},
+            ],
+        },
+    ]
+    thinker_eos_token_ids = [151644, 151645]
+    print(thinker_eos_token_ids)
+    chunk_stream = generate_stream(
+        messages,
+        use_audio_in_video=False,
+        thinker_max_new_tokens=100,
+        thinker_max_tokens_per_step=15,
+        thinker_stop_strings_per_step=[".", "。"],
+        thinker_eos_token_ids=thinker_eos_token_ids,
+    )
+
+    gen_text = ""
+    gen_all_text = ""
+    audios = []
+    times = []
+    start_time = time.perf_counter()
+    for i, (text, wav) in enumerate(chunk_stream):
+        times.append(time.perf_counter() - start_time)
+        if gen_text != text:
+            gen_text = text
+            gen_all_text += gen_text
+        print(text, wav.shape)
+        audios.append(wav.squeeze().cpu().numpy())
+        # save_audio_path = os.path.join(ASSETS_DIR, f"image_chatting_segment_stream-{i}-{text}.wav")
+        # torchaudio.save(save_audio_path, wav, sample_rate=24000)
+        # print(f"Audio saved to {save_audio_path}")
+        start_time = time.perf_counter()
+
+    print(f"gen all text: {gen_all_text}")
+    save_audio_path = os.path.join(ASSETS_DIR, f"image_chatting_segment_stream.wav")
+    sf.write(save_audio_path, np.concatenate(audios), samplerate=24000)
+    print(f"All Audio saved to {save_audio_path}")
+    info = sf.info(save_audio_path, verbose=True)
+    print(
+        f"thinker->talker->code2wav chunk streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+    )
+
+
+def audio_image_chatting_stream():
+    import torchaudio
+    import soundfile as sf
+
+    messages = [
+        {"role": "system", "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}]},
+        {
+            "role": "user",
+            "content": [
+                {"type": "audio", "audio": os.path.join(ASSETS_DIR, "image.mp3")},
+                {"type": "image", "image": os.path.join(ASSETS_DIR, "03-Confusing-Pictures.jpg")},
+            ],
+        },
+    ]
+    # response, audio = inference(
+    #    messages, return_audio=True, use_audio_in_video=False, thinker_do_sample=True
+    # )
+    # print(response[0])
+    # save_audio_path = os.path.join(ASSETS_DIR, f"generated_audio_image_chatting_stream.wav")
+    # torchaudio.save(save_audio_path, audio, sample_rate=24000)
+    # print(f"Audio saved to {save_audio_path}")
+    # return
+
+    for _ in range(1):  # warmup and test
+        streamer = thinker_talker_inference_stream(messages, use_audio_in_video=False)
+        audios = []
+        times = []
+        start_time = time.perf_counter()
+        for i, (texts, audio) in enumerate(streamer):
+            if i == 0:
+                print(texts[0])
+            times.append(time.perf_counter() - start_time)
+            audios.append(audio.squeeze().cpu().numpy())
+            # save_audio_path = os.path.join(ASSETS_DIR, f"generated_audio_image_chatting_stream_{i}.wav")
+            # torchaudio.save(save_audio_path, audio, sample_rate=24000)
+            # print(f"Audio saved to {save_audio_path}")
+            start_time = time.perf_counter()
+
+        save_audio_path = os.path.join(ASSETS_DIR, f"generated_audio_image_chatting_stream.wav")
+        sf.write(save_audio_path, np.concatenate(audios), samplerate=24000)
+        info = sf.info(save_audio_path, verbose=True)
+        print(
+            f"thinker->talker->code2wav streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+        )
+
+
+def audio_image_chatting_segment_stream():
+    import torchaudio
+    import soundfile as sf
+
+    messages = [
+        {"role": "system", "content": [{"type": "text", "text": SPEECH_SYS_PROMPT}]},
+        {
+            "role": "user",
+            "content": [
+                {"type": "audio", "audio": os.path.join(ASSETS_DIR, "image.mp3")},
+                {"type": "image", "image": os.path.join(ASSETS_DIR, "03-Confusing-Pictures.jpg")},
+            ],
+        },
+    ]
+    thinker_eos_token_ids = [151644, 151645]
+    print(thinker_eos_token_ids)
+    chunk_stream = generate_stream(
+        messages,
+        use_audio_in_video=False,
+        thinker_max_new_tokens=100,
+        thinker_max_tokens_per_step=15,
+        thinker_stop_strings_per_step=[".", "。"],
+        thinker_eos_token_ids=thinker_eos_token_ids,
+    )
+
+    gen_text = ""
+    gen_all_text = ""
+    audios = []
+    times = []
+    start_time = time.perf_counter()
+    for i, (text, wav) in enumerate(chunk_stream):
+        times.append(time.perf_counter() - start_time)
+        if gen_text != text:
+            gen_text = text
+            gen_all_text += gen_text
+        print(text, wav.shape)
+        audios.append(wav.squeeze().cpu().numpy())
+        # save_audio_path = os.path.join(ASSETS_DIR, f"audio_image_chatting_segment_stream-{i}-{text}.wav")
+        # torchaudio.save(save_audio_path, wav, sample_rate=24000)
+        # print(f"Audio saved to {save_audio_path}")
+        start_time = time.perf_counter()
+
+    print(f"gen all text: {gen_all_text}")
+    save_audio_path = os.path.join(ASSETS_DIR, f"audio_image_chatting_segment_stream.wav")
+    sf.write(save_audio_path, np.concatenate(audios), samplerate=24000)
+    print(f"All Audio saved to {save_audio_path}")
+    info = sf.info(save_audio_path, verbose=True)
+    print(
+        f"thinker->talker->code2wav chunk streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+    )
+
+
+def tokenizer():
+    print(processor.tokenizer.pad_token_id)
+    print(",", processor.tokenizer.encode(","))
+    print(".", processor.tokenizer.encode("."))
+    print("?", processor.tokenizer.encode("?"))
+    print("，", processor.tokenizer.encode("，"))
+    print("。", processor.tokenizer.encode("。"))
+    print("？", processor.tokenizer.encode("？"))
+    print("！", processor.tokenizer.encode("！"))
+
+
 def tokenizer_sentences():
     # return processor.tokenizer.encode(";.?!；。？！")
     token_ids = []
-    for i in ",;.?!，；。？！":
+    for i in ",;.?，；。？！":
         # for i in ",.":
         token_id = processor.tokenizer.encode(i)
         token_ids.extend(token_id)
@@ -2072,6 +2320,87 @@ class TokenStreamer(BaseStreamer):
             raise StopIteration()
         else:
             return value
+
+
+def achatbot_generate():
+    import torchaudio
+    import soundfile as sf
+    from achatbot.core.llm.transformers.manual_vision_voice_qwen import (
+        TransformersManualQwen2_5OmniLLM,
+    )
+    from achatbot.common.session import Session, SessionCtx
+    from achatbot.core.llm import LLMEnvInit
+    from achatbot.common.logger import Logger
+
+    Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
+
+    session = Session(**SessionCtx("test_client_id", 16000, 2).__dict__)
+    args = LLMEnvInit.get_qwen2_5omni_transformers_args()
+    args["lm_attn_impl"] = "flash_attention_2"
+    args["warmup_steps"] = 1
+    args["warnup_prompt"] = ""
+    args["is_use_sliding_window_code2wav"] = True
+    args["thinker_all_talker_stream"] = True
+    llm = TransformersManualQwen2_5OmniLLM(**args)
+
+    session.ctx.state["prompt"] = [
+        {"type": "text", "text": "请描述一下图片中的内容"},
+        {"type": "image", "image": os.path.join(ASSETS_DIR, "03-Confusing-Pictures.jpg")},
+        # {"type": "video", "video": ""},
+        # {"type": "audio", "audio": ""},
+    ]
+    kwargs = {
+        "use_audio_in_video": False,
+        "thinker_top_k": 10,
+        "thinker_top_p": 0.9,
+        "thinker_temperature": 0.95,
+        "thinker_repetition_penalty": 1.1,
+        "thinker_min_new_tokens": 1,
+        "thinker_max_tokens_per_step": 15,
+        "thinker_max_new_tokens": 100,
+        "thinker_eos_token_ids": [
+            151644,
+            151645,
+        ]
+        if args["thinker_all_talker_stream"] is True
+        else [
+            151644,
+            151645,
+        ],
+        "thinker_pad_token_id": 151643,
+    }
+    chunk_stream = llm.generate(session, **kwargs)
+    gen_text = ""
+    gen_all_text = ""
+    audios = []
+    times = []
+    start_time = time.perf_counter()
+    for i, chunk in enumerate(chunk_stream):
+        times.append(time.perf_counter() - start_time)
+        text = chunk["text"]
+        if gen_text != text:
+            gen_text = text
+            gen_all_text += gen_text
+        if "audio_wav" in chunk:
+            wav = chunk["audio_wav"]
+            print(text, wav.shape)
+            audios.append(wav.squeeze().cpu().numpy())
+            # save_audio_path = os.path.join(ASSETS_DIR, f"achatbot_generate_stream-{i}-{text}.wav")
+            # torchaudio.save(save_audio_path, wav, sample_rate=24000)
+            # print(f"Audio saved to {save_audio_path}")
+        else:
+            print(text)
+        start_time = time.perf_counter()
+
+    print(f"gen all text: {gen_all_text}")
+    if len(audios) > 0:
+        save_audio_path = os.path.join(ASSETS_DIR, f"achatbot_generate_stream.wav")
+        sf.write(save_audio_path, np.concatenate(audios), samplerate=24000)
+        print(f"All Audio saved to {save_audio_path}")
+        info = sf.info(save_audio_path, verbose=True)
+        print(
+            f"thinker->talker->code2wav chunk streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+        )
 
 
 """
@@ -2119,6 +2448,16 @@ IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_
 # text -> chunk text+speech stream
 IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_segment_stream
 
+# text+image -> text + chunk speech stream
+IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task image_chatting_stream
+# text+image -> chunk text+speech stream
+IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task image_chatting_segment_stream
+
+# audio+image -> text + chunk speech stream
+IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task audio_image_chatting_stream
+# audio+image -> chunk text+speech stream
+IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task audio_image_chatting_segment_stream
+
 # vision(video with audio) -> text + chunk speech stream
 IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_for_math_stream
 IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_for_music_stream
@@ -2128,6 +2467,8 @@ IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task omni_chattin
 IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task omni_chatting_for_music_chunk_stream
 
 
+ACHATBOT_VERSION=0.0.9.post9 IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task achatbot_generate
+
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task tokenizer
 """
 
@@ -2135,6 +2476,8 @@ IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task tokenizer
 @app.local_entrypoint()
 def main(task: str = "universal_audio_understanding"):
     tasks = {
+        "tokenizer": tokenizer,
+        "achatbot_generate": achatbot_generate,
         "universal_audio_understanding": universal_audio_understanding,
         "voice_chatting": voice_chatting,
         "video_information_extracting": video_information_extracting,
@@ -2149,6 +2492,10 @@ def main(task: str = "universal_audio_understanding"):
         "omni_chatting_for_music": omni_chatting_for_music,
         "omni_chatting_for_music_stream": omni_chatting_for_music_stream,
         "omni_chatting_for_music_chunk_stream": omni_chatting_for_music_chunk_stream,
+        "image_chatting_stream": image_chatting_stream,
+        "image_chatting_segment_stream": image_chatting_segment_stream,
+        "audio_image_chatting_stream": audio_image_chatting_stream,
+        "audio_image_chatting_segment_stream": audio_image_chatting_segment_stream,
         "multi_round_omni_chatting": multi_round_omni_chatting,
         "batch_requests": batch_requests,
         "thinker_stream": thinker_stream,

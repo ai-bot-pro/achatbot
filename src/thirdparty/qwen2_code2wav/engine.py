@@ -22,7 +22,7 @@ class Code2WavEngine:
         odeint_method_relaxed = self.args.odeint_method_relaxed
         batched_chunk = self.args.batched_chunk
         frequency: str = self.args.frequency
-        device: Union[int, str] = self.args.frequency
+        device: Union[int, str] = self.args.device
         code2wav_dynamic_batch: bool = self.args.code2wav_dynamic_batch  # todo batch chunk
 
         if isinstance(device, int):
@@ -177,11 +177,11 @@ class Code2WavEngine:
                 codec_all=code,
                 y_all=self.code2wav_y_all if y_all is None else y_all,
                 i=progress,
-                steps=gen_args.steps,
+                steps=gen_args.num_steps,
                 prev_generated=prev_generated,
                 finished=finished,
-                cfg_strength=gen_args.cfg_strength,
-                sway_sampling_coef=gen_args.sway_sampling_coef,
+                cfg_strength=gen_args.guidance_scale,
+                sway_sampling_coef=gen_args.sway_coefficient,
             )
         else:
             return prev_generated, None

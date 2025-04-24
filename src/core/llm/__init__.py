@@ -314,6 +314,9 @@ class LLMEnvInit:
             thinker_eos_token_ids=[
                 int(i) for i in os.getenv("THINKER_EOS_TOKEN_IDS", "151644,151645").split(",")
             ],
+            thinker_stop_strings_per_step=[
+                i for i in os.getenv("THINKER_STOP_STRINGS_PER_STEP", ".。")
+            ],
             thinker_args=TransformersLMArgs(
                 **LLMEnvInit._get_llm_generate_args(prefix="THINKER_"),
             ).__dict__,

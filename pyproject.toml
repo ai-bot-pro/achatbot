@@ -285,9 +285,9 @@ llm_transformers_manual_vision_voice_qwen =[
     #"git+https://github.com/huggingface/transformers@v4.51.3-Qwen2.5-Omni-preview",
     #"transformers==4.52.0",
     "achatbot[accelerate,librosa,soundfile]",
-    "torch~=2.2.2",
-    "torchaudio~=2.2.2",
-    "torchvision~=0.17.2",
+    "torch~=2.3.0",
+    "torchaudio~=2.3.0",
+    "torchvision~=0.18.0",
     "numpy==1.26.2",
     "qwen-omni-utils[decord]",
     # code2wav
