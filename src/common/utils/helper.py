@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 import platform
+import threading
 
 import pyloudnorm as pyln
 import numpy as np
@@ -71,3 +72,21 @@ def file_md5_hash(file_path: str):
         data = _file.read()
         data_hash = hashlib.md5(data).hexdigest()
         return data_hash
+
+
+class ThreadSafeDict:
+    def __init__(self):
+        self._dict = {}
+        self._lock = threading.RLock()
+
+    def get(self, key, default=None):
+        with self._lock:
+            return self._dict.get(key, default)
+
+    def set(self, key, value):
+        with self._lock:
+            self._dict[key] = value
+
+    def pop(self, key):
+        with self._lock:
+            return self._dict.pop(key, None)

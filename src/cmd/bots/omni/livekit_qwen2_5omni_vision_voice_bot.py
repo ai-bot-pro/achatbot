@@ -10,10 +10,10 @@ from src.processors.user_image_request_processor import UserImageRequestProcesso
 from src.processors.aggregators.vision_image_audio_frame import VisionImageAudioFrameAggregator
 from src.processors.speech.audio_save_processor import AudioSaveProcessor
 from src.processors.aggregators.user_audio_response import UserAudioResponseAggregator
-from src.cmd.bots.base_daily import DailyRoomBot
+from src.cmd.bots.base_livekit import LivekitRoomBot, rtc
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
-from src.common.types import DailyParams
-from src.transports.daily import DailyTransport
+from src.common.types import LivekitParams
+from src.transports.livekit import LivekitTransport
 from src.cmd.bots import register_ai_room_bots
 from src.types.frames import *
 
@@ -23,9 +23,9 @@ load_dotenv(override=True)
 
 
 @register_ai_room_bots.register
-class DailyMiniCPMoVisionVoiceBot(DailyRoomBot):
+class LivekitQwen2_5OmniVisionVoiceBot(LivekitRoomBot):
     """
-    use daily images + audio stream(bytes) --> MiniCPMo vision voice processor -->text/audio_bytes
+    use livekit images + audio stream(bytes) --> Qwen2_5Omni vision voice processor -->text/audio_bytes
     """
 
     def __init__(self, **args) -> None:
@@ -34,33 +34,29 @@ class DailyMiniCPMoVisionVoiceBot(DailyRoomBot):
 
     async def arun(self):
         self._vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
-        self.params = DailyParams(
+        self.params = LivekitParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
             vad_enabled=True,
             vad_analyzer=self._vad_analyzer,
             vad_audio_passthrough=True,
+            camera_in_enabled=True,
         )
 
-        self._vision_voice_processor = self.get_minicpmo_vision_voice_processor()
+        self._vision_voice_processor = self.get_qwen2_5omni_vision_voice_processor()
         stream_info = self._vision_voice_processor.stream_info
         self.params.audio_out_sample_rate = stream_info["sample_rate"]
         self.params.audio_out_channels = stream_info["channels"]
 
-        transport = DailyTransport(
-            self.args.room_url,
+        transport = LivekitTransport(
             self.args.token,
-            self.args.bot_name,
-            self.params,
+            params=self.params,
         )
+        self.regisiter_room_event(transport)
 
         in_audio_aggr = UserAudioResponseAggregator()
         self.image_requester = UserImageRequestProcessor(request_frame_cls=AudioRawFrame)
         image_audio_aggr = VisionImageAudioFrameAggregator()
-
-        # messages = []
-        # if self._bot_config.llm.messages:
-        #     messages = self._bot_config.llm.messages
 
         self.task = PipelineTask(
             Pipeline(
@@ -86,18 +82,25 @@ class DailyMiniCPMoVisionVoiceBot(DailyRoomBot):
             ),
         )
 
-        transport.add_event_handlers(
-            "on_first_participant_joined",
-            [self.on_first_participant_joined, self.on_first_participant_say_hi],
-        )
-        transport.add_event_handler("on_participant_left", self.on_participant_left)
-        transport.add_event_handler("on_call_state_updated", self.on_call_state_updated)
-
         await PipelineRunner().run(self.task)
 
-    async def on_first_participant_say_hi(self, transport: DailyTransport, participant):
-        transport.capture_participant_video(participant["id"], framerate=0)
-        self.image_requester.set_participant_id(participant["id"])
+    async def on_first_participant_joined(
+        self,
+        transport: LivekitTransport,
+        participant: rtc.RemoteParticipant,
+    ):
+        # subscribed the first participant
+        transport.capture_participant_video(participant.sid, framerate=0)
+        self.image_requester.set_participant_id(participant.sid)
+
+        participant_name = participant.name if participant.name else participant.identity
         await self._vision_voice_processor.say(
-            "你好，欢迎使用 Vision Voice Omni Bot. 我是一名虚拟助手，可以结合视频进行提问。"
+            f"你好，{participant_name} 欢迎使用 Vision Voice Omni Bot. 我是一名虚拟助手，可以结合视频进行提问。"
         )
+
+    async def on_video_track_subscribed(
+        self,
+        transport: LivekitTransport,
+        participant: rtc.RemoteParticipant,
+    ):
+        transport.capture_participant_video(participant.sid, framerate=0)

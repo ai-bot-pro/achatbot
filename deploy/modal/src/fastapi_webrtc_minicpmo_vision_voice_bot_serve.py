@@ -16,9 +16,6 @@ class ContainerRuntimeConfig:
                     "ACHATBOT_PKG": "1",
                     "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
                     "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
-                    "ASR_TAG": "sense_voice_asr",
-                    "ASR_LANG": "zn",
-                    "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
                     "USE_GPTQ_CKPT": os.getenv("USE_GPTQ_CKPT", ""),
                     "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "openbmb/MiniCPM-o-2_6")}',
                     # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#gpu-feature-list
@@ -42,10 +39,9 @@ class ContainerRuntimeConfig:
                     "fastapi_bot_server,"
                     "livekit,livekit-api,daily,agora,"
                     "silero_vad_analyzer,"
-                    "sense_voice_asr,deepgram_asr_processor,"
                     "llm_transformers_manual_vision_voice_minicpmo,"
                     "queue"
-                    "]~=0.0.8.12",
+                    "]~=0.0.9.post10",
                     "huggingface_hub[hf_transfer]==0.26.0",
                     "wget",
                 ],
@@ -170,8 +166,20 @@ class Srv:
 
     @modal.enter()
     def enter(self):
-        print("enter done")
-        # volume.reload()
+        # run container runtime to enter when container is starting
+        import subprocess
+        import torch
+
+        subprocess.run("nvidia-smi --version", shell=True)
+        gpu_prop = None
+        if torch.cuda.is_available():
+            gpu_prop = torch.cuda.get_device_properties("cuda:0")
+            print(gpu_prop)
+            torch.multiprocessing.set_start_method("spawn", force=True)
+        else:
+            print("CUDA is not available.")
+
+        # todo: init model to load, now use api to load model to run bot with config
 
     @modal.asgi_app()
     def app(self):

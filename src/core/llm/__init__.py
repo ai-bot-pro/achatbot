@@ -53,6 +53,8 @@ class LLMEnvInit:
             from .transformers import manual_vision_img_janus_pro
         elif "llm_transformers_manual_vision_minicpmo" == tag:
             from .transformers import manual_vision_voice_minicpmo
+        elif "llm_transformers_manual_qwen2_5omni" in tag:
+            from .transformers import manual_vision_voice_qwen
         elif "llm_transformers_manual" == tag:
             from .transformers import manual
         elif "llm_transformers_pipeline" == tag:
@@ -150,19 +152,22 @@ class LLMEnvInit:
         return kwargs
 
     @staticmethod
-    def _get_llm_generate_args() -> dict:
+    def _get_llm_generate_args(prefix: str = "") -> dict:
         from src.types.llm.sampling import LMGenerateArgs
 
         return LMGenerateArgs(
-            lm_gen_seed=int(os.getenv("LLM_GEN_SEED", "42")),
-            lm_gen_do_sample=bool(os.getenv("LLM_GEN_DO_SAMPLE", "1")),
-            lm_gen_max_new_tokens=int(os.getenv("LLM_GEN_MAX_NEW_TOKENS", "1024")),
-            lm_gen_temperature=float(os.getenv("LLM_GEN_TEMPERATURE", "0.8")),
-            lm_gen_top_k=int(os.getenv("LLM_GEN_TOP_K", "50")),
-            lm_gen_top_p=float(os.getenv("LLM_GEN_TOP_P", "0.95")),
-            lm_gen_min_p=float(os.getenv("LLM_GEN_MIN_P", "0.0")),
-            lm_gen_repetition_penalty=float(os.getenv("LLM_GEN_REPETITION_PENALTY", "1.1")),
-            lm_gen_min_new_tokens=int(os.getenv("LLM_GEN_MIN_NEW_TOKENS", "0")),
+            lm_gen_seed=int(os.getenv(f"{prefix}LLM_GEN_SEED", "42")),
+            lm_gen_do_sample=bool(os.getenv(f"{prefix}LLM_GEN_DO_SAMPLE", "1")),
+            lm_gen_max_tokens_per_step=int(os.getenv(f"{prefix}LLM_GEN_MAX_TOKENS_PER_STEP", "3")),
+            lm_gen_max_new_tokens=int(os.getenv(f"{prefix}LLM_GEN_MAX_NEW_TOKENS", "1024")),
+            lm_gen_temperature=float(os.getenv(f"{prefix}LLM_GEN_TEMPERATURE", "0.8")),
+            lm_gen_top_k=int(os.getenv(f"{prefix}LLM_GEN_TOP_K", "50")),
+            lm_gen_top_p=float(os.getenv(f"{prefix}LLM_GEN_TOP_P", "0.95")),
+            lm_gen_min_p=float(os.getenv(f"{prefix}LLM_GEN_MIN_P", "0.0")),
+            lm_gen_repetition_penalty=float(
+                os.getenv(f"{prefix}LLM_GEN_REPETITION_PENALTY", "1.1")
+            ),
+            lm_gen_min_new_tokens=int(os.getenv(f"{prefix}LLM_GEN_MIN_NEW_TOKENS", "1")),
         ).__dict__
 
     @staticmethod
@@ -286,6 +291,66 @@ class LLMEnvInit:
         )
         return kwargs
 
+    @staticmethod
+    def get_qwen2_5omni_transformers_args() -> dict:
+        from src.types.llm.transformers import TransformersLMArgs
+        from src.thirdparty.qwen2_code2wav import Code2WavEngineConfig, Code2WavGenerationConfig
+        from src.types.omni.qwen2_vision_voice import Qwen2_5TransformersVisionVoiceLMArgs
+
+        kwargs = Qwen2_5TransformersVisionVoiceLMArgs(
+            lm_model_name_or_path=os.getenv(
+                "LLM_MODEL_NAME_OR_PATH", os.path.join(MODELS_DIR, "Qwen/Qwen2.5-Omni-7B")
+            ),
+            lm_attn_impl=os.getenv("LLM_ATTN_IMPL", None),
+            lm_device=os.getenv("LLM_DEVICE", None),
+            lm_device_map=os.getenv("LLM_DEVICE_MAP", None),
+            lm_torch_dtype=os.getenv("LLM_TORCH_DTYPE", "auto"),
+            lm_stream=bool(os.getenv("LLM_STREAM", "1")),
+            init_chat_prompt=os.getenv("LLM_INIT_CHAT_PROMPT", ""),
+            chat_history_size=int(os.getenv("LLM_CHAT_HISTORY_SIZE", "10")),  # cache 10 round
+            model_type=os.getenv("LLM_MODEL_TYPE", "chat_completion"),
+            warmup_steps=int(os.getenv("LLM_WARMUP_STEPS", "1")),
+            **LLMEnvInit._get_llm_generate_args(),
+            thinker_eos_token_ids=[
+                int(i) for i in os.getenv("THINKER_EOS_TOKEN_IDS", "151644,151645").split(",")
+            ],
+            thinker_stop_strings_per_step=[
+                i for i in os.getenv("THINKER_STOP_STRINGS_PER_STEP", ".。")
+            ],
+            thinker_args=TransformersLMArgs(
+                **LLMEnvInit._get_llm_generate_args(prefix="THINKER_"),
+            ).__dict__,
+            speaker=os.getenv("SPEAKER", "Chelsie"),
+            talker_eos_token_ids=[
+                int(i) for i in os.getenv("TALKER_EOS_TOKEN_IDS", "8292, 8294").split(",")
+            ],
+            talker_args=TransformersLMArgs(
+                **LLMEnvInit._get_llm_generate_args(prefix="TALKER_"),
+            ).__dict__,
+            code2wav_args=Code2WavEngineConfig(
+                model_path=os.getenv(
+                    "CODE2WAV_MODEL_PATH", os.path.join(MODELS_DIR, "Qwen/Qwen2.5-Omni-7B")
+                ),
+                enable_torch_compile=bool(os.getenv("CODE2WAV_ENABLE_TORCH_COMPILE", "1")),
+                enable_torch_compile_first_chunk=bool(
+                    os.getenv("CODE2WAV_ENABLE_TORCH_COMPILE_FIRST_CHUNK", "")
+                ),
+                odeint_method=os.getenv("CODE2WAV_ODEINT_METHOD", "euler"),
+                odeint_method_relaxed=bool(os.getenv("CODE2WAV_ODEINT_METHOD_RELAXED", "")),
+                batched_chunk=int(os.getenv("CODE2WAV_BATCHED_CHUNK", "3")),
+                frequency=os.getenv("CODE2WAV_FREQUENCY", "50hz"),
+                device=os.getenv("CODE2WAV_DEVICE", "cuda"),
+                code2wav_dynamic_batch=bool(os.getenv("CODE2WAV_DYNAMIC_BATCHING", "")),
+                num_steps=int(os.getenv("CODE2WAV_NUM_STEPS", "10")),
+                guidance_scale=float(os.getenv("CODE2WAV_GUIDANCE_SCALE", "0.5")),
+                sway_coefficient=float(os.getenv("CODE2WAV_SWAY_COEFFICIENT", "-1.0")),
+            ).__dict__,
+            is_use_sliding_window_code2wav=bool(os.getenv("IS_USE_SLIDING_WINDOW_CODE2WAV", "")),
+            disable_talker=bool(os.getenv("DISABLE_TALKER", "")),
+        ).__dict__
+
+        return kwargs
+
     # TAG : config
     map_config_func = {
         "llm_llamacpp": get_llm_llamacpp_args,
@@ -303,6 +368,15 @@ class LLMEnvInit:
         "llm_transformers_manual_vision_janus_flow": get_llm_transformers_args,
         "llm_transformers_manual_image_janus_flow": get_llm_transformers_manual_image_janus_flow_args,
         "llm_transformers_manual_vision_minicpmo": get_llm_transformers_args,
+        "llm_transformers_manual_qwen2_5omni": get_qwen2_5omni_transformers_args,
+        "llm_transformers_manual_qwen2_5omni_vision": get_qwen2_5omni_transformers_args,
+        "llm_transformers_manual_qwen2_5omni_audio": get_qwen2_5omni_transformers_args,
+        "llm_transformers_manual_qwen2_5omni_audio_asr": get_qwen2_5omni_transformers_args,
+        "llm_transformers_manual_qwen2_5omni_audio_translation": get_qwen2_5omni_transformers_args,
+        "llm_transformers_manual_qwen2_5omni_audio_classification": get_qwen2_5omni_transformers_args,
+        "llm_transformers_manual_qwen2_5omni_vision_voice": get_qwen2_5omni_transformers_args,
+        "llm_transformers_manual_qwen2_5omni_text_voice": get_qwen2_5omni_transformers_args,
+        "llm_transformers_manual_qwen2_5omni_audio_voice": get_qwen2_5omni_transformers_args,
         "llm_transformers_generator": get_llm_transformers_args,
         "llm_llamacpp_generator": get_llm_llamacpp_generator_args,
         "llm_vllm_generator": get_llm_vllm_generator_args,

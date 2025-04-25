@@ -14,6 +14,8 @@ load_dotenv(override=True)
 class ASREnvInit:
     @staticmethod
     def getEngine(tag, **kwargs) -> interface.IAsr | EngineClass:
+        if "qwen2_5omni_asr" in tag:
+            from . import qwen2_5omni_asr
         if "minicpmo_asr" in tag:
             from . import minicpmo_asr
         if "sense_voice" in tag:
@@ -57,6 +59,12 @@ class ASREnvInit:
         kwargs["use_gptq_ckpt"] = bool(os.getenv("USE_GPTQ_CKPT", ""))
         return kwargs
 
+    @staticmethod
+    def get_asr_qwen2_5omni_args() -> dict:
+        kwargs = LLMEnvInit.get_qwen2_5omni_transformers_args()
+        return kwargs
+
     map_config_func = {
         "minicpmo_asr": get_asr_minicpmo_args,
+        "qwen2_5omni_asr": get_asr_qwen2_5omni_args,
     }

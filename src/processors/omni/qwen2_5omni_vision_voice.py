@@ -7,15 +7,15 @@ import librosa
 import numpy as np
 
 from src.common.session import Session
-from src.core.llm.transformers.manual_vision_voice_minicpmo import (
-    TransformersManualVisionVoiceMiniCPMO,
+from src.core.llm.transformers.manual_vision_voice_qwen import (
+    TransformersManualVisionVoiceQwen2_5OmniLLM,
 )
 from src.common.utils.audio_utils import bytes2NpArrayWith16
 from src.processors.omni.base import VisionVoiceProcessorBase
 from src.types.frames.data_frames import PathAudioRawFrame, VisionImageVoiceRawFrame
 
 
-class MiniCPMoVisionVoiceProcessor(VisionVoiceProcessorBase):
+class Qwen2_5OmnVisionVoiceProcessor(VisionVoiceProcessorBase):
     """ """
 
     def __init__(
@@ -26,7 +26,7 @@ class MiniCPMoVisionVoiceProcessor(VisionVoiceProcessorBase):
         **kwargs,
     ):
         super().__init__(
-            llm=TransformersManualVisionVoiceMiniCPMO(**kwargs),
+            llm=TransformersManualVisionVoiceQwen2_5OmniLLM(**kwargs),
             session=session,
             no_stream_sleep_time=no_stream_sleep_time,
             **kwargs,
@@ -36,7 +36,7 @@ class MiniCPMoVisionVoiceProcessor(VisionVoiceProcessorBase):
     def stream_info(self) -> dict:
         """Return dict out stream info"""
         return {
-            "sample_rate": TransformersManualVisionVoiceMiniCPMO.RATE,
+            "sample_rate": TransformersManualVisionVoiceQwen2_5OmniLLM.RATE,
             "channels": 1,
         }
 
@@ -54,14 +54,14 @@ class MiniCPMoVisionVoiceProcessor(VisionVoiceProcessorBase):
         if frame.images:
             for image_frame in frame.images:
                 image = Image.frombytes(image_frame.mode, image_frame.size, image_frame.image)
-                self._session.ctx.state["prompt"].append(image)
+                self._session.ctx.state["prompt"].append({"type": "image", "image": image})
 
         if frame.audio and frame.audio.audio:
             if isinstance(frame.audio, PathAudioRawFrame):
                 audio_nparr, _ = librosa.load(frame.audio.path, sr=16000, mono=True)
             else:
                 audio_nparr = bytes2NpArrayWith16(frame.audio.audio)
-            self._session.ctx.state["prompt"].append(audio_nparr)
+            self._session.ctx.state["prompt"].append({"type": "audio", "audio": audio_nparr})
 
         self.send_input(self._session)
         async for item in self.gen():

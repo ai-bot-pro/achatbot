@@ -162,6 +162,7 @@ main-dev.py
 tmp.*
 *.wav
 *.mp3
+*.mp4
 *.flv
 *.vtt
 

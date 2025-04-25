@@ -6,14 +6,12 @@ from apipeline.pipeline.runner import PipelineRunner
 from apipeline.processors.logger import FrameLogger
 from apipeline.frames import AudioRawFrame, TextFrame
 
-from src.processors.user_image_request_processor import UserImageRequestProcessor
-from src.processors.aggregators.vision_image_audio_frame import VisionImageAudioFrameAggregator
 from src.processors.speech.audio_save_processor import AudioSaveProcessor
 from src.processors.aggregators.user_audio_response import UserAudioResponseAggregator
-from src.cmd.bots.base_daily import DailyRoomBot
+from src.cmd.bots.base_livekit import LivekitRoomBot
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
-from src.common.types import DailyParams
-from src.transports.daily import DailyTransport
+from src.common.types import LivekitParams
+from src.transports.livekit import LivekitTransport
 from src.cmd.bots import register_ai_room_bots
 from src.types.frames import *
 
@@ -23,9 +21,10 @@ load_dotenv(override=True)
 
 
 @register_ai_room_bots.register
-class DailyMiniCPMoVisionVoiceBot(DailyRoomBot):
+class LivekitQwen2_5OmniVoiceBot(LivekitRoomBot):
     """
-    use daily images + audio stream(bytes) --> MiniCPMo vision voice processor -->text/audio_bytes
+    use livekit audio stream(bytes) --> Qwen2_5Omni voice processor -->text/audio_bytes
+    - unsupport tools call, need sft
     """
 
     def __init__(self, **args) -> None:
@@ -34,7 +33,7 @@ class DailyMiniCPMoVisionVoiceBot(DailyRoomBot):
 
     async def arun(self):
         self._vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
-        self.params = DailyParams(
+        self.params = LivekitParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
             vad_enabled=True,
@@ -42,21 +41,16 @@ class DailyMiniCPMoVisionVoiceBot(DailyRoomBot):
             vad_audio_passthrough=True,
         )
 
-        self._vision_voice_processor = self.get_minicpmo_vision_voice_processor()
-        stream_info = self._vision_voice_processor.stream_info
+        self._voice_processor = self.get_audio_qwen2_5omni_voice_processor()
+        stream_info = self._voice_processor.stream_info
         self.params.audio_out_sample_rate = stream_info["sample_rate"]
         self.params.audio_out_channels = stream_info["channels"]
 
-        transport = DailyTransport(
-            self.args.room_url,
+        transport = LivekitTransport(
             self.args.token,
-            self.args.bot_name,
-            self.params,
+            params=self.params,
         )
-
-        in_audio_aggr = UserAudioResponseAggregator()
-        self.image_requester = UserImageRequestProcessor(request_frame_cls=AudioRawFrame)
-        image_audio_aggr = VisionImageAudioFrameAggregator()
+        self.regisiter_room_event(transport)
 
         # messages = []
         # if self._bot_config.llm.messages:
@@ -66,14 +60,11 @@ class DailyMiniCPMoVisionVoiceBot(DailyRoomBot):
             Pipeline(
                 [
                     transport.input_processor(),
-                    in_audio_aggr,
+                    UserAudioResponseAggregator(),
                     FrameLogger(include_frame_types=[AudioRawFrame]),
                     # AudioSaveProcessor(prefix_name="user_audio_aggr"),
-                    # FrameLogger(include_frame_types=[PathAudioRawFrame]),
-                    self.image_requester,
-                    image_audio_aggr,
-                    FrameLogger(include_frame_types=[VisionImageVoiceRawFrame]),
-                    self._vision_voice_processor,
+                    FrameLogger(include_frame_types=[PathAudioRawFrame]),
+                    self._voice_processor,
                     FrameLogger(include_frame_types=[AudioRawFrame, TextFrame]),
                     # AudioSaveProcessor(prefix_name="bot_speak"),
                     transport.output_processor(),
@@ -90,14 +81,8 @@ class DailyMiniCPMoVisionVoiceBot(DailyRoomBot):
             "on_first_participant_joined",
             [self.on_first_participant_joined, self.on_first_participant_say_hi],
         )
-        transport.add_event_handler("on_participant_left", self.on_participant_left)
-        transport.add_event_handler("on_call_state_updated", self.on_call_state_updated)
 
         await PipelineRunner().run(self.task)
 
-    async def on_first_participant_say_hi(self, transport: DailyTransport, participant):
-        transport.capture_participant_video(participant["id"], framerate=0)
-        self.image_requester.set_participant_id(participant["id"])
-        await self._vision_voice_processor.say(
-            "你好，欢迎使用 Vision Voice Omni Bot. 我是一名虚拟助手，可以结合视频进行提问。"
-        )
+    async def on_first_participant_say_hi(self, transport: LivekitTransport, participant):
+        pass

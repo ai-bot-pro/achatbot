@@ -167,6 +167,18 @@ def import_bots(bot_name: str = "DummyBot"):
         from .vision import livekit_describe_vision_tools_bot
 
         return True
+    if "LivekitQwen2_5OmniVoiceBot" in bot_name:
+        from .voice import livekit_qwen2_5omni_voice_bot
+
+        return True
+    if "LivekitAsrQwen2_5OmniVoiceBot" in bot_name:
+        from .voice import livekit_asr_qwen2_5omni_voice_bot
+
+        return True
+    if "LivekitQwen2_5OmniVisionVoiceBot" in bot_name:
+        from .omni import livekit_qwen2_5omni_vision_voice_bot
+
+        return True
     # if "LivekitMoshiVoiceBot" in bot_name:
     #    from .voice import livekit_moshi_bot
 

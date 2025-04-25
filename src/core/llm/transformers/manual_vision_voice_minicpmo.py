@@ -197,11 +197,6 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
         if self.args.warmup_steps < 0:
             return
         logging.info(f"Warming up {self.__class__.__name__} device: {self._model.device}")
-        if "cuda" in str(self._model.device):
-            start_event = torch.cuda.Event(enable_timing=True)
-            end_event = torch.cuda.Event(enable_timing=True)
-            torch.cuda.synchronize()
-            start_event.record()
 
         dummy_input_text = self.args.warnup_prompt
         content = [dummy_input_text]
@@ -215,7 +210,13 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
             }
         ]
 
-        for i in range(self.args.warmup_steps):
+        if "cuda" in str(self._model.device):
+            start_event = torch.cuda.Event(enable_timing=True)
+            end_event = torch.cuda.Event(enable_timing=True)
+            torch.cuda.synchronize()
+            start_event.record()
+
+        for step in range(self.args.warmup_steps):
             self._sys_msg and self._model.streaming_prefill(
                 session_id="", msgs=[self._sys_msg], tokenizer=self._tokenizer
             )
@@ -232,15 +233,13 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
                 repetition_penalty=self.args.lm_gen_repetition_penalty,
                 generate_audio=False,
             )
-            for step in range(self.args.warmup_steps):
-                for _ in streamer:
-                    times = []
-                    start_time = time.perf_counter()
-                    for _ in streamer:
-                        times.append(time.perf_counter() - start_time)
-                        start_time = time.perf_counter()
-                    logging.info(f"step {step} warnup TTFT time: {times[0]} s")
-                    step += 1
+            times = []
+            start_time = time.perf_counter()
+            for _ in streamer:
+                times.append(time.perf_counter() - start_time)
+                start_time = time.perf_counter()
+            logging.info(f"step {step} warnup TTFT time: {times[0]} s")
+            step += 1
 
         if "cuda" in str(self._model.device):
             end_event.record()

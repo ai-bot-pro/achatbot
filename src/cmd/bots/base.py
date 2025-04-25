@@ -335,6 +335,19 @@ class AIBot(IBot):
             llm_processor = MiniCPMoTextVoiceProcessor()
         return llm_processor
 
+    def get_text_qwen2_5omni_voice_processor(
+        self, llm: LLMConfig | None = None
+    ) -> VoiceProcessorBase:
+        from src.processors.voice.qwen2_5omni_voice_processor import Qwen2_5OmniTextVoiceProcessor
+
+        if not llm:
+            llm = self._bot_config.voice_llm
+        if llm.args:
+            llm_processor = Qwen2_5OmniTextVoiceProcessor(**llm.args)
+        else:
+            llm_processor = Qwen2_5OmniTextVoiceProcessor()
+        return llm_processor
+
     def get_audio_minicpmo_voice_processor(
         self, llm: LLMConfig | None = None
     ) -> VoiceProcessorBase:
@@ -348,17 +361,49 @@ class AIBot(IBot):
             llm_processor = MiniCPMoAudioVoiceProcessor()
         return llm_processor
 
+    def get_audio_qwen2_5omni_voice_processor(
+        self, llm: LLMConfig | None = None
+    ) -> VoiceProcessorBase:
+        from src.processors.voice.qwen2_5omni_voice_processor import Qwen2_5OmniAudioVoiceProcessor
+
+        if not llm:
+            llm = self._bot_config.voice_llm
+        if llm.args:
+            llm_processor = Qwen2_5OmniAudioVoiceProcessor(**llm.args)
+        else:
+            llm_processor = Qwen2_5OmniAudioVoiceProcessor()
+        return llm_processor
+
     def get_minicpmo_vision_voice_processor(
         self, llm: LLMConfig | None = None
     ) -> VisionVoiceProcessorBase:
         from src.processors.omni.minicpmo_vision_voice import MiniCPMoVisionVoiceProcessor
+        from src.processors.omni.base import MockVisionVoiceProcessor
 
         if not llm:
             llm = self._bot_config.omni_llm
+        if "mock" in llm.tag:
+            return MockVisionVoiceProcessor()
         if llm.args:
             llm_processor = MiniCPMoVisionVoiceProcessor(**llm.args)
         else:
             llm_processor = MiniCPMoVisionVoiceProcessor()
+        return llm_processor
+
+    def get_qwen2_5omni_vision_voice_processor(
+        self, llm: LLMConfig | None = None
+    ) -> VisionVoiceProcessorBase:
+        from src.processors.omni.qwen2_5omni_vision_voice import Qwen2_5OmnVisionVoiceProcessor
+        from src.processors.omni.base import MockVisionVoiceProcessor
+
+        if not llm:
+            llm = self._bot_config.omni_llm
+        if "mock" in llm.tag:
+            return MockVisionVoiceProcessor()
+        if llm.args:
+            llm_processor = Qwen2_5OmnVisionVoiceProcessor(**llm.args)
+        else:
+            llm_processor = Qwen2_5OmnVisionVoiceProcessor()
         return llm_processor
 
     def get_text_glm_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:

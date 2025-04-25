@@ -174,6 +174,9 @@ IMAGE_NAME=minicpmo IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot s
 
 # moonshotai/Kimi-VL-A3B-Instruct (or Thinking) use 2xL4 like deepseek-ai/deepseek-vl2-small
 IMAGE_NAME=kimi IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4:2 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
+
+# webrtc_vision_bot serve on qwen2.5omni vision llm pip image
+IMAGE_NAME=qwen2.5omni IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vision_bot_serve.py
 ```
 - curl api to run chat room bot with webrtc (daily/livekit/agora)
 ```shell
@@ -384,7 +387,7 @@ curl --location 'https://weedge-achatbot--fastapi-webrtc-freeze-omni-voice-bo-4b
 ```
 
 ### webrtc_minicpmo_vision_voice_bot
-- run webrtc_minicpmo_vision_voice_bot serve with task queue(redis)
+- run webrtc_minicpmo_vision_voice_bot serve
 ```shell
 # webrtc_audio_bot serve on default pip image
 # need create .env.example to modal Secrets for webrtc key
@@ -559,6 +562,168 @@ curl --location 'https://weedge-achatbot--fastapi-webrtc-minicpmo-omni-bot-srv-a
   },
   "config_list": []
 }'
+```
+### webrtc_qwen2_5omni_vision_voice_bot
+- run webrtc_qwen2_5omni_vision_voice_bot serve with webrtc
+```shell
+# webrtc_audio_bot serve on default pip image
+# need create .env.example to modal Secrets for webrtc key
+IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L40s modal serve -e achatbot src/fastapi_webrtc_qwen2_5omni_vision_voice_bot_serve.py
+```
+- curl api to run chat room bot with webrtc (livekit_room)
+```shell
+# thinker gen chunk token and hidden states -> talker gen vq codes token -> code2wav gen chunk wav | don't use_sliding_window_code2wav
+curl --location 'https://weedge-achatbot--fastapi-webrtc-qwen2-5omni-bot-srv-app-dev.modal.run/bot_join/chat-room/LivekitQwen2_5OmniVisionVoiceBot' \
+--header 'Content-Type: application/json' \
+--data '{
+  "chat_bot_name": "LivekitQwen2_5OmniVisionVoiceBot",
+  "room_name": "chat-room",
+  "room_url": "",
+  "token": "",
+  "room_manager": {
+    "tag": "livekit_room",
+    "args": {
+      "bot_name": "LivekitQwen2_5OmniVisionVoiceBot",
+      "is_common_session": false
+    }
+  },
+  "services": {
+    "pipeline": "achatbot",
+    "vad": "silero",
+    "omni_llm": "llm_transformers_manual_qwen2_5omni_vision_voice"
+  },
+  "config": {
+    "vad": {
+      "tag": "silero_vad_analyzer",
+      "args": { "stop_secs": 0.7 }
+    },
+    "omni_llm": {
+      "tag": "llm_transformers_manual_qwen2_5omni_vision_voice",
+      "args": {
+        "lm_device": "cuda",
+        "lm_torch_dtype": "bfloat16",
+        "lm_attn_impl": "flash_attention_2",
+        "warmup_steps": 1,
+        "chat_history_size": 0,
+        "thinker_eos_token_ids": [151644, 151645],
+        "thinker_args": {
+          "lm_gen_temperature": 0.95,
+          "lm_gen_top_k": 20,
+          "lm_gen_top_p": 0.9,
+          "lm_gen_min_new_tokens": 1,
+          "lm_gen_max_new_tokens": 1024,
+          "lm_gen_max_tokens_per_step": 10,
+          "lm_gen_repetition_penalty": 1.1
+        },
+        "talker_args": {
+          "lm_gen_temperature": 0.95,
+          "lm_gen_top_k": 20,
+          "lm_gen_top_p": 0.9,
+          "lm_gen_min_new_tokens": 1,
+          "lm_gen_max_new_tokens": 2048,
+          "lm_gen_repetition_penalty": 1.1
+        },
+        "talker_skip_thinker_token_ids": [],
+        "talker_eos_token_ids": [8292, 8294],
+        "code2wav_args": {
+          "model_path": "/root/.achatbot/models/Qwen/Qwen2.5-Omni-7B",
+          "enable_torch_compile": false,
+          "enable_torch_compile_first_chunk": false,
+          "odeint_method": "euler",
+          "odeint_method_relaxed": false,
+          "batched_chunk": 3,
+          "frequency": "50hz",
+          "device": "cuda",
+          "num_steps": 10,
+          "guidance_scale": 0.5,
+          "sway_coefficient": -1.0,
+          "code2wav_dynamic_batch": false
+        },
+        "speaker": "Chelsie",
+        "is_use_sliding_window_code2wav": false,
+        "lm_model_name_or_path": "/root/.achatbot/models/Qwen/Qwen2.5-Omni-7B"
+      }
+    }
+  },
+  "config_list": []
+}
+'
+# thinker gen chunk token and hidden states -> talker gen vq codes token -> code2wav gen chunk wav | use_sliding_window_code2wav | no torch.compile
+curl --location 'https://weedge-achatbot--fastapi-webrtc-qwen2-5omni-bot-srv-app-dev.modal.run/bot_join/chat-room/LivekitQwen2_5OmniVisionVoiceBot' \
+--header 'Content-Type: application/json' \
+--data '{
+  "chat_bot_name": "LivekitQwen2_5OmniVisionVoiceBot",
+  "room_name": "chat-room",
+  "room_url": "",
+  "token": "",
+  "room_manager": {
+    "tag": "livekit_room",
+    "args": {
+      "bot_name": "LivekitQwen2_5OmniVisionVoiceBot",
+      "is_common_session": false
+    }
+  },
+  "services": {
+    "pipeline": "achatbot",
+    "vad": "silero",
+    "omni_llm": "llm_transformers_manual_qwen2_5omni_vision_voice"
+  },
+  "config": {
+    "vad": {
+      "tag": "silero_vad_analyzer",
+      "args": { "stop_secs": 0.7 }
+    },
+    "omni_llm": {
+      "tag": "llm_transformers_manual_qwen2_5omni_vision_voice",
+      "args": {
+        "lm_device": "cuda",
+        "lm_torch_dtype": "bfloat16",
+        "lm_attn_impl": "flash_attention_2",
+        "warmup_steps": 1,
+        "chat_history_size": 0,
+        "thinker_eos_token_ids": [151644, 151645],
+        "thinker_args": {
+          "lm_gen_temperature": 0.95,
+          "lm_gen_top_k": 20,
+          "lm_gen_top_p": 0.9,
+          "lm_gen_min_new_tokens": 1,
+          "lm_gen_max_new_tokens": 1024,
+          "lm_gen_max_tokens_per_step": 10,
+          "lm_gen_repetition_penalty": 1.1
+        },
+        "talker_args": {
+          "lm_gen_temperature": 0.95,
+          "lm_gen_top_k": 20,
+          "lm_gen_top_p": 0.9,
+          "lm_gen_min_new_tokens": 1,
+          "lm_gen_max_new_tokens": 2048,
+          "lm_gen_repetition_penalty": 1.1
+        },
+        "talker_skip_thinker_token_ids": [],
+        "talker_eos_token_ids": [8292, 8294],
+        "code2wav_args": {
+          "model_path": "/root/.achatbot/models/Qwen/Qwen2.5-Omni-7B",
+          "enable_torch_compile": false,
+          "enable_torch_compile_first_chunk": false,
+          "odeint_method": "euler",
+          "odeint_method_relaxed": false,
+          "batched_chunk": 3,
+          "frequency": "50hz",
+          "device": "cuda",
+          "num_steps": 10,
+          "guidance_scale": 0.5,
+          "sway_coefficient": -1.0,
+          "code2wav_dynamic_batch": false
+        },
+        "speaker": "Chelsie",
+        "is_use_sliding_window_code2wav": true,
+        "lm_model_name_or_path": "/root/.achatbot/models/Qwen/Qwen2.5-Omni-7B"
+      }
+    }
+  },
+  "config_list": []
+}
+'
 ```
 
 ### webrtc_step_voice_bot
