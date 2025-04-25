@@ -199,16 +199,60 @@ with omni_img.imports():
                 return thinker_result
 
             # 2. Generate speech tokens from talker module
+            embeds_to_talker = thinker_result.hidden_states[0][0].clone().to(self.talker.device)
+            if thinker_kwargs.get("input_features", None) is not None:
+                audio_ids_mask = input_ids == self.config.thinker_config.audio_token_index
+                audio_mask = (
+                    audio_ids_mask.unsqueeze(-1)
+                    .expand_as(embeds_to_talker)
+                    .to(embeds_to_talker.device)
+                )
+                audio_mask_tensor = torch.zeros(
+                    [audio_ids_mask.sum(), embeds_to_talker.shape[-1]],
+                    dtype=embeds_to_talker.dtype,
+                    device=self.talker.device,
+                )
+                embeds_to_talker.masked_scatter_(audio_mask, audio_mask_tensor)
+            if thinker_kwargs.get("pixel_values", None) is not None:
+                image_ids_mask = input_ids == self.config.thinker_config.image_token_index
+                image_mask = (
+                    image_ids_mask.unsqueeze(-1)
+                    .expand_as(embeds_to_talker)
+                    .to(embeds_to_talker.device)
+                )
+                image_mask_tensor = torch.zeros(
+                    [image_ids_mask.sum(), embeds_to_talker.shape[-1]],
+                    dtype=embeds_to_talker.dtype,
+                    device=self.talker.device,
+                )
+                embeds_to_talker.masked_scatter_(image_mask, image_mask_tensor)
+            if thinker_kwargs.get("pixel_values_videos", None) is not None:
+                video_ids_mask = input_ids == self.config.thinker_config.video_token_index
+                video_mask = (
+                    video_ids_mask.unsqueeze(-1)
+                    .expand_as(embeds_to_talker)
+                    .to(embeds_to_talker.device)
+                )
+                video_mask_tensor = torch.zeros(
+                    [video_ids_mask.sum(), embeds_to_talker.shape[-1]],
+                    dtype=embeds_to_talker.dtype,
+                    device=self.talker.device,
+                )
+                embeds_to_talker.masked_scatter_(video_mask, video_mask_tensor)
+
+            processed_thinker_hidden = (
+                (embeds_to_talker,) + thinker_result.hidden_states[0][1:],
+            ) + thinker_result.hidden_states[1:]
             thinker_generate_ids = thinker_result.sequences[:, input_ids.size(1) :].to(
                 self.talker.device
             )
             thinker_token_embeds = [
                 token_hidden_states[0].to(self.talker.device)
-                for token_hidden_states in thinker_result.hidden_states
+                for token_hidden_states in processed_thinker_hidden
             ]
             thinker_hidden_states = [
                 token_hidden_states[-1].to(self.talker.device)
-                for token_hidden_states in thinker_result.hidden_states
+                for token_hidden_states in processed_thinker_hidden
             ]
 
             talker_text_bos_token = speaker_params["bos_token"]
@@ -280,7 +324,6 @@ with omni_img.imports():
                 ],
                 dim=1,
             )
-
             talker_attention_mask = None
             if "attention_mask" in kwargs:
                 talker_attention_mask = torch.cat(
@@ -579,8 +622,8 @@ with omni_img.imports():
         output_hidden_states=False,
         stop_strings_per_step=[".", "。"],
     ):
-        input_ids = inputs.pop("input_ids")
-        attention_mask = inputs.pop("attention_mask", None)
+        input_ids = inputs.get("input_ids")
+        attention_mask = inputs.get("attention_mask", None)
 
         if max_tokens_per_step > max_new_tokens:
             max_tokens_per_step = max_new_tokens
@@ -723,12 +766,15 @@ with omni_img.imports():
         )
 
     def talker_generate_chunk(
-        input_ids,
-        attention_mask,
+        inputs: dict,
         thinker_chunk_stream,
         speaker=DEFAULT_SPEAKER,
         talker_eos_token_id: list[int] = [8292, 8294],
+        mask_embedding: bool = True,
     ):
+        input_ids = inputs.get("input_ids")
+        attention_mask = inputs.get("attention_mask", None)
+
         for chunk in thinker_chunk_stream:
             thinker_generate_text = chunk["thinker_generate_text"]
             if thinker_generate_text in " \n\r,;.?!，；。？！":
@@ -738,21 +784,72 @@ with omni_img.imports():
             if thinker_generate_hidden_states is None:
                 yield (thinker_generate_text, torch.empty([1, 0]))
                 continue
+
+            processed_thinker_hidden = thinker_generate_hidden_states
+            if mask_embedding is True:
+                print(f"mask embedding")
+                embeds_to_talker = (
+                    thinker_generate_hidden_states[0][0].clone().to(model.talker.device)
+                )
+                if inputs.get("input_features", None) is not None:
+                    audio_ids_mask = input_ids == model.config.thinker_config.audio_token_index
+                    audio_mask = (
+                        audio_ids_mask.unsqueeze(-1)
+                        .expand_as(embeds_to_talker)
+                        .to(embeds_to_talker.device)
+                    )
+                    audio_mask_tensor = torch.zeros(
+                        [audio_ids_mask.sum(), embeds_to_talker.shape[-1]],
+                        dtype=embeds_to_talker.dtype,
+                        device=model.talker.device,
+                    )
+                    embeds_to_talker.masked_scatter_(audio_mask, audio_mask_tensor)
+                if inputs.get("pixel_values", None) is not None:
+                    image_ids_mask = input_ids == model.config.thinker_config.image_token_index
+                    image_mask = (
+                        image_ids_mask.unsqueeze(-1)
+                        .expand_as(embeds_to_talker)
+                        .to(embeds_to_talker.device)
+                    )
+                    image_mask_tensor = torch.zeros(
+                        [image_ids_mask.sum(), embeds_to_talker.shape[-1]],
+                        dtype=embeds_to_talker.dtype,
+                        device=model.talker.device,
+                    )
+                    embeds_to_talker.masked_scatter_(image_mask, image_mask_tensor)
+                if inputs.get("pixel_values_videos", None) is not None:
+                    video_ids_mask = input_ids == model.config.thinker_config.video_token_index
+                    video_mask = (
+                        video_ids_mask.unsqueeze(-1)
+                        .expand_as(embeds_to_talker)
+                        .to(embeds_to_talker.device)
+                    )
+                    video_mask_tensor = torch.zeros(
+                        [video_ids_mask.sum(), embeds_to_talker.shape[-1]],
+                        dtype=embeds_to_talker.dtype,
+                        device=model.talker.device,
+                    )
+                    embeds_to_talker.masked_scatter_(video_mask, video_mask_tensor)
+
+                processed_thinker_hidden = (
+                    (embeds_to_talker,) + thinker_generate_hidden_states[0][1:],
+                ) + thinker_generate_hidden_states[1:]
+
             thinker_generate_ids = chunk["thinker_generate_ids"].to(model.talker.device)
             thinker_token_embeds = [
                 token_hidden_states[0].to(model.talker.device)
-                for token_hidden_states in thinker_generate_hidden_states
+                for token_hidden_states in processed_thinker_hidden
             ]
             thinker_hidden_states = [
                 token_hidden_states[-1].to(model.talker.device)
-                for token_hidden_states in thinker_generate_hidden_states
+                for token_hidden_states in processed_thinker_hidden
             ]
             print(
-                f"[{thinker_generate_text}] len(thinker_generate_hidden_states):{len(thinker_generate_hidden_states)}"
+                f"[{thinker_generate_text}] len(thinker_generate_hidden_states):{len(processed_thinker_hidden)}"
             )
-            for i in range(len(thinker_generate_hidden_states)):
+            for i in range(len(processed_thinker_hidden)):
                 print(
-                    f"[{thinker_generate_text}] thinker_generate_hidden_states[{i}]:{thinker_generate_hidden_states[i][0].shape}, {thinker_generate_hidden_states[i][-1].shape}"
+                    f"[{thinker_generate_text}] thinker_generate_hidden_states[{i}]:{processed_thinker_hidden[i][0].shape}, {processed_thinker_hidden[i][-1].shape}"
                 )
             # print(
             #    f"[{thinker_generate_text}] thinker_generate_hidden_states[0]:{thinker_generate_hidden_states[0][0][:,:5,:]}, {thinker_generate_hidden_states[0][-1][:,:5,:]}"
@@ -858,6 +955,7 @@ with omni_img.imports():
                 attention_mask=talker_attention_mask,
                 suppress_tokens=[model.talker.codec_bos_token],
                 eos_token_id=talker_eos_token_id,
+                pad_token_id=8292,
                 do_sample=True,
                 top_k=10,
                 top_p=0.9,
@@ -956,6 +1054,7 @@ with omni_img.imports():
         thinker_max_tokens_per_step=10,  # Controls how many tokens to generate *per step*
         thinker_stop_strings_per_step=[".", "。"],
         thinker_eos_token_ids=[151644, 151645],  # Define EOS tokens
+        mask_embedding: bool = False,
     ):
         print(messages)
         text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
@@ -994,10 +1093,10 @@ with omni_img.imports():
             output_hidden_states=True,
         )
         return talker_generate_chunk(
-            input_ids=inputs["input_ids"],
-            attention_mask=inputs["attention_mask"],
+            inputs=inputs,
             thinker_chunk_stream=thinker_chunk_stream,
             speaker=speaker,
+            mask_embedding=mask_embedding,
         )
 
     @torch.no_grad()
@@ -1052,16 +1151,56 @@ with omni_img.imports():
             )
         # 2. Generate speech tokens from talker module
         input_ids = inputs["input_ids"]
+
+        embeds_to_talker = thinker_result.hidden_states[0][0].clone().to(model.talker.device)
+        if inputs.get("input_features", None) is not None:
+            audio_ids_mask = input_ids == model.config.thinker_config.audio_token_index
+            audio_mask = (
+                audio_ids_mask.unsqueeze(-1).expand_as(embeds_to_talker).to(embeds_to_talker.device)
+            )
+            audio_mask_tensor = torch.zeros(
+                [audio_ids_mask.sum(), embeds_to_talker.shape[-1]],
+                dtype=embeds_to_talker.dtype,
+                device=model.talker.device,
+            )
+            embeds_to_talker.masked_scatter_(audio_mask, audio_mask_tensor)
+        if inputs.get("pixel_values", None) is not None:
+            image_ids_mask = input_ids == model.config.thinker_config.image_token_index
+            image_mask = (
+                image_ids_mask.unsqueeze(-1).expand_as(embeds_to_talker).to(embeds_to_talker.device)
+            )
+            image_mask_tensor = torch.zeros(
+                [image_ids_mask.sum(), embeds_to_talker.shape[-1]],
+                dtype=embeds_to_talker.dtype,
+                device=model.talker.device,
+            )
+            embeds_to_talker.masked_scatter_(image_mask, image_mask_tensor)
+        if inputs.get("pixel_values_videos", None) is not None:
+            video_ids_mask = input_ids == model.config.thinker_config.video_token_index
+            video_mask = (
+                video_ids_mask.unsqueeze(-1).expand_as(embeds_to_talker).to(embeds_to_talker.device)
+            )
+            video_mask_tensor = torch.zeros(
+                [video_ids_mask.sum(), embeds_to_talker.shape[-1]],
+                dtype=embeds_to_talker.dtype,
+                device=model.talker.device,
+            )
+            embeds_to_talker.masked_scatter_(video_mask, video_mask_tensor)
+
+        processed_thinker_hidden = (
+            (embeds_to_talker,) + thinker_result.hidden_states[0][1:],
+        ) + thinker_result.hidden_states[1:]
+
         thinker_generate_ids = thinker_result.sequences[:, input_ids.size(1) :].to(
             model.talker.device
         )
         thinker_token_embeds = [
             token_hidden_states[0].to(model.talker.device)
-            for token_hidden_states in thinker_result.hidden_states
+            for token_hidden_states in processed_thinker_hidden
         ]
         thinker_hidden_states = [
             token_hidden_states[-1].to(model.talker.device)
-            for token_hidden_states in thinker_result.hidden_states
+            for token_hidden_states in processed_thinker_hidden
         ]
         gen_text = processor.batch_decode(
             thinker_result.sequences,
@@ -1179,6 +1318,7 @@ with omni_img.imports():
             attention_mask=talker_attention_mask,
             suppress_tokens=[model.talker.codec_bos_token],
             eos_token_id=talker_eos_token_id,
+            pad_token_id=8292,
             do_sample=True,
             top_k=10,
             top_p=0.9,
@@ -2122,13 +2262,15 @@ def image_chatting_segment_stream():
     ]
     thinker_eos_token_ids = [151644, 151645]
     print(thinker_eos_token_ids)
+    mask_embedding = True
     chunk_stream = generate_stream(
         messages,
         use_audio_in_video=False,
         thinker_max_new_tokens=100,
         thinker_max_tokens_per_step=15,
-        thinker_stop_strings_per_step=[".", "。"],
+        thinker_stop_strings_per_step=[",", ".", "，", "。"],
         thinker_eos_token_ids=thinker_eos_token_ids,
+        mask_embedding=mask_embedding,
     )
 
     gen_text = ""
@@ -2149,7 +2291,9 @@ def image_chatting_segment_stream():
         start_time = time.perf_counter()
 
     print(f"gen all text: {gen_all_text}")
-    save_audio_path = os.path.join(ASSETS_DIR, f"image_chatting_segment_stream.wav")
+    save_audio_path = os.path.join(
+        ASSETS_DIR, f"image_chatting_segment_stream_{mask_embedding}.wav"
+    )
     sf.write(save_audio_path, np.concatenate(audios), samplerate=24000)
     print(f"All Audio saved to {save_audio_path}")
     info = sf.info(save_audio_path, verbose=True)

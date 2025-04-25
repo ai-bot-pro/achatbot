@@ -51,6 +51,10 @@ class AudioCameraOutputProcessor(OutputProcessor):
         # away and we would lose the TTSStoppedFrame.
         self._bot_speaking = False
 
+        # Audio queue and task
+        self._audio_out_queue = None
+        self._audio_out_task = None
+
     async def start(self, frame: StartFrame):
         await super().start(frame)
         # Create media threads queues and task
@@ -59,6 +63,9 @@ class AudioCameraOutputProcessor(OutputProcessor):
             self._camera_out_task = self.get_event_loop().create_task(
                 self._camera_out_task_handler()
             )
+        if self._params.audio_out_enabled:
+            self._audio_out_queue = asyncio.Queue()
+            self._audio_out_task = self.get_event_loop().create_task(self._audio_out_task_handler())
 
     async def stop(self, frame: EndFrame):
         await super().stop(frame)
@@ -66,12 +73,18 @@ class AudioCameraOutputProcessor(OutputProcessor):
         if self._params.camera_out_enabled:
             self._camera_out_task.cancel()
             await self._camera_out_task
+        if self._params.audio_out_enabled:
+            self._audio_out_task.cancel()
+            await self._audio_out_task
 
     async def cancel(self, frame: CancelFrame):
         await super().cancel(frame)
         if self._params.camera_out_enabled:
             self._camera_out_task.cancel()
             await self._camera_out_task
+        if self._params.audio_out_enabled:
+            self._audio_out_task.cancel()
+            await self._audio_out_task
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
@@ -149,15 +162,26 @@ class AudioCameraOutputProcessor(OutputProcessor):
             chunk = audio[i : i + self._audio_chunk_size]
             # if len(chunk) % 2 != 0: don't do that, need subclass to do
             #    chunk = chunk[:len(chunk) - 1]
-            await self.write_raw_audio_frames(chunk)
+            await self._audio_out_queue.put(chunk)
             await self.push_frame(BotSpeakingFrame(), FrameDirection.UPSTREAM)
         # self._audio_out_buff.clear()
 
     async def write_raw_audio_frames(self, frames: bytes):
         """
-        subcalss audio output stream transport to impl
+        Subclass audio output stream transport to implement.
         """
-        pass
+        logging.info(f"no subclass implement, dump len(frames): {len(frames)}")
+
+    async def _audio_out_task_handler(self):
+        while True:
+            try:
+                chunk = await self._audio_out_queue.get()
+                await self.write_raw_audio_frames(chunk)
+                self._audio_out_queue.task_done()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logging.exception(f"{self} error writing audio: {e}")
 
     #
     # Camera out
@@ -183,9 +207,9 @@ class AudioCameraOutputProcessor(OutputProcessor):
 
     async def write_frame_to_camera(self, frame: ImageRawFrame):
         """
-        subcalss camera output stream transport to impl
+        Subclass camera output stream transport to implement.
         """
-        pass
+        logging.info(f"no subclass implement, dump frame: {frame}")
 
     async def _draw_image(self, frame: ImageRawFrame):
         desired_size = (self._params.camera_out_width, self._params.camera_out_height)

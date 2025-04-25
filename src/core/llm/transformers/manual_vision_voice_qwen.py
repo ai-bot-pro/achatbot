@@ -451,6 +451,7 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
                     code2wav_chunk_stream_func=self.code2wav_sliding_window_chunk_stream
                     if self.args.is_use_sliding_window_code2wav
                     else None,
+                    mask_embedding=kwargs.get("mask_embedding", None) or self.args.mask_embedding,
                 )
 
                 gen_text = ""
@@ -460,7 +461,6 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
                         gen_text = text
                         gen_assistant_text += text
 
-                    time.sleep(0.05)
                     if "talker_wav" not in chunk:
                         yield {"text": text}
                     else:

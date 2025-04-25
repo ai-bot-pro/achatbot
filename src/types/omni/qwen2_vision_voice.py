@@ -22,3 +22,4 @@ class Qwen2_5TransformersVisionVoiceLMArgs(TransformersLMArgs):
     save_wav: bool = False
     disable_talker: bool = False
     thinker_all_talker_stream: bool = False
+    mask_embedding: bool = True

@@ -140,16 +140,55 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
             return thinker_result
 
         # 2. Generate speech tokens from talker module
+        embeds_to_talker = thinker_result.hidden_states[0][0].clone().to(self.talker.device)
+        if thinker_kwargs.get("input_features", None) is not None:
+            audio_ids_mask = input_ids == self.config.thinker_config.audio_token_index
+            audio_mask = (
+                audio_ids_mask.unsqueeze(-1).expand_as(embeds_to_talker).to(embeds_to_talker.device)
+            )
+            audio_mask_tensor = torch.zeros(
+                [audio_ids_mask.sum(), embeds_to_talker.shape[-1]],
+                dtype=embeds_to_talker.dtype,
+                device=self.talker.device,
+            )
+            embeds_to_talker.masked_scatter_(audio_mask, audio_mask_tensor)
+        if thinker_kwargs.get("pixel_values", None) is not None:
+            image_ids_mask = input_ids == self.config.thinker_config.image_token_index
+            image_mask = (
+                image_ids_mask.unsqueeze(-1).expand_as(embeds_to_talker).to(embeds_to_talker.device)
+            )
+            image_mask_tensor = torch.zeros(
+                [image_ids_mask.sum(), embeds_to_talker.shape[-1]],
+                dtype=embeds_to_talker.dtype,
+                device=self.talker.device,
+            )
+            embeds_to_talker.masked_scatter_(image_mask, image_mask_tensor)
+        if thinker_kwargs.get("pixel_values_videos", None) is not None:
+            video_ids_mask = input_ids == self.config.thinker_config.video_token_index
+            video_mask = (
+                video_ids_mask.unsqueeze(-1).expand_as(embeds_to_talker).to(embeds_to_talker.device)
+            )
+            video_mask_tensor = torch.zeros(
+                [video_ids_mask.sum(), embeds_to_talker.shape[-1]],
+                dtype=embeds_to_talker.dtype,
+                device=self.talker.device,
+            )
+            embeds_to_talker.masked_scatter_(video_mask, video_mask_tensor)
+
+        processed_thinker_hidden = (
+            (embeds_to_talker,) + thinker_result.hidden_states[0][1:],
+        ) + thinker_result.hidden_states[1:]
+
         thinker_generate_ids = thinker_result.sequences[:, input_ids.size(1) :].to(
             self.talker.device
         )
         thinker_token_embeds = [
             token_hidden_states[0].to(self.talker.device)
-            for token_hidden_states in thinker_result.hidden_states
+            for token_hidden_states in processed_thinker_hidden
         ]
         thinker_hidden_states = [
             token_hidden_states[-1].to(self.talker.device)
-            for token_hidden_states in thinker_result.hidden_states
+            for token_hidden_states in processed_thinker_hidden
         ]
 
         talker_text_bos_token = speaker_params["bos_token"]
@@ -167,9 +206,7 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
         talker_input_ids = torch.cat(
             [
                 torch.full_like(
-                    input_ids,
-                    fill_value=self.talker.codec_mask_token,
-                    device=self.talker.device,
+                    input_ids, fill_value=self.talker.codec_mask_token, device=self.talker.device
                 ),
                 torch.tensor(
                     [[self.talker.codec_pad_token]], dtype=torch.long, device=self.talker.device
@@ -219,7 +256,6 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
             ],
             dim=1,
         )
-
         talker_attention_mask = None
         if "attention_mask" in kwargs:
             talker_attention_mask = torch.cat(
@@ -430,9 +466,8 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
     @torch.no_grad()
     def talker_generate_chunk(
         self,
-        input_ids,
+        inputs: dict,
         thinker_chunk_stream,
-        attention_mask: Optional[torch.Tensor] = None,
         speaker: str = "Chelsie",
         talker_eos_token_ids: list[int] = [8292, 8294],
         talker_top_k: int = 10,
@@ -446,7 +481,11 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
         code2wav_guidance_scale: float = 0.5,
         code2wav_sway_coefficient: float = -1.0,
         code2wav_chunk_stream_func: Callable = None,
+        mask_embedding: bool = True,
     ) -> Generator[dict, None, None]:
+        input_ids = inputs.get("input_ids")
+        attention_mask = inputs.get("attention_mask", None)
+
         for chunk in thinker_chunk_stream:
             thinker_generate_ids = chunk["thinker_generate_ids"].to(self.talker.device)
             # skip talk
@@ -465,13 +504,64 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
                     )
                 yield {"thinker_ids": thinker_generate_ids, "talker_wav": torch.empty([0])}
                 continue
+
+            processed_thinker_hidden = thinker_generate_hidden_states
+            if mask_embedding is True:
+                logging.info("mask embedding")
+                embeds_to_talker = (
+                    thinker_generate_hidden_states[0][0].clone().to(self.talker.device)
+                )
+                if inputs.get("input_features", None) is not None:
+                    audio_ids_mask = input_ids == self.config.thinker_config.audio_token_index
+                    audio_mask = (
+                        audio_ids_mask.unsqueeze(-1)
+                        .expand_as(embeds_to_talker)
+                        .to(embeds_to_talker.device)
+                    )
+                    audio_mask_tensor = torch.zeros(
+                        [audio_ids_mask.sum(), embeds_to_talker.shape[-1]],
+                        dtype=embeds_to_talker.dtype,
+                        device=self.talker.device,
+                    )
+                    embeds_to_talker.masked_scatter_(audio_mask, audio_mask_tensor)
+                if inputs.get("pixel_values", None) is not None:
+                    image_ids_mask = input_ids == self.config.thinker_config.image_token_index
+                    image_mask = (
+                        image_ids_mask.unsqueeze(-1)
+                        .expand_as(embeds_to_talker)
+                        .to(embeds_to_talker.device)
+                    )
+                    image_mask_tensor = torch.zeros(
+                        [image_ids_mask.sum(), embeds_to_talker.shape[-1]],
+                        dtype=embeds_to_talker.dtype,
+                        device=self.talker.device,
+                    )
+                    embeds_to_talker.masked_scatter_(image_mask, image_mask_tensor)
+                if inputs.get("pixel_values_videos", None) is not None:
+                    video_ids_mask = input_ids == self.config.thinker_config.video_token_index
+                    video_mask = (
+                        video_ids_mask.unsqueeze(-1)
+                        .expand_as(embeds_to_talker)
+                        .to(embeds_to_talker.device)
+                    )
+                    video_mask_tensor = torch.zeros(
+                        [video_ids_mask.sum(), embeds_to_talker.shape[-1]],
+                        dtype=embeds_to_talker.dtype,
+                        device=self.talker.device,
+                    )
+                    embeds_to_talker.masked_scatter_(video_mask, video_mask_tensor)
+
+                processed_thinker_hidden = (
+                    (embeds_to_talker,) + thinker_generate_hidden_states[0][1:],
+                ) + thinker_generate_hidden_states[1:]
+
             thinker_token_embeds = [
                 token_hidden_states[0].to(self.talker.device)
-                for token_hidden_states in thinker_generate_hidden_states
+                for token_hidden_states in processed_thinker_hidden
             ]
             thinker_hidden_states = [
                 token_hidden_states[-1].to(self.talker.device)
-                for token_hidden_states in thinker_generate_hidden_states
+                for token_hidden_states in processed_thinker_hidden
             ]
             logging.debug(
                 f"len(thinker_generate_hidden_states):{len(thinker_generate_hidden_states)}"
@@ -712,6 +802,7 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
         code2wav_guidance_scale: float = 0.5,
         code2wav_sway_coefficient: float = -1.0,
         code2wav_chunk_stream_func: Callable = None,
+        mask_embedding: bool = True,
         **kwargs,
     ) -> Generator[dict, None, None]:
         """
@@ -741,8 +832,7 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
                 yield {"thinker_ids": thinker_chunk["thinker_generate_ids"]}
         else:
             talker_streamer = self.talker_generate_chunk(
-                inputs["input_ids"],
-                attention_mask=inputs.get("attention_mask", None),
+                inputs,
                 thinker_chunk_stream=thinker_chunk_stream,
                 speaker=speaker,
                 talker_eos_token_ids=talker_eos_token_ids,
@@ -757,6 +847,7 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
                 code2wav_guidance_scale=code2wav_guidance_scale,
                 code2wav_sway_coefficient=code2wav_sway_coefficient,
                 code2wav_chunk_stream_func=code2wav_chunk_stream_func,
+                mask_embedding=mask_embedding,
             )
 
             for talker_chunk in talker_streamer:
@@ -789,6 +880,7 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
         code2wav_guidance_scale: float = 0.5,
         code2wav_sway_coefficient: float = -1.0,
         code2wav_chunk_stream_func: Callable = None,
+        mask_embedding: bool = True,
         **kwargs,
     ) -> Generator[dict, None, None]:
         """
@@ -822,14 +914,13 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
             yield {"thinker_ids": thinker_generate_ids}
         else:
             talker_streamer = self.talker_generate_chunk(
-                input_ids,
+                inputs,
                 thinker_chunk_stream=to_generator(
                     {
                         "thinker_generate_ids": thinker_generate_ids,
                         "thinker_generate_hidden_states": thinker_result.hidden_states,
                     }
                 ),
-                attention_mask=inputs.get("attention_mask", None),
                 speaker=speaker,
                 talker_eos_token_ids=talker_eos_token_ids,
                 talker_top_k=talker_top_k,
@@ -843,6 +934,7 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
                 code2wav_guidance_scale=code2wav_guidance_scale,
                 code2wav_sway_coefficient=code2wav_sway_coefficient,
                 code2wav_chunk_stream_func=code2wav_chunk_stream_func,
+                mask_embedding=mask_embedding,
             )
 
             for talker_chunk in talker_streamer:
