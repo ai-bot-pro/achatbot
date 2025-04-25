@@ -2605,7 +2605,7 @@ IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task omni_chattin
 
 
 # text/vision/audio -> chunk text+speech stream  use sliding window code2wav
-ACHATBOT_VERSION=0.0.9.post9 IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task achatbot_generate
+ACHATBOT_VERSION=0.0.9.post10 IMAGE_GPU=L40s modal run src/llm/transformers/qwen2_5omni.py --task achatbot_generate
 
 IMAGE_GPU=L4 modal run src/llm/transformers/qwen2_5omni.py --task tokenizer
 """

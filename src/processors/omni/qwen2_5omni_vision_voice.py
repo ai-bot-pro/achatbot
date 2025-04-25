@@ -22,10 +22,14 @@ class Qwen2_5OmnVisionVoiceProcessor(VisionVoiceProcessorBase):
         self,
         *,
         session: Session | None = None,
+        no_stream_sleep_time: float = 0.5,
         **kwargs,
     ):
         super().__init__(
-            llm=TransformersManualVisionVoiceQwen2_5OmniLLM(**kwargs), session=session, **kwargs
+            llm=TransformersManualVisionVoiceQwen2_5OmniLLM(**kwargs),
+            session=session,
+            no_stream_sleep_time=no_stream_sleep_time,
+            **kwargs,
         )
 
     @property
@@ -59,5 +63,6 @@ class Qwen2_5OmnVisionVoiceProcessor(VisionVoiceProcessorBase):
                 audio_nparr = bytes2NpArrayWith16(frame.audio.audio)
             self._session.ctx.state["prompt"].append({"type": "audio", "audio": audio_nparr})
 
+        self.send_input(self._session)
         async for item in self.gen():
             yield item

@@ -1,7 +1,7 @@
 import modal
 import os
 
-achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.9.post9")
+achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.9.post10")
 
 vision_bot_img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags

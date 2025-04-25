@@ -30,7 +30,7 @@ class Qwen2_5OmniVoiceProcessor(VoiceProcessorBase):
         self,
         *,
         session: Session | None = None,
-        no_stream_sleep_time: float = 0.05,
+        no_stream_sleep_time: float = 0.5,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -48,6 +48,9 @@ class Qwen2_5OmniVoiceProcessor(VoiceProcessorBase):
             "sample_rate": TransformersManualQwen2_5OmniLLM.RATE,
             "channels": 1,
         }
+
+    async def say(self, text: str):
+        logging.info(f"say: {text}")
 
     def _generate(self):
         while True:
@@ -101,7 +104,7 @@ class Qwen2_5OmniVoiceProcessor(VoiceProcessorBase):
                         .astype(np.int16)
                         .tobytes()
                     )
-                    logging.info(
+                    logging.debug(
                         f"audio tensor:{tensor_audio.shape},push audio len:{len(audio_bytes)}"
                     )
                     await self.push_frame(

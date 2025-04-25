@@ -41,7 +41,7 @@ class ContainerRuntimeConfig:
                     "silero_vad_analyzer,"
                     "llm_transformers_manual_vision_voice_minicpmo,"
                     "queue"
-                    "]~=0.0.8.12",
+                    "]~=0.0.9.post10",
                     "huggingface_hub[hf_transfer]==0.26.0",
                     "wget",
                 ],
