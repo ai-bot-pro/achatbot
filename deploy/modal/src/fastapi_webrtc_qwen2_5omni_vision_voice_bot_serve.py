@@ -15,7 +15,7 @@ qwen2_5omni_img = (
             "achatbot["
             "fastapi_bot_server,"
             "livekit,livekit-api,daily,agora,"
-            "silero_vad_analyzer,"
+            "silero_vad_analyzer,asr_processor,"
             "llm_transformers_manual_vision_voice_qwen,"
             "queue"
             f"]=={achatbot_version}",

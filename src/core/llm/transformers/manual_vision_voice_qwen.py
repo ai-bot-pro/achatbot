@@ -460,6 +460,7 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
                         gen_text = text
                         gen_assistant_text += text
 
+                    time.sleep(0.05)
                     if "talker_wav" not in chunk:
                         yield {"text": text}
                     else:

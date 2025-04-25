@@ -299,17 +299,18 @@ core_llm = ["achatbot[llama_cpp,llm_personalai_proxy]"]
 
 # ----------------- asr ------------------
 # asr module tag -> pkgs
-whisper_asr = ["openai-whisper==20231117"]
-whisper_timestamped_asr = ["whisper-timestamped~=1.14.2"]
-whisper_faster_asr = ["faster-whisper~=1.0.2"]
+whisper_asr = ["openai-whisper"]
+whisper_timestamped_asr = ["whisper-timestamped"]
+whisper_faster_asr = ["faster-whisper"]
 whisper_transformers_asr = ["transformers[torch]>=4.40.2"]
 whisper_mlx_asr = [
     "mlx_whisper~=0.2.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
 ]
 whisper_groq_asr = ["groq~=0.9.0"]
 sense_voice_asr = [
-    "torch~=2.2.2",
-    "funasr~=1.1.8",
+    "torch",
+    "torchaudio",
+    "funasr",
     "onnx",
     "onnxconverter-common",
 ]

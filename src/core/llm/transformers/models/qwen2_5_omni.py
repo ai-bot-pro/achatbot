@@ -450,7 +450,10 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
         for chunk in thinker_chunk_stream:
             thinker_generate_ids = chunk["thinker_generate_ids"].to(self.talker.device)
             # skip talk
-            if thinker_generate_ids[0, -1].item() in talker_skip_thinker_token_ids:
+            if (
+                thinker_generate_ids.shape[1] == 1
+                and thinker_generate_ids[0, -1].item() in talker_skip_thinker_token_ids
+            ):
                 logging.info(f"skip token {thinker_generate_ids} to talk")
                 yield {"thinker_ids": thinker_generate_ids, "talker_wav": torch.empty([0])}
                 continue
