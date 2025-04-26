@@ -55,3 +55,6 @@
 [submodule "deps/WavTokenizer"]
 	path = deps/WavTokenizer
 	url = https://github.com/weedge/WavTokenizer.git
+[submodule "deps/KimiAudio"]
+	path = deps/KimiAudio
+	url = https://github.com/weedge/Kimi-Audio.git
