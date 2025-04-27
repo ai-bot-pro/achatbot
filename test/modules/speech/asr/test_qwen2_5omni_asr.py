@@ -12,7 +12,7 @@ from src.common.interface import IAsr
 from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR
 from src.modules.speech.asr import ASREnvInit
 
-
+# https://github.com/QwenLM/Qwen2.5-Omni/issues/79
 r"""
 LLM_MODEL_NAME_OR_PATH=./models/Qwen/Qwen2.5-Omni-7B \
     THINKER_LLM_GEN_TEMPERATURE=0.9 \
