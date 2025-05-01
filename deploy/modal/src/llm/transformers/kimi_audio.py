@@ -20,7 +20,7 @@ kimi_audio_img = (
     .pip_install("flash-attn", extra_options="--no-build-isolation")
     .run_commands(
         "cd /Kimi-Audio && git pull origin feat/achatbot",
-        "cd /Kimi-Audio && git checkout 05811bffb7221f60fb7ff2435754779218d2c219",
+        "cd /Kimi-Audio && git checkout ad456cf7302727cb2de44d9b1e58b706b9ef8cc4",
     )
     .env(
         {
@@ -171,7 +171,7 @@ def conversation():
     )
 
     # Save the generated audio
-    output_audio_path = os.path.join(ASSETS_DIR, "output_audio.wav")
+    output_audio_path = os.path.join(ASSETS_DIR, "kimia_conversation.wav")
     sf.write(
         output_audio_path, wav_output.detach().cpu().view(-1).numpy(), 24000
     )  # Assuming 24kHz output
@@ -232,6 +232,8 @@ def asr_stream():
         text_repetition_window_size=16,
     )
 
+    times = []
+    start_time = time.perf_counter()
     for text_token_id, _ in gen_token_stream(
         model,
         audio_input_ids,
@@ -242,6 +244,7 @@ def asr_stream():
         output_type="text",
         max_new_tokens=max_new_tokens,
     ):
+        times.append(time.perf_counter() - start_time)
         # print(text_token_id)
         if text_token_id.item() == model.extra_tokens.kimia_text_eos:
             break
@@ -251,6 +254,158 @@ def asr_stream():
         print(
             model.prompt_manager.text_tokenizer.decode([text_token_id.item()]), end="", flush=True
         )
+        start_time = time.perf_counter()
+    print(f"TTFT: {times[0]} s | total: {sum(times)} s | avg: {sum(times)/len(times)} s")
+
+
+def conversation_stream():
+    import soundfile as sf
+
+    model = KimiAudio(model_path=model_path, load_detokenizer=True)
+
+    output_type = "both"
+    messages_conversation = [
+        # Start conversation with an audio query
+        {
+            "role": "user",
+            "message_type": "audio",
+            "content": "/Kimi-Audio/test_audios/qa_example.wav",
+        }
+    ]
+    history = model.prompt_manager.get_prompt(messages_conversation, output_type=output_type)
+    audio_input_ids, text_input_ids, is_continuous_mask = history.to_tensor()
+    audio_continuous_features = history.continuous_feature
+    print(
+        "input_token_ids:",
+        audio_input_ids.shape,
+        text_input_ids.shape,
+        is_continuous_mask.shape,
+        len(audio_continuous_features),
+        audio_continuous_features[0].shape,
+    )
+
+    audio_input_ids = audio_input_ids.to(torch.cuda.current_device())
+    text_input_ids = text_input_ids.to(torch.cuda.current_device())
+    is_continuous_mask = is_continuous_mask.to(torch.cuda.current_device())
+    audio_continuous_features = [
+        f.to(torch.cuda.current_device()) for f in audio_continuous_features
+    ]
+
+    max_new_tokens = int(12.5 * 120) - audio_input_ids.shape[1]
+    print(f"max_new_tokens: {max_new_tokens}")
+    sampler = KimiASampler(
+        audio_top_k=10,
+        audio_temperature=0.8,
+        audio_repetition_penalty=1.0,
+        audio_repetition_window_size=64,
+        text_top_k=5,
+        text_temperature=0.0,
+        text_repetition_penalty=1.0,
+        text_repetition_window_size=16,
+    )
+
+    audio_text = ""
+    audio_vq_codes = []
+    gen_speechs = []
+    times = []
+    audio_chunk_times = []
+    start_time = time.perf_counter()
+    for text_token_id, audio_token_id in gen_token_stream(
+        model,
+        audio_input_ids,
+        sampler,
+        text_input_ids,
+        is_continuous_mask,
+        audio_continuous_features,
+        output_type=output_type,
+        max_new_tokens=max_new_tokens,
+    ):
+        times.append(time.perf_counter() - start_time)
+
+        text_token_id = text_token_id.item()
+        audio_token_id = audio_token_id.item()
+
+        if output_type == "text" and text_token_id == model.extra_tokens.kimia_text_eos:
+            break
+
+        if (
+            text_token_id != model.extra_tokens.kimia_text_eos
+            and text_token_id < model.kimia_token_offset
+            and text_token_id != model.extra_tokens.kimia_text_blank
+        ):
+            # https://huggingface.co/moonshotai/Kimi-Audio-7B-Instruct/blob/main/tokenization_kimia.py
+            # no skip_special_tokens args :)
+            audio_text += model.prompt_manager.text_tokenizer.decode([text_token_id])
+
+        if output_type == "text":
+            continue
+
+        if audio_token_id < model.kimia_token_offset:
+            continue
+        if audio_token_id in model.eod_ids:
+            break
+
+        audio_vq_code = audio_token_id - model.kimia_token_offset
+        audio_vq_codes.append(audio_vq_code)
+        if len(audio_vq_codes) % 30 == 0:
+            print("internal", audio_vq_codes)
+            start_time = time.perf_counter()
+            gen_speech = model.detokenizer.detokenize_streaming(
+                torch.tensor(audio_vq_codes).unsqueeze(0).long().to(torch.cuda.current_device()),
+                is_final=False,
+                upsample_factor=4,
+            )
+            audio_chunk_times.append(time.perf_counter() - start_time)
+            audio_vq_codes = []
+            gen_speechs.append(gen_speech)
+
+            output_path = os.path.join(ASSETS_DIR, f"kimia_conversation_{len(gen_speechs)}.wav")
+            sf.write(
+                output_path,
+                gen_speech.detach().cpu().view(-1).numpy(),
+                24000,
+            )
+
+        start_time = time.perf_counter()
+
+    if len(audio_vq_codes) > 0:
+        print("last", audio_vq_codes)
+        start_time = time.perf_counter()
+        gen_speech = model.detokenizer.detokenize_streaming(
+            torch.tensor(audio_vq_codes).unsqueeze(0).long().to(torch.cuda.current_device()),
+            is_final=True,
+            upsample_factor=4,
+        )
+        audio_chunk_times.append(time.perf_counter() - start_time)
+        gen_speechs.append(gen_speech)
+
+        output_path = os.path.join(ASSETS_DIR, f"kimia_conversation_{len(gen_speechs)}.wav")
+        sf.write(
+            output_path,
+            gen_speech.detach().cpu().view(-1).numpy(),
+            24000,
+        )
+
+    print(
+        f"text TTFT: {times[0]} s | total: {sum(times)} s | len: {len(times)} | avg: {sum(times)/len(times)} s"
+    )
+
+    print(
+        f"audio TTFT(chunk): {audio_chunk_times[0]} s | total: {sum(audio_chunk_times)} s | len: {len(audio_chunk_times)} | avg: {sum(audio_chunk_times)/len(audio_chunk_times)} s"
+    )
+    output_path = os.path.join(ASSETS_DIR, f"kimia_conversation_{len(gen_speechs)}.wav")
+    sf.write(
+        output_path,
+        gen_speech.detach().cpu().view(-1).numpy(),
+        24000,
+    )
+
+    output_audio_path = os.path.join(ASSETS_DIR, "kimia_conversation_stream.wav")
+    sf.write(
+        output_audio_path, torch.cat(gen_speechs, dim=-1).detach().cpu().view(-1).numpy(), 24000
+    )  # Assuming 24kHz output
+    print(f">>> Conversational Output Audio saved to: {output_audio_path}")
+    print(">>> Conversational Output Text: ", audio_text)
 
 
 def gen_token_stream(
@@ -311,6 +466,7 @@ def gen_token_stream(
         next_text_token_id = sampler.sample_text_logits(
             text_logits, recent_tokens=text_previous_tokens[:i] if i > 0 else None
         )
+        print(f"{i} next_text_token_id", next_text_token_id)
         # Sample audio token using the sampler
         next_audio_token_id = (
             sampler.sample_audio_logits(
@@ -321,6 +477,7 @@ def gen_token_stream(
             .long()
             .to(torch.cuda.current_device())
         )
+        print(f"{i} next_audio_token_id", next_audio_token_id)
 
         if text_stream_is_finished:
             next_text_token_id.fill_(model.extra_tokens.kimia_text_blank)
@@ -351,44 +508,14 @@ def gen_token_stream(
         decoder_is_continuous_mask = None
 
 
-def detokenize_audio_stream(self, vq_codes: torch.Tensor) -> torch.Tensor:
-    if self.detokenizer is None:
-        raise ValueError("Detokenizer is not initialized")
-    self.detokenizer.clear_states()
-    chunk_size = 30  # hard-coded right now
-    first_chunk_size = 30
-    cache_speech_collection = []
-    audio_tokens = vq_codes.to(torch.cuda.current_device())
-    audio_tokens = audio_tokens.long()
-    num_audio_tokens = audio_tokens.size(1)
-    first_chunk_semantic_tokens = audio_tokens[:, :first_chunk_size]
-    gen_speech = self.detokenizer.detokenize_streaming(
-        first_chunk_semantic_tokens,
-        is_final=(num_audio_tokens <= first_chunk_size),
-        upsample_factor=4,
-    )
-    cache_speech_collection.append(gen_speech)
-
-    if num_audio_tokens > first_chunk_size:
-        res_semantic_tokens = audio_tokens[:, first_chunk_size:]
-        for i in range(0, res_semantic_tokens.size(1), chunk_size):
-            chunk_semantic_tokens = res_semantic_tokens[:, i : i + chunk_size]
-            gen_speech = self.detokenizer.detokenize_streaming(
-                chunk_semantic_tokens,
-                upsample_factor=4,
-                is_final=(i + chunk_size >= res_semantic_tokens.size(1)),
-            )
-            cache_speech_collection.append(gen_speech)
-
-    gen_speech = torch.cat(cache_speech_collection, dim=-1)
-    return gen_speech
-
-
 """
 IMAGE_GPU=L4 modal run src/llm/transformers/kimi_audio.py --task tokenize
-IMAGE_GPU=L40s modal run src/llm/transformers/kimi_audio.py --task asr
 
+IMAGE_GPU=L40s modal run src/llm/transformers/kimi_audio.py --task asr
 IMAGE_GPU=L40s modal run src/llm/transformers/kimi_audio.py --task asr_stream
+
+IMAGE_GPU=L40s modal run src/llm/transformers/kimi_audio.py --task conversation
+IMAGE_GPU=L40s modal run src/llm/transformers/kimi_audio.py --task conversation_stream
 """
 
 
@@ -397,8 +524,9 @@ def main(task: str = "tokenize"):
     tasks = {
         "tokenize": tokenize,
         "asr": asr,
-        "conversation": conversation,
         "asr_stream": asr_stream,
+        "conversation": conversation,
+        "conversation_stream": conversation_stream,
     }
     if task not in tasks:
         raise ValueError(f"task {task} not found")
