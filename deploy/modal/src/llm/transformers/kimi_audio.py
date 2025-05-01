@@ -20,11 +20,12 @@ kimi_audio_img = (
     .pip_install("flash-attn", extra_options="--no-build-isolation")
     .run_commands(
         "cd /Kimi-Audio && git pull origin feat/achatbot",
-        "cd /Kimi-Audio && git checkout ad456cf7302727cb2de44d9b1e58b706b9ef8cc4",
+        "cd /Kimi-Audio && git checkout 13d1857949c864a872747e1139e18c2d7f6665da",
     )
     .env(
         {
             "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+            "TQDM_DISABLE": "1",
         }
     )
 )
@@ -76,6 +77,17 @@ def tokenize():
         kimia_token_offset=152064,
     )
     print("extra_tokens", prompt_manager.extra_tokens)
+
+    messages_text = [
+        # You can provide context or instructions as text
+        {
+            "role": "user",
+            "message_type": "text",
+            "content": "你叫什么名字？",
+        },
+    ]
+    text_prompt = prompt_manager.get_prompt(messages_text, output_type="text")
+    print("text_prompt", text_prompt)
 
     messages_asr = [
         # You can provide context or instructions as text
@@ -142,6 +154,9 @@ def asr():
 
 
 def conversation():
+    """
+    A1->T2A2
+    """
     import soundfile as sf
 
     model = KimiAudio(model_path=model_path, load_detokenizer=True)
@@ -176,9 +191,48 @@ def conversation():
         output_audio_path, wav_output.detach().cpu().view(-1).numpy(), 24000
     )  # Assuming 24kHz output
     print(f">>> Conversational Output Audio saved to: {output_audio_path}")
-    print(">>> Conversational Output Text: ", text_output)  # Expected output: "A."
+    print(">>> Conversational Output Text: ", text_output)
 
-    print("Kimi-Audio inference examples complete.")
+
+def conversation_text_audio():
+    """
+    T1->T2A2
+    """
+    import soundfile as sf
+
+    model = KimiAudio(model_path=model_path, load_detokenizer=True)
+
+    sampling_params = {
+        "audio_temperature": 0.8,
+        "audio_top_k": 10,
+        "text_temperature": 0.0,
+        "text_top_k": 5,
+        "audio_repetition_penalty": 1.0,
+        "audio_repetition_window_size": 64,
+        "text_repetition_penalty": 1.0,
+        "text_repetition_window_size": 16,
+    }
+    messages_conversation = [
+        # Start conversation with an audio query
+        {
+            "role": "user",
+            "message_type": "text",
+            "content": "你叫什么名字?",
+        }
+    ]
+
+    # Generate both audio and text output
+    wav_output, text_output = model.generate(
+        messages_conversation, **sampling_params, output_type="both"
+    )
+
+    # Save the generated audio
+    output_audio_path = os.path.join(ASSETS_DIR, "kimia_conversation_text_audio.wav")
+    sf.write(
+        output_audio_path, wav_output.detach().cpu().view(-1).numpy(), 24000
+    )  # Assuming 24kHz output
+    print(f">>> Conversational Output Audio saved to: {output_audio_path}")
+    print(">>> Conversational Output Text: ", text_output)
 
 
 def asr_stream():
@@ -201,9 +255,9 @@ def asr_stream():
         },
     ]
 
-    history = model.prompt_manager.get_prompt(messages_asr, output_type="text")
-    audio_input_ids, text_input_ids, is_continuous_mask = history.to_tensor()
-    audio_continuous_features = history.continuous_feature
+    prompt = model.prompt_manager.get_prompt(messages_asr, output_type="text")
+    audio_input_ids, text_input_ids, is_continuous_mask = prompt.to_tensor()
+    audio_continuous_features = prompt.continuous_feature
     print(
         "input_token_ids:",
         audio_input_ids.shape,
@@ -264,148 +318,154 @@ def conversation_stream():
     model = KimiAudio(model_path=model_path, load_detokenizer=True)
 
     output_type = "both"
-    messages_conversation = [
-        # Start conversation with an audio query
-        {
-            "role": "user",
-            "message_type": "audio",
-            "content": "/Kimi-Audio/test_audios/qa_example.wav",
-        }
-    ]
-    history = model.prompt_manager.get_prompt(messages_conversation, output_type=output_type)
-    audio_input_ids, text_input_ids, is_continuous_mask = history.to_tensor()
-    audio_continuous_features = history.continuous_feature
-    print(
-        "input_token_ids:",
-        audio_input_ids.shape,
-        text_input_ids.shape,
-        is_continuous_mask.shape,
-        len(audio_continuous_features),
-        audio_continuous_features[0].shape,
-    )
+    messages_conversation_cases = {
+        "kimia_conversation_T1toT2A2": [
+            {
+                "role": "user",
+                "message_type": "text",
+                "content": "你叫什么名字?",
+            }
+        ],
+        "kimia_conversation_A1toT2A2": [
+            {
+                "role": "user",
+                "message_type": "audio",
+                "content": "/Kimi-Audio/test_audios/qa_example.wav",
+            }
+        ],
+    }
+    for case_name, messages_conversation in messages_conversation_cases.items():
+        prompt = model.prompt_manager.get_prompt(messages_conversation, output_type=output_type)
+        audio_input_ids, text_input_ids, is_continuous_mask = prompt.to_tensor()
+        audio_continuous_features = prompt.continuous_feature
+        print(
+            "input_token_ids:",
+            audio_input_ids.shape,
+            text_input_ids.shape,
+            is_continuous_mask.shape,
+            len(audio_continuous_features),
+            audio_continuous_features[0].shape if len(audio_continuous_features) > 0 else None,
+        )
 
-    audio_input_ids = audio_input_ids.to(torch.cuda.current_device())
-    text_input_ids = text_input_ids.to(torch.cuda.current_device())
-    is_continuous_mask = is_continuous_mask.to(torch.cuda.current_device())
-    audio_continuous_features = [
-        f.to(torch.cuda.current_device()) for f in audio_continuous_features
-    ]
+        audio_input_ids = audio_input_ids.to(torch.cuda.current_device())
+        text_input_ids = text_input_ids.to(torch.cuda.current_device())
+        is_continuous_mask = is_continuous_mask.to(torch.cuda.current_device())
+        audio_continuous_features = [
+            f.to(torch.cuda.current_device()) for f in audio_continuous_features
+        ]
 
-    max_new_tokens = int(12.5 * 120) - audio_input_ids.shape[1]
-    print(f"max_new_tokens: {max_new_tokens}")
-    sampler = KimiASampler(
-        audio_top_k=10,
-        audio_temperature=0.8,
-        audio_repetition_penalty=1.0,
-        audio_repetition_window_size=64,
-        text_top_k=5,
-        text_temperature=0.0,
-        text_repetition_penalty=1.0,
-        text_repetition_window_size=16,
-    )
+        max_new_tokens = int(12.5 * 120) - audio_input_ids.shape[1]
+        print(f"max_new_tokens: {max_new_tokens}")
+        sampler = KimiASampler(
+            audio_top_k=10,
+            audio_temperature=0.8,
+            audio_repetition_penalty=1.0,
+            audio_repetition_window_size=64,
+            text_top_k=5,
+            text_temperature=0.0,
+            text_repetition_penalty=1.0,
+            text_repetition_window_size=16,
+        )
 
-    audio_text = ""
-    audio_vq_codes = []
-    gen_speechs = []
-    times = []
-    audio_chunk_times = []
-    start_time = time.perf_counter()
-    for text_token_id, audio_token_id in gen_token_stream(
-        model,
-        audio_input_ids,
-        sampler,
-        text_input_ids,
-        is_continuous_mask,
-        audio_continuous_features,
-        output_type=output_type,
-        max_new_tokens=max_new_tokens,
-    ):
-        times.append(time.perf_counter() - start_time)
-
-        text_token_id = text_token_id.item()
-        audio_token_id = audio_token_id.item()
-
-        if output_type == "text" and text_token_id == model.extra_tokens.kimia_text_eos:
-            break
-
-        if (
-            text_token_id != model.extra_tokens.kimia_text_eos
-            and text_token_id < model.kimia_token_offset
-            and text_token_id != model.extra_tokens.kimia_text_blank
+        audio_text = ""
+        audio_vq_codes = []
+        gen_speechs = []
+        times = []
+        audio_chunk_times = []
+        start_time = time.perf_counter()
+        for text_token_id, audio_token_id in gen_token_stream(
+            model,
+            audio_input_ids,
+            sampler,
+            text_input_ids,
+            is_continuous_mask,
+            audio_continuous_features,
+            output_type=output_type,
+            max_new_tokens=max_new_tokens,
         ):
-            # https://huggingface.co/moonshotai/Kimi-Audio-7B-Instruct/blob/main/tokenization_kimia.py
-            # no skip_special_tokens args :)
-            audio_text += model.prompt_manager.text_tokenizer.decode([text_token_id])
+            times.append(time.perf_counter() - start_time)
 
-        if output_type == "text":
-            continue
+            text_token_id = text_token_id.item()
+            audio_token_id = audio_token_id.item()
 
-        if audio_token_id < model.kimia_token_offset:
-            continue
-        if audio_token_id in model.eod_ids:
-            break
+            if output_type == "text" and text_token_id == model.extra_tokens.kimia_text_eos:
+                break
 
-        audio_vq_code = audio_token_id - model.kimia_token_offset
-        audio_vq_codes.append(audio_vq_code)
-        if len(audio_vq_codes) % 30 == 0:
-            print("internal", audio_vq_codes)
+            if (
+                text_token_id != model.extra_tokens.kimia_text_eos
+                and text_token_id < model.kimia_token_offset
+                and text_token_id != model.extra_tokens.kimia_text_blank
+            ):
+                # https://huggingface.co/moonshotai/Kimi-Audio-7B-Instruct/blob/main/tokenization_kimia.py
+                # no skip_special_tokens args :)
+                audio_text += model.prompt_manager.text_tokenizer.decode([text_token_id])
+
+            if output_type == "text":
+                continue
+
+            if audio_token_id < model.kimia_token_offset:
+                continue
+            if audio_token_id in model.eod_ids:
+                break
+
+            audio_vq_code = audio_token_id - model.kimia_token_offset
+            audio_vq_codes.append(audio_vq_code)
+            if len(audio_vq_codes) % 30 == 0:
+                print("internal_vq_codes", audio_vq_codes)
+                start_time = time.perf_counter()
+                gen_speech = model.detokenizer.detokenize_streaming(
+                    torch.tensor(audio_vq_codes)
+                    .unsqueeze(0)
+                    .long()
+                    .to(torch.cuda.current_device()),
+                    is_final=False,
+                    upsample_factor=4,
+                )
+                audio_chunk_times.append(time.perf_counter() - start_time)
+                audio_vq_codes = []
+                gen_speechs.append(gen_speech)
+
+                output_path = os.path.join(ASSETS_DIR, f"{case_name}_{len(gen_speechs)}.wav")
+                sf.write(
+                    output_path,
+                    gen_speech.detach().cpu().view(-1).numpy(),
+                    24000,
+                )
+
+            start_time = time.perf_counter()
+
+        if len(audio_vq_codes) > 0:
+            print("last_vq_codes", audio_vq_codes)
             start_time = time.perf_counter()
             gen_speech = model.detokenizer.detokenize_streaming(
                 torch.tensor(audio_vq_codes).unsqueeze(0).long().to(torch.cuda.current_device()),
-                is_final=False,
+                is_final=True,
                 upsample_factor=4,
             )
             audio_chunk_times.append(time.perf_counter() - start_time)
-            audio_vq_codes = []
             gen_speechs.append(gen_speech)
 
-            output_path = os.path.join(ASSETS_DIR, f"kimia_conversation_{len(gen_speechs)}.wav")
+            output_path = os.path.join(ASSETS_DIR, f"{case_name}_{len(gen_speechs)}.wav")
             sf.write(
                 output_path,
                 gen_speech.detach().cpu().view(-1).numpy(),
                 24000,
             )
 
-        start_time = time.perf_counter()
-
-    if len(audio_vq_codes) > 0:
-        print("last", audio_vq_codes)
-        start_time = time.perf_counter()
-        gen_speech = model.detokenizer.detokenize_streaming(
-            torch.tensor(audio_vq_codes).unsqueeze(0).long().to(torch.cuda.current_device()),
-            is_final=True,
-            upsample_factor=4,
+        print(
+            f"text TTFT: {times[0]} s | total: {sum(times)} s | len: {len(times)} | avg: {sum(times)/len(times)} s"
         )
-        audio_chunk_times.append(time.perf_counter() - start_time)
-        gen_speechs.append(gen_speech)
 
-        output_path = os.path.join(ASSETS_DIR, f"kimia_conversation_{len(gen_speechs)}.wav")
+        print(
+            f"audio TTFT(chunk): {audio_chunk_times[0]} s | total: {sum(audio_chunk_times)} s | len: {len(audio_chunk_times)} | avg: {sum(audio_chunk_times)/len(audio_chunk_times)} s"
+        )
+
+        output_audio_path = os.path.join(ASSETS_DIR, f"{case_name}.wav")
         sf.write(
-            output_path,
-            gen_speech.detach().cpu().view(-1).numpy(),
-            24000,
-        )
-
-    print(
-        f"text TTFT: {times[0]} s | total: {sum(times)} s | len: {len(times)} | avg: {sum(times)/len(times)} s"
-    )
-
-    print(
-        f"audio TTFT(chunk): {audio_chunk_times[0]} s | total: {sum(audio_chunk_times)} s | len: {len(audio_chunk_times)} | avg: {sum(audio_chunk_times)/len(audio_chunk_times)} s"
-    )
-    output_path = os.path.join(ASSETS_DIR, f"kimia_conversation_{len(gen_speechs)}.wav")
-    sf.write(
-        output_path,
-        gen_speech.detach().cpu().view(-1).numpy(),
-        24000,
-    )
-
-    output_audio_path = os.path.join(ASSETS_DIR, "kimia_conversation_stream.wav")
-    sf.write(
-        output_audio_path, torch.cat(gen_speechs, dim=-1).detach().cpu().view(-1).numpy(), 24000
-    )  # Assuming 24kHz output
-    print(f">>> Conversational Output Audio saved to: {output_audio_path}")
-    print(">>> Conversational Output Text: ", audio_text)
+            output_audio_path, torch.cat(gen_speechs, dim=-1).detach().cpu().view(-1).numpy(), 24000
+        )  # Assuming 24kHz output
+        print(f">>> Conversational Output Audio saved to: {output_audio_path}")
+        print(">>> Conversational Output Text: ", audio_text)
 
 
 def gen_token_stream(
@@ -441,7 +501,7 @@ def gen_token_stream(
         .unsqueeze(0)
         .long()
     )
-    decoder_input_whisper_feature = audio_continous_features
+    decoder_input_whisper_feature = audio_continous_features or None
     decoder_is_continuous_mask = is_continuous_mask
     past_key_values = None
 
@@ -527,6 +587,7 @@ def main(task: str = "tokenize"):
         "asr_stream": asr_stream,
         "conversation": conversation,
         "conversation_stream": conversation_stream,
+        "conversation_text_audio": conversation_text_audio,
     }
     if task not in tasks:
         raise ValueError(f"task {task} not found")
