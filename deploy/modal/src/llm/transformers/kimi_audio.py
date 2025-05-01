@@ -46,7 +46,6 @@ with kimi_audio_img.imports():
     from kimia_infer.utils.sampler import KimiASampler
 
     model_path = os.path.join(HF_MODEL_DIR, "moonshotai/Kimi-Audio-7B-Instruct")
-    model = KimiAudio(model_path=model_path, load_detokenizer=True)
 
 
 @app.function(
@@ -108,6 +107,7 @@ def tokenize():
 
 
 def asr():
+    model = KimiAudio(model_path=model_path, load_detokenizer=False)
     sampling_params = {
         "audio_temperature": 0.8,
         "audio_top_k": 10,
@@ -143,6 +143,8 @@ def asr():
 
 def conversation():
     import soundfile as sf
+
+    model = KimiAudio(model_path=model_path, load_detokenizer=True)
 
     sampling_params = {
         "audio_temperature": 0.8,
@@ -230,7 +232,8 @@ def asr_stream():
         text_repetition_window_size=16,
     )
 
-    for chunk in gen_chunk_stream(
+    for text_token_id, _ in gen_token_stream(
+        model,
         audio_input_ids,
         sampler,
         text_input_ids,
@@ -239,10 +242,19 @@ def asr_stream():
         output_type="text",
         max_new_tokens=max_new_tokens,
     ):
-        print(chunk)
+        # print(text_token_id)
+        if text_token_id.item() == model.extra_tokens.kimia_text_eos:
+            break
+        if text_token_id.item() == model.extra_tokens.kimia_text_blank:
+            print(" ", end="", flush=True)
+            continue
+        print(
+            model.prompt_manager.text_tokenizer.decode([text_token_id.item()]), end="", flush=True
+        )
 
 
-def gen_chunk_stream(
+def gen_token_stream(
+    model: "KimiAudio",
     audio_input_ids: torch.Tensor,  # input audio tokens
     sampler: "KimiASampler",
     text_input_ids: torch.Tensor = None,  # input text tokens if use multi-input
@@ -251,14 +263,18 @@ def gen_chunk_stream(
     output_type: str = "text",
     max_new_tokens: int = 50,
 ):
+    assert output_type in ["text", "audio", "both"], f"output_type: {output_type}"
+
+    is_output_audio = output_type == "both" or output_type == "audio"
+
     text_stream_is_finished = False
     previous_audio_tokens = torch.zeros(
-        (4096,),
+        (max_new_tokens,),
         dtype=torch.int,
         device=torch.cuda.current_device(),
     )
     text_previous_tokens = torch.zeros(
-        (4096,),
+        (max_new_tokens,),
         dtype=torch.int,
         device=torch.cuda.current_device(),
     )
@@ -276,18 +292,63 @@ def gen_chunk_stream(
 
     last_position_id = decoder_input_audio_ids.shape[1] - 1
 
-    valid_text_length = 0
-    valid_audio_length = 0
+    # one bye one generate, until eos or max_new_tokens
+    for i in range(max_new_tokens):
+        # https://huggingface.co/moonshotai/Kimi-Audio-7B-Instruct/blob/main/modeling_moonshot_kimia.py#L850
+        # https://huggingface.co/moonshotai/Kimi-Audio-7B-Instruct/blob/main/config.json
+        # use_cache=True
+        audio_logits, text_logits, past_key_values = model.alm.forward(
+            input_ids=decoder_input_audio_ids,
+            text_input_ids=decoder_input_text_ids,
+            whisper_input_feature=decoder_input_whisper_feature,
+            is_continuous_mask=decoder_is_continuous_mask,
+            position_ids=decoder_position_ids,
+            past_key_values=past_key_values,
+            return_dict=False,
+        )
 
-    audio_logits, text_logits, past_key_values = model.alm.forward(
-        input_ids=decoder_input_audio_ids,
-        text_input_ids=decoder_input_text_ids,
-        whisper_input_feature=decoder_input_whisper_feature,
-        is_continuous_mask=decoder_is_continuous_mask,
-        position_ids=decoder_position_ids,
-        past_key_values=past_key_values,
-        return_dict=False,
-    )
+        # Sample text token using the sampler
+        next_text_token_id = sampler.sample_text_logits(
+            text_logits, recent_tokens=text_previous_tokens[:i] if i > 0 else None
+        )
+        # Sample audio token using the sampler
+        next_audio_token_id = (
+            sampler.sample_audio_logits(
+                audio_logits, recent_tokens=previous_audio_tokens[:i] if i > 0 else None
+            )
+            if i >= model.kimia_text_audiodelaytokens and is_output_audio
+            else torch.Tensor([model.extra_tokens.kimia_text_blank])
+            .long()
+            .to(torch.cuda.current_device())
+        )
+
+        if text_stream_is_finished:
+            next_text_token_id.fill_(model.extra_tokens.kimia_text_blank)
+        elif next_text_token_id.item() == model.extra_tokens.kimia_text_eos:
+            text_stream_is_finished = True
+        audio_stream_is_finished = next_audio_token_id.item() in model.eod_ids
+
+        yield (next_text_token_id, next_audio_token_id)  # (1,) (1,)
+
+        if output_type == "text" and text_stream_is_finished:
+            break
+        if output_type == "both" and text_stream_is_finished and audio_stream_is_finished:
+            break
+
+        text_previous_tokens[i : i + 1] = next_text_token_id
+        previous_audio_tokens[i : i + 1] = next_audio_token_id
+
+        decoder_input_audio_ids = next_audio_token_id.unsqueeze(1)  # (1,1)
+        decoder_input_text_ids = next_text_token_id.unsqueeze(1)  # (1,1)
+        last_position_id += 1
+        decoder_position_ids = (
+            torch.zeros(1, 1, device=torch.cuda.current_device())
+            .fill_(last_position_id)
+            .long()
+            .view(1, 1)
+        )  # (1,1)
+        decoder_input_whisper_feature = None
+        decoder_is_continuous_mask = None
 
 
 def detokenize_audio_stream(self, vq_codes: torch.Tensor) -> torch.Tensor:
@@ -325,7 +386,9 @@ def detokenize_audio_stream(self, vq_codes: torch.Tensor) -> torch.Tensor:
 
 """
 IMAGE_GPU=L4 modal run src/llm/transformers/kimi_audio.py --task tokenize
+IMAGE_GPU=L40s modal run src/llm/transformers/kimi_audio.py --task asr
 
+IMAGE_GPU=L40s modal run src/llm/transformers/kimi_audio.py --task asr_stream
 """
 
 
@@ -335,6 +398,7 @@ def main(task: str = "tokenize"):
         "tokenize": tokenize,
         "asr": asr,
         "conversation": conversation,
+        "asr_stream": asr_stream,
     }
     if task not in tasks:
         raise ValueError(f"task {task} not found")
