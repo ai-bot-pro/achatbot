@@ -197,9 +197,9 @@ class TransformersManualVoiceKimiLLM(TransformersBaseLLM):
         output_type: str = "text",
         max_new_tokens: int = 128,
     ):
-        assert output_type in ["text", "audio", "both"], f"output_type: {output_type}"
+        assert output_type in ["text", "both"], f"output_type: {output_type}"
 
-        is_output_audio = output_type == "both" or output_type == "audio"
+        is_output_audio = output_type == "both" and self.args.is_load_detokenizer is True
 
         text_stream_is_finished = False
         previous_audio_tokens = torch.zeros(
@@ -264,9 +264,9 @@ class TransformersManualVoiceKimiLLM(TransformersBaseLLM):
 
             yield (next_text_token_id, next_audio_token_id)  # (1,) (1,)
 
-            if output_type == "text" and text_stream_is_finished:
+            if is_output_audio is False and text_stream_is_finished:
                 break
-            if output_type == "both" and text_stream_is_finished and audio_stream_is_finished:
+            if is_output_audio is True and text_stream_is_finished and audio_stream_is_finished:
                 break
 
             text_previous_tokens[i : i + 1] = next_text_token_id
@@ -402,10 +402,10 @@ class TransformersManualVoiceKimiLLM(TransformersBaseLLM):
         logging.info(
             f"text [{audio_text}] TTFT: {times[0]} s | total: {sum(times)} s | len: {len(times)} | avg: {sum(times)/len(times)} s"
         )
-
-        logging.info(
-            f"audio TTFT(chunk): {audio_chunk_times[0]} s | total: {sum(audio_chunk_times)} s | len: {len(audio_chunk_times)} | avg: {sum(audio_chunk_times)/len(audio_chunk_times)} s"
-        )
+        if len(audio_chunk_times) > 0:
+            logging.info(
+                f"audio TTFT(chunk): {audio_chunk_times[0]} s | total: {sum(audio_chunk_times)} s | len: {len(audio_chunk_times)} | avg: {sum(audio_chunk_times)/len(audio_chunk_times)} s"
+            )
 
 
 class TransformersManualAudioKimiLLM(TransformersManualVoiceKimiLLM):
