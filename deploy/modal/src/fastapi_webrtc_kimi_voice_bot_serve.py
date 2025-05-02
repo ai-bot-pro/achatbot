@@ -1,7 +1,7 @@
 import modal
 import os
 
-achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.9.post11")
+achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.10")
 kimi_voice_img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
     modal.Image.from_registry(
@@ -40,12 +40,12 @@ kimi_voice_img = (
             "MEL_FILTERS_PATH": "/Kimi-Audio/kimia_infer/models/tokenizer/whisper_Lv3/mel_filters.npz",
         }
     )
-    .pip_install(
-        [
-            "achatbot==0.0.9.dev58",
-        ],
-        extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
-    ).pip_install("torchdyn")
+    # .pip_install(
+    #    [
+    #        "achatbot==0.0.10",
+    #    ],
+    #    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+    # )
 )
 
 

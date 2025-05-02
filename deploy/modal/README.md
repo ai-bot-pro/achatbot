@@ -784,6 +784,66 @@ curl --location 'https://weedge-achatbot--fastapi-webrtc-step-voice-bot-srv-app-
     "config_list": []
 }'
 ```
+### webrtc_kimi_voice_bot
+- run webrtc_kimi_voice_bot serve with task queue(redis)
+```shell
+ACHATBOT_VERSION=0.0.10 IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L40s modal serve -e achatbot src/fastapi_webrtc_kimi_voice_bot_serve.py
+```
+- curl api to run chat room bot with webrtc (daily/livekit/agora)
+```shell
+curl --location 'https://weedge-achatbot--fastapi-webrtc-kimi-voice-bot-srv-app-dev.modal.run/bot_join/chat-room/LivekitKimiVoiceBot' \
+--header 'Content-Type: application/json' \
+--data '{
+    "chat_bot_name": "LivekitKimiVoiceBot",
+    "room_name": "chat-room",
+    "room_url": "",
+    "token": "",
+    "room_manager": {
+        "tag": "livekit_room",
+        "args": {
+            "bot_name": "LivekitKimiVoiceBot",
+            "is_common_session": false
+        }
+    },
+    "services": {
+        "pipeline": "achatbot",
+        "vad": "silero",
+        "voice_llm": "llm_transformers_manual_kimi_voice"
+    },
+    "config": {
+        "vad": {
+            "tag": "silero_vad_analyzer",
+            "args": {
+                "stop_secs": 0.7
+            }
+        },
+        "voice_llm": {
+            "tag": "llm_transformers_manual_kimi_voice",
+            "args": {
+                "no_stream_sleep_time": 0.5,
+                "lm_device": "cuda",
+                "lm_torch_dtype": "bfloat16",
+                "lm_attn_impl": "flash_attention_2",
+                "warmup_steps": 1,
+                "chat_history_size": 0,
+                "code2wav_args": {
+                    "max_prompt_chunk": 10,
+                    "look_ahead_tokens": 12,
+                    "max_kv_cache_tokens": 900,
+                    "use_cfg": false,
+                    "use_cfg_rescale": true,
+                    "cfg_init": 1.5,
+                    "cfg_scale": 7.5,
+                    "cfg_schedule": "linear",
+                    "device": "cuda"
+                },
+                "lm_model_name_or_path": "/root/.achatbot/models/moonshotai/Kimi-Audio-7B-Instruct"
+            }
+        }
+    },
+    "config_list": []
+}'
+```
 
 ## modal deploy (online)
 - deploy webrtc_audio_bot serve
