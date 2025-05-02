@@ -20,12 +20,14 @@ kimi_audio_img = (
     .pip_install("flash-attn", extra_options="--no-build-isolation")
     .run_commands(
         "cd /Kimi-Audio && git pull origin feat/achatbot",
-        "cd /Kimi-Audio && git checkout 13d1857949c864a872747e1139e18c2d7f6665da",
+        "cd /Kimi-Audio && git checkout e6ef56fd7466feae8d4ea4341631e23dc5e63853",
     )
     .env(
         {
             "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
             "TQDM_DISABLE": "1",
+            "ALIAS_FREE_ACTIVATION_CUDA_SRC_PATH": "/Kimi-Audio/kimia_infer/models/detokenizer/vocoder/alias_free_activation/cuda",
+            "MEL_FILTERS_PATH": "/Kimi-Audio/kimia_infer/models/tokenizer/whisper_Lv3/mel_filters.npz",
         }
     )
 )
@@ -588,6 +590,7 @@ IMAGE_GPU=L40s modal run src/llm/transformers/kimi_audio.py --task asr_stream
 
 IMAGE_GPU=L40s modal run src/llm/transformers/kimi_audio.py --task conversation
 IMAGE_GPU=L40s modal run src/llm/transformers/kimi_audio.py --task conversation_stream
+IMAGE_GPU=L40s modal run src/llm/transformers/kimi_audio.py --task conversation_text_audio
 """
 
 

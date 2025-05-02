@@ -351,6 +351,43 @@ class LLMEnvInit:
 
         return kwargs
 
+    @staticmethod
+    def get_kimi_audio_transformers_args() -> dict:
+        from src.types.omni.kimi_voice import (
+            KimiAudioTransformersVoiceLMArgs,
+            KimiAudioDeTokenizerArgs,
+        )
+
+        kwargs = KimiAudioTransformersVoiceLMArgs(
+            lm_model_name_or_path=os.getenv(
+                "LLM_MODEL_NAME_OR_PATH",
+                os.path.join(MODELS_DIR, "moonshotai/Kimi-Audio-7B-Instruct"),
+            ),
+            lm_attn_impl=os.getenv("LLM_ATTN_IMPL", None),
+            lm_device=os.getenv("LLM_DEVICE", None),
+            lm_device_map=os.getenv("LLM_DEVICE_MAP", None),
+            lm_torch_dtype=os.getenv("LLM_TORCH_DTYPE", "auto"),
+            lm_stream=bool(os.getenv("LLM_STREAM", "1")),
+            init_chat_prompt=os.getenv("LLM_INIT_CHAT_PROMPT", ""),
+            chat_history_size=int(os.getenv("LLM_CHAT_HISTORY_SIZE", "10")),  # cache 10 round
+            model_type=os.getenv("LLM_MODEL_TYPE", "chat_completion"),
+            warmup_steps=int(os.getenv("LLM_WARMUP_STEPS", "1")),
+            **LLMEnvInit._get_llm_generate_args(),
+            is_load_detokenizer=bool(os.getenv("IS_LOAD_DETOKENIZER", "1")),
+            code2wav_args=KimiAudioDeTokenizerArgs(
+                device=os.getenv("LLM_DEVICE", None),
+                look_ahead_tokens=int(os.getenv("LOOK_AHEAD_TOKENS", "12")),
+                max_prompt_chunk=int(os.getenv("MAX_PROMPT_CHUNK", "10")),
+                max_kv_cache_tokens=int(os.getenv("MAX_KV_CACHE_TOKENS", "900")),
+                use_cfg=bool(os.getenv("USE_CFG", "0")),
+                use_cfg_rescale=bool(os.getenv("USE_CFG_RESCALE", "1")),
+                cfg_init=float(os.getenv("CFG_INIT", "1.5")),
+                cfg_scale=float(os.getenv("CFG_SCALE", "7.5")),
+                cfg_schedule=os.getenv("CFG_SCHEDULE", "linear"),
+            ).__dict__,
+        ).__dict__
+        return kwargs
+
     # TAG : config
     map_config_func = {
         "llm_llamacpp": get_llm_llamacpp_args,

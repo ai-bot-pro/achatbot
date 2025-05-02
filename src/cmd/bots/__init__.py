@@ -179,6 +179,14 @@ def import_bots(bot_name: str = "DummyBot"):
         from .omni import livekit_qwen2_5omni_vision_voice_bot
 
         return True
+    if "LivekitAsrKimiVoiceBot" in bot_name:
+        from .voice import livekit_asr_kimi_voice_bot
+
+        return True
+    if "LivekitKimiVoiceBot" in bot_name:
+        from .voice import  livekit_kimi_voice_bot
+
+        return True
     # if "LivekitMoshiVoiceBot" in bot_name:
     #    from .voice import livekit_moshi_bot
 

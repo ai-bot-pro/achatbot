@@ -11,6 +11,11 @@ import torch
 try:
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
+    cur_dir = os.path.dirname(__file__)
+    if bool(os.getenv("ACHATBOT_PKG", "")):
+        sys.path.insert(1, os.path.join(cur_dir, "../../../KimiAudio"))
+    else:
+        sys.path.insert(1, os.path.join(cur_dir, "../../../../deps/KimiAudio"))
     from deps.KimiAudio.kimia_infer.models.detokenizer import PrefixStreamingFlowMatchingDetokenizer
     from deps.KimiAudio.kimia_infer.utils.special_tokens import instantiate_extra_tokens
     from deps.KimiAudio.kimia_infer.utils.sampler import KimiASampler
@@ -66,7 +71,7 @@ class TransformersManualVoiceKimiLLM(TransformersBaseLLM):
             )
 
         model_config = self._model.config
-        logging.info(f"model config: {model_config}")
+        logging.debug(f"model config: {model_config}")
         self.kimia_token_offset = model_config.kimia_token_offset
 
         # 2. load Audio-Tokenizer: align text/audio tokenizer with delay tokens
@@ -104,7 +109,7 @@ class TransformersManualVoiceKimiLLM(TransformersBaseLLM):
                 device=self.code2wav_args.device,
                 look_ahead_tokens=self.code2wav_args.look_ahead_tokens,
                 max_prompt_chunk=self.code2wav_args.max_prompt_chunk,
-                max_kv_cache_tokens=self.args.max_kv_cache_tokens,
+                max_kv_cache_tokens=self.code2wav_args.max_kv_cache_tokens,
                 use_cfg=self.code2wav_args.use_cfg,
                 use_cfg_rescale=self.code2wav_args.use_cfg_rescale,
                 cfg_init=self.code2wav_args.cfg_init,
@@ -129,7 +134,7 @@ class TransformersManualVoiceKimiLLM(TransformersBaseLLM):
         text_token_ids.append(self.extra_tokens.kimia_text_blank)  # assistant
         audio_token_ids = (
             [self.extra_tokens.user_msg_start]  # user
-            + [self.extra_tokens.kimia_audio_blank] * len(token_ids)
+            + [self.extra_tokens.kimia_text_blank] * len(token_ids)
             + [self.extra_tokens.msg_end]  # end
             + [self.extra_tokens.assistant_msg_start]  # assistant
         )
