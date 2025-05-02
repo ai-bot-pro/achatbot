@@ -78,44 +78,56 @@ def tokenize():
     )
     print("extra_tokens", prompt_manager.extra_tokens)
 
-    messages_text = [
-        # You can provide context or instructions as text
-        {
-            "role": "user",
-            "message_type": "text",
-            "content": "你叫什么名字？",
-        },
-    ]
-    text_prompt = prompt_manager.get_prompt(messages_text, output_type="text")
-    print("text_prompt", text_prompt)
+    # https://huggingface.co/moonshotai/Kimi-Audio-7B-Instruct/blob/main/tokenization_kimia.py#L141
+    token_ids = prompt_manager.text_tokenizer.encode("你叫什么名字？", bos=True, eos=True)
+    print("text_token_ids:", token_ids)
 
-    messages_asr = [
-        # You can provide context or instructions as text
-        {
-            "role": "user",
-            "message_type": "text",
-            "content": "Please transcribe the following audio:",
-        },
-        # Provide the audio file path
-        {
-            "role": "user",
-            "message_type": "audio",
-            "content": "/Kimi-Audio/test_audios/asr_example.wav",
-        },
-    ]
-    asr_prompt = prompt_manager.get_prompt(messages_asr, output_type="text")
-    print("asr_prompt", asr_prompt)
+    messages_cases = {
+        "text": [
+            {
+                "role": "user",
+                "message_type": "text",
+                "content": "你叫什么名字？",
+            },
+        ],
+        "audio": [
+            {
+                "role": "user",
+                "message_type": "audio",
+                "content": "/Kimi-Audio/test_audios/qa_example.wav",
+            }
+        ],
+        "text_audio": [
+            {
+                "role": "user",
+                "message_type": "text",
+                "content": "Please transcribe the following audio:",
+            },
+            # Provide the audio file path
+            {
+                "role": "user",
+                "message_type": "audio",
+                "content": "/Kimi-Audio/test_audios/asr_example.wav",
+            },
+        ],
+    }
+    for case_name, messages in messages_cases.items():
+        print(10 * "---" + case_name + 10 * "---")
+        prompt = prompt_manager.get_prompt(messages, output_type="both")
+        print(prompt)
 
-    messages_conversation = [
-        # Start conversation with an audio query
-        {
-            "role": "user",
-            "message_type": "audio",
-            "content": "/Kimi-Audio/test_audios/qa_example.wav",
-        }
-    ]
-    conversation_prompt = prompt_manager.get_prompt(messages_conversation, output_type="both")
-    print("conversation_prompt", conversation_prompt)
+        text_token = prompt_manager.text_tokenizer.decode(prompt.text_token_ids)
+        print(f"text_token: {text_token}")
+
+        # NOTE: audio token id > kimia_token_offset not supported in text tokenizer map dict
+        # need use add_special_tokens to add special tokens
+        audio_token = ""
+        for tid in prompt.audio_token_ids:
+            if tid < prompt_manager.kimia_token_offset:
+                audio_token += prompt_manager.text_tokenizer.decode([tid])
+            else:
+                audio_token += f"<|audio_token_{tid}|>"
+        print(f"audio_token: {audio_token}")
 
 
 def asr():
