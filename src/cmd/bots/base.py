@@ -54,7 +54,7 @@ class AIBot(IBot):
     !TIPS: RTVI config options can transfer to ai bot config
 
     !NOTE:
-    use multiprocessing pipe to run bot with unix socket, bot __init__ to new a bot obj must be serializable (pickle); or wraper a func, don't use bot obj methed.
+    use multiprocessing pipe to run bot with unix socket, bot __init__ to new a bot obj must be serializable (pickle); or wraper a func, don't use bot obj method.
     """
 
     def __init__(self, **args) -> None:
@@ -348,6 +348,17 @@ class AIBot(IBot):
             llm_processor = Qwen2_5OmniTextVoiceProcessor()
         return llm_processor
 
+    def get_text_kimi_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
+        from src.processors.voice.kimi_voice_processor import KimiTextVoiceProcessor
+
+        if not llm:
+            llm = self._bot_config.voice_llm
+        if llm.args:
+            llm_processor = KimiTextVoiceProcessor(**llm.args)
+        else:
+            llm_processor = KimiTextVoiceProcessor()
+        return llm_processor
+
     def get_audio_minicpmo_voice_processor(
         self, llm: LLMConfig | None = None
     ) -> VoiceProcessorBase:
@@ -372,6 +383,17 @@ class AIBot(IBot):
             llm_processor = Qwen2_5OmniAudioVoiceProcessor(**llm.args)
         else:
             llm_processor = Qwen2_5OmniAudioVoiceProcessor()
+        return llm_processor
+
+    def get_audio_kimi_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
+        from src.processors.voice.kimi_voice_processor import KimiAudioVoiceProcessor
+
+        if not llm:
+            llm = self._bot_config.voice_llm
+        if llm.args:
+            llm_processor = KimiAudioVoiceProcessor(**llm.args)
+        else:
+            llm_processor = KimiAudioVoiceProcessor()
         return llm_processor
 
     def get_minicpmo_vision_voice_processor(

@@ -43,7 +43,7 @@ class RepetitionAwareLogitsProcessor(LogitsProcessor):
 
 class TransformersManualSpeechStep(TransformersBaseLLM):
     """
-    system prompt + (one short: text->speech(audio vq code) prompt) + tts prompt -> tokenizer encode -> token ids -> StepForCausalLM -> audio vq tokens
+    system prompt + (one shot: text->speech(audio vq code) prompt) + tts prompt -> tokenizer encode -> token ids -> StepForCausalLM -> audio vq tokens
     with TransformersLMArgs
     """
 
@@ -167,12 +167,12 @@ class TransformersManualSpeechStep(TransformersBaseLLM):
     @torch.inference_mode()
     def generate(self, session: Session, **kwargs):
         """
-        system prompt + (one short: text->speech(audio code) prompt) + tts prompt -> tokenizer encode -> token ids -> step lm -> audio vq tokens
+        system prompt + (one shot: text->speech(audio code) prompt) + tts prompt -> tokenizer encode -> token ids -> step lm -> audio vq tokens
         """
         prompt = session.ctx.state.get("prompt", "")
         token_ids = self._tokenizer.encode(prompt)
         logging.debug(f"prompt:{prompt}")
-        logging.debug(f"token_ids:{token_ids}")
+        logging.debug(f"tfeat/voiceoken_ids:{token_ids}")
         logging.debug(f"args:{self.args}")
         logging.debug(f"kwargs:{kwargs}")
         logging.debug(f"end_token_id:{self.end_token_id}")

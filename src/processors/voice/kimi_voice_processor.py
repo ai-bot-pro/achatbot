@@ -10,22 +10,21 @@ import librosa
 import numpy as np
 from apipeline.frames import *
 
-from src.core.llm.transformers.manual_vision_voice_qwen import (
-    TransformersManualQwen2_5OmniLLM,
-    TransformersManualVoiceQwen2_5OmniLLM,
-    TransformersManualTextVoiceQwen2_5OmniLLM,
+from src.core.llm.transformers.manual_voice_kimi import (
+    TransformersManualTextVoiceKimiLLM,
+    TransformersManualVoiceKimiLLM,
 )
 
 from src.processors.voice.base import VoiceProcessorBase
 from src.common.session import Session
 from src.common.types import SessionCtx
 from src.common.utils.audio_utils import (
-    bytes2NpArrayWith16,
+    bytes2TorchTensorWith16,
 )
 from src.types.frames import PathAudioRawFrame
 
 
-class Qwen2_5OmniVoiceProcessor(VoiceProcessorBase):
+class KimiVoiceProcessor(VoiceProcessorBase):
     def __init__(
         self,
         *,
@@ -35,7 +34,7 @@ class Qwen2_5OmniVoiceProcessor(VoiceProcessorBase):
     ):
         super().__init__(**kwargs)
         self._session = session or Session(**SessionCtx(uuid.uuid4()).__dict__)
-        self._model: TransformersManualQwen2_5OmniLLM = None
+        self._model: TransformersManualVoiceKimiLLM = None
         self._queue = queue.Queue()
         self._input_queue = queue.Queue()
         self._generate_thread = None
@@ -45,7 +44,7 @@ class Qwen2_5OmniVoiceProcessor(VoiceProcessorBase):
     def stream_info(self) -> dict:
         """Return dict out stream info"""
         return {
-            "sample_rate": TransformersManualQwen2_5OmniLLM.RATE,
+            "sample_rate": TransformersManualVoiceKimiLLM.RATE,
             "channels": 1,
         }
 
@@ -123,9 +122,8 @@ class Qwen2_5OmniVoiceProcessor(VoiceProcessorBase):
         self._input_queue.put(session)
 
 
-class Qwen2_5OmniAudioVoiceProcessor(Qwen2_5OmniVoiceProcessor):
+class KimiAudioVoiceProcessor(KimiVoiceProcessor):
     """
-    qwen2.5omni voice
     - A1->T2A2
     """
 
@@ -138,21 +136,23 @@ class Qwen2_5OmniAudioVoiceProcessor(Qwen2_5OmniVoiceProcessor):
     ):
         super().__init__(session=session, no_stream_sleep_time=no_stream_sleep_time, **kwargs)
 
-        self._model = TransformersManualVoiceQwen2_5OmniLLM(**kwargs)
+        self._model = TransformersManualVoiceKimiLLM(**kwargs)
 
     async def run_voice(self, frame: AudioRawFrame) -> AsyncGenerator[Frame, None]:
         if isinstance(frame, PathAudioRawFrame):
-            audio_nparr, _ = librosa.load(frame.path, sr=16000, mono=True)
+            in_audio_wav = frame.path
         else:
-            audio_nparr = bytes2NpArrayWith16(frame.audio)
+            in_audio_wav = bytes2TorchTensorWith16(frame.audio)
 
-        self._session.ctx.state["prompt"] = [{"type": "audio", "audio": audio_nparr}]
+        self._session.ctx.state["prompt"] = [
+            {"role": "user", "message_type": "audio", "content": in_audio_wav}
+        ]
         self.send_input(self._session)
         async for item in self.gen():
             yield item
 
 
-class Qwen2_5OmniTextVoiceProcessor(Qwen2_5OmniVoiceProcessor):
+class KimiTextVoiceProcessor(KimiVoiceProcessor):
     """
     - T1->T2A2
     """
@@ -166,11 +166,17 @@ class Qwen2_5OmniTextVoiceProcessor(Qwen2_5OmniVoiceProcessor):
     ):
         super().__init__(session=session, no_stream_sleep_time=no_stream_sleep_time, **kwargs)
 
-        self._model = TransformersManualTextVoiceQwen2_5OmniLLM(**kwargs)
+        self._model = TransformersManualTextVoiceKimiLLM(**kwargs)
 
     async def run_text(self, frame: TextFrame) -> AsyncGenerator[Frame, None]:
         user_input = frame.text.strip()
-        self._session.ctx.state["prompt"] = [{"type": "text", "text": user_input}]
+        self._session.ctx.state["prompt"] = [
+            {
+                "role": "user",
+                "message_type": "text",
+                "content": user_input,
+            }
+        ]
         self.send_input(self._session)
         async for item in self.gen():
             yield item

@@ -12,26 +12,22 @@ from src.common.interface import IAsr
 from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR
 from src.modules.speech.asr import ASREnvInit
 
-# https://github.com/QwenLM/Qwen2.5-Omni/issues/79
 r"""
-LLM_MODEL_NAME_OR_PATH=./models/Qwen/Qwen2.5-Omni-7B \
-    THINKER_LLM_GEN_TEMPERATURE=0.9 \
+LLM_MODEL_NAME_OR_PATH=./models/moonshotai/Kimi-Audio-7B-Instruct \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
-    python -m unittest test.modules.speech.asr.test_qwen2_5omni_asr.TestQwen2_5OmniASR.test_transcribe_stream
+    python -m unittest test.modules.speech.asr.test_kimi_asr.TestKimiASR.test_transcribe_stream
 
-LLM_MODEL_NAME_OR_PATH=./models/Qwen/Qwen2.5-Omni-7B \
-    THINKER_LLM_GEN_TEMPERATURE=0.9 \
+LLM_MODEL_NAME_OR_PATH=./models/moonshotai/Kimi-Audio-7B-Instruct \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
-    python -m unittest test.modules.speech.asr.test_qwen2_5omni_asr.TestQwen2_5OmniASR.test_transcribe
+    python -m unittest test.modules.speech.asr.test_kimi_asr.TestKimiASR.test_transcribe
 
-LLM_MODEL_NAME_OR_PATH=./models/Qwen/Qwen2.5-Omni-7B \
-    THINKER_LLM_GEN_TEMPERATURE=0.9 \
+LLM_MODEL_NAME_OR_PATH=./models/moonshotai/Kimi-Audio-7B-Instruct \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
-    python -m unittest test.modules.speech.asr.test_qwen2_5omni_asr.TestQwen2_5OmniASR.test_transcribe_with_bytes
+    python -m unittest test.modules.speech.asr.test_kimi_asr.TestKimiASR.test_transcribe_with_bytes
 """
 
 
-class TestQwen2_5OmniASR(unittest.TestCase):
+class TestKimiASR(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # wget
@@ -39,7 +35,7 @@ class TestQwen2_5OmniASR(unittest.TestCase):
         # -O records/asr_example_zh.wav
         audio_file = os.path.join(TEST_DIR, "audio_files/asr_example_zh.wav")
         # Use an environment variable to get the ASR model TAG
-        cls.asr_tag = os.getenv("ASR_TAG", "qwen2_5omni_asr")
+        cls.asr_tag = os.getenv("ASR_TAG", "kimi_asr")
         cls.audio_file = os.getenv("AUDIO_FILE", audio_file)
 
         Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)

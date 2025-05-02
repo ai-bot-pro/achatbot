@@ -532,6 +532,7 @@ class TransformersManualAudioQwen2_5OmniLLM(TransformersManualQwen2_5OmniLLM):
     - speech -> text
     """
 
+    # https://github.com/QwenLM/Qwen2.5-Omni/issues/79
     TAG = [
         "llm_transformers_manual_qwen2_5omni_audio_asr",
         "llm_transformers_manual_qwen2_5omni_audio_translation",
