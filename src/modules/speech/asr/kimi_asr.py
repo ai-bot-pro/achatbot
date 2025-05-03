@@ -43,10 +43,8 @@ class KimiAsr(ASRBase):
         ]
         session.ctx.state["prompt"] = session.ctx.state.get("prompt", prompt)
         transcription = self.model.generate(session)
-        for item in transcription:
-            if "text" in item:
-                # clean_text = re.sub(r"<\|.*?\|>", "", item["text"])
-                yield item["text"]
+        for text in transcription:
+            yield text
 
     async def transcribe(self, session: Session) -> dict:
         res = ""

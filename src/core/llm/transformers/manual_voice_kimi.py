@@ -294,6 +294,12 @@ class TransformersManualVoiceKimiLLM(TransformersBaseLLM):
             "message_type": "text" | "audio",
             "content": str | torch.Tensor
         }
+
+        - return Generator[dict, None, None]:
+        {
+            "text": str,
+            "audio_wav": torch.Tensor,# (T,)
+        }
         """
         output_type = session.ctx.state.get("output_type", "both")
         assert output_type in ["text", "both"], f"output_type: {output_type}"

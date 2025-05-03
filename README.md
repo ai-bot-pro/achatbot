@@ -97,6 +97,8 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
       - [x] llm_transformers_manual_speech_step
       - [x] llm_transformers_manual_voice_glm
       - [x] llm_transformers_manual_vision_voice_minicpmo, llm_transformers_manual_voice_minicpmo,llm_transformers_manual_audio_minicpmo,llm_transformers_manual_text_speech_minicpmo,llm_transformers_manual_instruct_speech_minicpmo,llm_transformers_manual_vision_minicpmo
+      - [x] llm_transformers_manual_qwen2_5omni, llm_transformers_manual_qwen2_5omni_audio_asr,llm_transformers_manual_qwen2_5omni_vision,llm_transformers_manual_qwen2_5omni_speech,llm_transformers_manual_qwen2_5omni_vision_voice,llm_transformers_manual_qwen2_5omni_text_voice,llm_transformers_manual_qwen2_5omni_audio_voice
+      - [x] llm_transformers_manual_kimi_voice,llm_transformers_manual_kimi_audio_asr,llm_transformers_manual_kimi_text_voice
   - remote api llm: personal-ai(like openai api, other ai provider)
   
 - AI modules:
@@ -109,6 +111,8 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
       - [x] whisper_groq_asr
       - [x] sense_voice_asr
       - [x] minicpmo_asr (whisper)
+      - [x] qwen2_5omni_asr (whisper)
+      - [x] kimi_asr (whisper)
     - [x] audio_stream: daily_room_audio_stream(in/out), pyaudio_stream(in/out)
     - [x] detector: porcupine_wakeword,pyannote_vad,webrtc_vad,silero_vad,webrtc_silero_vad,fsmn_vad
     - [x] player: stream_player
@@ -127,6 +131,9 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
       - [x] tts_minicpmo
       - [x] tts_zonos
       - [x] tts_step
+      - [x] tts_spark
+      - [x] tts_orpheus
+      - [x] tts_mega3
     - [x] vad_analyzer: 
       - [x] daily_webrtc_vad_analyzer
       - [x] silero_vad_analyzer
@@ -146,6 +153,7 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
   - Cloudflare(frontend ui pages), personal ai workers 
   - [fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/cerebrium/fastapi-daily-chat-bot) on cerebrium (provider aws)
   - [fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/leptonai/fastapi-daily-chat-bot) on leptonai
+  - [fastapi-daily-chat-bot](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/modal) on modal
   - aws lambda + api Gateway
   - docker -> k8s/k3s
   - etc...
@@ -235,7 +243,9 @@ pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
 | [fastapi_websocket_moshi_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/voice/fastapi_websocket_moshi_bot.py) | e.g.:<br /> websocket_server<br />moshi opus stream voice llm<br /> | <a href="https://github.com/weedge/doraemon-nb/blob/main/achatbot_moshi_bot.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | L4/A100                                                      | websocket protocol  in stream<br />-> silero (vad)<br />-> moshi opus stream voice llm<br />-> websocket protocol out stream |
 | [daily_asr_glm_voice_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/voice/daily_asr_glm_voice_bot.py)<br>[daily_glm_voice_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/voice/daily_glm_voice_bot.py)<br /> | e.g.:<br /> daily_room_audio_stream<br />glm voice llm<br /> | <a href="https://github.com/weedge/doraemon-nb/blob/main/achatbot_glm_voice_bot.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | T4/L4/A100                                                   | e.g.:<br />daily room in stream<br />->glm4-voice<br />-> daily  room out stream |
 | [daily_freeze_omni_voice_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/voice/daily_freeze_omni_voice_bot.py) | e.g.:<br /> daily_room_audio_stream<br />freezeOmni voice llm<br /> | <a href="https://github.com/weedge/doraemon-nb/blob/main/achatbot_freeze_omni_voice_bot.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | L4/A100                                                      | e.g.:<br />daily room in stream<br />->freezeOmni-voice<br />-> daily  room out stream |
-| [daily_asr_minicpmo_voice_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/voice/daily_asr_minicpmo_voice_bot.py)<br/>[daily_minicpmo_voice_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/voice/daily_minicpmo_voice_bot.py)<br />[daily_minicpmo_vision_voice_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/omni/daily_minicpmo_vision_voice_bot.py)<br /> | e.g.:<br /> daily_room_audio_stream<br />minicpmo voice llm<br /> | <a href="https://github.com/weedge/doraemon-nb/blob/main/achat_miniCPMo.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | T4: MiniCPM-o-2_6-int4<br />L4/A100: MiniCPM-o-2_6<br />     | e.g.:<br />daily room in stream<br />->minicpmo<br />-> daily  room out stream |
+| [daily_asr_minicpmo_voice_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/voice/daily_asr_minicpmo_voice_bot.py)<br/>[daily_minicpmo_voice_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/voice/daily_minicpmo_voice_bot.py)<br />[daily_minicpmo_vision_voice_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/omni/daily_minicpmo_vision_voice_bot.py)<br /> | e.g.:<br /> daily_room_audio_stream<br />minicpmo llm<br />  | <a href="https://github.com/weedge/doraemon-nb/blob/main/achat_miniCPMo.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | T4: MiniCPM-o-2_6-int4<br />L4/A100: MiniCPM-o-2_6<br />     | e.g.:<br />daily room in stream<br />->minicpmo<br />-> daily  room out stream |
+| [livekit_asr_qwen2_5omni_voice_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/voice/livekit_asr_qwen2_5omni_voice_bot.py)<br/>[livekit_qwen2_5omni_voice_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/voice/livekit_qwen2_5omni_voice_bot.py)<br />[livekit_qwen2_5omni_vision_voice_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/omni/livekit_qwen2_5omni_vision_voice_bot.py)<br /> | e.g.:<br /> livekit_room_audio_stream<br />qwen2.5omni llm<br /> | <a href="https://github.com/weedge/doraemon-nb/blob/main/achatbot_Qwen2_5_Omni.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | A100                                                         | e.g.:<br />livekit room in stream<br />->qwen2.5omni<br />-> livekit  room out stream |
+| [livekit_asr_kimi_voice_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/voice/livekit_asr_kimi_voice_bot.py)<br/>[livekit_kimi_voice_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/voice/livekit_kimi_voice_bot.py)<br /> | e.g.:<br /> livekit_room_audio_stream<br />kimi audio llm<br /> | <a href="https://github.com/weedge/doraemon-nb/blob/main/achatbot_kimi_audio.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | A100                                                         | e.g.:<br />livekit room in stream<br />-> Kimi-Audio<br />-> livekit  room out stream |
 |                                                              |                                                              |                                                              |                                                              |                                                              |
 
 
