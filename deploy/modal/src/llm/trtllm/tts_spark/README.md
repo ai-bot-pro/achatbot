@@ -317,7 +317,7 @@ CLI_MODE=cli_sdk_http modal run src/llm/trtllm/tts_spark/bench.py \
 ```
 
 todo:
-- other GPU cumput arch (Ampere+) bench (benchmark performance on different GPU architectures)
+- other GPU comput arch (Ampere+) bench (benchmark performance on different GPU architectures)
 - change params to do [Perf Analyzer](https://github.com/triton-inference-server/perf_analyzer/blob/main/README.md) (adjust parameters for optimal performance analysis)
 
 ## reference
