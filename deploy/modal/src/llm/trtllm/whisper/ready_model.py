@@ -1,0 +1,139 @@
+import os
+import modal
+
+app_name = "whisper"
+app = modal.App(f"{app_name}-tritonserver")
+
+# Define the dependencies for the function using a Modal Image.
+image = modal.Image.debian_slim(python_version="3.10").apt_install("git", "wget")
+image = image.env({})
+
+TRT_MODEL_DIR = "/root/trt_models"
+trt_model_vol = modal.Volume.from_name("triton_trtllm_models", create_if_missing=True)
+TRITONSERVER_DIR = "/root/tritonserver"
+tritonserver_vol = modal.Volume.from_name("tritonserver", create_if_missing=True)
+ASSETS_DIR = "/root/assets"
+assets_dir = modal.Volume.from_name("assets", create_if_missing=True)
+
+FILL_TEMPLATE_URL = "https://raw.githubusercontent.com/triton-inference-server/tensorrtllm_backend/refs/heads/r24.10/tools/fill_template.py"
+
+
+# see: https://github.com/triton-inference-server/python_backend/blob/main/README.md
+@app.function(
+    retries=0,
+    image=image,
+    volumes={
+        ASSETS_DIR: assets_dir,
+        TRT_MODEL_DIR: trt_model_vol,
+        TRITONSERVER_DIR: tritonserver_vol,
+    },
+    timeout=1200,  # default 300s
+    scaledown_window=1200,
+)
+def ready_model(
+    whisper_params: str,
+    whisper_bls_params: str = "",
+    whisper_tensorrt_llm_params: str = "",
+    tag_or_hash: str = "",
+    stream: bool = False,
+    fill_template_url: str = FILL_TEMPLATE_URL,
+    engine_dir: str = "trt_engines_float16",
+) -> str:
+    import subprocess
+
+    if tag_or_hash == "":
+        tag_or_hash = "main"
+
+    cmd = f"git clone https://github.com/ai-bot-pro/achatbot.git -b {tag_or_hash}"
+    subprocess.run(cmd, cwd="/", shell=True, check=True)
+
+    model_repo = os.path.join(TRITONSERVER_DIR, app_name)
+    subprocess.run(f"rm -rf {model_repo}", shell=True, check=False)
+    subprocess.run(f"mkdir -p {model_repo}", shell=True, check=True)
+
+    cmd = f"wget {fill_template_url} -O /root/fill_template.py"
+    subprocess.run(cmd, cwd="/", shell=True, check=True)
+
+    # whisper
+    cmd = f"cp -r /achatbot/deploy/modal/src/llm/trtllm/model_repo/whisper {model_repo}"
+    print(cmd)
+    subprocess.run(cmd, shell=True, cwd="/", check=True)
+    local_trt_build_dir = os.path.join(TRT_MODEL_DIR, app_name, engine_dir)
+    cmd = (
+        f"python /root/fill_template.py "
+        + f"-i {model_repo}/whisper/config.pbtxt "
+        f"{whisper_params},engine_dir:{local_trt_build_dir},tokenizer_dir:{ASSETS_DIR},mel_filters_dir:{ASSETS_DIR}".strip(
+            ","
+        )
+    )
+    print(cmd)
+    subprocess.run(cmd.strip().split(" "), cwd="/", check=True)
+
+    # whishper bls
+    cmd = f"cp -r /achatbot/deploy/modal/src/llm/trtllm/model_repo/whisper_bls {model_repo}"
+    print(cmd)
+    subprocess.run(cmd, shell=True, cwd="/", check=True)
+    local_trt_build_dir = os.path.join(TRT_MODEL_DIR, app_name, engine_dir)
+    cmd = (
+        f"python /root/fill_template.py "
+        + f"-i {model_repo}/whisper_bls/config.pbtxt "
+        f"{whisper_bls_params},engine_dir:{local_trt_build_dir},tokenizer_dir:{ASSETS_DIR},mel_filters_dir:{ASSETS_DIR}".strip(
+            ","
+        )
+    )
+    print(cmd)
+    subprocess.run(cmd.strip().split(" "), cwd="/", check=True)
+
+    # whisper_tensorrt_llm
+    cmd = (
+        f"cp -r /achatbot/deploy/modal/src/llm/trtllm/model_repo/whisper_tensorrt_llm {model_repo}"
+    )
+    print(cmd)
+    subprocess.run(cmd, shell=True, cwd="/", check=True)
+    local_trt_build_dir = os.path.join(TRT_MODEL_DIR, app_name, engine_dir)
+    decoupled_mode = "True" if stream else "False"
+
+    cmd = (
+        f"python /root/fill_template.py "
+        + f"-i {model_repo}/whisper_bls/config.pbtxt "
+        f"{whisper_tensorrt_llm_params},triton_backend:tensorrtllm,engine_dir:{local_trt_build_dir}/decoder,encoder_engine_dir:{local_trt_build_dir}/encoder,decoupled_mode:{decoupled_mode}".strip(
+            ","
+        )
+    )
+    print(cmd)
+    subprocess.run(cmd.strip().split(" "), cwd="/", check=True)
+
+
+"""
+# fill template with pbtext file for api params
+
+# whisper large-v3 | tensorrt_llm decoupled_mode:False
+modal run src/llm/trtllm/whisper/ready_model.py \
+    --tag-or-hash "feat/asr" \
+    --engine-dir "trt_engines_float16" \
+    --whisper-params "triton_max_batch_size:8,max_queue_delay_microseconds:0,n_mels:128,zero_pad:False"
+    --whisper-bls-params "" \
+    --whisper-tensorrt-llm-params "max_tokens_in_paged_kv_cache:24000,max_attention_window_size:2560,batching_strategy:inflight_fused_batching,kv_cache_free_gpu_mem_fraction:0.5,exclude_input_in_output:True,triton_max_batch_size:8,max_queue_delay_microseconds:0,max_beam_width:1,enable_kv_cache_reuse:False,enable_chunked_context:False,max_queue_size:0,cross_kv_cache_fraction:0.5,encoder_input_features_data_type:TYPE_FP16"
+
+"""
+
+
+@app.local_entrypoint()
+def main(
+    whisper_params: str = "",
+    whisper_bls_params: str = "",
+    whisper_tensorrt_llm_params: str = "",
+    tag_or_hash: str = "main",
+    stream: str = "",
+    fill_template_url: str = FILL_TEMPLATE_URL,
+    engine_dir: str = "trt_engines_float16",
+):
+    ready_model.remote(
+        whisper_params,
+        whisper_bls_params,
+        whisper_tensorrt_llm_params,
+        tag_or_hash,
+        bool(stream),
+        fill_template_url,
+        engine_dir,
+    )

@@ -6,7 +6,13 @@ import modal
 
 app = modal.App("trtllm-run-whisper")
 # https://github.com/NVIDIA/TensorRT-LLM/blob/v0.20.0rc0/examples/models/core/whisper/README.md
-GIT_TAG_OR_HASH = "v0.20.0rc0"
+# GIT_TAG_OR_HASH = "v0.20.0rc0"
+# https://github.com/NVIDIA/TensorRT-LLM/tree/v0.15.0/examples/whisper
+GIT_TAG_OR_HASH = os.getenv("GIT_TAG_OR_HASH", "0.15.0.dev2024110500")
+WHISPER_DIRS = {
+    "0.15.0.dev2024110500": "/TensorRT-LLM/examples/whisper",
+    "v0.20.0rc0": "/TensorRT-LLM/examples/models/core/whisper",
+}
 
 trtllm_image = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
@@ -15,7 +21,7 @@ trtllm_image = (
         add_python="3.10",
     )
     .apt_install(
-        "git", "clang", "git-lfs", "openmpi-bin", "libopenmpi-dev", "wget"
+        "ffmpeg", "git", "clang", "git-lfs", "openmpi-bin", "libopenmpi-dev", "wget"
     )  # OpenMPI for distributed communication
     .pip_install(
         f"tensorrt-llm=={GIT_TAG_OR_HASH}",
@@ -23,22 +29,21 @@ trtllm_image = (
         extra_index_url="https://pypi.nvidia.com",
     )
     # https://github.com/flashinfer-ai/flashinfer/issues/738
-    .pip_install(
-        "wheel",
-        "setuptools==75.6.0",
-        "packaging==23.2",
-        "ninja==1.11.1.3",
-        "build==1.2.2.post1",
-    )
-    .run_commands(
-        "git clone https://github.com/flashinfer-ai/flashinfer.git --recursive",
-        'cd /flashinfer && git checkout v0.2.5 && TORCH_CUDA_ARCH_LIST="7.5 8.0 8.9 9.0a" FLASHINFER_ENABLE_AOT=1 pip install --no-build-isolation --verbose --editable .',
-    )
+    # .pip_install(
+    #    "wheel",
+    #    "setuptools==75.6.0",
+    #    "packaging==23.2",
+    #    "ninja==1.11.1.3",
+    #    "build==1.2.2.post1",
+    # )
+    # .run_commands(
+    #    "git clone https://github.com/flashinfer-ai/flashinfer.git --recursive",
+    #    'cd /flashinfer && git checkout v0.2.5 && TORCH_CUDA_ARCH_LIST="7.5 8.0 8.9 9.0a" FLASHINFER_ENABLE_AOT=1 pip install --no-build-isolation --verbose --editable .',
+    # )
     .run_commands(
         f"git clone https://github.com/NVIDIA/TensorRT-LLM.git -b {GIT_TAG_OR_HASH}",
-        "cd /TensorRT-LLM && pip install -r examples/models/core/whisper/requirements.txt",
+        f"pip install -r {WHISPER_DIRS[GIT_TAG_OR_HASH]}/requirements.txt",
     )
-    .apt_install("ffmpeg")
     .env({})
 )
 
@@ -93,7 +98,7 @@ def run_single_wav_test(app_name: str, engine_dir: str, other_args: str) -> None
             cmd,
             shell=True,
             check=True,
-            cwd="/TensorRT-LLM/examples/models/core/whisper",
+            cwd=WHISPER_DIRS[GIT_TAG_OR_HASH],
         )
     except subprocess.CalledProcessError as e:
         print(f"run stderr: {e.stderr}")
@@ -108,7 +113,7 @@ def run_dataset_bench(app_name: str, engine_dir: str, other_args: str) -> None:
             cmd,
             shell=True,
             check=True,
-            cwd="/TensorRT-LLM/examples/models/core/whisper",
+            cwd=WHISPER_DIRS[GIT_TAG_OR_HASH],
         )
     except subprocess.CalledProcessError as e:
         print(f"run stderr: {e.stderr}")

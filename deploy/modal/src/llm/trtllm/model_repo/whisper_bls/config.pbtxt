@@ -30,6 +30,10 @@ parameters [
   value: {string_value: "${zero_pad}"}
   },
   {
+    key: "engine_dir"
+    value: { string_value: "${engine_dir}"}
+  },
+  {
     key: "tokenizer_dir"
     value: { string_value: "${tokenizer_dir}"}
   },

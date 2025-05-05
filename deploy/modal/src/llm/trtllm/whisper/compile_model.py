@@ -3,7 +3,14 @@ import modal
 
 app = modal.App("trtllm-compile-whisper")
 # https://github.com/NVIDIA/TensorRT-LLM/blob/v0.20.0rc0/examples/models/core/whisper/README.md
-GIT_TAG_OR_HASH = "v0.20.0rc0"
+# GIT_TAG_OR_HASH = "v0.20.0rc0"
+# https://github.com/NVIDIA/TensorRT-LLM/tree/v0.15.0/examples/whisper
+GIT_TAG_OR_HASH = os.getenv("GIT_TAG_OR_HASH", "0.15.0.dev2024110500")
+CONVERSION_SCRIPT_URLS = {
+    "0.15.0.dev2024110500": "https://raw.githubusercontent.com/NVIDIA/TensorRT-LLM/v0.15.0/examples/whisper/convert_checkpoint.py",
+    "v0.20.0rc0": "https://raw.githubusercontent.com/NVIDIA/TensorRT-LLM/v0.20.0rc0/examples/models/core/whisper/convert_checkpoint.py",
+}
+
 
 trtllm_image = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
@@ -16,21 +23,22 @@ trtllm_image = (
     )  # OpenMPI for distributed communication
     .pip_install(
         f"tensorrt-llm=={GIT_TAG_OR_HASH}",
+        "pynvml<12",  # avoid breaking change to pynvml version API for tensorrt_llm
         pre=True,
         extra_index_url="https://pypi.nvidia.com",
     )
     # https://github.com/flashinfer-ai/flashinfer/issues/738
-    .pip_install(
-        "wheel",
-        "setuptools==75.6.0",
-        "packaging==23.2",
-        "ninja==1.11.1.3",
-        "build==1.2.2.post1",
-    )
-    .run_commands(
-        "git clone https://github.com/flashinfer-ai/flashinfer.git --recursive",
-        'cd /flashinfer && git checkout v0.2.5 && TORCH_CUDA_ARCH_LIST="7.5 8.0 8.9 9.0a" FLASHINFER_ENABLE_AOT=1 pip install --no-build-isolation --verbose --editable .',
-    )
+    # .pip_install(
+    #    "wheel",
+    #    "setuptools==75.6.0",
+    #    "packaging==23.2",
+    #    "ninja==1.11.1.3",
+    #    "build==1.2.2.post1",
+    # )
+    # .run_commands(
+    #    "git clone https://github.com/flashinfer-ai/flashinfer.git --recursive",
+    #    'cd /flashinfer && git checkout v0.2.5 && TORCH_CUDA_ARCH_LIST="7.5 8.0 8.9 9.0a" FLASHINFER_ENABLE_AOT=1 pip install --no-build-isolation --verbose --editable .',
+    # )
     .env({})
 )
 
@@ -39,9 +47,6 @@ MODEL_DIR = "/root/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
 TRT_MODEL_DIR = "/root/trt_models"
 trt_model_vol = modal.Volume.from_name("triton_trtllm_models", create_if_missing=True)
-
-
-CONVERSION_SCRIPT_URL = f"https://raw.githubusercontent.com/NVIDIA/TensorRT-LLM/{GIT_TAG_OR_HASH}/examples/models/core/whisper/convert_checkpoint.py"
 
 
 @app.function(
@@ -59,7 +64,7 @@ def trtllm_build(
     app_name: str,
     model_name: str,
     trt_dtype: str = "bfloat16",
-    convert_script_url: str = CONVERSION_SCRIPT_URL,
+    convert_script_url: str = CONVERSION_SCRIPT_URLS[GIT_TAG_OR_HASH],
     convert_other_args: str = "",
     compile_other_args: str = "",
 ) -> str:
@@ -204,7 +209,7 @@ def main(
     app_name: str,
     model_name: str,
     trt_dtype: str = "bfloat16",
-    convert_script_url: str = CONVERSION_SCRIPT_URL,
+    convert_script_url: str = CONVERSION_SCRIPT_URLS[GIT_TAG_OR_HASH],
     convert_other_args: str = "",
     compile_other_args: str = "",
 ):
