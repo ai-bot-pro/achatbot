@@ -1,6 +1,9 @@
 name: "whisper"
 backend: "python"
-max_batch_size: 8 
+max_batch_size: ${triton_max_batch_size}
+dynamic_batching {
+    max_queue_delay_microseconds: ${max_queue_delay_microseconds}
+}
 
 parameters [
   {
@@ -49,9 +52,6 @@ output [
   }
 ]
 
-dynamic_batching {
-    max_queue_delay_microseconds: 5000
-}
 instance_group [
     {
       count: 1

@@ -126,3 +126,21 @@ modal run src/llm/trtllm/whisper/run.py \
     --engine-dir "trt_engines_float16" \
     --other-args "--log_level info --use_py_session"
 ```
+
+## fill params for triton server
+```shell
+# whisper large-v3 | tensorrt_llm decoupled_mode:False
+modal run src/llm/trtllm/whisper/ready_model.py \
+    --tag-or-hash "feat/asr" \
+    --engine-dir "trt_engines_float16" \
+    --whisper-params "triton_max_batch_size:8,max_queue_delay_microseconds:0,n_mels:128"
+```
+
+## run triton server
+```shell
+modal run src/llm/trtllm/whisper/tritonserver.py \
+```
+
+# reference:
+- ⭐ run whisper with tensorrt-llm: https://github.com/NVIDIA/TensorRT-LLM/blob/v0.20.0rc0/examples/models/core/whisper/README.md
+- ⭐ run whisper service with triton tensorrtllm backend: https://github.com/triton-inference-server/tensorrtllm_backend/blob/main/docs/whisper.md
