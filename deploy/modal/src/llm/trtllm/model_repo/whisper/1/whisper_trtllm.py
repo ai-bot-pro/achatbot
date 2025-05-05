@@ -18,11 +18,10 @@
 import json
 from collections import OrderedDict
 from pathlib import Path
+import math
 
 import numpy as np
 import torch
-import math
-
 import tensorrt_llm
 import tensorrt_llm.logger as logger
 from tensorrt_llm._utils import str_dtype_to_torch, str_dtype_to_trt, trt_dtype_to_torch
