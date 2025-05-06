@@ -1,18 +1,4 @@
 #!/usr/bin/python
-"""
-This script supports to load audio files and sends it to the server
-for decoding, in parallel.
-
-
-Usage:
-# For offlien whisper server
-python3 client.py \
-    --server-addr localhost \
-    --model-name whisper_bls \
-    --num-tasks $num_task \
-    --whisper-prompt "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>" \
-    --audio-path $audio_path
-"""
 
 # https://github.com/triton-inference-server/tensorrtllm_backend/blob/v0.18.0/tools/whisper/client.py
 
@@ -64,9 +50,13 @@ with image.imports():
     import numpy as np
     import soundfile as sf
 
-    # import tritonclient.grpc as grpcclient
-    import tritonclient.grpc.aio as grpcclient
-    import tritonclient
+    # import tritonclient.grpc as protocol_client
+    protocol = os.getenv("TRITON_PROTOCOL", "grpc")
+    print(f"use protocol: {protocol}")
+    if protocol == "grpc":
+        import tritonclient.grpc.aio as protocol_client
+    else:
+        import tritonclient.http.aio as protocol_client
     from tritonclient.grpc import InferenceServerException
     from tritonclient.utils import np_to_triton_dtype
     import kaldialign
@@ -87,7 +77,7 @@ async def health(server_url: str, verbose: bool = False):
     url = server_url
 
     try:
-        triton_client = grpcclient.InferenceServerClient(url=url, verbose=verbose)
+        triton_client = protocol_client.InferenceServerClient(url=url, verbose=verbose)
     except Exception as e:
         print("context creation failed: " + str(e))
         return
@@ -145,7 +135,7 @@ async def asr(
     streaming: bool = False,
     verbose: bool = False,
 ):
-    triton_client = grpcclient.InferenceServerClient(url=server_url, verbose=verbose)
+    triton_client = protocol_client.InferenceServerClient(url=server_url, verbose=verbose)
     waveform, sr = sf.read(reference_audio)
     duration = sf.info(reference_audio).duration
     assert sr == 16000, "sample rate hardcoded in server"
@@ -154,7 +144,7 @@ async def asr(
     inputs = prepare_grpc_sdk_request(
         samples, text_prefix, duration, sample_rate=sr, padding_duration=padding_duration
     )
-    outputs = [grpcclient.InferRequestedOutput("TRANSCRIPTS")]
+    outputs = [protocol_client.InferRequestedOutput("TRANSCRIPTS")]
 
     if streaming:
         decoding_results = await infer_streaming(
@@ -218,7 +208,7 @@ async def bench_asr(
         * batch_size
     ] * concurency_cn
 
-    triton_client = grpcclient.InferenceServerClient(url=server_url, verbose=verbose)
+    triton_client = protocol_client.InferenceServerClient(url=server_url, verbose=verbose)
 
     tasks = []
     start_time = time.time()
@@ -228,7 +218,7 @@ async def bench_asr(
                 dps=dps_list[i],
                 name=f"task-{i}",
                 triton_client=triton_client,
-                protocol_client=grpcclient,
+                protocol_client=protocol_client,
                 log_interval=1,
                 model_name=model_name,
                 padding_duration=padding_duration,
@@ -320,9 +310,9 @@ def prepare_grpc_sdk_request(
     }
     """
     inputs = [
-        grpcclient.InferInput("TEXT_PREFIX", [1, 1], "BYTES"),
-        grpcclient.InferInput("WAV", samples.shape, np_to_triton_dtype(samples.dtype)),
-        grpcclient.InferInput("WAV_LEN", lengths.shape, np_to_triton_dtype(lengths.dtype)),
+        protocol_client.InferInput("TEXT_PREFIX", [1, 1], "BYTES"),
+        protocol_client.InferInput("WAV", samples.shape, np_to_triton_dtype(samples.dtype)),
+        protocol_client.InferInput("WAV_LEN", lengths.shape, np_to_triton_dtype(lengths.dtype)),
     ]
     input_data_numpy = np.array([text_prefix], dtype=object)
     input_data_numpy = input_data_numpy.reshape((1, 1))
@@ -338,7 +328,7 @@ async def infer(
     inputs,
     request_id,
     outputs,
-    triton_client: grpcclient.InferenceServerClient,
+    triton_client: protocol_client.InferenceServerClient,
 ):
     response = await triton_client.infer(model_name, inputs, request_id=request_id, outputs=outputs)
     decoding_results = response.as_numpy("TRANSCRIPTS")[0]
@@ -359,7 +349,7 @@ async def infer_streaming(
     inputs,
     request_id,
     outputs,
-    triton_client: grpcclient.InferenceServerClient,
+    triton_client: protocol_client.InferenceServerClient,
 ):
     user_data = UserData()
 
@@ -409,7 +399,7 @@ async def infer_streaming(
 async def send_whisper(
     dps: list,
     name: str,
-    triton_client: tritonclient.grpc.aio.InferenceServerClient,
+    triton_client: protocol_client.InferenceServerClient,
     protocol_client: types.ModuleType,
     log_interval: int,
     model_name: str,
@@ -471,25 +461,25 @@ async def send_whisper(
 
 """
 # health check
-modal run src/llm/trtllm/whisper/client_grpc.py \
+modal run src/llm/trtllm/whisper/client.py \
     --action health \
     --server-url "r15.modal.host:44161"
 
 # single wav test
-modal run src/llm/trtllm/whisper/client_grpc.py \
+modal run src/llm/trtllm/whisper/client.py \
     --no-streaming \
     --action asr \
     --server-url "r15.modal.host:44161"
-modal run src/llm/trtllm/whisper/client_grpc.py \
+modal run src/llm/trtllm/whisper/client.py \
     --streaming \
     --action asr \
     --server-url "r15.modal.host:44161"
-modal run src/llm/trtllm/whisper/client_grpc.py \
+modal run src/llm/trtllm/whisper/client.py \
     --action asr \
     --reference-audio /1221-135766-0001.wav \
     --text-prefix "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>" \
     --server-url "r15.modal.host:44161"
-modal run src/llm/trtllm/whisper/client_grpc.py \
+modal run src/llm/trtllm/whisper/client.py \
     --action asr \
     --reference-audio /long.wav \
     --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
@@ -497,21 +487,21 @@ modal run src/llm/trtllm/whisper/client_grpc.py \
 
 # bench (concurency_cn:1->2->4->8->16 | batch_size:1->2->4->8)
 # bench throughput and latency, grpc just test, modal support http, grpc now use tunnel
-modal run src/llm/trtllm/whisper/client_grpc.py \
+modal run src/llm/trtllm/whisper/client.py \
     --no-streaming \
     --action bench_asr \
     --concurency-cn 4 \
     --batch-size 4 \
     --server-url "r28.modal.host:33695"
 
-modal run src/llm/trtllm/whisper/client_grpc.py \
+modal run src/llm/trtllm/whisper/client.py \
     --streaming \
     --action bench_asr \
     --concurency-cn 4 \
     --batch-size 4 \
     --server-url "r18.modal.host:41787"
 
-modal run src/llm/trtllm/whisper/client_grpc.py \
+modal run src/llm/trtllm/whisper/client.py \
     --streaming \
     --action bench_asr \
     --concurency-cn 4 \

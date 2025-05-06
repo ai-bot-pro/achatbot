@@ -185,6 +185,55 @@ APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper_bls,whisper_tensorrt_llm modal 
 
 ## test whisper service
 ```shell
+# health check
+modal run src/llm/trtllm/whisper/client_grpc.py \
+    --action health \
+    --server-url "r15.modal.host:44161"
+
+# single wav test
+modal run src/llm/trtllm/whisper/client_grpc.py \
+    --no-streaming \
+    --action asr \
+    --server-url "r15.modal.host:44161"
+modal run src/llm/trtllm/whisper/client_grpc.py \
+    --streaming \
+    --action asr \
+    --server-url "r15.modal.host:44161"
+modal run src/llm/trtllm/whisper/client_grpc.py \
+    --action asr \
+    --reference-audio /1221-135766-0001.wav \
+    --text-prefix "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>" \
+    --server-url "r15.modal.host:44161"
+modal run src/llm/trtllm/whisper/client_grpc.py \
+    --action asr \
+    --reference-audio /long.wav \
+    --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
+    --server-url "r24.modal.host:44175"
+
+# bench (concurency_cn:1->2->4->8->16 | batch_size:1->2->4->8)
+# bench throughput and latency, grpc just test, modal support http, grpc now use tunnel
+modal run src/llm/trtllm/whisper/client_grpc.py \
+    --no-streaming \
+    --action bench_asr \
+    --concurency-cn 4 \
+    --batch-size 4 \
+    --server-url "r28.modal.host:33695"
+
+modal run src/llm/trtllm/whisper/client_grpc.py \
+    --streaming \
+    --action bench_asr \
+    --concurency-cn 4 \
+    --batch-size 4 \
+    --server-url "r18.modal.host:41787"
+
+modal run src/llm/trtllm/whisper/client_grpc.py \
+    --streaming \
+    --action bench_asr \
+    --concurency-cn 4 \
+    --batch-size 4 \
+    --reference-audio /long.wav \
+    --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
+    --server-url "r18.modal.host:41787"
 ```
 
 # reference:
