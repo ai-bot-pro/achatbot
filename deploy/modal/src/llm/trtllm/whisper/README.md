@@ -153,7 +153,7 @@ modal run src/llm/trtllm/whisper/ready_model.py \
 APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper_bls,whisper_tensorrt_llm modal serve src/llm/trtllm/whisper/tritonserver.py 
 
 # curl server is ready
-curl -vv -X GET "https://weege009--tritonserver-serve-dev.modal.run/v2/health/ready" -H  "accept: application/json"
+curl -vv -X GET "https://weege--tritonserver-serve-dev.modal.run/v2/health/ready" -H  "accept: application/json"
 
 # run grpc tritonserver by tcp tunnel and http server
 APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper_bls,whisper_tensorrt_llm modal run src/llm/trtllm/whisper/tritonserver.py 

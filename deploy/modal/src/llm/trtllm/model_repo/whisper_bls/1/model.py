@@ -125,7 +125,7 @@ class TritonPythonModel:
         - pb_utils.InferenceResponse: The response object containing the generated text and additional metadata.
         """
         llm_request = pb_utils.InferenceRequest(
-            model_name="tensorrt_llm",
+            model_name="whisper_tensorrt_llm",
             requested_output_names=["output_ids", "sequence_length"],
             inputs=llm_request_inputs,
         )
