@@ -23,7 +23,7 @@ image = modal.Image.debian_slim(python_version="3.10").apt_install("git", "wget"
 image = image.pip_install(
     "numpy",
     "soundfile",
-    "tritonclient[grpc]",
+    "tritonclient[all]",
     "kaldialign",  # WER
 )
 image = image.run_commands(
@@ -37,7 +37,7 @@ image = image.run_commands(
     "wget 'https://raw.githubusercontent.com/yuekaizhang/Triton-ASR-Client/main/datasets/mini_zh/wav/mid.wav' -O /mid.wav",
     "ls -lh /*.wav",
 )
-image = image.env({})
+image = image.env({"TRITON_PROTOCOL": os.getenv("TRITON_PROTOCOL", "grpc")})
 
 audio_text_map = {
     "/1221-135766-0001.wav": "god as a direct consequence of the sin which man thus punished had given her a lovely child whose place was on that same dishonoured bosom to connect her parent for ever with the race and descent of mortals and to be finally a blessed soul in heaven",
@@ -92,6 +92,8 @@ async def health(server_url: str, verbose: bool = False):
 
     # Metadata
     metadata = await triton_client.get_server_metadata()
+    if isinstance(metadata, dict):
+        metadata = types.SimpleNamespace(**metadata)
     if not (metadata.name == "triton"):
         print("FAILED : get_server_metadata")
         return
@@ -110,6 +112,8 @@ async def health(server_url: str, verbose: bool = False):
         metadata = await triton_client.get_model_metadata(
             model_name, headers={"test": "1", "dummy": "2"}
         )
+        if isinstance(metadata, dict):
+            metadata = types.SimpleNamespace(**metadata)
         if not (metadata.name == model_name):
             print(f"{model_name} FAILED : get_model_metadata")
             return
@@ -328,7 +332,7 @@ async def infer(
     inputs,
     request_id,
     outputs,
-    triton_client: protocol_client.InferenceServerClient,
+    triton_client: "protocol_client.InferenceServerClient",
 ):
     response = await triton_client.infer(model_name, inputs, request_id=request_id, outputs=outputs)
     decoding_results = response.as_numpy("TRANSCRIPTS")[0]
@@ -349,7 +353,7 @@ async def infer_streaming(
     inputs,
     request_id,
     outputs,
-    triton_client: protocol_client.InferenceServerClient,
+    triton_client: "protocol_client.InferenceServerClient",
 ):
     user_data = UserData()
 
@@ -399,7 +403,7 @@ async def infer_streaming(
 async def send_whisper(
     dps: list,
     name: str,
-    triton_client: protocol_client.InferenceServerClient,
+    triton_client: "protocol_client.InferenceServerClient",
     protocol_client: types.ModuleType,
     log_interval: int,
     model_name: str,
@@ -460,12 +464,13 @@ async def send_whisper(
 
 
 """
-# health check
+# gRPC
+## health check
 modal run src/llm/trtllm/whisper/client.py \
     --action health \
     --server-url "r15.modal.host:44161"
 
-# single wav test
+## single wav test
 modal run src/llm/trtllm/whisper/client.py \
     --no-streaming \
     --action asr \
@@ -485,8 +490,8 @@ modal run src/llm/trtllm/whisper/client.py \
     --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
     --server-url "r24.modal.host:44175"
 
-# bench (concurency_cn:1->2->4->8->16 | batch_size:1->2->4->8)
-# bench throughput and latency, grpc just test, modal support http, grpc now use tunnel
+## bench (concurency_cn:1->2->4->8->16 | batch_size:1->2->4->8)
+## bench throughput and latency, grpc just test, modal support http, grpc now use tunnel
 modal run src/llm/trtllm/whisper/client.py \
     --no-streaming \
     --action bench_asr \
@@ -509,6 +514,19 @@ modal run src/llm/trtllm/whisper/client.py \
     --reference-audio /long.wav \
     --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
     --server-url "r18.modal.host:41787"
+
+
+# http
+## health check
+TRITON_PROTOCOL=http modal run src/llm/trtllm/whisper/client.py \
+    --action health --verbose \
+    --server-url "weedge--tritonserver-serve-dev.modal.run"
+
+## single wav test
+TRITON_PROTOCOL=http modal run src/llm/trtllm/whisper/client.py \
+    --no-streaming \
+    --action asr \
+    --server-url "weedge--tritonserver-serve-dev.modal.run"
 
 # WER eval
 see run.py to change
