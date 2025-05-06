@@ -164,6 +164,17 @@ APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper_bls,whisper_tensorrt_llm modal 
 - ⭐ run whisper service with triton tensorrtllm backend: https://github.com/triton-inference-server/tensorrtllm_backend/blob/main/docs/whisper.md
 - https://github.com/triton-inference-server/tensorrtllm_backend/blob/main/docs/model_config.md (fill necessary params)
 
+## wav2vec 2.0
+- https://ai.meta.com/research/impact/wav2vec/
+- 2019.4 [wav2vec: Unsupervised Pre-training for Speech Recognition](https://arxiv.org/abs/1904.05862)
+- ⭐️⭐️ 2020.6 [wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations](https://arxiv.org/abs/2006.11477) | [paper code](https://github.com/facebookresearch/fairseq/tree/main/examples/wav2vec)
+
+## whisper
+- https://openai.com/index/whisper/
+- ⭐️⭐️ 2022.12 [Robust Speech Recognition via Large-Scale Weak Supervision](https://arxiv.org/abs/2212.04356) | [paper code](https://github.com/openai/whisper)
+- ⭐️ https://huggingface.co/learn/audio-course/en/chapter3/seq2seq
+- 
+
 > [!NOTE]
-> compile_model trtllm-build with TensorRT-LLM must equal to tritonserver with TensorRT-LLM
+> compile_model trtllm-build with TensorRT-LLM version must equal to tritonserver with TensorRT-LLM version
 > now last tritonserver container 25.03 use TensortRT-LLM v0.18.0, so compile_model step trtllm-build need use TensortRT-LLM v0.18.0 !!!
