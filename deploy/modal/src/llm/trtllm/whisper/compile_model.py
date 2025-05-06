@@ -5,10 +5,11 @@ app = modal.App("trtllm-compile-whisper")
 # https://github.com/NVIDIA/TensorRT-LLM/blob/v0.20.0rc0/examples/models/core/whisper/README.md
 # GIT_TAG_OR_HASH = "v0.20.0rc0"
 # https://github.com/NVIDIA/TensorRT-LLM/tree/v0.15.0/examples/whisper
-GIT_TAG_OR_HASH = os.getenv("GIT_TAG_OR_HASH", "v0.20.0rc0")
+GIT_TAG_OR_HASH = os.getenv("GIT_TAG_OR_HASH", "v0.18.0")
 CONVERSION_SCRIPT_URLS = {
     "0.15.0.dev2024110500": "https://raw.githubusercontent.com/NVIDIA/TensorRT-LLM/v0.15.0/examples/whisper/convert_checkpoint.py",
-    "v0.20.0rc0": "https://raw.githubusercontent.com/NVIDIA/TensorRT-LLM/v0.20.0rc0/examples/models/core/whisper/convert_checkpoint.py",
+    "v0.18.0": "https://raw.githubusercontent.com/NVIDIA/TensorRT-LLM/v0.18.0/examples/whisper/convert_checkpoint.py",
+    # "v0.20.0rc0": "https://raw.githubusercontent.com/NVIDIA/TensorRT-LLM/v0.20.0rc0/examples/models/core/whisper/convert_checkpoint.py",
 }
 
 
@@ -79,7 +80,7 @@ def trtllm_build(
     subprocess.run("nvidia-smi --version", shell=True)
     subprocess.run("which nvcc", shell=True)
     subprocess.run("nvcc --version", shell=True)
-    subprocess.run("trtllm-build --help", shell=True)
+    subprocess.run("trtllm-build -h", shell=True)
 
     cmd = f"wget {convert_script_url} -O /root/convert.py".split(" ")
     subprocess.run(cmd, cwd="/", check=True)

@@ -163,3 +163,7 @@ APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper_bls,whisper_tensorrt_llm modal 
 - ⭐ run whisper with tensorrt-llm: https://github.com/NVIDIA/TensorRT-LLM/blob/v0.20.0rc0/examples/models/core/whisper/README.md
 - ⭐ run whisper service with triton tensorrtllm backend: https://github.com/triton-inference-server/tensorrtllm_backend/blob/main/docs/whisper.md
 - https://github.com/triton-inference-server/tensorrtllm_backend/blob/main/docs/model_config.md (fill necessary params)
+
+> [!NOTE]
+> compile_model trtllm-build with TensorRT-LLM must equal to tritonserver with TensorRT-LLM
+> now last tritonserver container 25.03 use TensortRT-LLM v0.18.0, so compile_model step trtllm-build need use TensortRT-LLM v0.18.0 !!!

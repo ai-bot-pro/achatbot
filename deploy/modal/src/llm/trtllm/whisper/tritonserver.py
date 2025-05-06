@@ -1,15 +1,17 @@
 import os
+import subprocess
 import modal
 
 app = modal.App("tritonserver")
 
 # https://github.com/NVIDIA/TensorRT-LLM/blob/v0.20.0rc0/examples/models/core/whisper/README.md
-# https://github.com/NVIDIA/TensorRT-LLM/tree/v0.15.0/examples/whisper
-GIT_TAG_OR_HASH = os.getenv("GIT_TAG_OR_HASH", "v0.20.0rc0")
+# https://github.com/NVIDIA/TensorRT-LLM/tree/v0.18.0/examples/whisper
+GIT_TAG_OR_HASH = os.getenv("GIT_TAG_OR_HASH", "v0.18.0")
 TRITONSERVER_VERSION = "25.03"
 
 
 tritonserver_image = (
+    # https://github.com/triton-inference-server/tensorrtllm_backend/blob/main/dockerfile/Dockerfile.trt_llm_backend
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/tritonserver
     # default install python3.12.3, in /usr/bin/python3.12.3
     modal.Image.from_registry(
@@ -80,31 +82,9 @@ tritonserver_vol = modal.Volume.from_name("tritonserver", create_if_missing=True
     max_containers=100,
 )
 def run():
-    import subprocess
-    import torch
-
-    print("torch:", torch.__version__)
-    print("cuda:", torch.version.cuda)
-    print("_GLIBCXX_USE_CXX11_ABI", torch._C._GLIBCXX_USE_CXX11_ABI)
-
-    subprocess.run("nvidia-smi --list-gpus", shell=True, check=True)
-    print("--" * 20)
-    cmd = f"ldd /opt/tritonserver/backends/python/triton_python_backend_stub"
-    print(cmd)
-    subprocess.run(cmd, shell=True, check=True)
-
-    print("--" * 20)
-    cmd = f"ldd /python_backend/build/triton_python_backend_stub"
-    print(cmd)
-    subprocess.run(cmd, shell=True, check=True)
-
     app_name: str = os.getenv("APP_NAME", "whisper")
     model_repo = os.path.join(TRITONSERVER_DIR, app_name)
-
-    for infer_dir in ["whisper", "whisper_bls"]:
-        cmd = f"cp /python_backend/build/triton_python_backend_stub {model_repo}/{infer_dir}"
-        print(cmd)
-        subprocess.run(cmd, shell=True, check=True)
+    prepare(model_repo)
 
     with modal.forward(8001, unencrypted=True) as tunnel:
         print(
@@ -136,12 +116,33 @@ def run():
 )
 @modal.web_server(port=8000, startup_timeout=10 * 60)
 def serve():
-    import subprocess
+    app_name: str = os.getenv("APP_NAME", "whisper")
+    model_repo = os.path.join(TRITONSERVER_DIR, app_name)
+    prepare(model_repo)
+
+    cmd = f"tritonserver --model-repository {model_repo} "
+    tensorrt_llm_model_name: str = os.getenv("TENSORRT_LLM_MODEL_NAME", "whisper")
+    model_names = tensorrt_llm_model_name.split(",")
+    if len(model_names) > 0:
+        cmd += f"--model-control-mode=explicit "
+    for model_name in model_names:
+        cmd += f"--load-model {model_name} "
+    print(cmd)
+    subprocess.Popen(cmd, shell=True)
+
+
+def prepare(model_repo):
     import torch
 
     print("torch:", torch.__version__)
     print("cuda:", torch.version.cuda)
     print("_GLIBCXX_USE_CXX11_ABI", torch._C._GLIBCXX_USE_CXX11_ABI)
+
+    subprocess.run("pip show tensorrt", shell=True)
+    subprocess.run("nvidia-smi --version", shell=True)
+    subprocess.run("which nvcc", shell=True)
+    subprocess.run("nvcc --version", shell=True)
+    subprocess.run("trtllm-build -h", shell=True)
 
     subprocess.run("nvidia-smi --list-gpus", shell=True, check=True)
     print("--" * 20)
@@ -154,23 +155,10 @@ def serve():
     print(cmd)
     subprocess.run(cmd, shell=True, check=True)
 
-    app_name: str = os.getenv("APP_NAME", "whisper")
-    model_repo = os.path.join(TRITONSERVER_DIR, app_name)
-
     for infer_dir in ["whisper", "whisper_bls"]:
         cmd = f"cp /python_backend/build/triton_python_backend_stub {model_repo}/{infer_dir}"
         print(cmd)
         subprocess.run(cmd, shell=True, check=True)
-
-    cmd = f"tritonserver --model-repository {model_repo} "
-    tensorrt_llm_model_name: str = os.getenv("TENSORRT_LLM_MODEL_NAME", "whisper")
-    model_names = tensorrt_llm_model_name.split(",")
-    if len(model_names) > 0:
-        cmd += f"--model-control-mode=explicit "
-    for model_name in model_names:
-        cmd += f"--load-model {model_name} "
-    print(cmd)
-    subprocess.Popen(cmd, shell=True)
 
 
 """

@@ -8,10 +8,11 @@ app = modal.App("trtllm-run-whisper")
 # https://github.com/NVIDIA/TensorRT-LLM/blob/v0.20.0rc0/examples/models/core/whisper/README.md
 # GIT_TAG_OR_HASH = "v0.20.0rc0"
 # https://github.com/NVIDIA/TensorRT-LLM/tree/v0.15.0/examples/whisper
-GIT_TAG_OR_HASH = os.getenv("GIT_TAG_OR_HASH", "v0.20.0rc0")
+GIT_TAG_OR_HASH = os.getenv("GIT_TAG_OR_HASH", "v0.18.0")
 WHISPER_DIRS = {
     "0.15.0.dev2024110500": "/TensorRT-LLM/examples/whisper",
-    "v0.20.0rc0": "/TensorRT-LLM/examples/models/core/whisper",
+    "v0.18.0": "/TensorRT-LLM/examples/whisper",
+    # "v0.20.0rc0": "/TensorRT-LLM/examples/models/core/whisper",
 }
 
 trtllm_image = (
