@@ -5,17 +5,16 @@ app = modal.App("tritonserver")
 
 # https://github.com/NVIDIA/TensorRT-LLM/blob/v0.20.0rc0/examples/models/core/whisper/README.md
 # https://github.com/NVIDIA/TensorRT-LLM/tree/v0.15.0/examples/whisper
-GIT_TAG_OR_HASH = os.getenv("GIT_TAG_OR_HASH", "0.15.0.dev2024110500")
-TRITONSERVER_VERSION = "24.10"
-# TRITONSERVER_VERSION = "25.03"
+GIT_TAG_OR_HASH = os.getenv("GIT_TAG_OR_HASH", "v0.20.0rc0")
+TRITONSERVER_VERSION = "25.03"
 
 
 tritonserver_image = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/tritonserver
-    # default install python3.10.13, in /usr/bin/python3.10.13
+    # default install python3.12.3, in /usr/bin/python3.12.3
     modal.Image.from_registry(
         f"nvcr.io/nvidia/tritonserver:{TRITONSERVER_VERSION}-trtllm-python-py3",
-        add_python="3.10",  # modal install /usr/local/bin/python3.10.12
+        add_python="3.12",  # modal install /usr/local/bin/python3.12.1 or 3.10.13
     )
     .apt_install(
         "tree",
@@ -37,16 +36,8 @@ tritonserver_image = (
         "cd python_backend && mkdir build",
         f"cd /python_backend/build && cmake -DPYBIND11_FINDPYTHON=ON -DPYTHON_EXECUTABLE=$(which python) -DTRITON_ENABLE_GPU=ON -DTRITON_BACKEND_REPO_TAG=r{TRITONSERVER_VERSION} -DTRITON_COMMON_REPO_TAG=r{TRITONSERVER_VERSION} -DTRITON_CORE_REPO_TAG=r{TRITONSERVER_VERSION} -DCMAKE_INSTALL_PREFIX:PATH=/stub/ .. && make triton-python-backend-stub",
     )
-    # https://pypi.nvidia.com/tensorrt-llm/
     .pip_install(
-        f"tensorrt-llm=={GIT_TAG_OR_HASH}",
-        "pynvml<12",  # avoid breaking change to pynvml version API for tensorrt_llm
-        # "tensorrt==10.8.0.43",
-        pre=True,
-        extra_index_url="https://pypi.nvidia.com",
-    )
-    .pip_install(
-        "numpy",
+        # "numpy<2",
         "torch",
         "tiktoken",  # tokenizer
         "soundfile",  # wav file to np.array
@@ -58,6 +49,9 @@ tritonserver_image = (
             "CUDA_VISIBLE_DEVICES": os.getenv("CUDA_VISIBLE_DEVICES", "0"),
             "PYTHONIOENCODING": "utf-8",
             "APP_NAME": os.getenv("APP_NAME", "whisper"),
+            "TENSORRT_LLM_MODEL_NAME": os.getenv(
+                "TENSORRT_LLM_MODEL_NAME", "whisper_bls,whisper_tensorrt_llm"
+            ),
             "STREAM": os.getenv("STREAM", ""),
         }
     )
@@ -107,16 +101,22 @@ def run():
     app_name: str = os.getenv("APP_NAME", "whisper")
     model_repo = os.path.join(TRITONSERVER_DIR, app_name)
 
-    infer_dir = "whisper"
-    cmd = f"cp /python_backend/build/triton_python_backend_stub {model_repo}/{infer_dir}"
-    print(cmd)
-    subprocess.run(cmd, shell=True, check=True)
+    for infer_dir in ["whisper", "whisper_bls"]:
+        cmd = f"cp /python_backend/build/triton_python_backend_stub {model_repo}/{infer_dir}"
+        print(cmd)
+        subprocess.run(cmd, shell=True, check=True)
 
     with modal.forward(8001, unencrypted=True) as tunnel:
         print(
             f"use tunnel.tcp_socket = {tunnel.tcp_socket[0]}:{tunnel.tcp_socket[1]} to connect tritonserver with tcp(grpc)"
         )
-        cmd = f"tritonserver --model-repository {model_repo} --log-verbose 0 --log-info True"
+        cmd = f"tritonserver --model-repository {model_repo} --log-verbose 0 --log-info True "
+        tensorrt_llm_model_name: str = os.getenv("TENSORRT_LLM_MODEL_NAME", "whisper")
+        model_names = tensorrt_llm_model_name.split(",")
+        if len(model_names) > 0:
+            cmd += f"--model-control-mode=explicit "
+        for model_name in model_names:
+            cmd += f"--load-model {model_name} "
         print(cmd)
         subprocess.run(cmd, shell=True, check=True)
 
@@ -157,25 +157,31 @@ def serve():
     app_name: str = os.getenv("APP_NAME", "whisper")
     model_repo = os.path.join(TRITONSERVER_DIR, app_name)
 
-    infer_dir = "whisper"
-    cmd = f"cp /python_backend/build/triton_python_backend_stub {model_repo}/{infer_dir}"
-    print(cmd)
-    subprocess.run(cmd, shell=True, check=True)
+    for infer_dir in ["whisper", "whisper_bls"]:
+        cmd = f"cp /python_backend/build/triton_python_backend_stub {model_repo}/{infer_dir}"
+        print(cmd)
+        subprocess.run(cmd, shell=True, check=True)
 
-    cmd = f"tritonserver --model-repository {model_repo}"
+    cmd = f"tritonserver --model-repository {model_repo} "
+    tensorrt_llm_model_name: str = os.getenv("TENSORRT_LLM_MODEL_NAME", "whisper")
+    model_names = tensorrt_llm_model_name.split(",")
+    if len(model_names) > 0:
+        cmd += f"--model-control-mode=explicit "
+    for model_name in model_names:
+        cmd += f"--load-model {model_name} "
     print(cmd)
     subprocess.Popen(cmd, shell=True)
 
 
 """
-# run tritonserver
-APP_NAME=whisper modal serve src/llm/trtllm/whisper/tritonserver.py 
+# run tritonserver with whisper_bls + whisper_tensorrt_llm(decoder)
+APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper_bls,whisper_tensorrt_llm modal serve src/llm/trtllm/whisper/tritonserver.py 
 
 # curl server is ready
 curl -vv -X GET "https://weege009--tritonserver-serve-dev.modal.run/v2/health/ready" -H  "accept: application/json"
 
 # run grpc tritonserver by tcp tunnel and http server
-APP_NAME=whisper modal run src/llm/trtllm/whisper/tritonserver.py 
+APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper_bls,whisper_tensorrt_llm modal run src/llm/trtllm/whisper/tritonserver.py 
 """
 
 
