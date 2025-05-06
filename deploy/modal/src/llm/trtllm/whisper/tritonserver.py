@@ -77,9 +77,9 @@ tritonserver_vol = modal.Volume.from_name("tritonserver", create_if_missing=True
         TRT_MODEL_DIR: trt_model_vol,
         TRITONSERVER_DIR: tritonserver_vol,
     },
-    timeout=1200,  # default 300s
+    timeout=3600,  # default 300s
     scaledown_window=1200,
-    max_containers=100,
+    max_containers=int(os.getenv("MAX_CONTAINERS", "1")),
 )
 def run():
     app_name: str = os.getenv("APP_NAME", "whisper")

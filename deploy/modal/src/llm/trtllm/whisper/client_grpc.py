@@ -17,16 +17,16 @@ python3 client.py \
 # https://github.com/triton-inference-server/tensorrtllm_backend/blob/v0.18.0/tools/whisper/client.py
 
 import asyncio
+from collections import defaultdict
+import logging
 import os
 import queue
 import sys
 import time
 import types
+from typing import Dict, Iterable, List, TextIO, Tuple
 import uuid
 import modal
-import tritonclient
-from tritonclient.grpc import InferenceServerException
-from tritonclient.utils import np_to_triton_dtype
 
 
 app_name = "whisper"
@@ -34,22 +34,42 @@ app = modal.App(f"{app_name}-grpc-client")
 
 # Define the dependencies for the function using a Modal Image.
 image = modal.Image.debian_slim(python_version="3.10").apt_install("git", "wget")
-image = image.pip_install("numpy", "soundfile", "tritonclient[grpc]")
+image = image.pip_install(
+    "numpy",
+    "soundfile",
+    "tritonclient[grpc]",
+    "kaldialign",  # WER
+)
 image = image.run_commands(
+    # god as a direct consequence of the sin which man thus punished had given her a lovely child whose place was on that same dishonoured bosom to connect her parent for ever with the race and descent of mortals and to be finally a blessed soul in heaven
     "wget 'https://raw.githubusercontent.com/yuekaizhang/Triton-ASR-Client/main/datasets/mini_en/wav/1221-135766-0001.wav' -O /1221-135766-0001.wav",
+    # yet these thoughts affected hester prynne less with hope than apprehension
     "wget 'https://raw.githubusercontent.com/yuekaizhang/Triton-ASR-Client/main/datasets/mini_en/wav/1221-135766-0002.wav' -O /1221-135766-0002.wav",
-    "wget 'https://raw.githubusercontent.com/yuekaizhang/Triton-ASR-Client/main/datasets/mini_zh/wav/long.wav' -O long.wav",
-    "wget 'https://raw.githubusercontent.com/yuekaizhang/Triton-ASR-Client/main/datasets/mini_zh/wav/mid.wav' -O mid.wav",
+    # 大学生利用漏洞免费吃肯德基获刑
+    "wget 'https://raw.githubusercontent.com/yuekaizhang/Triton-ASR-Client/main/datasets/mini_zh/wav/long.wav' -O /long.wav",
+    # 富士康在印度工厂出现大规模感染目前工厂产量已下降超50%
+    "wget 'https://raw.githubusercontent.com/yuekaizhang/Triton-ASR-Client/main/datasets/mini_zh/wav/mid.wav' -O /mid.wav",
     "ls -lh /*.wav",
 )
 image = image.env({})
+
+audio_text_map = {
+    "/1221-135766-0001.wav": "god as a direct consequence of the sin which man thus punished had given her a lovely child whose place was on that same dishonoured bosom to connect her parent for ever with the race and descent of mortals and to be finally a blessed soul in heaven",
+    "/1221-135766-0002.wav": "yet these thoughts affected hester prynne less with hope than apprehension",
+    "/mid.wav": "大学生利用漏洞免费吃肯德基获刑。",
+    "/long.wav": "富士康在印度工厂出现大规模感染，目前工厂产量已下降超50%。",
+}
 
 with image.imports():
     import numpy as np
     import soundfile as sf
 
-    import tritonclient.grpc as grpcclient
+    # import tritonclient.grpc as grpcclient
+    import tritonclient.grpc.aio as grpcclient
+    import tritonclient
+    from tritonclient.grpc import InferenceServerException
     from tritonclient.utils import np_to_triton_dtype
+    import kaldialign
 
 
 ASSETS_DIR = "/root/assets"
@@ -63,7 +83,7 @@ assets_dir = modal.Volume.from_name("assets", create_if_missing=True)
     timeout=1200,  # default 300s
     scaledown_window=1200,
 )
-def health(server_url: str, verbose: bool = False):
+async def health(server_url: str, verbose: bool = False):
     url = server_url
 
     try:
@@ -73,15 +93,15 @@ def health(server_url: str, verbose: bool = False):
         return
 
     # Health
-    if not triton_client.is_server_live(headers={"test": "1", "dummy": "2"}):
+    if not await triton_client.is_server_live(headers={"test": "1", "dummy": "2"}):
         print("FAILED : is_server_live")
         return
-    if not triton_client.is_server_ready():
+    if not await triton_client.is_server_ready():
         print("FAILED : is_server_ready")
         return
 
     # Metadata
-    metadata = triton_client.get_server_metadata()
+    metadata = await triton_client.get_server_metadata()
     if not (metadata.name == "triton"):
         print("FAILED : get_server_metadata")
         return
@@ -89,19 +109,19 @@ def health(server_url: str, verbose: bool = False):
 
     # Health
     for model_name in [
-        "audio_tokenizer",
-        "tensorrt_llm",
-        "vocoder",
         "whisper_bls",
+        "whisper_tensorrt_llm",
     ]:
-        if not triton_client.is_model_ready(model_name):
-            print("FAILED : is_model_ready")
+        if not await triton_client.is_model_ready(model_name):
+            print(f"{model_name} FAILED : is_model_ready")
 
         print("-" * 20)
 
-        metadata = triton_client.get_model_metadata(model_name, headers={"test": "1", "dummy": "2"})
+        metadata = await triton_client.get_model_metadata(
+            model_name, headers={"test": "1", "dummy": "2"}
+        )
         if not (metadata.name == model_name):
-            print("FAILED : get_model_metadata")
+            print(f"{model_name} FAILED : get_model_metadata")
             return
         print(metadata)
 
@@ -117,10 +137,10 @@ def health(server_url: str, verbose: bool = False):
     scaledown_window=1200,
 )
 async def asr(
-    reference_audio: str = "/prompt_audio.wav",
-    text_prefix: str = "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>",
     server_url: str = "localhost:8000",
-    model_name: str = "spark_tts",
+    reference_audio: str = "/1221-135766-0002.wav",
+    text_prefix: str = "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>",
+    model_name: str = "whisper_bls",
     padding_duration: int = 10,
     streaming: bool = False,
     verbose: bool = False,
@@ -152,9 +172,18 @@ async def asr(
             outputs=outputs,
             triton_client=triton_client,
         )
-    print(f"decoding_results: {decoding_results}")
+    print(f"ref_text____________: {audio_text_map[reference_audio]}")
+    print(f"asr_decoding_results: {decoding_results}")
 
-    triton_client.close()
+    tot_err_rate = write_error_stats(
+        None,
+        test_set_name="test-asr",
+        results=[(reference_audio, audio_text_map[reference_audio], decoding_results)],
+        enable_log=False,
+    )
+    print("total_err_rate:", tot_err_rate)
+
+    await triton_client.close()
 
 
 @app.function(
@@ -169,24 +198,24 @@ async def asr(
 )
 async def bench_asr(
     server_url: str = "localhost:8000",
-    model_name: str = "spark_tts",
+    reference_audio: str = "/1221-135766-0002.wav",
+    text_prefix: str = "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>",
+    model_name: str = "whisper_bls",
+    padding_duration: int = 10,  # padding to nearset 10 seconds
     concurency_cn: int = 1,
+    batch_size: int = 1,
     verbose: bool = False,
     streaming: bool = False,
 ):
-    text_prefix = "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>"
-    reference_audio: str = ("/prompt_audio.wav",)
-    text_prefix: str = (
-        "吃燕窝就选燕之屋，本节目由26年专注高品质燕窝的燕之屋冠名播出。豆奶牛奶换着喝，营养更均衡，本节目由豆本豆豆奶特约播出。",
-    )
     dps_list = [
         [
             {
-                "audio_filepath": reference_audio,
-                "text": "foo",
-                "id": 0,
+                "wav_id": reference_audio,
+                "ref_audio_filepath": reference_audio,
+                "ref_text": audio_text_map[reference_audio],
             }
         ]
+        * batch_size
     ] * concurency_cn
 
     triton_client = grpcclient.InferenceServerClient(url=server_url, verbose=verbose)
@@ -199,8 +228,10 @@ async def bench_asr(
                 dps=dps_list[i],
                 name=f"task-{i}",
                 triton_client=triton_client,
+                protocol_client=grpcclient,
                 log_interval=1,
                 model_name=model_name,
+                padding_duration=padding_duration,
                 text_prefix=text_prefix,
                 streaming=streaming,
             )
@@ -307,7 +338,7 @@ async def infer(
     inputs,
     request_id,
     outputs,
-    triton_client: tritonclient.grpc.aio.InferenceServerClient,
+    triton_client: grpcclient.InferenceServerClient,
 ):
     response = await triton_client.infer(model_name, inputs, request_id=request_id, outputs=outputs)
     decoding_results = response.as_numpy("TRANSCRIPTS")[0]
@@ -328,7 +359,7 @@ async def infer_streaming(
     inputs,
     request_id,
     outputs,
-    triton_client: tritonclient.grpc.aio.InferenceServerClient,
+    triton_client: grpcclient.InferenceServerClient,
 ):
     user_data = UserData()
 
@@ -394,10 +425,10 @@ async def send_whisper(
         if i % log_interval == 0:
             print(f"{name}: {i}/{len(dps)}")
 
-        waveform, sr = sf.read(dp["audio_filepath"])
+        waveform, sr = sf.read(dp["ref_audio_filepath"])
         assert sr == 16000, "sample rate hardcoded in server"
         duration = int(len(waveform) / sr)
-        # duration = sf.info(dp["audio_filepath"]).duration
+        # duration = sf.info(dp["ref_audio_filepath"]).duration
 
         inputs = prepare_grpc_sdk_request(
             waveform, text_prefix, duration, sample_rate=sr, padding_duration=padding_duration
@@ -428,9 +459,9 @@ async def send_whisper(
         total_duration += duration
         results.append(
             (
-                dp["id"],
-                dp["text"].split(),
-                decoding_results.split(),
+                dp["wav_id"],
+                dp["ref_text"].split(),  # label
+                decoding_results.split(),  # prediction
             )
         )
         print(results[-1])
@@ -446,27 +477,64 @@ modal run src/llm/trtllm/whisper/client_grpc.py \
 
 # single wav test
 modal run src/llm/trtllm/whisper/client_grpc.py \
+    --no-streaming \
     --action asr \
     --server-url "r15.modal.host:44161"
-
-# bench
 modal run src/llm/trtllm/whisper/client_grpc.py \
-    --action bench_asr \
+    --streaming \
+    --action asr \
     --server-url "r15.modal.host:44161"
+modal run src/llm/trtllm/whisper/client_grpc.py \
+    --action asr \
+    --reference-audio /1221-135766-0001.wav \
+    --text-prefix "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>" \
+    --server-url "r15.modal.host:44161"
+modal run src/llm/trtllm/whisper/client_grpc.py \
+    --action asr \
+    --reference-audio /long.wav \
+    --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
+    --server-url "r24.modal.host:44175"
+
+# bench (concurency_cn:1->2->4->8->16 | batch_size:1->2->4->8)
+# bench throughput and latency, grpc just test, modal support http, grpc now use tunnel
+modal run src/llm/trtllm/whisper/client_grpc.py \
+    --no-streaming \
+    --action bench_asr \
+    --concurency-cn 4 \
+    --batch-size 4 \
+    --server-url "r28.modal.host:33695"
+
+modal run src/llm/trtllm/whisper/client_grpc.py \
+    --streaming \
+    --action bench_asr \
+    --concurency-cn 4 \
+    --batch-size 4 \
+    --server-url "r18.modal.host:41787"
+
+modal run src/llm/trtllm/whisper/client_grpc.py \
+    --streaming \
+    --action bench_asr \
+    --concurency-cn 4 \
+    --batch-size 4 \
+    --reference-audio /long.wav \
+    --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
+    --server-url "r18.modal.host:41787"
 
 # WER eval
-see run.py
+see run.py to change
 """
 
 
 @app.local_entrypoint()
 def main(
     server_url: str = "localhost:8000",
-    reference_audio: str = "/prompt_audio.wav",
+    reference_audio: str = "/1221-135766-0002.wav",
     text_prefix: str = "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>",
     model_name: str = "whisper_bls",
     action: str = "health",
     concurency_cn: int = 1,
+    batch_size: int = 1,
+    padding_duration: int = 10,  # padding to nearset 10 seconds , max 30 seconds
     verbose: bool = False,
     streaming: bool = False,
 ):
@@ -476,17 +544,201 @@ def main(
             reference_audio,
             text_prefix,
             model_name,
-            concurency_cn,
+            padding_duration,
             verbose=verbose,
             streaming=streaming,
         )
     elif action == "bench_asr":
+        """
+        bench throughput and latency, grpc just test, modal support http, grpc now use tunnel
+        """
         bench_asr.remote(
             server_url,
+            reference_audio,
+            text_prefix,
             model_name,
+            padding_duration,
             concurency_cn,
+            batch_size,
             verbose=verbose,
             streaming=streaming,
         )
     else:
         health.remote(server_url, verbose=verbose)
+
+
+def store_transcripts(filename: os.PathLike, texts: Iterable[Tuple[str, str, str]]) -> None:
+    """Save predicted results and reference transcripts to a file.
+    https://github.com/k2-fsa/icefall/blob/master/icefall/utils.py
+    Args:
+      filename:
+        File to save the results to.
+      texts:
+        An iterable of tuples. The first element is the cur_id, the second is
+        the reference transcript and the third element is the predicted result.
+    Returns:
+      Return None.
+    """
+    with open(filename, "w") as f:
+        for cut_id, ref, hyp in texts:
+            print(f"{cut_id}:\tref={ref}", file=f)
+            print(f"{cut_id}:\thyp={hyp}", file=f)
+
+
+def write_error_stats(
+    f: TextIO,
+    test_set_name: str,
+    results: List[Tuple[str, str, str]],  # wav_id, label, prediction
+    enable_log: bool = True,
+) -> float:
+    """Write statistics based on predicted results and reference transcripts.
+    https://github.com/k2-fsa/icefall/blob/master/icefall/utils.py
+    It will write the following to the given file:
+
+        - WER
+        - number of insertions, deletions, substitutions, corrects and total
+          reference words. For example::
+
+              Errors: 23 insertions, 57 deletions, 212 substitutions, over 2606
+              reference words (2337 correct)
+
+        - The difference between the reference transcript and predicted result.
+          An instance is given below::
+
+            THE ASSOCIATION OF (EDISON->ADDISON) ILLUMINATING COMPANIES
+
+          The above example shows that the reference word is `EDISON`,
+          but it is predicted to `ADDISON` (a substitution error).
+
+          Another example is::
+
+            FOR THE FIRST DAY (SIR->*) I THINK
+
+          The reference word `SIR` is missing in the predicted
+          results (a deletion error).
+      results:
+        An iterable of tuples. The first element is the cur_id, the second is
+        the reference transcript and the third element is the predicted result.
+      enable_log:
+        If True, also print detailed WER to the console.
+        Otherwise, it is written only to the given file.
+    Returns:
+      Return None.
+    """
+    subs: Dict[Tuple[str, str], int] = defaultdict(int)
+    ins: Dict[str, int] = defaultdict(int)
+    dels: Dict[str, int] = defaultdict(int)
+
+    # `words` stores counts per word, as follows:
+    #   corr, ref_sub, hyp_sub, ins, dels
+    words: Dict[str, List[int]] = defaultdict(lambda: [0, 0, 0, 0, 0])
+    num_corr = 0
+    ERR = "*"
+    for cut_id, ref, hyp in results:
+        ali = kaldialign.align(ref, hyp, ERR)
+        for ref_word, hyp_word in ali:
+            if ref_word == ERR:
+                ins[hyp_word] += 1
+                words[hyp_word][3] += 1
+            elif hyp_word == ERR:
+                dels[ref_word] += 1
+                words[ref_word][4] += 1
+            elif hyp_word != ref_word:
+                subs[(ref_word, hyp_word)] += 1
+                words[ref_word][1] += 1
+                words[hyp_word][2] += 1
+            else:
+                words[ref_word][0] += 1
+                num_corr += 1
+    ref_len = sum([len(r) for _, r, _ in results])
+    sub_errs = sum(subs.values())
+    ins_errs = sum(ins.values())
+    del_errs = sum(dels.values())
+    tot_errs = sub_errs + ins_errs + del_errs
+    tot_err_rate = "%.2f" % (100.0 * tot_errs / ref_len)
+
+    if enable_log:
+        logging.info(
+            f"[{test_set_name}] %WER {tot_errs / ref_len:.2%} "
+            f"[{tot_errs} / {ref_len}, {ins_errs} ins, "
+            f"{del_errs} del, {sub_errs} sub ]"
+        )
+
+    print(f"%WER = {tot_err_rate}", file=f)
+    print(
+        f"Errors: {ins_errs} insertions, {del_errs} deletions, "
+        f"{sub_errs} substitutions, over {ref_len} reference "
+        f"words ({num_corr} correct)",
+        file=f,
+    )
+    print(
+        "Search below for sections starting with PER-UTT DETAILS:, "
+        "SUBSTITUTIONS:, DELETIONS:, INSERTIONS:, PER-WORD STATS:",
+        file=f,
+    )
+
+    print("", file=f)
+    print("PER-UTT DETAILS: corr or (ref->hyp)  ", file=f)
+    for cut_id, ref, hyp in results:
+        ali = kaldialign.align(ref, hyp, ERR)
+        combine_successive_errors = True
+        if combine_successive_errors:
+            ali = [[[x], [y]] for x, y in ali]
+            for i in range(len(ali) - 1):
+                if ali[i][0] != ali[i][1] and ali[i + 1][0] != ali[i + 1][1]:
+                    ali[i + 1][0] = ali[i][0] + ali[i + 1][0]
+                    ali[i + 1][1] = ali[i][1] + ali[i + 1][1]
+                    ali[i] = [[], []]
+            ali = [
+                [
+                    list(filter(lambda a: a != ERR, x)),
+                    list(filter(lambda a: a != ERR, y)),
+                ]
+                for x, y in ali
+            ]
+            ali = list(filter(lambda x: x != [[], []], ali))
+            ali = [
+                [
+                    ERR if x == [] else " ".join(x),
+                    ERR if y == [] else " ".join(y),
+                ]
+                for x, y in ali
+            ]
+
+        print(
+            f"{cut_id}:\t"
+            + " ".join(
+                (
+                    ref_word if ref_word == hyp_word else f"({ref_word}->{hyp_word})"
+                    for ref_word, hyp_word in ali
+                )
+            ),
+            file=f,
+        )
+
+    print("", file=f)
+    print("SUBSTITUTIONS: count ref -> hyp", file=f)
+
+    for count, (ref, hyp) in sorted([(v, k) for k, v in subs.items()], reverse=True):
+        print(f"{count}   {ref} -> {hyp}", file=f)
+
+    print("", file=f)
+    print("DELETIONS: count ref", file=f)
+    for count, ref in sorted([(v, k) for k, v in dels.items()], reverse=True):
+        print(f"{count}   {ref}", file=f)
+
+    print("", file=f)
+    print("INSERTIONS: count hyp", file=f)
+    for count, hyp in sorted([(v, k) for k, v in ins.items()], reverse=True):
+        print(f"{count}   {hyp}", file=f)
+
+    print("", file=f)
+    print("PER-WORD STATS: word  corr tot_errs count_in_ref count_in_hyp", file=f)
+    for _, word, counts in sorted([(sum(v[1:]), k, v) for k, v in words.items()], reverse=True):
+        (corr, ref_sub, hyp_sub, ins, dels) = counts
+        tot_errs = ref_sub + hyp_sub + ins + dels
+        ref_count = corr + ref_sub + dels
+        hyp_count = corr + hyp_sub + ins
+
+        print(f"{word}   {corr} {tot_errs} {ref_count} {hyp_count}", file=f)
+    return float(tot_err_rate)
