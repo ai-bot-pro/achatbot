@@ -1,3 +1,27 @@
+<figure>
+<img src="https://github.com/user-attachments/assets/c5dc556f-c61b-4e1b-a78d-e63af039ce59" alt="Trulli" style="width:100%">
+<figcaption align = "center"><b>Figure 1:</b> Whisper model. The architecture
+follows the standard Transformer-based encoder-decoder model. A
+log-Mel spectrogram is input to the encoder. The last encoder
+hidden states are input to the decoder via cross-attention mechanisms. The
+decoder autoregressively predicts text tokens, jointly conditional on the
+encoder hidden states and previously predicted tokens. Figure source:
+<a href="https://openai.com/blog/whisper/">OpenAI Whisper Blog</a>.</figcaption>
+</figure>
+
+
+<figure>
+<img src="https://github.com/user-attachments/assets/33e0d42e-f823-4a04-b86d-369d5e7bff66" alt="Trulli" style="width:100%">
+<figcaption align = "center"><b>Figure 2:</b> The multitask training tokenize format for transcription with timestamps and translation </figcaption>
+</figure>
+
+
+---
+
+podcast: https://podcast-997.pages.dev/podcast/c99c96522e1b4b6ea398126e026f1eaf
+
+---
+
 ## download whisper assets and models
 
 - download assets
@@ -159,21 +183,30 @@ curl -vv -X GET "https://weege--tritonserver-serve-dev.modal.run/v2/health/ready
 APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper_bls,whisper_tensorrt_llm modal run src/llm/trtllm/whisper/tritonserver.py 
 ```
 
+## test whisper service
+```shell
+```
+
 # reference:
 - ⭐ run whisper with tensorrt-llm: https://github.com/NVIDIA/TensorRT-LLM/blob/v0.20.0rc0/examples/models/core/whisper/README.md
 - ⭐ run whisper service with triton tensorrtllm backend: https://github.com/triton-inference-server/tensorrtllm_backend/blob/main/docs/whisper.md
 - https://github.com/triton-inference-server/tensorrtllm_backend/blob/main/docs/model_config.md (fill necessary params)
 
-## wav2vec 2.0
-- https://ai.meta.com/research/impact/wav2vec/
+## wav2vec (CTC Transformer Encoder-only architecture)
+- ⭐️ CTC: https://huggingface.co/learn/audio-course/en/chapter3/ctc
+- wav2vec: https://ai.meta.com/research/impact/wav2vec/ 
 - 2019.4 [wav2vec: Unsupervised Pre-training for Speech Recognition](https://arxiv.org/abs/1904.05862)
 - ⭐️⭐️ 2020.6 [wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations](https://arxiv.org/abs/2006.11477) | [paper code](https://github.com/facebookresearch/fairseq/tree/main/examples/wav2vec)
+- wav2vec-U: https://ai.meta.com/blog/wav2vec-unsupervised-speech-recognition-without-supervision/
 
-## whisper
+## whisper (Seq2Seq Transformer Encoder-Decoder architecture)
 - https://openai.com/index/whisper/
-- ⭐️⭐️ 2022.12 [Robust Speech Recognition via Large-Scale Weak Supervision](https://arxiv.org/abs/2212.04356) | [paper code](https://github.com/openai/whisper)
-- ⭐️ https://huggingface.co/learn/audio-course/en/chapter3/seq2seq
-- 
+- ⭐️⭐️ 2022.9 [Robust Speech Recognition via Large-Scale Weak Supervision](https://arxiv.org/abs/2212.04356) | [paper code](https://github.com/openai/whisper)
+- tiktoken text tokenizer from GPT-2: https://github.com/openai/whisper/blob/main/whisper/tokenizer.py
+- ⭐️ https://huggingface.co/learn/audio-course/en/chapter3/seq2seq (ASR TTS with seq2seq transformer model, but TTS is more complex than ASR, need vocoder to generate audio waveform,This vocoder is not part of the seq2seq architecture and is trained separately, e.g.: hifigan, bigvgan)
+- whisper fine-tuning: https://github.com/openai/whisper/discussions/759 | https://huggingface.co/blog/fine-tune-whisper
+
+---
 
 > [!NOTE]
 > compile_model trtllm-build with TensorRT-LLM version must equal to tritonserver with TensorRT-LLM version

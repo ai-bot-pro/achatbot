@@ -56,7 +56,7 @@ input [
     dims: [-1]
   },
   {
-    name: "WAV_LENS"
+    name: "WAV_LEN"
     data_type: TYPE_INT32
     dims: [1]
     optional: True

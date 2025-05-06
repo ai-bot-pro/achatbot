@@ -121,7 +121,7 @@ def run_dataset_bench(app_name: str, engine_dir: str, other_args: str) -> None:
 
 
 """
-# run_single_wav_test, NOTE: don't WER
+# run_single_wav_test, NOTE: no WER eval
 ## C++ runtime
 modal run src/llm/trtllm/whisper/run.py \
     --app-name "whisper" \
@@ -145,7 +145,7 @@ modal run src/llm/trtllm/whisper/run.py \
     --engine-dir "trt_engines_float16" \
     --other-args "--log_level info"
 
-# run_dataset_bench, NOTE: have WER
+# run_dataset_bench, NOTE: have WER eval
 ## C++ runtime
 modal run src/llm/trtllm/whisper/run.py \
     --task "run_dataset_bench" \

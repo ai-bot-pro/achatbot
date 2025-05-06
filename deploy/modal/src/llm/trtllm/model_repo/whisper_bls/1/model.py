@@ -193,7 +193,7 @@ class TritonPythonModel:
             # To support batch > 1
             # cat mel,text_prompt, also, need to increase decoder_input_len as a triton input
             wav = torch.from_numpy(wav[0]).to(self.device)
-            wav_len = pb_utils.get_input_tensor_by_name(request, "WAV_LENS").as_numpy().item()
+            wav_len = pb_utils.get_input_tensor_by_name(request, "WAV_LEN").as_numpy().item()
             if self.zero_pad:
                 wav = wav[:wav_len]
                 target = 0
