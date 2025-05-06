@@ -528,6 +528,15 @@ TRITON_PROTOCOL=http modal run src/llm/trtllm/whisper/client.py \
     --action asr \
     --server-url "weedge--tritonserver-serve-dev.modal.run"
 
+## bench (concurency_cn:1->2->4->8->16 | batch_size:1->2->4->8)
+## bench throughput and latency, grpc just test, modal support http, grpc now use tunnel
+TRITON_PROTOCOL=http modal run src/llm/trtllm/whisper/client.py \
+    --no-streaming \
+    --action bench_asr \
+    --concurency-cn 4 \
+    --batch-size 4 \
+    --server-url "weedge--tritonserver-serve-dev.modal.run"
+
 # WER eval
 see run.py to change
 """
