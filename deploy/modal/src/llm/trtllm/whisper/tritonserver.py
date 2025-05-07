@@ -88,8 +88,13 @@ def run():
 
     with modal.forward(8001, unencrypted=True) as tunnel:
         print(
-            f"use tunnel.tcp_socket = {tunnel.tcp_socket[0]}:{tunnel.tcp_socket[1]} to connect tritonserver with tcp(grpc)"
+            f"use tunnel.tcp_socket = {tunnel.tcp_socket[0]}:{tunnel.tcp_socket[1]} to connect tritonserver with tcp(grpc)",
         )
+        with open(f"{model_repo}/tunnel_server_addr.txt", "w") as f:
+            print(
+                f"use tunnel.tcp_socket = {tunnel.tcp_socket[0]}:{tunnel.tcp_socket[1]} to connect tritonserver with tcp(grpc)",
+                file=f,
+            )
         cmd = f"tritonserver --model-repository {model_repo} --log-verbose 0 --log-info True "
         tensorrt_llm_model_name: str = os.getenv("TENSORRT_LLM_MODEL_NAME", "whisper")
         model_names = tensorrt_llm_model_name.split(",")
@@ -143,6 +148,7 @@ def prepare(model_repo):
     subprocess.run("which nvcc", shell=True)
     subprocess.run("nvcc --version", shell=True)
     subprocess.run("trtllm-build -h", shell=True)
+    subprocess.run("tritonserver -h", shell=True)
 
     subprocess.run("nvidia-smi --list-gpus", shell=True, check=True)
     print("--" * 20)
