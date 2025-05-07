@@ -38,11 +38,11 @@ from .fbank import FeatureExtractor
 
 class TritonPythonModel:
     def initialize(self, args):
-        parameters = json.loads(args['model_config'])['parameters']
+        parameters = json.loads(args["model_config"])["parameters"]
         for key, value in parameters.items():
             parameters[key] = value["string_value"]
         engine_dir = parameters["engine_dir"]
-        config_path = Path(engine_dir) / 'decoder' / 'config.json'
+        config_path = Path(engine_dir) / "decoder" / "config.json"
         json_config = GptJsonConfig.parse_file(config_path)
         assert json_config.model_config.supports_inflight_batching
         runner_kwargs = dict(
@@ -56,10 +56,14 @@ class TritonPythonModel:
             kv_cache_free_gpu_memory_fraction=0.5,
         )
         self.model_runner_cpp = ModelRunnerCpp.from_dir(**runner_kwargs)
+        mel_filters_dir = parameters["mel_filters_dir"]
         self.feature_extractor = FeatureExtractor(
-            n_mels=int(parameters["n_mels"])
+            n_mels=int(parameters["n_mels"]),
+            mel_filters_dir=mel_filters_dir,
         )
         self.zero_pad = parameters["zero_pad"] == "true"
+        # https://huggingface.co/openai/whisper-large-v3/blob/main/added_tokens.json#L1521
+        # <|endoftext|>
         self.eot_id = 50257
 
     def execute(self, requests):
@@ -67,10 +71,8 @@ class TritonPythonModel:
 
         for request in requests:
             wav_tensor = pb_utils.get_input_tensor_by_name(request, "WAV")
-            wav_lens = pb_utils.get_input_tensor_by_name(
-                request, "WAV_LEN").as_numpy()
-            prompt_ids = pb_utils.get_input_tensor_by_name(
-                request, "DECODER_INPUT_IDS").as_numpy()
+            wav_lens = pb_utils.get_input_tensor_by_name(request, "WAV_LEN").as_numpy()
+            prompt_ids = pb_utils.get_input_tensor_by_name(request, "DECODER_INPUT_IDS").as_numpy()
 
             # Move WAV data to GPU
             wav = from_dlpack(wav_tensor.to_dlpack())
@@ -81,22 +83,18 @@ class TritonPythonModel:
 
             # Batch processing for each sample in the batch
             for i in range(batch_size):
-                wav_i = wav[i:i+1, :int(wav_lens[i].item())]
+                wav_i = wav[i : i + 1, : int(wav_lens[i].item())]
                 mel = self.feature_extractor.compute_feature(
-                    wav_i[0].to('cuda'),
-                    padding_target_len=padding
+                    wav_i[0].to("cuda"), padding_target_len=padding
                 ).transpose(1, 2)
                 batch_mel_list.append(mel.squeeze(0))
 
             # Move prompt IDs to GPU
-            decoder_input_ids = torch.tensor(
-                prompt_ids, dtype=torch.int32, device='cuda')
+            decoder_input_ids = torch.tensor(prompt_ids, dtype=torch.int32, device="cuda")
 
             # Calculate mel lengths
             mel_input_lengths = torch.tensor(
-                [mel.shape[0] for mel in batch_mel_list],
-                dtype=torch.int32,
-                device='cuda'
+                [mel.shape[0] for mel in batch_mel_list], dtype=torch.int32, device="cuda"
             )
 
             # Run batch inference
@@ -109,17 +107,17 @@ class TritonPythonModel:
                 pad_id=self.eot_id,
                 num_beams=1,
                 output_sequence_lengths=True,
-                return_dict=True
+                return_dict=True,
             )
             torch.cuda.synchronize()
 
             # Process outputs
-            output_ids = outputs['output_ids'].cpu().numpy()
+            output_ids = outputs["output_ids"].cpu().numpy()
 
             # Create response for the request
-            response = pb_utils.InferenceResponse(output_tensors=[
-                pb_utils.Tensor("OUTPUT_IDS", output_ids)
-            ])
+            response = pb_utils.InferenceResponse(
+                output_tensors=[pb_utils.Tensor("OUTPUT_IDS", output_ids)]
+            )
             responses.append(response)
 
         return responses

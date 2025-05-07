@@ -32,6 +32,8 @@ FILL_TEMPLATE_URL = "https://raw.githubusercontent.com/triton-inference-server/t
 )
 def ready_model(
     whisper_params: str,
+    whisper_infer_bls_params: str = "",
+    whisper_tensorrt_llm_cpprunner_params: str = "",
     whisper_bls_params: str = "",
     whisper_tensorrt_llm_params: str = "",
     tag_or_hash: str = "",
@@ -54,7 +56,7 @@ def ready_model(
     cmd = f"wget {fill_template_url} -O /root/fill_template.py"
     subprocess.run(cmd, cwd="/", shell=True, check=True)
 
-    # whisper
+    # whisper (python BE)
     cmd = f"cp -r /achatbot/deploy/modal/src/llm/trtllm/model_repo/whisper {model_repo}"
     print(cmd)
     subprocess.run(cmd, shell=True, cwd="/", check=True)
@@ -69,7 +71,35 @@ def ready_model(
     print(cmd)
     subprocess.run(cmd.strip().split(" "), cwd="/", check=True)
 
-    # whishper bls
+    # whisper infer bls (python BE)
+    cmd = f"cp -r /achatbot/deploy/modal/src/llm/trtllm/model_repo/whisper_infer_bls {model_repo}"
+    print(cmd)
+    subprocess.run(cmd, shell=True, cwd="/", check=True)
+    local_trt_build_dir = os.path.join(TRT_MODEL_DIR, app_name, engine_dir)
+    cmd = (
+        f"python /root/fill_template.py "
+        + f"-i {model_repo}/whisper_infer_bls/config.pbtxt "
+        + f"{whisper_params},engine_dir:{local_trt_build_dir},tokenizer_dir:{ASSETS_DIR}".strip(",")
+    )
+    print(cmd)
+    subprocess.run(cmd.strip().split(" "), cwd="/", check=True)
+
+    # whisper_tensorrt_llm cpp runner (python BE)
+    cmd = f"cp -r /achatbot/deploy/modal/src/llm/trtllm/model_repo/whisper_infer_bls {model_repo}"
+    print(cmd)
+    subprocess.run(cmd, shell=True, cwd="/", check=True)
+    local_trt_build_dir = os.path.join(TRT_MODEL_DIR, app_name, engine_dir)
+    cmd = (
+        f"python /root/fill_template.py "
+        + f"-i {model_repo}/whisper_infer_bls/config.pbtxt "
+        + f"{whisper_params},engine_dir:{local_trt_build_dir},mel_filters_dir:{ASSETS_DIR}".strip(
+            ","
+        )
+    )
+    print(cmd)
+    subprocess.run(cmd.strip().split(" "), cwd="/", check=True)
+
+    # whishper bls (python BE)
     cmd = f"cp -r /achatbot/deploy/modal/src/llm/trtllm/model_repo/whisper_bls {model_repo}"
     print(cmd)
     subprocess.run(cmd, shell=True, cwd="/", check=True)
@@ -85,7 +115,7 @@ def ready_model(
     print(cmd)
     subprocess.run(cmd.strip().split(" "), cwd="/", check=True)
 
-    # whisper_tensorrt_llm
+    # whisper_tensorrt_llm (tensorrtllm BE)
     cmd = (
         f"cp -r /achatbot/deploy/modal/src/llm/trtllm/model_repo/whisper_tensorrt_llm {model_repo}"
     )
@@ -111,6 +141,8 @@ modal run src/llm/trtllm/whisper/ready_model.py \
     --tag-or-hash "feat/asr" \
     --engine-dir "trt_engines_float16" \
     --whisper-params "triton_max_batch_size:8,max_queue_delay_microseconds:5000,n_mels:128" \
+    --whisper-infer-bls-params "triton_max_batch_size:8,max_queue_delay_microseconds:0" \
+    --whisper-tensorrt-llm-cpprunner-params "triton_max_batch_size:8,max_queue_delay_microseconds:0,n_mels:128,zero_pad:false" \
     --whisper-bls-params "triton_max_batch_size:8,max_queue_delay_microseconds:0,n_mels:128,zero_pad:false" \
     --whisper-tensorrt-llm-params "max_tokens_in_paged_kv_cache:24000,max_attention_window_size:2560,batch_scheduler_policy:guaranteed_no_evict,batching_strategy:inflight_fused_batching,kv_cache_free_gpu_mem_fraction:0.5,exclude_input_in_output:True,triton_max_batch_size:8,max_queue_delay_microseconds:0,max_beam_width:1,enable_kv_cache_reuse:False,normalize_log_probs:True,enable_chunked_context:False,decoding_mode:top_k_top_p,max_queue_size:0,enable_context_fmha_fp32_acc:False,cross_kv_cache_fraction:0.5,encoder_input_features_data_type:TYPE_FP16,logits_datatype:TYPE_FP32"
 
@@ -120,6 +152,8 @@ modal run src/llm/trtllm/whisper/ready_model.py \
     --stream 1 \
     --engine-dir "trt_engines_float16" \
     --whisper-params "triton_max_batch_size:8,max_queue_delay_microseconds:5000,n_mels:128" \
+    --whisper-infer-bls-params "triton_max_batch_size:8,max_queue_delay_microseconds:0" \
+    --whisper-tensorrt-llm-cpprunner-params "triton_max_batch_size:8,max_queue_delay_microseconds:0,n_mels:128,zero_pad:false" \
     --whisper-bls-params "triton_max_batch_size:8,max_queue_delay_microseconds:0,n_mels:128,zero_pad:false" \
     --whisper-tensorrt-llm-params "max_tokens_in_paged_kv_cache:24000,max_attention_window_size:2560,batch_scheduler_policy:guaranteed_no_evict,batching_strategy:inflight_fused_batching,kv_cache_free_gpu_mem_fraction:0.5,exclude_input_in_output:True,triton_max_batch_size:8,max_queue_delay_microseconds:0,max_beam_width:1,enable_kv_cache_reuse:False,normalize_log_probs:True,enable_chunked_context:False,decoding_mode:top_k_top_p,max_queue_size:0,enable_context_fmha_fp32_acc:False,cross_kv_cache_fraction:0.5,encoder_input_features_data_type:TYPE_FP16,logits_datatype:TYPE_FP32"
 """
@@ -128,6 +162,8 @@ modal run src/llm/trtllm/whisper/ready_model.py \
 @app.local_entrypoint()
 def main(
     whisper_params: str = "",
+    whisper_infer_bls_params: str = "",
+    whisper_tensorrt_llm_cpprunner_params: str = "",
     whisper_bls_params: str = "",
     whisper_tensorrt_llm_params: str = "",
     tag_or_hash: str = "main",
@@ -137,6 +173,8 @@ def main(
 ):
     ready_model.remote(
         whisper_params,
+        whisper_infer_bls_params,
+        whisper_tensorrt_llm_cpprunner_params,
         whisper_bls_params,
         whisper_tensorrt_llm_params,
         tag_or_hash,

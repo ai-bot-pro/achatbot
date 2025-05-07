@@ -12,13 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # Reference: https://github.com/openai/whisper/blob/main/whisper/audio.py
+import os
+from typing import Union
+from functools import lru_cache
+
 import numpy as np
 import torch
 import torch.nn.functional as F
-from typing import Union
-import os
 
-def mel_filters(device, n_mels: int =128) -> torch.Tensor:
+
+@lru_cache(maxsize=None)
+def mel_filters(device, n_mels: int = 128, mel_filters_dir: str = None) -> torch.Tensor:
     """
     load the mel filterbank matrix for projecting STFT into a Mel spectrogram.
     Allows decoupling librosa dependency; saved using:
@@ -28,17 +32,18 @@ def mel_filters(device, n_mels: int =128) -> torch.Tensor:
             mel_128=librosa.filters.mel(sr=16000, n_fft=400, n_mels=128),
         )
     """
-    assert n_mels == 80 or n_mels == 128 , f"Unsupported n_mels: {n_mels}"
-    with np.load(
-        os.path.join(os.path.dirname(__file__), "mel_filters.npz")
-    ) as f:
+    assert n_mels == 80 or n_mels == 128, f"Unsupported n_mels: {n_mels}"
+    if mel_filters_dir is None:
+        mel_filters_path = os.path.join(os.path.dirname(__file__), "mel_filters.npz")
+    else:
+        mel_filters_path = os.path.join(mel_filters_dir, "mel_filters.npz")
+    with np.load(mel_filters_path) as f:
         return torch.from_numpy(f[f"mel_{n_mels}"]).to(device)
 
 
 def log_mel_spectrogram(
     audio: Union[torch.Tensor],
     filters: torch.Tensor,
-    n_mels: int = 128,
     n_fft: int = 400,
     hop_length: int = 160,
 ):
@@ -72,15 +77,21 @@ def log_mel_spectrogram(
     log_spec = log_spec.half()
     return log_spec
 
+
 class FeatureExtractor(torch.nn.Module):
     """Your Python model must use the same class name. Every Python model
     that is created must have "TritonPythonModel" as the class name.
     """
 
-    def __init__(self, n_mels: int = 128):
+    def __init__(self, n_mels: int = 128, mel_filters_dir: str = None):
         self.device = torch.device("cuda")
         self.n_mels = n_mels
-        self.filters = mel_filters(self.device, n_mels=self.n_mels)
+        self.mel_filters_dir = mel_filters_dir
+        self.filters = mel_filters(
+            self.device,
+            n_mels=self.n_mels,
+            mel_filters_dir=mel_filters_dir,
+        )
 
     def compute_feature(self, wav, padding_target_len: int = 3000):
         """

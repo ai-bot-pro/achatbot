@@ -32,6 +32,10 @@ parameters [
   {
   key: "zero_pad"
   value: {string_value: "${zero_pad}"}
+  },
+  {
+    key: "mel_filters_dir"
+    value: { string_value: "${mel_filters_dir}"}
   }
 ]
 
