@@ -53,7 +53,7 @@ class TritonPythonModel:
         prompt_ids_tensor = pb_utils.Tensor("DECODER_INPUT_IDS", prompt_ids.astype(np.int32))
 
         infer_request = pb_utils.InferenceRequest(
-            model_name="whisper",
+            model_name="whisper_tensorrt_llm_cpprunner",
             requested_output_names=["OUTPUT_IDS"],
             inputs=[wav_tensor, wav_len_tensor, prompt_ids_tensor],
         )

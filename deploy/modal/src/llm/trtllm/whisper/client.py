@@ -40,8 +40,8 @@ image = image.run_commands(
 image = image.env({"TRITON_PROTOCOL": os.getenv("TRITON_PROTOCOL", "grpc")})
 
 audio_text_map = {
-    "/1221-135766-0001.wav": "god as a direct consequence of the sin which man thus punished had given her a lovely child whose place was on that same dishonoured bosom to connect her parent for ever with the race and descent of mortals and to be finally a blessed soul in heaven",
-    "/1221-135766-0002.wav": "yet these thoughts affected hester prynne less with hope than apprehension",
+    "/1221-135766-0001.wav": "god as a direct consequence of the sin which man thus punished had given her a lovely child whose place was on that same dishonoured bosom to connect her parent for ever with the race and descent of mortals and to be finally a blessed soul in heaven.",
+    "/1221-135766-0002.wav": "yet these thoughts affected hester prynne less with hope than apprehension.",
     "/mid.wav": "大学生利用漏洞免费吃肯德基获刑。",
     "/long.wav": "富士康在印度工厂出现大规模感染，目前工厂产量已下降超50%。",
 }
@@ -73,7 +73,11 @@ assets_dir = modal.Volume.from_name("assets", create_if_missing=True)
     timeout=1200,  # default 300s
     scaledown_window=1200,
 )
-async def health(server_url: str, verbose: bool = False):
+async def health(
+    server_url: str,
+    verbose: bool = False,
+    model_names: str = "whisper_bls,whisper_tensorrt_llm",
+):
     url = server_url
 
     try:
@@ -100,10 +104,7 @@ async def health(server_url: str, verbose: bool = False):
     print(metadata)
 
     # Health
-    for model_name in [
-        "whisper_bls",
-        "whisper_tensorrt_llm",
-    ]:
+    for model_name in model_names.split(","):
         if not await triton_client.is_model_ready(model_name):
             print(f"{model_name} FAILED : is_model_ready")
 
@@ -172,7 +173,13 @@ async def asr(
     tot_err_rate = write_error_stats(
         None,
         test_set_name="test-asr",
-        results=[(reference_audio, audio_text_map[reference_audio], decoding_results)],
+        results=[
+            (
+                reference_audio,
+                audio_text_map[reference_audio].lower(),
+                decoding_results.strip().lower(),
+            )
+        ],
         enable_log=False,
     )
     print("total_err_rate:", tot_err_rate)
@@ -465,30 +472,62 @@ async def send_whisper(
 
 """
 # gRPC
-## health check
+## health check for whisper_bls,whisper_tensorrt_llm
 modal run src/llm/trtllm/whisper/client.py \
     --action health \
-    --server-url "r15.modal.host:44161"
+    --server-url "r22.modal.host:38249"
 
-## single wav test
+## health check for whisper_infer_bls, whisper_tensorrt_llm_cpprunner
+modal run src/llm/trtllm/whisper/client.py \
+    --action health \
+    --model-name whisper_infer_bls \
+    --model-names whisper_infer_bls,whisper_tensorrt_llm_cpprunner \
+    --server-url "r28.modal.host:38535"
+
+
+## single wav test for whisper_bls,whisper_tensorrt_llm
 modal run src/llm/trtllm/whisper/client.py \
     --no-streaming \
     --action asr \
-    --server-url "r15.modal.host:44161"
+    --server-url "r22.modal.host:38249"
 modal run src/llm/trtllm/whisper/client.py \
     --streaming \
     --action asr \
-    --server-url "r15.modal.host:44161"
+    --server-url "r22.modal.host:38249"
 modal run src/llm/trtllm/whisper/client.py \
     --action asr \
     --reference-audio /1221-135766-0001.wav \
     --text-prefix "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>" \
-    --server-url "r15.modal.host:44161"
+    --server-url "r22.modal.host:38249"
 modal run src/llm/trtllm/whisper/client.py \
     --action asr \
     --reference-audio /long.wav \
     --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
     --server-url "r24.modal.host:44175"
+
+## single wav test for whisper_infer_bls,whisper_tensorrt_llm_cpprunner
+modal run src/llm/trtllm/whisper/client.py \
+    --no-streaming \
+    --action asr \
+    --model-name whisper_infer_bls \
+    --server-url "r28.modal.host:38535"
+modal run src/llm/trtllm/whisper/client.py \
+    --streaming \
+    --action asr \
+    --model-name whisper_infer_bls \
+    --server-url "r22.modal.host:38249"
+modal run src/llm/trtllm/whisper/client.py \
+    --action asr \
+    --model-name whisper_infer_bls \
+    --reference-audio /1221-135766-0001.wav \
+    --text-prefix "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>" \
+    --server-url "r22.modal.host:38249"
+modal run src/llm/trtllm/whisper/client.py \
+    --action asr \
+    --model-name whisper_infer_bls \
+    --reference-audio /long.wav \
+    --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
+    --server-url "r22.modal.host:38249"
 
 ## bench (concurency_cn:1->2->4->8->16 | batch_size:1->2->4->8)
 ## bench throughput and latency, grpc just test, modal support http, grpc now use tunnel
@@ -515,6 +554,16 @@ modal run src/llm/trtllm/whisper/client.py \
     --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
     --server-url "r18.modal.host:41787"
 
+## bench for whisper_infer_bls,whisper_tensorrt_llm_cpprunner
+modal run src/llm/trtllm/whisper/client.py \
+    --no-streaming \
+    --action bench_asr \
+    --model-name whisper_infer_bls \
+    --concurency-cn 4 \
+    --batch-size 4 \
+    --reference-audio /long.wav \
+    --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
+    --server-url "r22.modal.host:38249"
 
 # http
 ## health check
@@ -537,6 +586,8 @@ TRITON_PROTOCOL=http modal run src/llm/trtllm/whisper/client.py \
     --batch-size 4 \
     --server-url "weedge--tritonserver-serve-dev.modal.run"
 
+# other the same as grpc :-)
+
 # WER eval
 see run.py to change
 """
@@ -554,6 +605,7 @@ def main(
     padding_duration: int = 10,  # padding to nearset 10 seconds , max 30 seconds
     verbose: bool = False,
     streaming: bool = False,
+    model_names: str = "whisper_bls,whisper_tensorrt_llm",
 ):
     if action == "asr":
         asr.remote(
@@ -581,7 +633,7 @@ def main(
             streaming=streaming,
         )
     else:
-        health.remote(server_url, verbose=verbose)
+        health.remote(server_url, verbose=verbose, model_names=model_names)
 
 
 def store_transcripts(filename: os.PathLike, texts: Iterable[Tuple[str, str, str]]) -> None:

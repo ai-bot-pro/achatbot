@@ -45,6 +45,12 @@ tritonserver_image = (
         "soundfile",  # wav file to np.array
         # "kaldialign", for client test WER
     )
+    .pip_install(
+        f"tensorrt-llm=={GIT_TAG_OR_HASH}",
+        # "pynvml<12",  # avoid breaking change to pynvml version API for tensorrt_llm
+        pre=True,
+        extra_index_url="https://pypi.nvidia.com",
+    )
     .env(
         {
             # "PYTHONPATH": os.getenv("IMAGE_PYTHONPATH", "/"),
@@ -143,12 +149,12 @@ def prepare(model_repo):
     print("cuda:", torch.version.cuda)
     print("_GLIBCXX_USE_CXX11_ABI", torch._C._GLIBCXX_USE_CXX11_ABI)
 
-    subprocess.run("pip show tensorrt", shell=True)
+    subprocess.run("pip list | grep tensorrt", shell=True)
     subprocess.run("nvidia-smi --version", shell=True)
     subprocess.run("which nvcc", shell=True)
     subprocess.run("nvcc --version", shell=True)
-    subprocess.run("trtllm-build -h", shell=True)
-    subprocess.run("tritonserver -h", shell=True)
+    # subprocess.run("trtllm-build -h", shell=True)
+    # subprocess.run("tritonserver -h", shell=True)
 
     subprocess.run("nvidia-smi --list-gpus", shell=True, check=True)
     print("--" * 20)
@@ -161,14 +167,22 @@ def prepare(model_repo):
     print(cmd)
     subprocess.run(cmd, shell=True, check=True)
 
-    for infer_dir in ["whisper", "whisper_bls"]:
+    for infer_dir in [
+        "whisper",
+        "whisper_bls",
+        "whisper_infer_bls",
+        "whisper_tensorrt_llm_cpprunner",
+    ]:
         cmd = f"cp /python_backend/build/triton_python_backend_stub {model_repo}/{infer_dir}"
         print(cmd)
         subprocess.run(cmd, shell=True, check=True)
 
 
 """
-# run tritonserver with whisper_bls + whisper_tensorrt_llm(decoder)
+# run tritonserver with whisper_infer_bls + whisper_tensorrt_llm_cpprunner(decoder python BE)
+APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper_infer_bls,whisper_tensorrt_llm_cpprunner modal serve src/llm/trtllm/whisper/tritonserver.py 
+
+# run tritonserver with whisper_bls + whisper_tensorrt_llm(decoder tensorrtllm BE)
 APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper_bls,whisper_tensorrt_llm modal serve src/llm/trtllm/whisper/tritonserver.py 
 
 # curl server is ready
@@ -176,6 +190,8 @@ curl -vv -X GET "https://weege009--tritonserver-serve-dev.modal.run/v2/health/re
 
 # run grpc tritonserver by tcp tunnel and http server
 APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper_bls,whisper_tensorrt_llm modal run src/llm/trtllm/whisper/tritonserver.py 
+
+APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper_infer_bls,whisper_tensorrt_llm_cpprunner modal run src/llm/trtllm/whisper/tritonserver.py 
 """
 
 

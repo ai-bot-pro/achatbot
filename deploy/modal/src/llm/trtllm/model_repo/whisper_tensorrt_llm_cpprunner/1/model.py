@@ -43,18 +43,32 @@ class TritonPythonModel:
             parameters[key] = value["string_value"]
         engine_dir = parameters["engine_dir"]
         config_path = Path(engine_dir) / "decoder" / "config.json"
-        json_config = GptJsonConfig.parse_file(config_path)
-        assert json_config.model_config.supports_inflight_batching
+        decoder_json_config = GptJsonConfig.parse_file(config_path)
+        self.decoder_model_config = decoder_json_config.model_config
+        # https://github.com/NVIDIA/TensorRT-LLM/blob/a7c50cc426e1865afb0be0545a6035f7af420870/cpp/include/tensorrt_llm/runtime/modelConfig.h#L342
+        assert (
+            decoder_json_config.model_config.supports_inflight_batching
+        ), f"{decoder_json_config.model_config.supports_inflight_batching}, expected True"
+
         runner_kwargs = dict(
             engine_dir=engine_dir,
+            # https://github.com/NVIDIA/TensorRT-LLM/blob/v0.18.0/tensorrt_llm/runtime/model_runner_cpp.py#L199
+            # seq2seq encoder-decoder transformer model support
             is_enc_dec=True,
-            max_batch_size=64,
-            max_input_len=3000,
-            max_output_len=96,
-            max_beam_width=1,
+            # https://github.com/NVIDIA/TensorRT-LLM/blob/v0.19.0rc0/cpp/tensorrt_llm/batch_manager/trtGptModelInflightBatching.cpp#L266
+            # must set crossKvCacheFraction
+            cross_kv_cache_fraction=float(parameters.get("cross_kv_cache_fraction", 0.5)),
+            kv_cache_free_gpu_memory_fraction=float(
+                parameters.get("kv_cache_free_gpu_mem_fraction", 0.5)
+            ),
             debug_mode=False,
-            kv_cache_free_gpu_memory_fraction=0.5,
+            ## default use engine config set in cpp runtime
+            # max_batch_size=self.decoder_model_config.max_batch_size,
+            # max_input_len=self.decoder_model_config.max_input_len,
+            max_beam_width=self.decoder_model_config.max_beam_width,
         )
+        pb_utils.Logger.log_info(f"runner_kwargs: {runner_kwargs}")
+        # https://github.com/NVIDIA/TensorRT-LLM/blob/v0.18.0/tensorrt_llm/runtime/model_runner_cpp.py#L87
         self.model_runner_cpp = ModelRunnerCpp.from_dir(**runner_kwargs)
         mel_filters_dir = parameters["mel_filters_dir"]
         self.feature_extractor = FeatureExtractor(
@@ -78,7 +92,7 @@ class TritonPythonModel:
             wav = from_dlpack(wav_tensor.to_dlpack())
             batch_size = wav.shape[0]
 
-            padding = 0 if self.zero_pad else 3000
+            padding = 0 if self.zero_pad else self.decoder_model_config.max_input_len
             batch_mel_list = []
 
             # Batch processing for each sample in the batch
@@ -97,6 +111,12 @@ class TritonPythonModel:
                 [mel.shape[0] for mel in batch_mel_list], dtype=torch.int32, device="cuda"
             )
 
+            pb_utils.Logger.log_info(f"decoder_input_ids: {decoder_input_ids.shape}")
+            pb_utils.Logger.log_info(f"mel_input_lengths: {mel_input_lengths.shape}")
+            pb_utils.Logger.log_info(f"batch_mel_list: {len(batch_mel_list)}")
+            for i, mel in enumerate(batch_mel_list):
+                pb_utils.Logger.log_info(f"batch_mel_list[{i}]: {mel.shape}")
+
             # Run batch inference
             outputs = self.model_runner_cpp.generate(
                 batch_input_ids=decoder_input_ids,
@@ -110,6 +130,7 @@ class TritonPythonModel:
                 return_dict=True,
             )
             torch.cuda.synchronize()
+            pb_utils.Logger.log_info(f"outputs: {outputs}")
 
             # Process outputs
             output_ids = outputs["output_ids"].cpu().numpy()

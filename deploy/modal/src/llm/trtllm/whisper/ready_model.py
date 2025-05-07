@@ -79,20 +79,20 @@ def ready_model(
     cmd = (
         f"python /root/fill_template.py "
         + f"-i {model_repo}/whisper_infer_bls/config.pbtxt "
-        + f"{whisper_params},engine_dir:{local_trt_build_dir},tokenizer_dir:{ASSETS_DIR}".strip(",")
+        + f"{whisper_infer_bls_params},engine_dir:{local_trt_build_dir},tokenizer_dir:{ASSETS_DIR}".strip(",")
     )
     print(cmd)
     subprocess.run(cmd.strip().split(" "), cwd="/", check=True)
 
     # whisper_tensorrt_llm cpp runner (python BE)
-    cmd = f"cp -r /achatbot/deploy/modal/src/llm/trtllm/model_repo/whisper_infer_bls {model_repo}"
+    cmd = f"cp -r /achatbot/deploy/modal/src/llm/trtllm/model_repo/whisper_tensorrt_llm_cpprunner {model_repo}"
     print(cmd)
     subprocess.run(cmd, shell=True, cwd="/", check=True)
     local_trt_build_dir = os.path.join(TRT_MODEL_DIR, app_name, engine_dir)
     cmd = (
         f"python /root/fill_template.py "
-        + f"-i {model_repo}/whisper_infer_bls/config.pbtxt "
-        + f"{whisper_params},engine_dir:{local_trt_build_dir},mel_filters_dir:{ASSETS_DIR}".strip(
+        + f"-i {model_repo}/whisper_tensorrt_llm_cpprunner/config.pbtxt "
+        + f"{whisper_tensorrt_llm_cpprunner_params},engine_dir:{local_trt_build_dir},mel_filters_dir:{ASSETS_DIR}".strip(
             ","
         )
     )

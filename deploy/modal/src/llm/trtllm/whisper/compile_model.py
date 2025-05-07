@@ -127,7 +127,7 @@ def trtllm_build(
         f"trtllm-build --checkpoint_dir {local_trt_model_dir}/decoder "
         + f"--output_dir {local_trt_build_dir}/decoder "
         + "--moe_plugin disable "
-        + "--max_input_len 14 --max_seq_len 114 "
+        + "--max_input_len 1024 --max_seq_len 2048"
         + "--max_beam_width 4 "
         + "--max_batch_size 8 "
         + "--max_encoder_input_len 3000 "

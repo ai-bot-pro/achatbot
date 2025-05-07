@@ -39,6 +39,13 @@ parameters [
   }
 ]
 
+parameters: {
+  key: "cross_kv_cache_fraction"
+  value: {
+    string_value: "${cross_kv_cache_fraction}"
+  }
+}
+
 input [
   {
     name: "WAV"
