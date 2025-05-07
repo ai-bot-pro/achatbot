@@ -186,25 +186,25 @@ APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper_bls,whisper_tensorrt_llm modal 
 ## test whisper service
 ```shell
 # health check
-modal run src/llm/trtllm/whisper/client_grpc.py \
+modal run src/llm/trtllm/whisper/client.py \
     --action health \
     --server-url "r15.modal.host:44161"
 
 # single wav test
-modal run src/llm/trtllm/whisper/client_grpc.py \
+modal run src/llm/trtllm/whisper/client.py \
     --no-streaming \
     --action asr \
     --server-url "r15.modal.host:44161"
-modal run src/llm/trtllm/whisper/client_grpc.py \
+modal run src/llm/trtllm/whisper/client.py \
     --streaming \
     --action asr \
     --server-url "r15.modal.host:44161"
-modal run src/llm/trtllm/whisper/client_grpc.py \
+modal run src/llm/trtllm/whisper/client.py \
     --action asr \
     --reference-audio /1221-135766-0001.wav \
     --text-prefix "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>" \
     --server-url "r15.modal.host:44161"
-modal run src/llm/trtllm/whisper/client_grpc.py \
+modal run src/llm/trtllm/whisper/client.py \
     --action asr \
     --reference-audio /long.wav \
     --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
@@ -212,21 +212,21 @@ modal run src/llm/trtllm/whisper/client_grpc.py \
 
 # bench (concurency_cn:1->2->4->8->16 | batch_size:1->2->4->8)
 # bench throughput and latency, grpc just test, modal support http, grpc now use tunnel
-modal run src/llm/trtllm/whisper/client_grpc.py \
+modal run src/llm/trtllm/whisper/client.py \
     --no-streaming \
     --action bench_asr \
     --concurency-cn 4 \
     --batch-size 4 \
     --server-url "r28.modal.host:33695"
 
-modal run src/llm/trtllm/whisper/client_grpc.py \
+modal run src/llm/trtllm/whisper/client.py \
     --streaming \
     --action bench_asr \
     --concurency-cn 4 \
     --batch-size 4 \
     --server-url "r18.modal.host:41787"
 
-modal run src/llm/trtllm/whisper/client_grpc.py \
+modal run src/llm/trtllm/whisper/client.py \
     --streaming \
     --action bench_asr \
     --concurency-cn 4 \
@@ -240,6 +240,7 @@ modal run src/llm/trtllm/whisper/client_grpc.py \
 - ⭐ run whisper with tensorrt-llm: https://github.com/NVIDIA/TensorRT-LLM/blob/v0.20.0rc0/examples/models/core/whisper/README.md
 - ⭐ run whisper service with triton tensorrtllm backend: https://github.com/triton-inference-server/tensorrtllm_backend/blob/main/docs/whisper.md
 - https://github.com/triton-inference-server/tensorrtllm_backend/blob/main/docs/model_config.md (fill necessary params)
+- deploy with triton cpp runner: https://github.com/k2-fsa/sherpa/tree/master/triton/whisper
 
 ## wav2vec (CTC Transformer Encoder-only architecture)
 - ⭐️ CTC: https://huggingface.co/learn/audio-course/en/chapter3/ctc
@@ -254,6 +255,7 @@ modal run src/llm/trtllm/whisper/client_grpc.py \
 - tiktoken text tokenizer from GPT-2: https://github.com/openai/whisper/blob/main/whisper/tokenizer.py
 - ⭐️ https://huggingface.co/learn/audio-course/en/chapter3/seq2seq (ASR TTS with seq2seq transformer model, but TTS is more complex than ASR, need vocoder to generate audio waveform,This vocoder is not part of the seq2seq architecture and is trained separately, e.g.: hifigan, bigvgan)
 - whisper fine-tuning: https://github.com/openai/whisper/discussions/759 | https://huggingface.co/blog/fine-tune-whisper
+- fine-tune whisper with k2(icefall): https://github.com/k2-fsa/icefall/tree/master/egs/aishell/ASR/whisper
 
 ---
 
