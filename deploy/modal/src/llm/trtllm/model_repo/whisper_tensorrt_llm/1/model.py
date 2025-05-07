@@ -1207,8 +1207,8 @@ class TritonPythonModel:
           * model_version: Model version
           * model_name: Model name
         """
-        self.logger = pb_utils.Logger
         model_config = json.loads(args["model_config"])
+        logger.info(f"model_config: {model_config}")
         gpt_model_path = get_parameter(model_config, "gpt_model_path")
         if get_parameter(model_config, "enable_trt_overlap", bool):
             raise pb_utils.TritonModelException(f"enable_trt_overlap=true is not supported.")
@@ -1220,7 +1220,7 @@ class TritonPythonModel:
             gpt_model_path, trtllm.ModelType.DECODER_ONLY, executor_config
         )
         self.decoupled = pb_utils.using_decoupled_model_transaction_policy(model_config)
-        self.logger.log_info(f"decoupled:{self.decoupled}")
+        logger.info(f"decoupled:{self.decoupled}")
         self.cancellation_check_period_ms = (
             get_parameter(model_config, "cancellation_check_period_ms", int) or 100
         )
