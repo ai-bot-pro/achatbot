@@ -11,6 +11,10 @@ parameters [
    value: {string_value:"${n_mels}"} # 128 dim for large-v3, 80 dim for large-v2
   },
   {
+  key: "zero_pad"
+  value: {string_value: "${zero_pad}"}
+  },
+  {
     key: "engine_dir"
     value: { string_value: "${engine_dir}"}
   },

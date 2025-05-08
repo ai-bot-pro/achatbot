@@ -32,14 +32,14 @@ class TritonPythonModel:
 
         # parameters
         model_config = json.loads(args["model_config"])
-        parameters = json.loads(model_config)["parameters"]
+        parameters = model_config["parameters"]
         for key, value in parameters.items():
             parameters[key] = value["string_value"]
+        pb_utils.Logger.log_info(f"parameters: {parameters}")
 
-        # encoder
+        # encoder config
         engine_dir = Path(parameters["engine_dir"])
-        encoder_config = read_config("encoder", engine_dir)
-        pb_utils.Logger.log_info(f"Using encoder config: {encoder_config}")
+        encoder_config_dict = read_config("encoder", engine_dir)
 
         # feature extractor
         mel_filters_dir = parameters["mel_filters_dir"]
@@ -57,6 +57,9 @@ class TritonPythonModel:
             decoder_json_config.model_config.supports_inflight_batching
         ), f"{decoder_json_config.model_config.supports_inflight_batching}, expected True"
 
+        self.decoder_model_config = decoder_json_config.model_config
+
+        # encoder-decoder model engine runner
         runner_kwargs = dict(
             engine_dir=engine_dir,
             # https://github.com/NVIDIA/TensorRT-LLM/blob/v0.18.0/tensorrt_llm/runtime/model_runner_cpp.py#L199
@@ -80,7 +83,8 @@ class TritonPythonModel:
 
         # tokenizer
         self.tokenizer = get_tokenizer(
-            num_languages=encoder_config["num_languages"], tokenizer_dir=parameters["tokenizer_dir"]
+            num_languages=encoder_config_dict["num_languages"],
+            tokenizer_dir=parameters["tokenizer_dir"],
         )
         self.blank = self.tokenizer.encode(
             " ",
