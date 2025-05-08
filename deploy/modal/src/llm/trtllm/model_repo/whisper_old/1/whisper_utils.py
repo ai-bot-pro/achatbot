@@ -184,20 +184,3 @@ def log_mel_spectrogram(
     else:
         return log_spec
 
-
-def store_transcripts(filename: Pathlike, texts: Iterable[Tuple[str, str, str]]) -> None:
-    """Save predicted results and reference transcripts to a file.
-    https://github.com/k2-fsa/icefall/blob/master/icefall/utils.py
-    Args:
-      filename:
-        File to save the results to.
-      texts:
-        An iterable of tuples. The first element is the cur_id, the second is
-        the reference transcript and the third element is the predicted result.
-    Returns:
-      Return None.
-    """
-    with open(filename, "w") as f:
-        for cut_id, ref, hyp in texts:
-            print(f"{cut_id}:\tref={ref}", file=f)
-            print(f"{cut_id}:\thyp={hyp}", file=f)

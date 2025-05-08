@@ -75,7 +75,7 @@ class WhisperEncoding:
             TensorInfo("position_ids", str_dtype_to_trt("int32"), inputs["position_ids"].shape),
         ]
 
-        output_info = (self.session).infer_shapes(output_list)
+        output_info = self.session.infer_shapes(output_list)
 
         logger.debug(f"output info {output_info}")
         outputs = {
@@ -255,6 +255,8 @@ class WhisperTRTLLM(object):
         encoder_output, encoder_output_lengths = self.encoder.get_audio_features(
             mel, mel_input_lengths
         )
+        logger.info(f"encoder_output: {encoder_output.shape}")
+        logger.info(f"encoder_output_lengths: {encoder_output_lengths}")
         encoder_max_input_length = torch.max(encoder_output_lengths).item()
         output_ids = self.decoder.generate(
             decoder_input_ids,

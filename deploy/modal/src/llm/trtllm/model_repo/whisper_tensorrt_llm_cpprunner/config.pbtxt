@@ -39,13 +39,6 @@ parameters [
   }
 ]
 
-parameters: {
-  key: "cross_kv_cache_fraction"
-  value: {
-    string_value: "${cross_kv_cache_fraction}"
-  }
-}
-
 input [
   {
     name: "WAV"
@@ -73,6 +66,20 @@ output [
     dims: [-1]
   }
 ]
+
+parameters: {
+  key: "cross_kv_cache_fraction"
+  value: {
+    string_value: "${cross_kv_cache_fraction}"
+  }
+}
+parameters: {
+  key: "kv_cache_free_gpu_mem_fraction"
+  value: {
+    string_value: "${kv_cache_free_gpu_mem_fraction}"
+  }
+}
+
 
 instance_group [
   {

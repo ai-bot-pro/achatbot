@@ -1,4 +1,4 @@
-name: "whisper"
+name: "whisper_old"
 backend: "python"
 max_batch_size: ${triton_max_batch_size}
 dynamic_batching {
@@ -37,10 +37,10 @@ input [
     dims: [-1]
   },
   {
-    name: "WAV_LEN"
-    data_type: TYPE_INT32
-    dims: [1]
-    optional: True
+    name: "REPETITION_PENALTY"
+    data_type: TYPE_FP32
+    dims: [ 1 ]
+    optional: true
   }
 ]
 
@@ -51,19 +51,6 @@ output [
     dims: [1]
   }
 ]
-
-parameters: {
-  key: "cross_kv_cache_fraction"
-  value: {
-    string_value: "${cross_kv_cache_fraction}"
-  }
-}
-parameters: {
-  key: "kv_cache_free_gpu_mem_fraction"
-  value: {
-    string_value: "${kv_cache_free_gpu_mem_fraction}"
-  }
-}
 
 instance_group [
     {

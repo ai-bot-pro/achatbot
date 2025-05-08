@@ -1,178 +1,193 @@
 # -*- coding: utf-8 -*-
-import re
+
 import json
+import re
+from collections import OrderedDict
+from pathlib import Path
 
 import numpy as np
 import torch
-import torch.nn.functional as F
-from torch.utils.dlpack import from_dlpack, to_dlpack
-import tensorrt_llm.logger as logger
+from torch.utils.dlpack import to_dlpack
 import triton_python_backend_utils as pb_utils
+from tensorrt_llm.bindings import GptJsonConfig
+from tensorrt_llm.runtime import ModelRunnerCpp
 
 from .tokenizer import get_tokenizer
-from .whisper_trtllm import WhisperTRTLLM
-from .whisper_utils import mel_filters, log_mel_spectrogram
+from .fbank import FeatureExtractor
 
 
-class FeatureExtractor(torch.nn.Module):
-    """Your Python model must use the same class name. Every Python model
-    that is created must have "TritonPythonModel" as the class name.
-    """
-
-    def __init__(self, n_mels: int = 128, mel_filters_dir: str = None):
-        self.device = torch.device("cuda")
-        self.n_mels = n_mels
-        self.mel_filters_dir = mel_filters_dir
-        self.filters = mel_filters(
-            self.device,
-            n_mels=self.n_mels,
-            mel_filters_dir=mel_filters_dir,
-        )
-
-    def compute_feature(self, wav, target: int = 3000):
-        mel = log_mel_spectrogram(wav, self.filters, mel_filters_dir=self.mel_filters_dir)
-        assert mel.shape[1] <= target, f"{mel.shape[1]} > {target}, audio is too long"
-        if mel.shape[1] < target:
-            mel = F.pad(mel, (0, target - mel.shape[1]), mode="constant")
-        mel = mel.unsqueeze(0)
-        return mel
+def read_config(component, engine_dir):
+    config_path = engine_dir / component / "config.json"
+    with open(config_path, "r") as f:
+        config = json.load(f)
+    model_config = OrderedDict()
+    model_config.update(config["pretrained_config"])
+    model_config.update(config["build_config"])
+    return model_config
 
 
 class TritonPythonModel:
-    """Your Python model must use the same class name. Every Python model
-    that is created must have "TritonPythonModel" as the class name.
-    """
-
     def initialize(self, args):
-        """`initialize` is called only once when the model is being loaded.
-        Implementing `initialize` function is optional. This function allows
-        the model to initialize any state associated with this model.
-
-        Parameters
-        ----------
-        args : dict
-          Both keys and values are strings. The dictionary keys and values are:
-          * model_config: A JSON string containing the model configuration
-          * model_instance_kind: A string containing model instance kind
-          * model_instance_device_id: A string containing model instance device ID
-          * model_repository: Model repository path
-          * model_version: Model version
-          * model_name: Model name
-        """
-        self.model_config = model_config = json.loads(args["model_config"])
-
-        # Get OUTPUT0 configuration
-        output0_config = pb_utils.get_output_config_by_name(model_config, "TRANSCRIPTS")
-        # Convert Triton types to numpy types
-        self.out0_dtype = pb_utils.triton_string_to_numpy(output0_config["data_type"])
-
         self.device = torch.device("cuda")
-        parameters = self.model_config["parameters"]
+
+        # parameters
+        model_config = json.loads(args["model_config"])
+        parameters = json.loads(model_config)["parameters"]
         for key, value in parameters.items():
             parameters[key] = value["string_value"]
-        engine_dir = parameters["engine_dir"]
-        config_path = engine_dir + "/encoder" + "/config.json"
-        with open(config_path, "r") as f:
-            config = json.load(f)
-        self.num_languages = config["pretrained_config"]["num_languages"]
-        tokenizer_dir = parameters["tokenizer_dir"]
-        self.tokenizer = get_tokenizer(
-            num_languages=self.num_languages, tokenizer_dir=tokenizer_dir
-        )
-        self.blank = self.tokenizer.encode(" ", allowed_special=self.tokenizer.special_tokens_set)[
-            0
-        ]
-        n_mels = int(parameters["n_mels"])
-        mel_filters_dir = parameters["mel_filters_dir"]
-        self.init_model(n_mels, engine_dir, mel_filters_dir)
 
-    def init_model(self, n_mels, engine_dir, mel_filters_dir: str = None):
-        self.model = WhisperTRTLLM(engine_dir)
-        self.feature_extractor = FeatureExtractor(n_mels=n_mels, mel_filters_dir=mel_filters_dir)
+        # encoder
+        engine_dir = Path(parameters["engine_dir"])
+        encoder_config = read_config("encoder", engine_dir)
+        pb_utils.Logger.log_info(f"Using encoder config: {encoder_config}")
+
+        # feature extractor
+        mel_filters_dir = parameters["mel_filters_dir"]
+        self.feature_extractor = FeatureExtractor(
+            n_mels=int(parameters["n_mels"]),
+            mel_filters_dir=mel_filters_dir,
+        )
+
+        # decoder(gpt-2) config
+        decoder_config_path = engine_dir / "decoder" / "config.json"
+        decoder_json_config = GptJsonConfig.parse_file(decoder_config_path)
+        # pb_utils.Logger.log_info(f"Using decoder config: {decoder_json_config}")
+        # https://github.com/NVIDIA/TensorRT-LLM/blob/a7c50cc426e1865afb0be0545a6035f7af420870/cpp/include/tensorrt_llm/runtime/modelConfig.h#L342
+        assert (
+            decoder_json_config.model_config.supports_inflight_batching
+        ), f"{decoder_json_config.model_config.supports_inflight_batching}, expected True"
+
+        runner_kwargs = dict(
+            engine_dir=engine_dir,
+            # https://github.com/NVIDIA/TensorRT-LLM/blob/v0.18.0/tensorrt_llm/runtime/model_runner_cpp.py#L199
+            # seq2seq encoder-decoder transformer model support
+            is_enc_dec=True,
+            # https://github.com/NVIDIA/TensorRT-LLM/blob/v0.19.0rc0/cpp/tensorrt_llm/batch_manager/trtGptModelInflightBatching.cpp#L266
+            # must set crossKvCacheFraction
+            cross_kv_cache_fraction=float(parameters.get("cross_kv_cache_fraction", 0.5)),
+            kv_cache_free_gpu_memory_fraction=float(
+                parameters.get("kv_cache_free_gpu_mem_fraction", 0.5)
+            ),
+            debug_mode=False,
+            ## default use engine config set in cpp runtime
+            # max_batch_size=self.decoder_model_config.max_batch_size,
+            # max_input_len=self.decoder_model_config.max_input_len,
+            max_beam_width=self.decoder_model_config.max_beam_width,
+        )
+        pb_utils.Logger.log_info(f"runner_kwargs: {runner_kwargs}")
+        # https://github.com/NVIDIA/TensorRT-LLM/blob/v0.18.0/tensorrt_llm/runtime/model_runner_cpp.py#L87
+        self.model_runner_cpp = ModelRunnerCpp.from_dir(**runner_kwargs)
+
+        # tokenizer
+        self.tokenizer = get_tokenizer(
+            num_languages=encoder_config["num_languages"], tokenizer_dir=parameters["tokenizer_dir"]
+        )
+        self.blank = self.tokenizer.encode(
+            " ",
+            allowed_special=self.tokenizer.special_tokens_set,
+        )[0]
+        # https://huggingface.co/openai/whisper-large-v3/blob/main/added_tokens.json#L1521
+        # <|endoftext|>
+        self.eot_id = 50257
+        self.zero_pad = parameters["zero_pad"] == "true"
+
+        # output
+        output0_config = pb_utils.get_output_config_by_name(model_config, "TRANSCRIPTS")
+        self.out0_dtype = pb_utils.triton_string_to_numpy(output0_config["data_type"])
+
+    def process_batch(self, wav_batch, wav_len, prompt_id):
+        # Convert numpy arrays to torch tensors
+        wav_batch = torch.from_numpy(wav_batch).to(self.device)
+        wav_len = wav_len.astype(np.int32)
+
+        # Replicate prompt_id for batch size
+        batch_size = wav_batch.shape[0]
+        prompt_ids = np.tile(prompt_id, (batch_size, 1)).astype(np.int32)
+
+        # Batch processing for each sample in the batch
+        padding = 0 if self.zero_pad else self.decoder_model_config.max_input_len
+        batch_mel_list = []
+        for i in range(batch_size):
+            wav_i = wav_batch[i : i + 1, : int(wav_len[i].item())]
+            mel = self.feature_extractor.compute_feature(
+                wav_i[0].to(self.device), padding_target_len=padding
+            ).transpose(1, 2)
+            batch_mel_list.append(mel.squeeze(0))
+
+        # Move prompt IDs to GPU
+        decoder_input_ids = torch.Tensor(prompt_ids, dtype=torch.int32, device=self.device)
+
+        # Calculate mel lengths
+        mel_input_lengths = torch.Tensor(
+            [mel.shape[0] for mel in batch_mel_list], dtype=torch.int32, device=self.device
+        )
+
+        pb_utils.Logger.log_info(f"decoder_input_ids: {decoder_input_ids.shape}")
+        pb_utils.Logger.log_info(f"mel_input_lengths: {mel_input_lengths.shape}")
+        pb_utils.Logger.log_info(f"batch_mel_list: {len(batch_mel_list)}")
+        for i, mel in enumerate(batch_mel_list):
+            pb_utils.Logger.log_info(f"batch_mel_list[{i}]: {mel.shape}")
+
+        # Run batch inference
+        outputs = self.model_runner_cpp.generate(
+            batch_input_ids=decoder_input_ids,
+            encoder_input_features=batch_mel_list,
+            encoder_output_lengths=mel_input_lengths // 2,
+            max_new_tokens=96,
+            end_id=self.eot_id,
+            pad_id=self.eot_id,
+            num_beams=1,
+            output_sequence_lengths=True,
+            return_dict=True,
+        )
+        torch.cuda.synchronize()
+        pb_utils.Logger.log_info(f"outputs: {outputs}")
+
+        # Process outputs
+        output_ids = outputs["output_ids"].cpu().numpy()
+
+        return output_ids
 
     def execute(self, requests):
-        """`execute` must be implemented in every Python model. `execute`
-        function receives a list of pb_utils.InferenceRequest as the only
-        argument. This function is called when an inference is requested
-        for this model.
-
-        Parameters
-        ----------
-        requests : list
-          A list of pb_utils.InferenceRequest
-
-        Returns
-        -------
-        list
-          A list of pb_utils.InferenceResponse. The length of this list must
-          be the same as `requests`
-        """
-        # Every Python backend must iterate through list of requests and create
-        # an instance of pb_utils.InferenceResponse class for each of them. You
-        # should avoid storing any of the input Tensors in the class attributes
-        # as they will be overridden in subsequent inference requests. You can
-        # make a copy of the underlying NumPy array and store it if it is
-        # required.
-        mel_list, text_prefix_list, repetition_penalty_list = [], [], []
-        for request in requests:
-            # Perform inference on the request and append it to responses list...
-            in_0 = pb_utils.get_input_tensor_by_name(request, "TEXT_PREFIX")
-            in_1 = pb_utils.get_input_tensor_by_name(request, "WAV")
-            in_2 = pb_utils.get_input_tensor_by_name(request, "REPETITION_PENALTY")
-
-            wav = in_1.as_numpy()
-
-            assert wav.shape[0] == 1, "Only support batch size 1"
-            wav = torch.from_numpy(wav[0]).to(self.device)
-            mel = self.feature_extractor.compute_feature(wav)
-            mel_list.append(mel)
-
-            text_prefix_list.append(in_0.as_numpy().tolist())
-            repetition_penalty_list.append(in_2.as_numpy()[0])
-
-        # concat tensors in batch dimension
-        features = torch.cat(mel_list, dim=0)
-        features = features.to(self.device)
-        features_input_lengths = torch.full(
-            (features.shape[0],), features.shape[2], dtype=torch.int32, device=features.device
-        )
-
-        prompt_ids = []
-        for text_prefix in text_prefix_list:
-            text_prefix = text_prefix[0][0].decode("utf-8")
-            if text_prefix == "":
-                text_prefix = "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>"
-            prompt_id = self.tokenizer.encode(
-                text_prefix, allowed_special=self.tokenizer.special_tokens_set
-            )
-            # convert prompt_id to tensor, tensor shape is [Seq]
-            prompt_id = torch.tensor(prompt_id)
-            prompt_ids.append(prompt_id)
-        # convert prompt_ids to tensor, tensor shape is [Batch, Seq], left padding with self.blank
-        tokens = torch.nn.utils.rnn.pad_sequence(
-            prompt_ids, batch_first=True, padding_value=self.blank
-        )
-        tokens = tokens.to(features.device)
-        logger.info(f"features.shape: {features.shape}")
-        output_ids = self.model.process_batch(
-            features, features_input_lengths, tokens, repetition_penalty=repetition_penalty_list
-        )
-        results = [output_ids[i][0] for i in range(len(output_ids))]
-
         responses = []
-        for result in results:
-            s = self.tokenizer.decode(result)
-            s = re.sub(r"<\|startofprev\|>.*?<\|startoftranscript\|>", "", s)
-            s = re.sub(r"<\|.*?\|>", "", s)
-            sentence = np.array([s])
-            out0 = pb_utils.Tensor("TRANSCRIPTS", sentence.astype(self.out0_dtype))
+
+        for request in requests:
+            # Get batch inputs
+            text_prefix = pb_utils.get_input_tensor_by_name(request, "TEXT_PREFIX").as_numpy()
+            wav_batch = pb_utils.get_input_tensor_by_name(request, "WAV").as_numpy()
+            wav_len = pb_utils.get_input_tensor_by_name(request, "WAV_LEN").as_numpy()
+
+            # Use the same text_prefix for all items in the request
+            prefix = text_prefix[0][0].decode("utf-8")
+            if prefix == "":
+                prefix = "<|startoftranscript|><|ko|><|transcribe|><|notimestamps|>"
+            prompt_id = self.tokenizer.encode(
+                prefix, allowed_special=self.tokenizer.special_tokens_set
+            )
+
+            # Process the entire batch
+            output_ids = self.process_batch(wav_batch, wav_len, prompt_id)
+
+            # Decode outputs for each item in batch
+            transcripts = []
+
+            # Handle case where output_ids is 3-dimensional
+            # ([batch_size, beam_size, seq_len])
+            if len(output_ids.shape) == 3:
+                output_ids = output_ids[:, 0, :]  # Remove beam_size dimension
+
+            for output_id in output_ids:
+                token_list = output_id.tolist()
+                s = self.tokenizer.decode(token_list)
+                s = re.sub(r"<\|.*?\|>", "", s)
+                transcripts.append(s)
+
+            # Create response tensor
+            out0 = pb_utils.Tensor("TRANSCRIPTS", np.array(transcripts).astype(self.out0_dtype))
             inference_response = pb_utils.InferenceResponse(output_tensors=[out0])
             responses.append(inference_response)
+
         return responses
 
     def finalize(self):
-        """`finalize` is called only once when the model is being unloaded.
-        Implementing `finalize` function is optional. This function allows
-        the model to perform any necessary clean ups before exit.
-        """
         print("Cleaning up...")
