@@ -1,0 +1,77 @@
+name: "whisper"
+backend: "python"
+max_batch_size: ${triton_max_batch_size}
+dynamic_batching {
+    max_queue_delay_microseconds: ${max_queue_delay_microseconds}
+}
+
+parameters [
+  {
+   key: "n_mels", 
+   value: {string_value:"${n_mels}"} # 128 dim for large-v3, 80 dim for large-v2
+  },
+  {
+  key: "zero_pad"
+  value: {string_value: "${zero_pad}"}
+  },
+  {
+    key: "engine_dir"
+    value: { string_value: "${engine_dir}"}
+  },
+  {
+    key: "tokenizer_dir"
+    value: { string_value: "${tokenizer_dir}"}
+  },
+  {
+    key: "mel_filters_dir"
+    value: { string_value: "${mel_filters_dir}"}
+  }
+]
+
+
+input [
+  {
+    name: "TEXT_PREFIX"
+    data_type: TYPE_STRING
+    dims: [1]
+  },
+  {
+    name: "WAV"
+    data_type: TYPE_FP32
+    dims: [-1]
+  },
+  {
+    name: "WAV_LEN"
+    data_type: TYPE_INT32
+    dims: [1]
+    optional: True
+  }
+]
+
+output [
+  {
+    name: "TRANSCRIPTS"
+    data_type: TYPE_STRING
+    dims: [1]
+  }
+]
+
+parameters: {
+  key: "cross_kv_cache_fraction"
+  value: {
+    string_value: "${cross_kv_cache_fraction}"
+  }
+}
+parameters: {
+  key: "kv_cache_free_gpu_mem_fraction"
+  value: {
+    string_value: "${kv_cache_free_gpu_mem_fraction}"
+  }
+}
+
+instance_group [
+    {
+      count: 1
+      kind: KIND_CPU
+    }
+]
