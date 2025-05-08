@@ -157,61 +157,148 @@ modal run src/llm/trtllm/whisper/run.py \
 modal run src/llm/trtllm/whisper/ready_model.py \
     --tag-or-hash "feat/asr" \
     --engine-dir "trt_engines_float16" \
-    --whisper-params "triton_max_batch_size:8,max_queue_delay_microseconds:5000,n_mels:128" \
+    --whisper-params "triton_max_batch_size:8,max_queue_delay_microseconds:5000,n_mels:128,zero_pad:false,cross_kv_cache_fraction:0.5,kv_cache_free_gpu_mem_fraction:0.5" \
+    --whisper-infer-bls-params "triton_max_batch_size:8,max_queue_delay_microseconds:0" \
+    --whisper-tensorrt-llm-cpprunner-params "triton_max_batch_size:8,max_queue_delay_microseconds:0,n_mels:128,zero_pad:false,cross_kv_cache_fraction:0.5,kv_cache_free_gpu_mem_fraction:0.5" \
     --whisper-bls-params "triton_max_batch_size:8,max_queue_delay_microseconds:0,n_mels:128,zero_pad:false" \
-    --whisper-tensorrt-llm-params "max_tokens_in_paged_kv_cache:24000,max_attention_window_size:2560,batch_scheduler_policy:guaranteed_no_evict,batching_strategy:inflight_fused_batching,kv_cache_free_gpu_mem_fraction:0.5,exclude_input_in_output:True,triton_max_batch_size:8,max_queue_delay_microseconds:0,max_beam_width:1,enable_kv_cache_reuse:False,normalize_log_probs:True,enable_chunked_context:False,decoding_mode:top_k_top_p,max_queue_size:0,enable_context_fmha_fp32_acc:False,cross_kv_cache_fraction:0.5,encoder_input_features_data_type:TYPE_FP16,logits_datatype:TYPE_FP32"
+    --whisper-tensorrt-llm-params "triton_backend:tensorrtllm,max_tokens_in_paged_kv_cache:24000,max_attention_window_size:2560,batch_scheduler_policy:guaranteed_no_evict,batching_strategy:inflight_fused_batching,kv_cache_free_gpu_mem_fraction:0.5,exclude_input_in_output:True,triton_max_batch_size:8,max_queue_delay_microseconds:0,max_beam_width:1,enable_kv_cache_reuse:False,normalize_log_probs:True,enable_chunked_context:False,decoding_mode:top_k_top_p,max_queue_size:0,enable_context_fmha_fp32_acc:False,cross_kv_cache_fraction:0.5,encoder_input_features_data_type:TYPE_FP16,logits_datatype:TYPE_FP32"
 
 # whisper large-v3 | whisper_bls + tensorrt_llm decoupled_mode:True
 modal run src/llm/trtllm/whisper/ready_model.py \
     --tag-or-hash "feat/asr" \
     --stream 1 \
     --engine-dir "trt_engines_float16" \
-    --whisper-params "triton_max_batch_size:8,max_queue_delay_microseconds:5000,n_mels:128" \
+    --whisper-params "triton_max_batch_size:8,max_queue_delay_microseconds:5000,n_mels:128,zero_pad:false,cross_kv_cache_fraction:0.5,kv_cache_free_gpu_mem_fraction:0.5" \
+    --whisper-infer-bls-params "triton_max_batch_size:8,max_queue_delay_microseconds:0" \
+    --whisper-tensorrt-llm-cpprunner-params "triton_max_batch_size:8,max_queue_delay_microseconds:0,n_mels:128,zero_pad:false,cross_kv_cache_fraction:0.5,kv_cache_free_gpu_mem_fraction:0.5" \
     --whisper-bls-params "triton_max_batch_size:8,max_queue_delay_microseconds:0,n_mels:128,zero_pad:false" \
-    --whisper-tensorrt-llm-params "max_tokens_in_paged_kv_cache:24000,max_attention_window_size:2560,batch_scheduler_policy:guaranteed_no_evict,batching_strategy:inflight_fused_batching,kv_cache_free_gpu_mem_fraction:0.5,exclude_input_in_output:True,triton_max_batch_size:8,max_queue_delay_microseconds:0,max_beam_width:1,enable_kv_cache_reuse:False,normalize_log_probs:True,enable_chunked_context:False,decoding_mode:top_k_top_p,max_queue_size:0,enable_context_fmha_fp32_acc:False,cross_kv_cache_fraction:0.5,encoder_input_features_data_type:TYPE_FP16,logits_datatype:TYPE_FP32"
+    --whisper-tensorrt-llm-params "triton_backend:tensorrtllm,max_tokens_in_paged_kv_cache:24000,max_attention_window_size:2560,batch_scheduler_policy:guaranteed_no_evict,batching_strategy:inflight_fused_batching,kv_cache_free_gpu_mem_fraction:0.5,exclude_input_in_output:True,triton_max_batch_size:8,max_queue_delay_microseconds:0,max_beam_width:1,enable_kv_cache_reuse:False,normalize_log_probs:True,enable_chunked_context:False,decoding_mode:top_k_top_p,max_queue_size:0,enable_context_fmha_fp32_acc:False,cross_kv_cache_fraction:0.5,encoder_input_features_data_type:TYPE_FP16,logits_datatype:TYPE_FP32"
 ```
 
 ## run triton server
 ```shell
-# run tritonserver with whisper_bls + whisper_tensorrt_llm(decoder)
+# run tritonserver with whisper(python BE)
+APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper modal serve src/llm/trtllm/whisper/tritonserver.py
+
+# run tritonserver with whisper_infer_bls + whisper_tensorrt_llm_cpprunner(encoder-decoder python BE)
+APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper_infer_bls,whisper_tensorrt_llm_cpprunner modal serve src/llm/trtllm/whisper/tritonserver.py 
+
+# run tritonserver with whisper_bls + whisper_tensorrt_llm(encoder-decoder tensorrtllm BE)
 APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper_bls,whisper_tensorrt_llm modal serve src/llm/trtllm/whisper/tritonserver.py 
 
 # curl server is ready
-curl -vv -X GET "https://weege--tritonserver-serve-dev.modal.run/v2/health/ready" -H  "accept: application/json"
+curl -vv -X GET "https://weege009--tritonserver-serve-dev.modal.run/v2/health/ready" -H  "accept: application/json"
 
 # run grpc tritonserver by tcp tunnel and http server
+APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper modal run src/llm/trtllm/whisper/tritonserver.py
 APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper_bls,whisper_tensorrt_llm modal run src/llm/trtllm/whisper/tritonserver.py 
+APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper_infer_bls,whisper_tensorrt_llm_cpprunner modal run src/llm/trtllm/whisper/tritonserver.py 
 ```
 
 ## test whisper service
 ```shell
-# health check
+# gRPC
+## health check for whisper
 modal run src/llm/trtllm/whisper/client.py \
     --action health \
-    --server-url "r15.modal.host:44161"
+    --model-name whisper \
+    --model-names whisper \
+    --server-url "r15.modal.host:34101"
 
-# single wav test
+## health check for whisper_bls,whisper_tensorrt_llm
+modal run src/llm/trtllm/whisper/client.py \
+    --action health \
+    --server-url "r15.modal.host:34101"
+
+## health check for whisper_infer_bls, whisper_tensorrt_llm_cpprunner
+modal run src/llm/trtllm/whisper/client.py \
+    --action health \
+    --model-name whisper_infer_bls \
+    --model-names whisper_infer_bls,whisper_tensorrt_llm_cpprunner \
+    --server-url "r28.modal.host:38535"
+
+
+## single wav test for whisper
 modal run src/llm/trtllm/whisper/client.py \
     --no-streaming \
     --action asr \
-    --server-url "r15.modal.host:44161"
+    --model-name whisper \
+    --server-url "r15.modal.host:34101"
 modal run src/llm/trtllm/whisper/client.py \
     --streaming \
     --action asr \
-    --server-url "r15.modal.host:44161"
+    --model-name whisper \
+    --server-url "r15.modal.host:34101"
+modal run src/llm/trtllm/whisper/client.py \
+    --action asr \
+    --model-name whisper \
+    --reference-audio /1221-135766-0001.wav \
+    --text-prefix "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>" \
+    --server-url "r15.modal.host:34101"
+modal run src/llm/trtllm/whisper/client.py \
+    --action asr \
+    --model-name whisper \
+    --reference-audio /long.wav \
+    --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
+    --server-url "r15.modal.host:34101"
+
+## single wav test for whisper_bls,whisper_tensorrt_llm
+modal run src/llm/trtllm/whisper/client.py \
+    --no-streaming \
+    --action asr \
+    --server-url "r15.modal.host:34101"
+modal run src/llm/trtllm/whisper/client.py \
+    --streaming \
+    --action asr \
+    --server-url "r15.modal.host:34101"
 modal run src/llm/trtllm/whisper/client.py \
     --action asr \
     --reference-audio /1221-135766-0001.wav \
     --text-prefix "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>" \
-    --server-url "r15.modal.host:44161"
+    --server-url "r15.modal.host:34101"
 modal run src/llm/trtllm/whisper/client.py \
     --action asr \
     --reference-audio /long.wav \
     --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
     --server-url "r24.modal.host:44175"
 
-# bench (concurency_cn:1->2->4->8->16 | batch_size:1->2->4->8)
-# bench throughput and latency, grpc just test, modal support http, grpc now use tunnel
+## single wav test for whisper_infer_bls,whisper_tensorrt_llm_cpprunner
+modal run src/llm/trtllm/whisper/client.py \
+    --no-streaming \
+    --action asr \
+    --model-name whisper_infer_bls \
+    --server-url "r28.modal.host:38535"
+modal run src/llm/trtllm/whisper/client.py \
+    --streaming \
+    --action asr \
+    --model-name whisper_infer_bls \
+    --server-url "r15.modal.host:34101"
+modal run src/llm/trtllm/whisper/client.py \
+    --action asr \
+    --model-name whisper_infer_bls \
+    --reference-audio /1221-135766-0001.wav \
+    --text-prefix "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>" \
+    --server-url "r15.modal.host:34101"
+modal run src/llm/trtllm/whisper/client.py \
+    --action asr \
+    --model-name whisper_infer_bls \
+    --reference-audio /long.wav \
+    --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
+    --server-url "r15.modal.host:34101"
+
+## bench for whisper
+modal run src/llm/trtllm/whisper/client.py \
+    --no-streaming \
+    --action bench_asr \
+    --model-name whisper \
+    --concurency-cn 4 \
+    --batch-size 4 \
+    --reference-audio /long.wav \
+    --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
+    --server-url "r15.modal.host:34101"
+
+## bench (concurency_cn:1->2->4->8->16 | batch_size(requests_cn):1->2->4->8)
+## bench throughput and latency, grpc just test, modal support http, grpc now use tunnel
 modal run src/llm/trtllm/whisper/client.py \
     --no-streaming \
     --action bench_asr \
@@ -234,6 +321,43 @@ modal run src/llm/trtllm/whisper/client.py \
     --reference-audio /long.wav \
     --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
     --server-url "r18.modal.host:41787"
+
+## bench for whisper_infer_bls,whisper_tensorrt_llm_cpprunner
+modal run src/llm/trtllm/whisper/client.py \
+    --no-streaming \
+    --action bench_asr \
+    --model-name whisper_infer_bls \
+    --concurency-cn 4 \
+    --batch-size 4 \
+    --reference-audio /long.wav \
+    --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
+    --server-url "r15.modal.host:34101"
+
+# http
+## health check
+TRITON_PROTOCOL=http modal run src/llm/trtllm/whisper/client.py \
+    --action health --verbose \
+    --server-url "weedge--tritonserver-serve-dev.modal.run"
+
+## single wav test
+TRITON_PROTOCOL=http modal run src/llm/trtllm/whisper/client.py \
+    --no-streaming \
+    --action asr \
+    --server-url "weedge--tritonserver-serve-dev.modal.run"
+
+## bench (concurency_cn:1->2->4->8->16 | batch_size(requests_cn):1->2->4->8)
+## bench throughput and latency, grpc just test, modal support http, grpc now use tunnel
+TRITON_PROTOCOL=http modal run src/llm/trtllm/whisper/client.py \
+    --no-streaming \
+    --action bench_asr \
+    --concurency-cn 4 \
+    --batch-size 4 \
+    --server-url "weedge--tritonserver-serve-dev.modal.run"
+
+# other the same as grpc :-)
+
+# WER eval
+see run.py to change
 ```
 
 # reference:

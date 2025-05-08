@@ -6,6 +6,7 @@ import time
 from dataclasses import dataclass
 from random import randint
 from threading import Lock, Thread
+import traceback
 from typing import Any, List
 
 import numpy as np
@@ -499,7 +500,7 @@ def build_1_2_5_buckets(max_value: int) -> List[int]:
 
 def convert_request(request, exclude_input_from_output, decoupled, executor_lookahead_config=None):
     inputs = {}
-    input_token_ids = get_input_tensor_by_name(request, "input_ids")
+    input_token_ids = get_input_tensor_by_name(request, "decoder_input_ids")
     if input_token_ids is None:
         raise pb_utils.TritonModelException("A value is required for input_ids")
     if len(input_token_ids.shape) != 2:
@@ -507,7 +508,7 @@ def convert_request(request, exclude_input_from_output, decoupled, executor_look
     batch_size = input_token_ids.shape[0]
     requests = []
     for batch_index in range(0, batch_size):
-        input_token_ids = get_input_tensor_by_name(request, "input_ids", batch_size, batch_index)[0]
+        input_token_ids = get_input_tensor_by_name(request, "decoder_input_ids", batch_size, batch_index)[0]
         if input_token_ids is None:
             raise pb_utils.TritonModelException("A value is required for input_ids")
         input_token_ids = input_token_ids.tolist()
@@ -1328,10 +1329,11 @@ class TritonPythonModel:
                         self.executor_lookahead_config,
                     )
                 except Exception as e:
+                    error_message = traceback.format_exc()
                     response_sender.send(
                         pb_utils.InferenceResponse(
                             error=pb_utils.TritonError(
-                                f"An error occurred when processing the input values for request id {request.request_id()}, the error was '{e}'"
+                                f"An error occurred when processing the input values for request id {request.request_id()}, error: {e} trace: {error_message}"
                             )
                         ),
                         flags=pb_utils.TRITONSERVER_RESPONSE_COMPLETE_FINAL,

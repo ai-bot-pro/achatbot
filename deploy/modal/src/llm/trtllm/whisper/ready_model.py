@@ -117,7 +117,7 @@ def ready_model(
     print(cmd)
     subprocess.run(cmd.strip().split(" "), cwd="/", check=True)
 
-    # whisper_tensorrt_llm (tensorrtllm BE)
+    # whisper_tensorrt_llm (python or tensorrtllm BE)
     cmd = (
         f"cp -r /achatbot/deploy/modal/src/llm/trtllm/model_repo/whisper_tensorrt_llm {model_repo}"
     )
@@ -129,7 +129,7 @@ def ready_model(
     cmd = (
         f"python /root/fill_template.py "
         + f"-i {model_repo}/whisper_tensorrt_llm/config.pbtxt "
-        + f"{whisper_tensorrt_llm_params},triton_backend:tensorrtllm,engine_dir:{local_trt_build_dir}/decoder,encoder_engine_dir:{local_trt_build_dir}/encoder,decoupled_mode:{decoupled_mode}".strip(
+        + f"{whisper_tensorrt_llm_params},engine_dir:{local_trt_build_dir}/decoder,encoder_engine_dir:{local_trt_build_dir}/encoder,decoupled_mode:{decoupled_mode}".strip(
             ","
         )
     )
@@ -146,7 +146,7 @@ modal run src/llm/trtllm/whisper/ready_model.py \
     --whisper-infer-bls-params "triton_max_batch_size:8,max_queue_delay_microseconds:0" \
     --whisper-tensorrt-llm-cpprunner-params "triton_max_batch_size:8,max_queue_delay_microseconds:0,n_mels:128,zero_pad:false,cross_kv_cache_fraction:0.5,kv_cache_free_gpu_mem_fraction:0.5" \
     --whisper-bls-params "triton_max_batch_size:8,max_queue_delay_microseconds:0,n_mels:128,zero_pad:false" \
-    --whisper-tensorrt-llm-params "max_tokens_in_paged_kv_cache:24000,max_attention_window_size:2560,batch_scheduler_policy:guaranteed_no_evict,batching_strategy:inflight_fused_batching,kv_cache_free_gpu_mem_fraction:0.5,exclude_input_in_output:True,triton_max_batch_size:8,max_queue_delay_microseconds:0,max_beam_width:1,enable_kv_cache_reuse:False,normalize_log_probs:True,enable_chunked_context:False,decoding_mode:top_k_top_p,max_queue_size:0,enable_context_fmha_fp32_acc:False,cross_kv_cache_fraction:0.5,encoder_input_features_data_type:TYPE_FP16,logits_datatype:TYPE_FP32"
+    --whisper-tensorrt-llm-params "triton_backend:tensorrtllm,max_tokens_in_paged_kv_cache:24000,max_attention_window_size:2560,batch_scheduler_policy:guaranteed_no_evict,batching_strategy:inflight_fused_batching,kv_cache_free_gpu_mem_fraction:0.5,exclude_input_in_output:True,triton_max_batch_size:8,max_queue_delay_microseconds:0,max_beam_width:1,enable_kv_cache_reuse:False,normalize_log_probs:True,enable_chunked_context:False,decoding_mode:top_k_top_p,max_queue_size:0,enable_context_fmha_fp32_acc:False,cross_kv_cache_fraction:0.5,encoder_input_features_data_type:TYPE_FP16,logits_datatype:TYPE_FP32"
 
 # whisper large-v3 | whisper_bls + tensorrt_llm decoupled_mode:True
 modal run src/llm/trtllm/whisper/ready_model.py \
@@ -157,7 +157,7 @@ modal run src/llm/trtllm/whisper/ready_model.py \
     --whisper-infer-bls-params "triton_max_batch_size:8,max_queue_delay_microseconds:0" \
     --whisper-tensorrt-llm-cpprunner-params "triton_max_batch_size:8,max_queue_delay_microseconds:0,n_mels:128,zero_pad:false,cross_kv_cache_fraction:0.5,kv_cache_free_gpu_mem_fraction:0.5" \
     --whisper-bls-params "triton_max_batch_size:8,max_queue_delay_microseconds:0,n_mels:128,zero_pad:false" \
-    --whisper-tensorrt-llm-params "max_tokens_in_paged_kv_cache:24000,max_attention_window_size:2560,batch_scheduler_policy:guaranteed_no_evict,batching_strategy:inflight_fused_batching,kv_cache_free_gpu_mem_fraction:0.5,exclude_input_in_output:True,triton_max_batch_size:8,max_queue_delay_microseconds:0,max_beam_width:1,enable_kv_cache_reuse:False,normalize_log_probs:True,enable_chunked_context:False,decoding_mode:top_k_top_p,max_queue_size:0,enable_context_fmha_fp32_acc:False,cross_kv_cache_fraction:0.5,encoder_input_features_data_type:TYPE_FP16,logits_datatype:TYPE_FP32"
+    --whisper-tensorrt-llm-params "triton_backend:tensorrtllm,max_tokens_in_paged_kv_cache:24000,max_attention_window_size:2560,batch_scheduler_policy:guaranteed_no_evict,batching_strategy:inflight_fused_batching,kv_cache_free_gpu_mem_fraction:0.5,exclude_input_in_output:True,triton_max_batch_size:8,max_queue_delay_microseconds:0,max_beam_width:1,enable_kv_cache_reuse:False,normalize_log_probs:True,enable_chunked_context:False,decoding_mode:top_k_top_p,max_queue_size:0,enable_context_fmha_fp32_acc:False,cross_kv_cache_fraction:0.5,encoder_input_features_data_type:TYPE_FP16,logits_datatype:TYPE_FP32"
 """
 
 

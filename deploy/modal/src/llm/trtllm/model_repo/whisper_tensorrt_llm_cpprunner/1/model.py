@@ -130,7 +130,7 @@ class TritonPythonModel:
                 return_dict=True,
             )
             torch.cuda.synchronize()
-            pb_utils.Logger.log_info(f"outputs: {outputs}")
+            # pb_utils.Logger.log_info(f"outputs: {outputs}")
 
             # Process outputs
             output_ids = outputs["output_ids"].cpu().numpy()

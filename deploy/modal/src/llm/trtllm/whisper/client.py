@@ -472,10 +472,17 @@ async def send_whisper(
 
 """
 # gRPC
+## health check for whisper
+modal run src/llm/trtllm/whisper/client.py \
+    --action health \
+    --model-name whisper \
+    --model-names whisper \
+    --server-url "r15.modal.host:34101"
+
 ## health check for whisper_bls,whisper_tensorrt_llm
 modal run src/llm/trtllm/whisper/client.py \
     --action health \
-    --server-url "r22.modal.host:38249"
+    --server-url "r15.modal.host:34101"
 
 ## health check for whisper_infer_bls, whisper_tensorrt_llm_cpprunner
 modal run src/llm/trtllm/whisper/client.py \
@@ -485,20 +492,44 @@ modal run src/llm/trtllm/whisper/client.py \
     --server-url "r28.modal.host:38535"
 
 
+## single wav test for whisper
+modal run src/llm/trtllm/whisper/client.py \
+    --no-streaming \
+    --action asr \
+    --model-name whisper \
+    --server-url "r15.modal.host:34101"
+modal run src/llm/trtllm/whisper/client.py \
+    --streaming \
+    --action asr \
+    --model-name whisper \
+    --server-url "r15.modal.host:34101"
+modal run src/llm/trtllm/whisper/client.py \
+    --action asr \
+    --model-name whisper \
+    --reference-audio /1221-135766-0001.wav \
+    --text-prefix "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>" \
+    --server-url "r15.modal.host:34101"
+modal run src/llm/trtllm/whisper/client.py \
+    --action asr \
+    --model-name whisper \
+    --reference-audio /long.wav \
+    --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
+    --server-url "r15.modal.host:34101"
+
 ## single wav test for whisper_bls,whisper_tensorrt_llm
 modal run src/llm/trtllm/whisper/client.py \
     --no-streaming \
     --action asr \
-    --server-url "r22.modal.host:38249"
+    --server-url "r15.modal.host:34101"
 modal run src/llm/trtllm/whisper/client.py \
     --streaming \
     --action asr \
-    --server-url "r22.modal.host:38249"
+    --server-url "r15.modal.host:34101"
 modal run src/llm/trtllm/whisper/client.py \
     --action asr \
     --reference-audio /1221-135766-0001.wav \
     --text-prefix "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>" \
-    --server-url "r22.modal.host:38249"
+    --server-url "r15.modal.host:34101"
 modal run src/llm/trtllm/whisper/client.py \
     --action asr \
     --reference-audio /long.wav \
@@ -515,21 +546,32 @@ modal run src/llm/trtllm/whisper/client.py \
     --streaming \
     --action asr \
     --model-name whisper_infer_bls \
-    --server-url "r22.modal.host:38249"
+    --server-url "r15.modal.host:34101"
 modal run src/llm/trtllm/whisper/client.py \
     --action asr \
     --model-name whisper_infer_bls \
     --reference-audio /1221-135766-0001.wav \
     --text-prefix "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>" \
-    --server-url "r22.modal.host:38249"
+    --server-url "r15.modal.host:34101"
 modal run src/llm/trtllm/whisper/client.py \
     --action asr \
     --model-name whisper_infer_bls \
     --reference-audio /long.wav \
     --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
-    --server-url "r22.modal.host:38249"
+    --server-url "r15.modal.host:34101"
 
-## bench (concurency_cn:1->2->4->8->16 | batch_size:1->2->4->8)
+## bench for whisper
+modal run src/llm/trtllm/whisper/client.py \
+    --no-streaming \
+    --action bench_asr \
+    --model-name whisper \
+    --concurency-cn 4 \
+    --batch-size 4 \
+    --reference-audio /long.wav \
+    --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
+    --server-url "r15.modal.host:34101"
+
+## bench (concurency_cn:1->2->4->8->16 | batch_size(requests_cn):1->2->4->8)
 ## bench throughput and latency, grpc just test, modal support http, grpc now use tunnel
 modal run src/llm/trtllm/whisper/client.py \
     --no-streaming \
@@ -563,7 +605,7 @@ modal run src/llm/trtllm/whisper/client.py \
     --batch-size 4 \
     --reference-audio /long.wav \
     --text-prefix "<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>" \
-    --server-url "r22.modal.host:38249"
+    --server-url "r15.modal.host:34101"
 
 # http
 ## health check
@@ -577,7 +619,7 @@ TRITON_PROTOCOL=http modal run src/llm/trtllm/whisper/client.py \
     --action asr \
     --server-url "weedge--tritonserver-serve-dev.modal.run"
 
-## bench (concurency_cn:1->2->4->8->16 | batch_size:1->2->4->8)
+## bench (concurency_cn:1->2->4->8->16 | batch_size(requests_cn):1->2->4->8)
 ## bench throughput and latency, grpc just test, modal support http, grpc now use tunnel
 TRITON_PROTOCOL=http modal run src/llm/trtllm/whisper/client.py \
     --no-streaming \

@@ -119,10 +119,10 @@ class TritonPythonModel:
             batch_mel_list.append(mel.squeeze(0))
 
         # Move prompt IDs to GPU
-        decoder_input_ids = torch.Tensor(prompt_ids, dtype=torch.int32, device=self.device)
+        decoder_input_ids = torch.tensor(prompt_ids, dtype=torch.int32, device=self.device)
 
         # Calculate mel lengths
-        mel_input_lengths = torch.Tensor(
+        mel_input_lengths = torch.tensor(
             [mel.shape[0] for mel in batch_mel_list], dtype=torch.int32, device=self.device
         )
 
@@ -145,7 +145,7 @@ class TritonPythonModel:
             return_dict=True,
         )
         torch.cuda.synchronize()
-        pb_utils.Logger.log_info(f"outputs: {outputs}")
+        # pb_utils.Logger.log_info(f"outputs: {outputs}")
 
         # Process outputs
         output_ids = outputs["output_ids"].cpu().numpy()

@@ -172,6 +172,7 @@ def prepare(model_repo):
         "whisper_bls",
         "whisper_infer_bls",
         "whisper_tensorrt_llm_cpprunner",
+        "whisper_tensorrt_llm",
     ]:
         cmd = f"cp /python_backend/build/triton_python_backend_stub {model_repo}/{infer_dir}"
         print(cmd)
@@ -179,18 +180,21 @@ def prepare(model_repo):
 
 
 """
-# run tritonserver with whisper_infer_bls + whisper_tensorrt_llm_cpprunner(decoder python BE)
+# run tritonserver with whisper(python BE)
+APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper modal serve src/llm/trtllm/whisper/tritonserver.py
+
+# run tritonserver with whisper_infer_bls + whisper_tensorrt_llm_cpprunner(encoder-decoder python BE)
 APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper_infer_bls,whisper_tensorrt_llm_cpprunner modal serve src/llm/trtllm/whisper/tritonserver.py 
 
-# run tritonserver with whisper_bls + whisper_tensorrt_llm(decoder tensorrtllm BE)
+# run tritonserver with whisper_bls + whisper_tensorrt_llm(encoder-decoder tensorrtllm BE)
 APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper_bls,whisper_tensorrt_llm modal serve src/llm/trtllm/whisper/tritonserver.py 
 
 # curl server is ready
 curl -vv -X GET "https://weege009--tritonserver-serve-dev.modal.run/v2/health/ready" -H  "accept: application/json"
 
 # run grpc tritonserver by tcp tunnel and http server
+APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper modal run src/llm/trtllm/whisper/tritonserver.py
 APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper_bls,whisper_tensorrt_llm modal run src/llm/trtllm/whisper/tritonserver.py 
-
 APP_NAME=whisper TENSORRT_LLM_MODEL_NAME=whisper_infer_bls,whisper_tensorrt_llm_cpprunner modal run src/llm/trtllm/whisper/tritonserver.py 
 """
 
