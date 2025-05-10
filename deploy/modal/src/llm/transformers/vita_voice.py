@@ -33,12 +33,24 @@ vita_audio_img = (
     .pip_install("flash-attn", extra_options="--no-build-isolation")
     .run_commands(
         "cd /VITA-Audio && git pull origin feat/achatbot",
-        "cd /VITA-Audio && git checkout 4f7242d4d07a6bc981d87cca8704296795c4f0bb",
+        "cd /VITA-Audio && git checkout d9c6ae30c69d950b8a59a43d8e5e11ffcb32c462",
     )
+    .run_commands(
+        "git clone https://github.com/weedge/CosyVoice.git",
+        "cd /CosyVoice && git checkout 6507762ba72ecfd4f9c15e17f543c8aaeef2fd8f",
+        "pip install rich",
+    )
+    .pip_install("snac")
+    .run_commands(
+        "git clone https://github.com/weedge/Spark-TTS.git",
+        "cd /Spark-TTS && git checkout 244144322c738a64d98ce51247d8de75a74e9449",
+    )
+    .pip_install("einops", "einx", "omegaconf", "packaging", "safetensors", "soxr")
     .env(
         {
             "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
             "TQDM_DISABLE": "1",
+            "AUDIO_TOKENIZER_TYPE": os.getenv("AUDIO_TOKENIZER_TYPE", "sensevoice_glm4voice"),
         }
     )
 )
@@ -64,15 +76,77 @@ with vita_audio_img.imports():
     from vita_audio.tokenizer import get_audio_tokenizer
     from vita_audio.data.processor.audio_processor import add_audio_input_contiguous
 
-    # (sensevoice_small encoder+ctc contiguous) or (glm4voice tokenizer whisperVQ encoder discrete)
-    # glm-4-voice-decoder (flow + hift) from cosyvoice (support streaming)
-    audio_tokenizer_type = "sensevoice_glm4voice"
-    sense_voice_model_path = os.path.join(HF_MODEL_DIR, "FunAudioLLM/SenseVoiceSmall")
-    glm4_voice_tokenizer_model_path = os.path.join(HF_MODEL_DIR, "THUDM/glm-4-voice-tokenizer")
-    flow_path = os.path.join(HF_MODEL_DIR, "THUDM/glm-4-voice-decoder")
+    # audio vq codec model | cosyvoice (glm-4-voice-tokenizer or FunAudioLLM/CosyVoice2-0.5B tokenizer + vocoder)
+    audio_tokenizer_model_path = None
 
-    # (VITA-Audio-Plus-Vanilla) or (VITA-Audio-Boost) or (VITA-Audio-Balance)
-    model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Plus-Vanilla")
+    sense_voice_model_path = None  # sensevoice_small model
+    glm4_voice_tokenizer_model_path = None
+    flow_path = None
+    model_path = None
+
+    # glm4voice | cosyvoice2 | snac24khz | sensevoice_sparktts | sensevoice_glm4voice
+    support_types = [
+        "glm4voice",
+        "sensevoice_glm4voice",
+        # "snac24khz",
+        # "cosyvoice2",
+        # "sensevoice_sparktts",
+    ]
+    audio_tokenizer_type = os.getenv("AUDIO_TOKENIZER_TYPE", "sensevoice_glm4voice")
+
+    if audio_tokenizer_type == "sensevoice_glm4voice":
+        # sensevoice_glm4voice
+        # (sensevoice_small WaveFrontend extract audio feature)
+        sense_voice_model_path = os.path.join(HF_MODEL_DIR, "FunAudioLLM/SenseVoiceSmall")
+        # glm-4-voice-decoder (flow + hift) from cosyvoice (support streaming)
+        flow_path = os.path.join(HF_MODEL_DIR, "THUDM/glm-4-voice-decoder")
+        # sensevoice_small encoder(no ctc head) + qwen2 model (no mtp)
+        model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Plus-Vanilla")
+
+    if audio_tokenizer_type == "glm4voice":
+        audio_tokenizer_model_path = os.path.join(HF_MODEL_DIR, "THUDM/glm-4-voice-tokenizer")
+        flow_path = os.path.join(HF_MODEL_DIR, "THUDM/glm-4-voice-decoder")
+
+        # sensevoice_small encoder(no ctc head) + qwen2 model (mtp)
+        # model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Boost")
+        model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Balance")
+
+        # run is ok, but don't use this model
+        # model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Plus-Vanilla")
+
+    if audio_tokenizer_type == "cosyvoice2":
+        sys.path.insert(0, "/CosyVoice")
+        # (sensevoice_small WaveFrontend extract audio feature)
+        audio_tokenizer_model_path = os.path.join(HF_MODEL_DIR, "FunAudioLLM/CosyVoice2-0.5B")
+
+        # sensevoice_small encoder(no ctc head) + qwen2 model (mtp)
+        # model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Boost")
+        model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Balance")
+
+        # run is ok, but don't use this model
+        # model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Plus-Vanilla")
+
+    if audio_tokenizer_type == "snac24khz":
+        audio_tokenizer_model_path = os.path.join(HF_MODEL_DIR, "hubertsiuzdak/snac_24khz")
+
+        # sensevoice_small encoder(no ctc head) + qwen2 model (mtp)
+        # model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Boost")
+        model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Balance")
+
+        # run is ok, but don't use this model
+        # model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Plus-Vanilla")
+
+    if audio_tokenizer_type == "sensevoice_sparktts":
+        sys.path.insert(0, "/Spark-TTS")
+        # bicodec (vq codec)
+        audio_tokenizer_model_path = os.path.join(HF_MODEL_DIR, "SparkAudio/Spark-TTS-0.5B")
+
+        # sensevoice_small encoder(no ctc head) + qwen2 model (mtp)
+        # model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Boost")
+        model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Balance")
+
+        # run is ok, but don't use this model
+        # model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Plus-Vanilla")
 
 
 @app.function(
@@ -89,6 +163,11 @@ with vita_audio_img.imports():
     max_containers=1,
 )
 def run(func):
+    if audio_tokenizer_type not in support_types:
+        print(
+            f"Invalid audio_tokenizer_type: {audio_tokenizer_type}, please choose one of the following: {support_types}"
+        )
+        return
     subprocess.run("nvidia-smi --version", shell=True)
     subprocess.run("nvcc --version", shell=True)
     gpu_prop = torch.cuda.get_device_properties("cuda")
@@ -119,14 +198,21 @@ def dump_model():
     # https://huggingface.co/VITA-MLLM/VITA-Audio-Boost/blob/main/modeling_qwen2.py#L781
     # https://huggingface.co/VITA-MLLM/VITA-Audio-Balance/blob/main/modeling_qwen2.py#L781
     # https://huggingface.co/VITA-MLLM/VITA-Audio-Plus-Vanilla/blob/main/modeling_qwen2.py#L834
-    model = AutoModelForCausalLM.from_pretrained(
-        model_path,
-        trust_remote_code=True,
-        device_map="cuda:0",
-        torch_dtype=torch.bfloat16,
-        attn_implementation="flash_attention_2",
-    ).eval()
-    print_model_params(model, "Qwen2MTP_AR_LLM")
+    for name, model_path in {
+        "Boost": os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Boost"),
+        "Balance": os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Balance"),
+        "Vanilla": os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Plus-Vanilla"),
+    }.items():
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            trust_remote_code=True,
+            device_map="cuda:0",
+            torch_dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2",
+        ).eval()
+        print_model_params(model, f"Qwen2MTP_AR_LLM_{name}")
+        del model
+        torch.cuda.empty_cache()
 
     audio_tokenizer = get_audio_tokenizer(
         model_type=audio_tokenizer_type,
@@ -150,8 +236,7 @@ def benchmark_llm():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        # glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
-        glm4_voice_tokenizer_model_path=None,
+        glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
         sense_voice_model_path=sense_voice_model_path,
         flow_path=flow_path,
     )
@@ -191,8 +276,7 @@ def benchmark_sts():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        # glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
-        glm4_voice_tokenizer_model_path=None,
+        glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
         sense_voice_model_path=sense_voice_model_path,
         flow_path=flow_path,
     )
@@ -322,8 +406,7 @@ def sts():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        # glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
-        glm4_voice_tokenizer_model_path=None,
+        glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
         sense_voice_model_path=sense_voice_model_path,
         flow_path=flow_path,
     )
@@ -339,11 +422,13 @@ def sts():
         print(f"{audio_path=}")
         subprocess.run(f"cp {audio_path} {ASSETS_DIR}", shell=True)
 
+        start_time = perf_counter()
         output, tts_speech = s2s_inference.run_infer(
             audio_path=audio_path,
         )
         print(f"{output=}")
         print(f"{tts_speech.shape=}", flush=True)
+        print(f"cost time: {perf_counter()-start_time:.6f} s")
 
         file_name = os.path.basename(audio_path)
         wav_path = os.path.join(output_dir, f"sts_{file_name}")
@@ -364,8 +449,7 @@ def sts_stream():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        # glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
-        glm4_voice_tokenizer_model_path=None,
+        glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
         sense_voice_model_path=sense_voice_model_path,
         flow_path=flow_path,
     )
@@ -425,7 +509,7 @@ def asr():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        glm4_voice_tokenizer_model_path=None,
+        glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
         sense_voice_model_path=sense_voice_model_path,
         flow_path=None,
     )
@@ -442,6 +526,7 @@ def asr():
         start_time = perf_counter()
         output, _ = s2s_inference.run_infer(
             audio_path=audio_path,
+            # message="Translate the speech to english.",
             # message="Translate the speech to text.",
             message="Convert the speech to text.",
             mode=None,
@@ -454,7 +539,7 @@ def asr_text_stream():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        glm4_voice_tokenizer_model_path=None,
+        glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
         sense_voice_model_path=sense_voice_model_path,
         flow_path=None,
     )
@@ -502,8 +587,7 @@ def tts():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        # glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
-        glm4_voice_tokenizer_model_path=None,
+        glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
         sense_voice_model_path=sense_voice_model_path,
         flow_path=flow_path,
     )
@@ -550,8 +634,7 @@ def tts_clone():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        # glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
-        glm4_voice_tokenizer_model_path=None,
+        glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
         sense_voice_model_path=sense_voice_model_path,
         flow_path=flow_path,
     )
@@ -608,8 +691,7 @@ def tts_stream():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        # glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
-        glm4_voice_tokenizer_model_path=None,
+        glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
         sense_voice_model_path=sense_voice_model_path,
         flow_path=flow_path,
     )
@@ -852,11 +934,12 @@ class S2SInference:
         model.generation_config.top_p = 1.0
         model.generation_config.num_beams = 1
         model.generation_config.pad_token_id = tokenizer.pad_token_id
-        print(f"{model.generation_config=}")
+        # print(f"{model.generation_config=}")
 
         audio_tokenizer = get_audio_tokenizer(
             model_type=audio_tokenizer_type,
             flow_path=flow_path,
+            model_name_or_path=audio_tokenizer_model_path,
             rank=audio_tokenizer_rank,
             glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
             sense_voice_model_path=sense_voice_model_path,
@@ -1080,8 +1163,11 @@ class S2SInference:
         if prompt_audio_path is not None and self.audio_tokenizer.apply_to_role(
             "user", is_discrete=True
         ):
+            print("discrete codec")
             # discrete codec
-            audio_tokens = self.audio_tokenizer.encode(prompt_audio_path)
+            audio_tokens = self.audio_tokenizer.encode(
+                prompt_audio_path, is_discrete=True, is_contiguous=False
+            )
             audio_tokens = "".join(f"<|audio_{i}|>" for i in audio_tokens)
             system_message[-1]["content"] = system_message[-1]["content"].replace(
                 "<|audio|>", f"<|begin_of_audio|>{audio_tokens}<|end_of_audio|>"
@@ -1105,7 +1191,9 @@ class S2SInference:
         if audio_path is not None and self.audio_tokenizer.apply_to_role("user", is_discrete=True):
             print("discrete codec")
             # discrete codec
-            audio_tokens = self.audio_tokenizer.encode(audio_path)
+            audio_tokens = self.audio_tokenizer.encode(
+                audio_path, is_discrete=True, is_contiguous=False
+            )
             audio_tokens = "".join(f"<|audio_{i}|>" for i in audio_tokens)
             messages[-1]["content"] = messages[-1]["content"].replace(
                 "<|audio|>", f"<|begin_of_audio|>{audio_tokens}<|end_of_audio|>"
