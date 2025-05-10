@@ -33,7 +33,7 @@ vita_audio_img = (
     .pip_install("flash-attn", extra_options="--no-build-isolation")
     .run_commands(
         "cd /VITA-Audio && git pull origin feat/achatbot",
-        "cd /VITA-Audio && git checkout d9c6ae30c69d950b8a59a43d8e5e11ffcb32c462",
+        "cd /VITA-Audio && git checkout 670029d3941c54309b31e515dbff8b5dde5b0fe9",
     )
     .run_commands(
         "git clone https://github.com/weedge/CosyVoice.git",
@@ -51,6 +51,8 @@ vita_audio_img = (
             "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
             "TQDM_DISABLE": "1",
             "AUDIO_TOKENIZER_TYPE": os.getenv("AUDIO_TOKENIZER_TYPE", "sensevoice_glm4voice"),
+            # VITA-MLLM/VITA-Audio-Boost | VITA-MLLM/VITA-Audio-Balance
+            "MTP_LLM_MODEL": os.getenv("MTP_LLM_MODEL", "VITA-MLLM/VITA-Audio-Balance"),
         }
     )
 )
@@ -78,7 +80,6 @@ with vita_audio_img.imports():
 
     # audio vq codec model | cosyvoice (glm-4-voice-tokenizer or FunAudioLLM/CosyVoice2-0.5B tokenizer + vocoder)
     audio_tokenizer_model_path = None
-
     sense_voice_model_path = None  # sensevoice_small model
     glm4_voice_tokenizer_model_path = None
     flow_path = None
@@ -93,6 +94,11 @@ with vita_audio_img.imports():
         # "sensevoice_sparktts",
     ]
     audio_tokenizer_type = os.getenv("AUDIO_TOKENIZER_TYPE", "sensevoice_glm4voice")
+    print(f"{audio_tokenizer_type=}")
+    mtp_llm_model = os.path.join(
+        HF_MODEL_DIR, os.getenv("MTP_LLM_MODEL", "VITA-MLLM/VITA-Audio-Balance")
+    )
+    print(f"{mtp_llm_model=}")
 
     if audio_tokenizer_type == "sensevoice_glm4voice":
         # sensevoice_glm4voice
@@ -104,13 +110,10 @@ with vita_audio_img.imports():
         model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Plus-Vanilla")
 
     if audio_tokenizer_type == "glm4voice":
-        audio_tokenizer_model_path = os.path.join(HF_MODEL_DIR, "THUDM/glm-4-voice-tokenizer")
+        glm4_voice_tokenizer_model_path = os.path.join(HF_MODEL_DIR, "THUDM/glm-4-voice-tokenizer")
         flow_path = os.path.join(HF_MODEL_DIR, "THUDM/glm-4-voice-decoder")
 
-        # sensevoice_small encoder(no ctc head) + qwen2 model (mtp)
-        # model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Boost")
-        model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Balance")
-
+        model_path = mtp_llm_model
         # run is ok, but don't use this model
         # model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Plus-Vanilla")
 
@@ -119,9 +122,7 @@ with vita_audio_img.imports():
         # (sensevoice_small WaveFrontend extract audio feature)
         audio_tokenizer_model_path = os.path.join(HF_MODEL_DIR, "FunAudioLLM/CosyVoice2-0.5B")
 
-        # sensevoice_small encoder(no ctc head) + qwen2 model (mtp)
-        # model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Boost")
-        model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Balance")
+        model_path = mtp_llm_model
 
         # run is ok, but don't use this model
         # model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Plus-Vanilla")
@@ -129,9 +130,7 @@ with vita_audio_img.imports():
     if audio_tokenizer_type == "snac24khz":
         audio_tokenizer_model_path = os.path.join(HF_MODEL_DIR, "hubertsiuzdak/snac_24khz")
 
-        # sensevoice_small encoder(no ctc head) + qwen2 model (mtp)
-        # model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Boost")
-        model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Balance")
+        model_path = mtp_llm_model
 
         # run is ok, but don't use this model
         # model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Plus-Vanilla")
@@ -141,16 +140,14 @@ with vita_audio_img.imports():
         # bicodec (vq codec)
         audio_tokenizer_model_path = os.path.join(HF_MODEL_DIR, "SparkAudio/Spark-TTS-0.5B")
 
-        # sensevoice_small encoder(no ctc head) + qwen2 model (mtp)
-        # model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Boost")
-        model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Balance")
+        model_path = mtp_llm_model
 
         # run is ok, but don't use this model
         # model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Plus-Vanilla")
 
 
 @app.function(
-    gpu=os.getenv("IMAGE_GPU", "L40s"),
+    gpu=os.getenv("IMAGE_GPU", None),
     cpu=2.0,
     retries=1,
     image=vita_audio_img,
@@ -587,24 +584,25 @@ def tts():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
-        sense_voice_model_path=sense_voice_model_path,
+        glm4_voice_tokenizer_model_path=None,
+        sense_voice_model_path=None,
         flow_path=flow_path,
     )
 
+    # bad case: use glm4voice tokenizer to generate tts with Boost/Balance mtp llm(7B)
     TTS_texts = [
-        "我们将为全球城市的可持续发展贡献力量。",
-        "通天河 灵感大王",
-        "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",
-        "一二三四五六七八九十",
-        "One Two Tree Four Five Six Seven Eight Night Ten",
-        "1 2 3 4 5 6 7 8 9 10",
-        "12345678910",
-        "两个黄鹂鸣翠柳，一行白鹭上青天。窗含西岭千秋雪，门泊东吴万里船。",
-        "坡上立着一只鹅，坡下就是一条河。宽宽的河，肥肥的鹅，鹅要过河，河要渡鹅不知是鹅过河，还是河渡鹅?",
-        "扁担长，板凳宽，扁担没有板凳宽，板凳没有扁担长。扁担绑在板凳上，板凳不让扁担绑在板凳上。",
-        "化肥会挥发，黑化肥发灰，灰化肥发黑。黑化肥发灰会挥发；灰化肥挥发会发黑。黑化肥挥发发灰会花飞；灰化肥挥发发黑会飞花，黑灰化肥会挥发发灰黑讳为花飞；灰黑化肥会挥发发黑灰为讳飞花。",
-        "圆桌儿、方桌儿没有腿儿，墨水瓶儿里没有水儿，花瓶里有花儿没有叶儿，练习本儿上写字儿没有准儿，甘蔗好吃净是节儿。西瓜挺大没有味儿，坛儿里的小米儿长了虫儿，鸡毛掸子成了棍儿，水缸沿儿上系围裙儿，耗子打更猫打盹儿，新买的小褂儿没钉扣儿，奶奶想说没有劲儿。",
+        # "我们将为全球城市的可持续发展贡献力量。",
+        # "通天河 灵感大王",
+        # "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",
+        # "一二三四五六七八九十",
+        # "One Two Tree Four Five Six Seven Eight Night Ten",
+        # "1 2 3 4 5 6 7 8 9 10",
+        # "12345678910",
+        # "两个黄鹂鸣翠柳，一行白鹭上青天。窗含西岭千秋雪，门泊东吴万里船。",
+        # "坡上立着一只鹅，坡下就是一条河。宽宽的河，肥肥的鹅，鹅要过河，河要渡鹅不知是鹅过河，还是河渡鹅?",
+        # "扁担长，板凳宽，扁担没有板凳宽，板凳没有扁担长。扁担绑在板凳上，板凳不让扁担绑在板凳上。",
+        # "化肥会挥发，黑化肥发灰，灰化肥发黑。黑化肥发灰会挥发；灰化肥挥发会发黑。黑化肥挥发发灰会花飞；灰化肥挥发发黑会飞花，黑灰化肥会挥发发灰黑讳为花飞；灰黑化肥会挥发发黑灰为讳飞花。",
+        # "圆桌儿、方桌儿没有腿儿，墨水瓶儿里没有水儿，花瓶里有花儿没有叶儿，练习本儿上写字儿没有准儿，甘蔗好吃净是节儿。西瓜挺大没有味儿，坛儿里的小米儿长了虫儿，鸡毛掸子成了棍儿，水缸沿儿上系围裙儿，耗子打更猫打盹儿，新买的小褂儿没钉扣儿，奶奶想说没有劲儿。",
         "起床歌：小宝宝，起得早，睁开眼，眯眯笑，咿呀呀，学说话，伸伸手，要人抱。穿衣歌小胳膊，穿袖子，穿上衣，扣扣子，小脚丫，穿裤子，穿上袜子穿鞋子。小镜子-小镜子，圆又圆，看宝宝，露笑脸。闭上眼，做个梦，变月亮，挂上天。小铃铛叮铃铃，叮铃铃，一会远，一会近。小宝宝，耳朵灵，听铃声，找到铃。学画画小宝宝，学画画，大蜡笔，手中拿，画小鸭，叫嘎嘎，画小马，骑回家。大鞋子大鞋子，像只船，爸爸穿，我也穿，一二一，向前走，走呀走，翻了船。逛公园逛公园，宝宝笑，东看看，西瞧瞧，花儿香，鸟儿叫，小草绿，小树摇。看画报小娃娃，看画报，睁大眼，仔细瞧，布娃娃，哈哈笑，伸伸手，要你抱。搭积木大积木，红黄兰，小宝宝，最爱玩，搭火车，钻山洞，盖高楼，连着天。小汽车小汽车，嘀嘀嘀，开过来，开过去，小宝宝，当司机，送妈妈，上班去。藏猫猫儿歌：躲猫猫，躲猫猫， 猫猫、猫猫在哪里？喵……猫咪在这里。",
     ]
 
@@ -613,6 +611,7 @@ def tts():
         print("tts_task")
         print(f"{text=}")
 
+        start = perf_counter()
         output, tts_speech = s2s_inference.run_infer(
             message="Convert the text to speech.\n" + text,
             mode=None,
@@ -620,6 +619,7 @@ def tts():
         )
         print(f"{output=}", flush=True)
         print(f"{tts_speech.shape=}", flush=True)
+        print(f"cost: {perf_counter()-start}")
 
         wav_path = os.path.join(ASSETS_DIR, text[:16] + ".wav")
         print(f"save to {wav_path}")
@@ -634,8 +634,8 @@ def tts_clone():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
-        sense_voice_model_path=sense_voice_model_path,
+        glm4_voice_tokenizer_model_path=None,
+        sense_voice_model_path=None,
         flow_path=flow_path,
     )
 
@@ -691,14 +691,15 @@ def tts_stream():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
-        sense_voice_model_path=sense_voice_model_path,
+        glm4_voice_tokenizer_model_path=None,
+        sense_voice_model_path=None,
         flow_path=flow_path,
     )
 
     TTS_texts = [
         "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",  # warmup
         "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",
+        # "起床歌：小宝宝，起得早，睁开眼，眯眯笑，咿呀呀，学说话，伸伸手，要人抱。穿衣歌小胳膊，穿袖子，穿上衣，扣扣子，小脚丫，穿裤子，穿上袜子穿鞋子。小镜子-小镜子，圆又圆，看宝宝，露笑脸。闭上眼，做个梦，变月亮，挂上天。小铃铛叮铃铃，叮铃铃，一会远，一会近。小宝宝，耳朵灵，听铃声，找到铃。学画画小宝宝，学画画，大蜡笔，手中拿，画小鸭，叫嘎嘎，画小马，骑回家。大鞋子大鞋子，像只船，爸爸穿，我也穿，一二一，向前走，走呀走，翻了船。逛公园逛公园，宝宝笑，东看看，西瞧瞧，花儿香，鸟儿叫，小草绿，小树摇。看画报小娃娃，看画报，睁大眼，仔细瞧，布娃娃，哈哈笑，伸伸手，要你抱。搭积木大积木，红黄兰，小宝宝，最爱玩，搭火车，钻山洞，盖高楼，连着天。小汽车小汽车，嘀嘀嘀，开过来，开过去，小宝宝，当司机，送妈妈，上班去。藏猫猫儿歌：躲猫猫，躲猫猫， 猫猫、猫猫在哪里？喵……猫咪在这里。",
     ]
 
     for text in TTS_texts:
@@ -719,7 +720,7 @@ def tts_stream():
             print(new_text, end="")
             start_time = perf_counter()
         print(
-            f"\ngenerate [{generated_text}] first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s\n"
+            f"\ngenerate first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s\n"
         )
 
         file_name = text[:16]
@@ -1223,7 +1224,6 @@ class S2SInference:
             audio_indices = None
 
         input_ids = torch.tensor([input_ids], dtype=torch.long).to("cuda")
-
         print("input", self.tokenizer.decode(input_ids[0], skip_special_tokens=False), flush=True)
 
         self.model.generation_config.do_sample = do_sample
@@ -1238,12 +1238,14 @@ class S2SInference:
             audio_indices=audio_indices,
         )
 
-        output = self.tokenizer.decode(outputs[0], skip_special_tokens=False)
+        outputs = outputs[0][input_ids.shape[1] :]
+        output = self.tokenizer.decode(outputs, skip_special_tokens=False)
+        print(f"{output=}")
 
         audio_offset = self.tokenizer.convert_tokens_to_ids("<|audio_0|>")
 
         audio_tokens = []
-        for token_id in outputs[0]:
+        for token_id in outputs:
             if token_id >= audio_offset:
                 audio_tokens.append(token_id - audio_offset)
 
@@ -1378,10 +1380,20 @@ class S2SInference:
 
 
 """
-IMAGE_GPU=L4 modal run src/llm/transformers/vita_audio.py --task tokenize
+IMAGE_GPU=T4 modal run src/llm/transformers/vita_voice.py --task tokenize
 IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task dump_model
+
+# LLM: sensevoice(no use ctc)_qwen2_mtp(no mtp)
 IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task text 
 IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task text_stream
+
+# LLM: qwen2_mtp
+AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task text 
+AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task text_stream
+MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task text 
+MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task text_stream
+
+# LLM(Vanilla): sensevoice(no use ctc)_qwen2_mtp(no mtp) + AudioTokenizer: sensevoice_glm4voice(sensevoice WavFrontend, decoder)
 IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task sts
 IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task sts_stream
 IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task asr
@@ -1389,6 +1401,23 @@ IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task asr_text_stream
 IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts
 IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_stream
 IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_clone
+
+# LLM(Boost/Balance): qwen2_mtp + AudioTokenizer: glm4voice(tokenizer, decoder)
+AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L40s modal run src/llm/transformers/vita_voice.py --task sts
+AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L40s modal run src/llm/transformers/vita_voice.py --task sts_stream
+AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task asr
+AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task asr_text_stream
+AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts
+AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_stream
+AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_clone
+
+MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L40s modal run src/llm/transformers/vita_voice.py --task sts
+MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L40s modal run src/llm/transformers/vita_voice.py --task sts_stream
+MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L40s modal run src/llm/transformers/vita_voice.py --task asr
+MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task asr_text_stream
+MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts
+MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_stream
+MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_clone
 
 """
 
@@ -1407,8 +1436,8 @@ def main(task: str = "tokenize"):
         "tts": tts,
         "tts_stream": tts_stream,
         "tts_clone": tts_clone,
-        "benchmark_llm": benchmark_llm,
-        "benchmark_sts": benchmark_sts,
+        # "benchmark_llm": benchmark_llm,
+        # "benchmark_sts": benchmark_sts,
     }
     if task not in tasks:
         raise ValueError(f"task {task} not found")
