@@ -4,6 +4,7 @@ import re
 import sys
 from threading import Thread
 import time
+import traceback
 from typing import List
 
 import torch
@@ -12,18 +13,44 @@ import torch
 try:
     from transformers import AutoModelForCausalLM, AutoTokenizer
     from transformers.generation import GenerationConfig
-    from evaluation.get_chat_template import qwen2_chat_template as chat_template
 
     cur_dir = os.path.dirname(__file__)
     if bool(os.getenv("ACHATBOT_PKG", "")):
         sys.path.insert(1, os.path.join(cur_dir, "../../../VITAAudio"))
+        sys.path.insert(1, os.path.join(cur_dir, "../../../VITAAudio/third_party/GLM-4-Voice/"))
+        sys.path.insert(
+            1, os.path.join(cur_dir, "../../../VITAAudio/third_party/GLM-4-Voice/cosyvoice/")
+        )
+        sys.path.insert(
+            1,
+            os.path.join(
+                cur_dir, "../../../VITAAudio/third_party/GLM-4-Voice/third_party/Matcha-TTS/"
+            ),
+        )
     else:
         sys.path.insert(1, os.path.join(cur_dir, "../../../../deps/VITAAudio"))
+        sys.path.insert(
+            1, os.path.join(cur_dir, "../../../../deps/VITAAudio/third_party/GLM-4-Voice/")
+        )
+        sys.path.insert(
+            1,
+            os.path.join(cur_dir, "../../../../deps/VITAAudio/third_party/GLM-4-Voice/cosyvoice/"),
+        )
+        sys.path.insert(
+            1,
+            os.path.join(
+                cur_dir,
+                "../../../../deps/VITAAudio/third_party/GLM-4-Voice/third_party/Matcha-TTS/",
+            ),
+        )
 
     from deps.VITAAudio.vita_audio.tokenizer import get_audio_tokenizer
     from deps.VITAAudio.vita_audio.data.processor.audio_processor import add_audio_input_contiguous
+    from deps.VITAAudio.evaluation.get_chat_template import qwen2_chat_template as chat_template
+
 except ModuleNotFoundError as e:
-    logging.error(f"Exception: {e}")
+    ex_trace = traceback.format_exc()
+    logging.error(f"Exception: {ex_trace}")
     logging.error(
         "In order to use VITA-Audio, you need to `pip install achatbot[llm_transformers_manual_voice_vita]`. "
     )
@@ -270,11 +297,11 @@ class TransformersManualTextVITALLM(TransformersBaseLLM):
 
         # print("input", self._tokenizer.decode(input_ids[0], skip_special_tokens=False), flush=True)
 
-        self.model.generation_config.do_sample = do_sample
+        self._model.generation_config.do_sample = do_sample
 
         if mtp_inference_mode is not None:
-            ori_mtp_inference_mode = self.model.generation_config.mtp_inference_mode
-            self.model.generation_config.mtp_inference_mode = mtp_inference_mode
+            ori_mtp_inference_mode = self._model.generation_config.mtp_inference_mode
+            self._model.generation_config.mtp_inference_mode = mtp_inference_mode
 
         streamer = TextAudioIteratorStreamer(self._tokenizer, skip_prompt=True)
         generation_kwargs = dict(
@@ -283,7 +310,7 @@ class TransformersManualTextVITALLM(TransformersBaseLLM):
             audio_indices=audio_indices,
             streamer=streamer,
         )
-        thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
+        thread = Thread(target=self._model.generate, kwargs=generation_kwargs)
 
         thread.start()
 
@@ -291,7 +318,7 @@ class TransformersManualTextVITALLM(TransformersBaseLLM):
             yield new_text
 
         if mtp_inference_mode is not None:
-            self.model.generation_config.mtp_inference_mode = ori_mtp_inference_mode
+            self._model.generation_config.mtp_inference_mode = ori_mtp_inference_mode
 
     # @torch.no_grad()
     @torch.inference_mode()

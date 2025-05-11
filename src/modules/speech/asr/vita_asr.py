@@ -27,6 +27,8 @@ class VITAAsr(ASRBase):
         session.ctx.state["prompt"] = session.ctx.state.get("prompt", self.asr_audio)
         transcription = self.model.generate(session)
         for text in transcription:
+            if text == "<|im_end|>":
+                break
             yield text
 
     async def transcribe(self, session: Session) -> dict:

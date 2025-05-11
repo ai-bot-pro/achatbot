@@ -279,7 +279,7 @@ llm_transformers_manual_vision_voice_minicpmo = [
     "decord",
     "moviepy",
 ]
-llm_transformers_manual_vision_voice_qwen =[
+llm_transformers_manual_vision_voice_qwen = [
     # https://github.com/huggingface/transformers/releases/tag/v4.51.3-Qwen2.5-Omni-preview
     #"git+https://github.com/huggingface/transformers@v4.51.3-Qwen2.5-Omni-preview",
     #"transformers==4.52.0",
@@ -322,7 +322,9 @@ llm_transformers_manual_voice_vita = [
     "tiktoken",
     "funasr",
     "rich",
+    "hyperpyyaml",
 ]
+
 
 # core llms
 core_llm = ["achatbot[llama_cpp,llm_personalai_proxy]"]
