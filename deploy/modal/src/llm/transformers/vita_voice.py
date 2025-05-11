@@ -1,3 +1,4 @@
+import math
 import os
 import sys
 from random import random
@@ -6,6 +7,7 @@ from threading import Thread
 from time import perf_counter
 import time
 from typing import Optional
+import uuid
 
 import modal
 
@@ -33,7 +35,7 @@ vita_audio_img = (
     .pip_install("flash-attn", extra_options="--no-build-isolation")
     .run_commands(
         "cd /VITA-Audio && git pull origin feat/achatbot",
-        "cd /VITA-Audio && git checkout 670029d3941c54309b31e515dbff8b5dde5b0fe9",
+        "cd /VITA-Audio && git checkout 32fb8180fcd7a4bbaa8c9dd77928c78cb7fd26ce",
     )
     .run_commands(
         "git clone https://github.com/weedge/CosyVoice.git",
@@ -81,7 +83,6 @@ with vita_audio_img.imports():
     # audio vq codec model | cosyvoice (glm-4-voice-tokenizer or FunAudioLLM/CosyVoice2-0.5B tokenizer + vocoder)
     audio_tokenizer_model_path = None
     sense_voice_model_path = None  # sensevoice_small model
-    glm4_voice_tokenizer_model_path = None
     flow_path = None
     model_path = None
 
@@ -110,7 +111,7 @@ with vita_audio_img.imports():
         model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Plus-Vanilla")
 
     if audio_tokenizer_type == "glm4voice":
-        glm4_voice_tokenizer_model_path = os.path.join(HF_MODEL_DIR, "THUDM/glm-4-voice-tokenizer")
+        audio_tokenizer_model_path = os.path.join(HF_MODEL_DIR, "THUDM/glm-4-voice-tokenizer")
         flow_path = os.path.join(HF_MODEL_DIR, "THUDM/glm-4-voice-decoder")
 
         model_path = mtp_llm_model
@@ -143,6 +144,7 @@ with vita_audio_img.imports():
         model_path = mtp_llm_model
 
         # run is ok, but don't use this model
+        # sense_voice_model_path = os.path.join(HF_MODEL_DIR, "FunAudioLLM/SenseVoiceSmall")
         # model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Plus-Vanilla")
 
 
@@ -215,7 +217,7 @@ def dump_model():
         model_type=audio_tokenizer_type,
         flow_path=flow_path,
         rank=0,
-        glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
+        audio_tokenizer_model_path=audio_tokenizer_model_path,
         sense_voice_model_path=sense_voice_model_path,
     )
     print(f"{audio_tokenizer=}")
@@ -233,7 +235,7 @@ def benchmark_llm():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
+        audio_tokenizer_model_path=audio_tokenizer_model_path,
         sense_voice_model_path=sense_voice_model_path,
         flow_path=flow_path,
     )
@@ -273,7 +275,7 @@ def benchmark_sts():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
+        audio_tokenizer_model_path=audio_tokenizer_model_path,
         sense_voice_model_path=sense_voice_model_path,
         flow_path=flow_path,
     )
@@ -333,7 +335,6 @@ def text():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        glm4_voice_tokenizer_model_path=None,
         sense_voice_model_path=None,
         flow_path=None,
     )
@@ -348,6 +349,7 @@ def text():
         print("text_task")
         print(f"{text=}")
 
+        start = perf_counter()
         output, _ = s2s_inference.run_infer(
             message=text,
             mode=None,
@@ -355,6 +357,45 @@ def text():
             mtp_inference_mode=[8192, 0],
         )
         print(f"{output=}", flush=True)
+        print(f"cost: {perf_counter()-start} s")
+
+
+def text_audio():
+    import torchaudio
+
+    s2s_inference = S2SInference(
+        model_path,
+        audio_tokenizer_type,
+        sense_voice_model_path=None,
+        flow_path=flow_path,
+    )
+
+    for text in [
+        "How many helicopters can a human eat in one sitting?",
+        "你叫什么名字？",
+        "写一首诗",
+        "介绍一下北京",
+    ]:
+        print("=" * 100)
+        print("text_audio_task")
+        print(f"{text=}")
+
+        start = perf_counter()
+        output, tts_speech = s2s_inference.run_infer(
+            message=text,
+            mode="luke",
+            do_sample=False,
+            # mtp_inference_mode=[8192, 0],
+        )
+        print(f"{output=}", flush=True)
+        print(f"{tts_speech.shape=}", flush=True)
+        print(f"cost: {perf_counter()-start} s")
+
+        file_name = text[:16]
+        wav_path = os.path.join(ASSETS_DIR, f"sts_{file_name}.wav")
+        print(f"save to {wav_path=}")
+        os.makedirs(os.path.dirname(wav_path), exist_ok=True)
+        torchaudio.save(wav_path, tts_speech.unsqueeze(0), 22050, format="wav")
 
 
 # ==============================================================
@@ -363,7 +404,6 @@ def text_stream():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        glm4_voice_tokenizer_model_path=None,
         sense_voice_model_path=None,
         flow_path=None,
     )
@@ -394,6 +434,68 @@ def text_stream():
         )
 
 
+def text_audio_stream():
+    import soundfile as sf
+
+    s2s_inference = S2SInference(
+        model_path,
+        audio_tokenizer_type,
+        sense_voice_model_path=None,
+        flow_path=flow_path,
+    )
+    for text in [
+        "你叫什么名字？",
+        "请讲一个儿童故事。",
+    ]:
+        print("=" * 100)
+        print("text_audio_stream_task")
+        print(f"{text=}")
+
+        times = []
+        start_time = perf_counter()
+        generated_text = ""
+        for new_text in s2s_inference.run_infer_stream(
+            message=text,
+            mode="luke",
+            do_sample=True,
+            # mtp_inference_mode=[8192, 0],
+        ):
+            times.append(perf_counter() - start_time)
+            generated_text += new_text
+            print(new_text, end="", flush=True)
+            start_time = perf_counter()
+
+        print(
+            f"\ngenerate [{generated_text}] first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s\n"
+        )
+        file_name = text[:16]
+        audio_decode_time = []
+        audios = []
+        audio_segments = find_audio_segments_regex(generated_text)
+        for audio_idx, audio_segment in enumerate(audio_segments):
+            start = perf_counter()
+
+            audio_tokens = extract_token_ids_as_int(audio_segment)
+            print(f"{audio_tokens=}")
+
+            tts_speech = s2s_inference.audio_tokenizer.decode(audio_tokens)
+            audio_decode_time.append(perf_counter() - start)
+
+            # wav_path = os.path.join(ASSETS_DIR, f"qa_stream_{audio_idx}_{file_name}.wav")
+            # print(f"save to {wav_path=}")
+            # torchaudio.save(wav_path, tts_speech.unsqueeze(0), 22050, format="wav")
+
+            audios.append(tts_speech.cpu().numpy())
+
+        wav_path = os.path.join(ASSETS_DIR, f"sts_stream_{file_name}.wav")
+        print(f"save to {wav_path=}")
+        sf.write(wav_path, np.concatenate(audios), samplerate=22050)
+        info = sf.info(wav_path, verbose=True)
+        print(
+            f"\ngenerate first audio segment cost time: {audio_decode_time[0]} s, {len(audio_decode_time)} segment cost time: {sum(audio_decode_time)} s | wav duration: {info.duration} s | audio tokenizer decode RTF: {sum(audio_decode_time)/info.duration} \n"
+        )
+
+
 # ==============================================================
 # S2S
 def sts():
@@ -403,7 +505,7 @@ def sts():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
+        audio_tokenizer_model_path=audio_tokenizer_model_path,
         sense_voice_model_path=sense_voice_model_path,
         flow_path=flow_path,
     )
@@ -446,7 +548,7 @@ def sts_stream():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
+        audio_tokenizer_model_path=audio_tokenizer_model_path,
         sense_voice_model_path=sense_voice_model_path,
         flow_path=flow_path,
     )
@@ -506,7 +608,7 @@ def asr():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
+        audio_tokenizer_model_path=audio_tokenizer_model_path,
         sense_voice_model_path=sense_voice_model_path,
         flow_path=None,
     )
@@ -536,7 +638,7 @@ def asr_text_stream():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
+        audio_tokenizer_model_path=audio_tokenizer_model_path,
         sense_voice_model_path=sense_voice_model_path,
         flow_path=None,
     )
@@ -584,8 +686,6 @@ def tts():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        glm4_voice_tokenizer_model_path=None,
-        sense_voice_model_path=None,
         flow_path=flow_path,
     )
 
@@ -634,8 +734,8 @@ def tts_clone():
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        glm4_voice_tokenizer_model_path=None,
-        sense_voice_model_path=None,
+        audio_tokenizer_model_path=audio_tokenizer_model_path,
+        sense_voice_model_path=sense_voice_model_path,
         flow_path=flow_path,
     )
 
@@ -667,6 +767,7 @@ def tts_clone():
             print("clone_tts_task")
             print(f"{text=} {prompt_audio_path=}")
 
+            start = perf_counter()
             output, tts_speech = s2s_inference.run_infer(
                 prompt_audio_path=prompt_audio_path,
                 # message="Translate the text to speech.\n" + text,
@@ -676,6 +777,7 @@ def tts_clone():
             )
             print(f"{output=}", flush=True)
             print(f"{tts_speech.shape=}", flush=True)
+            print(f"cost: {perf_counter()-start} s")
 
             wav_path = os.path.join(ASSETS_DIR, file_name[:16] + "_" + text[:16] + ".wav")
             print(f"save to {wav_path}")
@@ -685,21 +787,24 @@ def tts_clone():
 # ==============================================================
 # TTS stream
 def tts_stream():
+    """all text gen over, then to gen speech"""
     import torchaudio
     import soundfile as sf
 
     s2s_inference = S2SInference(
         model_path,
         audio_tokenizer_type,
-        glm4_voice_tokenizer_model_path=None,
-        sense_voice_model_path=None,
         flow_path=flow_path,
     )
 
     TTS_texts = [
-        "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",  # warmup
-        "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",
-        # "起床歌：小宝宝，起得早，睁开眼，眯眯笑，咿呀呀，学说话，伸伸手，要人抱。穿衣歌小胳膊，穿袖子，穿上衣，扣扣子，小脚丫，穿裤子，穿上袜子穿鞋子。小镜子-小镜子，圆又圆，看宝宝，露笑脸。闭上眼，做个梦，变月亮，挂上天。小铃铛叮铃铃，叮铃铃，一会远，一会近。小宝宝，耳朵灵，听铃声，找到铃。学画画小宝宝，学画画，大蜡笔，手中拿，画小鸭，叫嘎嘎，画小马，骑回家。大鞋子大鞋子，像只船，爸爸穿，我也穿，一二一，向前走，走呀走，翻了船。逛公园逛公园，宝宝笑，东看看，西瞧瞧，花儿香，鸟儿叫，小草绿，小树摇。看画报小娃娃，看画报，睁大眼，仔细瞧，布娃娃，哈哈笑，伸伸手，要你抱。搭积木大积木，红黄兰，小宝宝，最爱玩，搭火车，钻山洞，盖高楼，连着天。小汽车小汽车，嘀嘀嘀，开过来，开过去，小宝宝，当司机，送妈妈，上班去。藏猫猫儿歌：躲猫猫，躲猫猫， 猫猫、猫猫在哪里？喵……猫咪在这里。",
+        # "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",  # warmup
+        # "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",
+        # "起床歌：小宝宝，起得早，睁开眼，眯眯笑，咿呀呀，学说话，伸伸手，要人抱。穿衣歌小胳膊，穿袖子，穿上衣，扣扣子，小脚丫，穿裤子，穿上袜子穿鞋子。",
+        "小镜子-小镜子，圆又圆，看宝宝，露笑脸。闭上眼，做个梦，变月亮，挂上天。",
+        # "小铃铛叮铃铃，叮铃铃，一会远，一会近。小宝宝，耳朵灵，听铃声，找到铃。学画画小宝宝，学画画，大蜡笔，手中拿，画小鸭，叫嘎嘎，画小马，骑回家。大鞋子大鞋子，像只船，爸爸穿，我也穿，一二一，向前走，走呀走，翻了船。",
+        # "逛公园逛公园，宝宝笑，东看看，西瞧瞧，花儿香，鸟儿叫，小草绿，小树摇。看画报小娃娃，看画报，睁大眼，仔细瞧，布娃娃，哈哈笑，伸伸手，要你抱。",
+        # "搭积木大积木，红黄兰，小宝宝，最爱玩，搭火车，钻山洞，盖高楼，连着天。小汽车小汽车，嘀嘀嘀，开过来，开过去，小宝宝，当司机，送妈妈，上班去。藏猫猫儿歌：躲猫猫，躲猫猫， 猫猫、猫猫在哪里？喵……猫咪在这里。",
     ]
 
     for text in TTS_texts:
@@ -707,9 +812,13 @@ def tts_stream():
         print("tts_stream_task")
         print(f"{text=}")
 
+        file_name = text[:16]
         times = []
         start_time = perf_counter()
+
         generated_text = ""
+        audio_decode_time = []
+        audios = []
         for new_text in s2s_inference.run_infer_stream(
             message="Convert the text to speech.\n" + text,
             mode=None,
@@ -717,27 +826,301 @@ def tts_stream():
         ):
             times.append(perf_counter() - start_time)
             generated_text += new_text
-            print(new_text, end="")
+            print(new_text, end="", flush=True)
             start_time = perf_counter()
         print(
             f"\ngenerate first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s\n"
         )
 
-        file_name = text[:16]
         audio_decode_time = []
         audios = []
         audio_segments = find_audio_segments_regex(generated_text)
         for audio_idx, audio_segment in enumerate(audio_segments):
-            start_time = perf_counter()
-            audio_tokens = extract_token_ids_as_int(audio_segment)
-            # print(audio_tokens)
-            tts_speech = s2s_inference.audio_tokenizer.decode(audio_tokens)
-            audio_decode_time.append(perf_counter() - start_time)
+            start = perf_counter()
 
-            # wav_path = os.path.join(output_dir, file_name + f"_{audio_idx}.wav")
+            audio_tokens = extract_token_ids_as_int(audio_segment)
+            print(f"{audio_tokens=}")
+
+            tts_speech = s2s_inference.audio_tokenizer.decode(audio_tokens)
+            audio_decode_time.append(perf_counter() - start)
+
+            # wav_path = os.path.join(ASSETS_DIR, f"qa_stream_{audio_idx}_{file_name}")
+            # print(f"save to {wav_path=}")
             # torchaudio.save(wav_path, tts_speech.unsqueeze(0), 22050, format="wav")
 
             audios.append(tts_speech.cpu().numpy())
+
+        wav_path = os.path.join(ASSETS_DIR, f"sts_stream_{file_name}.wav")
+        print(f"save to {wav_path=}")
+        sf.write(wav_path, np.concatenate(audios), samplerate=22050)
+        info = sf.info(wav_path, verbose=True)
+
+        print(
+            f"\ngenerate first audio segment cost time: {audio_decode_time[0]} s, {len(audio_decode_time)} segment cost time: {sum(audio_decode_time)} s | wav duration: {info.duration} s | audio tokenizer decode RTF: {sum(audio_decode_time)/info.duration} \n"
+        )
+
+
+# TTS stream
+def tts_text_stream():
+    import torchaudio
+    import soundfile as sf
+
+    s2s_inference = S2SInference(
+        model_path,
+        audio_tokenizer_type,
+        flow_path=flow_path,
+    )
+
+    TTS_texts = [
+        # "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",  # warmup
+        # "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",
+        # "起床歌：小宝宝，起得早，睁开眼，眯眯笑，咿呀呀，学说话，伸伸手，要人抱。穿衣歌小胳膊，穿袖子，穿上衣，扣扣子，小脚丫，穿裤子，穿上袜子穿鞋子。",
+        "小镜子-小镜子，圆又圆，看宝宝，露笑脸。闭上眼，做个梦，变月亮，挂上天。",
+        # "小铃铛叮铃铃，叮铃铃，一会远，一会近。小宝宝，耳朵灵，听铃声，找到铃。学画画小宝宝，学画画，大蜡笔，手中拿，画小鸭，叫嘎嘎，画小马，骑回家。大鞋子大鞋子，像只船，爸爸穿，我也穿，一二一，向前走，走呀走，翻了船。",
+        # "逛公园逛公园，宝宝笑，东看看，西瞧瞧，花儿香，鸟儿叫，小草绿，小树摇。看画报小娃娃，看画报，睁大眼，仔细瞧，布娃娃，哈哈笑，伸伸手，要你抱。",
+        # "搭积木大积木，红黄兰，小宝宝，最爱玩，搭火车，钻山洞，盖高楼，连着天。小汽车小汽车，嘀嘀嘀，开过来，开过去，小宝宝，当司机，送妈妈，上班去。藏猫猫儿歌：躲猫猫，躲猫猫， 猫猫、猫猫在哪里？喵……猫咪在这里。",
+    ]
+
+    for text in TTS_texts:
+        print("=" * 100)
+        print("tts_stream_task")
+        print(f"{text=}")
+
+        chunk_size = 4 * 2
+
+        file_name = text[:16]
+        times = []
+        start_time = perf_counter()
+
+        generated_text = ""
+        sub_generated_text = ""
+        audio_decode_time = []
+        audios = []
+        for new_text in s2s_inference.run_infer_stream(
+            message="Convert the text to speech.\n" + text,
+            mode=None,
+            do_sample=True,
+        ):
+            times.append(perf_counter() - start_time)
+            generated_text += new_text
+            sub_generated_text += new_text
+            print(new_text, end="", flush=True)
+            if "<|end_of_audio|>" in new_text:
+                audio_segments = find_audio_segments_regex(sub_generated_text)
+                for audio_idx, audio_segment in enumerate(audio_segments):
+                    audio_tokens = extract_token_ids_as_int(audio_segment)
+                    print(f"\n{audio_tokens=}", flush=True)
+                    start_time = perf_counter()
+                    tts_speech = s2s_inference.audio_tokenizer.decode(audio_tokens)
+                    audio_decode_time.append(perf_counter() - start_time)
+
+                    # wav_path = os.path.join(output_dir, file_name + f"_{pos}.wav")
+                    # torchaudio.save(wav_path, tts_speech.unsqueeze(0), 22050, format="wav")
+
+                    audios.append(tts_speech.cpu().numpy())
+                sub_generated_text = ""
+            start_time = perf_counter()
+        print(
+            f"\ngenerate first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s\n"
+        )
+
+        wav_path = os.path.join(ASSETS_DIR, f"sts_stream_{file_name}.wav")
+        print(f"save to {wav_path=}")
+        sf.write(wav_path, np.concatenate(audios), samplerate=22050)
+        info = sf.info(wav_path, verbose=True)
+
+        print(
+            f"\ngenerate first audio segment cost time: {audio_decode_time[0]} s, {len(audio_decode_time)} segment cost time: {sum(audio_decode_time)} s | wav duration: {info.duration} s | audio tokenizer decode RTF: {sum(audio_decode_time)/info.duration} \n"
+        )
+
+
+# TTS stream
+def tts_audio_chunk_static_stream():
+    import torchaudio
+    import soundfile as sf
+
+    s2s_inference = S2SInference(
+        model_path,
+        audio_tokenizer_type,
+        flow_path=flow_path,
+    )
+
+    TTS_texts = [
+        # "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",  # warmup
+        # "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",
+        # "起床歌：小宝宝，起得早，睁开眼，眯眯笑，咿呀呀，学说话，伸伸手，要人抱。穿衣歌小胳膊，穿袖子，穿上衣，扣扣子，小脚丫，穿裤子，穿上袜子穿鞋子。",
+        "小镜子-小镜子，圆又圆，看宝宝，露笑脸。闭上眼，做个梦，变月亮，挂上天。",
+        # "小铃铛叮铃铃，叮铃铃，一会远，一会近。小宝宝，耳朵灵，听铃声，找到铃。学画画小宝宝，学画画，大蜡笔，手中拿，画小鸭，叫嘎嘎，画小马，骑回家。大鞋子大鞋子，像只船，爸爸穿，我也穿，一二一，向前走，走呀走，翻了船。",
+        # "逛公园逛公园，宝宝笑，东看看，西瞧瞧，花儿香，鸟儿叫，小草绿，小树摇。看画报小娃娃，看画报，睁大眼，仔细瞧，布娃娃，哈哈笑，伸伸手，要你抱。",
+        # "搭积木大积木，红黄兰，小宝宝，最爱玩，搭火车，钻山洞，盖高楼，连着天。小汽车小汽车，嘀嘀嘀，开过来，开过去，小宝宝，当司机，送妈妈，上班去。藏猫猫儿歌：躲猫猫，躲猫猫， 猫猫、猫猫在哪里？喵……猫咪在这里。",
+    ]
+
+    for i, text in enumerate(TTS_texts):
+        print("=" * 100)
+        print("tts_stream_task")
+        print(f"{text=}")
+
+        chunk_size = 4 * 2
+        session_id = i
+
+        file_name = text[:16]
+        times = []
+        start_time = perf_counter()
+
+        generated_text = ""
+        raw_text = ""
+        audio_decode_time = []
+        audio_chunk = []
+        audios = []
+        for new_text in s2s_inference.run_infer_stream(
+            message="Convert the text to speech.\n" + text,
+            mode=None,
+            do_sample=True,
+        ):
+            times.append(perf_counter() - start_time)
+            generated_text += new_text
+            print(new_text, end="", flush=True)
+            if "audio" not in new_text:
+                raw_text += new_text
+                continue
+            audio_tokens = extract_token_ids_as_int(new_text)
+            print(f"\n{audio_tokens=}", flush=True)
+            if not audio_tokens:
+                continue
+            audio_chunk.extend(audio_tokens)
+            if len(audio_chunk) % chunk_size == 0:
+                chunk = audio_chunk
+                print(f"\n{chunk=}", flush=True)
+                start_time = perf_counter()
+                tts_speech = s2s_inference.audio_tokenizer.decode(chunk, session_id=session_id)
+                audio_decode_time.append(perf_counter() - start_time)
+
+                audios.append(tts_speech.cpu().numpy())
+                audio_chunk = []
+                start_time = perf_counter()
+
+        if len(audio_chunk) > 0:
+            chunk = audio_chunk
+            print(f"\nlast {chunk=}", flush=True)
+            start_time = perf_counter()
+            tts_speech = s2s_inference.audio_tokenizer.decode(chunk, session_id=session_id)
+            audio_decode_time.append(perf_counter() - start_time)
+
+            audios.append(tts_speech.cpu().numpy())
+
+        print(
+            f"\ngenerate [{raw_text}] first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s\n"
+        )
+
+        wav_path = os.path.join(ASSETS_DIR, f"sts_stream_{file_name}.wav")
+        print(f"save to {wav_path=}")
+        sf.write(wav_path, np.concatenate(audios), samplerate=22050)
+        info = sf.info(wav_path, verbose=True)
+
+        print(
+            f"\ngenerate first audio segment cost time: {audio_decode_time[0]} s, {len(audio_decode_time)} segment cost time: {sum(audio_decode_time)} s | wav duration: {info.duration} s | audio tokenizer decode RTF: {sum(audio_decode_time)/info.duration} \n"
+        )
+
+
+def tts_audio_chunk_dynamic_stream():
+    """
+    smooth chunk tokens_decode_out from glm4voice: chunk_size_list = [25, 50, 100, 150, 200]
+    """
+    import torchaudio
+    import soundfile as sf
+
+    s2s_inference = S2SInference(
+        model_path,
+        audio_tokenizer_type,
+        flow_path=flow_path,
+    )
+
+    TTS_texts = [
+        # "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",  # warmup
+        # "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",
+        # "起床歌：小宝宝，起得早，睁开眼，眯眯笑，咿呀呀，学说话，伸伸手，要人抱。穿衣歌小胳膊，穿袖子，穿上衣，扣扣子，小脚丫，穿裤子，穿上袜子穿鞋子。",
+        "小镜子-小镜子，圆又圆，看宝宝，露笑脸。闭上眼，做个梦，变月亮，挂上天。",
+        # "小铃铛叮铃铃，叮铃铃，一会远，一会近。小宝宝，耳朵灵，听铃声，找到铃。学画画小宝宝，学画画，大蜡笔，手中拿，画小鸭，叫嘎嘎，画小马，骑回家。大鞋子大鞋子，像只船，爸爸穿，我也穿，一二一，向前走，走呀走，翻了船。",
+        # "逛公园逛公园，宝宝笑，东看看，西瞧瞧，花儿香，鸟儿叫，小草绿，小树摇。看画报小娃娃，看画报，睁大眼，仔细瞧，布娃娃，哈哈笑，伸伸手，要你抱。",
+        # "搭积木大积木，红黄兰，小宝宝，最爱玩，搭火车，钻山洞，盖高楼，连着天。小汽车小汽车，嘀嘀嘀，开过来，开过去，小宝宝，当司机，送妈妈，上班去。藏猫猫儿歌：躲猫猫，躲猫猫， 猫猫、猫猫在哪里？喵……猫咪在这里。",
+    ]
+
+    for i, text in enumerate(TTS_texts):
+        print("=" * 100)
+        print("tts_stream_task")
+        print(f"{text=}")
+
+        prompt_speech_feat = torch.zeros(1, 0, 80).to("cuda")
+        flow_prompt_speech_token = torch.zeros(1, 0, dtype=torch.int64).to("cuda")
+
+        this_uuid = str(uuid.uuid4())
+        tts_mels = []
+        prev_mel = None
+
+        is_finalize = False
+        chunk_size_list = [25, 50, 100, 150, 200]  # like tcp cwnd
+        chunk_size_idx = 0
+        chunk_size = chunk_size_list[chunk_size_idx]
+
+        file_name = text[:16]
+        times = []
+        start_time = perf_counter()
+
+        generated_text = ""
+        raw_text = ""
+        audio_decode_time = []
+        audio_chunk = []
+        audios = []
+        for new_text in s2s_inference.run_infer_stream(
+            message="Convert the text to speech.\n" + text,
+            mode=None,
+            do_sample=True,
+        ):
+            times.append(perf_counter() - start_time)
+            generated_text += new_text
+            print(new_text, end="", flush=True)
+            if "<|im_end|>" in new_text:
+                is_finalize = True
+            elif "audio" not in new_text:
+                raw_text += new_text
+                continue
+            audio_tokens = extract_token_ids_as_int(new_text)
+            print(f"\n{audio_tokens=}", flush=True)
+            if not audio_tokens and is_finalize is False:
+                continue
+            audio_chunk.extend(audio_tokens)
+            print(f"{is_finalize=} {len(audio_chunk)=}")
+            if len(audio_chunk) >= chunk_size or (is_finalize and audio_chunk):
+                print(f"\n{audio_chunk=}", flush=True)
+                if chunk_size_idx < len(chunk_size_list) - 1:
+                    chunk_size_idx += 1
+                    chunk_size = chunk_size_list[chunk_size_idx]
+                tts_token = torch.tensor(audio_chunk, device="cuda").unsqueeze(0)
+
+                if prev_mel is not None:
+                    prompt_speech_feat = torch.cat(tts_mels, dim=-1).transpose(1, 2)
+
+                # gen waveform and mel-spectrogram feat
+                start_time = perf_counter()
+                tts_speech, tts_mel = s2s_inference.audio_tokenizer.audio_decoder.token2wav(
+                    tts_token,
+                    uuid=this_uuid,
+                    prompt_token=flow_prompt_speech_token.to("cuda"),
+                    prompt_feat=prompt_speech_feat.to("cuda"),
+                    finalize=is_finalize,
+                )
+                audio_decode_time.append(perf_counter() - start_time)
+                prev_mel = tts_mel
+
+                audios.append(tts_speech.squeeze(0).cpu().numpy())  # T
+                tts_mels.append(tts_mel)
+                flow_prompt_speech_token = torch.cat((flow_prompt_speech_token, tts_token), dim=-1)
+                audio_chunk = []
+                start_time = perf_counter()
+
+        print(
+            f"\ngenerate [{raw_text}] first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s\n"
+        )
 
         wav_path = os.path.join(ASSETS_DIR, f"sts_stream_{file_name}.wav")
         print(f"save to {wav_path=}")
@@ -880,7 +1263,7 @@ class S2SInference:
         self,
         llm_model_path,
         audio_tokenizer_type,
-        glm4_voice_tokenizer_model_path=None,
+        audio_tokenizer_model_path=None,
         sense_voice_model_path=None,
         flow_path=None,
         device_map="cuda:0",
@@ -942,7 +1325,6 @@ class S2SInference:
             flow_path=flow_path,
             model_name_or_path=audio_tokenizer_model_path,
             rank=audio_tokenizer_rank,
-            glm4_voice_tokenizer_model_path=glm4_voice_tokenizer_model_path,
             sense_voice_model_path=sense_voice_model_path,
         )
         audio_tokenizer.load_model()
@@ -1127,11 +1509,12 @@ class S2SInference:
         if mtp_inference_mode is not None:
             self.model.generation_config.mtp_inference_mode = ori_mtp_inference_mode
 
+    @torch.inference_mode()
     def run_infer(
         self,
         audio_path=None,
         prompt_audio_path=None,
-        stream_stride=4,
+        chunk_size=4,
         max_returned_tokens=4096,
         sample_rate=16000,
         request_id="",
@@ -1240,7 +1623,6 @@ class S2SInference:
 
         outputs = outputs[0][input_ids.shape[1] :]
         output = self.tokenizer.decode(outputs, skip_special_tokens=False)
-        print(f"{output=}")
 
         audio_offset = self.tokenizer.convert_tokens_to_ids("<|audio_0|>")
 
@@ -1262,11 +1644,12 @@ class S2SInference:
 
         return output, tts_speech
 
+    @torch.inference_mode()
     def run_infer_stream(
         self,
         audio_path=None,
         prompt_audio_path=None,
-        stream_stride=4,
+        chunk_size=4,
         max_returned_tokens=4096,
         sample_rate=16000,
         request_id="",
@@ -1385,11 +1768,15 @@ IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task dump_model
 
 # LLM: sensevoice(no use ctc)_qwen2_mtp(no mtp)
 IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task text 
+IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task text_audio
 IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task text_stream
+IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task text_audio_stream
 
 # LLM: qwen2_mtp
 AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task text 
+AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task text_audio
 AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task text_stream
+AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task text_audio_stream
 MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task text 
 MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task text_stream
 
@@ -1401,6 +1788,8 @@ IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task asr_text_stream
 IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts
 IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_stream
 IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_clone
+IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_audio_chunk_static_stream
+IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_audio_chunk_dynamic_stream
 
 # LLM(Boost/Balance): qwen2_mtp + AudioTokenizer: glm4voice(tokenizer, decoder)
 AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L40s modal run src/llm/transformers/vita_voice.py --task sts
@@ -1410,15 +1799,18 @@ AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_
 AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts
 AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_stream
 AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_clone
+AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_audio_chunk_static_stream
+AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_audio_chunk_dynamic_stream
 
 MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L40s modal run src/llm/transformers/vita_voice.py --task sts
 MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L40s modal run src/llm/transformers/vita_voice.py --task sts_stream
-MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L40s modal run src/llm/transformers/vita_voice.py --task asr
+MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task asr
 MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task asr_text_stream
 MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts
 MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_stream
 MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_clone
-
+MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_audio_chunk_static_stream
+MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_audio_chunk_dynamic_stream
 """
 
 
@@ -1429,6 +1821,8 @@ def main(task: str = "tokenize"):
         "dump_model": dump_model,
         "text": text,
         "text_stream": text_stream,
+        "text_audio": text_audio,
+        "text_audio_stream": text_audio_stream,
         "asr": asr,
         "asr_text_stream": asr_text_stream,
         "sts": sts,
@@ -1436,6 +1830,8 @@ def main(task: str = "tokenize"):
         "tts": tts,
         "tts_stream": tts_stream,
         "tts_clone": tts_clone,
+        "tts_audio_chunk_static_stream": tts_audio_chunk_static_stream,
+        "tts_audio_chunk_dynamic_stream": tts_audio_chunk_dynamic_stream,
         # "benchmark_llm": benchmark_llm,
         # "benchmark_sts": benchmark_sts,
     }
