@@ -1,0 +1,483 @@
+import logging
+import os
+import re
+import sys
+from threading import Thread
+import time
+from typing import List
+
+import torch
+
+
+try:
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from transformers.generation import GenerationConfig
+    from evaluation.get_chat_template import qwen2_chat_template as chat_template
+
+    cur_dir = os.path.dirname(__file__)
+    if bool(os.getenv("ACHATBOT_PKG", "")):
+        sys.path.insert(1, os.path.join(cur_dir, "../../../VITAAudio"))
+    else:
+        sys.path.insert(1, os.path.join(cur_dir, "../../../../deps/VITAAudio"))
+
+    from deps.VITAAudio.vita_audio.tokenizer import get_audio_tokenizer
+    from deps.VITAAudio.vita_audio.data.processor.audio_processor import add_audio_input_contiguous
+except ModuleNotFoundError as e:
+    logging.error(f"Exception: {e}")
+    logging.error(
+        "In order to use VITA-Audio, you need to `pip install achatbot[llm_transformers_manual_voice_vita]`. "
+    )
+    raise Exception(f"Missing module: {e}")
+
+from src.common.types import ASSETS_DIR
+from src.common.utils.helper import get_device
+from src.common.session import Session
+from src.types.omni.vita_voice import VitaAudioTransformersVoiceLMArgs
+from .base import TransformersBaseLLM
+from .streamer import TextAudioIteratorStreamer
+
+
+def find_audio_segments_regex(text):
+    """
+    Find all substrings between <|begin_of_audio|> and <|end_of_audio|> using regex.
+
+    Args:
+        text (str): The input string to search through
+
+    Returns:
+        list: A list of all found audio segments (substrings between the delimiters)
+    """
+    pattern = re.compile(r"<\|begin_of_audio\|>(.*?)<\|end_of_audio\|>", re.DOTALL)
+    segments = pattern.findall(text)
+    return [segment.strip() for segment in segments]
+
+
+def extract_token_ids_as_int(text):
+    pattern = re.compile(r"<\|audio_(\d+)\|>")
+    token_ids = pattern.findall(text)
+    return [int(id) for id in token_ids]
+
+
+class TransformersManualTextVITALLM(TransformersBaseLLM):
+    """
+    https://github.com/ai-bot-pro/achatbot/pull/146
+
+    - text chat: text -> text
+    """
+
+    TAG = "llm_transformers_manual_vita_text"
+    RATE = 22050
+
+    def __init__(self, **args):
+        self.args = VitaAudioTransformersVoiceLMArgs(**args)
+        self.args.lm_device = self.args.lm_device or get_device()
+        logging.info(f"args: {self.args}")
+
+        # 1. load llm with double heads (text|audio) for sampling
+        # https://huggingface.co/VITA-MLLM/VITA-Audio-Boost/blob/main/modeling_qwen2.py#L781
+        # https://huggingface.co/VITA-MLLM/VITA-Audio-Balance/blob/main/modeling_qwen2.py#L781
+        # https://huggingface.co/VITA-MLLM/VITA-Audio-Plus-Vanilla/blob/main/modeling_qwen2.py#L834
+        if self.args.lm_device_map:
+            self._model = AutoModelForCausalLM.from_pretrained(
+                self.args.lm_model_name_or_path,
+                torch_dtype=self.args.lm_torch_dtype,
+                attn_implementation=self.args.lm_attn_impl,
+                #!NOTE: https://github.com/huggingface/transformers/issues/20896
+                # device_map for multi cpu/gpu with accelerate
+                device_map=self.args.lm_device_map,
+                trust_remote_code=True,
+            ).eval()
+        else:
+            self._model = (
+                AutoModelForCausalLM.from_pretrained(
+                    self.args.lm_model_name_or_path,
+                    torch_dtype=self.args.lm_torch_dtype,
+                    attn_implementation=self.args.lm_attn_impl,
+                    trust_remote_code=True,
+                )
+                .eval()
+                .to(self.args.lm_device)
+            )
+
+        model_config = self._model.config
+        logging.info(f"model config: {model_config}")
+
+        self._tokenizer = AutoTokenizer.from_pretrained(
+            self.args.lm_model_name_or_path,
+            trust_remote_code=True,
+            chat_template=chat_template,
+        )
+
+        self._model.generation_config = GenerationConfig.from_pretrained(
+            self.args.lm_model_name_or_path, trust_remote_code=True
+        )
+
+        self._model.generation_config.max_new_tokens = 8192
+        self._model.generation_config.chat_format = "chatml"
+        self._model.generation_config.max_window_size = 8192
+        self._model.generation_config.use_cache = True
+        # model.generation_config.use_cache = False
+        self._model.generation_config.do_sample = False
+        self._model.generation_config.temperature = 1.0
+        self._model.generation_config.top_k = 50
+        self._model.generation_config.top_p = 1.0
+        self._model.generation_config.num_beams = 1
+        self._model.generation_config.pad_token_id = self._tokenizer.pad_token_id
+        logging.info(f"{self._model.generation_config=}")
+
+        # 2. load audio tokenizer
+        self.audio_tokenizer = get_audio_tokenizer(
+            model_type=self.args.audio_tokenizer_type,
+            rank=self.args.audio_tokenizer_rank,
+            flow_path=self.args.flow_path,
+            model_name_or_path=self.args.audio_tokenizer_model_path,
+            sense_voice_model_path=self.args.sense_voice_model_path,
+        )
+        self.audio_tokenizer.load_model()
+
+        self.add_generation_prompt = True
+        self.default_system_message = []
+        self.luke_system_message = [
+            {
+                "role": "system",
+                "content": "Your Name: Luke\nYour Gender: male\n\nRespond in a text-audio interleaved manner.",
+            },
+        ]
+
+        self.warmup()
+
+    @torch.inference_mode()
+    def warmup(self):
+        if self.args.warmup_steps < 1:
+            return
+        logging.info(f"Warming up {self.__class__.__name__} device: {self._model.device}")
+        dummy_input_text = self.args.warnup_prompt.strip()
+
+        if "cuda" in str(self._model.device):
+            start_event = torch.cuda.Event(enable_timing=True)
+            end_event = torch.cuda.Event(enable_timing=True)
+            torch.cuda.synchronize()
+            start_event.record()
+
+        for step in range(self.args.warmup_steps):
+            text = ""
+            times = []
+            start_time = time.perf_counter()
+            for token in self.run_infer_stream(
+                message=dummy_input_text,
+                mode=None,
+                do_sample=True,
+                mtp_inference_mode=[8192, 0],
+            ):
+                times.append(time.perf_counter() - start_time)
+                text += token
+                start_time = time.perf_counter()
+
+            if len(times) > 0:
+                logging.info(
+                    f"step {step} | gen_text: {text} | warmup TTFT time: {times[0]} s | total: {sum(times)} s"
+                )
+            else:
+                logging.warning(f"step {step} warmup no generate stream")
+            step += 1
+
+        if "cuda" in str(self._model.device):
+            end_event.record()
+            torch.cuda.synchronize()
+            logging.info(
+                f"{self.__class__.__name__}:  warmed up! time: {start_event.elapsed_time(end_event) * 1e-3:.3f} s"
+            )
+
+    def run_infer_stream(
+        self,
+        audio_path: str = None,
+        prompt_audio_path: str = None,
+        message="",
+        mode="luke",
+        do_sample=False,
+        mtp_inference_mode=None,
+    ):
+        if prompt_audio_path is not None:
+            system_message = [
+                {
+                    "role": "system",
+                    "content": f"Your Voice: <|audio|>\n",
+                },
+            ]
+
+        elif mode == "luke":
+            system_message = self.luke_system_message
+
+        else:
+            system_message = self.default_system_message
+
+        if prompt_audio_path is not None and self.audio_tokenizer.apply_to_role(
+            "user", is_discrete=True
+        ):
+            # discrete codec
+            audio_tokens = self.audio_tokenizer.encode(prompt_audio_path)
+            audio_tokens = "".join(f"<|audio_{i}|>" for i in audio_tokens)
+            system_message[-1]["content"] = system_message[-1]["content"].replace(
+                "<|audio|>", f"<|begin_of_audio|>{audio_tokens}<|end_of_audio|>"
+            )
+
+        if audio_path is not None:
+            messages = system_message + [
+                {
+                    "role": "user",
+                    "content": message + "\n<|audio|>",
+                },
+            ]
+        else:
+            messages = system_message + [
+                {
+                    "role": "user",
+                    "content": message,
+                },
+            ]
+
+        if audio_path is not None and self.audio_tokenizer.apply_to_role("user", is_discrete=True):
+            # discrete codec
+            audio_tokens = self.audio_tokenizer.encode(audio_path)
+            audio_tokens = "".join(f"<|audio_{i}|>" for i in audio_tokens)
+            messages[-1]["content"] = messages[-1]["content"].replace(
+                "<|audio|>", f"<|begin_of_audio|>{audio_tokens}<|end_of_audio|>"
+            )
+
+        input_ids = self._tokenizer.apply_chat_template(
+            messages,
+            tokenize=True,
+            add_generation_prompt=self.add_generation_prompt,
+        )
+
+        if (
+            audio_path is not None or prompt_audio_path is not None
+        ) and self.audio_tokenizer.apply_to_role("user", is_contiguous=True):
+            # contiguous codec
+            audio_paths = []
+            if audio_path is not None:
+                audio_paths.append(audio_path)
+            if prompt_audio_path is not None:
+                audio_paths.append(prompt_audio_path)
+            input_ids, audios, audio_indices = add_audio_input_contiguous(
+                input_ids, audio_paths, self._tokenizer, self.audio_tokenizer
+            )
+        else:
+            audios = None
+            audio_indices = None
+
+        input_ids = torch.tensor([input_ids], dtype=torch.long).to("cuda")
+
+        # print("input", self._tokenizer.decode(input_ids[0], skip_special_tokens=False), flush=True)
+
+        self.model.generation_config.do_sample = do_sample
+
+        if mtp_inference_mode is not None:
+            ori_mtp_inference_mode = self.model.generation_config.mtp_inference_mode
+            self.model.generation_config.mtp_inference_mode = mtp_inference_mode
+
+        streamer = TextAudioIteratorStreamer(self._tokenizer, skip_prompt=True)
+        generation_kwargs = dict(
+            input_ids=input_ids,
+            audios=audios,
+            audio_indices=audio_indices,
+            streamer=streamer,
+        )
+        thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
+
+        thread.start()
+
+        for new_text in streamer:
+            yield new_text
+
+        if mtp_inference_mode is not None:
+            self.model.generation_config.mtp_inference_mode = ori_mtp_inference_mode
+
+    # @torch.no_grad()
+    @torch.inference_mode()
+    def generate(self, session: Session, **kwargs):
+        """
+        prompt: str | torch.Tensor
+
+        - return Generator[str, None, None]:
+        """
+        # process prompt
+        prompt = session.ctx.state.get("prompt", "")
+
+        text = ""
+        times = []
+        start_time = time.perf_counter()
+        for token in self.run_infer_stream(
+            message=prompt,
+            mode=None,
+            do_sample=True,
+            mtp_inference_mode=[8192, 0],
+        ):
+            times.append(time.perf_counter() - start_time)
+            yield token
+            text += token
+            start_time = time.perf_counter()
+
+        logging.info(
+            f"text [{text}] TTFT: {times[0]} s | total: {sum(times)} s | len: {len(times)} | avg: {sum(times)/len(times)} s"
+        )
+
+
+class TransformersManualAudioVITALLM(TransformersManualTextVITALLM):
+    """
+    audio understanding
+
+    - speech -> text
+    """
+
+    TAG = [
+        "llm_transformers_manual_vita_audio_asr",
+    ]
+
+    def __init__(self, **args) -> None:
+        args["flow_path"] = None
+        super().__init__(**args)
+
+    @torch.inference_mode()
+    def generate(self, session: Session, **kwargs):
+        """
+        prompt: str | torch.Tensor
+
+        - return Generator[str, None, None]:
+        """
+        # process prompt
+        prompt = session.ctx.state.get("prompt", "")
+
+        times = []
+        start_time = time.perf_counter()
+        generated_text = ""
+        for new_text in self.run_infer_stream(
+            audio_path=prompt,
+            message="Convert the speech to text.",
+            mode=None,
+        ):
+            times.append(time.perf_counter() - start_time)
+            generated_text += new_text
+            yield new_text
+            start_time = time.perf_counter()
+        logging.info(
+            f"\ngenerate [{generated_text}] first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s\n"
+        )
+
+
+class TransformersManualTextSpeechVITALLM(TransformersManualTextVITALLM):
+    """
+    tts: coverate text to speech
+
+    - text -> speech
+    """
+
+    TAG = "llm_transformers_manual_vita_tts"
+
+    def __init__(self, **args) -> None:
+        args["audio_tokenizer_model_path"] = None
+        args["sense_voice_model_path"] = None
+        super().__init__(**args)
+
+    @torch.inference_mode()
+    def generate(self, session: Session, **kwargs):
+        """
+        prompt: str | torch.Tensor
+
+        - return Generator[str, None, None]:
+        """
+        # process prompt
+        prompt = session.ctx.state.get("prompt", "")
+
+        times = []
+        start_time = time.perf_counter()
+        generated_text = ""
+        for new_text in self.run_infer_stream(
+            message="Convert the text to speech.\n" + prompt,
+            mode=None,
+            do_sample=True,
+        ):
+            times.append(time.perf_counter() - start_time)
+            generated_text += new_text
+            yield new_text
+            start_time = time.perf_counter()
+        logging.info(
+            f"\ngenerate [{generated_text}] first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s\n"
+        )
+
+
+class TransformersManualTextVoiceVITALLM(TransformersManualTextVITALLM):
+    """
+    text to speech voice chat
+
+    - text -> text + speech
+    """
+
+    TAG = "llm_transformers_manual_vita_text_voice"
+
+    def __init__(self, **args) -> None:
+        super().__init__(**args)
+
+    @torch.inference_mode()
+    def generate(self, session: Session, **kwargs):
+        """
+        prompt: str | torch.Tensor
+
+        - return Generator[str, None, None]:
+        """
+        # process prompt
+        prompt = session.ctx.state.get("prompt", "")
+
+        times = []
+        start_time = time.perf_counter()
+        generated_text = ""
+        for new_text in self.run_infer_stream(
+            message=prompt,
+            mode="luke",
+            do_sample=True,
+        ):
+            times.append(time.perf_counter() - start_time)
+            generated_text += new_text
+            yield new_text
+            start_time = time.perf_counter()
+        logging.info(
+            f"\ngenerate [{generated_text}] first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s\n"
+        )
+
+
+class TransformersManualVoiceVITALLM(TransformersManualTextVITALLM):
+    """
+    text to speech voice chat
+
+    - speech -> text + speech
+    """
+
+    TAG = "llm_transformers_manual_vita_voice"
+
+    def __init__(self, **args) -> None:
+        super().__init__(**args)
+
+    @torch.inference_mode()
+    def generate(self, session: Session, **kwargs):
+        """
+        prompt: str | torch.Tensor
+
+        - return Generator[str, None, None]:
+        """
+        # process prompt
+        prompt = session.ctx.state.get("prompt", "")
+
+        times = []
+        start_time = time.perf_counter()
+        generated_text = ""
+        for new_text in self.run_infer_stream(
+            audio_path=prompt,
+            mode="luke",
+        ):
+            times.append(time.perf_counter() - start_time)
+            generated_text += new_text
+            yield new_text
+            start_time = time.perf_counter()
+        logging.info(
+            f"\ngenerate [{generated_text}] first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s\n"
+        )
