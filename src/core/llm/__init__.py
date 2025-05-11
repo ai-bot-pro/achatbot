@@ -388,6 +388,35 @@ class LLMEnvInit:
         ).__dict__
         return kwargs
 
+    @staticmethod
+    def get_vita_audio_transformers_args() -> dict:
+        from src.types.omni.vita_voice import (
+            VitaAudioTransformersVoiceLMArgs,
+        )
+
+        kwargs = VitaAudioTransformersVoiceLMArgs(
+            lm_model_name_or_path=os.getenv(
+                "LLM_MODEL_NAME_OR_PATH",
+                os.path.join(MODELS_DIR, "VITA-MLLM/VITA-Audio-Plus-Vanilla"),
+            ),
+            lm_attn_impl=os.getenv("LLM_ATTN_IMPL", None),
+            lm_device=os.getenv("LLM_DEVICE", None),
+            lm_device_map=os.getenv("LLM_DEVICE_MAP", None),
+            lm_torch_dtype=os.getenv("LLM_TORCH_DTYPE", "auto"),
+            lm_stream=bool(os.getenv("LLM_STREAM", "1")),
+            init_chat_prompt=os.getenv("LLM_INIT_CHAT_PROMPT", ""),
+            chat_history_size=int(os.getenv("LLM_CHAT_HISTORY_SIZE", "10")),  # cache 10 round
+            model_type=os.getenv("LLM_MODEL_TYPE", "chat_completion"),
+            warmup_steps=int(os.getenv("LLM_WARMUP_STEPS", "1")),
+            **LLMEnvInit._get_llm_generate_args(),
+            audio_tokenizer_type=os.getenv("AUDIO_TOKENIZER_TYPE", "sensevoice_glm4voice"),
+            audio_tokenizer_model_path=os.getenv("AUDIO_TOKENIZER_MODEL_PATH", None),
+            sense_voice_model_path=os.getenv("SENSE_VOICE_MODEL_PATH", None),
+            flow_path=os.getenv("FLOW_PATH", None),
+            audio_tokenizer_rank=int(os.getenv("AUDIO_TOKENIZER_RANK", "0")),
+        ).__dict__
+        return kwargs
+
     # TAG : config
     map_config_func = {
         "llm_llamacpp": get_llm_llamacpp_args,

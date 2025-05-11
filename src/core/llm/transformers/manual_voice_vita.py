@@ -346,7 +346,8 @@ class TransformersManualAudioVITALLM(TransformersManualTextVITALLM):
         - return Generator[str, None, None]:
         """
         # process prompt
-        prompt = session.ctx.state.get("prompt", "")
+        prompt = session.ctx.state.get("prompt", None)
+        assert prompt is not None
 
         times = []
         start_time = time.perf_counter()
