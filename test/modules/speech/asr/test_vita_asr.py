@@ -31,10 +31,14 @@ LLM_MODEL_NAME_OR_PATH=./models/VITA-MLLM/VITA-Audio-Balance \
     python -m unittest test.modules.speech.asr.test_vita_asr.TestVITAASR.test_transcribe_stream
 
 LLM_MODEL_NAME_OR_PATH=./modelsVITA-MLLM/VITA-Audio-Plus-Vanilla \
+    SENSE_VOICE_MODEL_PATH=./models/FunAudioLLM/SenseVoiceSmall \
+    AUDIO_TOKENIZER_TYPE=sensevoice_glm4voice \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
     python -m unittest test.modules.speech.asr.test_vita_asr.TestVITAASR.test_transcribe
 
 LLM_MODEL_NAME_OR_PATH=./modelsVITA-MLLM/VITA-Audio-Plus-Vanilla \
+    SENSE_VOICE_MODEL_PATH=./models/FunAudioLLM/SenseVoiceSmall \
+    AUDIO_TOKENIZER_TYPE=sensevoice_glm4voice \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
     python -m unittest test.modules.speech.asr.test_vita_asr.TestVITAASR.test_transcribe_with_bytes
 """

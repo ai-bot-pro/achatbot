@@ -313,6 +313,16 @@ llm_transformers_manual_voice_kimi = [
     "blobfile",
     "timm",
 ]
+llm_transformers_manual_voice_vita = [
+    "achatbot[accelerate,librosa,soundfile,conf]",
+    "torch~=2.6.0",
+    "torchaudio~=2.6.0",
+    "torchvision~=0.21.0",
+    "transformers==4.48.3",
+    "tiktoken",
+    "funasr",
+    "rich",
+]
 
 # core llms
 core_llm = ["achatbot[llama_cpp,llm_personalai_proxy]"]
