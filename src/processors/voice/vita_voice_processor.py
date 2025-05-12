@@ -18,7 +18,7 @@ from src.core.llm.transformers.manual_voice_vita import (
 
 from src.processors.voice.base import VoiceProcessorBase
 from src.common.session import Session
-from src.common.types import SessionCtx
+from src.common.types import SessionCtx, RATE
 from src.common.utils.audio_utils import (
     bytes2TorchTensorWith16,
 )
@@ -55,10 +55,11 @@ class VITAVoiceProcessor(VoiceProcessorBase):
     def _generate(self):
         while True:
             try:
-                session, kwargs = self._input_queue.get()
-                if session is None:
+                item = self._input_queue.get()
+                if item is None:
                     self._queue.put(None)  # Signal the end of the stream
                     break  # Signal to stop the thread
+                session, kwargs = item
                 tensor_audio_stream = self._model.generate(session, **kwargs)
                 for item in tensor_audio_stream:
                     self._queue.put(item)
@@ -104,7 +105,7 @@ class VITAVoiceProcessor(VoiceProcessorBase):
                         .astype(np.int16)
                         .tobytes()
                     )
-                    logging.debug(
+                    logging.info(
                         f"audio tensor:{tensor_audio.shape},push audio len:{len(audio_bytes)}"
                     )
                     await self.push_frame(
@@ -141,13 +142,14 @@ class VITAAudioVoiceProcessor(VITAVoiceProcessor):
 
     async def run_voice(self, frame: AudioRawFrame) -> AsyncGenerator[Frame, None]:
         if isinstance(frame, PathAudioRawFrame):
-            in_audio_wav = frame.path
+            utt = frame.path
         else:
             in_audio_wav = bytes2TorchTensorWith16(frame.audio)
+            utt = (in_audio_wav, RATE)
 
         kwargs = {}
         kwargs["mode"] = "luke"
-        kwargs["audio_path"] = in_audio_wav
+        kwargs["audio_path"] = utt
         self.send_input(self._session, **kwargs)
         async for item in self.gen():
             yield item

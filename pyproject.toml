@@ -326,6 +326,20 @@ llm_transformers_manual_voice_vita = [
     "conformer",
     "lightning",
     "wget",
+    "natsort",
+    "safetensors",
+    "diffusers",
+    "gdown",
+    "jiwer",
+    "zhon",
+    "WeTextProcessing",
+    "inflect",
+    "openai-whisper",
+    "onnxruntime",
+    "modelscope",
+    "word2number",
+    "pyworld",
+    "matplotlib",
 ]
 
 

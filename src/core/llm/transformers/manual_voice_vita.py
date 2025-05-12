@@ -429,7 +429,9 @@ class TransformersManualTextSpeechVITALLM(TransformersManualTextVITALLM):
         }
         """
         # process prompt
-        message = session.ctx.state.get("message", None)
+        message = session.ctx.state.get("message", "")
+        assert message is not None
+
         chunk_size_list = kwargs.get("chunk_size_list", self.chunk_size_list)
         mode = kwargs.get("mode", None)  # None | "luke" for chat
         do_sample = kwargs.get("do_sample", False)  # bool
@@ -543,7 +545,7 @@ class TransformersManualTextVoiceVITALLM(TransformersManualTextSpeechVITALLM):
 
 class TransformersManualVoiceVITALLM(TransformersManualTextSpeechVITALLM):
     """
-    text to speech voice chat
+    speech to speech voice chat
 
     - speech -> text + speech
     """
@@ -563,5 +565,6 @@ class TransformersManualVoiceVITALLM(TransformersManualTextSpeechVITALLM):
         """
         assert kwargs.get("mode")
         assert kwargs.get("audio_path")
+        print(f"{kwargs.get('audio_path')=}",flush=True)
 
         return super().generate(session, **kwargs)
