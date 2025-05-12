@@ -24,12 +24,6 @@ LLM_MODEL_NAME_OR_PATH=./models/VITA-MLLM/VITA-Audio-Plus-Vanilla \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 LLM_ATTN_IMP=flash_attention_2 \
     python -m unittest test.modules.speech.asr.test_vita_asr.TestVITAASR.test_transcribe_stream
 
-LLM_MODEL_NAME_OR_PATH=./models/VITA-MLLM/VITA-Audio-Balance \
-    AUDIO_TOKENIZER_TYPE=glm4voice \
-    AUDIO_TOKENIZER_MODEL_PATH=./models/THUDM/glm-4-voice-tokenizer \
-    LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 LLM_ATTN_IMP=flash_attention_2 \
-    python -m unittest test.modules.speech.asr.test_vita_asr.TestVITAASR.test_transcribe_stream
-
 LLM_MODEL_NAME_OR_PATH=./modelsVITA-MLLM/VITA-Audio-Plus-Vanilla \
     SENSE_VOICE_MODEL_PATH=./models/FunAudioLLM/SenseVoiceSmall \
     AUDIO_TOKENIZER_TYPE=sensevoice_glm4voice \

@@ -54,6 +54,8 @@ class TTSEnvInit:
             from . import orpheus_tts
         elif "tts_mega3" == tag:
             from . import mega3_tts
+        elif "tts_vita" == tag:
+            from . import vita_tts
         # elif "tts_openai" in tag:
         # from . import openai_tts
 
@@ -403,6 +405,11 @@ class TTSEnvInit:
         ).__dict__
         return kwargs
 
+    @staticmethod
+    def get_tts_vita_args() -> dict:
+        kwargs = LLMEnvInit.get_vita_audio_transformers_args()
+        return kwargs
+
     # TAG : config
     map_config_func = {
         "tts_coqui": get_tts_coqui_args,
@@ -424,6 +431,7 @@ class TTSEnvInit:
         "tts_spark": get_tts_spark_args,
         "tts_generator_spark": get_tts_generator_spark_args,
         "tts_mega3": get_tts_mega3_args,
+        "tts_vita": get_tts_vita_args,
     }
 
     @staticmethod

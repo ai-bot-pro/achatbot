@@ -644,9 +644,10 @@ def asr_text_stream():
     )
 
     for audio_path in [
-        "/VITA-Audio/asset/介绍一下上海.wav",
-        "/VITA-Audio/asset/发表一个悲伤的演讲.wav",
-        "/VITA-Audio/asset/发表一个振奋人心的演讲.wav",
+        os.path.join(ASSETS_DIR, "asr_example_zh.wav"),
+        # "/VITA-Audio/asset/介绍一下上海.wav",
+        # "/VITA-Audio/asset/发表一个悲伤的演讲.wav",
+        # "/VITA-Audio/asset/发表一个振奋人心的演讲.wav",
     ]:
         print("=" * 100)
         print("asr_text_stream_task")
@@ -1300,7 +1301,8 @@ class S2SInference:
             attn_implementation="flash_attention_2",
         ).eval()
         # print("model", model)
-        print(f"{model.config.model_type=}")
+        print(f"{model.config=}")
+        # print(f"{model.config.model_type=}")
         print(f"{model.hf_device_map=}")
 
         model.generation_config = GenerationConfig.from_pretrained(
@@ -1318,7 +1320,7 @@ class S2SInference:
         model.generation_config.top_p = 1.0
         model.generation_config.num_beams = 1
         model.generation_config.pad_token_id = tokenizer.pad_token_id
-        # print(f"{model.generation_config=}")
+        print(f"{model.generation_config=}")
 
         audio_tokenizer = get_audio_tokenizer(
             model_type=audio_tokenizer_type,
@@ -1700,6 +1702,7 @@ class S2SInference:
             ]
 
         if audio_path is not None and self.audio_tokenizer.apply_to_role("user", is_discrete=True):
+            print("discrete codec")
             # discrete codec
             audio_tokens = self.audio_tokenizer.encode(audio_path)
             audio_tokens = "".join(f"<|audio_{i}|>" for i in audio_tokens)
@@ -1716,6 +1719,7 @@ class S2SInference:
         if (
             audio_path is not None or prompt_audio_path is not None
         ) and self.audio_tokenizer.apply_to_role("user", is_contiguous=True):
+            print("contiguous codec")
             # contiguous codec
             audio_paths = []
             if audio_path is not None:
@@ -1732,19 +1736,25 @@ class S2SInference:
         input_ids = torch.tensor([input_ids], dtype=torch.long).to("cuda")
 
         print("input", self.tokenizer.decode(input_ids[0], skip_special_tokens=False), flush=True)
+        attention_mask = torch.ones((1, input_ids.shape[1]), dtype=torch.int64).to("cuda")
 
         self.model.generation_config.do_sample = do_sample
 
         if mtp_inference_mode is not None:
+            print(f"{mtp_inference_mode=}")
             ori_mtp_inference_mode = self.model.generation_config.mtp_inference_mode
             self.model.generation_config.mtp_inference_mode = mtp_inference_mode
 
         streamer = TextAudioIteratorStreamer(self.tokenizer, skip_prompt=True)
         generation_kwargs = dict(
             input_ids=input_ids,
+            attention_mask=attention_mask,
             audios=audios,
             audio_indices=audio_indices,
             streamer=streamer,
+        )
+        print(
+            f"input_ids: {input_ids.shape}, attention_mask: {attention_mask.shape} audio_indices: {audio_indices} audios: {audios}"
         )
         thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
 

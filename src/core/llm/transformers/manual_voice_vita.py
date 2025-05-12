@@ -126,8 +126,8 @@ class TransformersManualTextVITALLM(TransformersBaseLLM):
                 .to(self.args.lm_device)
             )
 
-        model_config = self._model.config
-        logging.info(f"model config: {model_config}")
+        logging.info(f"model config: {self._model.config}")
+        logging.info(f"{self._model.device=}")
 
         self._tokenizer = AutoTokenizer.from_pretrained(
             self.args.lm_model_name_or_path,
@@ -264,6 +264,7 @@ class TransformersManualTextVITALLM(TransformersBaseLLM):
             ]
 
         if audio_path is not None and self.audio_tokenizer.apply_to_role("user", is_discrete=True):
+            print("discrete codec")
             # discrete codec
             audio_tokens = self.audio_tokenizer.encode(audio_path)
             audio_tokens = "".join(f"<|audio_{i}|>" for i in audio_tokens)
@@ -280,6 +281,7 @@ class TransformersManualTextVITALLM(TransformersBaseLLM):
         if (
             audio_path is not None or prompt_audio_path is not None
         ) and self.audio_tokenizer.apply_to_role("user", is_contiguous=True):
+            print("contiguous codec")
             # contiguous codec
             audio_paths = []
             if audio_path is not None:
@@ -293,22 +295,30 @@ class TransformersManualTextVITALLM(TransformersBaseLLM):
             audios = None
             audio_indices = None
 
-        input_ids = torch.tensor([input_ids], dtype=torch.long).to("cuda")
+        input_ids = torch.tensor([input_ids], dtype=torch.long).to(self._model.device)
 
-        # print("input", self._tokenizer.decode(input_ids[0], skip_special_tokens=False), flush=True)
+        print("input", self._tokenizer.decode(input_ids[0], skip_special_tokens=False), flush=True)
+        attention_mask = torch.ones((1, input_ids.shape[1]), dtype=torch.int64).to(
+            self._model.device
+        )
 
         self._model.generation_config.do_sample = do_sample
 
         if mtp_inference_mode is not None:
+            print(f"{mtp_inference_mode=}")
             ori_mtp_inference_mode = self._model.generation_config.mtp_inference_mode
             self._model.generation_config.mtp_inference_mode = mtp_inference_mode
 
         streamer = TextAudioIteratorStreamer(self._tokenizer, skip_prompt=True)
         generation_kwargs = dict(
             input_ids=input_ids,
+            attention_mask=attention_mask,
             audios=audios,
             audio_indices=audio_indices,
             streamer=streamer,
+        )
+        print(
+            f"input_ids: {input_ids.shape}, attention_mask: {attention_mask.shape} audio_indices: {audio_indices} audios: {audios}"
         )
         thread = Thread(target=self._model.generate, kwargs=generation_kwargs)
 
@@ -406,31 +416,94 @@ class TransformersManualTextSpeechVITALLM(TransformersManualTextVITALLM):
         args["audio_tokenizer_model_path"] = None
         args["sense_voice_model_path"] = None
         super().__init__(**args)
+        self.chunk_size_list = [25, 50, 100, 150, 200]  # like tcp cwnd
 
     @torch.inference_mode()
     def generate(self, session: Session, **kwargs):
         """
         prompt: str | torch.Tensor
 
-        - return Generator[str, None, None]:
+        - return Generator[dict , None, None]:
+        {
+            "text": str,
+            "audio": torch.Tensor
+        }
         """
         # process prompt
-        prompt = session.ctx.state.get("prompt", "")
+        prompt = session.ctx.state.get("prompt", None)
+        assert prompt is not None
+        chunk_size_list = kwargs.get("chunk_size_list", self.chunk_size_list)
+
+        prompt_speech_feat = torch.zeros(1, 0, 80).to(self._model.device)
+        flow_prompt_speech_token = torch.zeros(1, 0, dtype=torch.int64).to(self._model.device)
+
+        this_uuid = session.ctx.client_id
+        tts_mels = []
+        prev_mel = None
+
+        is_finalize = False
+        chunk_size_idx = 0
+        chunk_size = chunk_size_list[chunk_size_idx]
 
         times = []
         start_time = time.perf_counter()
-        generated_text = ""
+
+        raw_text = ""
+        audio_decode_time = []
+        audio_chunk = []
         for new_text in self.run_infer_stream(
             message="Convert the text to speech.\n" + prompt,
             mode=None,
             do_sample=True,
         ):
             times.append(time.perf_counter() - start_time)
-            generated_text += new_text
-            yield new_text
-            start_time = time.perf_counter()
+            # print(new_text, end="", flush=True)
+            if "<|im_end|>" in new_text:
+                is_finalize = True
+            elif "audio" not in new_text:
+                yield {"text": new_text}
+                raw_text += new_text
+                continue
+            audio_tokens = extract_token_ids_as_int(new_text)
+            # print(f"\n{audio_tokens=}", flush=True)
+            if not audio_tokens and is_finalize is False:
+                continue
+            audio_chunk.extend(audio_tokens)
+            # print(f"{is_finalize=} {len(audio_chunk)=}")
+            if len(audio_chunk) >= chunk_size or (is_finalize and audio_chunk):
+                # print(f"\n{audio_chunk=}", flush=True)
+                if chunk_size_idx < len(chunk_size_list) - 1:
+                    chunk_size_idx += 1
+                    chunk_size = chunk_size_list[chunk_size_idx]
+                tts_token = torch.tensor(audio_chunk, device=self._model.device).unsqueeze(0)
+
+                if prev_mel is not None:
+                    prompt_speech_feat = torch.cat(tts_mels, dim=-1).transpose(1, 2)
+
+                # gen waveform and mel-spectrogram feat
+                start_time = time.perf_counter()
+                tts_speech, tts_mel = self.audio_tokenizer.audio_decoder.token2wav(
+                    tts_token,
+                    uuid=this_uuid,
+                    prompt_token=flow_prompt_speech_token.to(self._model.device),
+                    prompt_feat=prompt_speech_feat.to(self._model.device),
+                    finalize=is_finalize,
+                )
+                audio_decode_time.append(time.perf_counter() - start_time)
+                yield {"audio": tts_speech}
+
+                prev_mel = tts_mel
+                tts_mels.append(tts_mel)
+                flow_prompt_speech_token = torch.cat((flow_prompt_speech_token, tts_token), dim=-1)
+                audio_chunk = []
+                start_time = time.perf_counter()
+
         logging.info(
-            f"\ngenerate [{generated_text}] first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s\n"
+            f"generate [{raw_text}] first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s"
+        )
+
+        logging.info(
+            f"generate first audio segment cost time: {audio_decode_time[0]} s, {len(audio_decode_time)} segment cost time: {sum(audio_decode_time)} s"
         )
 
 
