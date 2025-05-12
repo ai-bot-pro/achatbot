@@ -413,8 +413,6 @@ class TransformersManualTextSpeechVITALLM(TransformersManualTextVITALLM):
     TAG = "llm_transformers_manual_vita_tts"
 
     def __init__(self, **args) -> None:
-        args["audio_tokenizer_model_path"] = None
-        args["sense_voice_model_path"] = None
         super().__init__(**args)
         self.chunk_size_list = [25, 50, 100, 150, 200]  # like tcp cwnd
 
@@ -430,9 +428,14 @@ class TransformersManualTextSpeechVITALLM(TransformersManualTextVITALLM):
         }
         """
         # process prompt
-        prompt = session.ctx.state.get("prompt", None)
-        assert prompt is not None
+        message = session.ctx.state.get("message", None)
+        assert message is not None
         chunk_size_list = kwargs.get("chunk_size_list", self.chunk_size_list)
+        mode = kwargs.get("mode", None)  # None | "luke" for chat
+        do_sample = kwargs.get("do_sample", False)  # bool
+        audio_path = kwargs.get("audio_path", None)  # None | str
+        prompt_audio_path = kwargs.get("prompt_audio_path", None)  # None | str
+        mtp_inference_mode = kwargs.get("mtp_inference_mode", None)  # None | List[int]
 
         prompt_speech_feat = torch.zeros(1, 0, 80).to(self._model.device)
         flow_prompt_speech_token = torch.zeros(1, 0, dtype=torch.int64).to(self._model.device)
@@ -452,9 +455,12 @@ class TransformersManualTextSpeechVITALLM(TransformersManualTextVITALLM):
         audio_decode_time = []
         audio_chunk = []
         for new_text in self.run_infer_stream(
-            message="Convert the text to speech.\n" + prompt,
-            mode=None,
-            do_sample=True,
+            audio_path=audio_path,
+            prompt_audio_path=prompt_audio_path,
+            message=message,
+            mode=mode,
+            do_sample=do_sample,
+            mtp_inference_mode=mtp_inference_mode,
         ):
             times.append(time.perf_counter() - start_time)
             # print(new_text, end="", flush=True)
@@ -507,7 +513,7 @@ class TransformersManualTextSpeechVITALLM(TransformersManualTextVITALLM):
         )
 
 
-class TransformersManualTextVoiceVITALLM(TransformersManualTextVITALLM):
+class TransformersManualTextVoiceVITALLM(TransformersManualTextSpeechVITALLM):
     """
     text to speech voice chat
 
@@ -516,37 +522,23 @@ class TransformersManualTextVoiceVITALLM(TransformersManualTextVITALLM):
 
     TAG = "llm_transformers_manual_vita_text_voice"
 
-    def __init__(self, **args) -> None:
-        super().__init__(**args)
-
     @torch.inference_mode()
     def generate(self, session: Session, **kwargs):
         """
         prompt: str | torch.Tensor
 
-        - return Generator[str, None, None]:
+        - return Generator[dict , None, None]:
+        {
+            "text": str,
+            "audio": torch.Tensor
+        }
         """
-        # process prompt
-        prompt = session.ctx.state.get("prompt", "")
+        assert kwargs.get("mode")
 
-        times = []
-        start_time = time.perf_counter()
-        generated_text = ""
-        for new_text in self.run_infer_stream(
-            message=prompt,
-            mode="luke",
-            do_sample=True,
-        ):
-            times.append(time.perf_counter() - start_time)
-            generated_text += new_text
-            yield new_text
-            start_time = time.perf_counter()
-        logging.info(
-            f"\ngenerate [{generated_text}] first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s\n"
-        )
+        return super().generate(session, **kwargs)
 
 
-class TransformersManualVoiceVITALLM(TransformersManualTextVITALLM):
+class TransformersManualVoiceVITALLM(TransformersManualTextSpeechVITALLM):
     """
     text to speech voice chat
 
@@ -555,30 +547,18 @@ class TransformersManualVoiceVITALLM(TransformersManualTextVITALLM):
 
     TAG = "llm_transformers_manual_vita_voice"
 
-    def __init__(self, **args) -> None:
-        super().__init__(**args)
-
     @torch.inference_mode()
     def generate(self, session: Session, **kwargs):
         """
         prompt: str | torch.Tensor
 
-        - return Generator[str, None, None]:
+        - return Generator[dict , None, None]:
+        {
+            "text": str,
+            "audio": torch.Tensor
+        }
         """
-        # process prompt
-        prompt = session.ctx.state.get("prompt", "")
+        assert kwargs.get("mode")
+        assert kwargs.get("audio_path")
 
-        times = []
-        start_time = time.perf_counter()
-        generated_text = ""
-        for new_text in self.run_infer_stream(
-            audio_path=prompt,
-            mode="luke",
-        ):
-            times.append(time.perf_counter() - start_time)
-            generated_text += new_text
-            yield new_text
-            start_time = time.perf_counter()
-        logging.info(
-            f"\ngenerate [{generated_text}] first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s\n"
-        )
+        return super().generate(session, **kwargs)

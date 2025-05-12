@@ -18,7 +18,7 @@ from src.common.types import RECORDS_DIR, SessionCtx, MODELS_DIR
 r"""
 LLM_MODEL_NAME_OR_PATH=./models/VITA-MLLM/VITA-Audio-Plus-Vanilla \
     AUDIO_TOKENIZER_TYPE=sensevoice_glm4voice \
-    SENSE_VOICE_MODEL_PATH=./models/FunAudioLLM/SenseVoiceSmall \
+    FLOW_PATH=./models/THUDM/glm-4-voice-decoder \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 LLM_ATTN_IMP=flash_attention_2 \
     python -m unittest test.modules.speech.tts.test_vita.TestVITATTS.test_synthesize
 """

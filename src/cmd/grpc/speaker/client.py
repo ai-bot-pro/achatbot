@@ -251,7 +251,7 @@ TTS_TAG=tts_mega3 IS_SAVE=1 \
 
 LLM_MODEL_NAME_OR_PATH=./models/VITA-MLLM/VITA-Audio-Plus-Vanilla \
     AUDIO_TOKENIZER_TYPE=sensevoice_glm4voice \
-    SENSE_VOICE_MODEL_PATH=./models/FunAudioLLM/SenseVoiceSmall \
+    FLOW_PATH=./models/THUDM/glm-4-voice-decoder \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 LLM_ATTN_IMP=flash_attention_2 \
     python -m src.cmd.grpc.speaker.client
 """

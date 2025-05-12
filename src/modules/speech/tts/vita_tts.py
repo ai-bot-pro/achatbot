@@ -18,6 +18,8 @@ class VITATTS(BaseTTS, ITts):
     TAG = "tts_vita"
 
     def __init__(self, **kwargs) -> None:
+        kwargs["audio_tokenizer_model_path"] = None
+        kwargs["sense_voice_model_path"] = None
         self.lm_model = TransformersManualTextSpeechVITALLM(**kwargs)
 
     def get_stream_info(self) -> dict:
@@ -38,7 +40,9 @@ class VITATTS(BaseTTS, ITts):
         if len(input_text) == 0:
             yield None
             return
-        session.ctx.state["prompt"] = input_text
+        session.ctx.state["message"] = "Convert the text to speech.\n" + input_text
+        kwargs["do_sample"] = False
+        kwargs["mode"] = None
         tensor_audio_stream = self.lm_model.generate(session, **kwargs)
 
         for tensor_audio_dict in tensor_audio_stream:
