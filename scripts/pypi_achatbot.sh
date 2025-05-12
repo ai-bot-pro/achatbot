@@ -22,6 +22,7 @@ cp -r src/* pypi_build/app/achatbot/
 rm -f deps/CosyVoice/third_party/Matcha-TTS/data
 rm -f deps/GLM4Voice/third_party/Matcha-TTS/data
 rm -f deps/KimiAudio/kimia_infer/models/tokenizer/glm4/third_party/Matcha-TTS/data
+rm -f deps/VITAAudio/third_party/GLM-4-Voice/third_party/Matcha-TTS/data
 cp -r deps/* pypi_build/app/achatbot/
 
 

@@ -58,3 +58,6 @@
 [submodule "deps/KimiAudio"]
 	path = deps/KimiAudio
 	url = https://github.com/weedge/Kimi-Audio.git
+[submodule "deps/VITAAudio"]
+	path = deps/VITAAudio
+	url = https://github.com/weedge/VITA-Audio.git

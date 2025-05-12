@@ -14,6 +14,8 @@ load_dotenv(override=True)
 class ASREnvInit:
     @staticmethod
     def getEngine(tag, **kwargs) -> interface.IAsr | EngineClass:
+        if "vita_asr" in tag:
+            from . import vita_asr
         if "kimi_asr" in tag:
             from . import kimi_asr
         if "qwen2_5omni_asr" in tag:
@@ -71,8 +73,14 @@ class ASREnvInit:
         kwargs = LLMEnvInit.get_kimi_audio_transformers_args()
         return kwargs
 
+    @staticmethod
+    def get_asr_vita_args() -> dict:
+        kwargs = LLMEnvInit.get_vita_audio_transformers_args()
+        return kwargs
+
     map_config_func = {
         "minicpmo_asr": get_asr_minicpmo_args,
         "qwen2_5omni_asr": get_asr_qwen2_5omni_args,
         "kimi_asr": get_asr_kimi_args,
+        "vita_asr": get_asr_vita_args,
     }

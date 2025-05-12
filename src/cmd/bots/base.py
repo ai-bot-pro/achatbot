@@ -359,6 +359,17 @@ class AIBot(IBot):
             llm_processor = KimiTextVoiceProcessor()
         return llm_processor
 
+    def get_text_vita_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
+        from src.processors.voice.vita_voice_processor import VITATextVoiceProcessor
+
+        if not llm:
+            llm = self._bot_config.voice_llm
+        if llm.args:
+            llm_processor = VITATextVoiceProcessor(**llm.args)
+        else:
+            llm_processor = VITATextVoiceProcessor()
+        return llm_processor
+
     def get_audio_minicpmo_voice_processor(
         self, llm: LLMConfig | None = None
     ) -> VoiceProcessorBase:
@@ -394,6 +405,17 @@ class AIBot(IBot):
             llm_processor = KimiAudioVoiceProcessor(**llm.args)
         else:
             llm_processor = KimiAudioVoiceProcessor()
+        return llm_processor
+
+    def get_audio_vita_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
+        from src.processors.voice.vita_voice_processor import VITAAudioVoiceProcessor
+
+        if not llm:
+            llm = self._bot_config.voice_llm
+        if llm.args:
+            llm_processor = VITAAudioVoiceProcessor(**llm.args)
+        else:
+            llm_processor = VITAAudioVoiceProcessor()
         return llm_processor
 
     def get_minicpmo_vision_voice_processor(

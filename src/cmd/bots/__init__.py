@@ -184,7 +184,15 @@ def import_bots(bot_name: str = "DummyBot"):
 
         return True
     if "LivekitKimiVoiceBot" in bot_name:
-        from .voice import  livekit_kimi_voice_bot
+        from .voice import livekit_kimi_voice_bot
+
+        return True
+    if "LivekitAsrVITAVoiceBot" in bot_name:
+        from .voice import livekit_asr_vita_voice_bot
+
+        return True
+    if "LivekitVITAVoiceBot" in bot_name:
+        from .voice import livekit_vita_voice_bot
 
         return True
     # if "LivekitMoshiVoiceBot" in bot_name:

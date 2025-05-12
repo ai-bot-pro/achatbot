@@ -78,22 +78,20 @@ class BaseTTS(EngineClass, ITts):
                     continue
                 async for chunk in self._inference(session, text, **session.ctx.state):
                     yield chunk
-                if add_silence_chunk is False:
-                    continue
-                silence_chunk = self._get_end_silence_chunk(session, text)
-                if silence_chunk:
-                    yield silence_chunk
+                if add_silence_chunk is True:
+                    silence_chunk = self._get_end_silence_chunk(session, text)
+                    if silence_chunk:
+                        yield silence_chunk
         elif "tts_text" in session.ctx.state:
             text = session.ctx.state["tts_text"]
             text = self.filter_special_chars(text)
             if len(text.strip()) > 0:
                 async for chunk in self._inference(session, text, **session.ctx.state):
                     yield chunk
-                if add_silence_chunk is False:
-                    return
-                silence_chunk = self._get_end_silence_chunk(session, text)
-                if silence_chunk:
-                    yield silence_chunk
+                if add_silence_chunk is True:
+                    silence_chunk = self._get_end_silence_chunk(session, text)
+                    if silence_chunk:
+                        yield silence_chunk
 
     async def _inference(
         self, session: Session, text: str, **kwargs
