@@ -323,6 +323,9 @@ llm_transformers_manual_voice_vita = [
     "funasr",
     "rich",
     "hyperpyyaml",
+    "conformer",
+    "lightning",
+    "wget",
 ]
 
 

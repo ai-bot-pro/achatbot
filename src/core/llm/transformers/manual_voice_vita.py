@@ -170,6 +170,7 @@ class TransformersManualTextVITALLM(TransformersBaseLLM):
                 "content": "Your Name: Luke\nYour Gender: male\n\nRespond in a text-audio interleaved manner.",
             },
         ]
+        self.audio_0_id = self._tokenizer("<|audio_0|>").input_ids[0]
 
         self.warmup()
 
@@ -464,15 +465,18 @@ class TransformersManualTextSpeechVITALLM(TransformersManualTextVITALLM):
         ):
             times.append(time.perf_counter() - start_time)
             # print(new_text, end="", flush=True)
+            if "<|begin_of_audio|>" in new_text:
+                new_text = new_text.replace("<|begin_of_audio|>", "")
+            if "<|end_of_audio|>" in new_text:
+                new_text = new_text.replace("<|end_of_audio|>", "")
             if "<|im_end|>" in new_text:
+                new_text = new_text.replace("<|im_end|>", "")
                 is_finalize = True
-            elif "audio" not in new_text:
-                yield {"text": new_text}
-                raw_text += new_text
-                continue
             audio_tokens = extract_token_ids_as_int(new_text)
             # print(f"\n{audio_tokens=}", flush=True)
             if not audio_tokens and is_finalize is False:
+                raw_text += new_text
+                yield {"text": new_text}
                 continue
             audio_chunk.extend(audio_tokens)
             # print(f"{is_finalize=} {len(audio_chunk)=}")

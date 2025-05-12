@@ -873,10 +873,11 @@ def tts_text_stream():
     )
 
     TTS_texts = [
+        "你好，hello.",
         # "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",  # warmup
         # "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",
         # "起床歌：小宝宝，起得早，睁开眼，眯眯笑，咿呀呀，学说话，伸伸手，要人抱。穿衣歌小胳膊，穿袖子，穿上衣，扣扣子，小脚丫，穿裤子，穿上袜子穿鞋子。",
-        "小镜子-小镜子，圆又圆，看宝宝，露笑脸。闭上眼，做个梦，变月亮，挂上天。",
+        # "小镜子-小镜子，圆又圆，看宝宝，露笑脸。闭上眼，做个梦，变月亮，挂上天。",
         # "小铃铛叮铃铃，叮铃铃，一会远，一会近。小宝宝，耳朵灵，听铃声，找到铃。学画画小宝宝，学画画，大蜡笔，手中拿，画小鸭，叫嘎嘎，画小马，骑回家。大鞋子大鞋子，像只船，爸爸穿，我也穿，一二一，向前走，走呀走，翻了船。",
         # "逛公园逛公园，宝宝笑，东看看，西瞧瞧，花儿香，鸟儿叫，小草绿，小树摇。看画报小娃娃，看画报，睁大眼，仔细瞧，布娃娃，哈哈笑，伸伸手，要你抱。",
         # "搭积木大积木，红黄兰，小宝宝，最爱玩，搭火车，钻山洞，盖高楼，连着天。小汽车小汽车，嘀嘀嘀，开过来，开过去，小宝宝，当司机，送妈妈，上班去。藏猫猫儿歌：躲猫猫，躲猫猫， 猫猫、猫猫在哪里？喵……猫咪在这里。",
@@ -1037,7 +1038,8 @@ def tts_audio_chunk_dynamic_stream():
     )
 
     TTS_texts = [
-        "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",  # warmup
+        "你好，hello.",
+        # "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",  # warmup
         # "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",
         # "起床歌：小宝宝，起得早，睁开眼，眯眯笑，咿呀呀，学说话，伸伸手，要人抱。穿衣歌小胳膊，穿袖子，穿上衣，扣扣子，小脚丫，穿裤子，穿上袜子穿鞋子。",
         # "小镜子-小镜子，圆又圆，看宝宝，露笑脸。闭上眼，做个梦，变月亮，挂上天。",
@@ -1079,15 +1081,18 @@ def tts_audio_chunk_dynamic_stream():
         ):
             times.append(perf_counter() - start_time)
             generated_text += new_text
-            print(new_text, end="", flush=True)
+            print(f"{new_text=}", flush=True)
+            if "<|begin_of_audio|>" in new_text:
+                new_text = new_text.replace("<|begin_of_audio|>", "")
+            if "<|end_of_audio|>" in new_text:
+                new_text = new_text.replace("<|end_of_audio|>", "")
             if "<|im_end|>" in new_text:
+                new_text = new_text.replace("<|im_end|>", "")
                 is_finalize = True
-            elif "audio" not in new_text:
-                raw_text += new_text
-                continue
             audio_tokens = extract_token_ids_as_int(new_text)
             print(f"\n{audio_tokens=}", flush=True)
             if not audio_tokens and is_finalize is False:
+                raw_text += new_text
                 continue
             audio_chunk.extend(audio_tokens)
             print(f"{is_finalize=} {len(audio_chunk)=}")
@@ -1113,6 +1118,7 @@ def tts_audio_chunk_dynamic_stream():
                 audio_decode_time.append(perf_counter() - start_time)
                 prev_mel = tts_mel
 
+                print(tts_speech.shape)
                 audios.append(tts_speech.squeeze(0).cpu().numpy())  # T
                 tts_mels.append(tts_mel)
                 flow_prompt_speech_token = torch.cat((flow_prompt_speech_token, tts_token), dim=-1)
@@ -1338,8 +1344,8 @@ class S2SInference:
         self.default_system_message = default_system_message
         self.luke_system_message = luke_system_message
 
-        # audio_0_id = tokenizer("<|audio_0|>").input_ids[0]
-        # print(f"{audio_0_id=}")
+        self.audio_0_id = tokenizer("<|audio_0|>").input_ids[0]
+        print(f"{self.audio_0_id=}")
 
     def benchmark_forward(self, mtp_inference_mode):
         print("-" * 100)

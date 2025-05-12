@@ -24,13 +24,13 @@ class VITATTS(BaseTTS, ITts):
 
     def get_stream_info(self) -> dict:
         return {
-            "format": PYAUDIO_PAINT16,
-            # "format": PYAUDIO_PAFLOAT32,
+            # "format": PYAUDIO_PAINT16,
+            "format": PYAUDIO_PAFLOAT32,
             "channels": 1,
             "rate": TransformersManualTextSpeechVITALLM.RATE,
             "sample_width": 2,
-            "np_dtype": np.int16,
-            # "np_dtype": np.float32,
+            # "np_dtype": np.int16,
+            "np_dtype": np.float32,
         }
 
     async def _inference(
@@ -41,7 +41,7 @@ class VITATTS(BaseTTS, ITts):
             yield None
             return
         session.ctx.state["message"] = "Convert the text to speech.\n" + input_text
-        kwargs["do_sample"] = False
+        kwargs["do_sample"] = True
         kwargs["mode"] = None
         tensor_audio_stream = self.lm_model.generate(session, **kwargs)
 
@@ -50,9 +50,7 @@ class VITATTS(BaseTTS, ITts):
                 tensor_audio_dict is not None and "audio" in tensor_audio_dict
             ):  # don't use if tensor_audio to check
                 audio_tensor = tensor_audio_dict["audio"]
-
-                audio_np = audio_tensor.float().detach().cpu().numpy()
-                audio_np = (audio_np * 32767).astype(np.int16)
+                audio_np = audio_tensor.squeeze(0).float().detach().cpu().numpy()
+                # audio_np = (audio_np * 32767).astype(np.int16)
                 yield audio_np.tobytes()
-            else:
-                yield None
+        yield None  # end of stream
