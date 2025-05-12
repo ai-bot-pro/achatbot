@@ -47,9 +47,9 @@ class VITATTS(BaseTTS, ITts):
 
         for tensor_audio_dict in tensor_audio_stream:
             if (
-                tensor_audio_dict is not None and "audio" in tensor_audio_dict
+                tensor_audio_dict is not None and "audio_wav" in tensor_audio_dict
             ):  # don't use if tensor_audio to check
-                audio_tensor = tensor_audio_dict["audio"]
+                audio_tensor = tensor_audio_dict["audio_wav"]
                 audio_np = audio_tensor.squeeze(0).float().detach().cpu().numpy()
                 # audio_np = (audio_np * 32767).astype(np.int16)
                 yield audio_np.tobytes()

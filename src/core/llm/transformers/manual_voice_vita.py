@@ -425,12 +425,11 @@ class TransformersManualTextSpeechVITALLM(TransformersManualTextVITALLM):
         - return Generator[dict , None, None]:
         {
             "text": str,
-            "audio": torch.Tensor
+            "audio_wav": torch.Tensor
         }
         """
         # process prompt
         message = session.ctx.state.get("message", None)
-        assert message is not None
         chunk_size_list = kwargs.get("chunk_size_list", self.chunk_size_list)
         mode = kwargs.get("mode", None)  # None | "luke" for chat
         do_sample = kwargs.get("do_sample", False)  # bool
@@ -500,7 +499,7 @@ class TransformersManualTextSpeechVITALLM(TransformersManualTextVITALLM):
                     finalize=is_finalize,
                 )
                 audio_decode_time.append(time.perf_counter() - start_time)
-                yield {"audio": tts_speech}
+                yield {"audio_wav": tts_speech}
 
                 prev_mel = tts_mel
                 tts_mels.append(tts_mel)

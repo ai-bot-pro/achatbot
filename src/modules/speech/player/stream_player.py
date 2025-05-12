@@ -286,7 +286,7 @@ class PlayStreamInit:
                 "sample_width": 2,
             },
             "tts_vita": {
-                "format": PYAUDIO_PAINT16,
+                "format": PYAUDIO_PAFLOAT32,
                 "channels": 1,
                 "rate": 22050,
                 "sample_width": 2,
