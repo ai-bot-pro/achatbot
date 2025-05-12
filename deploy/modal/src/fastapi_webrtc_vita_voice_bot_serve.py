@@ -17,8 +17,8 @@ kimi_voice_img = (
             "silero_vad_analyzer,asr_processor,"
             "llm_transformers_manual_voice_vita,"
             "queue"
-            # "]==0.0.10.dev4",
-            f"]=={achatbot_version}",
+            "]==0.0.10.dev4",
+            # f"]=={achatbot_version}",
         ],
         extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
     )

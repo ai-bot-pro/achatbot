@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 name = "achatbot"
 #dynamic = ["version"]
 # todo
-version = "0.0.10"
+version = "0.0.11"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -318,7 +318,8 @@ llm_transformers_manual_voice_vita = [
     "torch~=2.6.0",
     "torchaudio~=2.6.0",
     "torchvision~=0.21.0",
-    "transformers==4.48.3",
+    # https://github.com/huggingface/transformers/tags
+    "transformers",     # use latest version, preview can see some new models
     "tiktoken",
     "funasr",
     "rich",

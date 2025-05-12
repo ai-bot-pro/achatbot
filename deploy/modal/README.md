@@ -844,6 +844,60 @@ curl --location 'https://weedge-achatbot--fastapi-webrtc-kimi-voice-bot-srv-app-
     "config_list": []
 }'
 ```
+### webrtc_vita_voice_bot
+- run webrtc_vita_voice_bot serve with task queue(redis)
+```shell
+ACHATBOT_VERSION=0.0.11 IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 modal serve -e achatbot src/fastapi_webrtc_vita_voice_bot_serve.py
+```
+- curl api to run chat room bot with webrtc (daily/livekit/agora)
+```shell
+curl --location 'https://weedge-achatbot--fastapi-webrtc-vita-voice-bot-srv-app-dev.modal.run/bot_join/chat-room/LivekitVITAVoiceBot' \
+--header 'Content-Type: application/json' \
+--data '{
+    "chat_bot_name": "LivekitVITAVoiceBot",
+    "room_name": "chat-room",
+    "room_url": "",
+    "token": "",
+    "room_manager": {
+        "tag": "livekit_room",
+        "args": {
+            "bot_name": "LivekitVITAVoiceBot",
+            "is_common_session": false
+        }
+    },
+    "services": {
+        "pipeline": "achatbot",
+        "vad": "silero",
+        "voice_llm": "llm_transformers_manual_vita_voice"
+    },
+    "config": {
+        "vad": {
+            "tag": "silero_vad_analyzer",
+            "args": {
+                "stop_secs": 0.7
+            }
+        },
+        "voice_llm": {
+            "tag": "llm_transformers_manual_vita_voice",
+            "args": {
+                "no_stream_sleep_time": 0.5,
+                "lm_device": "cuda",
+                "lm_torch_dtype": "bfloat16",
+                "lm_attn_impl": "flash_attention_2",
+                "warmup_steps": 1,
+                "chat_history_size": 0,
+                "audio_tokenizer_type": "sensevoice_glm4voice",
+                "audio_tokenizer_model_path": null,
+                "sense_voice_model_path": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
+                "flow_path": "/root/.achatbot/models/THUDM/glm-4-voice-decoder",
+                "audio_tokenizer_rank": 0,
+                "lm_model_name_or_path": "/root/.achatbot/models/VITA-MLLM/VITA-Audio-Plus-Vanilla"
+            }
+        }
+    },
+    "config_list": []
+}'
+```
 
 ## modal deploy (online)
 - deploy webrtc_audio_bot serve

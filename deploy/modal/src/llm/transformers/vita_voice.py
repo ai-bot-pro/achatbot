@@ -1038,8 +1038,8 @@ def tts_audio_chunk_dynamic_stream():
     )
 
     TTS_texts = [
-        "你好，hello.",
-        # "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",  # warmup
+        # "你好，hello.",
+        "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",  # warmup
         # "他本是我莲花池里养大的金鱼，每日浮头听经，修成手段。那一柄九瓣铜锤，乃是一枝未开的菡萏，被他运炼成兵。不知是那一日，海潮泛涨，走到此间。我今早扶栏看花，却不见这厮出拜，掐指巡纹，算着他在此成精，害你师父，故此未及梳妆，运神功，织个竹篮儿擒他。",
         # "起床歌：小宝宝，起得早，睁开眼，眯眯笑，咿呀呀，学说话，伸伸手，要人抱。穿衣歌小胳膊，穿袖子，穿上衣，扣扣子，小脚丫，穿裤子，穿上袜子穿鞋子。",
         # "小镜子-小镜子，圆又圆，看宝宝，露笑脸。闭上眼，做个梦，变月亮，挂上天。",
@@ -1061,7 +1061,8 @@ def tts_audio_chunk_dynamic_stream():
         prev_mel = None
 
         is_finalize = False
-        chunk_size_list = [25, 50, 100, 150, 200]  # like tcp cwnd
+        chunk_size_list = [8, 16, 25, 50, 100, 150, 200]  # like tcp cwnd
+        # chunk_size_list = [8]  # like tcp cwnd
         chunk_size_idx = 0
         chunk_size = chunk_size_list[chunk_size_idx]
 
@@ -1128,6 +1129,8 @@ def tts_audio_chunk_dynamic_stream():
         print(
             f"\ngenerate [{raw_text}] first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s\n"
         )
+        print(f"{chunk_size_list=}")
+        print(f"{audio_decode_time=}")
 
         wav_path = os.path.join(ASSETS_DIR, f"sts_stream_{file_name}.wav")
         print(f"save to {wav_path=}")

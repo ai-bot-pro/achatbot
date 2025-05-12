@@ -265,7 +265,7 @@ class TransformersManualTextVITALLM(TransformersBaseLLM):
             ]
 
         if audio_path is not None and self.audio_tokenizer.apply_to_role("user", is_discrete=True):
-            print("discrete codec")
+            # print("discrete codec")
             # discrete codec
             audio_tokens = self.audio_tokenizer.encode(audio_path)
             audio_tokens = "".join(f"<|audio_{i}|>" for i in audio_tokens)
@@ -282,7 +282,7 @@ class TransformersManualTextVITALLM(TransformersBaseLLM):
         if (
             audio_path is not None or prompt_audio_path is not None
         ) and self.audio_tokenizer.apply_to_role("user", is_contiguous=True):
-            print("contiguous codec")
+            # print("contiguous codec")
             # contiguous codec
             audio_paths = []
             if audio_path is not None:
@@ -298,7 +298,7 @@ class TransformersManualTextVITALLM(TransformersBaseLLM):
 
         input_ids = torch.tensor([input_ids], dtype=torch.long).to(self._model.device)
 
-        print("input", self._tokenizer.decode(input_ids[0], skip_special_tokens=False), flush=True)
+        # print("input", self._tokenizer.decode(input_ids[0], skip_special_tokens=False), flush=True)
         attention_mask = torch.ones((1, input_ids.shape[1]), dtype=torch.int64).to(
             self._model.device
         )
@@ -306,7 +306,7 @@ class TransformersManualTextVITALLM(TransformersBaseLLM):
         self._model.generation_config.do_sample = do_sample
 
         if mtp_inference_mode is not None:
-            print(f"{mtp_inference_mode=}")
+            # print(f"{mtp_inference_mode=}")
             ori_mtp_inference_mode = self._model.generation_config.mtp_inference_mode
             self._model.generation_config.mtp_inference_mode = mtp_inference_mode
 
@@ -318,9 +318,9 @@ class TransformersManualTextVITALLM(TransformersBaseLLM):
             audio_indices=audio_indices,
             streamer=streamer,
         )
-        print(
-            f"input_ids: {input_ids.shape}, attention_mask: {attention_mask.shape} audio_indices: {audio_indices} audios: {audios}"
-        )
+        # print(
+        #    f"input_ids: {input_ids.shape}, attention_mask: {attention_mask.shape} audio_indices: {audio_indices} audios: {audios}"
+        # )
         thread = Thread(target=self._model.generate, kwargs=generation_kwargs)
 
         thread.start()
@@ -415,7 +415,7 @@ class TransformersManualTextSpeechVITALLM(TransformersManualTextVITALLM):
 
     def __init__(self, **args) -> None:
         super().__init__(**args)
-        self.chunk_size_list = [25, 50, 100, 150, 200]  # like tcp cwnd
+        self.chunk_size_list = self.args.chunk_size_list  # like tcp cwnd
 
     @torch.inference_mode()
     def generate(self, session: Session, **kwargs):
@@ -565,6 +565,6 @@ class TransformersManualVoiceVITALLM(TransformersManualTextSpeechVITALLM):
         """
         assert kwargs.get("mode")
         assert kwargs.get("audio_path")
-        print(f"{kwargs.get('audio_path')=}",flush=True)
+        # print(f"{kwargs.get('audio_path')=}", flush=True)
 
         return super().generate(session, **kwargs)
