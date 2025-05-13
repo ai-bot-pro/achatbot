@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 name = "achatbot"
 #dynamic = ["version"]
 # todo
-version = "0.0.10"
+version = "0.0.11"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -79,7 +79,7 @@ matplotlib = ["matplotlib==3.7.5"]
 tensorrt = ["tensorrt~=10.4.0"]
 einops = ["einops~=0.8.0"]
 # with --no-build-isolation
-flash-attn = ["flash-attn==2.5.6"]
+flash-attn = ["flash-attn==2.7.3"]
 tiktoken = ["tiktoken~=0.7.0"]
 verovio = ["verovio~=4.3.1"]
 accelerate = ["accelerate~=0.28.0"]
@@ -279,7 +279,7 @@ llm_transformers_manual_vision_voice_minicpmo = [
     "decord",
     "moviepy",
 ]
-llm_transformers_manual_vision_voice_qwen =[
+llm_transformers_manual_vision_voice_qwen = [
     # https://github.com/huggingface/transformers/releases/tag/v4.51.3-Qwen2.5-Omni-preview
     #"git+https://github.com/huggingface/transformers@v4.51.3-Qwen2.5-Omni-preview",
     #"transformers==4.52.0",
@@ -313,6 +313,36 @@ llm_transformers_manual_voice_kimi = [
     "blobfile",
     "timm",
 ]
+llm_transformers_manual_voice_vita = [
+    "achatbot[accelerate,librosa,soundfile,conf]",
+    "torch~=2.6.0",
+    "torchaudio~=2.6.0",
+    "torchvision~=0.21.0",
+    # https://github.com/huggingface/transformers/tags
+    "transformers",     # use latest version, preview can see some new models
+    "tiktoken",
+    "funasr",
+    "rich",
+    "hyperpyyaml",
+    "conformer",
+    "lightning",
+    "wget",
+    "natsort",
+    "safetensors",
+    "diffusers",
+    "gdown",
+    "jiwer",
+    "zhon",
+    "WeTextProcessing",
+    "inflect",
+    "openai-whisper",
+    "onnxruntime",
+    "modelscope",
+    "word2number",
+    "pyworld",
+    "matplotlib",
+]
+
 
 # core llms
 core_llm = ["achatbot[llama_cpp,llm_personalai_proxy]"]

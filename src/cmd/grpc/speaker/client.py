@@ -248,6 +248,13 @@ TTS_TAG=tts_mega3 IS_SAVE=1 \
     TTS_REF_AUDIO_FILE=./assets/Chinese_prompt.wav \
     TTS_REF_LATENT_FILE=./assets/Chinese_prompt.npy\
     python -m src.cmd.grpc.speaker.client
+
+TTS_TAG=tts_vita IS_SAVE=1 \
+    LLM_MODEL_NAME_OR_PATH=./models/VITA-MLLM/VITA-Audio-Plus-Vanilla \
+    AUDIO_TOKENIZER_TYPE=sensevoice_glm4voice \
+    FLOW_PATH=./models/THUDM/glm-4-voice-decoder \
+    LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 LLM_ATTN_IMP=flash_attention_2 \
+    python -m src.cmd.grpc.speaker.client
 """
 if __name__ == "__main__":
     player = None
