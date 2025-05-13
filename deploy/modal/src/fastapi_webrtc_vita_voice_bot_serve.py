@@ -1,7 +1,7 @@
 import modal
 import os
 
-achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.10")
+achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.11")
 kimi_voice_img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
     modal.Image.from_registry(
@@ -17,8 +17,7 @@ kimi_voice_img = (
             "silero_vad_analyzer,asr_processor,"
             "llm_transformers_manual_voice_vita,"
             "queue"
-            "]==0.0.10.dev4",
-            # f"]=={achatbot_version}",
+            f"]=={achatbot_version}",
         ],
         extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
     )
@@ -34,15 +33,9 @@ kimi_voice_img = (
             "TQDM_DISABLE": "1",
         }
     )
-    .pip_install(
-        [
-            f"achatbot=={achatbot_version}",
-        ],
-        extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
-    )
     # .pip_install(
     #    [
-    #        "achatbot==0.0.10",
+    #        f"achatbot=={achatbot_version}",
     #    ],
     #    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
     # )
