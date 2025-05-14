@@ -89,7 +89,17 @@ async def gen_podcast_tts_audios(
                 continue
             if pre_role == role.name:
                 logging.warning(f"duplicate {role.name}: {role.content}")
-                continue
+                # remove pre tts audio content
+                pre_audio_file = os.path.join(p_save_dir, f"{role_index-1}_{role.name}.mp3")
+                if os.path.exists(pre_audio_file):
+                    os.remove(pre_audio_file)
+                    # logging.warning(f"remove {pre_audio_file}")
+                pre_vtt_file = os.path.join(p_save_dir, f"{role_index-1}_{role.name}.vtt")
+                if os.path.exists(pre_vtt_file):
+                    os.remove(pre_vtt_file)
+                    # logging.warning(f"remove {pre_vtt_file}")
+                role_index -= 1
+
             output_file = os.path.join(p_save_dir, f"{role_index}_{role.name}.mp3")
             voice = role_tts_voices[role_index % len(role_tts_voices)]
             print(f"{role_index}. {role.name}: {role.content} speaker:{voice} \n")
@@ -161,6 +171,7 @@ def instruct_content_tts(
     for source in sources:
         try:
             content = extractor.extract_content(source)
+            logging.info(f"{source} extracted content done")
             now = datetime.now()
             formatted_time = now.strftime("%Y-%m-%d_%H-%M-%S")
             output_file = os.path.join(save_dir, f"{extractor.file_name}_{formatted_time}.mp3")
