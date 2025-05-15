@@ -340,9 +340,9 @@ def text():
     )
 
     for text in [
-        "How many helicopters can a human eat in one sitting?",
-        "你叫什么名字？",
-        "写一首诗",
+        # "How many helicopters can a human eat in one sitting?",
+        # "你叫什么名字？",
+        # "写一首诗",
         "介绍一下上海",
     ]:
         print("=" * 100)
@@ -445,7 +445,7 @@ def text_audio_stream():
     )
     for text in [
         "你叫什么名字？",
-        "请讲一个儿童故事。",
+        # "请讲一个儿童故事。",
     ]:
         print("=" * 100)
         print("text_audio_stream_task")
@@ -462,7 +462,7 @@ def text_audio_stream():
         ):
             times.append(perf_counter() - start_time)
             generated_text += new_text
-            print(new_text, end="", flush=True)
+            print(new_text, end=" ", flush=True)
             start_time = perf_counter()
 
         print(
@@ -827,7 +827,7 @@ def tts_stream():
         ):
             times.append(perf_counter() - start_time)
             generated_text += new_text
-            print(new_text, end="", flush=True)
+            print(new_text, end=" ", flush=True)
             start_time = perf_counter()
         print(
             f"\ngenerate first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s\n"
@@ -1198,6 +1198,7 @@ class TextAudioIteratorStreamer(TextIteratorStreamer):
         """
         Receives tokens, decodes them, and prints them to stdout as soon as they form entire words.
         """
+        print(f"{value=}")
         if len(value.shape) > 1 and value.shape[0] > 1:
             raise ValueError("TextStreamer only supports batch size 1")
         elif len(value.shape) > 1:
@@ -1851,7 +1852,7 @@ def main(task: str = "tokenize"):
         "tts_clone": tts_clone,
         "tts_audio_chunk_static_stream": tts_audio_chunk_static_stream,
         "tts_audio_chunk_dynamic_stream": tts_audio_chunk_dynamic_stream,
-        # "benchmark_llm": benchmark_llm,
+        "benchmark_llm": benchmark_llm,
         # "benchmark_sts": benchmark_sts,
     }
     if task not in tasks:
