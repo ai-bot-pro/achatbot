@@ -44,7 +44,7 @@ vita_audio_img = (
         {
             # RuntimeError: The kernel on this machine does not support the pidfd_open syscall needed to use IPC for CUDA tensors when expandable_segments:True is set. Consider using expandable_segments:False via torch.cuda.memory._set_allocator_settings('expandable_segments:False') for this allocation.
             "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:False",
-            "LLM_MODEL": os.getenv("LLM_MODEL", "Qwen/Qwen2.5-7B-Instruct"),
+            "LLM_MODEL": os.getenv("LLM_MODEL", "finetune_glm4voice_mtp1_stage1"),
             "AUDIO_ENCODE_MODEL": os.getenv("AUDIO_ENCODE_MODEL", "THUDM/glm-4-voice-tokenizer"),
             "DATA_CONFIG_PATH": os.getenv(
                 "DATA_CONFIG_PATH", "/VITA-Audio/configs/sts_finetune_stage1_debug.yaml"
@@ -53,12 +53,12 @@ vita_audio_img = (
             # BOOST: 1 10 4 10
             # Balance: 1 4 3 8 4 10
             "TEXT_AUDIO_INTERVAL_RATIO": os.getenv("TEXT_AUDIO_INTERVAL_RATIO", "1 10 4 10"),
-            "MAX_STEPS": os.getenv("MAX_STEPS", "8000"),
+            "MAX_STEPS": os.getenv("MAX_STEPS", "4000"),
         }
     )
 )
 
-TRAIN_NAME = "finetune_glm4voice_stage1"
+TRAIN_NAME = "finetune_glm4voice_mtp10_stage1"
 
 HF_MODEL_DIR = "/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
@@ -94,7 +94,10 @@ def run(other_args: str = ""):
         HF_MODEL_DIR, os.getenv("AUDIO_ENCODE_MODEL", "THUDM/glm-4-voice-tokenizer")
     )
 
-    LLM_MODEL_PATH = os.path.join(HF_MODEL_DIR, os.getenv("LLM_MODEL", "Qwen/Qwen2.5-7B-Instruct"))
+    LLM_MODEL_PATH = os.path.join(
+        TRAIN_OUTPUT_DIR, os.getenv("LLM_MODEL", "finetune_glm4voice_mtp1_stage1")
+    )
+    LLM_MODEL_CONFIG = "/VITA-Audio/vita_audio/models/qwen2_mtp_v4_48_3/config_7B_mtp10.json"
 
     DATA_CONFIG_PATH = os.getenv(
         "DATA_CONFIG_PATH", "/VITA-Audio/configs/sts_finetune_stage1_test.yaml"
@@ -116,7 +119,7 @@ def run(other_args: str = ""):
 
     RUN_PATH = "/VITA-Audio/tools/finetune_sts_v4_48_3.py"
     TEXT_AUDIO_INTERVAL_RATIO = os.getenv("TEXT_AUDIO_INTERVAL_RATIO", "1 10 4 10")
-    MAX_STEPS = os.getenv("MAX_STEPS", "8000")
+    MAX_STEPS = os.getenv("MAX_STEPS", "4000")
 
     os.makedirs(os.path.join(TRITON_CACHE_DIR, "autotune"), exist_ok=True)
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -149,12 +152,19 @@ PYTHONPATH=$PYTHONPATH:/VITA-Audio:/VITA-Audio/third_party/GLM-4-Voice:/VITA-Aud
     --log_level info \
     --do_train \
     --overwrite_output_dir \
-    --config_name {LLM_MODEL_PATH} \
+    --config_name {LLM_MODEL_CONFIG} \
     --tokenizer_name {LLM_MODEL_PATH} \
     --model_name_or_path {LLM_MODEL_PATH} \
     --audio_tokenizer_path {AUDIO_TOKENIZER_MODEL_PATH} \
     --audio_tokenizer_type {AUDIO_TOKENIZER_TYPE} \
     --dataset_name {DATA_CONFIG_PATH} \
+    --dataloader_num_workers 8 \
+    --dataset_joint true \
+    --data_seed 42 \
+    --reset_attention_mask \
+    --reset_position_ids \
+    --create_attention_mask false \
+    --create_attention_mask_2d false \
     --bf16 True \
     --tf32 True \
     --torch_dtype bfloat16 \
@@ -167,7 +177,7 @@ PYTHONPATH=$PYTHONPATH:/VITA-Audio:/VITA-Audio/third_party/GLM-4-Voice:/VITA-Aud
     --save_strategy "steps" \
     --save_steps 0.1 \
     --save_total_limit 2 \
-    --learning_rate 6.00e-5 \
+    --learning_rate 1.00e-3 \
     --max_grad_norm 1.0 \
     --weight_decay 0.0 \
     --adam_beta1 0.9 \
@@ -185,11 +195,7 @@ PYTHONPATH=$PYTHONPATH:/VITA-Audio:/VITA-Audio/third_party/GLM-4-Voice:/VITA-Aud
     --ddp_backend {DDP_BACKEND} \
     --attn_implementation flash_attention_2 \
     --seed 42 \
-    --data_seed 42 \
-    --reset_attention_mask \
-    --reset_position_ids \
-    --create_attention_mask false \
-    --create_attention_mask_2d false \
+    --language-model-freeze \
     --text-audio-interval-ratio {TEXT_AUDIO_INTERVAL_RATIO} \
     {other_args} \
 """
@@ -201,11 +207,10 @@ PYTHONPATH=$PYTHONPATH:/VITA-Audio:/VITA-Audio/third_party/GLM-4-Voice:/VITA-Aud
 
 """
 # just debug | 2xA100-80GB for 7B with zero 1/2
-IMAGE_GPU=A100-80GB:2 MAX_STEPS=1 modal run src/train/vita_audio/finetune_glm4voice_stage1.py --other-args "--dataset_joint true --dataloader_num_workers 8"
+IMAGE_GPU=A100-80GB:2 MAX_STEPS=1 modal run src/train/vita_audio/finetune_glm4voice_mtp10_stage1.py
 
 # run train with test data | 2xA100-80GB for 7B with ds zero 1/2
 IMAGE_GPU=A100-80GB:2 MAX_STEPS=2 \
     DATA_CONFIG_PATH=/VITA-Audio/configs/sts_finetune_stage1_test.yaml \
-    modal run src/train/vita_audio/finetune_glm4voice_stage1.py \
-    --other-args "--dataset_joint true --dataloader_num_workers 8"
+    modal run src/train/vita_audio/finetune_glm4voice_mtp10_stage1.py
 """
