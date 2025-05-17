@@ -103,7 +103,7 @@ def download_ckpts(ckpt_urls: str) -> str:
             logging.error(f"Error downloading {url}: {e}")
             logging.error(f"curl stderr: {e.stderr}")
 
-    return "All asset downloads complete."
+    return "All ckpt downloads complete."
 
 
 """
