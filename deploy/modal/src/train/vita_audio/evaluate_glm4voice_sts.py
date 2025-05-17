@@ -225,7 +225,7 @@ def run():
 
     write_res(outputs)
 
-    # todo: sentence similarity
+    # sentence similarity
     # TF-IDF余弦相似度 | Jaccard相似度 | Sequence相似度
     # 基于 bert embedding (sbert)
     evaluate(
