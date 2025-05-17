@@ -9,7 +9,7 @@ download_image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install("curl")
     .run_commands()
-    .pip_install("hf-transfer", "huggingface_hub")
+    .pip_install("hf-transfer", "huggingface_hub[hf_xet]")
     .env(
         {"HF_HUB_ENABLE_HF_TRANSFER": "1"},  # hf-transfer for faster downloads
     )
@@ -103,7 +103,7 @@ def download_ckpts(ckpt_urls: str) -> str:
             logging.error(f"Error downloading {url}: {e}")
             logging.error(f"curl stderr: {e.stderr}")
 
-    return "All asset downloads complete."
+    return "All ckpt downloads complete."
 
 
 """
