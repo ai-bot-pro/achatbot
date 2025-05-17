@@ -38,9 +38,10 @@ vita_audio_img = (
     .pip_install("wheel")
     # https://github.com/Dao-AILab/flash-attention/releases/tag/v2.7.4.post1
     .pip_install("flash-attn", extra_options="--no-build-isolation")
+    .pip_install("sentence_transformers", "jieba", "scikit-learn")
     .run_commands(
         "cd /VITA-Audio && git pull origin feat/achatbot",
-        "cd /VITA-Audio && git checkout c7805441d1c1bdf5279dc54eaad84ea03439ed06",
+        "cd /VITA-Audio && git checkout 0a5d6c30dcd587acb8bcafb18f24d3af10a07d52",
     )
     .env(
         {
@@ -86,6 +87,7 @@ with vita_audio_img.imports():
         load_asr_model,
         inference,
     )
+    from evaluation.compute_acc_of_contain import evaluate
 
     # --------------- init ----------------------
     AUDIO_TOKENIZER_TYPE = "glm4voice"
@@ -108,9 +110,10 @@ with vita_audio_img.imports():
         print(cmd)
         subprocess.run(cmd, shell=True)
 
-    JSON_PATH = os.getenv("JSON_PATH", "/VITA-Audio/asset/sts.jsonl")
+    JSON_PATH = os.getenv("JSON_PATH", "/VITA-Audio/asset/eval_sts.jsonl")
     if JSON_PATH.startswith("VITA-MLLM/VITA-Audio-Data"):
         JSON_PATH = os.path.join(DATASETS_DIR, JSON_PATH)
+    JSON_NAME = Path(os.path.normpath(JSON_PATH).split(os.sep)[-1]).stem
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -185,10 +188,10 @@ def run():
     model.generation_config.chat_format = "chatml"
     model.generation_config.max_window_size = 8192
     model.generation_config.use_cache = True
-    model.generation_config.do_sample = False
-    # model.generation_config.temperature = None
+    # model.generation_config.temperature = 0
     # model.generation_config.top_p = None
     # model.generation_config.top_k = None
+    model.generation_config.do_sample = True if model.generation_config.temperature > 0 else False
     model.generation_config.pad_token_id = tokenizer.pad_token_id
 
     asr_model = load_asr_model(0)
@@ -222,15 +225,28 @@ def run():
 
     write_res(outputs)
 
+    # todo: sentence similarity
+    # TF-IDF余弦相似度 | Jaccard相似度 | Sequence相似度
+    # 基于 bert embedding (sbert)
+    evaluate(
+        os.path.join(OUTPUT_DIR, f"{JSON_NAME}_hyp_ref_text.json"),
+        calculate_transformer_similarity,
+        verbose=True,
+    )
+    evaluate(
+        os.path.join(OUTPUT_DIR, f"{JSON_NAME}_hyp_ref_speech.json"),
+        calculate_transformer_similarity,
+        verbose=True,
+    )
+
     evaluate_out_dir.commit()
 
 
 def write_res(outputs):
-    # json_name = Path("_".join(os.path.normpath(args.json_path).split(os.sep)[-2:])).stem
-    json_name = Path(os.path.normpath(JSON_PATH).split(os.sep)[-1]).stem
-    hyp_text_path = os.path.join(OUTPUT_DIR, f"{json_name}_hyp_text.txt")
-    hyp_speech_path = os.path.join(OUTPUT_DIR, f"{json_name}_hyp_speech.txt")
-    ref_path = os.path.join(OUTPUT_DIR, f"{json_name}_ref.txt")
+    # JSON_NAME = Path("_".join(os.path.normpath(args.json_path).split(os.sep)[-2:])).stem
+    hyp_text_path = os.path.join(OUTPUT_DIR, f"{JSON_NAME}_hyp_text.txt")
+    hyp_speech_path = os.path.join(OUTPUT_DIR, f"{JSON_NAME}_hyp_speech.txt")
+    ref_path = os.path.join(OUTPUT_DIR, f"{JSON_NAME}_ref.txt")
 
     os.makedirs(os.path.dirname(ref_path), exist_ok=True)
     os.makedirs(os.path.dirname(hyp_text_path), exist_ok=True)
@@ -252,12 +268,12 @@ def write_res(outputs):
     outputs_speech = [[x[1], x[2]] for x in outputs]
     outputs_text = [[x[0], x[2]] for x in outputs]
 
-    hyp_ref_path = os.path.join(OUTPUT_DIR, f"{json_name}_hyp_ref_text.json")
+    hyp_ref_path = os.path.join(OUTPUT_DIR, f"{JSON_NAME}_hyp_ref_text.json")
     hyp_ref_file = open(hyp_ref_path, "w")
     json.dump(outputs_text, hyp_ref_file, indent=4)
     hyp_ref_file.close()
 
-    hyp_ref_path = os.path.join(OUTPUT_DIR, f"{json_name}_hyp_ref_speech.json")
+    hyp_ref_path = os.path.join(OUTPUT_DIR, f"{JSON_NAME}_hyp_ref_speech.json")
     hyp_ref_file = open(hyp_ref_path, "w")
     json.dump(outputs_speech, hyp_ref_file, indent=4)
     hyp_ref_file.close()
@@ -272,3 +288,74 @@ IMAGE_GPU=L40s LLM_MODEL=VITA-MLLM/VITA-Audio-Boost modal run src/train/vita_aud
 # eval  VITA-MLLM/VITA-Audio-Balance
 IMAGE_GPU=L40s LLM_MODEL=VITA-MLLM/VITA-Audio-Balance modal run src/train/vita_audio/evaluate_glm4voice_sts.py
 """
+
+
+def evaluate(pred_gt_json_file, func, verbose=False):
+    with open(pred_gt_json_file, "r") as f:
+        pred_gt = json.load(f)
+
+    for line in pred_gt:
+        pred = line[0].lower()
+        gt = line[1].lower()
+        sim = func(pred, gt)
+        if verbose:
+            print(f"{func=} {sim=}")
+
+
+def calculate_cosine_similarity(text1, text2):
+    """使用TF-IDF和余弦相似度计算文本相似度"""
+    import jieba
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+
+    # 对文本进行分词
+    text1_cut = " ".join(jieba.cut(text1))
+    text2_cut = " ".join(jieba.cut(text2))
+
+    # 创建TF-IDF向量
+    vectorizer = TfidfVectorizer()
+    tfidf_matrix = vectorizer.fit_transform([text1_cut, text2_cut])
+
+    # 计算余弦相似度
+    return cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
+
+
+def calculate_jaccard_similarity(text1, text2):
+    """计算Jaccard相似度"""
+    import jieba
+
+    # 对文本进行分词
+    set1 = set(jieba.cut(text1))
+    set2 = set(jieba.cut(text2))
+
+    # 计算交集和并集
+    intersection = len(set1.intersection(set2))
+    union = len(set1.union(set2))
+
+    return intersection / union if union != 0 else 0
+
+
+def calculate_sequence_similarity(text1, text2):
+    """使用SequenceMatcher计算文本相似度"""
+    from difflib import SequenceMatcher
+
+    return SequenceMatcher(None, text1, text2).ratio()
+
+
+def calculate_transformer_similarity(text1, text2):
+    """使用Sentence Transformers计算文本相似度"""
+    from sentence_transformers import SentenceTransformer
+
+    model_path = os.path.join(HF_MODEL_DIR, "sentence-transformers/all-MiniLM-L6-v2")
+    model = SentenceTransformer(model_path)
+
+    # 计算文本嵌入
+    embeddings = model.encode([text1, text2])
+
+    # 计算余弦相似度
+    similarity = torch.nn.functional.cosine_similarity(
+        torch.FloatTensor(embeddings[0]).unsqueeze(0),
+        torch.FloatTensor(embeddings[1]).unsqueeze(0),
+    )
+
+    return similarity.item()
