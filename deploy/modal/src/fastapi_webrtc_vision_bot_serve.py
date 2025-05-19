@@ -1,7 +1,7 @@
 import modal
 import os
 
-achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.9.post10")
+achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.11")
 
 vision_bot_img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
@@ -9,7 +9,7 @@ vision_bot_img = (
         "nvidia/cuda:12.5.1-cudnn-devel-ubuntu22.04",
         add_python="3.10",
     )
-    .apt_install("git", "git-lfs", "ffmpeg", "cmake")
+    .apt_install("git", "git-lfs", "ffmpeg", "cmake", "ninja-build")
     .pip_install("wheel")
     .pip_install(
         [
@@ -26,7 +26,6 @@ vision_bot_img = (
         ],
         extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
     )
-    .pip_install("flash-attn", extra_options="--no-build-isolation")
     .env(
         {
             "ACHATBOT_PKG": "1",
@@ -130,7 +129,9 @@ class ContainerRuntimeConfig:
                 ],
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
             )
-            .run_commands("pip install git+https://github.com/huggingface/transformers@v4.51.3-Qwen2.5-Omni-preview")
+            .run_commands(
+                "pip install git+https://github.com/huggingface/transformers@v4.51.3-Qwen2.5-Omni-preview"
+            )
             .env(
                 {
                     "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
@@ -171,6 +172,10 @@ class ContainerRuntimeConfig:
         return concurrent_cn
 
 
+img = ContainerRuntimeConfig.get_img().pip_install(
+    "flash-attn", extra_options="--no-build-isolation"
+)
+
 HF_MODEL_DIR = "/root/.achatbot/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
 ASSETS_DIR = "/root/.achatbot/assets"
@@ -183,7 +188,7 @@ app = modal.App(ContainerRuntimeConfig.get_app_name())
 
 # 128 MiB of memory and 0.125 CPU cores by default container runtime
 @app.cls(
-    image=ContainerRuntimeConfig.get_img(),
+    image=img,
     gpu=ContainerRuntimeConfig.get_gpu(),
     secrets=[modal.Secret.from_name("achatbot")],
     cpu=2.0,

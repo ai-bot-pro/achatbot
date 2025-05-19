@@ -62,49 +62,23 @@ class ContainerRuntimeConfig:
 # ----------------------- app -------------------------------
 app = modal.App(ContainerRuntimeConfig.get_app_name())
 
+ASSETS_DIR = "/root/.achatbot/assets"
+assets_dir = modal.Volume.from_name("assets", create_if_missing=True)
+HF_MODEL_DIR = "/root/.achatbot/models"
+hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
+
 
 # 128 MiB of memory and 0.125 CPU cores by default container runtime
 @app.cls(
     image=ContainerRuntimeConfig.get_img(),
     secrets=[modal.Secret.from_name("achatbot")],
+    volumes={ASSETS_DIR: assets_dir, HF_MODEL_DIR: hf_model_vol},
     cpu=2.0,
     scaledown_window=300,
     timeout=600,
     allow_concurrent_inputs=100,
 )
 class Srv:
-    @modal.build()
-    def setup(self):
-        # https://huggingface.co/docs/huggingface_hub/guides/download
-        import wget
-        from huggingface_hub import snapshot_download
-        from achatbot.common.types import MODELS_DIR, ASSETS_DIR
-
-        os.makedirs(MODELS_DIR, exist_ok=True)
-        os.makedirs(ASSETS_DIR, exist_ok=True)
-
-        print(f"start downloading assets to dir:{ASSETS_DIR}")
-        storytelling_assets = [
-            "https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/src/cmd/bots/image/storytelling/assets/book1.png",
-            "https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/src/cmd/bots/image/storytelling/assets/book2.png",
-            "https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/src/cmd/bots/image/storytelling/assets/ding.wav",
-            "https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/src/cmd/bots/image/storytelling/assets/listening.wav",
-            "https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/src/cmd/bots/image/storytelling/assets/talking.wav",
-        ]
-
-        for url in storytelling_assets:
-            wget.download(url, out=ASSETS_DIR)
-
-        print(f"start downloading model to dir:{MODELS_DIR}")
-        snapshot_download(
-            repo_id="FunAudioLLM/SenseVoiceSmall",
-            repo_type="model",
-            allow_patterns="*",
-            local_dir=os.path.join(MODELS_DIR, "FunAudioLLM/SenseVoiceSmall"),
-            # local_dir_use_symlinks=False,
-        )
-        print("setup done")
-
     @modal.enter()
     def enter(self):
         print("start enter")

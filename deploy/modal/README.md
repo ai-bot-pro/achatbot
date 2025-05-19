@@ -28,9 +28,12 @@ modal volume create -e achatbot bot_config
 
 e.g.:
 ```
-modal run src/download_models.py --repo-ids "Qwen/Qwen2.5-0.5B"
+modal run -e achatbot src/download_models.py --repo-ids "Qwen/Qwen2.5-0.5B"
+modal run -e achatbot src/download_models.py --repo-ids "FunAudioLLM/SenseVoiceSmall"
 
-modal run src/download_assets.py --asset-urls "https://raw.githubusercontent.com/bytedance/MegaTTS3/refs/heads/main/tts/utils/text_utils/dict.json"
+modal run -e achatbot src/download_assets.py --asset-urls "https://raw.githubusercontent.com/bytedance/MegaTTS3/refs/heads/main/tts/utils/text_utils/dict.json"
+
+modal run -e achatbot src/download_assets.py --asset-urls "https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/src/cmd/bots/image/storytelling/assets/book1.png,https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/src/cmd/bots/image/storytelling/assets/book2.png,https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/src/cmd/bots/image/storytelling/assets/ding.wav,https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/src/cmd/bots/image/storytelling/assets/listening.wav,https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/src/cmd/bots/image/storytelling/assets/talking.wav"
 ```
 
 ## modal serve
