@@ -29,7 +29,7 @@ hf_dataset_vol = modal.Volume.from_name("datasets", create_if_missing=True)
     timeout=1200,
     scaledown_window=1200,
 )
-def download_datasets(repo_ids: str, allow_patterns: str = "*") -> str:
+def download_datasets(repo_ids: str, allow_patterns: str = "*"):
     import os
 
     # https://huggingface.co/docs/huggingface_hub/guides/download

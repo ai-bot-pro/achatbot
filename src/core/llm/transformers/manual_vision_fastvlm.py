@@ -168,7 +168,7 @@ class TransformersManualVisionFastvlm(TransformersBaseLLM):
 
     @torch.inference_mode()
     def generate(self, session: Session, **kwargs):
-        torch.cuda.empty_cache()
+        # torch.cuda.empty_cache()
         seed = kwargs.get("seed", self.args.lm_gen_seed)
         set_all_random_seed(seed)
 
@@ -220,4 +220,4 @@ class TransformersManualVisionFastvlm(TransformersBaseLLM):
             start = perf_counter()
         logging.info(f"{generated_text=} TTFT: {times[0]:.4f}s total time: {sum(times):.4f}s")
 
-        torch.cuda.empty_cache()
+        # torch.cuda.empty_cache()
