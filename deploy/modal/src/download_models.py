@@ -98,6 +98,25 @@ def download_ckpts(ckpt_urls: str) -> str:
             )
             logging.info(f"Download of {url} complete.")
             logging.debug(f"curl output:{result.stdout}")
+            # Check if the downloaded file is a zip or tar archive and extract it
+            if filename.endswith(".zip"):
+                import zipfile
+
+                with zipfile.ZipFile(local_path, "r") as zip_ref:
+                    zip_ref.extractall(dir_path)
+                os.remove(local_path)
+                logging.info(f"Extracted and removed {filename}")
+            elif (
+                filename.endswith(".tar")
+                or filename.endswith(".tar.gz")
+                or filename.endswith(".tgz")
+            ):
+                import tarfile
+
+                with tarfile.open(local_path, "r") as tar_ref:
+                    tar_ref.extractall(dir_path)
+                os.remove(local_path)
+                logging.info(f"Extracted and removed {filename}")
 
         except subprocess.CalledProcessError as e:
             logging.error(f"Error downloading {url}: {e}")
@@ -123,6 +142,7 @@ modal run src/download_models.py --repo-ids "Qwen/Qwen2.5-0.5B"
 modal run src/download_models.py --repo-ids "FunAudioLLM/SenseVoiceSmall"
 
 modal run src/download_models.py::download_ckpts --ckpt-urls "https://openaipublic.azureedge.net/main/whisper/models/e5b1a55b89c1367dacf97e3e19bfd829a01529dbfdeefa8caeb59b3f1b81dadb/large-v3.pt"
+modal run src/download_models.py::download_ckpts --ckpt-urls "https://ml-site.cdn-apple.com/datasets/fastvlm/llava-fastvithd_1.5b_stage3.zip"
 """
 
 
