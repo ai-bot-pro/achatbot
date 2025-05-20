@@ -64,6 +64,12 @@ class VisionProcessor(VisionProcessorBase):
         ):  # transformers vision MiniCPM-o
             async for item in self._run_imgs_text_vision(frame):
                 yield item
+        elif (
+            "llm_transformers" in self._llm.SELECTED_TAG
+            and "vision_fastvlm" in self._llm.SELECTED_TAG
+        ):  # transformers vision FastVLM
+            async for item in self._run_imgs_text_vision(frame):
+                yield item
         else:  # qwen vision (kimi vision) is default, nice vision prompt
             async for item in self._run_vision(frame):
                 yield item
