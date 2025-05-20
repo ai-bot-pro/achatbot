@@ -1,7 +1,7 @@
 import modal
 import os
 
-achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.11")
+achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.12")
 
 vision_bot_img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
@@ -22,8 +22,7 @@ vision_bot_img = (
             "tts_edge,"
             "deep_translator,together_ai,"
             "queue"
-            # f"]=={achatbot_version}",
-            "]==0.0.11.dev1",
+            f"]=={achatbot_version}",
         ],
         extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
     )

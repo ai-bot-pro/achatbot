@@ -58,6 +58,7 @@ dependencies = [
     "aiohttp",
     "scipy",
     "pyloudnorm",
+    "pydantic",
     "numpy>=1.22.0",
 ]
 
@@ -82,7 +83,7 @@ einops = ["einops~=0.8.0"]
 flash-attn = ["flash-attn==2.7.3"]
 tiktoken = ["tiktoken~=0.7.0"]
 verovio = ["verovio~=4.3.1"]
-accelerate = ["accelerate~=0.28.0"]
+accelerate = ["accelerate~=1.6.0"]
 opencv = ["opencv-python~=4.10.0.84"]
 librosa = ["librosa~=0.10.2.post1"]
 soundfile = ["soundfile~=0.12.1"]
@@ -241,18 +242,15 @@ llm_transformers_manual_vision_kimi = [
     "achatbot[llm_transformers_manual_vision,tiktoken,accelerate]",
 ]
 llm_transformers_manual_vision_fastvlm = [
-    "achatbot[torch_vision_audio]",
+    "achatbot[torch_vision_audio,accelerate]",
     "numpy==1.26.4",
     "transformers==4.48.3",
     "tokenizers==0.21.0",
     "sentencepiece==0.1.99",
     "shortuuid",
-    "accelerate==1.6.0",
     "peft>=0.10.0,<0.14.0",
     "bitsandbytes",
-    "pydantic",
     "markdown2[all]",
-    "numpy==1.26.4",
     "scikit-learn==1.2.2",
     "einops==0.6.1",
     "einops-exts==0.0.4",
