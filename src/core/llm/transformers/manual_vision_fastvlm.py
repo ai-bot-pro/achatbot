@@ -78,7 +78,7 @@ class TransformersManualVisionFastvlm(TransformersBaseLLM):
             load_8bit=True if self.args.lm_bnb_quant_type == "int8" else False,
             load_4bit=True if self.args.lm_bnb_quant_type == "int4" else False,
             device=self.args.lm_device,
-            device_map=self.args.lm_device_map,
+            device_map="auto" if self.args.lm_device_map is None else self.args.lm_device_map,
             use_flash_attn=True if self.args.lm_attn_impl == "flash_attention_2" else False,
         )
         self._model = model.eval()
