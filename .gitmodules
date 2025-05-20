@@ -61,3 +61,6 @@
 [submodule "deps/VITAAudio"]
 	path = deps/VITAAudio
 	url = https://github.com/weedge/VITA-Audio.git
+[submodule "deps/FastVLM"]
+	path = deps/FastVLM
+	url = https://github.com/weedge/ml-fastvlm.git

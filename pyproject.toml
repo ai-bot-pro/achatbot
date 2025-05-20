@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 name = "achatbot"
 #dynamic = ["version"]
 # todo
-version = "0.0.11"
+version = "0.0.11.dev5"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -86,15 +86,15 @@ accelerate = ["accelerate~=0.28.0"]
 opencv = ["opencv-python~=4.10.0.84"]
 librosa = ["librosa~=0.10.2.post1"]
 soundfile = ["soundfile~=0.12.1"]
+torch_vision_audio = [
+    "torch~=2.6.0",
+    "torchaudio~=2.6.0",
+    "torchvision~=0.21.0",
+]
 
 
 # diffusers DiT with quantizing model
-diffusers = [
-    "torch==2.4.1",
-    "torchvision==0.19.1",
-    "torchaudio==2.4.1",
-    "diffusers[torch]~=0.31.0",
-]
+diffusers = ["achatbot[torch_vision_audio]", "diffusers[torch]~=0.31.0"]
 
 # quantization
 # for transformers model weights with BitsAndBytes to 4bit/8bit quantization
@@ -239,6 +239,24 @@ llm_transformers_manual_vision_kimi = [
     "numpy==1.26.2",
     "blobfile",
     "achatbot[llm_transformers_manual_vision,tiktoken,accelerate]",
+]
+llm_transformers_manual_vision_fastvlm = [
+    "achatbot[torch_vision_audio]",
+    "numpy==1.26.4",
+    "transformers==4.48.3",
+    "tokenizers==0.21.0",
+    "sentencepiece==0.1.99",
+    "shortuuid",
+    "accelerate==1.6.0",
+    "peft>=0.10.0,<0.14.0",
+    "bitsandbytes",
+    "pydantic",
+    "markdown2[all]",
+    "numpy==1.26.4",
+    "scikit-learn==1.2.2",
+    "einops==0.6.1",
+    "einops-exts==0.0.4",
+    "timm==1.0.15",
 ]
 
 # voice llm

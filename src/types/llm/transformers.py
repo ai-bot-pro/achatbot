@@ -86,8 +86,12 @@ class TransformersLMArgs(LMGenerateArgs):
         },
     )
     lm_bnb_quant_type: str = field(
-        default="int4",
-        metadata={"help": "The BitsAndBytes quantization type, default int4."},
+        default=None,
+        metadata={"help": "The BitsAndBytes quantization type, default None."},
+    )
+    lm_language_code: str = field(
+        default="zh",
+        metadata={"help": "The chat language code, default zh."},
     )
 
     def to_dict(self) -> dict:

@@ -120,10 +120,6 @@ class TransformersManualVisionDeepSeekVL2(TransformersBaseLLM):
         )
         self._tokenizer = self.vl_chat_processor.tokenizer
 
-        self._streamer = TextIteratorStreamer(
-            self._tokenizer, skip_prompt=True, skip_special_tokens=True
-        )
-
         self._chat_history = ChatHistory(self.args.chat_history_size)
         self.warmup()
 
@@ -151,10 +147,11 @@ class TransformersManualVisionDeepSeekVL2(TransformersBaseLLM):
 
         # input embeddings
         inputs_embeds = self._model.prepare_inputs_embeds(**prepare_inputs)
+        streamer = TextIteratorStreamer(self._tokenizer, skip_prompt=True, skip_special_tokens=True)
         # AR lm generate with streamer
         warmup_gen_kwargs = dict(
             inputs_embeds=inputs_embeds,
-            streamer=self._streamer,
+            streamer=streamer,
             attention_mask=prepare_inputs.attention_mask,
             pad_token_id=self._tokenizer.eos_token_id,
             bos_token_id=self._tokenizer.bos_token_id,
@@ -169,7 +166,7 @@ class TransformersManualVisionDeepSeekVL2(TransformersBaseLLM):
         self._warmup(
             target=self._model.language.generate,
             kwargs=warmup_gen_kwargs,
-            streamer=self._streamer,
+            streamer=streamer,
         )
 
     @torch.inference_mode()
@@ -213,10 +210,11 @@ class TransformersManualVisionDeepSeekVL2(TransformersBaseLLM):
         # input embeddings
         inputs_embeds = self._model.prepare_inputs_embeds(**prepare_inputs)
 
+        streamer = TextIteratorStreamer(self._tokenizer, skip_prompt=True, skip_special_tokens=True)
         # AR lm generate with streamer
         generation_kwargs = dict(
             inputs_embeds=inputs_embeds,
-            streamer=self._streamer,
+            streamer=streamer,
             attention_mask=prepare_inputs.attention_mask,
             pad_token_id=self._tokenizer.eos_token_id,
             bos_token_id=self._tokenizer.bos_token_id,
@@ -231,7 +229,7 @@ class TransformersManualVisionDeepSeekVL2(TransformersBaseLLM):
         thread.start()
 
         generated_text = ""
-        for new_text in self._streamer:
+        for new_text in streamer:
             generated_text += new_text
             yield new_text
         self._chat_history.append({"role": "<|Assistant|>", "content": generated_text})
