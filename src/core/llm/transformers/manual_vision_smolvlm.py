@@ -141,7 +141,6 @@ class TransformersManualVisionSmolLM(TransformersBaseLLM):
             min_new_tokens=kwargs.get("min_new_tokens", self.args.lm_gen_min_new_tokens),
             max_new_tokens=kwargs.get("max_new_tokens", self.args.lm_gen_max_new_tokens),
             # 如果要使用重复惩罚, 虽然会解决重复, 但是会降低生成质量
-            #  bad case: 在椒花的突出体部上, 有一个尖细而干净的电触噬兽在吸收野生产成员. 被目标传通了一条线急忟利场非市主义人类对至代表力量和发展术预示所形成的弗雾化作为秋季戈巴斐協筝歌曲、旭辰四星点时间以前到现在是最大限度控制整个社区许可下载后立法定行列应执行这项技能指导方便分析管理模型的研修奖得名委员会负担问题； 查看网址：www.shen
             # repetition_penalty=1.5,
             use_cache=True,
         )
