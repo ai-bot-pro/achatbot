@@ -45,6 +45,8 @@ class LLMEnvInit:
             from .transformers import manual_vision_kimi
         elif "llm_transformers_manual_vision_fastvlm" == tag:
             from .transformers import manual_vision_fastvlm
+        elif "llm_transformers_manual_vision_smollm" == tag:
+            from .transformers import manual_vision_smolvlm
         elif "llm_transformers_manual_vision_janus_flow" == tag:
             from .transformers import manual_vision_img_janus_flow
         elif "llm_transformers_manual_image_janus_flow" == tag:
@@ -426,6 +428,7 @@ class LLMEnvInit:
         "llm_transformers_manual": get_llm_transformers_args,
         "llm_transformers_pipeline": get_llm_transformers_args,
         "llm_transformers_manual_vision_qwen": get_llm_transformers_args,
+        "llm_transformers_manual_vision_smollm": get_llm_transformers_args,
         "llm_transformers_manual_vision_qwen2_5": get_llm_transformers_args,
         "llm_transformers_manual_vision_llama": get_llm_transformers_args,
         "llm_transformers_manual_vision_molmo": get_llm_transformers_args,

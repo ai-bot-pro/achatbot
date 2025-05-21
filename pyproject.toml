@@ -166,7 +166,7 @@ speech_waker = ["achatbot[porcupine_wakeword]"]
 # vad module tag -> pkgs
 pyannote_vad = ["pyannote.audio~=3.2.0"]
 webrtcvad = ["webrtcvad~=2.0.10"]
-silero_vad = ["torch", "torchaudio"]
+silero_vad = ["achatbot[torch_vision_audio]"]
 webrtc_silero_vad = ["achatbot[webrtcvad,silero_vad]"]
 speech_vad = ["achatbot[pyannote_vad,webrtcvad,silero_vad]"]
 
@@ -203,12 +203,10 @@ flashinfer-python = ["flashinfer-python==0.2.3"]
 # vision llm
 llm_transformers_manual_vision = [
     #"transformers@git+https://github.com/huggingface/transformers",
-    "transformers~=4.50.3",
+    "transformers",
     "qwen-vl-utils",
     "av",
-    "torch~=2.2.2",
-    "torchaudio~=2.2.2",
-    "torchvision~=0.17.2",
+    "achatbot[torch_vision_audio]",
 ]
 llm_transformers_manual_vision_qwen = [
     "achatbot[llm_transformers_manual_vision]",
@@ -255,6 +253,10 @@ llm_transformers_manual_vision_fastvlm = [
     "einops==0.6.1",
     "einops-exts==0.0.4",
     "timm==1.0.15",
+]
+llm_transformers_manual_vision_smolvlm = [
+    "achatbot[llm_transformers_manual_vision]",
+    "num2words",
 ]
 
 # voice llm

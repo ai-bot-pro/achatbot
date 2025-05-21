@@ -22,7 +22,8 @@ vision_bot_img = (
             "tts_edge,"
             "deep_translator,together_ai,"
             "queue"
-            f"]=={achatbot_version}",
+            # f"]=={achatbot_version}",
+            "]==0.0.12.dev9",
         ],
         extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
     )
@@ -150,6 +151,19 @@ class ContainerRuntimeConfig:
                     "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
                     "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "llava-fastvithd_1.5b_stage3")}',
                     "MOBILE_CLIP_MODEL_CONFIG": "/root/.achatbot/models/mobileclip_l.json",
+                }
+            )
+        ),
+        "smolvlm": (
+            vision_bot_img.pip_install(
+                [
+                    f"achatbot[llm_transformers_manual_vision_smolvlm]=={achatbot_version}",
+                ],
+                extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+            ).env(
+                {
+                    "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+                    "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "HuggingFaceTB/SmolVLM2-2.2B-Instruct")}',
                 }
             )
         ),
