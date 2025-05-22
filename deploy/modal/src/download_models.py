@@ -2,8 +2,6 @@ import os
 import modal
 
 app = modal.App("download_models")
-secret = os.getenv("SECRET_NAME")
-# print(secret)
 
 # We also define the dependencies for our Function by specifying an
 # [Image](https://modal.com/docs/guide/images).
@@ -30,7 +28,7 @@ hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
     retries=0,
     cpu=8.0,
     image=download_image,
-    secrets=[modal.Secret.from_name(secret)],
+    secrets=[modal.Secret.from_name("achatbot")],
     volumes={HF_MODEL_DIR: hf_model_vol},
     timeout=1200,
     scaledown_window=1200,
