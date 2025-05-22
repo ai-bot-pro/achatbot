@@ -1,6 +1,9 @@
+import os
 import modal
 
 app = modal.App("download_models")
+secret = os.getenv("SECRET_NAME")
+# print(secret)
 
 # We also define the dependencies for our Function by specifying an
 # [Image](https://modal.com/docs/guide/images).
@@ -27,14 +30,12 @@ hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
     retries=0,
     cpu=8.0,
     image=download_image,
-    # secrets=[modal.Secret.from_name("achatbot")],
+    secrets=[modal.Secret.from_name(secret)],
     volumes={HF_MODEL_DIR: hf_model_vol},
     timeout=1200,
     scaledown_window=1200,
 )
 def download_ckpt(repo_ids: str) -> str:
-    import os
-
     # https://huggingface.co/docs/huggingface_hub/guides/download
     from huggingface_hub import snapshot_download
 
@@ -57,7 +58,6 @@ def download_ckpt(repo_ids: str) -> str:
     retries=0,
     cpu=2.0,
     image=download_image,
-    # secrets=[modal.Secret.from_name("achatbot")],
     volumes={HF_MODEL_DIR: hf_model_vol},
     timeout=1200,
     scaledown_window=1200,
@@ -140,6 +140,8 @@ modal run src/download_models.py --repo-ids "hubertsiuzdak/snac_24khz"
 modal run src/download_models.py --repo-ids "Qwen/Qwen2.5-0.5B"
 
 modal run src/download_models.py --repo-ids "FunAudioLLM/SenseVoiceSmall"
+
+SECRET_NAME=achatbot modal run src/download_models.py --repo-ids "google/gemma-3-1b-it,google/gemma-3-4b-it,google/gemma-3-12b-it,google/gemma-3-27b-it"
 
 modal run src/download_models.py::download_ckpts --ckpt-urls "https://openaipublic.azureedge.net/main/whisper/models/e5b1a55b89c1367dacf97e3e19bfd829a01529dbfdeefa8caeb59b3f1b81dadb/large-v3.pt"
 modal run src/download_models.py::download_ckpts --ckpt-urls "https://ml-site.cdn-apple.com/datasets/fastvlm/llava-fastvithd_1.5b_stage3.zip"

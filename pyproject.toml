@@ -83,7 +83,7 @@ einops = ["einops~=0.8.0"]
 flash-attn = ["flash-attn==2.7.3"]
 tiktoken = ["tiktoken~=0.7.0"]
 verovio = ["verovio~=4.3.1"]
-accelerate = ["accelerate~=1.6.0"]
+accelerate = ["accelerate~=1.7.0"]
 opencv = ["opencv-python~=4.10.0.84"]
 librosa = ["librosa~=0.10.2.post1"]
 soundfile = ["soundfile~=0.12.1"]
@@ -257,6 +257,9 @@ llm_transformers_manual_vision_fastvlm = [
 llm_transformers_manual_vision_smolvlm = [
     "achatbot[llm_transformers_manual_vision]",
     "num2words",
+]
+llm_transformers_manual_vision_gemma = [
+    "achatbot[llm_transformers_manual_vision,accelerate]",
 ]
 
 # voice llm

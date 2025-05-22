@@ -2,7 +2,7 @@ class ChatHistory:
     """
     buffer the local chat hostory with limit size using to avoid OOM issues.
     - if size is None, no limit
-    - if size <= 0, no history
+    - if size < 0, no history
 
     !TODO: use kv store history like mem0. @weedge
     """
@@ -15,7 +15,7 @@ class ChatHistory:
         self.buffer = []
 
     def append(self, item):
-        if self.size and self.size <= 0:
+        if self.size and self.size < 0:
             return
 
         self.buffer.append(item)
