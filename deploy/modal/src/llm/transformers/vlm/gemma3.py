@@ -415,7 +415,6 @@ Model	bf16	Int4	Int4(blocks=32) SFP8
 27B 	54.0	14.1	15.3	        27.4
 +KV 	72.7	32.8	34.0	        46.1
 
-# use 
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/gemma3.py --task dump_model
 
 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/gemma3.py --task predict
