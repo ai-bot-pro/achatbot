@@ -164,7 +164,7 @@ class TransformersManualVisionGemmaLM(TransformersBaseLLM):
         with torch.inference_mode():
             for new_text in streamer:
                 times.append(perf_counter() - start)
-                generated_text += new_text
+                generated_text += new_text.replace("*", "")
                 yield new_text
                 start = perf_counter()
         logging.info(f"{generated_text=} TTFT: {times[0]:.4f}s total time: {sum(times):.4f}s")

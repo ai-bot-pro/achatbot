@@ -45,7 +45,11 @@ with img.imports():
     from transformers import pipeline
 
     from PIL import Image
-    from transformers import AutoProcessor, Gemma3ForConditionalGeneration
+    from transformers import (
+        AutoProcessor,
+        Gemma3ForConditionalGeneration,
+        AutoModelForImageTextToText,
+    )
     from transformers.generation.streamers import TextIteratorStreamer
 
 
@@ -184,7 +188,6 @@ def predict(gpu_prop):
     print(generated_text)
 
 
-# https://github.com/huggingface/smollm/tree/main/vision
 def predict_stream(gpu_prop):
     # Load model
     MODEL_PATH = os.path.join(HF_MODEL_DIR, os.getenv("LLM_MODEL"))
@@ -265,7 +268,131 @@ def predict_stream(gpu_prop):
         print(f"\n{i}. {generated_text=} TTFT: {times[0]:.2f}s total time: {sum(times):.2f}s")
 
 
+def predict_med(gpu_prop):
+    import requests
+
+    model_id = "google/medgemma-4b-it"
+    MODEL_PATH = os.path.join(HF_MODEL_DIR, model_id)
+
+    model = AutoModelForImageTextToText.from_pretrained(
+        MODEL_PATH,
+        torch_dtype=torch.bfloat16,
+        device_map="auto",
+    )
+    processor = AutoProcessor.from_pretrained(MODEL_PATH, use_fast=True)
+
+    # Image attribution: Stillwaterising, CC0, via Wikimedia Commons
+    image_url = "https://upload.wikimedia.org/wikipedia/commons/c/c8/Chest_Xray_PA_3-8-2010.png"
+    image = Image.open(requests.get(image_url, headers={"User-Agent": "example"}, stream=True).raw)
+
+    messages = [
+        {"role": "system", "content": [{"type": "text", "text": "你是一名放射科医生"}]},
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "请描述这个 X-射线图像"},
+                {"type": "image", "image": image},
+            ],
+        },
+    ]
+
+    inputs = processor.apply_chat_template(
+        messages, add_generation_prompt=True, tokenize=True, return_dict=True, return_tensors="pt"
+    ).to(model.device, dtype=torch.bfloat16)
+
+    input_len = inputs["input_ids"].shape[-1]
+
+    with torch.inference_mode():
+        generation = model.generate(**inputs, max_new_tokens=200, do_sample=False)
+        generation = generation[0][input_len:]
+
+    decoded = processor.decode(generation, skip_special_tokens=True)
+    print(decoded)
+
+
+def predict_med_stream(gpu_prop):
+    # Load model
+    import requests
+
+    model_id = "google/medgemma-4b-it"
+    MODEL_PATH = os.path.join(HF_MODEL_DIR, model_id)
+
+    model = AutoModelForImageTextToText.from_pretrained(
+        MODEL_PATH,
+        torch_dtype=torch.bfloat16,
+        device_map="auto",
+    )
+    processor = AutoProcessor.from_pretrained(MODEL_PATH, use_fast=True)
+
+    # Image attribution: Stillwaterising, CC0, via Wikimedia Commons
+    image_url = "https://upload.wikimedia.org/wikipedia/commons/c/c8/Chest_Xray_PA_3-8-2010.png"
+    image = Image.open(requests.get(image_url, headers={"User-Agent": "example"}, stream=True).raw)
+
+    messages = [
+        {
+            "role": "system",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "你是一名放射科医生,进行语音聊天咨询， 你会进行诊断，并给出建议,言简意赅。",
+                }
+            ],
+        },
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "请描述这个X-射线图像"},
+                {"type": "image", "image": image},
+            ],
+        },
+    ]
+
+    inputs = processor.apply_chat_template(
+        messages, add_generation_prompt=True, tokenize=True, return_dict=True, return_tensors="pt"
+    ).to(model.device, dtype=torch.bfloat16)
+
+    for key, value in inputs.items():
+        print(f"{key}: {value.shape=}")
+    input_ids = inputs["input_ids"]
+    prompt = processor.decode(input_ids[0])
+    print(f"{prompt=}")
+
+    for i in range(3):
+        streamer = TextIteratorStreamer(
+            tokenizer=processor, skip_prompt=True, skip_special_tokens=True
+        )
+        generation_kwargs = dict(
+            **inputs,
+            # do_sample=False,
+            do_sample=True,
+            temperature=0.2,
+            top_k=10,
+            top_p=0.9,
+            num_beams=1,
+            repetition_penalty=1.1,
+            max_new_tokens=256,
+            use_cache=True,
+            streamer=streamer,
+        )
+        thread = Thread(target=model.generate, kwargs=generation_kwargs)
+        thread.start()
+        generated_text = ""
+        start = perf_counter()
+        times = []
+        with torch.inference_mode():
+            for new_text in streamer:
+                times.append(perf_counter() - start)
+                print(new_text, end="", flush=True)
+                generated_text += new_text
+                start = perf_counter()
+        print(f"\n{i}. {generated_text=} TTFT: {times[0]:.2f}s total time: {sum(times):.2f}s")
+
+
 """
+Gemma 3 Medical:
+Text only: 27b
+Multimodal: 4b
+
 Gemma 3:
 Text only: 1b
 Multimodal: 4b, 12b, 27b
@@ -289,7 +416,7 @@ Model	bf16	Int4	Int4(blocks=32) SFP8
 +KV 	72.7	32.8	34.0	        46.1
 
 # use 
-IMAGE_GPU=A100-80G modal run src/llm/transformers/vlm/gemma3.py --task dump_model
+IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/gemma3.py --task dump_model
 
 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/gemma3.py --task predict
 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/gemma3.py --task predict_stream
@@ -303,6 +430,10 @@ LLM_MODEL=google/gemma-3-12b-it IMAGE_GPU=L40s modal run src/llm/transformers/vl
 LLM_MODEL=google/gemma-3-27b-it-qat-q4_0-unquantized IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/gemma3.py --task predict_stream
 LLM_MODEL=google/gemma-3-27b-it IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/gemma3.py --task predict
 LLM_MODEL=google/gemma-3-27b-it IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/gemma3.py --task predict_stream
+
+# medgemma
+IMAGE_GPU=L4 modal run src/llm/transformers/vlm/gemma3.py --task predict_med
+IMAGE_GPU=L4 modal run src/llm/transformers/vlm/gemma3.py --task predict_med_stream
 """
 
 
@@ -312,6 +443,8 @@ def main(task: str = "dump_model"):
         "dump_model": dump_model,
         "predict": predict,
         "predict_stream": predict_stream,
+        "predict_med": predict_med,
+        "predict_med_stream": predict_med_stream,
     }
     if task not in tasks:
         raise ValueError(f"task {task} not found")
