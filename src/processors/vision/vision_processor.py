@@ -70,7 +70,7 @@ class VisionProcessor(VisionProcessorBase):
         ):  # transformers vision FastVLM
             async for item in self._run_imgs_text_vision(frame):
                 yield item
-        else:  # smolvlm, qwen vision (kimi vision) is default, nice vision prompt
+        else:  # gemma3, smolvlm, qwen vision (kimi vision) is default, nice vision prompt
             async for item in self._run_vision(frame):
                 yield item
 

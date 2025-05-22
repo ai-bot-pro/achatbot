@@ -2,6 +2,7 @@ import modal
 import os
 
 achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.12")
+secret = os.getenv("SECRET_NAME", "achatbot")
 
 vision_bot_img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
@@ -166,6 +167,19 @@ class ContainerRuntimeConfig:
                 }
             )
         ),
+        "gemma3": (
+            vision_bot_img.pip_install(
+                [
+                    f"achatbot[llm_transformers_manual_vision_gemma]=={achatbot_version}",
+                ],
+                extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+            ).env(
+                {
+                    "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+                    "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "google/gemma-3-4b-it")}',
+                }
+            )
+        ),
     }
 
     @staticmethod
@@ -217,7 +231,7 @@ app = modal.App(ContainerRuntimeConfig.get_app_name())
 @app.cls(
     image=img,
     gpu=ContainerRuntimeConfig.get_gpu(),
-    secrets=[modal.Secret.from_name("achatbot")],
+    secrets=[modal.Secret.from_name(secret)],
     cpu=2.0,
     allow_concurrent_inputs=ContainerRuntimeConfig.get_allow_concurrent_inputs(),
     volumes={

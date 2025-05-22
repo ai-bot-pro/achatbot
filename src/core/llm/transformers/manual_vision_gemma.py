@@ -4,13 +4,13 @@ from PIL import Image
 from time import perf_counter
 
 try:
-    from transformers import AutoProcessor, TextIteratorStreamer, AutoModelForImageTextToText
+    from transformers import AutoProcessor, TextIteratorStreamer, Gemma3ForConditionalGeneration
     import torch
 
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        "In order to use Smol-VLM, you need to `pip install achatbot[llm_transformers_manual_vision_smolvlm]`"
+        "In order to use Gemma3, you need to `pip install achatbot[llm_transformers_manual_vision_gemma]`"
     )
     raise Exception(f"Missing module: {e}")
 
@@ -24,29 +24,28 @@ from src.types.llm.transformers import TransformersLMArgs
 from .base import TransformersBaseLLM
 
 
-class TransformersManualVisionSmolLM(TransformersBaseLLM):
-    TAG = "llm_transformers_manual_vision_smollm"
+class TransformersManualVisionGemmaLM(TransformersBaseLLM):
+    TAG = "llm_transformers_manual_vision_gemma3"
 
     def __init__(self, **args) -> None:
         self.args = TransformersLMArgs(**args)
-        gpu_prop = torch.cuda.get_device_properties("cuda")
 
         if self.args.lm_device_map:
-            self._model = AutoModelForImageTextToText.from_pretrained(
+            self._model = Gemma3ForConditionalGeneration.from_pretrained(
                 self.args.lm_model_name_or_path,
                 torch_dtype=torch.bfloat16,
                 #!NOTE: https://github.com/huggingface/transformers/issues/20896
                 # device_map for multi cpu/gpu with accelerate
                 device_map=self.args.lm_device_map,
-                attn_implementation="flash_attention_2" if gpu_prop.major >= 8 else None,
+                # attn_implementation="flash_attention_2",
                 trust_remote_code=True,
             ).eval()
         else:
             self._model = (
-                AutoModelForImageTextToText.from_pretrained(
+                Gemma3ForConditionalGeneration.from_pretrained(
                     self.args.lm_model_name_or_path,
                     torch_dtype=torch.bfloat16,
-                    attn_implementation="flash_attention_2" if gpu_prop.major >= 8 else None,
+                    # attn_implementation="flash_attention_2",
                     trust_remote_code=True,
                 )
                 .eval()
@@ -55,7 +54,18 @@ class TransformersManualVisionSmolLM(TransformersBaseLLM):
 
         logging.info(f"TransformersLMArgs: {self.args}")
         print_model_params(self._model, self.TAG)
-        self._tokenizer = AutoProcessor.from_pretrained(self.args.lm_model_name_or_path, use_fast=True)
+        self._tokenizer = AutoProcessor.from_pretrained(
+            self.args.lm_model_name_or_path, use_fast=True
+        )
+
+        self._chat_history = ChatHistory(self.args.chat_history_size)
+        if self.args.init_chat_role and self.args.init_chat_prompt:
+            self._chat_history.init(
+                {
+                    "role": self.args.init_chat_role,
+                    "content": [{"type": "text", "text": self.args.init_chat_prompt}],
+                }
+            )
 
         self.warmup()
 
@@ -90,9 +100,13 @@ class TransformersManualVisionSmolLM(TransformersBaseLLM):
         warmup_gen_kwargs = dict(
             **inputs,
             streamer=streamer,
-            do_sample=False,
+            do_sample=True if self.args.lm_gen_temperature > 0 else False,
+            temperature=self.args.lm_gen_temperature,
+            top_k=self.args.lm_gen_top_k,
+            top_p=self.args.lm_gen_top_p,
+            repetition_penalty=self.args.lm_gen_repetition_penalty,
             min_new_tokens=self.args.lm_gen_min_new_tokens,
-            max_new_tokens=self.args.lm_gen_max_new_tokens,
+            max_new_tokens=128,
         )
 
         self._warmup(
@@ -101,32 +115,19 @@ class TransformersManualVisionSmolLM(TransformersBaseLLM):
             streamer=streamer,
         )
 
-    @torch.inference_mode()
     def generate(self, session: Session, **kwargs):
         seed = kwargs.get("seed", self.args.lm_gen_seed)
         set_all_random_seed(seed)
 
         prompt = session.ctx.state["prompt"]
         assert len(prompt) > 0
-        text = prompt[0].get("text", "")
-        text = self.args.init_chat_prompt + text
-        if (
-            not self.args.lm_language_code
-            or self.args.lm_language_code not in TO_LLM_LANGUAGE.keys()
-        ):
-            self.args.lm_language_code = "zh"
-        if self.args.lm_language_code == "zh":
-            # NOTE: smol-vlm just do vision task, don't support to chat (Q/A task) need sft and do Pareto Front
-            text = (
-                self.args.init_chat_prompt if self.args.init_chat_prompt else "请用中文描述图片内容"
-            )
-        prompt[0]["text"] = text
-        logging.info(f"{prompt[0]=}")
 
         message = {"role": self.args.user_role, "content": prompt}
-        # logging.info(f"{message=}")
+        self._chat_history.append(message)
+        chat_history = self._chat_history.to_list()
+        logging.debug(f"chat_history:{chat_history}")
         inputs = self._tokenizer.apply_chat_template(
-            [message],
+            chat_history,
             add_generation_prompt=True,
             tokenize=True,
             return_dict=True,
@@ -141,11 +142,17 @@ class TransformersManualVisionSmolLM(TransformersBaseLLM):
         generation_kwargs = dict(
             **inputs,
             streamer=streamer,
-            do_sample=False,
+            do_sample=True
+            if kwargs.get("temperature", self.args.lm_gen_temperature) > 0
+            else False,
+            temperature=kwargs.get("temperature", self.args.lm_gen_temperature),
+            top_k=kwargs.get("top_k", self.args.lm_gen_top_k),
+            top_p=kwargs.get("top_p", self.args.lm_gen_top_p),
+            repetition_penalty=kwargs.get(
+                "repetition_penalty", self.args.lm_gen_repetition_penalty
+            ),
             min_new_tokens=kwargs.get("min_new_tokens", self.args.lm_gen_min_new_tokens),
             max_new_tokens=kwargs.get("max_new_tokens", self.args.lm_gen_max_new_tokens),
-            # 如果要使用重复惩罚, 虽然会解决重复, 但是会降低生成质量
-            repetition_penalty=1.1,
             use_cache=True,
         )
         thread = Thread(target=self._model.generate, kwargs=generation_kwargs)
@@ -154,10 +161,14 @@ class TransformersManualVisionSmolLM(TransformersBaseLLM):
         generated_text = ""
         start = perf_counter()
         times = []
-        for new_text in streamer:
-            times.append(perf_counter() - start)
-            generated_text += new_text
-            yield new_text
-            start = perf_counter()
+        with torch.inference_mode():
+            for new_text in streamer:
+                times.append(perf_counter() - start)
+                generated_text += new_text.replace("*", "")
+                yield new_text
+                start = perf_counter()
         logging.info(f"{generated_text=} TTFT: {times[0]:.4f}s total time: {sum(times):.4f}s")
+        self._chat_history.append(
+            {"role": "assistant", "content": [{"type": "text", "text": generated_text}]}
+        )
         torch.cuda.empty_cache()

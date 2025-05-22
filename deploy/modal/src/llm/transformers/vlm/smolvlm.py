@@ -79,6 +79,8 @@ def print_model_params(model: torch.nn.Module, extra_info=""):
 def dump_model(gpu_prop):
     for model_name in [
         "HuggingFaceTB/SmolVLM2-2.2B-Instruct",
+        "HuggingFaceTB/SmolVLM2-500M-Video-Instruct",
+        "HuggingFaceTB/SmolVLM2-256M-Video-Instruct",
     ]:
         model_path = os.path.join(HF_MODEL_DIR, model_name)
         processor = AutoProcessor.from_pretrained(model_path)
@@ -100,7 +102,8 @@ def dump_model(gpu_prop):
 # https://github.com/huggingface/smollm/tree/main/vision
 def predict(gpu_prop):
     # Load model
-    MODEL_PATH = os.path.join(HF_MODEL_DIR, os.getenv("LLM_MODEL"))
+    model_name = os.getenv("LLM_MODEL")
+    MODEL_PATH = os.path.join(HF_MODEL_DIR, model_name)
     processor = AutoProcessor.from_pretrained(MODEL_PATH)
     model = AutoModelForImageTextToText.from_pretrained(
         MODEL_PATH,
@@ -112,6 +115,7 @@ def predict(gpu_prop):
     print(f"{model.config=}")
     print(f"{processor=}")
     # print(f"{model=}")
+    print_model_params(model, f"{model_name}")
 
     # Construct prompt
     text = "请用中文描述图片内容"
@@ -242,6 +246,10 @@ def predict_stream(gpu_prop):
 IMAGE_GPU=T4 modal run src/llm/transformers/vlm/smolvlm.py --task dump_model
 IMAGE_GPU=T4 modal run src/llm/transformers/vlm/smolvlm.py --task predict
 IMAGE_GPU=T4 modal run src/llm/transformers/vlm/smolvlm.py --task predict_stream
+LLM_MODEL=HuggingFaceTB/SmolVLM2-500M-Video-Instruct IMAGE_GPU=T4 modal run src/llm/transformers/vlm/smolvlm.py --task predict
+LLM_MODEL=HuggingFaceTB/SmolVLM2-500M-Video-Instruct IMAGE_GPU=T4 modal run src/llm/transformers/vlm/smolvlm.py --task predict_stream
+LLM_MODEL=HuggingFaceTB/SmolVLM2-256M-Video-Instruct IMAGE_GPU=T4 modal run src/llm/transformers/vlm/smolvlm.py --task predict
+LLM_MODEL=HuggingFaceTB/SmolVLM2-256M-Video-Instruct IMAGE_GPU=T4 modal run src/llm/transformers/vlm/smolvlm.py --task predict_stream
 
 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/smolvlm.py --task predict
 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/smolvlm.py --task predict_stream
