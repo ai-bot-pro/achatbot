@@ -262,6 +262,15 @@ llm_transformers_manual_vision_gemma = [
     "achatbot[llm_transformers_manual_vision,accelerate]",
 ]
 
+# vision + audio -> text
+llm_transformers_manual_vision_audio_phi = [
+    "achatbot[torch_vision_audio,accelerate,soundfile]",
+    "transformers==4.48.2",
+    "backoff",
+    "peft",
+    "qwen-vl-utils",
+]
+
 # voice llm
 llm_transformers_manual_voice = [
     #"transformers@git+https://github.com/huggingface/transformers",
