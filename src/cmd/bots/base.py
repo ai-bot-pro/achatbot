@@ -418,6 +418,17 @@ class AIBot(IBot):
             llm_processor = VITAAudioVoiceProcessor()
         return llm_processor
 
+    def get_audio_phi4_speech_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
+        from src.processors.voice.phi4_speech_processor import Phi4AudioTextProcessor
+
+        if not llm:
+            llm = self._bot_config.voice_llm
+        if llm.args:
+            llm_processor = Phi4AudioTextProcessor(**llm.args)
+        else:
+            llm_processor = Phi4AudioTextProcessor()
+        return llm_processor
+
     def get_minicpmo_vision_voice_processor(
         self, llm: LLMConfig | None = None
     ) -> VisionVoiceProcessorBase:
@@ -448,6 +459,22 @@ class AIBot(IBot):
             llm_processor = Qwen2_5OmnVisionVoiceProcessor(**llm.args)
         else:
             llm_processor = Qwen2_5OmnVisionVoiceProcessor()
+        return llm_processor
+
+    def get_phi4_vision_speech_processor(
+        self, llm: LLMConfig | None = None
+    ) -> VisionVoiceProcessorBase:
+        from src.processors.omni.phi4_vision_speech import Phi4VisionSpeechProcessor
+        from src.processors.omni.base import MockVisionVoiceProcessor
+
+        if not llm:
+            llm = self._bot_config.omni_llm
+        if "mock" in llm.tag:
+            return MockVisionVoiceProcessor()
+        if llm.args:
+            llm_processor = Phi4VisionSpeechProcessor(**llm.args)
+        else:
+            llm_processor = Phi4VisionSpeechProcessor()
         return llm_processor
 
     def get_text_glm_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:

@@ -61,6 +61,8 @@ class LLMEnvInit:
             from .transformers import manual_vision_voice_minicpmo
         elif "llm_transformers_manual_qwen2_5omni" in tag:
             from .transformers import manual_vision_voice_qwen
+        elif "llm_transformers_manual_phi4" in tag:
+            from .transformers import manual_vision_speech_phi
         elif "llm_transformers_manual" == tag:
             from .transformers import manual
         elif "llm_transformers_pipeline" == tag:
@@ -443,6 +445,10 @@ class LLMEnvInit:
         "llm_transformers_manual_vision_janus_flow": get_llm_transformers_args,
         "llm_transformers_manual_image_janus_flow": get_llm_transformers_manual_image_janus_flow_args,
         "llm_transformers_manual_vision_minicpmo": get_llm_transformers_args,
+        "llm_transformers_manual_phi4_vision_speech": get_llm_transformers_args,
+        "llm_transformers_manual_phi4_vision": get_llm_transformers_args,
+        "llm_transformers_manual_phi4_audio_asr": get_llm_transformers_args,
+        "llm_transformers_manual_phi4_audio_translation": get_llm_transformers_args,
         "llm_transformers_manual_qwen2_5omni": get_qwen2_5omni_transformers_args,
         "llm_transformers_manual_qwen2_5omni_vision": get_qwen2_5omni_transformers_args,
         "llm_transformers_manual_qwen2_5omni_audio": get_qwen2_5omni_transformers_args,

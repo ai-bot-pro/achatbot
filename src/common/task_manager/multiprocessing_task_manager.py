@@ -1,5 +1,6 @@
 import logging
 import multiprocessing
+import traceback
 
 from src.common.task_manager.base import Task, TaskManager
 
@@ -28,6 +29,8 @@ class MultiprocessingTaskManager(TaskManager):
                     proc.join(timeout=self._task_done_timeout)
                     proc.close()
                     logging.info(f"pid:{pid} tag:{tag} proc: {proc} close")
+                    trace_info = traceback.format_exc()
+                    logging.info(f"{trace_info=}")
                 else:
                     logging.warning(f"pid:{pid} tag:{tag} proc: {proc} already closed")
             except Exception as e:
