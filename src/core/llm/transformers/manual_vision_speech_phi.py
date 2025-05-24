@@ -244,6 +244,13 @@ class TransformersManualAudioPhiLM(TransformersManualVisionSpeechPhiLM):
         "llm_transformers_manual_phi4_audio_translation",
     ]
 
+    def generate(self, session: Session, **kwargs):
+        for item in super().generate(session, **kwargs):
+            text = item.pop("text", "")
+            if text == "":
+                continue
+            yield text
+
 
 class TransformersManualVisionPhiLM(TransformersManualVisionSpeechPhiLM):
     """

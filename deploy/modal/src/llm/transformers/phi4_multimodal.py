@@ -718,7 +718,7 @@ def multi_turn_vision_speech2text_stream(gpu_prop):
 
 
 def cover_chat(chat: list):
-    #print(chat)
+    # print(chat)
     audio_cn = 0
     image_cn = 0
     for item in chat:
@@ -898,7 +898,7 @@ def tokenize_debug(gpu_prop):
 """
 language:
 - Text: Arabic, Chinese, Czech, Danish, Dutch, English, Finnish, French, German, Hebrew, Hungarian, Italian, Japanese, Korean, Norwegian, Polish, Portuguese, Russian, Spanish, Swedish, Thai, Turkish, Ukrainian
-- Vision: English (NOTE:images+text -> english text, so don't support chinese text output)
+- Vision: English 
 - Audio: English, Chinese, German, French, Italian, Japanese, Spanish, Portuguese
 
 # multimmodal input formats:
