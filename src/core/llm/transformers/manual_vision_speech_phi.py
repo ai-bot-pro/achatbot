@@ -264,3 +264,15 @@ class TransformersManualVisionPhiLM(TransformersManualVisionSpeechPhiLM):
     def generate(self, session: Session, **kwargs):
         for item in super().generate(session, **kwargs):
             yield item["text"]
+
+
+class TransformersManualAudioChatPhiLM(TransformersManualVisionSpeechPhiLM):
+    """
+    audio chat
+
+    - speech -> text
+    """
+
+    TAG = [
+        "llm_transformers_manual_phi4_audio_chat",
+    ]
