@@ -127,6 +127,10 @@ def import_bots(bot_name: str = "DummyBot"):
         from .voice import daily_asr_step_voice_bot
 
         return True
+    if "DailyPhi4VisionSpeechBot" in bot_name:
+        from .omni import daily_phi4_vision_speech_bot
+
+        return True
     if "LivekitBot" in bot_name:
         from . import livekit_bot
 

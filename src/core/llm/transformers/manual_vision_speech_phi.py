@@ -1,3 +1,4 @@
+import copy
 import logging
 from threading import Thread
 from PIL import Image
@@ -31,7 +32,7 @@ from .base import TransformersBaseLLM
 
 
 class TransformersManualVisionSpeechPhiLM(TransformersBaseLLM):
-    TAG = "llm_transformers_manual_vision_speech_phi4"
+    TAG = "llm_transformers_manual_ph4_vision_speech"
 
     def __init__(self, **args) -> None:
         self.args = TransformersLMArgs(**args)
@@ -90,22 +91,7 @@ class TransformersManualVisionSpeechPhiLM(TransformersBaseLLM):
                 ],
             }
         ]
-
-        # text tokenizer
-        prompt = self._tokenizer.tokenizer.apply_chat_template(
-            dummy_msgs, tokenize=False, add_generation_prompt=True
-        )
-
-        # need to remove last <|endoftext|> if it is there, which is used for training, not inference. For training, make sure to add <|endoftext|> in the end.
-        if prompt.endswith("<|endoftext|>"):
-            prompt = prompt.rstrip("<|endoftext|>")
-
-        # text and image tokenizer
-        inputs = self._tokenizer(
-            text=prompt,
-            images=dummy_pil_image,
-            return_tensors="pt",
-        ).to("cuda", dtype=torch.bfloat16)
+        inputs = self.get_inputs(dummy_msgs)
 
         streamer = TextIteratorStreamer(self._tokenizer, skip_prompt=True, skip_special_tokens=True)
 
@@ -128,62 +114,79 @@ class TransformersManualVisionSpeechPhiLM(TransformersBaseLLM):
         )
 
     def cover_chat(self, chat: list):
+        new_chat = []
+        audio_cn = 0
+        image_cn = 0
         for item in chat:
-            audio_cn = 0
-            image_cn = 0
+            new_chat.append(copy.deepcopy(item))
             tmp_text = ""
             tmp_content = ""
+            sub_audio_cn = 0
+            sub_image_cn = 0
             if "content" in item and isinstance(item["content"], list):
                 for c_item in item["content"]:
                     assert isinstance(c_item, dict)
                     if "text" in c_item:
                         tmp_text = c_item["text"]
                     if "image" in c_item:
-                        image_cn += 1
+                        sub_image_cn += 1
                     if "audio" in c_item:
-                        audio_cn += 1
-                for i in range(image_cn):
+                        sub_audio_cn += 1
+                image_cn += sub_image_cn
+                audio_cn += sub_audio_cn
+                for i in range(image_cn - sub_image_cn, image_cn):
                     tmp_content += f"<|image_{i+1}|>"
-                for i in range(audio_cn):
+                for i in range(audio_cn - sub_audio_cn, audio_cn):
                     tmp_content += f"<|audio_{i+1}|>"
                 if tmp_text:
                     tmp_content += tmp_text
-                item["content"] = tmp_content
+                new_chat[-1]["content"] = tmp_content
 
-        return chat
+        return new_chat
 
     # https://huggingface.co/microsoft/Phi-4-multimodal-instruct#input-formats
-    def get_inputs(self, chat: list, **kwargs):
-        audios, images, videos = process_mm_info(chat, use_audio_in_video=False)
+    def get_inputs(self, chat: list):
+        audios, images, _ = process_mm_info(chat, use_audio_in_video=False)
         # text promt
         chat = self.cover_chat(chat)
-        print(chat)
+        # print(chat)
         prompt = self._tokenizer.tokenizer.apply_chat_template(
             chat, tokenize=False, add_generation_prompt=True
         )
         # need to remove last <|endoftext|> if it is there, which is used for training, not inference. For training, make sure to add <|endoftext|> in the end.
         if prompt.endswith("<|endoftext|>"):
             prompt = prompt.rstrip("<|endoftext|>")
-        # print(f">>> Prompt\n{prompt}")
+        logging.info(f"{prompt=}")
 
+        if audios is not None:
+            new_audios = []
+            for audio in audios:
+                new_audios.append((audio, 16000))
+            audios = new_audios if new_audios else None
+
+        {
+            logging.debug(f"audios[{i}]: {item.shape}") for i, item in enumerate(audios)
+        } if audios else logging.debug(audios)
+        {
+            logging.debug(f"images[{i}]: {item}") for i, item in enumerate(images)
+        } if images else logging.debug(images)
         # tokenize (tokens -> token_ids)
-        new_audios = []
-        for audio in audios:
-            new_audios.append((audio, 16000))
-        inputs = self._tokenizer(
-            text=prompt, images=images, audios=new_audios, return_tensors="pt"
-        ).to(self._model.device, dtype=torch.bfloat16)
+        inputs = self._tokenizer(text=prompt, images=images, audios=audios, return_tensors="pt").to(
+            self._model.device, dtype=torch.bfloat16
+        )
         for key, value in inputs.items():
             if value is not None:
-                # print(f"{key}: {value.shape=}")
+                logging.info(f"{key}: {value.shape=}")
                 pass
         return inputs
 
+    @torch.inference_mode()
     def generate(self, session: Session, **kwargs):
         seed = kwargs.get("seed", self.args.lm_gen_seed)
         set_all_random_seed(seed)
 
         prompt = session.ctx.state["prompt"]
+        # logging.info(prompt)
         assert len(prompt) > 0
         assert isinstance(prompt[0], dict)
         message = {"role": self.args.user_role, "content": prompt}
@@ -191,7 +194,7 @@ class TransformersManualVisionSpeechPhiLM(TransformersBaseLLM):
         chat_history = self._chat_history.to_list()
         logging.debug(f"chat_history:{chat_history}")
 
-        inputs = self.get_inputs(chat_history, **kwargs)
+        inputs = self.get_inputs(chat_history)
 
         streamer = TextIteratorStreamer(self._tokenizer, skip_prompt=True, skip_special_tokens=True)
 
@@ -220,11 +223,38 @@ class TransformersManualVisionSpeechPhiLM(TransformersBaseLLM):
         with torch.inference_mode():
             for new_text in streamer:
                 times.append(perf_counter() - start)
-                generated_text += new_text.replace("*", "")
-                yield new_text
+                generated_text += new_text
+                yield {"text": new_text.replace("*", "")}
                 start = perf_counter()
         logging.info(f"{generated_text=} TTFT: {times[0]:.4f}s total time: {sum(times):.4f}s")
         self._chat_history.append(
             {"role": "assistant", "content": [{"type": "text", "text": generated_text}]}
         )
         torch.cuda.empty_cache()
+
+
+class TransformersManualAudioPhiLM(TransformersManualVisionSpeechPhiLM):
+    """
+    audio understanding
+
+    - speech -> text
+    """
+
+    TAG = [
+        "llm_transformers_manual_phi4_audio_asr",
+        "llm_transformers_manual_phi4_audio_translation",
+    ]
+
+
+class TransformersManualVisionPhiLM(TransformersManualVisionSpeechPhiLM):
+    """
+    vision understanding
+
+    - vision(image) -> text
+    """
+
+    TAG = "llm_transformers_manual_phi4_vision"
+
+    def generate(self, session: Session, **kwargs):
+        for item in super().generate(session, **kwargs):
+            yield item["text"]

@@ -384,7 +384,7 @@ def multi_turn_vision2text(gpu_prop):
             "role": "assistant",
             "content": "The image depicts a street scene with a prominent red stop sign in the foreground. The background showcases a building with traditional Chinese architecture, characterized by its red roof and ornate decorations. There are also several statues of lions, which are common in Chinese culture, positioned in front of the building. The street is lined with various shops and businesses, and there's a car passing by.",
         },
-        {"role": "user", "content": "What is so special about this image"},
+        {"role": "user", "content": "<|image_2|>What is so special about this image"},
     ]
     prompt = processor.tokenizer.apply_chat_template(
         chat, tokenize=False, add_generation_prompt=True
@@ -397,7 +397,7 @@ def multi_turn_vision2text(gpu_prop):
 
     url = "https://www.ilankelman.org/stopsigns/australia.jpg"
     image = Image.open(requests.get(url, stream=True).raw)
-    inputs = processor(text=prompt, images=image, return_tensors="pt").to("cuda")
+    inputs = processor(text=prompt, images=[image, image], return_tensors="pt").to("cuda")
     for key, value in inputs.items():
         if value is not None:
             print(f"{key}: {value.shape=}")
@@ -611,7 +611,7 @@ def multi_turn_vision_speech2text(gpu_prop):
     inputs = processor(
         text=prompt,
         images=[image],
-        #audios=[(audio_1[0], 16000), (audio_2[0], 16000)],
+        # audios=[(audio_1[0], 16000), (audio_2[0], 16000)],
         audios=[audio_1, audio_2],
         return_tensors="pt",
     ).to("cuda")
@@ -718,23 +718,28 @@ def multi_turn_vision_speech2text_stream(gpu_prop):
 
 
 def cover_chat(chat: list):
+    #print(chat)
+    audio_cn = 0
+    image_cn = 0
     for item in chat:
-        audio_cn = 0
-        image_cn = 0
         tmp_text = ""
         tmp_content = ""
+        sub_audio_cn = 0
+        sub_image_cn = 0
         if "content" in item and isinstance(item["content"], list):
             for c_item in item["content"]:
                 assert isinstance(c_item, dict)
                 if "text" in c_item:
                     tmp_text = c_item["text"]
                 if "image" in c_item:
-                    image_cn += 1
+                    sub_image_cn += 1
                 if "audio" in c_item:
-                    audio_cn += 1
-            for i in range(image_cn):
+                    sub_audio_cn += 1
+            image_cn += sub_image_cn
+            audio_cn += sub_audio_cn
+            for i in range(image_cn - sub_image_cn, image_cn):
                 tmp_content += f"<|image_{i+1}|>"
-            for i in range(audio_cn):
+            for i in range(audio_cn - sub_audio_cn, audio_cn):
                 tmp_content += f"<|audio_{i+1}|>"
             if tmp_text:
                 tmp_content += tmp_text
@@ -817,6 +822,79 @@ def tokenize(gpu_prop):
     print(f"{prompt=}")
 
 
+def tokenize_debug(gpu_prop):
+    model_name = os.getenv("LLM_MODEL", "microsoft/Phi-4-multimodal-instruct")
+    model_path = os.path.join(HF_MODEL_DIR, model_name)
+    url = "https://www.ilankelman.org/stopsigns/australia.jpg"
+    image = Image.open(requests.get(url, stream=True).raw)
+    print(image)
+    chat = [
+        {"role": "system", "content": "请用中文交流"},
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "你好"},
+                {"type": "image", "image": image},
+            ],
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Hello! Is there something specific you would like to know or discuss?",
+                }
+            ],
+        },
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "你叫什么名字"},
+                {"type": "image", "image": image},
+            ],
+        },
+    ]
+    # mm prompt
+    audios, images, videos = process_mm_info(chat, use_audio_in_video=False)
+    {print(f"audios[{i}]: {item.shape}") for i, item in enumerate(audios)} if audios else print(
+        audios
+    )
+    {print(f"images[{i}]: {item}") for i, item in enumerate(images)} if images else print(images)
+    {print(f"videos[{i}]: {item.shape}") for i, item in enumerate(videos)} if videos else print(
+        videos
+    )
+
+    # text promt
+    chat = cover_chat(chat)
+    # print(chat)
+    processor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True, use_fast=True)
+    prompt = processor.tokenizer.apply_chat_template(
+        chat, tokenize=False, add_generation_prompt=True
+    )
+    # need to remove last <|endoftext|> if it is there, which is used for training, not inference. For training, make sure to add <|endoftext|> in the end.
+    if prompt.endswith("<|endoftext|>"):
+        prompt = prompt.rstrip("<|endoftext|>")
+    print(f"{prompt=}")
+
+    # tokenize (tokens -> token_ids)
+    if audios:
+        new_audios = []
+        for audio in audios:
+            new_audios.append((audio, 16000))
+        audios = new_audios if new_audios else None
+    inputs = processor(text=prompt, images=images, audios=audios, return_tensors="pt").to(
+        "cuda" if gpu_prop else "cpu", dtype=torch.bfloat16
+    )
+    for key, value in inputs.items():
+        if value is not None:
+            print(f"{key}: {value.shape=}")
+    input_ids = inputs["input_ids"]
+
+    # text token
+    prompt = processor.decode(input_ids[0])
+    print(f"{prompt=}")
+
+
 """
 language:
 - Text: Arabic, Chinese, Czech, Danish, Dutch, English, Finnish, French, German, Hebrew, Hungarian, Italian, Japanese, Korean, Norwegian, Polish, Portuguese, Russian, Spanish, Swedish, Thai, Turkish, Ukrainian
@@ -828,6 +906,7 @@ language:
 
 modal run src/download_models.py --repo-ids "microsoft/Phi-4-mini-instruct,microsoft/Phi-4-multimodal-instruct"
 
+IMAGE_GPU=T4 modal run src/llm/transformers/phi4_multimodal.py --task tokenize_debug
 IMAGE_GPU=T4 modal run src/llm/transformers/phi4_multimodal.py --task tokenize
 IMAGE_GPU=T4 modal run src/llm/transformers/phi4_multimodal.py --task dump_model
 
@@ -851,6 +930,7 @@ IMAGE_GPU=L4 modal run src/llm/transformers/phi4_multimodal.py --task multi_turn
 def main(task: str = "dump_model"):
     tasks = {
         "dump_model": dump_model,
+        "tokenize_debug": tokenize_debug,
         "tokenize": tokenize,
         "text2text": text2text,
         "text2text_stream": text2text_stream,

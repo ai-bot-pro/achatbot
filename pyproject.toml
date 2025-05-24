@@ -16,7 +16,6 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-# todo
 version = "0.0.12"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
@@ -263,18 +262,18 @@ llm_transformers_manual_vision_gemma = [
 ]
 
 # vision + audio -> text
-llm_transformers_manual_vision_audio_phi = [
+llm_transformers_manual_vision_speech_phi = [
     "achatbot[torch_vision_audio,accelerate,soundfile]",
     "transformers==4.48.2",
     "backoff",
     "peft",
-    "qwen-vl-utils",
+    "qwen-omni-utils",
 ]
 
 # voice llm
 llm_transformers_manual_voice = [
     #"transformers@git+https://github.com/huggingface/transformers",
-    # https://github.com/huggingface/transformers/releases/tag/v4.45.transformers~=4.45.2
+    # https://github.com/huggingface/transformers/releases/tag/v4.45.2
     "transformers~=4.45.2",
     "torch~=2.2.2",
     "torchaudio~=2.2.2",

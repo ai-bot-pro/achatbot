@@ -450,6 +450,22 @@ class AIBot(IBot):
             llm_processor = Qwen2_5OmnVisionVoiceProcessor()
         return llm_processor
 
+    def get_phi4_vision_speech_processor(
+        self, llm: LLMConfig | None = None
+    ) -> VisionVoiceProcessorBase:
+        from src.processors.omni.phi4_vision_speech import Phi4VisionSpeechProcessor
+        from src.processors.omni.base import MockVisionVoiceProcessor
+
+        if not llm:
+            llm = self._bot_config.omni_llm
+        if "mock" in llm.tag:
+            return MockVisionVoiceProcessor()
+        if llm.args:
+            llm_processor = Phi4VisionSpeechProcessor(**llm.args)
+        else:
+            llm_processor = Phi4VisionSpeechProcessor()
+        return llm_processor
+
     def get_text_glm_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
         from src.processors.voice.glm_voice_processor import GLMTextVoiceProcessor
 
