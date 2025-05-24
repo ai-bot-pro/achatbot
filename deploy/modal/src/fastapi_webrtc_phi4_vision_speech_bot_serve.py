@@ -19,8 +19,8 @@ phi4_img = (
             "llm_transformers_manual_vision_speech_phi,"
             "tts_edge,"
             "queue"
-            # f"]=={achatbot_version}",
-            "]==0.0.12.dev42",
+            f"]=={achatbot_version}",
+            # "]==0.0.12.dev42",
         ],
         extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
     )

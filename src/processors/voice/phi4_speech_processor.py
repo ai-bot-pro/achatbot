@@ -128,7 +128,7 @@ class Phi4AudioTextProcessor(Phi4SpeechProcessor):
         if isinstance(frame, PathAudioRawFrame):
             audio_nparr, _ = librosa.load(frame.path, sr=16000, mono=True)
         else:
-            audio_nparr = bytes2NpArrayWith16(frame.audio.audio)
+            audio_nparr = bytes2NpArrayWith16(frame.audio)
         self._session.ctx.state["prompt"] = [{"type": "audio", "audio": audio_nparr}]
         self.send_input(self._session)
         async for item in self.gen():
