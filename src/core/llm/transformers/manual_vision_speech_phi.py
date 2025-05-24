@@ -10,7 +10,6 @@ try:
     from transformers import (
         AutoModelForCausalLM,
         AutoProcessor,
-        GenerationConfig,
         TextIteratorStreamer,
     )
 
@@ -147,6 +146,13 @@ class TransformersManualVisionSpeechPhiLM(TransformersBaseLLM):
     # https://huggingface.co/microsoft/Phi-4-multimodal-instruct#input-formats
     def get_inputs(self, chat: list):
         audios, images, _ = process_mm_info(chat, use_audio_in_video=False)
+        {
+            logging.debug(f"audios[{i}]: {item.shape}") for i, item in enumerate(audios)
+        } if audios else logging.debug(audios)
+        {
+            logging.debug(f"images[{i}]: {item}") for i, item in enumerate(images)
+        } if images else logging.debug(images)
+
         # text promt
         chat = self.cover_chat(chat)
         # print(chat)
@@ -163,13 +169,6 @@ class TransformersManualVisionSpeechPhiLM(TransformersBaseLLM):
             for audio in audios:
                 new_audios.append((audio, 16000))
             audios = new_audios if new_audios else None
-
-        {
-            logging.debug(f"audios[{i}]: {item.shape}") for i, item in enumerate(audios)
-        } if audios else logging.debug(audios)
-        {
-            logging.debug(f"images[{i}]: {item}") for i, item in enumerate(images)
-        } if images else logging.debug(images)
         # tokenize (tokens -> token_ids)
         inputs = self._tokenizer(text=prompt, images=images, audios=audios, return_tensors="pt").to(
             self._model.device, dtype=torch.bfloat16
