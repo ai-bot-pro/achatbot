@@ -16,7 +16,6 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-# todo
 version = "0.0.12"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
@@ -262,10 +261,19 @@ llm_transformers_manual_vision_gemma = [
     "achatbot[llm_transformers_manual_vision,accelerate]",
 ]
 
+# vision + audio -> text
+llm_transformers_manual_vision_speech_phi = [
+    "achatbot[torch_vision_audio,accelerate,soundfile]",
+    "transformers==4.48.2",
+    "backoff",
+    "peft",
+    "qwen-omni-utils",
+]
+
 # voice llm
 llm_transformers_manual_voice = [
     #"transformers@git+https://github.com/huggingface/transformers",
-    # https://github.com/huggingface/transformers/releases/tag/v4.45.transformers~=4.45.2
+    # https://github.com/huggingface/transformers/releases/tag/v4.45.2
     "transformers~=4.45.2",
     "torch~=2.2.2",
     "torchaudio~=2.2.2",
@@ -335,10 +343,7 @@ llm_transformers_manual_voice_kimi = [
     "timm",
 ]
 llm_transformers_manual_voice_vita = [
-    "achatbot[accelerate,librosa,soundfile,conf]",
-    "torch~=2.6.0",
-    "torchaudio~=2.6.0",
-    "torchvision~=0.21.0",
+    "achatbot[torch_vision_audio,accelerate,librosa,soundfile,conf]",
     # https://github.com/huggingface/transformers/tags
     "transformers",     # use latest version, preview can see some new models
     "tiktoken",
