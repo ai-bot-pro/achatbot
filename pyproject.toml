@@ -343,10 +343,7 @@ llm_transformers_manual_voice_kimi = [
     "timm",
 ]
 llm_transformers_manual_voice_vita = [
-    "achatbot[accelerate,librosa,soundfile,conf]",
-    "torch~=2.6.0",
-    "torchaudio~=2.6.0",
-    "torchvision~=0.21.0",
+    "achatbot[torch_vision_audio,accelerate,librosa,soundfile,conf]",
     # https://github.com/huggingface/transformers/tags
     "transformers",     # use latest version, preview can see some new models
     "tiktoken",

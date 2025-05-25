@@ -95,7 +95,7 @@ class Phi4SpeechProcessor(VoiceProcessorBase):
                     await self.push_frame(
                         AudioRawFrame(
                             audio=audio_bytes,
-                            sample_rate=self._model.RATE,
+                            sample_rate=RATE,  # default sample rate, now only support text output, no audio
                         )
                     )
                 yield None

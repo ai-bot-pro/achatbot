@@ -13,15 +13,15 @@ from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR
 from src.modules.speech.asr import ASREnvInit
 
 r"""
-LLM_MODEL_NAME_OR_PATH=./models/microsoft/Phi-4-mini-instruct \
+LLM_MODEL_NAME_OR_PATH=./models/microsoft/Phi-4-multimodal-instruct \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
     python -m unittest test.modules.speech.asr.test_phi4_asr.TestPhi4ASR.test_transcribe_stream
 
-LLM_MODEL_NAME_OR_PATH=./models/microsoft/Phi-4-mini-instruct \
+LLM_MODEL_NAME_OR_PATH=./models/microsoft/Phi-4-multimodal-instruct \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
     python -m unittest test.modules.speech.asr.test_phi4_asr.TestPhi4ASR.test_transcribe
 
-LLM_MODEL_NAME_OR_PATH=./models/microsoft/Phi-4-mini-instruct \
+LLM_MODEL_NAME_OR_PATH=./models/microsoft/Phi-4-multimodal-instruct \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
     python -m unittest test.modules.speech.asr.test_phi4_asr.TestPhi4ASR.test_transcribe_with_bytes
 """

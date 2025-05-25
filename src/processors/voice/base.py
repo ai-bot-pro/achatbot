@@ -36,7 +36,9 @@ class VoiceProcessorBase(AsyncAIProcessor):
         return {"sample_rate": RATE, "channels": CHANNELS}
 
     async def say(self, text: str):
+        # @TODO: implement tts and audio gen, if model support tts task
         logging.info(f"say: {text}")
+
     async def run_voice(self, frame: AudioRawFrame) -> AsyncGenerator[Frame, None]:
         """
         yield AudioRawFrame | AudioRawFrame + TextFrame async generator or None (internal push/queue frame)

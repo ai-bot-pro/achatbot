@@ -31,7 +31,7 @@ from .base import TransformersBaseLLM
 
 
 class TransformersManualVisionSpeechPhiLM(TransformersBaseLLM):
-    TAG = "llm_transformers_manual_ph4_vision_speech"
+    TAG = "llm_transformers_manual_phi4_vision_speech"
 
     def __init__(self, **args) -> None:
         self.args = TransformersLMArgs(**args)
