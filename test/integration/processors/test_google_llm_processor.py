@@ -179,7 +179,8 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
 
     def get_google_llm_processor(self) -> LLMProcessor:
         api_key = os.environ.get("GOOGLE_API_KEY")
-        model = os.environ.get("MODEL", "gemini-1.5-flash-latest")
+        # https://ai.google.dev/gemini-api/docs/models?hl=zh-cn#model-variations
+        model = os.environ.get("MODEL", "gemini-2.5-flash-preview-04-17")
         config = {
             "api_key": api_key,
             "model": model,

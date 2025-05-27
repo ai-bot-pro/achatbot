@@ -91,6 +91,9 @@ torch_vision_audio = [
     "torchaudio~=2.6.0",
     "torchvision~=0.21.0",
 ]
+# https://github.com/modelcontextprotocol
+# https://github.com/modelcontextprotocol/python-sdk
+mcp = ["mcp[cli]~=1.9.1"]
 
 
 # diffusers DiT with quantizing model

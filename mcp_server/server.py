@@ -1,0 +1,188 @@
+import click
+import anyio
+import logging
+import contextlib
+from collections.abc import AsyncIterator
+
+
+from . import app, logger
+from .prompts import *
+from .resources import *
+from .tools import *
+
+
+def run_stdio():
+    # https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#stdio
+    from mcp.server.stdio import stdio_server
+
+    async def arun():
+        async with stdio_server() as streams:
+            await app.run(streams[0], streams[1], app.create_initialization_options())
+
+    anyio.run(arun)
+
+
+def run_state_streamable_http(port: int = 8000, json_response: bool = False):
+    import uvicorn
+    from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
+    from starlette.applications import Starlette
+    from starlette.routing import Mount
+    from starlette.types import Receive, Scope, Send
+
+    from .common.event_store import InMemoryEventStore
+
+    # Create event store for resumability
+    # The InMemoryEventStore enables resumability support for StreamableHTTP transport.
+    # It stores SSE events with unique IDs, allowing clients to:
+    #   1. Receive event IDs for each SSE message
+    #   2. Resume streams by sending Last-Event-ID in GET requests
+    #   3. Replay missed events after reconnection
+    # Note: This in-memory implementation is for demonstration ONLY.
+    # For production, use a persistent storage solution.
+    event_store = InMemoryEventStore()
+
+    # Create the session manager with our app and event store
+    session_manager = StreamableHTTPSessionManager(
+        app=app,
+        event_store=event_store,  # Enable resumability
+        json_response=json_response,
+    )
+
+    # ASGI handler for streamable HTTP connections
+    async def handle_streamable_http(scope: Scope, receive: Receive, send: Send) -> None:
+        await session_manager.handle_request(scope, receive, send)
+
+    @contextlib.asynccontextmanager
+    async def lifespan(app: Starlette) -> AsyncIterator[None]:
+        """Context manager for managing session manager lifecycle."""
+        async with session_manager.run():
+            logger.info("Application started with StreamableHTTP session manager!")
+            try:
+                yield
+            finally:
+                logger.info("Application shutting down...")
+
+    # Create an ASGI application using the transport
+    starlette_app = Starlette(
+        debug=True,
+        routes=[
+            Mount("/mcp", app=handle_streamable_http),
+        ],
+        lifespan=lifespan,
+    )
+
+    uvicorn.run(starlette_app, host="127.0.0.1", port=port)
+
+
+def run_stateless_streamable_http(port: int = 8000, json_response: bool = False):
+    import uvicorn
+    from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
+    from starlette.applications import Starlette
+    from starlette.routing import Mount
+    from starlette.types import Receive, Scope, Send
+
+    # Create the session manager with true stateless mode
+    session_manager = StreamableHTTPSessionManager(
+        app=app,
+        event_store=None,
+        json_response=json_response,
+        stateless=True,
+    )
+
+    async def handle_streamable_http(scope: Scope, receive: Receive, send: Send) -> None:
+        await session_manager.handle_request(scope, receive, send)
+
+    @contextlib.asynccontextmanager
+    async def lifespan(app: Starlette) -> AsyncIterator[None]:
+        """Context manager for session manager."""
+        async with session_manager.run():
+            logger.info("Application started with StreamableHTTP session manager!")
+            try:
+                yield
+            finally:
+                logger.info("Application shutting down...")
+
+    # Create an ASGI application using the transport
+    starlette_app = Starlette(
+        debug=True,
+        routes=[
+            Mount("/mcp", app=handle_streamable_http),
+        ],
+        lifespan=lifespan,
+    )
+
+    uvicorn.run(starlette_app, host="127.0.0.1", port=port)
+
+
+def run_sse(port: int):
+    # https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http
+    # https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#backwards-compatibility
+    from mcp.server.sse import SseServerTransport
+    from starlette.applications import Starlette
+    from starlette.responses import Response
+    from starlette.routing import Mount, Route
+    import uvicorn
+
+    sse = SseServerTransport("/messages/")
+
+    async def handle_sse(request):
+        async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
+            await app.run(streams[0], streams[1], app.create_initialization_options())
+        return Response()
+
+    starlette_app = Starlette(
+        debug=True,
+        routes=[
+            Route("/sse", endpoint=handle_sse, methods=["GET"]),
+            Mount("/messages/", app=sse.handle_post_message),
+        ],
+    )
+
+    uvicorn.run(starlette_app, host="127.0.0.1", port=port)
+
+
+@click.command()
+@click.option(
+    "--port",
+    default=8000,
+    help="Port to listen on for SSE or state-streamable-http, stateless-streamable-http",
+)
+@click.option(
+    "--transport",
+    type=click.Choice(["stdio", "sse", "state-streamable-http", "stateless-streamable-http"]),
+    default="stdio",
+    help="Transport type",
+)
+@click.option(
+    "--log-level",
+    default="INFO",
+    help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+)
+@click.option(
+    "--json-response",
+    is_flag=True,
+    default=False,
+    help="Enable JSON responses instead of SSE streams",
+)
+def main(
+    port: int,
+    transport: str,
+    log_level: str,
+    json_response: bool,
+) -> int:
+    # Configure logging
+    logging.basicConfig(
+        level=getattr(logging, log_level.upper()),
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+
+    if transport == "sse":
+        run_sse(port)
+    elif transport == "state-streamable-http":
+        run_state_streamable_http(port=port, json_response=json_response)
+    elif transport == "stateless-streamable-http":
+        run_stateless_streamable_http(port=port, json_response=json_response)
+    else:
+        run_stdio()
+
+    return 0
