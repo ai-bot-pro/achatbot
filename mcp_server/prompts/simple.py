@@ -1,5 +1,4 @@
 import mcp.types as types
-from mcp.server.lowlevel import Server
 
 from .prompt_register import prompts
 
@@ -37,7 +36,6 @@ def create_messages(
 
 @prompts.register("simple")
 async def get_prompt(
-    app: Server,
     arguments: dict[str, str] | None = None,
 ) -> types.GetPromptResult:
     if arguments is None:

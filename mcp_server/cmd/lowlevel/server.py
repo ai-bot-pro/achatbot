@@ -8,11 +8,11 @@ from pydantic import AnyUrl
 from mcp.server.lowlevel import Server
 import mcp.types as types
 
-from .resources.resource_register import resources, resource_list
-from .tools.tool_register import functions, tool_list
-from .prompts.prompt_register import prompts, prompt_list
+from mcp_server.resources.resource_register import resources, resource_list
+from mcp_server.tools.tool_register import functions, tool_list
+from mcp_server.prompts.prompt_register import prompts, prompt_list
 
-app = Server("mcp-tools")
+app = Server("lowlevel-mcp-tools")
 
 
 @app.list_resources()
@@ -41,7 +41,7 @@ async def get_prompt(
     logging.info(f"{prompts.dict()=}")
     if name not in prompts.keys():
         raise ValueError(f"Unknown prompt: {name}")
-    return await prompts[name](app, arguments)
+    return await prompts[name](arguments)
 
 
 @app.list_tools()
@@ -77,7 +77,7 @@ def run_state_streamable_http(port: int = 8000, json_response: bool = False):
     from starlette.routing import Mount
     from starlette.types import Receive, Scope, Send
 
-    from .common.event_store import InMemoryEventStore
+    from mcp_server.common.event_store import InMemoryEventStore
 
     # Create event store for resumability
     # The InMemoryEventStore enables resumability support for StreamableHTTP transport.
