@@ -79,7 +79,7 @@ class MCPClient(EventHandlerManager):
             function_name: str,
             tool_call_id: str,
             arguments: Dict[str, Any],
-            llm: any,
+            llm: LLMProcessor,
             context: any,
             result_callback: any,
         ) -> None:
@@ -169,7 +169,7 @@ class MCPClient(EventHandlerManager):
         final_response = response if len(response) else "Sorry, could not call the mcp tool"
         await result_callback(final_response)
 
-    async def _list_tools(self, session: ClientSession, mcp_tool_wrapper, llm):
+    async def _list_tools(self, session: ClientSession, mcp_tool_wrapper, llm: LLMProcessor):
         available_tools = await session.list_tools()
         if available_tools is None or available_tools.tools is None:
             logging.warning("No tools found")

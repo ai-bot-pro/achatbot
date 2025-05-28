@@ -49,10 +49,6 @@ python -m unittest test.integration.processors.test_google_llm_mcp_processor.Tes
 
 python -m unittest test.integration.processors.test_google_llm_mcp_processor.TestProcessor.test_run_mcp
 
-python -m unittest test.integration.processors.test_google_llm_mcp_processor.TestProcessor.test_run_tools_describe_image
-
-python -m unittest test.integration.processors.test_google_llm_mcp_processor.TestProcessor.test_run_image
-
 python -m unittest test.integration.processors.test_google_llm_mcp_processor.TestProcessor.test_run_all
 """
 
