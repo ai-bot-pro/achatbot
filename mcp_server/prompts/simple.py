@@ -1,4 +1,7 @@
-from .. import app, types
+import mcp.types as types
+from mcp.server.lowlevel import Server
+
+from .prompt_register import prompts
 
 
 def create_messages(
@@ -32,33 +35,11 @@ def create_messages(
     return messages
 
 
-@app.list_prompts()
-async def list_prompts() -> list[types.Prompt]:
-    return [
-        types.Prompt(
-            name="simple",
-            description="A simple prompt that can take optional context and topic " "arguments",
-            arguments=[
-                types.PromptArgument(
-                    name="context",
-                    description="Additional context to consider",
-                    required=False,
-                ),
-                types.PromptArgument(
-                    name="topic",
-                    description="Specific topic to focus on",
-                    required=False,
-                ),
-            ],
-        )
-    ]
-
-
-@app.get_prompt()
-async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> types.GetPromptResult:
-    if name != "simple":
-        raise ValueError(f"Unknown prompt: {name}")
-
+@prompts.register("simple")
+async def get_prompt(
+    app: Server,
+    arguments: dict[str, str] | None = None,
+) -> types.GetPromptResult:
     if arguments is None:
         arguments = {}
 

@@ -1,11 +1,15 @@
 import anyio
 
-from .. import app, types
+from mcp.server.lowlevel import Server
+import mcp.types as types
+
+from .tool_register import functions
 
 
-@app.call_tool()
-async def call_tool(
-    name: str, arguments: dict
+@functions.register("stateless_send_notification")
+async def stateless_send_notification(
+    app: Server,
+    arguments: dict,
 ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
     ctx = app.request_context
     interval = arguments.get("interval", 1.0)

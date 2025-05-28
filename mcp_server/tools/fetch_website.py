@@ -1,22 +1,16 @@
 from mcp.shared._httpx_utils import create_mcp_http_client
+from mcp.server.lowlevel import Server
+import mcp.types as types
 
-from .. import app, types
-
-
-@app.call_tool()
-async def call_tool(
-    name: str, arguments: dict
-) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
-    if name != "fetch":
-        raise ValueError(f"Unknown tool: {name}")
-    if "url" not in arguments:
-        raise ValueError("Missing required argument 'url'")
-    return await fetch_website(arguments["url"])
+from .tool_register import functions
 
 
+@functions.register("fetch_website")
 async def fetch_website(
-    url: str,
+    app: Server,
+    arguments: dict,
 ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
+    url = arguments.get("url")
     headers = {"User-Agent": "MCP Test Server (github.com/modelcontextprotocol/python-sdk)"}
     async with create_mcp_http_client(headers=headers) as client:
         response = await client.get(url)

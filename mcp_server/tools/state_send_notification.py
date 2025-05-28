@@ -1,12 +1,17 @@
+import logging
+
 import anyio
 from mcp.types import AnyUrl
+from mcp.server.lowlevel import Server
+import mcp.types as types
 
-from .. import app, types, logger
+from .tool_register import functions
 
 
-@app.call_tool()
-async def call_tool(
-    name: str, arguments: dict
+@functions.register("state_send_notification")
+async def state_send_notification(
+    app: Server,
+    arguments: dict,
 ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
     ctx = app.request_context
     interval = arguments.get("interval", 1.0)
@@ -31,7 +36,7 @@ async def call_tool(
             # - nowhere (if GET request isn't supported)
             related_request_id=ctx.request_id,
         )
-        logger.debug(f"Sent notification {i+1}/{count} for caller: {caller}")
+        logging.debug(f"Sent notification {i+1}/{count} for caller: {caller}")
         if i < count - 1:  # Don't wait after the last notification
             await anyio.sleep(interval)
 

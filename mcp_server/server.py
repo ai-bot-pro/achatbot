@@ -1,14 +1,62 @@
-import click
-import anyio
 import logging
 import contextlib
 from collections.abc import AsyncIterator
 
+import click
+import anyio
+from pydantic import AnyUrl
+from mcp.server.lowlevel import Server
+import mcp.types as types
 
-from . import app, logger
-from .prompts import *
-from .resources import *
-from .tools import *
+from .resources.resource_register import resources, resource_list
+from .tools.tool_register import functions, tool_list
+from .prompts.prompt_register import prompts, prompt_list
+
+app = Server("mcp-tools")
+
+
+@app.list_resources()
+async def list_resources() -> list[types.Resource]:
+    return resource_list()
+
+
+@app.read_resource()
+async def read_resource(uri: AnyUrl) -> str | bytes:
+    logging.info(f"{resources.dict()=}")
+    if uri.path not in resources.keys():
+        raise ValueError(f"Unknown resource: {uri.path}")
+    return await resources[uri.path](uri)
+
+
+@app.list_prompts()
+async def list_prompts() -> list[types.Prompt]:
+    return prompt_list()
+
+
+@app.get_prompt()
+async def get_prompt(
+    name: str,
+    arguments: dict[str, str] | None = None,
+) -> types.GetPromptResult:
+    logging.info(f"{prompts.dict()=}")
+    if name not in prompts.keys():
+        raise ValueError(f"Unknown prompt: {name}")
+    return await prompts[name](app, arguments)
+
+
+@app.list_tools()
+async def list_tools() -> list[types.Tool]:
+    return tool_list()
+
+
+@app.call_tool()
+async def call_tool(
+    name: str, arguments: dict
+) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
+    logging.info(f"{functions.dict()=}")
+    if name not in functions.keys():
+        raise ValueError(f"Unknown tool: {name}")
+    return await functions[name](app, arguments)
 
 
 def run_stdio():
@@ -56,11 +104,11 @@ def run_state_streamable_http(port: int = 8000, json_response: bool = False):
     async def lifespan(app: Starlette) -> AsyncIterator[None]:
         """Context manager for managing session manager lifecycle."""
         async with session_manager.run():
-            logger.info("Application started with StreamableHTTP session manager!")
+            logging.info("Application started with StreamableHTTP session manager!")
             try:
                 yield
             finally:
-                logger.info("Application shutting down...")
+                logging.info("Application shutting down...")
 
     # Create an ASGI application using the transport
     starlette_app = Starlette(
@@ -96,11 +144,11 @@ def run_stateless_streamable_http(port: int = 8000, json_response: bool = False)
     async def lifespan(app: Starlette) -> AsyncIterator[None]:
         """Context manager for session manager."""
         async with session_manager.run():
-            logger.info("Application started with StreamableHTTP session manager!")
+            logging.info("Application started with StreamableHTTP session manager!")
             try:
                 yield
             finally:
-                logger.info("Application shutting down...")
+                logging.info("Application shutting down...")
 
     # Create an ASGI application using the transport
     starlette_app = Starlette(
@@ -177,12 +225,16 @@ def main(
     )
 
     if transport == "sse":
+        logging.info("run_sse")
         run_sse(port)
     elif transport == "state-streamable-http":
+        logging.info("run_state_streamable_http")
         run_state_streamable_http(port=port, json_response=json_response)
     elif transport == "stateless-streamable-http":
+        logging.info("run_stateless_streamable_http")
         run_stateless_streamable_http(port=port, json_response=json_response)
     else:
+        logging.info("run_stdio")
         run_stdio()
 
     return 0
