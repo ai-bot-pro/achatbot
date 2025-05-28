@@ -2,7 +2,24 @@
 FastMCP Echo Server
 """
 
+from fastmcp import Context
+
 from . import mcp
+
+# https://gofastmcp.com/servers/tools
+
+
+@mcp.tool()
+async def echo_context(text: str, ctx: Context):
+    # Log a message to the client
+    await ctx.info(f"Processing {text}...")
+
+    # Ask client LLM to summarize the data
+    # sampling to mock
+    summary = await ctx.sample(f"Summarize: {text}")
+
+    # Return the summary
+    return summary.text
 
 
 @mcp.tool()

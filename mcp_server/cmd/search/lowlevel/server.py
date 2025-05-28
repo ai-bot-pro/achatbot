@@ -9,10 +9,11 @@ from mcp.server.lowlevel import Server
 import mcp.types as types
 
 from mcp_server.resources.resource_register import resources, resource_list
-from mcp_server.tools.tool_register import functions, tool_list
 from mcp_server.prompts.prompt_register import prompts, prompt_list
+from achatbot.modules.functions.search.api import SearchFuncEnvInit
+from achatbot.common.session import Session
 
-app = Server("lowlevel-mcp-tools")
+app = Server(__name__)
 
 
 @app.list_resources()
@@ -46,17 +47,37 @@ async def get_prompt(
 
 @app.list_tools()
 async def list_tools() -> list[types.Tool]:
-    return tool_list()
+    tools = []
+    item = SearchFuncEnvInit.initSearchEngine().get_tool_call()
+    function = item.get("function")
+    if function is None:
+        return tools
+    tool = types.Tool(
+        name=function.get("name"),
+        description=function.get("description"),
+        inputSchema=function.get("parameters"),
+        annotations=types.ToolAnnotations(title="search"),
+    )
+    tools.append(tool)
+    return tools
 
 
+# dispatch
 @app.call_tool()
 async def call_tool(
     name: str, arguments: dict
 ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
-    logging.info(f"{functions.dict()=}")
-    if name not in functions.keys():
+    item = SearchFuncEnvInit.initSearchEngine().get_tool_call()
+    function = item.get("function")
+    if function is None:
+        raise ValueError(f"no function found for {name}")
+    logging.info(f"{item=}")
+    if name != function.get("name"):
         raise ValueError(f"Unknown tool: {name}")
-    return await functions[name](app, arguments)
+
+    session = Session(client_id=app.request_context.request_id)
+    result = SearchFuncEnvInit.initSearchEngine().execute(session, **arguments)
+    return [types.TextContent(type="text", text=result)]
 
 
 def run_stdio():
@@ -70,7 +91,9 @@ def run_stdio():
     anyio.run(arun)
 
 
-def run_state_streamable_http(port: int = 8000, json_response: bool = False):
+def run_state_streamable_http(
+    host: str = "127.0.0.1", port: int = 8000, json_response: bool = False
+):
     import uvicorn
     from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
     from starlette.applications import Starlette
@@ -119,10 +142,12 @@ def run_state_streamable_http(port: int = 8000, json_response: bool = False):
         lifespan=lifespan,
     )
 
-    uvicorn.run(starlette_app, host="127.0.0.1", port=port)
+    uvicorn.run(starlette_app, host=host, port=port)
 
 
-def run_stateless_streamable_http(port: int = 8000, json_response: bool = False):
+def run_stateless_streamable_http(
+    host: str = "127.0.0.1", port: int = 8000, json_response: bool = False
+):
     import uvicorn
     from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
     from starlette.applications import Starlette
@@ -159,10 +184,10 @@ def run_stateless_streamable_http(port: int = 8000, json_response: bool = False)
         lifespan=lifespan,
     )
 
-    uvicorn.run(starlette_app, host="127.0.0.1", port=port)
+    uvicorn.run(starlette_app, host=host, port=port)
 
 
-def run_sse(port: int):
+def run_sse(host: str, port: int):
     # https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http
     # https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#backwards-compatibility
     from mcp.server.sse import SseServerTransport
@@ -186,10 +211,15 @@ def run_sse(port: int):
         ],
     )
 
-    uvicorn.run(starlette_app, host="127.0.0.1", port=port)
+    uvicorn.run(starlette_app, host=host, port=port)
 
 
 @click.command()
+@click.option(
+    "--host",
+    default="127.0.0.1",
+    help="Host to listen on for SSE or state-streamable-http, stateless-streamable-http",
+)
 @click.option(
     "--port",
     default=8000,
@@ -213,6 +243,7 @@ def run_sse(port: int):
     help="Enable JSON responses instead of SSE streams",
 )
 def main(
+    host: str,
     port: int,
     transport: str,
     log_level: str,
@@ -226,13 +257,13 @@ def main(
 
     if transport == "sse":
         logging.info("run_sse")
-        run_sse(port)
+        run_sse(host, port)
     elif transport == "state-streamable-http":
         logging.info("run_state_streamable_http")
-        run_state_streamable_http(port=port, json_response=json_response)
+        run_state_streamable_http(host=host, port=port, json_response=json_response)
     elif transport == "stateless-streamable-http":
         logging.info("run_stateless_streamable_http")
-        run_stateless_streamable_http(port=port, json_response=json_response)
+        run_stateless_streamable_http(host=host, port=port, json_response=json_response)
     else:
         logging.info("run_stdio")
         run_stdio()

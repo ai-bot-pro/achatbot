@@ -2,7 +2,7 @@ import logging
 
 import anyio
 from mcp.types import AnyUrl
-from mcp.server.lowlevel import Server
+from mcp.shared.context import RequestContext
 import mcp.types as types
 
 from .tool_register import functions
@@ -10,14 +10,11 @@ from .tool_register import functions
 
 @functions.register("state_send_notification")
 async def state_send_notification(
-    app: Server,
-    arguments: dict,
+    ctx: RequestContext,
+    interval: float = 1.0,
+    count: int = 5,
+    caller: str = "unknown",
 ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
-    ctx = app.request_context
-    interval = arguments.get("interval", 1.0)
-    count = arguments.get("count", 5)
-    caller = arguments.get("caller", "unknown")
-
     # Send the specified number of notifications with the given interval
     for i in range(count):
         # Include more detailed message for resumability demonstration

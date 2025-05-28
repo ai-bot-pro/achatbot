@@ -24,16 +24,16 @@ use Low-Level Server
 - run mcp server
 ```shell
 # help
-python -m mcp_server.cmd.lowlevel --help
+python -m mcp_server.cmd.simple.lowlevel --help
 
 # defualt transport is stdio
-python -m mcp_server.cmd.lowlevel
+python -m mcp_server.cmd.simple.lowlevel
 # sse
-python -m mcp_server.cmd.lowlevel --transport sse
+python -m mcp_server.cmd.simple.lowlevel --transport sse
 # stateless-streamable-http
-python -m mcp_server.cmd.lowlevel --transport stateless-streamable-http
+python -m mcp_server.cmd.simple.lowlevel --transport stateless-streamable-http
 # state-streamable-http
-python -m mcp_server.cmd.lowlevel --transport state-streamable-http
+python -m mcp_server.cmd.simple.lowlevel --transport state-streamable-http
 ```
 - The MCP Inspector is an interactive developer tool for testing and debugging MCP servers
 ```shell
@@ -42,7 +42,7 @@ python -m mcp_server.cmd.lowlevel --transport state-streamable-http
 # run inspector page to debug  mcp server
 npx @modelcontextprotocol/inspector
 # or run with mcp stdio transport server 
-npx @modelcontextprotocol/inspector `which python` -m mcp_server.cmd.lowlevel
+npx @modelcontextprotocol/inspector `which python` -m mcp_server.cmd.simple.lowlevel
 ```
 > [!NOTE]
 > - if mcp server use stdio transport, don't run multi inspector page, it will cause error

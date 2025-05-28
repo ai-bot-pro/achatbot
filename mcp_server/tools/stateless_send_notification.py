@@ -1,6 +1,6 @@
 import anyio
 
-from mcp.server.lowlevel import Server
+from mcp.shared.context import RequestContext
 import mcp.types as types
 
 from .tool_register import functions
@@ -8,14 +8,11 @@ from .tool_register import functions
 
 @functions.register("stateless_send_notification")
 async def stateless_send_notification(
-    app: Server,
-    arguments: dict,
+    ctx: RequestContext,
+    interval: float = 1.0,
+    count: int = 5,
+    caller: str = "unknown",
 ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
-    ctx = app.request_context
-    interval = arguments.get("interval", 1.0)
-    count = arguments.get("count", 5)
-    caller = arguments.get("caller", "unknown")
-
     # Send the specified number of notifications with the given interval
     for i in range(count):
         await ctx.session.send_log_message(
