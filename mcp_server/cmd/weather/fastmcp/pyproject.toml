@@ -29,7 +29,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["fastmcp_weather_server"]
+packages = ["mcp_server.cmd.weather.fastmcp"]
 
 [tool.pyright]
 include = ["."]
