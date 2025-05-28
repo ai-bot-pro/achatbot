@@ -108,7 +108,13 @@ class OpenAILLMContext:
         return self._messages
 
     @property
-    def tools(self) -> List[ChatCompletionToolParam] | NotGiven:
+    def tools(self) -> List[ChatCompletionToolParam] | NotGiven | List[dict]:
+        if isinstance(self._tools, ToolsSchema):
+            functions_schema = self._tools.standard_tools
+            self._tools = [
+                {"function": func.to_default_dict(), "type": "function"}
+                for func in functions_schema
+            ]
         return self._tools
 
     @property
@@ -134,7 +140,7 @@ class OpenAILLMContext:
         self._tool_choice = tool_choice
 
     def set_tools(self, tools: List[ChatCompletionToolParam] | NotGiven | ToolsSchema = NOT_GIVEN):
-        if tools != NOT_GIVEN and len(tools) == 0:
+        if tools != NOT_GIVEN and isinstance(tools, list) and len(tools) == 0:
             tools = NOT_GIVEN
         self._tools = tools
 

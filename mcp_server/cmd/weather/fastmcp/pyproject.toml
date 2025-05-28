@@ -20,9 +20,9 @@ dependencies = [
 ]
 
 [project.scripts]
-mcp-weather-stdio = "python -m mcp_server.cmd.weather.fastmcp --transport stdio"
-mcp-weather-streamablehttp = "python -m mcp_server.cmd.weather.fastmcp --transport streamable-http"
-mcp-weather-streamablehttp-stateless = "python -m mcp_server.cmd.weather.fastmcp --transport streamable-http --stateless-http"
+fastmcp-weather-stdio = "python -m mcp_server.cmd.weather.fastmcp --transport stdio"
+fastmcp-weather-streamablehttp = "python -m mcp_server.cmd.weather.fastmcp --transport streamable-http"
+fastmcp-weather-streamablehttp-stateless = "python -m mcp_server.cmd.weather.fastmcp --transport streamable-http --stateless-http"
 
 [build-system]
 requires = ["hatchling"]

@@ -30,6 +30,10 @@ class ToolsSchema:
         self._standard_tools = standard_tools
         self._custom_tools = custom_tools
 
+    def __str__(self) -> str:
+        standard_tools = [str(tool) for tool in self._standard_tools]
+        return f"ToolsSchema(standard_tools={standard_tools}, custom_tools={self._custom_tools})"
+
     @property
     def standard_tools(self) -> List[FunctionSchema]:
         return self._standard_tools

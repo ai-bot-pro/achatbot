@@ -27,7 +27,9 @@ dependencies = [
 ]
 
 [project.scripts]
-mcp-simple-streamablehttp = "mcp.server:main"
+mcp-simple-stdio = "python -m mcp_server.cmd.simple.lowlevel --transport stdio"
+mcp-simple-streamablehttp = "python -m mcp_server.cmd.simple.lowlevel --transport stateless-streamable-http"
+mcp-simple-streamablehttp-stateless = "python -m mcp_server.cmd.simple.lowlevel --transport state-streamable-http"
 
 [build-system]
 requires = ["hatchling"]

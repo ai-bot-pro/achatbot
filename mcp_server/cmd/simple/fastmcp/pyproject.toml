@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "A simple MCP server exposing a stdio,see,StreamableHttp(state/stateless) transport for testing"
 readme = "README.md"
 requires-python = ">=3.10"
-authors = [{ name = "Anthropic, PBC. & fastmcp & weedge", email = "weege007@gmail.com" }]
+authors = [
+    { name = "Anthropic, PBC. & fastmcp & weedge", email = "weege007@gmail.com" },
+]
 keywords = [
     "mcp",
     "llm",
@@ -27,7 +29,9 @@ dependencies = [
 ]
 
 [project.scripts]
-mcp-simple-streamablehttp = "mcp.server:main"
+fastmcp-simple-stdio = "python -m mcp_server.cmd.simple.fastmcp --transport stdio"
+fastmcp-simple-streamablehttp = "python -m mcp_server.cmd.simple.fastmcp --transport streamable-http"
+fastmcp-simple-streamablehttp-stateless = "python -m mcp_server.cmd.simple.fastmcp --transport streamable-http --stateless-http"
 
 [build-system]
 requires = ["hatchling"]

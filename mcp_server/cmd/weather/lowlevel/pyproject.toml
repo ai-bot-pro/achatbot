@@ -28,7 +28,9 @@ dependencies = [
 ]
 
 [project.scripts]
-mcp-weather-streamablehttp = "mcp.server:main"
+mcp-weather-stdio = "python -m mcp_server.cmd.weather.lowlevel --transport stdio"
+mcp-weather-streamablehttp = "python -m mcp_server.cmd.weather.lowlevel --transport stateless-streamable-http"
+mcp-weather-streamablehttp-stateless = "python -m mcp_server.cmd.weather.lowlevel --transport state-streamable-http"
 
 [build-system]
 requires = ["hatchling"]

@@ -20,9 +20,9 @@ dependencies = [
 ]
 
 [project.scripts]
-mcp-search-stdio = "python -m mcp_server.cmd.search.fastmcp --transport stdio"
-mcp-search-streamablehttp = "python -m mcp_server.cmd.search.fastmcp --transport streamable-http"
-mcp-search-streamablehttp-stateless = "python -m mcp_server.cmd.search.fastmcp --transport streamable-http --stateless-http"
+fastmcp-search-stdio = "python -m mcp_server.cmd.search.fastmcp --transport stdio"
+fastmcp-search-streamablehttp = "python -m mcp_server.cmd.search.fastmcp --transport streamable-http"
+fastmcp-search-streamablehttp-stateless = "python -m mcp_server.cmd.search.fastmcp --transport streamable-http --stateless-http"
 
 [build-system]
 requires = ["hatchling"]
