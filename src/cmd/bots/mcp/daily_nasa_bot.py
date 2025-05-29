@@ -125,7 +125,7 @@ class DailyNASABot(DailyRoomBot):
                         llm_processor,
                         tts_processor,
                         url2image_processor,  # URL image -> output
-                        FrameLogger(include_frame_types=[ImageRawFrame]),
+                        # FrameLogger(include_frame_types=[ImageRawFrame]),
                         transport.output_processor(),
                         llm_assistant_ctx_aggr,
                     ]

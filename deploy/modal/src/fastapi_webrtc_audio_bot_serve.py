@@ -7,7 +7,10 @@ achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.15")
 class ContainerRuntimeConfig:
     images = {
         "default": (
-            modal.Image.debian_slim(python_version="3.11")
+            modal.Image.from_registry(
+                "node:22-slim",
+                add_python="3.10",
+            )
             .apt_install("git", "git-lfs", "ffmpeg")
             .pip_install(
                 [
@@ -43,13 +46,8 @@ class ContainerRuntimeConfig:
                     "TTS_TAG": "tts_edge",
                 }
             )
-            .apt_install("curl", "unzip", "nodejs", "npm")
             .run_commands(
-                "node -v",
-                "npm -v",
-                "npm install -g npx",
-                "npx -v",
-                "npx --help",
+                "npx -y @programcomputer/nasa-mcp-server@latest",
             )
         ),
     }
