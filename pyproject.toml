@@ -16,7 +16,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.12"
+version = "0.0.14"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -91,6 +91,9 @@ torch_vision_audio = [
     "torchaudio~=2.6.0",
     "torchvision~=0.21.0",
 ]
+# https://github.com/modelcontextprotocol
+# https://github.com/modelcontextprotocol/python-sdk
+mcp = ["mcp[cli]~=1.9.1"]
 
 
 # diffusers DiT with quantizing model
@@ -118,7 +121,8 @@ agora = [
     #need move colorlog
     "colorlog",
     "agora-realtime-ai-api-v1~=0.0.3",   # dep agora_python_server_sdk_v1
-    "agora_python_server_sdk_v1~=0.0.2",
+    "agora_python_server_sdk_v1~=0.0.3",
+    #"agora_python_server_sdk~=2.2.4",
     "achatbot[opencv]",
 ]
 daily = ["daily-python~=0.11.0"]

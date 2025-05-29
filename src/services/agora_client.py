@@ -834,9 +834,11 @@ class AgoraTransportClient:
         """
         try:
             if self._params.audio_in_enabled:
-                await self._channel.unsubscribe_audio(user_id)
+                await self._channel.unsubscribe_audio(str(user_id))
         except Exception as e:
-            logging.error(f"Error unsubscribe_audio user {user_id}: {e}", exc_info=True)
+            logging.error(
+                f"Error unsubscribe_audio user {type(user_id)=} {user_id}: {e}", exc_info=True
+            )
         try:
             if self._params.camera_in_enabled:
                 await self._channel.unsubscribe_video(user_id)

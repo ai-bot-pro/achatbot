@@ -21,6 +21,7 @@ except ModuleNotFoundError as e:
     )
     raise Exception(f"Missing module: {e}")
 
+from src.schemas.tools_schema import ToolsSchema
 from src.processors.aggregators.openai_llm_context import OpenAILLMContext, OpenAILLMContextFrame
 from src.processors.llm.base import LLMProcessor, UnhandledFunctionException
 from src.types.frames.control_frames import (
@@ -102,6 +103,7 @@ class GoogleAILLMProcessor(LLMProcessor):
             return None
 
         google_tools = {"function_declarations": []}
+        # print(f"{context.tools=}")
         for tool in context.tools:
             if "function" in tool:
                 google_tools["function_declarations"].append(tool["function"])

@@ -1,11 +1,16 @@
 import modal
 import os
 
+achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.13")
+
 
 class ContainerRuntimeConfig:
     images = {
         "default": (
-            modal.Image.debian_slim(python_version="3.11")
+            modal.Image.from_registry(
+                "node:22-slim",
+                add_python="3.10",
+            )
             .apt_install("git", "git-lfs", "ffmpeg")
             .pip_install(
                 [
@@ -17,12 +22,13 @@ class ContainerRuntimeConfig:
                     "openai_llm_processor,google_llm_processor,litellm_processor,"
                     "tts_edge,"
                     "deep_translator,together_ai,"
+                    "mcp,"
                     "queue"
-                    "]~=0.0.8.3",
+                    f"]=={achatbot_version}",
                     "huggingface_hub[hf_transfer]==0.24.7",
                     "wget",
                 ],
-                extra_index_url="https://pypi.org/simple/",
+                extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
             )
             .env(
                 {
@@ -35,13 +41,22 @@ class ContainerRuntimeConfig:
                     "ASR_LANG": "zn",
                     "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
                     # llm processor model, default:google gemini_flash_latest
-                    "GOOGLE_LLM_MODEL": "gemini-1.5-flash-latest",
+                    "GOOGLE_LLM_MODEL": "gemini-2.0-flash-lite",
                     # tts module engine TAG,default tts_edge
                     "TTS_TAG": "tts_edge",
                 }
             )
+            .run_commands(
+                "npx -y @programcomputer/nasa-mcp-server@latest",
+            )
         ),
     }
+
+    @staticmethod
+    def get_allow_concurrent_inputs():
+        concurrent_cn = int(os.getenv("IMAGE_CONCURRENT_CN", "1"))
+        print(f"image_concurrent_cn:{concurrent_cn}")
+        return concurrent_cn
 
     @staticmethod
     def get_img(image_name: str = None):
@@ -73,15 +88,18 @@ hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
     image=ContainerRuntimeConfig.get_img(),
     secrets=[modal.Secret.from_name("achatbot")],
     volumes={ASSETS_DIR: assets_dir, HF_MODEL_DIR: hf_model_vol},
+    allow_concurrent_inputs=ContainerRuntimeConfig.get_allow_concurrent_inputs(),
     cpu=2.0,
-    scaledown_window=300,
-    timeout=600,
-    allow_concurrent_inputs=100,
+    timeout=1200,  # default 300s
+    scaledown_window=1200,
 )
 class Srv:
     @modal.enter()
     def enter(self):
-        print("start enter")
+        import subprocess
+
+        subprocess.run("which npx", shell=True)
+        subprocess.run("npx --version", shell=True)
 
     @modal.asgi_app()
     def app(self):
