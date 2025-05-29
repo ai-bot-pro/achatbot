@@ -41,11 +41,11 @@ class UrlToImageProcessor(FrameProcessor):
 
     async def run_image_process(self, image_url: str):
         try:
-            logging.info(f"handling image from url: '{image_url}'")
             async with self._aiohttp_session.get(image_url) as response:
                 image_stream = io.BytesIO(await response.content.read())
                 image = Image.open(image_stream)
                 image = image.convert("RGB")
+                logging.info(f"handling image from url: '{image_url}' | image size: {image.size}")
                 frame = URLImageRawFrame(
                     url=image_url,
                     image=image.tobytes(),

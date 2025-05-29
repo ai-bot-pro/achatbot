@@ -178,9 +178,6 @@ class MCPClient(EventHandlerManager):
         tool_schemas: List[FunctionSchema] = []
         for tool in available_tools.tools:
             tool_name = tool.name
-            logging.debug(f"Processing tool: {tool_name}")
-            logging.debug(f"Tool description: {tool.description}")
-
             try:
                 # Convert the schema
                 function_schema = self._convert_mcp_schema(
@@ -189,12 +186,13 @@ class MCPClient(EventHandlerManager):
                 )
 
                 # Register the wrapped function
-                logging.info(f"Registering function handler for '{tool_name}'")
                 llm.register_function(tool_name, mcp_tool_wrapper)
 
                 # Add to list of schemas
                 tool_schemas.append(function_schema)
-                logging.info(f"Successfully registered tool '{tool_name}'")
+                logging.info(
+                    f"Successfully registered tool '{tool_name}' | Tool description: {tool.description}"
+                )
 
             except Exception as e:
                 logging.error(f"Failed to register tool '{tool_name}': {str(e)}")
@@ -202,7 +200,9 @@ class MCPClient(EventHandlerManager):
                 continue
 
         logging.info(f"Completed registration of {len(tool_schemas)} tools")
-        logging.info(f"{tool_schemas=}")
+        # {
+        #    logging.info(f"tool_schemas[{i}]: {str(item)}") for i, item in enumerate(tool_schemas)
+        # } if tool_schemas else logging.info(tool_schemas)
         tools_schema = ToolsSchema(standard_tools=tool_schemas)
 
         return tools_schema

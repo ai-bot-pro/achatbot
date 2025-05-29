@@ -203,6 +203,7 @@ class AudioCameraOutputProcessor(OutputProcessor):
         await self.process_frame(frame, FrameDirection.DOWNSTREAM)
 
     async def _set_camera_images(self, images: List[ImageRawFrame]):
+        # cycle images for display image frame like video
         self._camera_images = itertools.cycle(images)
 
     async def write_frame_to_camera(self, frame: ImageRawFrame):
@@ -214,10 +215,11 @@ class AudioCameraOutputProcessor(OutputProcessor):
     async def _draw_image(self, frame: ImageRawFrame):
         desired_size = (self._params.camera_out_width, self._params.camera_out_height)
 
+        # @TODO: self._params need in the ctx
         if frame.size != desired_size:
             image = Image.frombytes(frame.mode, frame.size, frame.image)
             resized_image = image.resize(desired_size)
-            logging.warning(f"{frame} does not have the expected size {desired_size}, resizing")
+            # logging.warning(f"{frame} does not have the expected size {desired_size}, resizing")
             frame = ImageRawFrame(
                 image=resized_image.tobytes(),
                 size=resized_image.size,
@@ -264,9 +266,9 @@ class AudioCameraOutputProcessor(OutputProcessor):
                 elif self._camera_images:
                     image = next(self._camera_images)
                     await self._draw_image(image)
-                    await asyncio.sleep(1.0 / self._params.camera_out_framerate)
+                    await asyncio.sleep(self._camera_out_frame_duration)
                 else:
-                    await asyncio.sleep(1.0 / self._params.camera_out_framerate)
+                    await asyncio.sleep(self._camera_out_frame_duration)
             except asyncio.CancelledError:
                 break
             except Exception as e:

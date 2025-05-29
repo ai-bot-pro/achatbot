@@ -222,6 +222,7 @@ class AIBot(IBot):
 
         llm_config = llm
         if llm_config and llm_config.args:
+            logging.info(f"use google llm processor args:{llm_config.args}")
             llm_processor = GoogleAILLMProcessor(**llm_config.args)
         else:
             logging.info("use default google llm processor")

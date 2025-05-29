@@ -1,7 +1,7 @@
 import modal
 import os
 
-achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.15")
+achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.13")
 
 
 class ContainerRuntimeConfig:

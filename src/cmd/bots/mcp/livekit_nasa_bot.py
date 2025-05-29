@@ -9,14 +9,15 @@ from apipeline.pipeline.runner import PipelineRunner
 from apipeline.processors.logger import FrameLogger
 from apipeline.frames.data_frames import ImageRawFrame
 from mcp import StdioServerParameters
+from livekit import rtc
 
 from src.processors.image_url_extract_processor import UrlToImageProcessor
 from src.processors.llm.base import LLMProcessor
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
-from src.common.types import DailyParams
-from src.transports.daily import DailyTransport
-from src.cmd.bots.base_daily import DailyRoomBot
+from src.common.types import LivekitParams
+from src.transports.livekit import LivekitTransport
+from src.cmd.bots.base_livekit import LivekitRoomBot
 from src.cmd.bots import register_ai_room_bots
 from src.types.frames.data_frames import (
     LLMMessagesFrame,
@@ -34,9 +35,9 @@ load_dotenv(override=True)
 
 
 @register_ai_room_bots.register
-class DailyNASABot(DailyRoomBot):
+class LivekitNASABot(LivekitRoomBot):
     """
-    daily webrtc + llm(gemini) + nasa mcp bot
+    livekit webrtc + llm(gemini) + nasa mcp bot
     """
 
     def __init__(self, **args) -> None:
@@ -45,17 +46,15 @@ class DailyNASABot(DailyRoomBot):
 
     async def arun(self):
         vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
-        self.daily_params = DailyParams(
+        self.livekit_params = LivekitParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
             vad_enabled=True,
             vad_analyzer=vad_analyzer,
             vad_audio_passthrough=True,
-            transcription_enabled=False,
             camera_out_enabled=True,
             camera_out_width=1024,
             camera_out_height=768,
-            # camera_out_is_live=True,
         )
 
         asr_processor = self.get_asr_processor()
@@ -80,14 +79,12 @@ class DailyNASABot(DailyRoomBot):
 
         tts_processor: TTSProcessor = self.get_tts_processor()
         stream_info = tts_processor.get_stream_info()
-        self.daily_params.audio_out_sample_rate = stream_info["sample_rate"]
-        self.daily_params.audio_out_channels = stream_info["channels"]
+        self.livekit_params.audio_out_sample_rate = stream_info["sample_rate"]
+        self.livekit_params.audio_out_channels = stream_info["channels"]
 
-        transport = DailyTransport(
-            self.args.room_url,
+        transport = LivekitTransport(
             self.args.token,
-            self.args.bot_name,
-            self.daily_params,
+            params=self.livekit_params,
         )
 
         llm_context = OpenAILLMContext()
@@ -133,7 +130,7 @@ class DailyNASABot(DailyRoomBot):
                 ),
                 params=PipelineParams(
                     allow_interruptions=False,
-                    enable_metrics=True,  # deploy prod open it
+                    enable_metrics=True,
                     send_initial_empty_metrics=False,
                 ),
             )
@@ -142,15 +139,14 @@ class DailyNASABot(DailyRoomBot):
                 "on_first_participant_joined",
                 [self.on_first_participant_joined, self.on_first_participant_say_hi],
             )
-            transport.add_event_handler("on_participant_left", self.on_participant_left)
-            transport.add_event_handler("on_call_state_updated", self.on_call_state_updated)
 
             await PipelineRunner(handle_sigint=False).run(self.task)
 
-    async def on_first_participant_say_hi(self, transport: DailyTransport, participant):
-        self.session.set_client_id(participant["id"])
-        if self.daily_params.transcription_enabled:
-            transport.capture_participant_transcription(participant["id"])
+    async def on_first_participant_say_hi(
+        self, transport: LivekitTransport, participant: rtc.RemoteParticipant
+    ):
+        self.session.set_client_id(participant.sid)
+        name = participant.name or participant.identity or "weedge"
 
         # joined use tts say "hello" to introduce with llm generate
         if (
@@ -161,7 +157,7 @@ class DailyNASABot(DailyRoomBot):
         ):
             hi_text = "Please introduce yourself first."
             if self._bot_config.llm.language and self._bot_config.llm.language == "zh":
-                hi_text = "请用中文介绍下自己。"
+                hi_text = f"你好，我叫{name}, 请用中文介绍下自己。"
             self._bot_config.llm.messages.append(
                 {
                     "role": "user",
