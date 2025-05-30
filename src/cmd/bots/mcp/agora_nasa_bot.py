@@ -140,6 +140,7 @@ class AgoraNASABot(AgoraChannelBot):
         if (
             self._bot_config.tts
             and self._bot_config.llm
+            and self._bot_config.llm.messages is not None
             and isinstance(self._bot_config.llm.messages, list)
         ):
             hi_text = "Please introduce yourself first."

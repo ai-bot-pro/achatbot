@@ -1,7 +1,3 @@
-import logging
-import os
-import shutil
-
 import aiohttp
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
@@ -142,11 +138,12 @@ class LivekitMultiMCPBot(LivekitRoomBot):
         self.session.set_client_id(participant.sid)
         name = participant.name or participant.identity or "weedge"
 
+        print("--->", self._bot_config.llm.messages)
         # joined use tts say "hello" to introduce with llm generate
         if (
             self._bot_config.tts
             and self._bot_config.llm
-            and self._bot_config.llm.messages
+            and self._bot_config.llm.messages is not None
             and isinstance(self._bot_config.llm.messages, list)
         ):
             hi_text = "Please introduce yourself first."
