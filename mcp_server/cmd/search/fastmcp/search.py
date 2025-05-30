@@ -20,7 +20,7 @@ item = SearchFuncEnvInit.initSearchEngine().get_tool_call()
 function = item.get("function")
 if function is None:
 
-    @mcp.tool()
+    @mcp.tool(name="web_search", description="web search")
     def web_search(query: str, ctx: Context) -> str:
         session = Session(client_id=ctx.client_id)
         return SearchFuncEnvInit.initSearchEngine().execute(session, **{"query": query})

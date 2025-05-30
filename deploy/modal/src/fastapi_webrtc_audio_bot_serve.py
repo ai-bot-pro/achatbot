@@ -1,16 +1,14 @@
 import modal
 import os
 
-achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.13")
+achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.15")
 
 
 class ContainerRuntimeConfig:
     images = {
         "default": (
-            modal.Image.from_registry(
-                "node:22-slim",
-                add_python="3.10",
-            )
+            # modal.Image.debian_slim(python_version="3.11")
+            modal.Image.from_registry("node:22-slim", add_python="3.10")
             .apt_install("git", "git-lfs", "ffmpeg")
             .pip_install(
                 [
@@ -20,13 +18,13 @@ class ContainerRuntimeConfig:
                     "silero_vad_analyzer,daily_langchain_rag_bot,"
                     "sense_voice_asr,deepgram_asr_processor,"
                     "openai_llm_processor,google_llm_processor,litellm_processor,"
-                    "tts_edge,"
                     "deep_translator,together_ai,"
                     "mcp,"
+                    "tts_edge,"
                     "queue"
                     f"]=={achatbot_version}",
-                    "huggingface_hub[hf_transfer]==0.24.7",
-                    "wget",
+                    # "huggingface_hub[hf_transfer]==0.24.7",
+                    # "wget",
                 ],
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
             )
@@ -46,6 +44,9 @@ class ContainerRuntimeConfig:
                     "TTS_TAG": "tts_edge",
                 }
             )
+            .pip_install(
+                "aiohttp==3.10.11"
+            )  # fix Future exception was never retrieve, when connect timeout ( Connection reset by peer, retry)
             .run_commands(
                 "npx -y @programcomputer/nasa-mcp-server@latest",
             )

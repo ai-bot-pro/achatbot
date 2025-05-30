@@ -20,7 +20,7 @@ item = WeatherFuncEnvInit.initWeatherEngine().get_tool_call()
 function = item.get("function")
 if function is None:
 
-    @mcp.tool()
+    @mcp.tool(name="get weather", description="get weather")
     def get_weather(longitude: float, latitude: float, ctx: Context) -> str:
         session = Session(client_id=ctx.client_id)
         return WeatherFuncEnvInit.initWeatherEngine().execute(session, longitude, latitude)
