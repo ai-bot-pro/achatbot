@@ -139,6 +139,10 @@ def import_bots(bot_name: str = "DummyBot"):
         from .mcp import daily_nasa_bot
 
         return True
+    if "DailyMultiMCPBot" in bot_name:
+        from .mcp import daily_multi_mcp_bot
+
+        return True
     if "LivekitBot" in bot_name:
         from . import livekit_bot
 
@@ -211,6 +215,10 @@ def import_bots(bot_name: str = "DummyBot"):
         from .mcp import livekit_nasa_bot
 
         return True
+    if "LivekitMultiMCPBot" in bot_name:
+        from .mcp import livekit_multi_mcp_bot
+
+        return True
     # if "LivekitMoshiVoiceBot" in bot_name:
     #    from .voice import livekit_moshi_bot
 
@@ -257,6 +265,10 @@ def import_bots(bot_name: str = "DummyBot"):
         return True
     if "AgoraNASABot" in bot_name:
         from .mcp import agora_nasa_bot
+
+        return True
+    if "AgoraMultiMCPBot" in bot_name:
+        from .mcp import agora_multi_mcp_bot
 
         return True
 

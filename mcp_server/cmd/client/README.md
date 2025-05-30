@@ -1,6 +1,10 @@
 # client
 
-servers_config.json
+servers_config.json | define as agent tools config :)
+
+> [!NOTE]
+> if have same tool name, use last one
+
 ```json
 {
   "mcpServers": {
@@ -38,10 +42,16 @@ servers_config.json
 ```
 
 ```shell
-# local terminal chat with stdio transport mcp server
+# run streamable-http mcp server weather
+python -m mcp_server.cmd.weather.lowlevel --transport state-streamable-http
+# run sse mcp server search
+python -m mcp_server.cmd.search.lowlevel --transport sse --port 8001
+
+# local terminal chat with stdio,sse,streamable-http transport mcp servers_config.json
 python -m mcp_server.cmd.client.terminal
 ```
 
+case: execute command and log in terminal
 ```
 python -m mcp_server.cmd.client.terminal
 2025-05-30 15:57:42,812 - root - INFO - run_stdio

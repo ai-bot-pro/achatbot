@@ -84,3 +84,26 @@ class FunctionSchema:
             List of required parameter names.
         """
         return self._required
+
+    def format_for_llm(self) -> str:
+        """Format tool information for LLM.
+
+        Returns:
+            A formatted string describing the tool.
+        """
+        args_desc = []
+        if not self._properties:
+            return ""
+
+        for param_name, param_info in self._properties.items():
+            arg_desc = f"- {param_name}: {param_info.get('description', 'No description')}"
+            if self._required and param_name in self._required:
+                arg_desc += " (required)"
+            args_desc.append(arg_desc)
+
+        return f"""
+Tool: {self.name}
+Description: {self.description}
+Arguments:
+{chr(10).join(args_desc)}
+"""

@@ -45,3 +45,10 @@ class ToolsSchema:
     @custom_tools.setter
     def custom_tools(self, value: Dict[AdapterType, List[Dict[str, Any]]]) -> None:
         self._custom_tools = value
+
+    def get_tools_description(self) -> str:
+        """
+        Returns a string containing the descriptions of all the tools.
+        """
+        tools_description = "\n".join([tool.format_for_llm() for tool in self._standard_tools])
+        return tools_description
