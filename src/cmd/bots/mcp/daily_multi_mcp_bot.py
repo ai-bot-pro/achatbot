@@ -51,7 +51,7 @@ class DailyMultiMCPBot(DailyRoomBot):
             vad_analyzer=vad_analyzer,
             vad_audio_passthrough=True,
             transcription_enabled=False,
-            camera_out_enabled=True,
+            camera_out_enabled=False,
             camera_out_width=1024,
             camera_out_height=768,
             # camera_out_is_live=True,

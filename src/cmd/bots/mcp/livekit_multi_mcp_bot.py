@@ -47,7 +47,7 @@ class LivekitMultiMCPBot(LivekitRoomBot):
             vad_enabled=True,
             vad_analyzer=vad_analyzer,
             vad_audio_passthrough=True,
-            camera_out_enabled=True,
+            camera_out_enabled=False,
             camera_out_width=1024,
             camera_out_height=768,
         )
