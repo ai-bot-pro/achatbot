@@ -100,8 +100,12 @@ class DailyMultiMCPBot(DailyRoomBot):
             "2. Keep responses concise but informative\n"
             "3. Focus on the most relevant information\n"
             "4. Use appropriate context from the user's question\n"
-            "5. Avoid simply repeating the raw data\n\n"
-            "Please use only the tools that are explicitly defined above."
+            "5. Avoid simply repeating the raw data\n"
+            "6. Your output will be converted to audio so don't include special characters in your answers.\n"
+            "7. Respond to what the user said in a creative and helpful way.\n"
+            "8. Don't overexplain what you are doing.\n"
+            "9. Just respond with short sentences when you are carrying out tool calls.\n"
+            "Please use only the tools that are explicitly defined above.\n"
         )
         messages = [{"role": "system", "content": system_message}]
         if self._bot_config.llm.messages:
