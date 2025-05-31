@@ -22,7 +22,7 @@ class EdgeTTS(BaseTTS, ITts):
 
     def __init__(self, **args) -> None:
         self.args = EdgeTTSArgs(**args)
-        #self.file_path = os.path.join(RECORDS_DIR, EDGE_TTS_SYNTHESIS_FILE)
+        # self.file_path = os.path.join(RECORDS_DIR, EDGE_TTS_SYNTHESIS_FILE)
         self.voice_name = None
 
     async def _inference(
@@ -43,7 +43,7 @@ class EdgeTTS(BaseTTS, ITts):
                 )
                 self.args.voice_name = random.choice(voices)["ShotName"]
                 self.voice_name = self.args.voice_name
-            logging.info(f"{self.TAG} voice: {self.voice_name}")
+        logging.info(f"{self.TAG} voice: {self.voice_name}")
 
         communicate: edge_tts.Communicate = edge_tts.Communicate(
             text,
@@ -75,7 +75,7 @@ class EdgeTTS(BaseTTS, ITts):
         voice_maps = asyncio.run(self._get_voices())
         voices = []
         for voice_map in voice_maps:
-            print(voice_map)
+            # print(voice_map)
             if "ShortName" in voice_map:
                 voices.append(voice_map["ShortName"])
 

@@ -16,13 +16,22 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.14"
+version = "0.0.15.post2"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
 readme = "README.md"
 license = { file = "LICENSE" }
-keywords = ["ai", "chat bot", "audio", "speech", "video", "image"]
+keywords = [
+    "ai",
+    "chat bot",
+    "audio",
+    "speech",
+    "video",
+    "image",
+    "vision",
+    "mcp",
+]
 # https://pypi.org/classifiers/
 classifiers = [
     # How mature is this project? Common values are
@@ -54,7 +63,7 @@ dependencies = [
     "python-dotenv",
     "pydub",             # need install ffmpeg
     "pillow",
-    "aiohttp",
+    "aiohttp==3.10.11",
     "scipy",
     "pyloudnorm",
     "pydantic",

@@ -37,7 +37,7 @@ load_dotenv(override=True)
 @register_ai_room_bots.register
 class LivekitNASABot(LivekitRoomBot):
     """
-    livekit webrtc + llm(gemini) + nasa mcp bot
+    livekit webrtc + asr + llm(gemini) + nasa mcp server + tts bot
     """
 
     def __init__(self, **args) -> None:
@@ -59,21 +59,14 @@ class LivekitNASABot(LivekitRoomBot):
 
         asr_processor = self.get_asr_processor()
 
-        try:
-            server_params = StdioServerParameters(
-                command=shutil.which("npx"),
-                args=["-y", "@programcomputer/nasa-mcp-server@latest"],
-                # https://api.nasa.gov
-                env={"NASA_API_KEY": os.getenv("NASA_API_KEY")},
-            )
-            # logging.info(f"{server_params=}")
-            mcp_client = MCPClient(
-                server_params=server_params,
-            )
-        except Exception as e:
-            logging.error(f"error setting up mcp")
-            logging.exception(f"error trace: {e}")
-            raise e
+        server_params = StdioServerParameters(
+            command=shutil.which("npx"),
+            args=["-y", "@programcomputer/nasa-mcp-server@latest"],
+            # https://api.nasa.gov
+            env={"NASA_API_KEY": os.getenv("NASA_API_KEY")},
+        )
+        # logging.info(f"{server_params=}")
+        mcp_client = MCPClient(server_params=server_params, mcp_name="nasa")
 
         llm_processor: LLMProcessor = self.get_llm_processor()
 
@@ -152,8 +145,8 @@ class LivekitNASABot(LivekitRoomBot):
         if (
             self._bot_config.tts
             and self._bot_config.llm
-            and self._bot_config.llm.messages
-            and len(self._bot_config.llm.messages) == 1
+            and self._bot_config.llm.messages is not None
+            and isinstance(self._bot_config.llm.messages, list)
         ):
             hi_text = "Please introduce yourself first."
             if self._bot_config.llm.language and self._bot_config.llm.language == "zh":

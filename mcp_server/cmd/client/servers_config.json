@@ -1,0 +1,33 @@
+{
+  "mcpServers": {
+    "simple": {
+      "transport": "stdio",
+      "parameters": {
+        "command": "python",
+        "args": ["-m", "mcp_server.cmd.simple.lowlevel"],
+        "env": {}
+      }
+    },
+    "weather": {
+      "transport": "streamable-http",
+      "parameters": {
+        "url": "http://localhost:8000/mcp",
+        "headers": {},
+        "timeout": 30,
+        "sse_read_timeout": 300,
+        "terminate_on_close": true,
+        "auth": null
+      }
+    },
+    "search": {
+      "transport": "sse",
+      "parameters": {
+        "url": "http://localhost:8001/sse",
+        "headers": {},
+        "timeout": 30,
+        "sse_read_timeout": 300,
+        "auth": null
+      }
+    }
+  }
+}

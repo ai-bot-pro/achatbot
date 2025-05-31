@@ -1,15 +1,10 @@
-import logging
-import os
-import shutil
-
+# with mcp services config to start bot
 import aiohttp
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.processors.logger import FrameLogger
 from apipeline.frames.data_frames import ImageRawFrame
-from mcp import StdioServerParameters
-from agora import rtc
 
 from src.processors.image_url_extract_processor import UrlToImageProcessor
 from src.processors.llm.base import LLMProcessor
@@ -22,7 +17,7 @@ from src.cmd.bots import register_ai_room_bots
 from src.types.frames.data_frames import (
     LLMMessagesFrame,
 )
-from src.services.mcp_client import MCPClient
+from src.services.mcp_client import MultiMCPClients
 from src.processors.aggregators.openai_llm_context import (
     OpenAILLMContext,
     OpenAIAssistantContextAggregator,
@@ -35,9 +30,9 @@ load_dotenv(override=True)
 
 
 @register_ai_room_bots.register
-class AgoraNASABot(AgoraChannelBot):
+class AgoraMultiMCPBot(AgoraChannelBot):
     """
-    agora webrtc channel + asr + llm(gemini) + nasa mcp server + tts bot
+    agora webrtc channel + asr + llm + multi mcp servers + tts bot
     """
 
     def __init__(self, **args) -> None:
@@ -52,23 +47,12 @@ class AgoraNASABot(AgoraChannelBot):
             vad_enabled=True,
             vad_analyzer=vad_analyzer,
             vad_audio_passthrough=True,
-            camera_out_enabled=True,
+            camera_out_enabled=False,
             camera_out_width=1024,
             camera_out_height=768,
         )
 
         asr_processor = self.get_asr_processor()
-
-        server_params = StdioServerParameters(
-            command=shutil.which("npx"),
-            args=["-y", "@programcomputer/nasa-mcp-server@latest"],
-            # https://api.nasa.gov
-            env={"NASA_API_KEY": os.getenv("NASA_API_KEY")},
-        )
-        # logging.info(f"{server_params=}")
-        mcp_client = MCPClient(server_params=server_params, mcp_name="nasa")
-
-        llm_processor: LLMProcessor = self.get_llm_processor()
 
         tts_processor: TTSProcessor = self.get_tts_processor()
         stream_info = tts_processor.get_stream_info()
@@ -80,27 +64,49 @@ class AgoraNASABot(AgoraChannelBot):
             params=self.agora_params,
         )
 
-        llm_context = OpenAILLMContext()
-        # 提问： 给出当天的天文图片； 请解释这张图片的主要内容；我想看2025年5月24日的天文图片;请讲解下图片；
-        system = f"""
-你是NASA天文探测团队的机器人。
-你的目标是以简洁的方式展示你的能力。
-你可以使用 NASA MCP 提供的多种工具来帮助用户。
-当被要求提供每日天文图片时，请不要向 API 提供任何日期，这将确保我们获取到最新的可用图片。
-如果用户要求特定日期的图片，你可以向 API 提供该日期。
-你的输出将被转换为音频，所以请不要在回答中包含特殊字符。
-以富有创意且有用的方式回应用户所说的内容。
-不要过度解释你正在做的事情。
-在执行工具调用时，只需用简短的句子回应。
-        """
-        messages = [{"role": "system", "content": system}]
+        llm_processor: LLMProcessor = self.get_llm_processor()
+
+        mcp_clients = MultiMCPClients(mcp_servers_config=self._bot_config.mcp_servers)
+        tools = await mcp_clients.register_tools(llm_processor)
+        tools_description = tools.get_tools_description()
+
+        # TODO @weedge:
+        # if use json response shot system prompt
+        # need support llm assistant response json to exract tool name and arguments
+        json_obj_tip = (
+            "IMPORTANT: When you need to use a tool, you must ONLY respond with "
+            "the exact JSON object format below, nothing else:\n"
+            "{\n"
+            '    "tool": "tool-name",\n'
+            '    "arguments": {\n'
+            '        "argument-name": "value"\n'
+            "    }\n"
+            "}\n"
+        )
+        system_message = (
+            "You are a helpful assistant with access to these tools:\n\n"
+            f"{tools_description}\n"
+            "Choose the appropriate tool based on the user's question. "
+            "If no tool is needed, reply directly.\n\n"
+            "After receiving a tool's response:\n"
+            "1. Transform the raw data into a natural, conversational response\n"
+            "2. Keep responses concise but informative\n"
+            "3. Focus on the most relevant information\n"
+            "4. Use appropriate context from the user's question\n"
+            "5. Avoid simply repeating the raw data\n"
+            "6. Your output will be converted to audio so don't include special characters in your answers.\n"
+            "7. Respond to what the user said in a creative and helpful way.\n"
+            "8. Don't overexplain what you are doing.\n"
+            "9. Just respond with short sentences when you are carrying out tool calls.\n\n"
+            "Please use only the tools that are explicitly defined above.\n"
+        )
+        messages = [{"role": "system", "content": system_message}]
         if self._bot_config.llm.messages:
             messages = self._bot_config.llm.messages
-        llm_context.set_messages(messages)
 
-        tools = await mcp_client.register_tools(llm_processor)
+        llm_context = OpenAILLMContext()
         llm_context.set_tools(tools)
-
+        llm_context.set_messages(messages)
         llm_user_ctx_aggr = OpenAIUserContextAggregator(llm_context)
         llm_assistant_ctx_aggr = OpenAIAssistantContextAggregator(llm_user_ctx_aggr)
 
