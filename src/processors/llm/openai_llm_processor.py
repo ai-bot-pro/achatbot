@@ -143,12 +143,16 @@ class BaseOpenAILLMProcessor(LLMProcessor):
         )
 
         async for chunk in chunk_stream:
-            # logging.info(f"chunk:{chunk.model_dump_json()}")
+            logging.debug(f"chunk:{chunk.model_dump_json()}")
             await self.record_llm_usage_tokens(chunk_dict=chunk.model_dump())
 
             if len(chunk.choices) == 0:
                 continue
+
             await self.stop_ttfb_metrics()
+
+            if not chunk.choices[0].delta:
+                continue
 
             if chunk.choices[0].delta.tool_calls:
                 # We're streaming the LLM response to enable the fastest response times.
@@ -171,6 +175,9 @@ class BaseOpenAILLMProcessor(LLMProcessor):
                     # Keep iterating through the response to collect all the argument fragments
                     arguments += tool_call.function.arguments
             elif chunk.choices[0].delta.content:
+                # TODO @weedge:
+                # if use json response shot system prompt
+                # need support llm assistant response json to exract tool name and arguments
                 await self.push_frame(TextFrame(chunk.choices[0].delta.content))
 
         # if we got a function name and arguments, check to see if it's a function with

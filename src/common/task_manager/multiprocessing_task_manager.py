@@ -28,13 +28,11 @@ class MultiprocessingTaskManager(TaskManager):
                     proc.terminate()
                     proc.join(timeout=self._task_done_timeout)
                     proc.close()
-                    logging.info(f"pid:{pid} tag:{tag} proc: {proc} close")
-                    trace_info = traceback.format_exc()
-                    logging.info(f"{trace_info=}")
+                    logging.info(f"pid:{pid} tag:{tag} proc: {proc} close", exc_info=True)
                 else:
                     logging.warning(f"pid:{pid} tag:{tag} proc: {proc} already closed")
             except Exception as e:
-                logging.error(f"Error while cleaning up process {pid}: {e}")
+                logging.error(f"Error while cleaning up process {pid}: {e}", exc_info=True)
                 if proc.is_alive():
                     proc.kill()
                     logging.warning(f"pid:{pid} tag:{tag} proc: {proc} killed")

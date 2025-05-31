@@ -70,11 +70,10 @@ class LivekitMultiMCPBot(LivekitRoomBot):
         tools = await mcp_clients.register_tools(llm_processor)
         tools_description = tools.get_tools_description()
 
-        system_message = (
-            "You are a helpful assistant with access to these tools:\n\n"
-            f"{tools_description}\n"
-            "Choose the appropriate tool based on the user's question. "
-            "If no tool is needed, reply directly.\n\n"
+        # TODO @weedge:
+        # if use json response shot system prompt
+        # need support llm assistant response json to exract tool name and arguments
+        json_obj_tip = (
             "IMPORTANT: When you need to use a tool, you must ONLY respond with "
             "the exact JSON object format below, nothing else:\n"
             "{\n"
@@ -82,7 +81,13 @@ class LivekitMultiMCPBot(LivekitRoomBot):
             '    "arguments": {\n'
             '        "argument-name": "value"\n'
             "    }\n"
-            "}\n\n"
+            "}\n"
+        )
+        system_message = (
+            "You are a helpful assistant with access to these tools:\n\n"
+            f"{tools_description}\n"
+            "Choose the appropriate tool based on the user's question. "
+            "If no tool is needed, reply directly.\n\n"
             "After receiving a tool's response:\n"
             "1. Transform the raw data into a natural, conversational response\n"
             "2. Keep responses concise but informative\n"

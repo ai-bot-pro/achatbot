@@ -47,7 +47,7 @@ class MultiMCPClients(EventHandlerManager):
                 continue
             mcp_client = MCPClient(server_params=server_params, mcp_name=name)
             self.regist_clients[name] = mcp_client
-            logging.info(f"Registered mcp client: {name} with params: {server_params.__dict__}")
+            logging.info(f"Registered mcp client: {name}")
 
     async def register_tools(self, llm: LLMProcessor) -> ToolsSchema:
         all_standard_tools = []
@@ -296,7 +296,7 @@ class MCPClient(EventHandlerManager):
                 # Add to list of schemas
                 tool_schemas.append(function_schema)
                 logging.info(
-                    f"MCP {self._mcp_name} Successfully registered tool '{tool_name}' | Tool description: {tool.description}"
+                    f"MCP {self._mcp_name} Successfully registered tool '{tool_name}' | Tool description: {tool.description} | Tool schema: {tool.inputSchema}"
                 )
 
             except Exception as e:

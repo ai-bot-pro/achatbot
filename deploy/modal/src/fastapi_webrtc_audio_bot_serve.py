@@ -4,53 +4,62 @@ import os
 achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.15")
 
 
+image = (
+    # modal.Image.debian_slim(python_version="3.11")
+    modal.Image.from_registry("node:22-slim", add_python="3.10")
+    .apt_install("git", "git-lfs", "ffmpeg")
+    .pip_install(
+        [
+            "achatbot["
+            "fastapi_bot_server,"
+            "livekit,livekit-api,daily,agora,"
+            "silero_vad_analyzer,daily_langchain_rag_bot,"
+            "sense_voice_asr,deepgram_asr_processor,"
+            "openai_llm_processor,google_llm_processor,litellm_processor,"
+            "deep_translator,together_ai,"
+            "mcp,"
+            "tts_edge,"
+            "queue"
+            f"]=={achatbot_version}",
+        ],
+        extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+    )
+    .pip_install(
+        "aiohttp==3.10.11"
+    )  # fix Future exception was never retrieve, when connect timeout ( Connection reset by peer, retry)
+    .env(
+        {
+            "HF_HUB_ENABLE_HF_TRANSFER": "1",
+            "ACHATBOT_PKG": "1",
+            "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
+            "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
+            # asr module engine TAG, default whisper_timestamped_asr
+            "ASR_TAG": "sense_voice_asr",
+            "ASR_LANG": "zn",
+            "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
+            # llm processor model, default:google gemini_flash_latest
+            "GOOGLE_LLM_MODEL": "gemini-2.0-flash-lite",
+            # tts module engine TAG,default tts_edge
+            "TTS_TAG": "tts_edge",
+        }
+    )
+)
+
+
 class ContainerRuntimeConfig:
     images = {
-        "default": (
-            # modal.Image.debian_slim(python_version="3.11")
-            modal.Image.from_registry("node:22-slim", add_python="3.10")
-            .apt_install("git", "git-lfs", "ffmpeg")
-            .pip_install(
-                [
-                    "achatbot["
-                    "fastapi_bot_server,"
-                    "livekit,livekit-api,daily,agora,"
-                    "silero_vad_analyzer,daily_langchain_rag_bot,"
-                    "sense_voice_asr,deepgram_asr_processor,"
-                    "openai_llm_processor,google_llm_processor,litellm_processor,"
-                    "deep_translator,together_ai,"
-                    "mcp,"
-                    "tts_edge,"
-                    "queue"
-                    f"]=={achatbot_version}",
-                    # "huggingface_hub[hf_transfer]==0.24.7",
-                    # "wget",
-                ],
-                extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
-            )
-            .env(
-                {
-                    "HF_HUB_ENABLE_HF_TRANSFER": "1",
-                    "ACHATBOT_PKG": "1",
-                    "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
-                    "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
-                    # asr module engine TAG, default whisper_timestamped_asr
-                    "ASR_TAG": "sense_voice_asr",
-                    "ASR_LANG": "zn",
-                    "ASR_MODEL_NAME_OR_PATH": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall",
-                    # llm processor model, default:google gemini_flash_latest
-                    "GOOGLE_LLM_MODEL": "gemini-2.0-flash-lite",
-                    # tts module engine TAG,default tts_edge
-                    "TTS_TAG": "tts_edge",
-                }
-            )
-            .pip_install(
-                "aiohttp==3.10.11"
-            )  # fix Future exception was never retrieve, when connect timeout ( Connection reset by peer, retry)
-            .run_commands(
-                "npx -y @programcomputer/nasa-mcp-server@latest",
-            )
-        ),
+        # default don't preinstall tools, when setup bot to install tools
+        "default": image,
+        # preinstall nasa mcp server tool
+        "nasa": image.run_commands("npx -y @programcomputer/nasa-mcp-server@latest"),
+        # preinstall amap mcp server tool when have amap api key
+        "travel": image.env(
+            {
+                "AMAP_MAPS_API_KEY": os.getenv("AMAP_MAPS_API_KEY"),
+            }
+        ).run_commands("AMAP_MAPS_API_KEY=$AMAP_MAPS_API_KEY npx -y @amap/amap-maps-mcp-server")
+        if os.getenv("AMAP_MAPS_API_KEY")
+        else image,
     }
 
     @staticmethod
