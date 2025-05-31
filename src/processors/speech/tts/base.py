@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import string
 from abc import abstractmethod
 from typing import AsyncGenerator
 
@@ -97,6 +98,8 @@ class TTSProcessorBase(AIProcessor):
 
     async def _push_tts_frames(self, text: str, text_passthrough: bool = True):
         text = text.strip()
+        translator = str.maketrans('', '', string.punctuation)
+        text = text.translate(translator)
         if not text:
             return
 

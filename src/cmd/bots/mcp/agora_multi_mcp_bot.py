@@ -97,7 +97,7 @@ class AgoraMultiMCPBot(AgoraChannelBot):
             "6. Your output will be converted to audio so don't include special characters in your answers.\n"
             "7. Respond to what the user said in a creative and helpful way.\n"
             "8. Don't overexplain what you are doing.\n"
-            "9. Just respond with short sentences when you are carrying out tool calls.\n"
+            "9. Just respond with short sentences when you are carrying out tool calls.\n\n"
             "Please use only the tools that are explicitly defined above.\n"
         )
         messages = [{"role": "system", "content": system_message}]
