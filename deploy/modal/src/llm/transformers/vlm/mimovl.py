@@ -804,7 +804,7 @@ ROUND=3 IMAGE_GPU=L40s modal run src/llm/transformers/vlm/mimovl.py --task text_
 # 不支持funciton_calling 需要微调
 IMAGE_GPU=L40s modal run src/llm/transformers/vlm/mimovl.py --task chat_tool
 # 支持json_mode :) (RL think,  system prompt need json mode shot)
-# so you can use json_mode to do function call
+# so you can use json_mode to do function call and GUI Tasks
 IMAGE_GPU=L40s modal run src/llm/transformers/vlm/mimovl.py --task chat_json_mode
 """
 
