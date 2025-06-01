@@ -160,6 +160,8 @@ class TransformersManualVisionMimo(TransformersBaseLLM):
         start = perf_counter()
         times = []
         is_output_think = self.args.lm_gen_think_output
+        think_interval_time = self.args.lm_gen_think_interval_time
+        think_interval_cn = 0
         for new_text in streamer:
             times.append(perf_counter() - start)
             if is_output_think is False:
@@ -167,10 +169,18 @@ class TransformersManualVisionMimo(TransformersBaseLLM):
                     new_text = new_text.replace("</think>", "").strip("\n")
                     is_output_think = True
                 else:
+                    if think_interval_time > 0 and sum(times) > think_interval_time:  # tip once
+                        think_interval_cn += 1
+                        think_interval_time = (
+                            think_interval_cn + 1
+                        ) * self.args.lm_gen_think_interval_time
+                        yield "思考中，请稍等。"
+                    start = perf_counter()
                     continue
             generated_text += new_text
             yield new_text
             start = perf_counter()
+        yield "."  # end the sentence for downstream process sentence, e.g.: tts
         logging.info(f"{generated_text=} TTFT: {times[0]:.4f}s total time: {sum(times):.4f}s")
         torch.cuda.empty_cache()
         tmp_list = generated_text.split("</think>")

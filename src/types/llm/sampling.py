@@ -98,6 +98,10 @@ class LMGenerateArgs:
             "help": "if use RL model, Whether to output <think>**</think> content; set this to False for deterministic outputs. Default is True."
         },
     )
+    lm_gen_think_interval_time: int = field(
+        default=0,
+        metadata={"help": "The think interval time to tip user. Default is 0<=. no tip,"},
+    )
 
     def update(self, **kwargs):
         unused_kwargs = dict()
