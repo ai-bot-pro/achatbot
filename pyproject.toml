@@ -16,7 +16,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.15.post2"
+version = "0.0.16"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -274,6 +274,9 @@ llm_transformers_manual_vision_smolvlm = [
 ]
 llm_transformers_manual_vision_gemma = [
     "achatbot[llm_transformers_manual_vision,accelerate]",
+]
+llm_transformers_manual_vision_mimo = [
+    "achatbot[llm_transformers_manual_vision]",
 ]
 
 # vision + audio -> text
