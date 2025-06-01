@@ -161,7 +161,6 @@ class TransformersManualVisionMimo(TransformersBaseLLM):
         times = []
         is_output_think = self.args.lm_gen_think_output
         think_interval_time = self.args.lm_gen_think_interval_time
-        think_interval_cn = 0
         for new_text in streamer:
             times.append(perf_counter() - start)
             if is_output_think is False:
@@ -170,10 +169,7 @@ class TransformersManualVisionMimo(TransformersBaseLLM):
                     is_output_think = True
                 else:
                     if think_interval_time > 0 and sum(times) > think_interval_time:  # tip once
-                        think_interval_cn += 1
-                        think_interval_time = (
-                            think_interval_cn + 1
-                        ) * self.args.lm_gen_think_interval_time
+                        think_interval_time = 0
                         yield "思考中，请稍等。"
                     start = perf_counter()
                     continue
