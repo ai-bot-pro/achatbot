@@ -92,6 +92,12 @@ class LMGenerateArgs:
         default=3,
         metadata={"help": "The maximum number of tokens to generate per step. Default is 3."},
     )
+    lm_gen_think_output: bool = field(
+        default=True,
+        metadata={
+            "help": "if use RL model, Whether to output <think>**</think> content; set this to False for deterministic outputs. Default is True."
+        },
+    )
 
     def update(self, **kwargs):
         unused_kwargs = dict()

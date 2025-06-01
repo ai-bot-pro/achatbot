@@ -1,7 +1,7 @@
 import modal
 import os
 
-achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.12")
+achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.16")
 secret = os.getenv("SECRET_NAME", "achatbot")
 
 vision_bot_img = (
@@ -59,7 +59,7 @@ class ContainerRuntimeConfig:
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
             ).env(
                 {
-                    "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "Qwen/Qwen2-VL-2B-Instruct")}',
+                    "LLM_MODEL_NAME_OR_PATH": f"/root/.achatbot/models/{os.getenv('LLM_MODEL_NAME_OR_PATH', 'Qwen/Qwen2-VL-2B-Instruct')}",
                 }
             )
         ),
@@ -71,7 +71,7 @@ class ContainerRuntimeConfig:
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
             ).env(
                 {
-                    "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "unsloth/Llama-3.2-11B-Vision-Instruct")}',
+                    "LLM_MODEL_NAME_OR_PATH": f"/root/.achatbot/models/{os.getenv('LLM_MODEL_NAME_OR_PATH', 'unsloth/Llama-3.2-11B-Vision-Instruct')}",
                 }
             )
         ),
@@ -83,7 +83,7 @@ class ContainerRuntimeConfig:
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
             ).env(
                 {
-                    "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "deepseek-ai/Janus-Pro-1B")}',
+                    "LLM_MODEL_NAME_OR_PATH": f"/root/.achatbot/models/{os.getenv('LLM_MODEL_NAME_OR_PATH', 'deepseek-ai/Janus-Pro-1B')}",
                 }
             )
         ),
@@ -95,7 +95,7 @@ class ContainerRuntimeConfig:
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
             ).env(
                 {
-                    "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "deepseek-ai/deepseek-vl2-tiny")}',
+                    "LLM_MODEL_NAME_OR_PATH": f"/root/.achatbot/models/{os.getenv('LLM_MODEL_NAME_OR_PATH', 'deepseek-ai/deepseek-vl2-tiny')}",
                 }
             )
         ),
@@ -107,7 +107,7 @@ class ContainerRuntimeConfig:
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
             ).env(
                 {
-                    "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "openbmb/MiniCPM-o-2_6")}',
+                    "LLM_MODEL_NAME_OR_PATH": f"/root/.achatbot/models/{os.getenv('LLM_MODEL_NAME_OR_PATH', 'openbmb/MiniCPM-o-2_6')}",
                 }
             )
         ),
@@ -136,7 +136,7 @@ class ContainerRuntimeConfig:
             .env(
                 {
                     "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
-                    "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "Qwen/Qwen2.5-Omni-7B")}',
+                    "LLM_MODEL_NAME_OR_PATH": f"/root/.achatbot/models/{os.getenv('LLM_MODEL_NAME_OR_PATH', 'Qwen/Qwen2.5-Omni-7B')}",
                 }
             )
         ),
@@ -149,7 +149,7 @@ class ContainerRuntimeConfig:
             ).env(
                 {
                     "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
-                    "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "llava-fastvithd_1.5b_stage3")}',
+                    "LLM_MODEL_NAME_OR_PATH": f"/root/.achatbot/models/{os.getenv('LLM_MODEL_NAME_OR_PATH', 'llava-fastvithd_1.5b_stage3')}",
                     "MOBILE_CLIP_MODEL_CONFIG": "/root/.achatbot/models/mobileclip_l.json",
                 }
             )
@@ -163,7 +163,7 @@ class ContainerRuntimeConfig:
             ).env(
                 {
                     "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
-                    "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "HuggingFaceTB/SmolVLM2-2.2B-Instruct")}',
+                    "LLM_MODEL_NAME_OR_PATH": f"/root/.achatbot/models/{os.getenv('LLM_MODEL_NAME_OR_PATH', 'HuggingFaceTB/SmolVLM2-2.2B-Instruct')}",
                 }
             )
         ),
@@ -176,7 +176,7 @@ class ContainerRuntimeConfig:
             ).env(
                 {
                     "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
-                    "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "google/gemma-3-4b-it")}',
+                    "LLM_MODEL_NAME_OR_PATH": f"/root/.achatbot/models/{os.getenv('LLM_MODEL_NAME_OR_PATH', 'google/gemma-3-4b-it')}",
                 }
             )
         ),
@@ -189,7 +189,20 @@ class ContainerRuntimeConfig:
             ).env(
                 {
                     "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
-                    "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "microsoft/Phi-4-multimodal-instruct")}',
+                    "LLM_MODEL_NAME_OR_PATH": f"/root/.achatbot/models/{os.getenv('LLM_MODEL_NAME_OR_PATH', 'microsoft/Phi-4-multimodal-instruct')}",
+                }
+            )
+        ),
+        "mimo": (
+            vision_bot_img.pip_install(
+                [
+                    f"achatbot[llm_transformers_manual_vision_mimo]=={achatbot_version}",
+                ],
+                extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+            ).env(
+                {
+                    "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+                    "LLM_MODEL_NAME_OR_PATH": f"/root/.achatbot/models/{os.getenv('LLM_MODEL_NAME_OR_PATH', 'XiaomiMiMo/MiMo-VL-7B-RL')}",
                 }
             )
         ),
