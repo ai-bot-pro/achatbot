@@ -52,6 +52,10 @@ img = (
             "DATA_PATH": os.getenv("DATA_PATH", "openai/gsm8k"),
         }
     )
+    .run_commands(
+        "cd /verl && git pull origin main ",
+        "cd /verl && git checkout 6a85316727d1985b346c62472c3e20470292fe96 && pip install -q .",
+    )
 )
 
 TRAIN_NAME = "demo_ppo_train"
@@ -67,15 +71,14 @@ train_out_vol = modal.Volume.from_name("train_output", create_if_missing=True)
 @app.function(
     gpu=IMAGE_GPU,
     cpu=2.0,
-    retries=1,
+    retries=modal.Retries(initial_delay=0.0, max_retries=10),
     image=img,
     volumes={
         HF_MODEL_DIR: hf_model_vol,
         DATASETS_DIR: datasets_vol,
         TRAIN_OUTPUT_DIR: train_out_vol,
     },
-    timeout=1200,  # default 300s
-    scaledown_window=1200,
+    timeout=86400,  # [10,86400]
     max_containers=1,
 )
 def run(other_args: str = ""):
@@ -89,15 +92,8 @@ def run(other_args: str = ""):
 
     DATA_PATH = os.path.join(DATASETS_DIR, os.getenv("DATA_PATH", "openai/gsm8k"))
 
-    cur_date = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     OUTPUT_DIR = os.path.join(TRAIN_OUTPUT_DIR, f"{TRAIN_NAME}")
-    PRE_OUTPUT_DIR = os.path.join(TRAIN_OUTPUT_DIR, f"{TRAIN_NAME}_{cur_date}")
-    if os.path.exists(OUTPUT_DIR):
-        cmd = f"mv {OUTPUT_DIR} {PRE_OUTPUT_DIR}"
-        print(cmd)
-        subprocess.run(cmd, shell=True)
     LOGS_DIR = os.path.join(OUTPUT_DIR, "logs")
-
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     os.makedirs(LOGS_DIR, exist_ok=True)
 
@@ -110,7 +106,7 @@ def run(other_args: str = ""):
 
     # https://verl.readthedocs.io/en/latest/examples/config.html
     # https://github.com/volcengine/verl/blob/main/verl/trainer/config/ppo_trainer.yaml
-    cmd = f"""PYTHONUNBUFFERED=1 python -m verl.trainer.main_ppo \
+    cmd = f"""HYDRA_FULL_ERROR=1 PYTHONUNBUFFERED=1 python -m verl.trainer.main_ppo \
 data.train_files={DATA_PATH}/train.parquet \
 data.val_files={DATA_PATH}/test.parquet \
 data.train_batch_size=256 \
@@ -120,14 +116,16 @@ data.max_response_length=256 \
 actor_rollout_ref.model.path={LLM_MODEL_PATH} \
 actor_rollout_ref.actor.optim.lr=1e-6 \
 actor_rollout_ref.actor.ppo_mini_batch_size=64 \
-actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=4 \
+actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=2 \
+actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16 \
 actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=8 \
 actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
-actor_rollout_ref.rollout.gpu_memory_utilization=0.4 \
+actor_rollout_ref.rollout.gpu_memory_utilization=0.6 \
 actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=4 \
 critic.optim.lr=1e-5 \
 critic.model.path={LLM_MODEL_PATH} \
-critic.ppo_micro_batch_size_per_gpu=4 \
+critic.model.fsdp_config.model_dtype=bfloat16 \
+critic.ppo_micro_batch_size_per_gpu=2 \
 algorithm.kl_ctrl.kl_coef=0.001 \
 trainer.experiment_name={TRAIN_NAME} \
 trainer.logger=['console','tensorboard'] \
