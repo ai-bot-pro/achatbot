@@ -50,11 +50,12 @@ img = (
             "PYTHONUNBUFFERED": "1",
             "LLM_MODEL": os.getenv("LLM_MODEL", "Qwen/Qwen2.5-0.5B-Instruct"),
             "DATA_PATH": os.getenv("DATA_PATH", "openai/gsm8k"),
+            "TOTAL_EPOCHS": os.getenv("TOTAL_EPOCHS", "2"),
         }
     )
     .run_commands(
-        "cd /verl && git pull origin main ",
-        "cd /verl && git checkout 6a85316727d1985b346c62472c3e20470292fe96 && pip install -q .",
+        "cd /verl && git pull origin feat/achatbot ",
+        "cd /verl && git checkout 81c821175d2749c19e61eba3da4c8021894f425d && pip install -q .",
     )
 )
 
@@ -86,6 +87,7 @@ def run(other_args: str = ""):
 
     # --------------- init ----------------------
     NPROC_PER_NODE = os.getenv("NPROC_PER_NODE", "1")
+    TOTAL_EPOCHS = os.getenv("TOTAL_EPOCHS", "2")
     LLM_MODEL_PATH = os.path.join(
         HF_MODEL_DIR, os.getenv("LLM_MODEL", "Qwen/Qwen2.5-0.5B-Instruct")
     )
@@ -116,7 +118,7 @@ data.max_response_length=256 \
 actor_rollout_ref.model.path={LLM_MODEL_PATH} \
 actor_rollout_ref.actor.optim.lr=1e-6 \
 actor_rollout_ref.actor.ppo_mini_batch_size=64 \
-actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=2 \
+actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=4 \
 actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16 \
 actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=8 \
 actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
@@ -125,7 +127,7 @@ actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=4 \
 critic.optim.lr=1e-5 \
 critic.model.path={LLM_MODEL_PATH} \
 critic.model.fsdp_config.model_dtype=bfloat16 \
-critic.ppo_micro_batch_size_per_gpu=2 \
+critic.ppo_micro_batch_size_per_gpu=4 \
 algorithm.kl_ctrl.kl_coef=0.001 \
 trainer.experiment_name={TRAIN_NAME} \
 trainer.logger=['console','tensorboard'] \
@@ -136,7 +138,7 @@ trainer.n_gpus_per_node={NPROC_PER_NODE} \
 trainer.nnodes=1 \
 trainer.save_freq=10 \
 trainer.test_freq=10 \
-trainer.total_epochs=2 \
+trainer.total_epochs={TOTAL_EPOCHS} \
 {other_args} 2>&1 | tee {LOGS_DIR}/verl_demo.log
 """
 
@@ -148,4 +150,5 @@ trainer.total_epochs=2 \
 
 """
 modal run src/train/verl/examples/demo_train_ppo.py
+TOTAL_EPOCHS=15 modal run src/train/verl/examples/demo_train_ppo.py
 """

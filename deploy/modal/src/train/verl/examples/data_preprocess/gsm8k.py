@@ -23,7 +23,6 @@ hf_dataset_vol = modal.Volume.from_name("datasets", create_if_missing=True)
     # secrets=[modal.Secret.from_name("achatbot")],
     volumes={HF_DATASET_DIR: hf_dataset_vol},
     timeout=1200,
-    scaledown_window=1200,
 )
 def process():
     import datasets
@@ -34,7 +33,9 @@ def process():
     dataset = datasets.load_dataset(data_source_path, "main")
 
     train_dataset = dataset["train"]
+    print("raw train dataset", train_dataset[0])
     test_dataset = dataset["test"]
+    print("raw test dataset", test_dataset[0])
 
     instruction_following = 'Let\'s think step by step and output the final answer after "####".'
 
@@ -69,7 +70,9 @@ def process():
         return process_fn
 
     train_dataset = train_dataset.map(function=make_map_fn("train"), with_indices=True)
+    print(train_dataset[0],flush=True)
     test_dataset = test_dataset.map(function=make_map_fn("test"), with_indices=True)
+    print(test_dataset[0],flush=True)
 
     local_dir = data_source_path
 
@@ -82,6 +85,7 @@ def extract_solution(solution_str):
     assert solution is not None
     final_solution = solution.group(0)
     final_solution = final_solution.split("#### ")[1].replace(",", "")
+    # print(final_solution)
     return final_solution
 
 
