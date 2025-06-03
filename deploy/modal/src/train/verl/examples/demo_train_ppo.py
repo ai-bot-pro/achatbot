@@ -124,7 +124,7 @@ data.max_response_length=1024 \
 actor_rollout_ref.model.path={LLM_MODEL_PATH} \
 actor_rollout_ref.actor.strategy={strategy} \
 actor_rollout_ref.actor.optim.lr=1e-6 \
-actor_rollout_ref.actor.ppo_mini_batch_size=60 \
+actor_rollout_ref.actor.ppo_mini_batch_size={int(NPROC_PER_NODE) * 60} \
 actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=20 \
 actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16 \
 actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=8 \
@@ -160,4 +160,5 @@ trainer.total_epochs={total_epochs} \
 modal run src/train/verl/examples/demo_train_ppo.py
 modal run src/train/verl/examples/demo_train_ppo.py --total-epochs 15
 modal run src/train/verl/examples/demo_train_ppo.py --total-epochs 15 --retrain
+IMAGE_GPU=L40s:2 modal run src/train/verl/examples/demo_train_ppo.py --total-epochs 15 --retrain
 """
