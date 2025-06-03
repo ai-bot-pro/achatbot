@@ -50,12 +50,11 @@ img = (
             "PYTHONUNBUFFERED": "1",
             "LLM_MODEL": os.getenv("LLM_MODEL", "Qwen/Qwen2.5-0.5B-Instruct"),
             "DATA_PATH": os.getenv("DATA_PATH", "openai/gsm8k"),
-            "TOTAL_EPOCHS": os.getenv("TOTAL_EPOCHS", "2"),
         }
     )
     .run_commands(
         "cd /verl && git pull origin feat/achatbot ",
-        "cd /verl && git checkout 81c821175d2749c19e61eba3da4c8021894f425d && pip install -q .",
+        "cd /verl && git checkout a6b2ed97614f6e70188cfe590369ae27c4b20510 && pip install -q .",
     )
 )
 
@@ -82,12 +81,11 @@ train_out_vol = modal.Volume.from_name("train_output", create_if_missing=True)
     timeout=86400,  # [10,86400]
     max_containers=1,
 )
-def run(other_args: str = ""):
+def run(other_args: str = "", total_epochs: int = 2, retrain: bool = False, strategy: str = "fsdp"):
     import torch
 
     # --------------- init ----------------------
     NPROC_PER_NODE = os.getenv("NPROC_PER_NODE", "1")
-    TOTAL_EPOCHS = os.getenv("TOTAL_EPOCHS", "2")
     LLM_MODEL_PATH = os.path.join(
         HF_MODEL_DIR, os.getenv("LLM_MODEL", "Qwen/Qwen2.5-0.5B-Instruct")
     )
@@ -95,9 +93,17 @@ def run(other_args: str = ""):
     DATA_PATH = os.path.join(DATASETS_DIR, os.getenv("DATA_PATH", "openai/gsm8k"))
 
     OUTPUT_DIR = os.path.join(TRAIN_OUTPUT_DIR, f"{TRAIN_NAME}")
-    LOGS_DIR = os.path.join(OUTPUT_DIR, "logs")
+    cur_date = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    PRE_OUTPUT_DIR = os.path.join(TRAIN_OUTPUT_DIR, f"{TRAIN_NAME}_{cur_date}")
+    if retrain is True and os.path.exists(OUTPUT_DIR):
+        cmd = f"mv {OUTPUT_DIR} {PRE_OUTPUT_DIR}"
+        print(cmd)
+        subprocess.run(cmd, shell=True)
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+    LOGS_DIR = os.path.join(OUTPUT_DIR, "logs")
     os.makedirs(LOGS_DIR, exist_ok=True)
+    TENSORBOARD_LOG = os.path.join(OUTPUT_DIR, "tensorboard_log")
+    os.makedirs(TENSORBOARD_LOG, exist_ok=True)
 
     # --------------- run ----------------------
     subprocess.run("nvidia-smi --version", shell=True)
@@ -108,26 +114,28 @@ def run(other_args: str = ""):
 
     # https://verl.readthedocs.io/en/latest/examples/config.html
     # https://github.com/volcengine/verl/blob/main/verl/trainer/config/ppo_trainer.yaml
-    cmd = f"""HYDRA_FULL_ERROR=1 PYTHONUNBUFFERED=1 python -m verl.trainer.main_ppo \
+    cmd = f"""TENSORBOARD_DIR={TENSORBOARD_LOG} PYTHONUNBUFFERED=1 python -m verl.trainer.main_ppo \
 data.train_files={DATA_PATH}/train.parquet \
 data.val_files={DATA_PATH}/test.parquet \
 data.train_batch_size=256 \
 data.val_batch_size=1312 \
 data.max_prompt_length=512 \
-data.max_response_length=256 \
+data.max_response_length=1024 \
 actor_rollout_ref.model.path={LLM_MODEL_PATH} \
+actor_rollout_ref.actor.strategy={strategy} \
 actor_rollout_ref.actor.optim.lr=1e-6 \
-actor_rollout_ref.actor.ppo_mini_batch_size=64 \
-actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=4 \
+actor_rollout_ref.actor.ppo_mini_batch_size=60 \
+actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=20 \
 actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16 \
 actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=8 \
 actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
 actor_rollout_ref.rollout.gpu_memory_utilization=0.6 \
 actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=4 \
+critic.strategy={strategy} \
 critic.optim.lr=1e-5 \
 critic.model.path={LLM_MODEL_PATH} \
 critic.model.fsdp_config.model_dtype=bfloat16 \
-critic.ppo_micro_batch_size_per_gpu=4 \
+critic.ppo_micro_batch_size_per_gpu=20 \
 algorithm.kl_ctrl.kl_coef=0.001 \
 trainer.experiment_name={TRAIN_NAME} \
 trainer.logger=['console','tensorboard'] \
@@ -138,7 +146,7 @@ trainer.n_gpus_per_node={NPROC_PER_NODE} \
 trainer.nnodes=1 \
 trainer.save_freq=10 \
 trainer.test_freq=10 \
-trainer.total_epochs={TOTAL_EPOCHS} \
+trainer.total_epochs={total_epochs} \
 {other_args} 2>&1 | tee {LOGS_DIR}/verl_demo.log
 """
 
@@ -150,5 +158,6 @@ trainer.total_epochs={TOTAL_EPOCHS} \
 
 """
 modal run src/train/verl/examples/demo_train_ppo.py
-TOTAL_EPOCHS=15 modal run src/train/verl/examples/demo_train_ppo.py
+modal run src/train/verl/examples/demo_train_ppo.py --total-epochs 15
+modal run src/train/verl/examples/demo_train_ppo.py --total-epochs 15 --retrain
 """
