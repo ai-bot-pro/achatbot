@@ -5,8 +5,8 @@ import subprocess
 import modal
 
 
-app = modal.App("demo_train_gsm8k_ppo")
-IMAGE_GPU = os.getenv("IMAGE_GPU", "L40s")
+app = modal.App("demo_train_gsm8k_grpo")
+IMAGE_GPU = os.getenv("IMAGE_GPU", "A100-80GB")
 
 img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
@@ -28,7 +28,7 @@ img = (
     .pip_install("wheel")
     # https://github.com/Dao-AILab/flash-attention/releases/tag/v2.7.4.post1
     .pip_install("flash-attn", extra_options="--no-build-isolation")
-    # vllm-0.8.3 does not support flashinfer>=0.2.3
+    # vllm-0.8.3 does not sugrport flashinfer>=0.2.3
     # see https://github.com/vllm-project/vllm/pull/15777
     .pip_install(
         "vllm==0.8.3",
@@ -45,20 +45,20 @@ img = (
     )
     .env(
         {
-            # RuntimeError: The kernel on this machine does not support the pidfd_open syscall needed to use IPC for CUDA tensors when expandable_segments:True is set. Consider using expandable_segments:False via torch.cuda.memory._set_allocator_settings('expandable_segments:False') for this allocation.
+            # RuntimeError: The kernel on this machine does not sugrport the pidfd_open syscall needed to use IPC for CUDA tensors when expandable_segments:True is set. Consider using expandable_segments:False via torch.cuda.memory._set_allocator_settings('expandable_segments:False') for this allocation.
             "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:False",
             "PYTHONUNBUFFERED": "1",
-            "LLM_MODEL": os.getenv("LLM_MODEL", "Qwen/Qwen2.5-0.5B-Instruct"),
+            "LLM_MODEL": os.getenv("LLM_MODEL", "Qwen/Qwen2.5-3B-Instruct"),
             "DATA_PATH": os.getenv("DATA_PATH", "openai/gsm8k"),
         }
     )
     .run_commands(
-        "cd /verl && git pull origin feat/achatbot ",
+        "cd /verl && git pull origin feat/achatbot",
         "cd /verl && git checkout dc5740e52f6a48b1eda53569e426e8b6e6fbd89e && pip install -q .",
     )
 )
 
-TRAIN_NAME = "demo_ppo_train"
+TRAIN_NAME = "demo_grpo_train"
 
 HF_MODEL_DIR = "/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
@@ -93,7 +93,7 @@ def run(
 
     # --------------- init ----------------------
     NPROC_PER_NODE = os.getenv("NPROC_PER_NODE", "1")
-    llm_model = os.getenv("LLM_MODEL", "Qwen/Qwen2.5-0.5B-Instruct")
+    llm_model = os.getenv("LLM_MODEL", "Qwen/Qwen2.5-3B-Instruct")
     LLM_MODEL_PATH = os.path.join(HF_MODEL_DIR, llm_model)
 
     DATA_PATH = os.path.join(DATASETS_DIR, os.getenv("DATA_PATH", "openai/gsm8k"))
@@ -119,42 +119,49 @@ def run(
     subprocess.run("which torchrun", shell=True)
 
     # https://verl.readthedocs.io/en/latest/examples/config.html
-    # https://github.com/volcengine/verl/blob/main/verl/trainer/config/ppo_trainer.yaml
+    # https://github.com/volcengine/verl/blob/main/verl/trainer/config/grpo_trainer.yaml
     cmd = f"""TENSORBOARD_DIR={TENSORBOARD_LOG} PYTHONUNBUFFERED=1 python -m verl.trainer.main_ppo \
 data.train_files={DATA_PATH}/train.parquet \
 data.val_files={DATA_PATH}/test.parquet \
-data.train_batch_size=256 \
-data.val_batch_size=1312 \
+algorithm.adv_estimator=grpo \
+actor_rollout_ref.model.path={LLM_MODEL_PATH} \
+data.train_batch_size=1024 \
 data.max_prompt_length=512 \
 data.max_response_length=1024 \
-actor_rollout_ref.model.path={LLM_MODEL_PATH} \
-actor_rollout_ref.actor.strategy={strategy} \
+data.filter_overlong_prompts=True \
+data.truncation='error' \
+actor_rollout_ref.actor.fsdp_config.model_dtype={model_type} \
 actor_rollout_ref.actor.optim.lr=1e-6 \
+actor_rollout_ref.model.use_remove_padding=True \
 actor_rollout_ref.actor.ppo_mini_batch_size={int(NPROC_PER_NODE) * 60} \
 actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=20 \
-actor_rollout_ref.actor.fsdp_config.model_dtype={model_type} \
-actor_rollout_ref.rollout.name=vllm \
+actor_rollout_ref.actor.use_kl_loss=True \
+actor_rollout_ref.actor.kl_loss_coef=0.001 \
+actor_rollout_ref.actor.kl_loss_type=low_var_kl \
+actor_rollout_ref.actor.entropy_coeff=0 \
+actor_rollout_ref.actor.strategy={strategy} \
+actor_rollout_ref.model.enable_gradient_checkpointing=False \
+actor_rollout_ref.actor.fsdp_config.param_offload=True \
+actor_rollout_ref.actor.fsdp_config.optimizer_offload=True \
 actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=8 \
-actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
+actor_rollout_ref.rollout.tensor_model_parallel_size=2 \
+actor_rollout_ref.rollout.name=vllm \
 actor_rollout_ref.rollout.gpu_memory_utilization=0.6 \
+actor_rollout_ref.rollout.n=5 \
 actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=8 \
-critic.strategy={strategy} \
-critic.optim.lr=1e-5 \
-critic.model.path={LLM_MODEL_PATH} \
-critic.model.fsdp_config.model_dtype={model_type} \
-critic.ppo_micro_batch_size_per_gpu=20 \
-algorithm.kl_ctrl.kl_coef=0.001 \
-trainer.experiment_name={TRAIN_NAME} \
-trainer.logger=['console','tensorboard','wandb'] \
-trainer.project_name='verl_grpo_example_gsm8k' \
-trainer.experiment_name='{llm_model}_function_rm' \
+actor_rollout_ref.ref.fsdp_config.param_offload=True \
+actor_rollout_ref.ref.strategy={strategy} \
+algorithm.use_kl_in_reward=False \
+trainer.critic_warmup=0 \
 trainer.val_before_train=True \
-trainer.default_hdfs_dir=null \
+trainer.logger=['console','tensorboard','wandb'] \
+trainer.project_name='verl_grpo_example_gsm8k_record' \
+trainer.experiment_name='{llm_model}_function_rm' \
 trainer.default_local_dir={OUTPUT_DIR} \
 trainer.n_gpus_per_node={NPROC_PER_NODE} \
 trainer.nnodes=1 \
 trainer.save_freq=10 \
-trainer.test_freq=10 \
+trainer.test_freq=5 \
 trainer.total_epochs={total_epochs} \
 {other_args} 2>&1 | tee {LOGS_DIR}/verl_{TRAIN_NAME}.log
 """
@@ -166,13 +173,9 @@ trainer.total_epochs={total_epochs} \
 
 
 """
-# actor and critic model_type use fp32
-modal run src/train/verl/examples/demo_train_ppo.py
-```
-(TaskRunner pid=1743) ("Final validation metrics: {'val-core/openai/gsm8k/reward/mean@1': "
-(TaskRunner pid=1743)  'np.float64(0.5253980288097043)}')
-```
-modal run src/train/verl/examples/demo_train_ppo.py --total-epochs 15
-modal run src/train/verl/examples/demo_train_ppo.py --total-epochs 15 --retrain
-IMAGE_GPU=L40s:2 modal run src/train/verl/examples/demo_train_ppo.py --total-epochs 15 --retrain
+# actor model_type use fp32
+modal run src/train/verl/examples/demo_train_grpo.py --strategy fsdp2
+modal run src/train/verl/examples/demo_train_grpo.py --strategy fsdp2 --total-epochs 15
+modal run src/train/verl/examples/demo_train_grpo.py --strategy fsdp2 --total-epochs 15 --retrain
+IMAGE_GPU=L40s:2 modal run src/train/verl/examples/demo_train_grpo.py  --strategy fsdp2 --total-epochs 15 --retrain
 """
