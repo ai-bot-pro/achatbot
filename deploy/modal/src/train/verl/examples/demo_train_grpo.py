@@ -88,6 +88,11 @@ def run(
     retrain: bool = False,
     strategy: str = "fsdp",
     model_type: str = "fp32",
+    tp: int = 1,
+    train_batch_size: int = 256,
+    ppo_mini_batch_size_per_gpu: int = 60,
+    ppo_micro_batch_size_per_gpu: int = 20,
+    log_prob_micro_batch_size_per_gpu: int = 8,
 ):
     import torch
 
@@ -96,7 +101,9 @@ def run(
     llm_model = os.getenv("LLM_MODEL", "Qwen/Qwen2.5-3B-Instruct")
     LLM_MODEL_PATH = os.path.join(HF_MODEL_DIR, llm_model)
 
-    DATA_PATH = os.path.join(DATASETS_DIR, os.getenv("DATA_PATH", "openai/gsm8k"))
+    data_path = os.getenv("DATA_PATH", "openai/gsm8k")
+    data_name = data_path.split("/")[-1]
+    DATA_PATH = os.path.join(DATASETS_DIR, data_path)
 
     OUTPUT_DIR = os.path.join(TRAIN_OUTPUT_DIR, f"{TRAIN_NAME}")
     cur_date = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
@@ -124,44 +131,43 @@ def run(
 data.train_files={DATA_PATH}/train.parquet \
 data.val_files={DATA_PATH}/test.parquet \
 algorithm.adv_estimator=grpo \
-actor_rollout_ref.model.path={LLM_MODEL_PATH} \
-data.train_batch_size=1024 \
+data.train_batch_size={train_batch_size} \
 data.max_prompt_length=512 \
 data.max_response_length=1024 \
 data.filter_overlong_prompts=True \
 data.truncation='error' \
+actor_rollout_ref.model.path={LLM_MODEL_PATH} \
+actor_rollout_ref.model.use_remove_padding=True \
+actor_rollout_ref.model.enable_gradient_checkpointing=False \
 actor_rollout_ref.actor.fsdp_config.model_dtype={model_type} \
 actor_rollout_ref.actor.optim.lr=1e-6 \
-actor_rollout_ref.model.use_remove_padding=True \
-actor_rollout_ref.actor.ppo_mini_batch_size={int(NPROC_PER_NODE) * 60} \
-actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=20 \
+actor_rollout_ref.actor.ppo_mini_batch_size={int(NPROC_PER_NODE) * ppo_mini_batch_size_per_gpu} \
+actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu={ppo_micro_batch_size_per_gpu} \
 actor_rollout_ref.actor.use_kl_loss=True \
 actor_rollout_ref.actor.kl_loss_coef=0.001 \
 actor_rollout_ref.actor.kl_loss_type=low_var_kl \
 actor_rollout_ref.actor.entropy_coeff=0 \
 actor_rollout_ref.actor.strategy={strategy} \
-actor_rollout_ref.model.enable_gradient_checkpointing=False \
 actor_rollout_ref.actor.fsdp_config.param_offload=True \
 actor_rollout_ref.actor.fsdp_config.optimizer_offload=True \
-actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=8 \
-actor_rollout_ref.rollout.tensor_model_parallel_size=2 \
+actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu={log_prob_micro_batch_size_per_gpu} \
+actor_rollout_ref.rollout.tensor_model_parallel_size={tp} \
 actor_rollout_ref.rollout.name=vllm \
 actor_rollout_ref.rollout.gpu_memory_utilization=0.6 \
 actor_rollout_ref.rollout.n=5 \
-actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=8 \
+actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu={log_prob_micro_batch_size_per_gpu} \
 actor_rollout_ref.ref.fsdp_config.param_offload=True \
 actor_rollout_ref.ref.strategy={strategy} \
 algorithm.use_kl_in_reward=False \
-trainer.critic_warmup=0 \
 trainer.val_before_train=True \
 trainer.logger=['console','tensorboard','wandb'] \
-trainer.project_name='verl_grpo_example_gsm8k_record' \
+trainer.project_name='verl_grpo_example_{data_name}' \
 trainer.experiment_name='{llm_model}_function_rm' \
 trainer.default_local_dir={OUTPUT_DIR} \
 trainer.n_gpus_per_node={NPROC_PER_NODE} \
 trainer.nnodes=1 \
 trainer.save_freq=10 \
-trainer.test_freq=5 \
+trainer.test_freq=10 \
 trainer.total_epochs={total_epochs} \
 {other_args} 2>&1 | tee {LOGS_DIR}/verl_{TRAIN_NAME}.log
 """
@@ -173,9 +179,18 @@ trainer.total_epochs={total_epochs} \
 
 
 """
-# actor model_type use fp32
-modal run src/train/verl/examples/demo_train_grpo.py --strategy fsdp2
+# actor model_type use fp32, Qwen/Qwen2.5-0.5B-Instruct rl zero with gsm10k
+IMAGE_GPU=L40s LLM_MODEL=Qwen/Qwen2.5-0.5B-Instruct modal run src/train/verl/examples/demo_train_grpo.py --strategy fsdp --retrain
+IMAGE_GPU=L40s:2 LLM_MODEL=Qwen/Qwen2.5-0.5B-Instruct modal run src/train/verl/examples/demo_train_grpo.py --strategy fsdp --retrain
+
+# use fsdp2, actor model_type use fp32, Qwen/Qwen2.5-0.5B-Instruct rl zero with gsm10k
+IMAGE_GPU=L40s LLM_MODEL=Qwen/Qwen2.5-0.5B-Instruct modal run src/train/verl/examples/demo_train_grpo.py --strategy fsdp2 --retrain
+IMAGE_GPU=L40s:2 LLM_MODEL=Qwen/Qwen2.5-0.5B-Instruct modal run src/train/verl/examples/demo_train_grpo.py --strategy fsdp2 --retrain
+IMAGE_GPU=L40s LLM_MODEL=Qwen/Qwen2.5-0.5B-Instruct modal run src/train/verl/examples/demo_train_grpo.py --strategy fsdp2 --total-epochs 15
+IMAGE_GPU=L40s:2 LLM_MODEL=Qwen/Qwen2.5-0.5B-Instruct modal run src/train/verl/examples/demo_train_grpo.py --strategy fsdp2 --total-epochs 15 --retrain --tp 2
+
+# actor model_type use fp32, Qwen/Qwen2.5-3B-Instruct rl zero with gsm10k
+modal run src/train/verl/examples/demo_train_grpo.py --strategy fsdp2 --retrain
 modal run src/train/verl/examples/demo_train_grpo.py --strategy fsdp2 --total-epochs 15
-modal run src/train/verl/examples/demo_train_grpo.py --strategy fsdp2 --total-epochs 15 --retrain
-IMAGE_GPU=L40s:2 modal run src/train/verl/examples/demo_train_grpo.py  --strategy fsdp2 --total-epochs 15 --retrain
+IMAGE_GPU=L40s:2 modal run src/train/verl/examples/demo_train_grpo.py  --strategy fsdp2 --total-epochs 15 --retrain --tp 2
 """

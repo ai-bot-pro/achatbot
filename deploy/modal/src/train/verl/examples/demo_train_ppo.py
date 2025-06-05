@@ -88,6 +88,11 @@ def run(
     retrain: bool = False,
     strategy: str = "fsdp",
     model_type: str = "fp32",
+    tp: int = 1,
+    train_batch_size: int = 256,
+    ppo_mini_batch_size_per_gpu: int = 60,
+    ppo_micro_batch_size_per_gpu: int = 20,
+    log_prob_micro_batch_size_per_gpu: int = 8,
 ):
     import torch
 
@@ -96,7 +101,9 @@ def run(
     llm_model = os.getenv("LLM_MODEL", "Qwen/Qwen2.5-0.5B-Instruct")
     LLM_MODEL_PATH = os.path.join(HF_MODEL_DIR, llm_model)
 
-    DATA_PATH = os.path.join(DATASETS_DIR, os.getenv("DATA_PATH", "openai/gsm8k"))
+    data_path = os.getenv("DATA_PATH", "openai/gsm8k")
+    data_name = data_path.split("/")[-1]
+    DATA_PATH = os.path.join(DATASETS_DIR, data_path)
 
     OUTPUT_DIR = os.path.join(TRAIN_OUTPUT_DIR, f"{TRAIN_NAME}")
     cur_date = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
@@ -123,30 +130,28 @@ def run(
     cmd = f"""TENSORBOARD_DIR={TENSORBOARD_LOG} PYTHONUNBUFFERED=1 python -m verl.trainer.main_ppo \
 data.train_files={DATA_PATH}/train.parquet \
 data.val_files={DATA_PATH}/test.parquet \
-data.train_batch_size=256 \
-data.val_batch_size=1312 \
+data.train_batch_size={train_batch_size} \
 data.max_prompt_length=512 \
 data.max_response_length=1024 \
 actor_rollout_ref.model.path={LLM_MODEL_PATH} \
 actor_rollout_ref.actor.strategy={strategy} \
 actor_rollout_ref.actor.optim.lr=1e-6 \
-actor_rollout_ref.actor.ppo_mini_batch_size={int(NPROC_PER_NODE) * 60} \
-actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=20 \
+actor_rollout_ref.actor.ppo_mini_batch_size={int(NPROC_PER_NODE) * {ppo_mini_batch_size_per_gpu}} \
+actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu={ppo_micro_batch_size_per_gpu} \
 actor_rollout_ref.actor.fsdp_config.model_dtype={model_type} \
 actor_rollout_ref.rollout.name=vllm \
-actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=8 \
-actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
+actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu={log_prob_micro_batch_size_per_gpu} \
+actor_rollout_ref.rollout.tensor_model_parallel_size={tp} \
 actor_rollout_ref.rollout.gpu_memory_utilization=0.6 \
-actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=8 \
+actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu={log_prob_micro_batch_size_per_gpu} \
 critic.strategy={strategy} \
 critic.optim.lr=1e-5 \
 critic.model.path={LLM_MODEL_PATH} \
 critic.model.fsdp_config.model_dtype={model_type} \
-critic.ppo_micro_batch_size_per_gpu=20 \
+critic.ppo_micro_batch_size_per_gpu={ppo_micro_batch_size_per_gpu} \
 algorithm.kl_ctrl.kl_coef=0.001 \
-trainer.experiment_name={TRAIN_NAME} \
 trainer.logger=['console','tensorboard','wandb'] \
-trainer.project_name='verl_grpo_example_gsm8k' \
+trainer.project_name='verl_ppo_example_{data_name}' \
 trainer.experiment_name='{llm_model}_function_rm' \
 trainer.val_before_train=True \
 trainer.default_hdfs_dir=null \
@@ -166,7 +171,7 @@ trainer.total_epochs={total_epochs} \
 
 
 """
-# actor and critic model_type use fp32
+# actor and critic model_type use fp32, Qwen/Qwen2.5-0.5B-Instruct rl zero with gsm10k
 modal run src/train/verl/examples/demo_train_ppo.py
 ```
 (TaskRunner pid=1743) ("Final validation metrics: {'val-core/openai/gsm8k/reward/mean@1': "
