@@ -146,6 +146,9 @@ def run(
     if "-Instruct" in llm_model:
         MODEL_NAME = llm_model.replace("-Instruct", "")
         MODEL_CHAT_NAME = llm_model
+    else:
+        MODEL_NAME = llm_model
+        MODEL_CHAT_NAME = llm_model + "-Instruct"
 
     LLM_MODEL_PATH = os.path.join(HF_MODEL_DIR, MODEL_NAME)
     LLM_CHAT_MODEL_PATH = os.path.join(HF_MODEL_DIR, MODEL_CHAT_NAME)
