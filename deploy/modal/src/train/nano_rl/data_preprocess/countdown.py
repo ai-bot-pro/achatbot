@@ -12,6 +12,12 @@ download_image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install("curl")
     .pip_install("datasets", "transformers", "jinja2")
+    .env(
+        {
+            "LLM_MODEL": os.getenv("LLM_MODEL", "Qwen/Qwen2.5-0.5B-Instruct"),
+            "DATA_PATH": os.getenv("DATA_PATH", "Jiayi-Pan/Countdown-Tasks-3to4"),
+        }
+    )
 )
 
 HF_DATASET_DIR = "/datasets"
@@ -125,4 +131,12 @@ def read(parquet_file: str):
 modal run src/train/nano_rl/data_preprocess/countdown.py
 modal run src/train/nano_rl/data_preprocess/countdown.py --read-data-type test --task r
 modal run src/train/nano_rl/data_preprocess/countdown.py --read-data-type train --task r
+
+LLM_MODEL=Qwen/Qwen2.5-1.5B-Instruct modal run src/train/nano_rl/data_preprocess/countdown.py
+LLM_MODEL=Qwen/Qwen2.5-1.5B-Instruct modal run src/train/nano_rl/data_preprocess/countdown.py --read-data-type test --task r
+LLM_MODEL=Qwen/Qwen2.5-1.5B-Instruct modal run src/train/nano_rl/data_preprocess/countdown.py --read-data-type train --task r
+
+LLM_MODEL=Qwen/Qwen2.5-3B-Instruct modal run src/train/nano_rl/data_preprocess/countdown.py
+LLM_MODEL=Qwen/Qwen2.5-3B-Instruct modal run src/train/nano_rl/data_preprocess/countdown.py --read-data-type test --task r
+LLM_MODEL=Qwen/Qwen2.5-3B-Instruct modal run src/train/nano_rl/data_preprocess/countdown.py --read-data-type train --task r
 """

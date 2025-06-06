@@ -32,7 +32,7 @@ img = (
         "torchvision==0.21.0",
         index_url="https://download.pytorch.org/whl/cu124",
     )
-    .pip_install("wheel")
+    .pip_install("wheel", "packaging")
     # https://github.com/Dao-AILab/flash-attention/releases/tag/v2.7.4.post1
     .pip_install("flash-attn", extra_options="--no-build-isolation")
     # vllm-0.8.3 does not support flashinfer>=0.2.3
@@ -104,7 +104,15 @@ triton_vol = modal.Volume.from_name("triton_cache", create_if_missing=True)
 
 
 """
+# use IT chat template tokenizer
+modal run src/download_models.py --repo-ids "Qwen/Qwen2.5-0.5B-Instruct,Qwen/Qwen2.5-0.5B"
+modal run src/download_models.py --repo-ids "Qwen/Qwen2.5-1.5B-Instruct,Qwen/Qwen2.5-1.5B"
+modal run src/download_models.py --repo-ids "Qwen/Qwen2.5-3B-Instruct,Qwen/Qwen2.5-3B"
+
 modal run src/train/nano_rl/r1_zero.py
+IMAGE_GPU=L40s LLM_MODEL=Qwen/Qwen2.5-1.5B modal run src/train/nano_rl/r1_zero.py --gpu-memory-utilization=0.2 --train-micro-batch-size-per-gpu=6 --train-batch-size=360
+IMAGE_GPU=A100-80GB LLM_MODEL=Qwen/Qwen2.5-3B modal run src/train/nano_rl/r1_zero.py --gpu-memory-utilization=0.2 --train-micro-batch-size-per-gpu=4 --train-batch-size=64
+IMAGE_GPU=A100-80GB LLM_MODEL=Qwen/Qwen2.5-3B modal run src/train/nano_rl/r1_zero.py --gpu-memory-utilization=0.2 --train-micro-batch-size-per-gpu=8 --train-batch-size=256
 """
 
 
@@ -112,7 +120,7 @@ modal run src/train/nano_rl/r1_zero.py
     gpu=IMAGE_GPU,
     cpu=2.0,
     secrets=[modal.Secret.from_name("achatbot")],
-    retries=modal.Retries(initial_delay=0.0, max_retries=10),
+    retries=modal.Retries(initial_delay=0.0, max_retries=1),
     image=img,
     volumes={
         HF_MODEL_DIR: hf_model_vol,
@@ -129,15 +137,15 @@ def run(
     gpu_memory_utilization: float = 0.6,
     max_response_tokens: int = 1024,
     temperature: float = 1.0,
-    generations_per_sample: int = 4,
+    generations_per_sample: int = 4,  # rollout n
     # train
     num_iterations: int = 1000,
     train_batch_size: int = 64,
     train_micro_batch_size_per_gpu: int = 4,
     kl_coeff: float = 0.001,
     learning_rate: float = 1e-5,
-    save_freq: int = 50,
-    test_freq: int = 25,
+    save_freq: int = 20,
+    test_freq: int = 20,
 ):
     # --------------- init ----------------------
     llm_model = os.getenv("LLM_MODEL", "Qwen/Qwen2.5-0.5B-Instruct")
