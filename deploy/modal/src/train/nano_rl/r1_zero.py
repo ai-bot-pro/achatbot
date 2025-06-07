@@ -143,7 +143,7 @@ def run(
     train_batch_size: int = 64,
     train_micro_batch_size_per_gpu: int = 4,
     kl_coeff: float = 0.001,
-    learning_rate: float = 1e-5,
+    learning_rate: float = 1e-6,
     save_freq: int = 20,
     test_freq: int = 20,
 ):
