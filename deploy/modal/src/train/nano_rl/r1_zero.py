@@ -104,6 +104,8 @@ triton_vol = modal.Volume.from_name("triton_cache", create_if_missing=True)
 
 
 """
+# NOTE: IT model eos_token: <|im_end|>(151645) to chat complate, base model eos_token: <|endoftext|>(151643) to generate complate
+
 # use IT chat template tokenizer
 modal run src/download_models.py --repo-ids "Qwen/Qwen2.5-0.5B-Instruct,Qwen/Qwen2.5-0.5B"
 modal run src/download_models.py --repo-ids "Qwen/Qwen2.5-1.5B-Instruct,Qwen/Qwen2.5-1.5B"
@@ -113,6 +115,7 @@ modal run src/train/nano_rl/r1_zero.py
 IMAGE_GPU=L40s LLM_MODEL=Qwen/Qwen2.5-1.5B modal run src/train/nano_rl/r1_zero.py --gpu-memory-utilization=0.2 --train-micro-batch-size-per-gpu=6 --train-batch-size=360
 IMAGE_GPU=A100-80GB LLM_MODEL=Qwen/Qwen2.5-3B modal run src/train/nano_rl/r1_zero.py --gpu-memory-utilization=0.2 --train-micro-batch-size-per-gpu=4 --train-batch-size=64
 IMAGE_GPU=A100-80GB LLM_MODEL=Qwen/Qwen2.5-3B modal run src/train/nano_rl/r1_zero.py --gpu-memory-utilization=0.2 --train-micro-batch-size-per-gpu=8 --train-batch-size=256
+IMAGE_GPU=A100-80GB LLM_MODEL=Qwen/Qwen2.5-3B modal run src/train/nano_rl/r1_zero.py --gpu-memory-utilization=0.2 --train-micro-batch-size-per-gpu=8 --train-batch-size=256 --learning-rate=5e-7
 """
 
 
@@ -253,14 +256,19 @@ def run(
     # Initialize Models
     ############################################
 
+    tokenizer = AutoTokenizer.from_pretrained(LLM_CHAT_MODEL_PATH)
+    EOS_TOKEN_ID = AutoTokenizer.from_pretrained(LLM_MODEL_PATH).eos_token_id
+    EOS_TOKEN = tokenizer.convert_ids_to_tokens(EOS_TOKEN_ID)
+    print(f"chat {EOS_TOKEN=} | {EOS_TOKEN_ID=}")
+
     policy_model = AutoModelForCausalLM.from_pretrained(
-        MODEL_NAME,
+        LLM_MODEL_PATH,
         attn_implementation="flash_attention_2",
         torch_dtype=torch.bfloat16,
         device_map=0,
     )
     reference_model = AutoModelForCausalLM.from_pretrained(
-        MODEL_NAME,
+        LLM_MODEL_PATH,
         attn_implementation="flash_attention_2",
         torch_dtype=torch.bfloat16,
         device_map=0,
@@ -288,7 +296,7 @@ def run(
 
     # https://docs.vllm.ai/en/latest/api/vllm/config.html
     inference_engine = LLM(
-        model=MODEL_NAME,
+        model=LLM_MODEL_PATH,
         skip_tokenizer_init=False,
         gpu_memory_utilization=gpu_memory_utilization,
         enable_prefix_caching=True,
@@ -325,10 +333,6 @@ def run(
             raise RuntimeError(f"Failed to load checkpoint {ckpt_path}")
         begin_iter = ckpt_iter + 1
         load_model_into_vllm(policy_model, inference_engine)
-
-    tokenizer = AutoTokenizer.from_pretrained(LLM_MODEL_PATH)
-    EOS_TOKEN_ID = AutoTokenizer.from_pretrained(LLM_CHAT_MODEL_PATH).eos_token_id
-    EOS_TOKEN = tokenizer.convert_ids_to_tokens(EOS_TOKEN_ID)
 
     for iteration in trange(begin_iter, NUM_ITERATIONS):
         print(f"Iteration {iteration}/{NUM_ITERATIONS}")
@@ -372,7 +376,7 @@ def run(
         # Generate Episodes
         #########################################################
 
-        # Sample training batch
+        # Sample training batch from 489864 train_dataset
         num_samples = EPISODES_PER_ITERATION // GENERATIONS_PER_SAMPLE
         indices = np.random.choice(len(train_dataset), size=num_samples, replace=False)
         samples = train_dataset.select(indices)
@@ -392,6 +396,7 @@ def run(
                 stop_token_ids=[EOS_TOKEN_ID],
             ),
         )
+        # print(f"rollout result: {outputs[0]}")
         all_generations = [list(g.token_ids) for out in outputs for g in out.outputs]
         all_finish_reasons = [g.finish_reason for out in outputs for g in out.outputs]
         # https://docs.vllm.ai/en/latest/api/vllm/index.html?h=sleep#vllm.LLM.sleep

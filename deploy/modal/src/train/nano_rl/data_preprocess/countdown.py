@@ -45,17 +45,20 @@ with download_image.imports():
 )
 def process(task: str = "w", read_data_type: str = "train"):
     data_path = os.getenv("DATA_PATH", "Jiayi-Pan/Countdown-Tasks-3to4")
+    llm_model = os.getenv("LLM_MODEL", "Qwen/Qwen2.5-0.5B-Instruct")
+    CHAT_MODEL_NAME = llm_model
+    if "-Instruct" not in llm_model:
+        CHAT_MODEL_NAME = llm_model + "-Instruct"
+
+    LLM_CHAT_MODEL_PATH = os.path.join(HF_MODEL_DIR, CHAT_MODEL_NAME)
     DATA_PATH = os.path.join(HF_DATASET_DIR, data_path)
+
+    tokenizer = AutoTokenizer.from_pretrained(LLM_CHAT_MODEL_PATH)
+
     if task == "r":
         parquet_file = os.path.join(DATA_PATH, f"{read_data_type}.parquet")
-        read(parquet_file)
+        read(parquet_file, tokenizer)
         return
-    llm_model = os.getenv("LLM_MODEL", "Qwen/Qwen2.5-0.5B-Instruct")
-    MODEL_NAME = llm_model
-    if "-Instruct" in llm_model:
-        MODEL_NAME = llm_model.replace("-Instruct", "")
-
-    LLM_MODEL_PATH = os.path.join(HF_MODEL_DIR, MODEL_NAME)
 
     ############################################
     # Prompts and Dataset
@@ -76,7 +79,7 @@ def process(task: str = "w", read_data_type: str = "train"):
     dataset = dataset.map(
         preprocess_example,
         fn_kwargs={
-            "tokenizer": AutoTokenizer.from_pretrained(LLM_MODEL_PATH),
+            "tokenizer": tokenizer,
             "SYSTEM_MESSAGE": SYSTEM_MESSAGE,
             "PROMPT_TEMPLATE": PROMPT_TEMPLATE,
         },
@@ -122,12 +125,26 @@ def preprocess_example(
     return {"prompt": prompt, "input_ids": input_ids}
 
 
-def read(parquet_file: str):
+def read(parquet_file: str, tokenizer: "AutoTokenizer"):
     data = datasets.load_dataset("parquet", data_files=parquet_file)
     print(f"read data {data['train'][0]}")
+    input_ids = data["train"][0]["input_ids"]
+    prompt = tokenizer.decode(
+        input_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False
+    )
+    print(f"{prompt=}")
 
 
 """
+# use IT chat template tokenizer
+modal run src/download_models.py --repo-ids "Qwen/Qwen2.5-0.5B-Instruct,Qwen/Qwen2.5-0.5B"
+modal run src/download_models.py --repo-ids "Qwen/Qwen2.5-1.5B-Instruct,Qwen/Qwen2.5-1.5B"
+modal run src/download_models.py --repo-ids "Qwen/Qwen2.5-3B-Instruct,Qwen/Qwen2.5-3B"
+
+# download datasets
+modal run src/download_datasets.py --repo-ids "Jiayi-Pan/Countdown-Tasks-3to4"
+
+# data preporcess
 modal run src/train/nano_rl/data_preprocess/countdown.py
 modal run src/train/nano_rl/data_preprocess/countdown.py --read-data-type test --task r
 modal run src/train/nano_rl/data_preprocess/countdown.py --read-data-type train --task r
