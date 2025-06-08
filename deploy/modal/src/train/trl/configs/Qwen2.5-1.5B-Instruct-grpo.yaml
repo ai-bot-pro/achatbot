@@ -1,0 +1,89 @@
+# Model arguments
+model_name_or_path: Qwen/Qwen2.5-1.5B-Instruct
+model_revision: main
+torch_dtype: bfloat16
+attn_implementation: flash_attention_2
+bf16: true
+tf32: true
+#output_dir: runs/qwen-2.5-1.5B-r1-countdown
+
+# Dataset arguments
+dataset_id_or_path: Jiayi-Pan/Countdown-Tasks-3to4
+
+# Lora Arguments
+# No LoRA is used here
+
+# Training arguments
+max_steps: 100
+per_device_train_batch_size: 2
+gradient_accumulation_steps: 8
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+learning_rate: 5.0e-7 # 1.0e-6 as in the deepseek math paper 5-e7 from https://hijkzzz.notion.site/unraveling-rlhf-and-its-variants-engineering-insights#147d9a33ecc9806090f3d5c749d31f05
+lr_scheduler_type: cosine
+warmup_ratio: 0.03
+# GRPO specific parameters
+beta: 0.001 # 0.04 as in the deepseek math paper 0.001 from https://hijkzzz.notion.site/unraveling-rlhf-and-its-variants-engineering-insights#147d9a33ecc9806090f3d5c749d31f05
+max_prompt_length: 256
+max_completion_length: 1024
+num_generations: 8
+
+# > Parameters that control generation acceleration powered by vLLM
+#
+# use_vllm (`bool`, *optional*, defaults to `False`):
+#     Whether to use vLLM for generating completions. If set to `True`, the trainer will use vLLM for generation
+#     instead of the default model.generate(). Requires `vllm` to be installed.
+# vllm_mode (`str`, *optional*, defaults to `"server"`):
+#     Mode to use for vLLM integration when `use_vllm` is set to `True`. Must be one of `"server"` or
+#     `"colocate"`.
+#
+#     - `"server"`: The trainer will send generation requests to a separate vLLM server. Make sure a TRL vLLM
+#       server is running (start with `trl vllm-serve`).
+#     - `"colocate"`: vLLM will run in the same process and share the training GPUs. This avoids the need for a
+#       separate server but may cause resource contention with training.
+# vllm_guided_decoding_regex (`str` or `None`, *optional*, defaults to `None`):
+#     Regex for vLLM guided decoding. If `None` (default), guided decoding is disabled.
+#
+# > Parameters that control the vLLM server (only used when `vllm_mode` is `"server"`)
+# vllm_server_base_url (`str` or `None`, *optional*, defaults to `None`):
+#     Base URL for the vLLM server (e.g., `"http://localhost:8000"`). If provided, `vllm_server_host` and
+#     `vllm_server_port` are ignored.
+# vllm_server_host (`str`, *optional*, defaults to `"0.0.0.0"`):
+#     Host of the vLLM server to connect to. Ignored if `vllm_server_base_url` is provided.
+# vllm_server_port (`int`, *optional*, defaults to `8000`):
+#     Port of the vLLM server to connect to. Ignored if `vllm_server_base_url` is provided.
+# vllm_server_timeout (`float`, *optional*, defaults to `240.0`):
+#     Total timeout duration in seconds to wait for the vLLM server to be up. If the server is not up after the
+#     timeout, a `ConnectionError` is raised.
+#
+# > Parameters that control colocated vLLM execution (only used when `vllm_mode` is `"colocate"`)
+#
+# vllm_gpu_memory_utilization (`float`, *optional*, defaults to `0.3`):
+#     Control the GPU memory utilization for vLLM. This setting only applies when `vllm_mode` is set to
+#     `"colocate"`. If you are using `vllm_mode="server"`, this parameter must be passed separately when
+#     launching the vLLM server via the `--vllm_gpu_memory_utilization` flag.
+# vllm_tensor_parallel_size (`int`, *optional*, defaults to `1`):
+#     Control the tensor parallel size for vLLM. This setting only applies when `vllm_mode` is set to
+#     `"colocate"`. If you are using `vllm_mode="server"`, this parameter must be passed separately when
+#     launching the vLLM server via the `--vllm_tensor_parallel_size` flag.
+#
+use_vllm: false
+vllm_mode: "colocate"
+vllm_gpu_memory_utilization: 0.2
+vllm_tensor_parallel_size: 1
+
+# Logging arguments
+logging_strategy: steps
+logging_steps: 2
+report_to:
+- tensorboard
+- wandb
+save_strategy: "steps"
+save_steps: 25
+seed: 42
+
+# Hugging Face Hub 
+push_to_hub: true
+  # hub_model_id: llama-3-1-8b-math-orca-qlora-10k-ep1 # if not defined same as output_dir
+hub_strategy: every_save

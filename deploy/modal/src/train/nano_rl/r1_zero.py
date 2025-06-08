@@ -88,10 +88,6 @@ with img.imports():
     from vllm import LLM, SamplingParams
 
 
-DEFAULT_SYSTEM_MESSAGE = "You are a helpful assistant. You first think about the reasoning process in the mind and then provide the user with the answer."
-DEFAULT_PROMPT_TEMPLATE = "Using the numbers {numbers}, create an equation that equals {target}. You can use basic arithmetic operations (+, -, *, /) and each number can only be used once. Show your work in <think> </think> tags. And return the final equation and answer in <answer> </answer> tags, for example <answer>(1 + 2) / (3 * 5)</answer>."
-
-
 HF_MODEL_DIR = "/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
 DATASETS_DIR = "/datasets"
@@ -541,24 +537,6 @@ def run(
             )
 
 
-def create_prompt(
-    numbers: List[int],
-    target: int,
-    tokenizer: "AutoTokenizer",
-    system_message: str = DEFAULT_SYSTEM_MESSAGE,
-    prompt_template: str = DEFAULT_PROMPT_TEMPLATE,
-) -> str:
-    prefix = [
-        {"role": "system", "content": system_message},
-        {
-            "role": "user",
-            "content": prompt_template.format(numbers=numbers, target=target),
-        },
-        {"role": "assistant", "content": "Let me solve this step by step.\n<think>"},
-    ]
-    return tokenizer.apply_chat_template(prefix, tokenize=False, continue_final_message=True)
-
-
 def prepare_model_inputs(
     query_token_ids: List[List[int]],
     response_token_ids: List[List[int]],
@@ -886,31 +864,6 @@ def load_model_into_vllm(model: Union["DeepSpeedEngine", "PreTrainedModel"], llm
     )
     llm.llm_engine.model_executor.driver_worker.model_runner.model.load_weights(state_dict.items())
 
-
-# ----------------- dataset process -------------------------
-# Load and process dataset
-def preprocess_example(
-    example: Dict[str, Any],
-    tokenizer: "AutoTokenizer",
-    SYSTEM_MESSAGE: str,
-    PROMPT_TEMPLATE: str,
-):
-    numbers: List[int] = example["nums"]
-    target: int = example["target"]
-
-    prefix = [
-        {"role": "system", "content": SYSTEM_MESSAGE},
-        {
-            "role": "user",
-            "content": PROMPT_TEMPLATE.format(numbers=numbers, target=target),
-        },
-        {"role": "assistant", "content": "Let me solve this step by step.\n<think>"},
-    ]
-    input_ids = tokenizer.apply_chat_template(prefix, tokenize=True, continue_final_message=True)
-    prompt = tokenizer.decode(
-        input_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False
-    )
-    return {"prompt": prompt, "input_ids": input_ids}
 
 
 def format_reward_func(completion: str, EOS_TOKEN: str) -> float:

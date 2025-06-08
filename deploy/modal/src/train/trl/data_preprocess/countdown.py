@@ -52,8 +52,8 @@ def process(task: str = "w", read_data_type: str = "train"):
     tokenizer = AutoTokenizer.from_pretrained(LLM_CHAT_MODEL_PATH)
 
     if task == "r":
-        parquet_file = os.path.join(DATA_PATH, f"{read_data_type}.parquet")
-        read(parquet_file, tokenizer)
+        parquet_file = os.path.join(DATA_PATH, f"trl_{read_data_type}.parquet")
+        read(parquet_file)
         return
 
     ############################################
@@ -68,12 +68,12 @@ def process(task: str = "w", read_data_type: str = "train"):
         "Using the numbers {numbers}, create an equation that equals {target}. "
         "You can use basic arithmetic operations (+, -, *, /) and each number can only be used once. "
         "Show your work in <think> </think> tags. And return the final equation and answer in "
-        "<answer> </answer> tags, for example <answer>(1 + 2) / (3 * 5)</answer>."
+        "<answer> </answer> tags, for example <answer>(1 + 2) / 3 = 1</answer>."
     )
 
     dataset = datasets.load_dataset(DATA_PATH, split="train")
     dataset = dataset.map(
-        create_prompt,
+        generate_r1_prompt,
         fn_kwargs={
             "tokenizer": tokenizer,
             "SYSTEM_MESSAGE": SYSTEM_MESSAGE,
@@ -83,7 +83,8 @@ def process(task: str = "w", read_data_type: str = "train"):
     )
 
     # Split dataset
-    train_test_split = dataset.train_test_split(test_size=500, seed=42)
+    # train_test_split = dataset.train_test_split(test_size=500, seed=42)
+    train_test_split = dataset.train_test_split(test_size=0.1, seed=42)
     train_dataset = train_test_split["train"]
     test_dataset = train_test_split["test"]
 
@@ -92,19 +93,19 @@ def process(task: str = "w", read_data_type: str = "train"):
     print(f"Test dataset size: {len(test_dataset)}")
     print(f"{test_dataset[0]=}")
 
-    train_dataset.to_parquet(os.path.join(DATA_PATH, "train.parquet"))
-    test_dataset.to_parquet(os.path.join(DATA_PATH, "test.parquet"))
+    train_dataset.to_parquet(os.path.join(DATA_PATH, "trl_train.parquet"))
+    test_dataset.to_parquet(os.path.join(DATA_PATH, "trl_test.parquet"))
 
 
 # Load and process dataset
-def create_prompt(
-    example: Dict[str, Any],
+def generate_r1_prompt(
+    item: Dict[str, Any],
     tokenizer: "AutoTokenizer",
     SYSTEM_MESSAGE: str,
     PROMPT_TEMPLATE: str,
 ):
-    numbers: List[int] = example["nums"]
-    target: int = example["target"]
+    numbers: List[int] = item["nums"]
+    target: int = item["target"]
 
     prefix = [
         {"role": "system", "content": SYSTEM_MESSAGE},
@@ -114,21 +115,17 @@ def create_prompt(
         },
         {"role": "assistant", "content": "Let me solve this step by step.\n<think>"},
     ]
-    input_ids = tokenizer.apply_chat_template(prefix, tokenize=True, continue_final_message=True)
-    prompt = tokenizer.decode(
-        input_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False
-    )
-    return {"prompt": prompt, "input_ids": input_ids}
+    prompt = tokenizer.apply_chat_template(prefix, tokenize=False, continue_final_message=True)
+    # input_ids = tokenizer.apply_chat_template(prefix, tokenize=True, continue_final_message=True)
+    # prompt = tokenizer.decode(
+    #    input_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False
+    # )
+    return {"prompt": prompt, "target": target}
 
 
-def read(parquet_file: str, tokenizer: "AutoTokenizer"):
+def read(parquet_file: str):
     data = datasets.load_dataset("parquet", data_files=parquet_file)
     print(f"read data {data['train'][0]}")
-    input_ids = data["train"][0]["input_ids"]
-    prompt = tokenizer.decode(
-        input_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False
-    )
-    print(f"{prompt=}")
 
 
 """
@@ -141,15 +138,15 @@ modal run src/download_models.py --repo-ids "Qwen/Qwen2.5-3B-Instruct"
 modal run src/download_datasets.py --repo-ids "Jiayi-Pan/Countdown-Tasks-3to4"
 
 # data preporcess
-modal run src/train/nano_rl/data_preprocess/countdown.py
-modal run src/train/nano_rl/data_preprocess/countdown.py --read-data-type test --task r
-modal run src/train/nano_rl/data_preprocess/countdown.py --read-data-type train --task r
+modal run src/train/trl/data_preprocess/countdown.py
+modal run src/train/trl/data_preprocess/countdown.py --read-data-type test --task r
+modal run src/train/trl/data_preprocess/countdown.py --read-data-type train --task r
 
-LLM_MODEL=Qwen/Qwen2.5-1.5B-Instruct modal run src/train/nano_rl/data_preprocess/countdown.py
-LLM_MODEL=Qwen/Qwen2.5-1.5B-Instruct modal run src/train/nano_rl/data_preprocess/countdown.py --read-data-type test --task r
-LLM_MODEL=Qwen/Qwen2.5-1.5B-Instruct modal run src/train/nano_rl/data_preprocess/countdown.py --read-data-type train --task r
+LLM_MODEL=Qwen/Qwen2.5-1.5B-Instruct modal run src/train/trl/data_preprocess/countdown.py
+LLM_MODEL=Qwen/Qwen2.5-1.5B-Instruct modal run src/train/trl/data_preprocess/countdown.py --read-data-type test --task r
+LLM_MODEL=Qwen/Qwen2.5-1.5B-Instruct modal run src/train/trl/data_preprocess/countdown.py --read-data-type train --task r
 
-LLM_MODEL=Qwen/Qwen2.5-3B-Instruct modal run src/train/nano_rl/data_preprocess/countdown.py
-LLM_MODEL=Qwen/Qwen2.5-3B-Instruct modal run src/train/nano_rl/data_preprocess/countdown.py --read-data-type test --task r
-LLM_MODEL=Qwen/Qwen2.5-3B-Instruct modal run src/train/nano_rl/data_preprocess/countdown.py --read-data-type train --task r
+LLM_MODEL=Qwen/Qwen2.5-3B-Instruct modal run src/train/trl/data_preprocess/countdown.py
+LLM_MODEL=Qwen/Qwen2.5-3B-Instruct modal run src/train/trl/data_preprocess/countdown.py --read-data-type test --task r
+LLM_MODEL=Qwen/Qwen2.5-3B-Instruct modal run src/train/trl/data_preprocess/countdown.py --read-data-type train --task r
 """
