@@ -28,7 +28,11 @@ export class WebRtcClient extends EventTarget {
                 video: {
                     facingMode: { ideal: "environment" }
                 }, 
-                audio: false
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                }
             });
             this.dispatchEvent(new CustomEvent('localStream', { 
                 detail: { stream: this.localStream }

@@ -74,18 +74,20 @@ class ObjDet(ModalWebRtcPeer):
         # back to the source peer
         @self.pcs[peer_id].on("track")
         def on_track(track: MediaStreamTrack) -> None:
-            print(
-                f"Video Processor, {self.id}, received {track.kind} track from {peer_id}"
-            )
+            print(f"Video Processor, {self.id}, received {track.kind} track {track} from {peer_id}")
 
-            output_track = get_yolo_track(track, self.yolo_model)  # see Addenda
-            self.pcs[peer_id].addTrack(output_track)
+            if track.kind == "video":
+                output_track = get_yolo_track(track, self.yolo_model)  # see Addenda
+                self.pcs[peer_id].addTrack(output_track)
+            elif track.kind == "audio":
+                # For audio track, we just echo it back
+                self.pcs[peer_id].addTrack(track)
 
             # keep us notified when the incoming track ends
             @track.on("ended")
             async def on_ended() -> None:
                 print(
-                    f"Video Processor, {self.id}, incoming video track from {peer_id} ended"
+                    f"Video Processor, {self.id}, incoming {track.kind} track from {peer_id} ended"
                 )
 
     async def get_turn_servers(self, peer_id=None, msg=None) -> dict:
@@ -125,9 +127,7 @@ base_image = (
 
 this_directory = Path(__file__).parent.resolve()
 
-server_image = base_image.add_local_dir(
-    this_directory / "frontend", remote_path="/frontend"
-)
+server_image = base_image.add_local_dir(this_directory / "frontend", remote_path="/frontend")
 
 
 @app.cls(
@@ -227,7 +227,7 @@ def get_yolo_track(track, yolo_model=None):
 async def get_cloudflare_turn_servers(ttl=86400):
     import aiohttp
 
-    auth_token = os.environ['CLOUDFLARE_TURN_API_TOKEN']
+    auth_token = os.environ["CLOUDFLARE_TURN_API_TOKEN"]
     key_id = os.environ["CLOUDFLARE_TURN_TOKEN"]
     url = f"https://rtc.live.cloudflare.com/v1/turn/keys/{key_id}/credentials/generate-ice-servers"
 
@@ -248,6 +248,7 @@ async def get_cloudflare_turn_servers(ttl=86400):
 
 async def get_metered_turn_servers():
     import aiohttp
+
     turn_name = os.environ.get("METERED_TURN_USERNAME")
     api_key = os.environ.get("METERED_TURN_API_KEY")
     url = f"https://{turn_name}/api/v1/turn/credentials?apiKey={api_key}"

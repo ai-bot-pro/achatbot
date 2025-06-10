@@ -68,9 +68,7 @@ class ModalWebRtcPeer(ABC):
 
         # aiortc automatically uses google's STUN server,
         # but we can also specify our own
-        config = RTCConfiguration(
-            iceServers=[RTCIceServer(urls="stun:stun.l.google.com:19302")]
-        )
+        config = RTCConfiguration(iceServers=[RTCIceServer(urls="stun:stun.l.google.com:19302")])
         self.pcs[peer_id] = RTCPeerConnection(configuration=config)
         self.pending_candidates[peer_id] = []
         await self.setup_streams(peer_id)
@@ -98,19 +96,16 @@ class ModalWebRtcPeer(ABC):
         while True:
             try:
                 if self.pcs.get(peer_id) and (
-                    self.pcs[peer_id].connectionState
-                    in ["connected", "closed", "failed"]
+                    self.pcs[peer_id].connectionState in ["connected", "closed", "failed"]
                 ):
                     await queue.put.aio("close", partition="server")
                     break
 
                 # read and parse websocket message passed over queue
                 msg = json.loads(
-                    await asyncio.wait_for(
-                        queue.get.aio(partition=peer_id), timeout=0.5
-                    )
+                    await asyncio.wait_for(queue.get.aio(partition=peer_id), timeout=0.5)
                 )
-                print(f"{msg=}")
+                # print(f"{msg=}")
 
                 # dispatch the message to its handler
                 if handler := msg_handlers.get(msg.get("type")):
@@ -121,7 +116,7 @@ class ModalWebRtcPeer(ABC):
 
                 # pass the message back over the queue to the server
                 if response is not None:
-                    print(f"{response=}")
+                    # print(f"{response=}")
                     await queue.put.aio(json.dumps(response), partition="server")
 
             except Exception:
@@ -146,9 +141,7 @@ class ModalWebRtcPeer(ABC):
         print(f"Peer {self.id} handling SDP offer from {peer_id}...")
 
         await self._setup_peer_connection(peer_id)
-        await self.pcs[peer_id].setRemoteDescription(
-            RTCSessionDescription(msg["sdp"], msg["type"])
-        )
+        await self.pcs[peer_id].setRemoteDescription(RTCSessionDescription(msg["sdp"], msg["type"]))
 
         answer = await self.pcs[peer_id].createAnswer()
         await self.pcs[peer_id].setLocalDescription(answer)
@@ -260,9 +253,7 @@ class ModalWebRtcSignalingServer:
         """
         Abstract method to return the `ModalWebRtcPeer` implementation to use.
         """
-        raise NotImplementedError(
-            "Implement `get_modal_peer` to use `ModalWebRtcSignalingServer`"
-        )
+        raise NotImplementedError("Implement `get_modal_peer` to use `ModalWebRtcSignalingServer`")
 
     @modal.asgi_app()
     def web(self):
@@ -270,12 +261,8 @@ class ModalWebRtcSignalingServer:
 
     async def _mediate_negotiation(self, websocket: WebSocket, peer_id: str):
         modal_peer_class = self.get_modal_peer_class()
-        if not any(
-            base.__name__ == "ModalWebRtcPeer" for base in modal_peer_class.__bases__
-        ):
-            raise ValueError(
-                "Modal peer class must be an implementation of `ModalWebRtcPeer`"
-            )
+        if not any(base.__name__ == "ModalWebRtcPeer" for base in modal_peer_class.__bases__):
+            raise ValueError("Modal peer class must be an implementation of `ModalWebRtcPeer`")
 
         with modal.Queue.ephemeral() as q:
             print(f"Spawning modal peer instance for client peer {peer_id}...")
@@ -307,9 +294,7 @@ async def relay_queue_to_websocket(websocket: WebSocket, q: modal.Queue, peer_id
     while True:
         try:
             # get websocket message off queue and parse from json
-            modal_peer_msg = await asyncio.wait_for(
-                q.get.aio(partition="server"), timeout=0.5
-            )
+            modal_peer_msg = await asyncio.wait_for(q.get.aio(partition="server"), timeout=0.5)
 
             if modal_peer_msg.startswith("close"):
                 await websocket.close()
