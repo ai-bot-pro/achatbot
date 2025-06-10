@@ -5,13 +5,11 @@
 
 import modal
 
-from .modal_webrtc import ModalWebRtcPeer
-from .webrtc_yolo import (
-    CACHE_PATH,
-    WebcamObjDet,
-    app,
+from .modal_webrtc_peer import ModalWebRtcPeer
+from .bot_webrtc_peer import CACHE_PATH, cache, app
+from .signaling_service import (
+    WebcamWebRtcSignalingServer,
     base_image,
-    cache,
 )
 
 # ## Testing WebRTC and Modal
@@ -54,18 +52,14 @@ class TestPeer(ModalWebRtcPeer):
 
         # get input video duration in seconds
         self.input_video = cv2.VideoCapture(self.TEST_VIDEO_SOURCE_URL)
-        self.input_video_duration_frames = self.input_video.get(
-            cv2.CAP_PROP_FRAME_COUNT
-        )
-        self.input_video_duration_seconds = (
-            self.input_video_duration_frames / self.input_video.get(cv2.CAP_PROP_FPS)
+        self.input_video_duration_frames = self.input_video.get(cv2.CAP_PROP_FRAME_COUNT)
+        self.input_video_duration_seconds = self.input_video_duration_frames / self.input_video.get(
+            cv2.CAP_PROP_FPS
         )
         self.input_video.release()
 
         # set streaming duration to input video duration plus a buffer
-        self.stream_duration = (
-            self.input_video_duration_seconds + self.VIDEO_DURATION_BUFFER_SECS
-        )
+        self.stream_duration = self.input_video_duration_seconds + self.VIDEO_DURATION_BUFFER_SECS
 
         self.player = None  # video stream source
         self.recorder = None  # processed video stream sink
@@ -88,9 +82,7 @@ class TestPeer(ModalWebRtcPeer):
         # keep us notified on connection state changes
         @self.pcs[peer_id].on("connectionstatechange")
         async def on_connectionstatechange() -> None:
-            print(
-                f"Video Tester connection state updated: {self.pcs[peer_id].connectionState}"
-            )
+            print(f"Video Tester connection state updated: {self.pcs[peer_id].connectionState}")
 
         # when we receive a track back from
         # the video processing peer we record it
@@ -144,11 +136,9 @@ class TestPeer(ModalWebRtcPeer):
         peer_id = None
         # connect to server via websocket
         ws_uri = (
-            WebcamObjDet().web.get_web_url().replace("http", "ws") + f"/ws/{self.id}"
+            WebcamWebRtcSignalingServer().web.get_web_url().replace("http", "ws") + f"/ws/{self.id}"
         )
-        async with websockets.connect(
-            ws_uri, open_timeout=self.WS_OPEN_TIMEOUT
-        ) as websocket:
+        async with websockets.connect(ws_uri, open_timeout=self.WS_OPEN_TIMEOUT) as websocket:
             await websocket.send(json.dumps({"type": "identify", "peer_id": self.id}))
             peer_id = json.loads(await websocket.recv())["peer_id"]
 

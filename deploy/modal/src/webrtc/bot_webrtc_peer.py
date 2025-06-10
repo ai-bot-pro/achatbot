@@ -3,12 +3,14 @@ from pathlib import Path
 
 import modal
 
-from .modal_webrtc import ModalWebRtcPeer, ModalWebRtcSignalingServer
+from .modal_webrtc_peer import ModalWebRtcPeer
+
+app = modal.App("demo-webrtc-bot")
 
 py_version = "3.12"
 tensorrt_ld_path = f"/usr/local/lib/python{py_version}/site-packages/tensorrt_libs"
 
-video_processing_image = (
+video_audio_processing_image = (
     modal.Image.debian_slim(python_version=py_version)  # matching ld path
     # update locale as required by onnx
     .apt_install("locales")
@@ -31,32 +33,42 @@ video_processing_image = (
         "torch==2.7.0",
         "shortuuid==1.0.13",
     )
+    .env(
+        {
+            "BOT_NAME": os.getenv("BOT_NAME", "echo"),
+            "TURN_SERVER": os.getenv("TURN_SERVER", "cloudflare"),
+        }
+    )
 )
 
 CACHE_VOLUME = modal.Volume.from_name("webrtc-yolo-cache", create_if_missing=True)
 CACHE_PATH = Path("/cache")
 cache = {CACHE_PATH: CACHE_VOLUME}
 
-app = modal.App("example-webrtc-yolo")
-
 
 @app.cls(
-    image=video_processing_image,
-    gpu="L4",
+    image=video_audio_processing_image,
+    gpu=os.getenv("IMAGE_GPU", None),
     volumes=cache,
     secrets=[modal.Secret.from_name("turn-credentials")],
+    # u can use the nearest cloud region to run server
     # cloud="aws",
     # region="ap-northeast"
     min_containers=1,
-    max_containers=2,  # when peers per GPU container reach max input, scale up, max 2
+    max_containers=2,  # when peers per GPU/CPU container reach max inputs, scale up, max 2
 )
 @modal.concurrent(
-    target_inputs=2,  # try to stick to just two peers per GPU container
+    target_inputs=2,  # try to stick to just two peers per GPU/CPU container
     max_inputs=3,  # but allow up to three
 )
-class ObjDet(ModalWebRtcPeer):
+class BotWebRtcPeer(ModalWebRtcPeer):
     async def initialize(self):
-        self.yolo_model = get_yolo_model(CACHE_PATH)
+        print(f"initialize ModalWebRtcPeer")
+        # TODO: achatbot factory
+        self.bot_name = os.getenv("BOT_NAME", "echo")
+        self.turn_server = os.getenv("TURN_SERVER", "cloudflare")
+        if self.bot_name == "detector_yolo":
+            self.yolo_model = get_yolo_model(CACHE_PATH)
 
     async def setup_streams(self, peer_id: str):
         from aiortc import MediaStreamTrack
@@ -77,11 +89,15 @@ class ObjDet(ModalWebRtcPeer):
             print(f"Video Processor, {self.id}, received {track.kind} track {track} from {peer_id}")
 
             if track.kind == "video":
-                output_track = get_yolo_track(track, self.yolo_model)  # see Addenda
-                self.pcs[peer_id].addTrack(output_track)
+                if self.bot_name == "detector_yolo":
+                    output_track = get_yolo_track(track, self.yolo_model)
+                    self.pcs[peer_id].addTrack(output_track)
+                else:
+                    self.pcs[peer_id].addTrack(track)
             elif track.kind == "audio":
                 # For audio track, we just echo it back
                 self.pcs[peer_id].addTrack(track)
+                # TODO
 
             # keep us notified when the incoming track ends
             @track.on("ended")
@@ -93,63 +109,14 @@ class ObjDet(ModalWebRtcPeer):
     async def get_turn_servers(self, peer_id=None, msg=None) -> dict:
         print(f"get_turn_servers called for {peer_id} {msg}")
         try:
-            turn_servers = await get_cloudflare_turn_servers()
-            # turn_servers = await get_metered_turn_servers()
+            if self.turn_server == "metered":
+                turn_servers = await get_metered_turn_servers()
+            else:
+                turn_servers = await get_cloudflare_turn_servers()
         except Exception as e:
-            print(e)
             return {"type": "error", "message": str(e)}
 
         return {"type": "turn_servers", "ice_servers": turn_servers}
-
-
-# ### Implement a `SignalingServer`
-
-# The `ModalWebRtcSignalingServer` class is much simpler to implement.
-# The main thing we need to do is implement the `get_modal_peer_class` method which will return our implementation of the `ModalWebRtcPeer` class, `ObjDet`.
-#
-# It also has an `initialize()` method we can optionally override (called at the beginning of the [container lifecycle](https://modal.com/docs/guides/lifecycle-functions))
-# as well as a `web_app` property which will be [served by Modal](https://modal.com/docs/guide/webhooks#asgi-apps---fastapi-fasthtml-starlette).
-# We'll use these to add a frontend which uses the WebRTC JavaScript API to stream a peer's webcam from the browser.
-#
-# The JavaScript and HTML files are alongside this example in the [Github
-# repo](https://github.com/modal-labs/modal-examples/tree/main/07_web_endpoints/webrtc/frontend).
-
-base_image = (
-    modal.Image.debian_slim(python_version="3.12")
-    .apt_install("python3-opencv", "ffmpeg")
-    .pip_install(
-        "fastapi[standard]==0.115.4",
-        "aiortc==1.11.0",
-        "opencv-python==4.11.0.86",
-        "shortuuid==1.0.13",
-    )
-)
-
-this_directory = Path(__file__).parent.resolve()
-
-server_image = base_image.add_local_dir(this_directory / "frontend", remote_path="/frontend")
-
-
-@app.cls(
-    image=server_image,
-    max_containers=1,
-)
-class WebcamObjDet(ModalWebRtcSignalingServer):
-    def get_modal_peer_class(self):
-        return ObjDet
-
-    def initialize(self):
-        from fastapi.responses import HTMLResponse
-        from fastapi.staticfiles import StaticFiles
-
-        self.web_app.mount("/static", StaticFiles(directory="/frontend"))
-
-        @self.web_app.get("/")
-        async def root():
-            html = open("/frontend/index.html").read()
-            return HTMLResponse(content=html)
-
-        print("----initialized singaling server----")
 
 
 def get_yolo_model(cache_path):

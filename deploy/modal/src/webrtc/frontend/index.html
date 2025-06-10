@@ -113,8 +113,16 @@
         <input type="text" id="wsServer" placeholder="ws://localhost:8080" value="">
     </div>
     <div id="videos">
-        <video id="localVideo" autoplay playsinline muted></video>
-        <video id="remoteVideo" autoplay playsinline></video>
+        <div>
+            <p>Local Video</p>
+            <video id="localVideo" autoplay playsinline muted></video>
+            <canvas id="localAudioVisualizer" width="320" height="50"></canvas>
+        </div>
+        <div>
+            <p>Remote Video</p>
+            <video id="remoteVideo" autoplay playsinline></video>
+            <canvas id="remoteAudioVisualizer" width="320" height="50"></canvas>
+        </div>
     </div>
     <div>
         <button id="startWebcamButton">Start Local Webcam</button>

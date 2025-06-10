@@ -28,6 +28,9 @@ export class WebRtcClient extends EventTarget {
                 video: {
                     facingMode: { ideal: "environment" }
                 }, 
+                // https://developer.mozilla.org/zh-CN/docs/Web/API/MediaTrackConstraints
+                // haha like mfc to develop desktop software
+                // voice frontend
                 audio: {
                     echoCancellation: true,
                     noiseSuppression: true,
