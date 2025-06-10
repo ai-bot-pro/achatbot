@@ -65,10 +65,7 @@ class BotWebRtcPeer(ModalWebRtcPeer):
     async def initialize(self):
         print(f"initialize ModalWebRtcPeer")
         # TODO: achatbot factory
-        self.bot_name = os.getenv("BOT_NAME", "echo")
-        self.turn_server = os.getenv("TURN_SERVER", "cloudflare")
-        if self.bot_name == "detector_yolo":
-            load(CACHE_PATH)
+        load()
 
     async def setup_streams(self, peer_id: str):
         from aiortc import MediaStreamTrack
@@ -85,39 +82,38 @@ class BotWebRtcPeer(ModalWebRtcPeer):
         # we create a processed track and add it to our stream
         # back to the source peer
         @self.pcs[peer_id].on("track")
-        def on_track(track: MediaStreamTrack) -> None:
+        def on_track(in_track: MediaStreamTrack) -> None:
             print(
-                f"Video Processor, {self.id}, received {track.kind} track {track.__dict__} from {peer_id}"
+                f"Video Processor, {self.id}, received {in_track.kind} in_track {in_track.__dict__} from {peer_id}"
             )
 
-            if track.kind == "video":
-                if self.bot_name == "detector_yolo":
-                    output_track = get_yolo_track(track)
-                    self.pcs[peer_id].addTrack(output_track)
-                else:
-                    self.pcs[peer_id].addTrack(track)
-            elif track.kind == "audio":
-                # For audio track, we just echo it back
-                self.pcs[peer_id].addTrack(track)
-                # TODO
+            if in_track.kind == "video":
+                output_track = get_out_track(in_track)
+                self.pcs[peer_id].addTrack(output_track)
+            elif in_track.kind == "audio":
+                self.pcs[peer_id].addTrack(in_track)
 
             # keep us notified when the incoming track ends
-            @track.on("ended")
+            @in_track.on("ended")
             async def on_ended() -> None:
                 print(
-                    f"Video Processor, {self.id}, incoming {track.kind} track from {peer_id} ended"
+                    f"Video Processor, {self.id}, incoming {in_track.kind} track from {peer_id} ended"
                 )
 
 
-def load(cache_path):
-    import onnxruntime
+def load():
+    bot_name = os.getenv("BOT_NAME", "echo")
+    if bot_name == "detector_yolo":
+        from .track.yolo import load
 
-    from .track.yolo import load
-
-    load(cache_path)
+        load(CACHE_PATH)
 
 
-def get_yolo_track(track, yolo_model=None):
-    from .track.yolo import YOLOTrack
+def get_out_track(in_track):
+    bot_name = os.getenv("BOT_NAME", "echo")
+    if bot_name == "detector_yolo":
+        from .track.yolo import YOLOTrack
 
-    return YOLOTrack(track)
+        return YOLOTrack(in_track)
+
+    return in_track

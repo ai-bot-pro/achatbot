@@ -1,3 +1,4 @@
+import os
 import asyncio
 import json
 from abc import ABC, abstractmethod
@@ -39,6 +40,7 @@ class ModalWebRtcPeer(ABC):
         self.id = shortuuid.uuid()
         self.pcs: dict[str, RTCPeerConnection] = {}
         self.pending_candidates = {}
+        self.turn_server = os.getenv("TURN_SERVER", "cloudflare")
 
         # call custom init logic
         await self.initialize()
