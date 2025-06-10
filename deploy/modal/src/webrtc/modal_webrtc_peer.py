@@ -1,11 +1,10 @@
 import asyncio
 import json
 from abc import ABC, abstractmethod
-from typing import Optional
 
 import modal
-from fastapi import FastAPI, WebSocket
-from fastapi.websockets import WebSocketState
+
+from .turn_server import get_metered_turn_servers, get_cloudflare_turn_servers
 
 
 class ModalWebRtcPeer(ABC):
@@ -55,8 +54,17 @@ class ModalWebRtcPeer(ABC):
     async def run_streams(self, peer_id):
         """Override to add custom logic when running streams"""
 
-    async def get_turn_servers(self, peer_id=None, msg=None) -> Optional[list]:
-        """Override to customize TURN servers"""
+    async def get_turn_servers(self, peer_id=None, msg=None) -> dict:
+        print(f"get_turn_servers called for {peer_id} {msg}")
+        try:
+            if self.turn_server == "metered":
+                turn_servers = await get_metered_turn_servers()
+            else:
+                turn_servers = await get_cloudflare_turn_servers()
+        except Exception as e:
+            return {"type": "error", "message": str(e)}
+
+        return {"type": "turn_servers", "ice_servers": turn_servers}
 
     async def _setup_peer_connection(self, peer_id):
         """Creates an RTC peer connection via an ICE server"""

@@ -68,7 +68,7 @@ class BotWebRtcPeer(ModalWebRtcPeer):
         self.bot_name = os.getenv("BOT_NAME", "echo")
         self.turn_server = os.getenv("TURN_SERVER", "cloudflare")
         if self.bot_name == "detector_yolo":
-            self.yolo_model = get_yolo_model(CACHE_PATH)
+            load(CACHE_PATH)
 
     async def setup_streams(self, peer_id: str):
         from aiortc import MediaStreamTrack
@@ -86,11 +86,13 @@ class BotWebRtcPeer(ModalWebRtcPeer):
         # back to the source peer
         @self.pcs[peer_id].on("track")
         def on_track(track: MediaStreamTrack) -> None:
-            print(f"Video Processor, {self.id}, received {track.kind} track {track} from {peer_id}")
+            print(
+                f"Video Processor, {self.id}, received {track.kind} track {track.__dict__} from {peer_id}"
+            )
 
             if track.kind == "video":
                 if self.bot_name == "detector_yolo":
-                    output_track = get_yolo_track(track, self.yolo_model)
+                    output_track = get_yolo_track(track)
                     self.pcs[peer_id].addTrack(output_track)
                 else:
                     self.pcs[peer_id].addTrack(track)
@@ -106,125 +108,16 @@ class BotWebRtcPeer(ModalWebRtcPeer):
                     f"Video Processor, {self.id}, incoming {track.kind} track from {peer_id} ended"
                 )
 
-    async def get_turn_servers(self, peer_id=None, msg=None) -> dict:
-        print(f"get_turn_servers called for {peer_id} {msg}")
-        try:
-            if self.turn_server == "metered":
-                turn_servers = await get_metered_turn_servers()
-            else:
-                turn_servers = await get_cloudflare_turn_servers()
-        except Exception as e:
-            return {"type": "error", "message": str(e)}
 
-        return {"type": "turn_servers", "ice_servers": turn_servers}
-
-
-def get_yolo_model(cache_path):
+def load(cache_path):
     import onnxruntime
 
-    from .yolo import YOLOv10
+    from .track.yolo import load
 
-    onnxruntime.preload_dlls()
-    return YOLOv10(cache_path)
+    load(cache_path)
 
 
 def get_yolo_track(track, yolo_model=None):
-    import numpy as np
-    import onnxruntime
-    from aiortc import MediaStreamTrack
-    from aiortc.contrib.media import VideoFrame
-
-    from .yolo import YOLOv10
-
-    class YOLOTrack(MediaStreamTrack):
-        """
-        Custom media stream track performs object detection
-        on the video stream and passes it back to the source peer
-        """
-
-        kind: str = "video"
-        conf_threshold: float = 0.15
-
-        def __init__(self, track: MediaStreamTrack, yolo_model=None) -> None:
-            super().__init__()
-
-            self.track = track
-            if yolo_model is None:
-                onnxruntime.preload_dlls()
-                self.yolo_model = YOLOv10(CACHE_PATH)
-            else:
-                self.yolo_model = yolo_model
-
-        def detection(self, image: np.ndarray) -> np.ndarray:
-            import cv2
-
-            orig_shape = image.shape[:-1]
-
-            image = cv2.resize(
-                image,
-                (self.yolo_model.input_width, self.yolo_model.input_height),
-            )
-
-            image = self.yolo_model.detect_objects(image, self.conf_threshold)
-
-            image = cv2.resize(image, (orig_shape[1], orig_shape[0]))
-
-            return image
-
-        # this is the essential method we need to implement
-        # to create a custom MediaStreamTrack
-        async def recv(self) -> VideoFrame:
-            frame = await self.track.recv()
-            img = frame.to_ndarray(format="bgr24")
-
-            processed_img = self.detection(img)
-
-            # VideoFrames are from a really nice package called av
-            # which is a pythonic wrapper around ffmpeg
-            # and a dependency of aiortc
-            new_frame = VideoFrame.from_ndarray(processed_img, format="bgr24")
-            new_frame.pts = frame.pts
-            new_frame.time_base = frame.time_base
-
-            return new_frame
+    from .track.yolo import YOLOTrack
 
     return YOLOTrack(track)
-
-
-async def get_cloudflare_turn_servers(ttl=86400):
-    import aiohttp
-
-    auth_token = os.environ["CLOUDFLARE_TURN_API_TOKEN"]
-    key_id = os.environ["CLOUDFLARE_TURN_TOKEN"]
-    url = f"https://rtc.live.cloudflare.com/v1/turn/keys/{key_id}/credentials/generate-ice-servers"
-
-    print(url)
-    headers = {"Authorization": f"Bearer {auth_token}", "Content-Type": "application/json"}
-
-    data = {"ttl": ttl}
-
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, headers=headers, json=data) as response:
-            if response.status not in [200, 201]:
-                error_text = await response.text()
-                raise Exception(f"error status {response.status} {error_text}")
-
-            data = await response.json()
-            return data["iceServers"]
-
-
-async def get_metered_turn_servers():
-    import aiohttp
-
-    turn_name = os.environ.get("METERED_TURN_USERNAME")
-    api_key = os.environ.get("METERED_TURN_API_KEY")
-    url = f"https://{turn_name}/api/v1/turn/credentials?apiKey={api_key}"
-    print(url)
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            if response.status not in [200, 201]:
-                error_text = await response.text()
-                raise Exception(f"error status {response.status} {error_text}")
-
-            data = await response.json()
-            return data
