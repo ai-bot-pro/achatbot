@@ -82,23 +82,19 @@ class BotWebRtcPeer(ModalWebRtcPeer):
         # we create a processed track and add it to our stream
         # back to the source peer
         @self.pcs[peer_id].on("track")
-        def on_track(in_track: MediaStreamTrack) -> None:
+        def OnTrack(in_track: MediaStreamTrack) -> None:
             print(
-                f"Video Processor, {self.id}, received {in_track.kind} in_track {in_track.__dict__} from {peer_id}"
+                f"[OnTrack] {self.id}, received {in_track.kind} in_track({type(in_track)}) {in_track.__dict__} from {peer_id}"
             )
 
-            if in_track.kind == "video":
-                output_track = get_out_track(in_track)
-                self.pcs[peer_id].addTrack(output_track)
-            elif in_track.kind == "audio":
-                self.pcs[peer_id].addTrack(in_track)
+            # NOTE: track all kind include video, audio, bot track obj to recieve and process
+            output_track = get_out_track(in_track)
+            self.pcs[peer_id].addTrack(output_track)
 
             # keep us notified when the incoming track ends
             @in_track.on("ended")
-            async def on_ended() -> None:
-                print(
-                    f"Video Processor, {self.id}, incoming {in_track.kind} track from {peer_id} ended"
-                )
+            async def OnEnded() -> None:
+                print(f"[OnEnded], {self.id}, incoming {in_track.kind} track from {peer_id} ended")
 
 
 def load():
@@ -115,5 +111,7 @@ def get_out_track(in_track):
         from .track.yolo import YOLOTrack
 
         return YOLOTrack(in_track)
+    else:
+        from .track.base import BaseTrack
 
-    return in_track
+        return BaseTrack(in_track)

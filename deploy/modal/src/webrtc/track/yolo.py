@@ -1,8 +1,11 @@
 from pathlib import Path
+from typing import Union
 import numpy as np
 import onnxruntime
 from aiortc import MediaStreamTrack
 from aiortc.contrib.media import VideoFrame
+from av.frame import Frame
+from av.packet import Packet
 
 from ..yolo import YOLOv10
 from .base import BaseTrack
@@ -14,6 +17,7 @@ yolo_model = None
 def load(cache_path: Path = Path("/cache")):
     global yolo_model
     if yolo_model is not None:
+        print(f"{yolo_model} already loaded")
         return
 
     onnxruntime.preload_dlls()
@@ -26,20 +30,21 @@ class YOLOTrack(BaseTrack):
     on the video stream and passes it back to the source peer
     """
 
-    kind: str = "video"
     conf_threshold: float = 0.15
 
-    def __init__(self, track: MediaStreamTrack = None) -> None:
-        super().__init__(track)
+    def __init__(self, in_track: MediaStreamTrack = None) -> None:
+        super().__init__(in_track)
 
         self.yolo_model = yolo_model
-        print(yolo_model)
 
     # this is the essential method we need to implement
     # to create a custom MediaStreamTrack
-    async def recv(self) -> VideoFrame:
-        assert self.track is not None
-        frame = await self.track.recv()
+    async def recv(self) -> Union[Frame, Packet]:
+        assert self.in_track is not None
+        frame = await self.in_track.recv()
+        if self.in_track.kind == "audio":
+            return frame
+
         img = frame.to_ndarray(format="bgr24")
 
         processed_img = self.detection(img)
