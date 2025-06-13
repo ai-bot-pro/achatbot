@@ -17,7 +17,7 @@ class SmallWebrtcAIBot(AIBot):
     def set_webrtc_connection(self, webrtc_connection: SmallWebRTCConnection):
         self._webrtc_connection = webrtc_connection
 
-    def regisiter_event(self, transport: SmallWebRTCTransport):
+    def register_event(self, transport: SmallWebRTCTransport):
         transport.add_event_handler(
             "on_client_connected",
             self.on_client_connected,
