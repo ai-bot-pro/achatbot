@@ -119,7 +119,7 @@ class BotLoader:
                 case "small_webrtc_bot":
                     if import_small_webrtc_bots(bot_info.chat_bot_name) is False:
                         detail = f"un import bot: {bot_info.chat_bot_name}"
-                        raise Exception(detail)
+                        raise ValueError(detail)  # Or a more specific custom exception
 
                     logging.info(f"register bots: {register_ai_small_webrtc_bots.items()}")
                     if bot_info.chat_bot_name not in register_ai_small_webrtc_bots:
