@@ -56,4 +56,4 @@ class SmallWebrtcAIBot(AIBot):
         transport: SmallWebRTCTransport,
         message: Any,
     ):
-        logging.info(f"on_app_message recieved message: {message}")
+        logging.info(f"on_app_message received message: {message}")
