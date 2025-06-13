@@ -3,9 +3,9 @@ import logging
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
-from fastapi import WebSocket
 
-from src.cmd.bots.base_fastapi_websocket_server import AIFastapiWebsocketBot
+from src.services.webrtc_peer_connection import SmallWebRTCConnection
+from src.cmd.bots.base_small_webrtc import SmallWebrtcAIBot
 from src.processors.aggregators.llm_response import (
     LLMAssistantResponseAggregator,
     LLMUserResponseAggregator,
@@ -14,24 +14,22 @@ from src.processors.llm.base import LLMProcessor
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.types.frames.data_frames import LLMMessagesFrame
-from src.cmd.bots import register_ai_fastapi_ws_bots
+from src.cmd.bots import register_ai_small_webrtc_bots
+from src.common.types import AudioCameraParams
+from src.transports.small_webrtc import SmallWebRTCTransport
 
 from dotenv import load_dotenv
-
-from src.types.network.fastapi_websocket import FastapiWebsocketServerParams
-from src.transports.fastapi_websocket_server import FastapiWebsocketTransport
-
 load_dotenv(override=True)
 
 
-@register_ai_fastapi_ws_bots.register
-class FastapiWebsocketServerBot(AIFastapiWebsocketBot):
+@register_ai_small_webrtc_bots.register
+class SmallWebrtcBot(SmallWebrtcAIBot):
     """
-    fastapi websocket input/output server bot with vad,asr,llm,tts
+    webrtc input/output server bot with vad,asr,llm,tts
     """
 
-    def __init__(self, websocket: WebSocket | None = None, **args) -> None:
-        super().__init__(websocket=websocket, **args)
+    def __init__(self, webrtc_connection: SmallWebRTCConnection | None = None, **args) -> None:
+        super().__init__(webrtc_connection=webrtc_connection, **args)
         self.init_bot_config()
 
         self.vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
@@ -40,23 +38,21 @@ class FastapiWebsocketServerBot(AIFastapiWebsocketBot):
         self.tts_processor: TTSProcessor = self.get_tts_processor()
 
     async def arun(self):
-        if self._websocket is None:
+        if self._webrtc_connection is None:
             return
 
-        self.params = FastapiWebsocketServerParams(
+        self.params = AudioCameraParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
-            add_wav_header=True,
             vad_enabled=True,
             vad_analyzer=self.vad_analyzer,
             vad_audio_passthrough=True,
-            transcription_enabled=False,
         )
         stream_info = self.tts_processor.get_stream_info()
         self.params.audio_out_sample_rate = stream_info["sample_rate"]
         self.params.audio_out_channels = stream_info["channels"]
-        transport = FastapiWebsocketTransport(
-            websocket=self._websocket,
+        transport = SmallWebRTCTransport(
+            webrtc_connection=self._webrtc_connection,
             params=self.params,
         )
 
@@ -92,11 +88,10 @@ class FastapiWebsocketServerBot(AIFastapiWebsocketBot):
 
     async def on_client_connected(
         self,
-        transport: FastapiWebsocketTransport,
-        websocket: WebSocket,
+        transport: SmallWebRTCTransport,
+        connection: SmallWebRTCConnection,
     ):
-        logging.info(f"on_client_connected client:{websocket.client}")
-        self.session.set_client_id(client_id=f"{websocket.client.host}:{websocket.client.port}")
+        logging.info(f"on_client_connected connection:{connection.pc}")
 
         # joined use tts say "hello" to introduce with llm generate
         if self._bot_config.tts and self._bot_config.llm and self._bot_config.llm.messages:
