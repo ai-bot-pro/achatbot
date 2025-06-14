@@ -43,19 +43,20 @@ async def lifespan(app: FastAPI):
         # load model before running
         run_bot = await BotLoader.load_bot(args.f, bot_type="small_webrtc_bot")
     except Exception as e:
-        print(e)
+        logging.warning(e)
         traceback.print_exc()
 
-    print(f"load bot {run_bot} success")
+    logging.info(f"load chat-bot {run_bot} success")
 
     yield  # Run app
 
+    logging.info(f"chat-bot app clearing")
     # app life end to clear resources
     coros = [pc.disconnect() for pc in pcs_map.values()]
     await asyncio.gather(*coros)
     pcs_map.clear()
 
-    print(f"clear success")
+    logging.info(f"chat-bot app clear success")
 
 
 app = FastAPI(lifespan=lifespan)
@@ -70,11 +71,16 @@ async def handle_offer(request: dict, background_tasks: BackgroundTasks):
         connection = pcs_map[pc_id]
         logging.info(f"Reusing existing connection for pc_id: {pc_id}")
         await connection.renegotiate(
-            sdp=request["sdp"], type=request["type"], restart_pc=request.get("restart_pc", False)
+            sdp=request.get("sdp"),
+            type=request.get("type"),
+            restart_pc=request.get("restart_pc", False),
         )
     else:
         connection = SmallWebRTCConnection(ice_servers)
-        await connection.initialize(sdp=request["sdp"], type=request["type"])
+        await connection.initialize(
+            sdp=request.get("sdp"),
+            type=request.get("type"),
+        )
 
         @connection.event_handler("closed")
         async def handle_disconnected(webrtc_connection: SmallWebRTCConnection):
@@ -85,9 +91,9 @@ async def handle_offer(request: dict, background_tasks: BackgroundTasks):
         background_tasks.add_task(run_bot.try_run)
 
     answer = connection.get_answer()
-    logging.info(f"answer pc_id: {answer['pc_id']}")
+    logging.info(f"answer pc_id: {answer.get('pc_id')}")
     # Updating the peer connection inside the map
-    pcs_map[answer["pc_id"]] = connection
+    pcs_map[answer.get("pc_id")] = connection
 
     return answer
 

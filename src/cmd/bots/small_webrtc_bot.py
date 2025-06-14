@@ -19,6 +19,7 @@ from src.common.types import AudioCameraParams
 from src.transports.small_webrtc import SmallWebRTCTransport
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 
@@ -56,9 +57,11 @@ class SmallWebrtcBot(SmallWebrtcAIBot):
             params=self.params,
         )
 
-        messages = []
-        if self._bot_config.llm.messages:
-            messages = self._bot_config.llm.messages
+        messages = (
+            list(self._bot_config.llm.messages)
+            if self._bot_config.llm and self._bot_config.llm.messages
+            else []
+        )
         user_response = LLMUserResponseAggregator(messages)
         assistant_response = LLMAssistantResponseAggregator(messages)
 
@@ -75,7 +78,7 @@ class SmallWebrtcBot(SmallWebrtcAIBot):
                 ]
             ),
             params=PipelineParams(
-                allow_interruptions=True,
+                allow_interruptions=False,
                 enable_metrics=True,
                 send_initial_empty_metrics=False,
             ),
@@ -84,7 +87,8 @@ class SmallWebrtcBot(SmallWebrtcAIBot):
         transport.add_event_handler("on_client_connected", self.on_client_connected)
         transport.add_event_handler("on_client_disconnected", self.on_client_disconnected)
 
-        await PipelineRunner(handle_sigint=self._handle_sigint).run(self.task)
+        # NOTE: if bot run in the sub thread like fastapi/starlette background-tasks, handle_sigint set False
+        await PipelineRunner(handle_sigint=False).run(self.task)
 
     async def on_client_connected(
         self,

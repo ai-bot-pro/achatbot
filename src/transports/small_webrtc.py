@@ -40,14 +40,14 @@ class SmallWebRTCTransport(BaseTransport):
         self._register_event_handler("on_client_connected")
         self._register_event_handler("on_client_disconnected")
 
-    def input(self) -> SmallWebRTCInputProcessor:
+    def input_processor(self) -> SmallWebRTCInputProcessor:
         if not self._input:
             self._input = SmallWebRTCInputProcessor(
                 self._client, self._params, name=self._input_name
             )
         return self._input
 
-    def output(self) -> SmallWebRTCOutputProcessor:
+    def output_processor(self) -> SmallWebRTCOutputProcessor:
         if not self._output:
             self._output = SmallWebRTCOutputProcessor(
                 self._client, self._params, name=self._input_name

@@ -6,7 +6,12 @@ import numpy as np
 from pydantic import BaseModel
 
 from src.common.types import AudioCameraParams
-from src.services.webrtc_peer_connection import SmallWebRTCConnection, RawAudioTrack, RawVideoTrack
+from src.services.webrtc_peer_connection import (
+    SmallWebRTCConnection,
+    RawAudioTrack,
+    RawVideoTrack,
+    SmallWebRTCTrack,
+)
 from src.types.frames import (
     UserAudioRawFrame,
     UserImageRawFrame,
@@ -47,8 +52,8 @@ class SmallWebRTCClient:
 
         self._audio_output_track = None
         self._video_output_track = None
-        self._audio_input_track: Optional[AudioStreamTrack] = None
-        self._video_input_track: Optional[VideoStreamTrack] = None
+        self._audio_input_track: Optional[SmallWebRTCTrack] = None
+        self._video_input_track: Optional[SmallWebRTCTrack] = None
 
         self._params = None
         self._audio_in_channels = None
@@ -193,6 +198,10 @@ class SmallWebRTCClient:
         if self._can_send() and self._audio_output_track:
             await self._audio_output_track.add_audio_bytes(frame.audio)
 
+    async def write_raw_audio_frames(self, frames: bytes):
+        if self._can_send() and self._audio_output_track:
+            await self._audio_output_track.add_audio_bytes(frames)
+
     async def write_video_frame(self, frame: OutputImageRawFrame):
         if self._can_send() and self._video_output_track:
             self._video_output_track.add_video_frame(frame)
@@ -217,6 +226,7 @@ class SmallWebRTCClient:
             self._closing = True
             await self._webrtc_connection.disconnect()
             await self._handle_peer_disconnected()
+            logging.info(f"Disconnected to Small WebRTC")
 
     async def send_message(self, frame: TransportMessageFrame):
         if self._can_send():
@@ -233,9 +243,9 @@ class SmallWebRTCClient:
             self._audio_output_track = RawAudioTrack(sample_rate=self._out_sample_rate)
             self._webrtc_connection.replace_audio_track(self._audio_output_track)
 
-        if self._params.video_out_enabled:
+        if self._params.camera_out_enabled:
             self._video_output_track = RawVideoTrack(
-                width=self._params.video_out_width, height=self._params.video_out_height
+                width=self._params.camera_out_width, height=self._params.camera_out_height
             )
             self._webrtc_connection.replace_video_track(self._video_output_track)
 

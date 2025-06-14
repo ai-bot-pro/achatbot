@@ -3,6 +3,7 @@ import logging
 from apipeline.frames import StartFrame, EndFrame, CancelFrame
 
 from src.types.frames.data_frames import (
+    ImageRawFrame,
     OutputAudioRawFrame,
     OutputImageRawFrame,
     TransportMessageFrame,
@@ -27,8 +28,6 @@ class SmallWebRTCOutputProcessor(AudioCameraOutputProcessor):
         self._initialized = False
 
     async def start(self, frame: StartFrame):
-        await super().start(frame)
-
         if self._initialized:
             return
 
@@ -36,7 +35,7 @@ class SmallWebRTCOutputProcessor(AudioCameraOutputProcessor):
 
         await self._client.setup(self._params, frame)
         await self._client.connect()
-        await self.set_transport_ready(frame)
+        await super().start(frame)
 
     async def stop(self, frame: EndFrame):
         await super().stop(frame)
@@ -52,5 +51,14 @@ class SmallWebRTCOutputProcessor(AudioCameraOutputProcessor):
     async def write_audio_frame(self, frame: OutputAudioRawFrame):
         await self._client.write_audio_frame(frame)
 
+    async def write_raw_audio_frames(self, chunk: bytes):
+        if len(chunk) < self._audio_chunk_size:
+            pad_bytes = b"\x00" * (self._audio_chunk_size - len(chunk))
+            chunk += pad_bytes
+        await self._client.write_raw_audio_frames(chunk)
+
     async def write_video_frame(self, frame: OutputImageRawFrame):
+        await self._client.write_video_frame(frame)
+
+    async def write_frame_to_camera(self, frame: ImageRawFrame):
         await self._client.write_video_frame(frame)

@@ -6,7 +6,6 @@ import json
 import logging
 from typing import Any, List, Literal, Optional, Union
 
-from loguru import logger
 import numpy as np
 from pydantic import BaseModel, TypeAdapter
 
@@ -74,7 +73,7 @@ class SmallWebRTCTrack:
             ):
                 print("Warning: _queue does not exist or has changed in aiortc.")
                 return
-            logger.debug("Discarding old frames")
+            logging.debug("Discarding old frames")
             while not remote_track._queue.empty():
                 remote_track._queue.get_nowait()  # Remove the oldest frame
                 remote_track._queue.task_done()
@@ -216,7 +215,7 @@ class SmallWebRTCConnection(EventHandlerManager):
         return self._pc_id
 
     def _initialize(self):
-        logger.debug("Initializing new peer connection")
+        logging.debug("Initializing new peer connection")
         rtc_config = RTCConfiguration(iceServers=self.ice_servers)
 
         self._answer: Optional[RTCSessionDescription] = None
@@ -237,7 +236,7 @@ class SmallWebRTCConnection(EventHandlerManager):
             # Flush queued messages once the data channel is open
             @channel.on("open")
             async def on_open():
-                logger.debug("Data channel is open, flushing queued messages")
+                logging.debug("Data channel is open, flushing queued messages")
                 while self._message_queue:
                     message = self._message_queue.pop(0)
                     self._data_channel.send(message)
@@ -257,10 +256,10 @@ class SmallWebRTCConnection(EventHandlerManager):
                             if self.is_connected():
                                 await self._call_event_handler("app-message", json_message)
                             else:
-                                logger.debug("Client not connected. Queuing app-message.")
+                                logging.debug("Client not connected. Queuing app-message.")
                                 self._pending_app_messages.append(json_message)
                 except Exception as e:
-                    logger.exception(f"Error parsing JSON message {message}, {e}")
+                    logging.exception(f"Error parsing JSON message {message}, {e}")
 
         # Despite the fact that aiortc provides this listener, they don't have a status for "disconnected"
         # So, in case we loose connection, this event will not be triggered
@@ -272,22 +271,22 @@ class SmallWebRTCConnection(EventHandlerManager):
         # So, in case we loose connection, this event will not be triggered
         @self._pc.on("iceconnectionstatechange")
         async def on_iceconnectionstatechange():
-            logger.debug(
+            logging.debug(
                 f"ICE connection state is {self._pc.iceConnectionState}, connection is {self._pc.connectionState}"
             )
 
         @self._pc.on("icegatheringstatechange")
         async def on_icegatheringstatechange():
-            logger.debug(f"ICE gathering state is {self._pc.iceGatheringState}")
+            logging.debug(f"ICE gathering state is {self._pc.iceGatheringState}")
 
         @self._pc.on("track")
         async def on_track(track):
-            logger.debug(f"Track {track.kind} received")
+            logging.debug(f"Track {track.kind} received")
             await self._call_event_handler("track-started", track)
 
             @track.on("ended")
             async def on_ended():
-                logger.debug(f"Track {track.kind} ended")
+                logging.debug(f"Track {track.kind} ended")
                 await self._call_event_handler("track-ended", track)
 
     async def _create_answer(self, sdp: str, type: str):
@@ -299,10 +298,10 @@ class SmallWebRTCConnection(EventHandlerManager):
         self.force_transceivers_to_send_recv()
 
         # this answer does not contain the ice candidates, which will be gathered later, after the setLocalDescription
-        logger.debug(f"Creating answer")
+        logging.debug(f"Creating answer")
         local_answer = await self._pc.createAnswer()
         await self._pc.setLocalDescription(local_answer)
-        logger.debug(f"Setting the answer after the local description is created")
+        logging.debug(f"Setting the answer after the local description is created")
         self._answer = self._pc.localDescription
 
     async def initialize(self, sdp: str, type: str):
@@ -313,7 +312,7 @@ class SmallWebRTCConnection(EventHandlerManager):
         # If we already connected, trigger again the connected event
         if self.is_connected():
             await self._call_event_handler("connected")
-            logger.debug("Flushing pending app-messages")
+            logging.debug("Flushing pending app-messages")
             for message in self._pending_app_messages:
                 await self._call_event_handler("app-message", message)
             # We are renegotiating here, because likely we have loose the first video frames
@@ -324,11 +323,11 @@ class SmallWebRTCConnection(EventHandlerManager):
             self.ask_to_renegotiate()
 
     async def renegotiate(self, sdp: str, type: str, restart_pc: bool = False):
-        logger.debug(f"Renegotiating {self._pc_id}")
+        logging.debug(f"Renegotiating {self._pc_id}")
 
         if restart_pc:
             await self._call_event_handler("disconnected")
-            logger.debug("Closing old peer connection")
+            logging.debug("Closing old peer connection")
             # removing the listeners to prevent the bot from closing
             self._pc.remove_all_listeners()
             await self._close()
@@ -349,13 +348,13 @@ class SmallWebRTCConnection(EventHandlerManager):
     def force_transceivers_to_send_recv(self):
         for transceiver in self._pc.getTransceivers():
             transceiver.direction = "sendrecv"
-            # logger.debug(
+            # logging.debug(
             #    f"Transceiver: {transceiver}, Mid: {transceiver.mid}, Direction: {transceiver.direction}"
             # )
-            # logger.debug(f"Sender track: {transceiver.sender.track}")
+            # logging.debug(f"Sender track: {transceiver.sender.track}")
 
     def replace_audio_track(self, track):
-        logger.debug(f"Replacing audio track {track.kind}")
+        logging.debug(f"Replacing audio track {track.kind}")
         # Transceivers always appear in creation-order for both peers
         # For now we are only considering that we are going to have 02 transceivers,
         # one for audio and one for video
@@ -363,10 +362,10 @@ class SmallWebRTCConnection(EventHandlerManager):
         if len(transceivers) > 0 and transceivers[0].sender:
             transceivers[0].sender.replaceTrack(track)
         else:
-            logger.warning("Audio transceiver not found. Cannot replace audio track.")
+            logging.warning("Audio transceiver not found. Cannot replace audio track.")
 
     def replace_video_track(self, track):
-        logger.debug(f"Replacing video track {track.kind}")
+        logging.debug(f"Replacing video track {track.kind}")
         # Transceivers always appear in creation-order for both peers
         # For now we are only considering that we are going to have 02 transceivers,
         # one for audio and one for video
@@ -374,7 +373,7 @@ class SmallWebRTCConnection(EventHandlerManager):
         if len(transceivers) > 1 and transceivers[1].sender:
             transceivers[1].sender.replaceTrack(track)
         else:
-            logger.warning("Video transceiver not found. Cannot replace video track.")
+            logging.warning("Video transceiver not found. Cannot replace video track.")
 
     async def disconnect(self):
         self.send_app_message({"type": SIGNALLING_TYPE, "message": PeerLeftMessage().model_dump()})
@@ -402,10 +401,10 @@ class SmallWebRTCConnection(EventHandlerManager):
         if state == "connected" and not self._connect_invoked:
             # We are going to wait until the pipeline is ready before triggering the event
             return
-        logger.debug(f"Connection state changed to: {state}")
+        logging.debug(f"Connection state changed to: {state}")
         await self._call_event_handler(state)
         if state == "failed":
-            logger.warning("Connection failed, closing peer connection.")
+            logging.warning("Connection failed, closing peer connection.")
             await self._close()
 
     # Despite the fact that aiortc provides this listener, they don't have a status for "disconnected"
@@ -433,7 +432,7 @@ class SmallWebRTCConnection(EventHandlerManager):
         # one for audio and one for video
         transceivers = self._pc.getTransceivers()
         if len(transceivers) == 0 or not transceivers[AUDIO_TRANSCEIVER_INDEX].receiver:
-            logger.warning("No audio transceiver is available")
+            logging.warning("No audio transceiver is available")
             return None
 
         track = transceivers[AUDIO_TRANSCEIVER_INDEX].receiver.track
@@ -450,7 +449,7 @@ class SmallWebRTCConnection(EventHandlerManager):
         # one for audio and one for video
         transceivers = self._pc.getTransceivers()
         if len(transceivers) <= 1 or not transceivers[VIDEO_TRANSCEIVER_INDEX].receiver:
-            logger.warning("No video transceiver is available")
+            logging.warning("No video transceiver is available")
             return None
 
         track = transceivers[VIDEO_TRANSCEIVER_INDEX].receiver.track
@@ -463,7 +462,7 @@ class SmallWebRTCConnection(EventHandlerManager):
         if self._data_channel and self._data_channel.readyState == "open":
             self._data_channel.send(json_message)
         else:
-            logger.debug("Data channel not ready, queuing message")
+            logging.debug("Data channel not ready, queuing message")
             self._message_queue.append(json_message)
 
     def ask_to_renegotiate(self):
@@ -476,7 +475,7 @@ class SmallWebRTCConnection(EventHandlerManager):
         )
 
     def _handle_signalling_message(self, message):
-        logger.debug(f"Signalling message received: {message}")
+        logging.info(f"Signalling message received: {message}")
         inbound_adapter = TypeAdapter(SignallingMessage.Inbound)
         signalling_message = inbound_adapter.validate_python(message)
         match signalling_message:
