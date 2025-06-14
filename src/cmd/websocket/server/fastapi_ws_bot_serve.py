@@ -2,32 +2,69 @@ import asyncio
 import logging
 import os
 import argparse
+from contextlib import asynccontextmanager
+import traceback
+from typing import Dict
 
-from fastapi import WebSocket
+from fastapi import FastAPI, WebSocket
 from dotenv import load_dotenv
 
+from src.cmd.bots.base import AIBot
 from src.cmd.bots.bot_loader import BotLoader
 from src.cmd.bots.base_fastapi_websocket_server import AIFastapiWebsocketBot
 from src.common.types import CONFIG_DIR
 from src.common.const import *
 from src.common.logger import Logger
-from src.cmd.http.server.fastapi_daily_bot_serve import app, ngrok_proxy
+from src.cmd.http.server.fastapi_daily_bot_serve import ngrok_proxy
 
 
 load_dotenv(override=True)
 Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
 
+run_bot: AIBot = None
+# Store websocket
+ws_map: Dict[str, WebSocket] = {}
+
+
+# https://fastapi.tiangolo.com/advanced/events/#lifespan
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global run_bot
+    try:
+        # load model before running
+        run_bot = await BotLoader.load_bot(config.f, bot_type="fastapi_ws_bot")
+    except Exception as e:
+        print(e)
+        traceback.print_exc()
+
+    print(f"load bot {run_bot} success")
+
+    yield  # Run app
+
+    # clear
+    coros = [ws.close() for ws in ws_map.values()]
+    await asyncio.gather(*coros)
+    ws_map.clear()
+    print(f"clear success")
+
+
+app = FastAPI(lifespan=lifespan)
+
 
 @app.websocket("/")
 async def websocket_endpoint(websocket: WebSocket):
-    run_bot: AIFastapiWebsocketBot = await BotLoader.load_bot(config.f, bot_type="fastapi_ws_bot")
-
     # NOTE: after init, websocket to accept connection, then to run
     await websocket.accept()
+    key = f"{websocket.client.host}:{websocket.client.port}"
+    ws_map[key] = websocket
     run_bot.set_fastapi_websocket(websocket)
     logging.info(f"accept client: {websocket.client}")
     await run_bot.try_run()
 
+
+"""
+python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_websocket_echo_voice_bot.json
+"""
 
 if __name__ == "__main__":
     import uvicorn
@@ -61,7 +98,7 @@ if __name__ == "__main__":
 
     # api docs: http://0.0.0.0:4321/docs
     uvicorn.run(
-        "src.cmd.http.server.fastapi_daily_bot_serve:app",
+        app,
         host=config.host,
         port=config.port,
         reload=config.reload,

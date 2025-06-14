@@ -6,6 +6,20 @@ from apipeline.frames.data_frames import Frame, DataFrame, TextFrame, ImageRawFr
 
 
 @dataclass
+class InputImageRawFrame(ImageRawFrame):
+    """
+    input image frame
+    """
+
+
+@dataclass
+class OutputImageRawFrame(ImageRawFrame):
+    """
+    output image frame
+    """
+
+
+@dataclass
 class URLImageRawFrame(ImageRawFrame):
     """An image with an associated URL. Will be shown by the transport if the
     transport's camera is enabled.
@@ -175,6 +189,16 @@ class FunctionCallResultFrame(DataFrame):
     tool_call_id: str
     arguments: dict
     result: Any
+
+
+@dataclass
+class InputAudioRawFrame(AudioRawFrame):
+    """Input audio frame"""
+
+
+@dataclass
+class OutputAudioRawFrame(AudioRawFrame):
+    """output audio frame"""
 
 
 @dataclass

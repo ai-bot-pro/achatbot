@@ -2,10 +2,22 @@ import logging
 import inspect
 from typing import Dict
 
+from src.common.utils.obj import obj_count, obj_id
+
 
 class EventHandlerManager:
-    def __init__(self):
+    def __init__(self, name: str = None):
+        self._id: int = obj_id()
+        self._name = name or f"{self.__class__.__name__}#{obj_count(self)}"
         self._event_handlers: Dict[str, list] = {}
+
+    @property
+    def id(self) -> int:
+        return self._id
+
+    @property
+    def name(self) -> str:
+        return self._name
 
     @property
     def event_names(self):
