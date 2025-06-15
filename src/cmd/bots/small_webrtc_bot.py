@@ -56,6 +56,7 @@ class SmallWebrtcBot(SmallWebrtcAIBot):
             webrtc_connection=self._webrtc_connection,
             params=self.params,
         )
+        self.register_event(transport)
 
         messages = (
             list(self._bot_config.llm.messages)
@@ -83,9 +84,6 @@ class SmallWebrtcBot(SmallWebrtcAIBot):
                 send_initial_empty_metrics=False,
             ),
         )
-
-        transport.add_event_handler("on_client_connected", self.on_client_connected)
-        transport.add_event_handler("on_client_disconnected", self.on_client_disconnected)
 
         # NOTE: if bot run in the sub thread like fastapi/starlette background-tasks, handle_sigint set False
         await PipelineRunner(handle_sigint=False).run(self.task)

@@ -269,7 +269,9 @@ class SmallWebRTCConnection(EventHandlerManager):
                         self._last_received_time = time.time()
                     else:
                         json_message = json.loads(message)
-                        if json_message["type"] == SIGNALLING_TYPE and json_message.get("message"):
+                        if json_message.get("type") == SIGNALLING_TYPE and json_message.get(
+                            "message"
+                        ):
                             self._handle_signalling_message(json_message["message"])
                         else:
                             if self.is_connected():
