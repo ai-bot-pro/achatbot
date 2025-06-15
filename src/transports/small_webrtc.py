@@ -63,8 +63,8 @@ class SmallWebRTCTransport(BaseTransport):
             await self._output.queue_frame(frame, FrameDirection.DOWNSTREAM)
 
     async def _on_app_message(self, webrtc_connection, message: Any):
-        if self._input:
-            await self._input.push_app_message(message)
+        # if self._input:
+        #    await self._input.push_app_message(message)
         await self._call_event_handler("on_app_message", webrtc_connection, message)
 
     async def _on_client_connected(self, webrtc_connection):

@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
@@ -113,3 +114,11 @@ class SmallWebrtcBot(SmallWebrtcAIBot):
                 }
             )
             await self.task.queue_frames([LLMMessagesFrame(self._bot_config.llm.messages)])
+
+    async def on_app_message(
+        self,
+        transport: SmallWebRTCTransport,
+        connection: SmallWebRTCConnection,
+        message: Any,
+    ):
+        logging.info(f"on_app_message received message: {message}")

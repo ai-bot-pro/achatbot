@@ -24,7 +24,7 @@
 
         #visualizer {
             width: 600px;
-            height: 200px;
+            height: 100px;
             margin: 20px auto;
             background-color: #f0f0f0;
             border: 1px solid #ccc;
@@ -48,20 +48,20 @@
     </div>
     
     <div style="margin: 20px; max-width: 600px; margin-left: auto; margin-right: auto;">
-        <div style="display: flex; margin-bottom: 20px;">
+        <!-- <div style="display: flex; margin-bottom: 20px;">
             <input type="text" id="message-input" placeholder="Type your message here..." style="flex: 1; padding: 8px; margin-right: 10px;">
             <button id="send-btn" style="padding: 8px 15px;">Send</button>
-        </div>
+        </div> -->
         
         <div style="display: flex; justify-content: space-between;">
-            <div style="width: 48%;">
+            <!-- <div style="width: 48%;">
                 <h3>Sent Messages</h3>
                 <div id="sent-messages-container" style="border: 1px solid #ccc; min-height: 150px; max-height: 300px; overflow-y: auto; padding: 10px; text-align: left; background-color: #f9f9f9; margin-top: 10px;"></div>
-            </div>
-            <div style="width: 48%;">
+            </div> -->
+            <!-- <div style="width: 100%;">
                 <h3>Received Messages</h3>
                 <div id="messages-container" style="border: 1px solid #ccc; min-height: 150px; max-height: 300px; overflow-y: auto; padding: 10px; text-align: left; background-color: #f9f9f9; margin-top: 10px;"></div>
-            </div>
+            </div> -->
         </div>
     </div>
 
@@ -148,24 +148,24 @@
             localChannel.addEventListener('message', (event)=>{
                 console.log(`Received Remote message : ${event.data}`);
                 
-                // 将消息显示在消息容器中
-                const messagesContainer = document.getElementById("messages-container");
-                const messageElement = document.createElement("div");
-                messageElement.style.padding = "5px";
-                messageElement.style.marginBottom = "5px";
-                messageElement.style.borderBottom = "1px solid #eee";
+                // // 将消息显示在消息容器中
+                // const messagesContainer = document.getElementById("messages-container");
+                // const messageElement = document.createElement("div");
+                // messageElement.style.padding = "5px";
+                // messageElement.style.marginBottom = "5px";
+                // messageElement.style.borderBottom = "1px solid #eee";
                 
-                // 添加时间戳
-                const timestamp = new Date().toLocaleTimeString();
-                messageElement.innerHTML = `<strong>[${timestamp}]</strong>: ${event.data}`;
+                // // 添加时间戳
+                // const timestamp = new Date().toLocaleTimeString();
+                // messageElement.innerHTML = `<strong>[${timestamp}]</strong>: ${event.data}`;
                 
-                // 将新消息添加到容器顶部
-                messagesContainer.insertBefore(messageElement, messagesContainer.firstChild);
+                // // 将新消息添加到容器顶部
+                // messagesContainer.insertBefore(messageElement, messagesContainer.firstChild);
                 
-                // 如果消息太多，移除旧消息以保持性能
-                if (messagesContainer.children.length > 50) {
-                    messagesContainer.removeChild(messagesContainer.lastChild);
-                }
+                // // 如果消息太多，移除旧消息以保持性能
+                // if (messagesContainer.children.length > 50) {
+                //     messagesContainer.removeChild(messagesContainer.lastChild);
+                // }
             });
 
             // Caller Create offer
@@ -307,17 +307,17 @@
         }
 
         const _onConnected = () => {
-            statusEl.textContent = "Connected"
+            statusEl.textContent = "Connected, Please talk with chatbot"
             buttonEl.textContent = "Disconnect"
             connected = true
-            updateUIState(true)
+            // updateUIState(true)
         }
 
         const _onDisconnected = () => {
             statusEl.textContent = "Disconnected"
             buttonEl.textContent = "Connect"
             connected = false
-            updateUIState(false)
+            // updateUIState(false)
         }
 
         const disconnect = () => {
@@ -357,9 +357,7 @@
                     "type": "message",
                     "message": {
                         "role": "user",
-                        "content": [
-                            { "type": "text", "text": message },
-                        ]
+                        "content": message,
                     }
                 }));
                 
@@ -390,34 +388,34 @@
             }
         };
         
-        // 更新UI状态
-        const updateUIState = (isConnected) => {
-            sendButton.disabled = !isConnected;
-            messageInput.disabled = !isConnected;
+        // // 更新UI状态
+        // const updateUIState = (isConnected) => {
+        //     sendButton.disabled = !isConnected;
+        //     messageInput.disabled = !isConnected;
             
-            if (!isConnected) {
-                sendButton.style.opacity = "0.5";
-                messageInput.style.opacity = "0.5";
-                messageInput.placeholder = "Connect first to send messages...";
-            } else {
-                sendButton.style.opacity = "1";
-                messageInput.style.opacity = "1";
-                messageInput.placeholder = "Type your message here...";
-            }
-        };
+        //     if (!isConnected) {
+        //         sendButton.style.opacity = "0.5";
+        //         messageInput.style.opacity = "0.5";
+        //         messageInput.placeholder = "Connect first to send messages...";
+        //     } else {
+        //         sendButton.style.opacity = "1";
+        //         messageInput.style.opacity = "1";
+        //         messageInput.placeholder = "Type your message here...";
+        //     }
+        // };
         
-        // 初始化UI状态
-        updateUIState(false);
+        // // 初始化UI状态
+        // updateUIState(false);
         
-        // 发送按钮点击事件
-        sendButton.addEventListener("click", sendMessage);
+        // // 发送按钮点击事件
+        // sendButton.addEventListener("click", sendMessage);
         
-        // 输入框回车键事件
-        messageInput.addEventListener("keypress", (event) => {
-            if (event.key === "Enter") {
-                sendMessage();
-            }
-        });
+        // // 输入框回车键事件
+        // messageInput.addEventListener("keypress", (event) => {
+        //     if (event.key === "Enter") {
+        //         sendMessage();
+        //     }
+        // });
 
         buttonEl.addEventListener("click", async () => {
             if (!connected) {
