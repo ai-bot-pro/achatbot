@@ -70,5 +70,5 @@ access http://localhost:8000/  to click `Connect` to chat with bot
 
 # references
 - https://github.com/ai-bot-pro/achatbot/pull/158
-- [Webrtc](https://en.wikipedia.org/wiki/Webrtc)
+- [WebRTC Samples](https://webrtc.github.io/samples)
 - [Web-API Docs](https://developer.mozilla.org/en-US/docs/Web/API)

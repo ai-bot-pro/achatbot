@@ -86,19 +86,33 @@
 
             // SmallWebRTCTransport expects to receive both transceivers
             // pc.addTransceiver(audioTrack, { direction: 'sendrecv' })
-
             // Add local stream to peer connection
             pc.addTrack(audioTrack)
 
-            // Add event listeners
+            // Add peer connection event listeners
             addPeerConnectionEventListeners(pc)
             await waitForIceGatheringComplete(pc)
 
-            // create offer
+            // Caller create data channel and listen event (open, close, message)
+            localChannel = pc.createDataChannel('messaging-channel', { ordered: true });
+            localChannel.binaryType = 'arraybuffer';
+            localChannel.addEventListener('open', () => {
+                console.log('Local channel open!');
+                connected = true;
+            });
+            localChannel.addEventListener('close', () => {
+                console.log('Local channel closed!');
+                connected = false;
+            });
+            localChannel.addEventListener('message', (event)=>{
+                console.log(`Received Remote message : ${event.data}`);
+            });
+
+            // Caller Create offer
             await pc.setLocalDescription(await pc.createOffer())
             const offer = pc.localDescription
 
-            // Send peer connect offer to server, get answer from server
+            // Caller Send peer connect offer to server, get answer from server
             const serverUrlInput = document.getElementById("server-url");
             let serverUrl = serverUrlInput.value.trim();
             if (!serverUrl) {
@@ -113,13 +127,18 @@
                 method: 'POST',
             });
             const answer = await response.json()
+
+            // Caller Set remote description
             await pc.setRemoteDescription(answer)
             return pc
         }
 
         const connect = async () => {
             _onConnecting()
+            // Caller Open MediaStream (audio only)
             const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+
+            // Caller Create webrtc peer connection with audio stream
             peerConnection = await createSmallWebRTCConnection(audioStream)
         }
 

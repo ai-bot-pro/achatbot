@@ -13,7 +13,7 @@ from src.processors.aggregators.llm_response import (
 from src.processors.llm.base import LLMProcessor
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
-from src.types.frames.data_frames import LLMMessagesFrame
+from src.types.frames.data_frames import LLMMessagesFrame, TransportMessageFrame
 from src.cmd.bots import register_ai_small_webrtc_bots
 from src.common.types import AudioCameraParams
 from src.transports.small_webrtc import SmallWebRTCTransport
@@ -95,8 +95,13 @@ class SmallWebrtcBot(SmallWebrtcAIBot):
         transport: SmallWebRTCTransport,
         connection: SmallWebRTCConnection,
     ):
-        logging.info(f"on_client_connected connection:{connection.pc}")
+        logging.info(f"on_client_connected {connection.pc_id=} {connection.connectionState=}")
         self.session.set_client_id(connection.pc_id)
+        message = TransportMessageFrame(
+            message={"type": "meta", "protocol": "small-webrtc", "version": "0.0.1"},
+            urgent=True,
+        )
+        await transport.output_processor().send_message(message)
 
         # joined use tts say "hello" to introduce with llm generate
         if self._bot_config.tts and self._bot_config.llm and self._bot_config.llm.messages:

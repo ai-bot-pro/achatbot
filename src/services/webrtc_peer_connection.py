@@ -13,6 +13,7 @@ from src.common.event import EventHandlerManager
 
 
 try:
+    from aiortc.rtcdatachannel import RTCDataChannel
     from aiortc.rtcrtpreceiver import RemoteStreamTrack
     from aiortc import (
         AudioStreamTrack,
@@ -222,30 +223,48 @@ class SmallWebRTCConnection(EventHandlerManager):
         self._pc = RTCPeerConnection(rtc_config)
         self._pc_id = self.name
         self._setup_listeners()
-        self._data_channel = None
+        self._data_channel: RTCDataChannel = None
         self._renegotiation_in_progress = False
         self._last_received_time = None
         self._message_queue = []
         self._pending_app_messages = []
+        self._is_sending = False
 
     def _setup_listeners(self):
+        # NOTE: datachannel event for callee to sub (caller create data cahnnel)
         @self._pc.on("datachannel")
-        def on_datachannel(channel):
+        def on_datachannel(channel: RTCDataChannel):
+            logging.info(
+                f"Sub Remote Data channel, {channel.label=} {channel.id=} {channel.ordered=} {channel.maxRetransmits=} {channel.maxPacketLifeTime=} {channel.protocol=} {channel.readyState=}"
+            )
             self._data_channel = channel
 
             # Flush queued messages once the data channel is open
             @channel.on("open")
-            async def on_open():
-                logging.debug("Data channel is open, flushing queued messages")
+            def on_open():
+                logging.info(
+                    f"Remote Data channel [{channel.label}] is open, flushing queued messages, is_sending:{self._is_sending}"
+                )
+                if self._is_sending is True:
+                    return
+
                 while self._message_queue:
                     message = self._message_queue.pop(0)
                     self._data_channel.send(message)
+                    self._is_sending = True
+
+                self._is_sending = False
+
+            @channel.on("close")
+            async def on_close():
+                logging.info(f"Remote Data channel [{channel.label}] closed!")
 
             @channel.on("message")
             async def on_message(message):
                 try:
                     # aiortc does not provide any way so we can be aware when we are disconnected,
                     # so we are using this keep alive message as a way to implement that
+                    # NOTE: caller send ping message to keep alive
                     if isinstance(message, str) and message.startswith("ping"):
                         self._last_received_time = time.time()
                     else:
@@ -260,6 +279,10 @@ class SmallWebRTCConnection(EventHandlerManager):
                                 self._pending_app_messages.append(json_message)
                 except Exception as e:
                     logging.exception(f"Error parsing JSON message {message}, {e}")
+
+            if channel.readyState == "open":
+                # when data channel `open`` event don't trigger, Active trigger
+                on_open()
 
         # Despite the fact that aiortc provides this listener, they don't have a status for "disconnected"
         # So, in case we loose connection, this event will not be triggered
@@ -407,6 +430,22 @@ class SmallWebRTCConnection(EventHandlerManager):
             logging.warning("Connection failed, closing peer connection.")
             await self._close()
 
+    @property
+    def connectionState(self):
+        return self._pc.connectionState
+
+    def is_new(self):
+        return self._pc.connectionState == "new"
+
+    def is_connecting(self):
+        return self._pc.connectionState == "connecting"
+
+    def is_failed(self):
+        return self._pc.connectionState == "failed"
+
+    def is_closed(self):
+        return self._pc.connectionState == "closed"
+
     # Despite the fact that aiortc provides this listener, they don't have a status for "disconnected"
     # So, there is no advantage in looking at self._pc.connectionState
     # That is why we are trying to keep our own state
@@ -460,9 +499,13 @@ class SmallWebRTCConnection(EventHandlerManager):
     def send_app_message(self, message: Any):
         json_message = json.dumps(message)
         if self._data_channel and self._data_channel.readyState == "open":
+            logging.info(f"Data channel [{self._data_channel.label}] send message {json_message}")
             self._data_channel.send(json_message)
         else:
-            logging.debug("Data channel not ready, queuing message")
+            print_info = f"Data channel not ready, queuing message {json_message}"
+            if self._data_channel:
+                print_info += f" state {self._data_channel.readyState}"
+            logging.info(print_info)
             self._message_queue.append(json_message)
 
     def ask_to_renegotiate(self):

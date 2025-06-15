@@ -32,7 +32,7 @@ except ModuleNotFoundError as e:
 
 
 class SmallWebRTCCallbacks(BaseModel):
-    on_app_message: Callable[[Any], Awaitable[None]]
+    on_app_message: Callable[[SmallWebRTCConnection, Any], Awaitable[None]]
     on_client_connected: Callable[[SmallWebRTCConnection], Awaitable[None]]
     on_client_disconnected: Callable[[SmallWebRTCConnection], Awaitable[None]]
 
@@ -62,7 +62,10 @@ class SmallWebRTCClient:
 
         # We are always resampling it for 16000 if the sample_rate that we receive is bigger than that.
         # otherwise we face issues with Silero VAD
-        self._pipecat_resampler = AudioResampler("s16", "mono", 16000)
+        self._resampler = AudioResampler("s16", "mono", 16000)
+
+        # connect only once
+        self._connecting = False
 
         @self._webrtc_connection.event_handler("connected")
         async def on_connected(connection: SmallWebRTCConnection):
@@ -172,7 +175,7 @@ class SmallWebRTCClient:
                 continue
 
             if frame.sample_rate > self._in_sample_rate:
-                resampled_frames = self._pipecat_resampler.resample(frame)
+                resampled_frames = self._resampler.resample(frame)
                 for resampled_frame in resampled_frames:
                     # 16-bit PCM bytes
                     pcm_bytes = resampled_frame.to_ndarray().astype(np.int16).tobytes()
@@ -215,15 +218,24 @@ class SmallWebRTCClient:
     async def connect(self):
         if self._webrtc_connection.is_connected():
             # already initialized
+            logging.info(f"Small WebRTC already initialized")
+            return
+        if self._connecting is True:
+            # connecting
+            logging.info(f"Small WebRTC is connecting")
             return
 
-        logging.info(f"Connecting to Small WebRTC")
+        self._connecting = True
+        logging.info(
+            f"Connecting to Small WebRTC connectionState:{self._webrtc_connection.connectionState}"
+        )
         await self._webrtc_connection.connect()
 
     async def disconnect(self):
         if self.is_connected and not self.is_closing:
             logging.info(f"Disconnecting to Small WebRTC")
             self._closing = True
+            self._connecting = False
             await self._webrtc_connection.disconnect()
             await self._handle_peer_disconnected()
             logging.info(f"Disconnected to Small WebRTC")
@@ -265,7 +277,7 @@ class SmallWebRTCClient:
         await self._callbacks.on_client_disconnected(self._webrtc_connection)
 
     async def _handle_app_message(self, message: Any):
-        await self._callbacks.on_app_message(message)
+        await self._callbacks.on_app_message(self._webrtc_connection, message)
 
     def _can_send(self):
         return self.is_connected and not self.is_closing
