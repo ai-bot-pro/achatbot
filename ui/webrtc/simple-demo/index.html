@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Voice Agent</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        #status {
+            font-size: 20px;
+            margin: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>WebRTC Voice Agent</h1>
+    <div style="margin: 20px;">
+        <label for="server-url">服务器地址:</label>
+        <input type="text" id="server-url" value="http://localhost:4321/api/offer" placeholder="例如: https://example.com/api/offer" style="width: 300px; padding: 8px; margin-right: 10px;">
+    </div>
+    <p id="status">Disconnected</p>
+    <button id="connect-btn">Connect</button>
+    <audio id="audio-el" autoplay></audio>
+
+    <script>
+        const statusEl = document.getElementById("status")
+        const buttonEl = document.getElementById("connect-btn")
+        const audioEl = document.getElementById("audio-el")
+
+        let connected = false
+        let peerConnection = null
+
+        const waitForIceGatheringComplete = async (pc, timeoutMs = 2000) => {
+            if (pc.iceGatheringState === 'complete') return;
+            console.log("Waiting for ICE gathering to complete. Current state:", pc.iceGatheringState);
+            return new Promise((resolve) => {
+                let timeoutId;
+                const checkState = () => {
+                    console.log("icegatheringstatechange:", pc.iceGatheringState);
+                    if (pc.iceGatheringState === 'complete') {
+                        cleanup();
+                        resolve();
+                    }
+                };
+                const onTimeout = () => {
+                    console.warn(`ICE gathering timed out after ${timeoutMs} ms.`);
+                    cleanup();
+                    resolve();
+                };
+                const cleanup = () => {
+                    pc.removeEventListener('icegatheringstatechange', checkState);
+                    clearTimeout(timeoutId);
+                };
+                pc.addEventListener('icegatheringstatechange', checkState);
+                timeoutId = setTimeout(onTimeout, timeoutMs);
+                // Checking the state again to avoid any eventual race condition
+                checkState();
+            });
+        };
+
+
+        const createSmallWebRTCConnection = async (audioStream) => {
+            const audioTrack = audioStream.getAudioTracks()[0]
+            console.log("audioTrack", audioTrack)
+
+            const config = {
+                iceServers: [
+                    {
+                        urls: ["stun:stun.l.google.com:19302"], // Google's public STUN server
+                    },
+                ],
+            };
+            const pc = new RTCPeerConnection(config)
+
+            // SmallWebRTCTransport expects to receive both transceivers
+            // pc.addTransceiver(audioTrack, { direction: 'sendrecv' })
+
+            // Add local stream to peer connection
+            pc.addTrack(audioTrack)
+
+            // Add event listeners
+            addPeerConnectionEventListeners(pc)
+            await waitForIceGatheringComplete(pc)
+
+            // create offer
+            await pc.setLocalDescription(await pc.createOffer())
+            const offer = pc.localDescription
+
+            // Send peer connect offer to server, get answer from server
+            const serverUrlInput = document.getElementById("server-url");
+            let serverUrl = serverUrlInput.value.trim();
+            if (!serverUrl) {
+                serverUrl = '/api/offer';
+            } else if (!serverUrl.startsWith('http://') && !serverUrl.startsWith('https://') && !serverUrl.startsWith('/')) {
+                serverUrl = '/' + serverUrl;
+            }
+            console.log("Connecting to server:", serverUrl);
+            const response = await fetch(serverUrl, {
+                body: JSON.stringify({ sdp: offer.sdp, type: offer.type }),
+                headers: { 'Content-Type': 'application/json' },
+                method: 'POST',
+            });
+            const answer = await response.json()
+            await pc.setRemoteDescription(answer)
+            return pc
+        }
+
+        const connect = async () => {
+            _onConnecting()
+            const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+            peerConnection = await createSmallWebRTCConnection(audioStream)
+        }
+
+        const addPeerConnectionEventListeners = (pc) => {
+            // remote stream track
+            pc.ontrack = e => audioEl.srcObject = e.streams[0]
+
+            pc.oniceconnectionstatechange = () => {
+                console.log("oniceconnectionstatechange", pc?.iceConnectionState)
+            }
+            pc.onconnectionstatechange = () => {
+                console.log("onconnectionstatechange", pc?.connectionState)
+                let connectionState = pc?.connectionState
+                if (connectionState === 'connected') {
+                    _onConnected()
+                } else if (connectionState === 'disconnected') {
+                    _onDisconnected()
+                }
+            }
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    console.log("New ICE candidate:", event.candidate);
+                } else {
+                    console.log("All ICE candidates have been sent.");
+                }
+            };
+        }
+
+        const _onConnecting = () => {
+            statusEl.textContent = "Connecting"
+            buttonEl.textContent = "Disconnect"
+            connected = true
+        }
+
+        const _onConnected = () => {
+            statusEl.textContent = "Connected"
+            buttonEl.textContent = "Disconnect"
+            connected = true
+        }
+
+        const _onDisconnected = () => {
+            statusEl.textContent = "Disconnected"
+            buttonEl.textContent = "Connect"
+            connected = false
+        }
+
+        const disconnect = () => {
+            if (!peerConnection) {
+                return
+            }
+            peerConnection.close()
+            peerConnection = null
+            _onDisconnected()
+        }
+
+        buttonEl.addEventListener("click", async () => {
+            if (!connected) {
+                await connect()
+            } else {
+                disconnect()
+            }
+        });
+    </script>
+</body>
+
+</html>

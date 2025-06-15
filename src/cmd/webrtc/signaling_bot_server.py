@@ -12,6 +12,7 @@ from typing import Dict
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.cmd.bots.base import AIBot
 from src.services.webrtc_peer_connection import SmallWebRTCConnection, IceServer
@@ -60,6 +61,15 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+# 配置CORS中间件
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 允许所有来源，生产环境中应该限制为特定域名
+    allow_credentials=True,  # 允许携带凭证
+    allow_methods=["*"],  # 允许所有HTTP方法
+    allow_headers=["*"],  # 允许所有HTTP头部
+)
 
 
 @app.post("/api/offer")
