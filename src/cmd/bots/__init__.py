@@ -4,6 +4,7 @@ from src.common.register import Register
 
 register_ai_room_bots = Register("ai-room-bots")
 register_ai_fastapi_ws_bots = Register("fastapi-ws-bots")
+register_ai_small_webrtc_bots = Register("small-webrtc-bots")
 
 
 class BotInfo(BaseModel):
@@ -292,6 +293,15 @@ def import_fastapi_websocket_bots(bot_name: str = "DummyBot"):
 
     if "FastapiWebsocketMoshiVoiceBot" in bot_name:
         from .voice import fastapi_websocket_moshi_bot
+
+        return True
+
+    return False
+
+
+def import_small_webrtc_bots(bot_name: str = "DummyBot"):
+    if "SmallWebrtcBot" == bot_name:
+        from . import small_webrtc_bot
 
         return True
 

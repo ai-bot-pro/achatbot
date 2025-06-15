@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Voice Agent</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        #status {
+            font-size: 20px;
+            margin: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+
+        #visualizer {
+            width: 600px;
+            height: 100px;
+            margin: 20px auto;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>WebRTC Voice Agent</h1>
+    <div style="margin: 20px;">
+        <label for="server-url">Server URL:</label>
+        <input type="text" id="server-url" value="http://localhost:4321/api/offer" placeholder="例如: https://example.com/api/offer" style="width: 300px; padding: 8px; margin-right: 10px;">
+    </div>
+    <p id="status">Disconnected</p>
+    <button id="connect-btn">Connect</button>
+    <audio id="audio-el" autoplay></audio>
+    
+    <div>
+        <h3>Audio Visualization</h3>
+        <canvas id="visualizer"></canvas>
+    </div>
+    
+    <div style="margin: 20px; max-width: 600px; margin-left: auto; margin-right: auto;">
+        <!-- <div style="display: flex; margin-bottom: 20px;">
+            <input type="text" id="message-input" placeholder="Type your message here..." style="flex: 1; padding: 8px; margin-right: 10px;">
+            <button id="send-btn" style="padding: 8px 15px;">Send</button>
+        </div> -->
+        
+        <div style="display: flex; justify-content: space-between;">
+            <!-- <div style="width: 48%;">
+                <h3>Sent Messages</h3>
+                <div id="sent-messages-container" style="border: 1px solid #ccc; min-height: 150px; max-height: 300px; overflow-y: auto; padding: 10px; text-align: left; background-color: #f9f9f9; margin-top: 10px;"></div>
+            </div> -->
+            <!-- <div style="width: 100%;">
+                <h3>Received Messages</h3>
+                <div id="messages-container" style="border: 1px solid #ccc; min-height: 150px; max-height: 300px; overflow-y: auto; padding: 10px; text-align: left; background-color: #f9f9f9; margin-top: 10px;"></div>
+            </div> -->
+        </div>
+    </div>
+
+    <script>
+        const statusEl = document.getElementById("status")
+        const buttonEl = document.getElementById("connect-btn")
+        const audioEl = document.getElementById("audio-el")
+        const canvas = document.getElementById("visualizer")
+        const canvasCtx = canvas.getContext("2d")
+        const messageInput = document.getElementById("message-input")
+        const sendButton = document.getElementById("send-btn")
+        const sentMessagesContainer = document.getElementById("sent-messages-container")
+
+        let connected = false
+        let peerConnection = null
+        let audioContext = null
+        let analyser = null
+        let dataArray = null
+        let animationId = null
+        let localChannel = null
+
+        const waitForIceGatheringComplete = async (pc, timeoutMs = 2000) => {
+            if (pc.iceGatheringState === 'complete') return;
+            console.log("Waiting for ICE gathering to complete. Current state:", pc.iceGatheringState);
+            return new Promise((resolve) => {
+                let timeoutId;
+                const checkState = () => {
+                    console.log("icegatheringstatechange:", pc.iceGatheringState);
+                    if (pc.iceGatheringState === 'complete') {
+                        cleanup();
+                        resolve();
+                    }
+                };
+                const onTimeout = () => {
+                    console.warn(`ICE gathering timed out after ${timeoutMs} ms.`);
+                    cleanup();
+                    resolve();
+                };
+                const cleanup = () => {
+                    pc.removeEventListener('icegatheringstatechange', checkState);
+                    clearTimeout(timeoutId);
+                };
+                pc.addEventListener('icegatheringstatechange', checkState);
+                timeoutId = setTimeout(onTimeout, timeoutMs);
+                // Checking the state again to avoid any eventual race condition
+                checkState();
+            });
+        };
+
+
+        const createSmallWebRTCConnection = async (audioStream) => {
+            const audioTrack = audioStream.getAudioTracks()[0]
+            console.log("audioTrack", audioTrack)
+
+            const config = {
+                iceServers: [
+                    {
+                        urls: ["stun:stun.l.google.com:19302"], // Google's public STUN server
+                    },
+                ],
+            };
+            const pc = new RTCPeerConnection(config)
+
+            // SmallWebRTCTransport expects to receive both transceivers
+            // pc.addTransceiver(audioTrack, { direction: 'sendrecv' })
+            // Add local stream to peer connection
+            pc.addTrack(audioTrack)
+
+            // Add peer connection event listeners
+            addPeerConnectionEventListeners(pc)
+            await waitForIceGatheringComplete(pc)
+
+            // Caller create data channel and listen event (open, close, message)
+            localChannel = pc.createDataChannel('messaging-channel', { ordered: true });
+            localChannel.binaryType = 'arraybuffer';
+            localChannel.addEventListener('open', () => {
+                console.log('Local channel open!');
+                connected = true;
+            });
+            localChannel.addEventListener('close', () => {
+                console.log('Local channel closed!');
+                connected = false;
+            });
+            localChannel.addEventListener('message', (event)=>{
+                console.log(`Received Remote message : ${event.data}`);
+                
+                // // 将消息显示在消息容器中
+                // const messagesContainer = document.getElementById("messages-container");
+                // const messageElement = document.createElement("div");
+                // messageElement.style.padding = "5px";
+                // messageElement.style.marginBottom = "5px";
+                // messageElement.style.borderBottom = "1px solid #eee";
+                
+                // // 添加时间戳
+                // const timestamp = new Date().toLocaleTimeString();
+                // messageElement.innerHTML = `<strong>[${timestamp}]</strong>: ${event.data}`;
+                
+                // // 将新消息添加到容器顶部
+                // messagesContainer.insertBefore(messageElement, messagesContainer.firstChild);
+                
+                // // 如果消息太多，移除旧消息以保持性能
+                // if (messagesContainer.children.length > 50) {
+                //     messagesContainer.removeChild(messagesContainer.lastChild);
+                // }
+            });
+
+            // Caller Create offer
+            await pc.setLocalDescription(await pc.createOffer())
+            const offer = pc.localDescription
+
+            // Caller Send peer connect offer to server, get answer from server
+            const serverUrlInput = document.getElementById("server-url");
+            let serverUrl = serverUrlInput.value.trim();
+            if (!serverUrl) {
+                serverUrl = '/api/offer';
+            } else if (!serverUrl.startsWith('http://') && !serverUrl.startsWith('https://') && !serverUrl.startsWith('/')) {
+                serverUrl = '/' + serverUrl;
+            }
+            console.log("Connecting to server:", serverUrl);
+            const response = await fetch(serverUrl, {
+                body: JSON.stringify({ sdp: offer.sdp, type: offer.type }),
+                headers: { 'Content-Type': 'application/json' },
+                method: 'POST',
+            });
+            const answer = await response.json()
+
+            // Caller Set remote description
+            await pc.setRemoteDescription(answer)
+            return pc
+        }
+
+        const connect = async () => {
+            _onConnecting()
+            // Caller Open MediaStream (audio only)
+            const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+
+            // Caller Create webrtc peer connection with audio stream
+            peerConnection = await createSmallWebRTCConnection(audioStream)
+        }
+
+        // 初始化音频可视化
+        const initAudioVisualizer = (stream) => {
+            // 如果已经存在音频上下文，先清理
+            if (audioContext) {
+                cancelAnimationFrame(animationId);
+                audioContext.close();
+            }
+            
+            // 创建新的音频上下文和分析器
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 2048;
+            const bufferLength = analyser.frequencyBinCount;
+            dataArray = new Uint8Array(bufferLength);
+            
+            // 连接音频流到分析器
+            const source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
+            
+            // 开始绘制波形
+            drawWaveform();
+        };
+        
+        // 绘制波形函数
+        const drawWaveform = () => {
+            if (!analyser) return;
+            
+            // 设置canvas尺寸以匹配其显示尺寸
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // 请求下一帧动画
+            animationId = requestAnimationFrame(drawWaveform);
+            
+            // 获取音频数据
+            analyser.getByteTimeDomainData(dataArray);
+            
+            // 清除canvas
+            canvasCtx.fillStyle = 'rgb(240, 240, 240)';
+            canvasCtx.fillRect(0, 0, width, height);
+            
+            // 绘制波形
+            canvasCtx.lineWidth = 2;
+            canvasCtx.strokeStyle = 'rgb(0, 123, 255)';
+            canvasCtx.beginPath();
+            
+            const sliceWidth = width / dataArray.length;
+            let x = 0;
+            
+            for (let i = 0; i < dataArray.length; i++) {
+                const v = dataArray[i] / 128.0;
+                const y = v * height / 2;
+                
+                if (i === 0) {
+                    canvasCtx.moveTo(x, y);
+                } else {
+                    canvasCtx.lineTo(x, y);
+                }
+                
+                x += sliceWidth;
+            }
+            
+            canvasCtx.lineTo(width, height / 2);
+            canvasCtx.stroke();
+        };
+
+        const addPeerConnectionEventListeners = (pc) => {
+            // remote stream track
+            pc.ontrack = e => {
+                audioEl.srcObject = e.streams[0];
+                // 初始化音频可视化
+                initAudioVisualizer(e.streams[0]);
+            };
+
+            pc.oniceconnectionstatechange = () => {
+                console.log("oniceconnectionstatechange", pc?.iceConnectionState)
+            }
+            pc.onconnectionstatechange = () => {
+                console.log("onconnectionstatechange", pc?.connectionState)
+                let connectionState = pc?.connectionState
+                if (connectionState === 'connected') {
+                    _onConnected()
+                } else if (connectionState === 'disconnected') {
+                    _onDisconnected()
+                }
+            }
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    console.log("New ICE candidate:", event.candidate);
+                } else {
+                    console.log("All ICE candidates have been sent.");
+                }
+            };
+        }
+
+        const _onConnecting = () => {
+            statusEl.textContent = "Connecting"
+            buttonEl.textContent = "Disconnect"
+            connected = true
+        }
+
+        const _onConnected = () => {
+            statusEl.textContent = "Connected, Please talk with chatbot"
+            buttonEl.textContent = "Disconnect"
+            connected = true
+            // updateUIState(true)
+        }
+
+        const _onDisconnected = () => {
+            statusEl.textContent = "Disconnected"
+            buttonEl.textContent = "Connect"
+            connected = false
+            // updateUIState(false)
+        }
+
+        const disconnect = () => {
+            if (!peerConnection) {
+                return
+            }
+            peerConnection.close()
+            peerConnection = null
+            
+            // 停止音频可视化
+            if (audioContext) {
+                cancelAnimationFrame(animationId);
+                audioContext.close();
+                audioContext = null;
+                analyser = null;
+                
+                // 清除canvas
+                if (canvas && canvasCtx) {
+                    canvasCtx.fillStyle = 'rgb(240, 240, 240)';
+                    canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+            
+            _onDisconnected()
+        }
+
+        // 发送消息函数
+        const sendMessage = () => {
+            if (!connected || !localChannel) return;
+            
+            const message = messageInput.value.trim();
+            if (!message) return;
+            
+            try {
+                // 发送消息
+                localChannel.send(JSON.stringify({
+                    "type": "message",
+                    "message": {
+                        "role": "user",
+                        "content": message,
+                    }
+                }));
+                
+                // 添加到已发送消息容器
+                const messageElement = document.createElement("div");
+                messageElement.style.padding = "5px";
+                messageElement.style.marginBottom = "5px";
+                messageElement.style.borderBottom = "1px solid #eee";
+                
+                // 添加时间戳
+                const timestamp = new Date().toLocaleTimeString();
+                messageElement.innerHTML = `<strong>[${timestamp}]</strong>: ${message}`;
+                
+                // 将新消息添加到容器顶部
+                sentMessagesContainer.insertBefore(messageElement, sentMessagesContainer.firstChild);
+                
+                // 如果消息太多，移除旧消息以保持性能
+                if (sentMessagesContainer.children.length > 50) {
+                    sentMessagesContainer.removeChild(sentMessagesContainer.lastChild);
+                }
+                
+                // 清空输入框
+                messageInput.value = "";
+                
+            } catch (error) {
+                console.error("Error sending message:", error);
+                alert("Failed to send message. Please check your connection.");
+            }
+        };
+        
+        // // 更新UI状态
+        // const updateUIState = (isConnected) => {
+        //     sendButton.disabled = !isConnected;
+        //     messageInput.disabled = !isConnected;
+            
+        //     if (!isConnected) {
+        //         sendButton.style.opacity = "0.5";
+        //         messageInput.style.opacity = "0.5";
+        //         messageInput.placeholder = "Connect first to send messages...";
+        //     } else {
+        //         sendButton.style.opacity = "1";
+        //         messageInput.style.opacity = "1";
+        //         messageInput.placeholder = "Type your message here...";
+        //     }
+        // };
+        
+        // // 初始化UI状态
+        // updateUIState(false);
+        
+        // // 发送按钮点击事件
+        // sendButton.addEventListener("click", sendMessage);
+        
+        // // 输入框回车键事件
+        // messageInput.addEventListener("keypress", (event) => {
+        //     if (event.key === "Enter") {
+        //         sendMessage();
+        //     }
+        // });
+
+        buttonEl.addEventListener("click", async () => {
+            if (!connected) {
+                await connect()
+            } else {
+                disconnect()
+            }
+        });
+    </script>
+</body>
+
+</html>
