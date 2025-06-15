@@ -99,9 +99,6 @@ class SegmentedASRProcessor(ASRProcessorBase):
         ww.setframerate(self._sample_rate)
         return (content, ww)
 
-    async def stop(self, frame: EndFrame):
-        self._wave.close()
-
     async def cancel(self, frame: CancelFrame):
         self._wave.close()
 

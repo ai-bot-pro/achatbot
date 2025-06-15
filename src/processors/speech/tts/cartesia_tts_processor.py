@@ -87,10 +87,6 @@ class CartesiaTTSProcessor(TTSProcessorBase):
         await super().start(frame)
         await self._connect()
 
-    async def stop(self, frame: EndFrame):
-        await super().stop(frame)
-        await self._disconnect()
-
     async def cancel(self, frame: CancelFrame):
         await super().cancel(frame)
         await self._disconnect()

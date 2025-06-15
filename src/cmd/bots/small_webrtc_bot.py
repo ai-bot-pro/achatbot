@@ -78,8 +78,8 @@ class SmallWebrtcBot(SmallWebrtcAIBot):
                 ]
             ),
             params=PipelineParams(
-                allow_interruptions=False,
-                enable_metrics=True,
+                allow_interruptions=True,
+                enable_metrics=False,
                 send_initial_empty_metrics=False,
             ),
         )
@@ -96,6 +96,7 @@ class SmallWebrtcBot(SmallWebrtcAIBot):
         connection: SmallWebRTCConnection,
     ):
         logging.info(f"on_client_connected connection:{connection.pc}")
+        self.session.set_client_id(connection.pc_id)
 
         # joined use tts say "hello" to introduce with llm generate
         if self._bot_config.tts and self._bot_config.llm and self._bot_config.llm.messages:

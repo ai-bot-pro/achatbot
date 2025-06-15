@@ -36,18 +36,15 @@ class SmallWebrtcAIBot(AIBot):
         transport: SmallWebRTCTransport,
         connection: SmallWebRTCConnection,
     ):
-        logging.info(
-            f"on_client_connected callee id:{connection.pc_id}"
-        )
+        logging.info(f"on_client_connected callee id:{connection.pc_id}")
+        self.session.set_client_id(connection.pc_id)
 
     async def on_client_disconnected(
         self,
         transport: SmallWebRTCTransport,
         connection: SmallWebRTCConnection,
     ):
-        logging.info(
-            f"on_client_disconnected callee id:{connection.pc_id}"
-        )
+        logging.info(f"on_client_disconnected callee id:{connection.pc_id}")
         if self.task is not None:
             await self.task.queue_frame(EndFrame())
 
