@@ -21,26 +21,50 @@
             padding: 10px 20px;
             font-size: 16px;
         }
+
+        #visualizer {
+            width: 600px;
+            height: 200px;
+            margin: 20px auto;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+        }
     </style>
 </head>
 
 <body>
     <h1>WebRTC Voice Agent</h1>
     <div style="margin: 20px;">
-        <label for="server-url">服务器地址:</label>
+        <label for="server-url">Server URL:</label>
         <input type="text" id="server-url" value="http://localhost:4321/api/offer" placeholder="例如: https://example.com/api/offer" style="width: 300px; padding: 8px; margin-right: 10px;">
     </div>
     <p id="status">Disconnected</p>
     <button id="connect-btn">Connect</button>
     <audio id="audio-el" autoplay></audio>
+    
+    <div>
+        <h3>Audio Visualization</h3>
+        <canvas id="visualizer"></canvas>
+    </div>
+    
+    <div style="margin: 20px; max-width: 600px; margin-left: auto; margin-right: auto;">
+        <h3>Received Messages</h3>
+        <div id="messages-container" style="border: 1px solid #ccc; min-height: 150px; max-height: 300px; overflow-y: auto; padding: 10px; text-align: left; background-color: #f9f9f9; margin-top: 10px;"></div>
+    </div>
 
     <script>
         const statusEl = document.getElementById("status")
         const buttonEl = document.getElementById("connect-btn")
         const audioEl = document.getElementById("audio-el")
+        const canvas = document.getElementById("visualizer")
+        const canvasCtx = canvas.getContext("2d")
 
         let connected = false
         let peerConnection = null
+        let audioContext = null
+        let analyser = null
+        let dataArray = null
+        let animationId = null
 
         const waitForIceGatheringComplete = async (pc, timeoutMs = 2000) => {
             if (pc.iceGatheringState === 'complete') return;
@@ -106,6 +130,25 @@
             });
             localChannel.addEventListener('message', (event)=>{
                 console.log(`Received Remote message : ${event.data}`);
+                
+                // 将消息显示在消息容器中
+                const messagesContainer = document.getElementById("messages-container");
+                const messageElement = document.createElement("div");
+                messageElement.style.padding = "5px";
+                messageElement.style.marginBottom = "5px";
+                messageElement.style.borderBottom = "1px solid #eee";
+                
+                // 添加时间戳
+                const timestamp = new Date().toLocaleTimeString();
+                messageElement.innerHTML = `<strong>[${timestamp}]</strong>: ${event.data}`;
+                
+                // 将新消息添加到容器顶部
+                messagesContainer.insertBefore(messageElement, messagesContainer.firstChild);
+                
+                // 如果消息太多，移除旧消息以保持性能
+                if (messagesContainer.children.length > 50) {
+                    messagesContainer.removeChild(messagesContainer.lastChild);
+                }
             });
 
             // Caller Create offer
@@ -142,9 +185,82 @@
             peerConnection = await createSmallWebRTCConnection(audioStream)
         }
 
+        // 初始化音频可视化
+        const initAudioVisualizer = (stream) => {
+            // 如果已经存在音频上下文，先清理
+            if (audioContext) {
+                cancelAnimationFrame(animationId);
+                audioContext.close();
+            }
+            
+            // 创建新的音频上下文和分析器
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 2048;
+            const bufferLength = analyser.frequencyBinCount;
+            dataArray = new Uint8Array(bufferLength);
+            
+            // 连接音频流到分析器
+            const source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
+            
+            // 开始绘制波形
+            drawWaveform();
+        };
+        
+        // 绘制波形函数
+        const drawWaveform = () => {
+            if (!analyser) return;
+            
+            // 设置canvas尺寸以匹配其显示尺寸
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // 请求下一帧动画
+            animationId = requestAnimationFrame(drawWaveform);
+            
+            // 获取音频数据
+            analyser.getByteTimeDomainData(dataArray);
+            
+            // 清除canvas
+            canvasCtx.fillStyle = 'rgb(240, 240, 240)';
+            canvasCtx.fillRect(0, 0, width, height);
+            
+            // 绘制波形
+            canvasCtx.lineWidth = 2;
+            canvasCtx.strokeStyle = 'rgb(0, 123, 255)';
+            canvasCtx.beginPath();
+            
+            const sliceWidth = width / dataArray.length;
+            let x = 0;
+            
+            for (let i = 0; i < dataArray.length; i++) {
+                const v = dataArray[i] / 128.0;
+                const y = v * height / 2;
+                
+                if (i === 0) {
+                    canvasCtx.moveTo(x, y);
+                } else {
+                    canvasCtx.lineTo(x, y);
+                }
+                
+                x += sliceWidth;
+            }
+            
+            canvasCtx.lineTo(width, height / 2);
+            canvasCtx.stroke();
+        };
+
         const addPeerConnectionEventListeners = (pc) => {
             // remote stream track
-            pc.ontrack = e => audioEl.srcObject = e.streams[0]
+            pc.ontrack = e => {
+                audioEl.srcObject = e.streams[0];
+                // 初始化音频可视化
+                initAudioVisualizer(e.streams[0]);
+            };
 
             pc.oniceconnectionstatechange = () => {
                 console.log("oniceconnectionstatechange", pc?.iceConnectionState)
@@ -191,6 +307,21 @@
             }
             peerConnection.close()
             peerConnection = null
+            
+            // 停止音频可视化
+            if (audioContext) {
+                cancelAnimationFrame(animationId);
+                audioContext.close();
+                audioContext = null;
+                analyser = null;
+                
+                // 清除canvas
+                if (canvas && canvasCtx) {
+                    canvasCtx.fillStyle = 'rgb(240, 240, 240)';
+                    canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+            
             _onDisconnected()
         }
 
