@@ -16,7 +16,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.16"
+version = "0.0.17"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -140,6 +140,7 @@ daily = ["daily-python~=0.11.0"]
 livekit = ["livekit~=0.17.5"]
 # http api sdk
 livekit-api = ["livekit-api~=0.7.1"]
+webrtc=["aiortc~=1.13.0"]
 
 # api llm
 google_ai = ["google-generativeai~=0.8.3"]
