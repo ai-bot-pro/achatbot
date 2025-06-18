@@ -16,7 +16,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.17"
+version = "0.0.18"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -140,7 +140,7 @@ daily = ["daily-python~=0.11.0"]
 livekit = ["livekit~=0.17.5"]
 # http api sdk
 livekit-api = ["livekit-api~=0.7.1"]
-webrtc=["aiortc~=1.13.0"]
+webrtc = ["aiortc~=1.13.0"]
 
 # api llm
 google_ai = ["google-generativeai~=0.8.3"]
@@ -622,6 +622,19 @@ ai_langchain_framework_processor = ["langchain~=0.3.9"]
 # multi ai framework modules processor
 ai_frameworks_processor = ["achatbot[ai_langchain_framework_processor]"]
 
+# avatar
+lite_avatar = [
+    "funasr",
+    "av",
+    "h5py",
+    "jieba",
+    "pypinyin",
+    "transformers",
+    "typeguard==2.13.3",
+    "vector-quantize-pytorch",
+    "vocos",
+    "onnxruntime-gpu",
+]
 
 # asr
 deepgram_asr_processor = ["deepgram-sdk~=3.7.7"]

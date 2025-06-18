@@ -5,18 +5,20 @@ from pydantic import BaseModel
 
 import av
 
-from src.common.types import MODELS_DIR
+from src.common.types import MODELS_DIR, RATE
+
+VIDEO_FPS = 25
 
 
 class AvatarInitOption(BaseModel):
-    audio_sample_rate: int
-    video_frame_rate: int
-    avatar_name: str
+    audio_sample_rate: int = RATE
+    video_frame_rate: int = VIDEO_FPS
+    avatar_name: str = "20250408/sample_data"
     is_show_video_debug_text: bool = False
     enable_fast_mode: bool = False
-    use_gpu: bool = True
+    use_gpu: bool = False
     weight_dir: str = os.path.join(MODELS_DIR, "weege007/liteavatar")
-    is_flip: bool = False
+    is_flip: bool = True
 
 
 class AvatarConfig(BaseModel):

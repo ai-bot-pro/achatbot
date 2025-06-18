@@ -3,6 +3,7 @@ import logging
 from fractions import Fraction
 from typing import AsyncGenerator
 import asyncio
+import uuid
 
 import av
 import cv2
@@ -12,7 +13,6 @@ from apipeline.frames import Frame, StartFrame, EndFrame, CancelFrame
 from src.modules.avatar.lite_avatar import AudioSlice, LiteAvatar
 from src.types.avatar.lite_avatar import (
     AudioResult,
-    AvatarInitOption,
     AvatarStatus,
     MouthResult,
     SignalResult,
@@ -27,11 +27,11 @@ from src.types.frames import AudioRawFrame, OutputAudioRawFrame, OutputImageRawF
 
 # class LiteAvatarProcessor(SegmentedAvatarProcessor):
 class LiteAvatarProcessor(AvatarProcessorBase):
-    def __init__(self, avatar: LiteAvatar, init_option: AvatarInitOption, **kwargs):
-        super().__init__(sample_rate=init_option.audio_sample_rate, **kwargs)
-        logging.info(f"init {__name__} {init_option}")
+    def __init__(self, avatar: LiteAvatar, **kwargs):
         self._avatar = avatar
-        self._init_option = init_option
+        self._init_option = self._avatar.init_option
+        super().__init__(sample_rate=self._init_option.audio_sample_rate, **kwargs)
+        logging.info(f"init {__name__} init_option: {self._init_option}")
 
         # running
         self._session_running = False
@@ -39,7 +39,6 @@ class LiteAvatarProcessor(AvatarProcessorBase):
         self._current_speech_id = ""
 
         # running task
-
         self._audio2signal_task: asyncio.Task = None
         self._signal2img_task: asyncio.Task = None
         self._mouth2full_task: asyncio.Task = None
@@ -60,10 +59,10 @@ class LiteAvatarProcessor(AvatarProcessorBase):
         self._video_audio_aligner: VideoAudioAligner = None
 
         # is display video debug text
-        self._is_show_video_debug_text = init_option.is_show_video_debug_text
+        self._is_show_video_debug_text = self._init_option.is_show_video_debug_text
 
         # load avatar
-        self._avatar.init(self._init_option)
+        self._avatar.load()
 
     async def start(self, frame: StartFrame):
         self._session_running = True
@@ -137,7 +136,7 @@ class LiteAvatarProcessor(AvatarProcessorBase):
         generate signal for signal2img
         """
         logging.info("audio2signal loop started")
-        speech_id = ""
+        speech_id = str(uuid.uuid4())
         audio_slice = None
         target_round_time = 0.9
         while self._session_running:
@@ -198,7 +197,7 @@ class LiteAvatarProcessor(AvatarProcessorBase):
                 cost = time.time() - start_time
                 sleep_time = target_round_time - cost
                 if sleep_time > 0:
-                    time.sleep(sleep_time)
+                    await asyncio.sleep(sleep_time)
 
             except asyncio.CancelledError:
                 logging.warning("audio2signal_loop task cancelled")
@@ -219,7 +218,7 @@ class LiteAvatarProcessor(AvatarProcessorBase):
         timestamp = 0
 
         # delay start to ensure no extra audio and video generated
-        time.sleep(0.5)
+        await asyncio.sleep(0.5)
 
         while self._session_running:
             try:
@@ -267,7 +266,7 @@ class LiteAvatarProcessor(AvatarProcessorBase):
                     timestamp += 1 / self._init_option.video_frame_rate
                     wait = start_time + timestamp - time.time()
                     if wait > 0:
-                        time.sleep(wait)
+                        await asyncio.sleep(wait)
 
             except asyncio.CancelledError:
                 logging.warning("signal2img task cancelled")

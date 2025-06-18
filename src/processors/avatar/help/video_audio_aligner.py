@@ -39,7 +39,7 @@ class VideoAudioAligner:
         self._returned_audio_length_current_speech = 0
 
     def get_aligned_audio(self):
-        pass
+        raise NotImplementedError()
 
     def get_speech_level_algined_audio(
         self, audio_data, origin_sample_rate, frame_count, speech_id, end_of_speech

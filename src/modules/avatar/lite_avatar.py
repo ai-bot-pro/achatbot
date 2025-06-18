@@ -10,6 +10,7 @@ import numpy as np
 from src.common.time_utils import timeit
 from src.common.types import RESOURCES_DIR, MODELS_DIR
 from src.common.factory import EngineClass
+from src.modules.avatar.interface import IFaceAvatar
 
 
 try:
@@ -53,16 +54,22 @@ class BgFrameCounter:
         return bg_index
 
 
-class LiteAvatar(EngineClass):
+class LiteAvatar(IFaceAvatar, EngineClass):
     TAG = "lite_avatar"
     TARGET_FPS = 30
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__()
         self.tts2face: liteAvatar = None
         self._bg_counter: BgFrameCounter = None
+        self._init_option = AvatarInitOption(**kwargs)
 
-    def init(self, init_option: AvatarInitOption):
+    @property
+    def init_option(self) -> AvatarInitOption:
+        return self._init_option
+
+    def load(self):
+        init_option = self._init_option
         data_dir = self._get_avatar_data_dir(init_option.avatar_name)
         self.tts2face = liteAvatar(
             data_dir=data_dir,
@@ -76,7 +83,7 @@ class LiteAvatar(EngineClass):
         self.warm_up()
 
     @timeit
-    def audio2signal(self, audio_slice: AudioSlice):
+    def audio2signal(self, audio_slice: AudioSlice) -> list:
         signal_list = self.tts2face.audio2param(
             input_audio_byte=audio_slice.algo_audio_data,
             prefix_padding_size=0,
@@ -153,11 +160,10 @@ class LiteAvatar(EngineClass):
         return avatar_dir
 
     def warm_up(self):
-        start = time.perf_counter()
         for i in range(5):
+            start = time.perf_counter()
             self.tts2face.audio2param(bytes(16000 * 2))
             logging.debug(f"warm up {i} step, cost time: {time.perf_counter() - start:0.3f}")
-            start = time.perf_counter()
 
 
 """
@@ -185,12 +191,8 @@ if __name__ == "__main__":
 
     use_gpu = True if torch.cuda.is_available() else False
 
-    lite_avatar = LiteAvatar()
-
-    lite_avatar._get_avatar_data_dir(args.avatar_name)
-
-    lite_avatar.init(
-        AvatarInitOption(
+    lite_avatar = LiteAvatar(
+        **AvatarInitOption(
             audio_sample_rate=args.audio_sample_rate,
             video_frame_rate=args.video_frame_rate,
             avatar_name=args.avatar_name,
@@ -199,5 +201,9 @@ if __name__ == "__main__":
             is_show_video_debug_text=False,
             enable_fast_mode=False,
             is_flip=False,
-        )
+        ).__dict__
     )
+
+    lite_avatar._get_avatar_data_dir(args.avatar_name)
+
+    lite_avatar.load()

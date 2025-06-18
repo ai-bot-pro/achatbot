@@ -91,16 +91,17 @@ class TestLiteAvatarProcessor(unittest.IsolatedAsyncioTestCase):
         )
 
         liteAvatarProcessor = LiteAvatarProcessor(
-            LiteAvatar(),
-            AvatarInitOption(
-                audio_sample_rate=self.sr,
-                video_frame_rate=25,
-                avatar_name=self.avatar_name,
-                is_show_video_debug_text=True,
-                enable_fast_mode=False,
-                use_gpu=self.use_gpu,
-                weight_dir=self.weight_dir,
-                is_flip=False,
+            LiteAvatar(
+                **AvatarInitOption(
+                    audio_sample_rate=self.sr,
+                    video_frame_rate=25,
+                    avatar_name=self.avatar_name,
+                    is_show_video_debug_text=True,
+                    enable_fast_mode=False,
+                    use_gpu=self.use_gpu,
+                    weight_dir=self.weight_dir,
+                    is_flip=False,
+                ).__dict__
             ),
         )
         pipeline = Pipeline(

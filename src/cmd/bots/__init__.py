@@ -9,6 +9,7 @@ register_ai_small_webrtc_bots = Register("small-webrtc-bots")
 
 class BotInfo(BaseModel):
     is_agent: bool = False
+    is_background: bool = True  # background task
     chat_bot_name: str = ""
     config: dict = {}  # @deprecated use config_list options to conf
     room_name: str = "chat-room"
@@ -142,6 +143,14 @@ def import_bots(bot_name: str = "DummyBot"):
         return True
     if "DailyMultiMCPBot" in bot_name:
         from .mcp import daily_multi_mcp_bot
+
+        return True
+    if "DailyAvatarEchoBot" in bot_name:
+        from .avatar import daily_liteavatar_echo_bot
+
+        return True
+    if "DailyAvatarChatBot" in bot_name:
+        from .avatar import daily_liteavatar_chat_bot
 
         return True
     if "LivekitBot" in bot_name:
