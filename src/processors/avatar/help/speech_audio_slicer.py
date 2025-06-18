@@ -56,7 +56,7 @@ class SpeechAudioSlicer:
 
                 target_length = int(2 * speech_audio.sample_rate * self._audio_slice_duration)
                 padding_length = target_length - len(audio_data)
-                print(f"{target_length=} {len(audio_data)=}")
+                logging.debug(f"{target_length=} {len(audio_data)=}")
                 audio_data = bytes(padding_length) + audio_data
 
                 padding_duration = padding_length / 2 / speech_audio.sample_rate
