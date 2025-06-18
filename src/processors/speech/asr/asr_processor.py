@@ -57,7 +57,9 @@ class ASRProcessor(SegmentedASRProcessor):
         i = 0
         async for segment in self._asr.transcribe_stream(self._session):
             if i == 0:
+            if i == 0:
                 await self.stop_ttfb_metrics()
+            text += f"{segment}"
             text += f"{segment}"
             i += 1
 
