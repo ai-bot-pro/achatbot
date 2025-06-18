@@ -54,10 +54,13 @@ class ASRProcessor(SegmentedASRProcessor):
 
         self._asr.set_audio_data(audio)
         text: str = ""
+        i = 0
         async for segment in self._asr.transcribe_stream(self._session):
+            if i == 0:
+                await self.stop_ttfb_metrics()
             text += f"{segment}"
+            i += 1
 
-        await self.stop_ttfb_metrics()
         await self.stop_processing_metrics()
 
         language = None
