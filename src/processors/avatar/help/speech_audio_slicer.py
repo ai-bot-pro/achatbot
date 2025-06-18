@@ -138,7 +138,7 @@ class SpeechAudioSlicer:
     def extend_audio_to_duration(
         audio_data: bytes, sample_rate: int, duration: int, padding_front: bool
     ):
-        # print(f"{sample_rate=} {duration=} {padding_front=}")
+        # logging.debug(f"{sample_rate=} {duration=} {padding_front=}")
         target_length = int(2 * sample_rate * duration)
         padding_length = target_length - len(audio_data)
         if padding_length < 0:
