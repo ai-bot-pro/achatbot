@@ -1,3 +1,4 @@
+import asyncio
 import os
 import logging
 
@@ -66,6 +67,8 @@ class TestLiteAvatarProcessor(unittest.IsolatedAsyncioTestCase):
 
         cls.use_gpu = True if torch.cuda.is_available() else False
 
+        cls.sleep_to_end_time_s = int(os.getenv("SLEEP_TO_END_TIME_S", "20"))
+
     @classmethod
     def tearDownClass(cls):
         pass
@@ -73,6 +76,10 @@ class TestLiteAvatarProcessor(unittest.IsolatedAsyncioTestCase):
     async def out_cb(self, frame):
         # await asyncio.sleep(1)
         logging.info(f"sink_callback print frame: {frame}")
+
+    async def end_task(self):
+        await asyncio.sleep(self.sleep_to_end_time_s)
+        await self.task.queue_frame(EndFrame())
 
     async def asyncSetUp(self):
         bot_name = "avatar-bot"
@@ -121,8 +128,11 @@ class TestLiteAvatarProcessor(unittest.IsolatedAsyncioTestCase):
         )
         self.runner = PipelineRunner()
 
+        self.end_task: asyncio.Task = asyncio.get_event_loop().create_task(self.end_task())
+
     async def asyncTearDown(self):
-        pass
+        self.end_task.cancel()
+        await self.end_task
 
     async def test_gen(self):
         # ctrl + C to stop
