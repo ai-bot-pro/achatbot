@@ -16,7 +16,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.17.dev13"
+version = "0.0.18"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -635,6 +635,7 @@ lite_avatar = [
     "vector-quantize-pytorch",
     "vocos",
     "onnxruntime-gpu",
+    "numpy==1.26.4",
 ]
 
 # asr
