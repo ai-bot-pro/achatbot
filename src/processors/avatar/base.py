@@ -14,6 +14,8 @@ from src.types.frames.control_frames import (
     AvatarModelUpdateFrame,
     UserStartedSpeakingFrame,
     UserStoppedSpeakingFrame,
+    TTSStartedFrame,
+    TTSStoppedFrame,
 )
 
 
@@ -76,7 +78,7 @@ class SegmentedAvatarProcessor(AvatarProcessorBase):
         self._wave = None
         self._audio_buffer = bytearray()
         self._audio_buffer_size_1s = 0
-        self._user_speaking = False
+        self._speaking = False
 
     async def start(self, frame: StartFrame):
         await super().start(frame)
@@ -85,16 +87,16 @@ class SegmentedAvatarProcessor(AvatarProcessorBase):
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
 
-        if isinstance(frame, UserStartedSpeakingFrame):
-            await self._handle_user_started_speaking(frame)
-        elif isinstance(frame, UserStoppedSpeakingFrame):
-            await self._handle_user_stopped_speaking(frame)
+        if isinstance(frame, (UserStartedSpeakingFrame, TTSStartedFrame)):
+            await self._handle_started_speaking(frame)
+        elif isinstance(frame, (UserStoppedSpeakingFrame, TTSStoppedFrame)):
+            await self._handle_stopped_speaking(frame)
 
-    async def _handle_user_started_speaking(self, frame: UserStartedSpeakingFrame):
-        self._user_speaking = True
+    async def _handle_started_speaking(self, frame: UserStartedSpeakingFrame | TTSStartedFrame):
+        self._speaking = True
 
-    async def _handle_user_stopped_speaking(self, frame: UserStoppedSpeakingFrame):
-        self._user_speaking = False
+    async def _handle_stopped_speaking(self, frame: UserStoppedSpeakingFrame | TTSStoppedFrame):
+        self._speaking = False
 
         content = io.BytesIO()
         with wave.open(content, "wb") as wav:
@@ -120,6 +122,6 @@ class SegmentedAvatarProcessor(AvatarProcessorBase):
         self._audio_buffer += frame.audio
 
         # If the user is not speaking we keep just a little bit of audio.
-        if not self._user_speaking and len(self._audio_buffer) > self._audio_buffer_size_1s:
+        if not self._speaking and len(self._audio_buffer) > self._audio_buffer_size_1s:
             discarded = len(self._audio_buffer) - self._audio_buffer_size_1s
             self._audio_buffer = self._audio_buffer[discarded:]

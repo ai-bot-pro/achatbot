@@ -25,8 +25,8 @@ from src.processors.avatar.help.video_audio_aligner import VideoAudioAligner
 from src.types.frames import AudioRawFrame, OutputAudioRawFrame, OutputImageRawFrame
 
 
-# class LiteAvatarProcessor(SegmentedAvatarProcessor):
-class LiteAvatarProcessor(AvatarProcessorBase):
+# class LiteAvatarProcessor(AvatarProcessorBase):
+class LiteAvatarProcessor(SegmentedAvatarProcessor):
     def __init__(self, avatar: LiteAvatar, **kwargs):
         self._avatar = avatar
         self._init_option = self._avatar.init_option
@@ -65,6 +65,7 @@ class LiteAvatarProcessor(AvatarProcessorBase):
         self._avatar.load()
 
     async def start(self, frame: StartFrame):
+        await super().start(frame)
         self._session_running = True
         self._init()
         self._start_tasks()
@@ -89,9 +90,11 @@ class LiteAvatarProcessor(AvatarProcessorBase):
         self._mouth2full_task = self.get_event_loop().create_task(self._mouth2full_loop())
 
     async def stop(self, frame: EndFrame):
+        await super().stop(frame)
         await self._stop()
 
     async def cancle(self, frame: CancelFrame):
+        await super().cancel(frame)
         await self._stop()
 
     async def _stop(self):
