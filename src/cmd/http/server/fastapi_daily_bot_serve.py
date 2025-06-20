@@ -6,7 +6,7 @@ import os
 import argparse
 from typing import Any
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
@@ -236,10 +236,12 @@ curl -XPOST "http://0.0.0.0:4321/bot_join/DailyLangchainRAGBot" \
 
 
 @app.post("/realtime_ai/bot_join/{chat_bot_name}")
-async def fastapi_bot_join_ra(chat_bot_name: str, info: RunBotInfo) -> JSONResponse:
+async def fastapi_bot_join_ra(
+    chat_bot_name: str, info: RunBotInfo, background_tasks: BackgroundTasks
+) -> JSONResponse:
     # for realtime-ai, no biz code, api design not good
     try:
-        res = await bot_join(chat_bot_name, info)
+        res = await bot_join(chat_bot_name, info, background_tasks)
     except Exception as e:
         logging.error(f"Exception in bot_join: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"{e}")
@@ -249,13 +251,15 @@ async def fastapi_bot_join_ra(chat_bot_name: str, info: RunBotInfo) -> JSONRespo
 
 
 @app.post("/bot_join/{chat_bot_name}")
-async def fastapi_bot_join(chat_bot_name: str, info: RunBotInfo) -> JSONResponse:
+async def fastapi_bot_join(
+    chat_bot_name: str, info: RunBotInfo, background_tasks: BackgroundTasks
+) -> JSONResponse:
     # for chat-bot-rtvi-client
     try:
         if info.transport_type == "websocket":
-            res = await bot_websocket_join(chat_bot_name, info)
+            res = await bot_websocket_join(chat_bot_name, info, background_tasks)
         else:
-            res = await bot_join(chat_bot_name, info)
+            res = await bot_join(chat_bot_name, info, background_tasks)
     except Exception as e:
         logging.error(f"Exception in bot_join: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"{e}")
@@ -265,6 +269,7 @@ async def fastapi_bot_join(chat_bot_name: str, info: RunBotInfo) -> JSONResponse
 async def bot_websocket_join(
     chat_bot_name: str,
     info: RunBotInfo | dict,
+    background_tasks: BackgroundTasks,
     services: dict = None,
     config_list: list = None,
     config: dict = None,
@@ -285,8 +290,9 @@ async def bot_websocket_join(
 
     try:
         info.chat_bot_name = chat_bot_name
+        info.is_background = False
         task_runner = BotTaskRunnerFE(bot_task_mgr, **vars(info))
-        await task_runner.run()
+        background_tasks.add_task(task_runner.run)
     except Exception as e:
         detail = f"bot {chat_bot_name} failed to start process: {e}"
         raise Exception(detail)
@@ -302,6 +308,7 @@ async def bot_websocket_join(
 async def bot_join(
     chat_bot_name: str,
     info: RunBotInfo | dict,
+    background_tasks: BackgroundTasks,
     services: dict = None,
     config_list: list = None,
     config: dict = None,
@@ -339,8 +346,9 @@ async def bot_join(
         info.room_name = room.name
         info.room_url = room.url
         info.token = bot_token
+        info.is_background = False
         task_runner = BotTaskRunnerFE(bot_task_mgr, **vars(info))
-        await task_runner.run()
+        background_tasks.add_task(task_runner.run)
     except Exception as e:
         detail = f"bot {chat_bot_name} failed to start process: {e}"
         raise Exception(detail)
@@ -380,10 +388,10 @@ curl -XPOST "http://0.0.0.0:4321/bot_join/chat-bot/DailyLangchainRAGBot" \
 
 @app.post("/realtime-ai/bot_join/{room_name}/{chat_bot_name}")
 async def fastapi_bot_join_room_ra(
-    room_name: str, chat_bot_name: str, info: RunBotInfo
+    room_name: str, chat_bot_name: str, info: RunBotInfo, background_tasks: BackgroundTasks
 ) -> JSONResponse:
     try:
-        res = await bot_join_room(room_name, chat_bot_name, info)
+        res = await bot_join_room(room_name, chat_bot_name, info, background_tasks)
     except Exception as e:
         logging.error(f"Exception in bot_join_room: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"{e}")
@@ -395,10 +403,10 @@ async def fastapi_bot_join_room_ra(
 
 @app.post("/bot_join/{room_name}/{chat_bot_name}")
 async def fastapi_bot_join_room(
-    room_name: str, chat_bot_name: str, info: RunBotInfo
+    room_name: str, chat_bot_name: str, info: RunBotInfo, background_tasks: BackgroundTasks
 ) -> JSONResponse:
     try:
-        res = await bot_join_room(room_name, chat_bot_name, info)
+        res = await bot_join_room(room_name, chat_bot_name, info, background_tasks)
     except Exception as e:
         logging.error(f"Exception in bot_join_room: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"{e}")
@@ -410,6 +418,7 @@ async def bot_join_room(
     room_name: str,
     chat_bot_name: str,
     info: RunBotInfo | dict,
+    background_tasks: BackgroundTasks,
     services: dict = None,
     config_list: list = None,
     config: dict = None,
@@ -449,8 +458,9 @@ async def bot_join_room(
         info.room_name = room.name
         info.room_url = room.url
         info.token = bot_token
+        info.is_background = False
         task_runner = BotTaskRunnerFE(bot_task_mgr, **vars(info))
-        await task_runner.run()
+        background_tasks.add_task(task_runner.run)
     except Exception as e:
         detail = f"bot {chat_bot_name} failed to start process: {e}"
         raise Exception(detail)
@@ -627,9 +637,7 @@ if __name__ == "__main__":
     support:
     - daily/livekit room bot, agora channel bot, websocket bot, default use daily room bot
 
-    ACHATBOT_TASK_TYPE=multiprocessing python -m src.cmd.http.server.fastapi_daily_bot_serve
-    ACHATBOT_TASK_TYPE=threading python -m src.cmd.http.server.fastapi_daily_bot_serve
-    ACHATBOT_TASK_TYPE=asyncio python -m src.cmd.http.server.fastapi_daily_bot_serve
+    python -m src.cmd.http.server.fastapi_daily_bot_serve
     """
     import uvicorn
 

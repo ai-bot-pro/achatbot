@@ -64,3 +64,7 @@
 [submodule "deps/FastVLM"]
 	path = deps/FastVLM
 	url = https://github.com/weedge/ml-fastvlm.git
+[submodule "deps/LiteAvatar"]
+	path = deps/LiteAvatar
+	url = https://github.com/weedge/lite-avatar.git
+	branch = feat/achatbot

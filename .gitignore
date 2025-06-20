@@ -158,6 +158,8 @@ audios/*
 videos/*
 images/*
 asset/*
+resources/*
+tmp_frames
 main-dev.py
 tmp.*
 *.wav

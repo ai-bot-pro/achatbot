@@ -98,7 +98,7 @@ async def handle_offer(request: dict, background_tasks: BackgroundTasks):
             pcs_map.pop(webrtc_connection.pc_id, None)
 
         run_bot.set_webrtc_connection(connection)
-        background_tasks.add_task(run_bot.try_run)
+        background_tasks.add_task(run_bot.async_run)
 
     answer = connection.get_answer()
     logging.info(f"answer pc_id: {answer.get('pc_id')}")

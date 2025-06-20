@@ -178,3 +178,26 @@ class TTSArgsUpdateFrame(ControlFrame):
     """A control frame containing a request to update to TTS args."""
 
     args: dict
+
+
+@dataclass
+class AvatarModelUpdateFrame(ControlFrame):
+    """A control frame containing a request to update the Avatar model and optional
+    language.
+    """
+
+    model: str
+
+
+@dataclass
+class AvatarLanguageUpdateFrame(ControlFrame):
+    """A control frame containing a request to update to Avatar language."""
+
+    language: Language
+
+
+@dataclass
+class AvatarArgsUpdateFrame(ControlFrame):
+    """A control frame containing a request to update to Avatar args."""
+
+    args: dict

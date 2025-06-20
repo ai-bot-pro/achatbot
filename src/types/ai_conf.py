@@ -60,6 +60,11 @@ class ASRConfig(BaseModel):
     args: Optional[dict] = None
 
 
+class AvatarConfig(BaseModel):
+    tag: Optional[str] = None
+    args: Optional[dict] = None
+
+
 class LLMConfig(BaseModel):
     base_url: Optional[str] = None
     model: Optional[str] = None
@@ -86,6 +91,7 @@ class MCPServerConfig(BaseModel):
 class AIConfig(BaseModel):
     vad: Optional[VADConfig] = None
     asr: Optional[ASRConfig] = None
+    avatar: Optional[AvatarConfig] = None
     mcp_servers: Optional[Dict[str, MCPServerConfig]] = None
     llm: Optional[LLMConfig] = None
     nlp_task_llm: Optional[LLMConfig] = None

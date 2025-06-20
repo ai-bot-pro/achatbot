@@ -289,11 +289,15 @@ class IConnector(ABC):
 
 class IBot(ABC):
     @abstractmethod
+    def load(self):
+        raise NotImplementedError("must be implemented in the child class")
+
+    @abstractmethod
     def run(self):
         raise NotImplementedError("must be implemented in the child class")
 
     @abstractmethod
-    async def arun(self):
+    async def async_run(self):
         raise NotImplementedError("must be implemented in the child class")
 
     @abstractmethod

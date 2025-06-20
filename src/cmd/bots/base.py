@@ -15,6 +15,7 @@ from src.modules.vision.ocr import VisionOCREnvInit
 from src.modules.vision.detector import VisionDetectorEnvInit
 from src.processors.ai_processor import AIProcessor
 from src.processors.vision.vision_processor import MockVisionProcessor
+from src.processors.avatar.base import AvatarProcessorBase
 from src.processors.speech.asr.base import ASRProcessorBase
 from src.processors.llm.base import LLMProcessor
 from src.processors.speech.tts.base import TTSProcessorBase
@@ -22,6 +23,7 @@ from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.modules.speech.asr import ASREnvInit
 from src.core.llm import LLMEnvInit
 from src.modules.speech.tts import TTSEnvInit
+from src.modules.avatar import AvatarEnvInit
 from src.types.ai_conf import (
     TOGETHER_LLM_MODEL,
     TOGETHER_LLM_URL,
@@ -89,9 +91,9 @@ class AIBot(IBot):
         pass
 
     def run(self):
-        asyncio.run(self.try_run())
+        asyncio.run(self.async_run())
 
-    async def try_run(self):
+    async def async_run(self):
         try:
             await self.arun()
         except asyncio.CancelledError:
@@ -122,6 +124,30 @@ class AIBot(IBot):
         else:
             vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
         return vad_analyzer
+
+    def get_avatar_processor(self) -> AvatarProcessorBase:
+        avatar_processor: AvatarProcessorBase | None = None
+        # use avatar engine processor
+
+        avatar: interface.Iavatar | EngineClass | None = None
+        if self._bot_config.avatar and self._bot_config.avatar.tag:
+            # TODO: use avatar engine processor
+            args = self._bot_config.avatar.args or {}
+            avatar = AvatarEnvInit.getEngine(self._bot_config.avatar.tag, **args)
+            _ = avatar
+            raise NotImplementedError("don't support use tag to create avatar engine")
+            return avatar_processor
+        else:
+            from src.processors.avatar.lite_avatar_processor import LiteAvatarProcessor
+            from src.modules.avatar.lite_avatar import LiteAvatar
+
+            logging.info("use default lite avatar engine processor")
+            if self._bot_config.avatar and self._bot_config.avatar.args:
+                liteAvatarProcessor = LiteAvatarProcessor(
+                    LiteAvatar(**self._bot_config.avatar.args),
+                )
+                return liteAvatarProcessor
+            return LiteAvatarProcessor(LiteAvatar())
 
     def get_asr_processor(self) -> ASRProcessorBase:
         asr_processor: ASRProcessorBase | None = None
