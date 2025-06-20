@@ -228,7 +228,28 @@ bash scripts/pypi_achatbot.sh dev
 pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
 ```
 
+## run locat lite avatar chat bot
+
+```shell
+# install dependencies (replace $version) (if use cpu(default) install lite_avatar)
+pip install "dist/achatbot-{$version}-py3-none-any.whl["fastapi_bot_server,livekit,livekit-api,daily,agora,silero_vad_analyzer,sense_voice_asr,openai_llm_processor,google_llm_processor,litellm_processor,together_ai,tts_edge,lite_avatar"]
+# install dependencies (replace $version) (if use gpu(cuda) install lite_avatar_gpu)
+pip install "dist/achatbot-{$version}-py3-none-any.whl["fastapi_bot_server,livekit,livekit-api,daily,agora,silero_vad_analyzer,sense_voice_asr,openai_llm_processor,google_llm_processor,litellm_processor,together_ai,tts_edge,lite_avatar_gpu"]
+
+# download model weights
+huggingface-cli download weege007/liteavatar --local-dir ./models/weege007/liteavatar
+huggingface-cli download FunAudioLLM/SenseVoiceSmall --local-dir ./models/FunAudioLLM/SenseVoiceSmall
+
+# run local lite-avatar chat bot
+python -m src.cmd.bots.main -f config/bots/daily_liteavatar_echo_bot.json
+python -m src.cmd.bots.main -f config/bots/daily_liteavatar_chat_bot.json
+
+```
+
+More details: https://github.com/ai-bot-pro/achatbot/pull/161
+
 #  Run chat bots
+
 ## :memo: Run chat bots with colab notebook
 
 

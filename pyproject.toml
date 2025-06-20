@@ -634,9 +634,10 @@ lite_avatar = [
     "typeguard==2.13.3",
     "vector-quantize-pytorch",
     "vocos",
-    "onnxruntime-gpu",
+    "onnxruntime",
     "numpy==1.26.4",
 ]
+lite_avatar_gpu = ["achatbot[lite_avatar]", "onnxruntime-gpu"]
 
 # asr
 deepgram_asr_processor = ["deepgram-sdk~=3.7.7"]

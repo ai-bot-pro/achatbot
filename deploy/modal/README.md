@@ -901,6 +901,94 @@ curl --location 'https://weedge-achatbot--fastapi-webrtc-vita-voice-bot-srv-app-
     "config_list": []
 }'
 ```
+### webrtc_lite_avatar_chat_bot
+- run local bot
+```shell
+python -m src.cmd.bots.main -f config/bots/daily_liteavatar_echo_bot.json
+python -m src.cmd.bots.main -f config/bots/daily_liteavatar_chat_bot.json
+```
+
+- download model weights
+```shell
+modal run src/download_models.py --repo-ids "FunAudioLLM/SenseVoiceSmall"
+modal run src/download_models.py --repo-ids "weege007/liteavatar"
+```
+
+- run webrtc_avatar_chat_bot serve
+```shell
+ACHATBOT_VERSION=0.0.18 IMAGE_CONCURRENT_CN=1 IMAGE_GPU=T4 modal serve src/fastapi_webrtc_avatar_bot_serve.py
+```
+- curl api to run chat room bot with webrtc (daily)
+```shell
+curl --location 'https://weedge--fastapi-webrtc-avatar-bot-srv-app-dev.modal.run/bot_join/chat-room/DailyAvatarChatBot' \
+--header 'Content-Type: application/json' \
+--data '{
+    "chat_bot_name": "DailyAvatarChatBot",
+    "room_name": "chat-room",
+    "room_url": "",
+    "token": "",
+    "room_manager": {
+        "tag": "daily_room",
+        "args": {
+            "privacy": "public"
+        }
+    },
+    "is_background": false,
+    "services": {
+        "pipeline": "achatbot",
+        "vad": "silero",
+        "asr": "sense_voice",
+        "llm": "together",
+        "tts": "edge",
+        "avatar": "liteavatar"
+    },
+    "config": {
+        "vad": {
+            "tag": "silero_vad_analyzer",
+            "args": {
+                "stop_secs": 0.7
+            }
+        },
+        "asr": {
+            "tag": "sense_voice_asr",
+            "args": {
+                "language": "zn",
+                "model_name_or_path": "/root/.achatbot/models/FunAudioLLM/SenseVoiceSmall"
+            }
+        },
+        "llm": {
+            "tag": "openai_llm_processor",
+            "base_url": "https://api.together.xyz/v1",
+            "model": "Qwen/Qwen2-72B-Instruct",
+            "language": "zh",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "你是一名医疗专家。保持回答简短和清晰。请用中文回答。"
+                }
+            ]
+        },
+        "tts": {
+            "tag": "tts_edge",
+            "args": {
+                "voice_name": "zh-CN-XiaoxiaoNeural",
+                "language": "zh",
+                "gender": "Female"
+            }
+        },
+        "avatar": {
+            "args": {
+                "avatar_name": "20250612/P1-64AzfrJY037WpS69RiUMw",
+                "is_show_video_debug_text": true,
+                "use_gpu": true,
+                "weight_dir": "/root/.achatbot/models/weege007/liteavatar",
+                "is_flip": false
+            }
+        }
+    },
+    "config_list": []
+}'
+```
 
 ## modal deploy (online)
 - deploy webrtc_audio_bot serve
