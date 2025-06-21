@@ -143,6 +143,8 @@ SECRET_NAME=achatbot modal run src/download_models.py --repo-ids "google/gemma-3
 
 modal run src/download_models.py::download_ckpts --ckpt-urls "https://openaipublic.azureedge.net/main/whisper/models/e5b1a55b89c1367dacf97e3e19bfd829a01529dbfdeefa8caeb59b3f1b81dadb/large-v3.pt"
 modal run src/download_models.py::download_ckpts --ckpt-urls "https://ml-site.cdn-apple.com/datasets/fastvlm/llava-fastvithd_1.5b_stage3.zip"
+
+modal run src/download_models.py::download_ckpts --ckpt-urls "https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LAM/LAM_audio2exp_streaming.tar"
 """
 
 
