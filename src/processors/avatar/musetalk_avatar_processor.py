@@ -182,7 +182,7 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
             logging.info(f"audio_slices_len: {len(audio_slices)}")
         for audio_slice in audio_slices:
             if self._config.debug:
-                logging.info(f"audio_slice: {audio_slices}")
+                logging.info(f"audio_slice: {str(audio_slice)}")
 
             audio_data = audio_slice.algo_audio_data
             if isinstance(audio_data, bytes):

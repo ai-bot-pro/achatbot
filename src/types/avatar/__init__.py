@@ -29,7 +29,7 @@ class AudioSlice(BaseModel):
         )
 
     def __str__(self):
-        return f"{self.speech_id=} {self.get_play_audio_duration()=} {self.get_algo_audio_duration()=} {self.end_of_speech=} {self.front_padding_duration=} {self.end_padding_duration=}"
+        return f"{self.speech_id=} {self.get_audio_duration()=} {self.get_algo_audio_duration()=} {self.end_of_speech=} {self.front_padding_duration=} {self.end_padding_duration=}"
 
 
 class SpeechAudio(BaseModel):
