@@ -174,7 +174,7 @@ class MusetalkAvatar(EngineClass):
     def __init__(
         self,
         avatar_id="avatar_0",
-        video_path="deps/MuseTalk",
+        material_video_path="./deps/MuseTalk/data/video/sun.mp4",
         bbox_shift=0,
         batch_size=20,
         force_preparation=False,
@@ -195,7 +195,7 @@ class MusetalkAvatar(EngineClass):
 
         Args:
             avatar_id (str): Avatar ID
-            video_path (str): Video path
+            material_video_path (str): Material Video path
             bbox_shift (int): Face bounding box offset
             batch_size (int): Batch size
             force_preparation (bool): Whether to force data preparation
@@ -211,7 +211,7 @@ class MusetalkAvatar(EngineClass):
             gpu_id (int): GPU device ID
         """
         self.avatar_id = avatar_id
-        self.video_path = video_path
+        self.material_video_path = material_video_path
         self.bbox_shift = bbox_shift
         self.batch_size = batch_size
         self.force_preparation = force_preparation
@@ -253,7 +253,7 @@ class MusetalkAvatar(EngineClass):
 
         self.avatar_info = {
             "avatar_id": avatar_id,
-            "video_path": video_path,
+            "material_video_path": material_video_path,
             "bbox_shift": bbox_shift,
             "version": self.version,
         }
@@ -457,18 +457,18 @@ class MusetalkAvatar(EngineClass):
             json.dump(self.avatar_info, f)
 
         # Step 2: Process input source (support video file or image sequence)
-        if os.path.isfile(self.video_path):
+        if os.path.isfile(self.material_video_path):
             # If input is a video file, use video2imgs to extract frames
-            video2imgs(self.video_path, self.full_imgs_path, ext="png")
+            video2imgs(self.material_video_path, self.full_imgs_path, ext="png")
         else:
             # If input is an image directory, copy all png images directly
-            logging.info(f"copy files in {self.video_path}")
-            files = os.listdir(self.video_path)
+            logging.info(f"copy files in {self.material_video_path}")
+            files = os.listdir(self.material_video_path)
             files.sort()
             files = [file for file in files if file.split(".")[-1] == "png"]
             for filename in files:
                 shutil.copyfile(
-                    f"{self.video_path}/{filename}", f"{self.full_imgs_path}/{filename}"
+                    f"{self.material_video_path}/{filename}", f"{self.full_imgs_path}/{filename}"
                 )
 
         # Get all input image paths and sort
@@ -968,7 +968,7 @@ def run_batch_test(args):
     # Initialize digital avatar
     avatar = MusetalkAvatar(
         avatar_id=args.avatar_id,
-        video_path=args.video_path,
+        material_video_path=args.material_video_path,
         bbox_shift=args.bbox_shift,
         batch_size=args.batch_size,
         force_preparation=args.force_preparation,
@@ -1051,7 +1051,7 @@ if __name__ == "__main__":
         help="Whether to force data regeneration (True/False)",
     )
     parser.add_argument(
-        "--video_path",
+        "--material_video_path",
         type=str,
         default=os.path.join("deps/MuseTalk", "data", "video", "sun.mp4"),
         help="Video path",
