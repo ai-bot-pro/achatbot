@@ -229,6 +229,7 @@ class MusetalkAvatar(EngineClass):
         self.vae_dir = os.path.join(model_dir, "sd-vae")
         self.unet_dir = os.path.join(model_dir, "musetalkV15")
         self.whisper_dir = os.path.join(model_dir, "whisper")
+        self.face_parse_dir = os.path.join(model_dir, "face-parse-bisent")
 
         self.gpu_id = gpu_id
         self.debug = debug
@@ -350,10 +351,12 @@ class MusetalkAvatar(EngineClass):
         # Initialize face parser
         if self.version == "v15":
             self.fp = FaceParsing(
-                left_cheek_width=self.left_cheek_width, right_cheek_width=self.right_cheek_width
+                left_cheek_width=self.left_cheek_width,
+                right_cheek_width=self.right_cheek_width,
+                model_dir=self.face_parse_dir,
             )
         else:
-            self.fp = FaceParsing()
+            self.fp = FaceParsing(model_dir=self.face_parse_dir)
 
         # 3. Prepare or load data
         if need_preparation:
