@@ -641,18 +641,16 @@ lite_avatar_gpu = ["achatbot[lite_avatar]", "onnxruntime-gpu"]
 musetalk_avatar = [
     "ffmpeg-python>=0.2.0",
     "imageio[ffmpeg]>=2.37.0",
-    "moviepy>=1.0.3",
     "numpy==1.23.5",
-    "omegaconf>=2.3.0",
-    "opencv-python==4.9.0.80",
     "tensorflow==2.12.0",
-    "transformers",
-    "diffusers",
     "accelerate==0.28.0",
     "torch==2.4.1",
     "torchvision==0.19.1",
     "torchaudio==2.4.1",
-    "achatbot[einops,librosa,soundfile]",
+    "moviepy",
+    "transformers",
+    "diffusers",
+    "achatbot[conf,opencv,einops,librosa,soundfile]",
 ]
 
 # asr
