@@ -50,6 +50,11 @@ DAILY_ROOM_URL=https://weedge.daily.co/jk5g4mFlZkPHvOyaEZe5 \
 DAILY_ROOM_URL=https://weedge.daily.co/jk5g4mFlZkPHvOyaEZe5 DEBUG=true \
     WEIGHT_DIR=./models/weege007/musetalk \
     python -m unittest test.integration.processors.test_musetalk_avatar_processor.TestMusetalkProcessor.test_gen
+DAILY_ROOM_URL=https://weedge.daily.co/jk5g4mFlZkPHvOyaEZe5 DEBUG=true \
+    WEIGHT_DIR=./models/weege007/musetalk \
+    MATERIAL_VIDEO_PATH=./deps/MuseTalk/data/video/yongen.mp4 \
+    FORCE_PREPARATION=true \
+    python -m unittest test.integration.processors.test_musetalk_avatar_processor.TestMusetalkProcessor.test_gen
 """
 
 
@@ -60,6 +65,7 @@ class TestMusetalkProcessor(unittest.IsolatedAsyncioTestCase):
         assert torch.cuda.is_available()
 
         cls._debug = os.getenv("DEBUG", "false").lower() == "true"
+        cls.force_preparation = os.getenv("FORCE_PREPARATION", "false").lower() == "true"
 
         # https://isv-data.oss-cn-hangzhou.aliyuncs.com/ics/MaaS/asr/test_audio/asr_example_zh.wav
         audio_file = os.path.join(TEST_DIR, "audio_files/asr_example_zh.wav")
@@ -117,6 +123,7 @@ class TestMusetalkProcessor(unittest.IsolatedAsyncioTestCase):
         avatar = MusetalkAvatar(
             avatar_id="avator_test",
             material_video_path=self.material_video_path,
+            force_preparation=self.force_preparation,
             version=self.version,
             result_dir=self.result_dir,
             model_dir=self.model_dir,

@@ -18,7 +18,10 @@ from src.modules.avatar.lite_avatar import LiteAvatar
 from src.types.avatar.lite_avatar import MODELS_DIR, AvatarInitOption
 from src.transports.daily import DailyTransport
 from src.common.types import DailyParams
-
+from src.types.frames.control_frames import (
+    UserStartedSpeakingFrame,
+    UserStoppedSpeakingFrame,
+)
 
 from dotenv import load_dotenv
 
@@ -138,10 +141,12 @@ class TestLiteAvatarProcessor(unittest.IsolatedAsyncioTestCase):
         # ctrl + C to stop
         await self.task.queue_frames(
             [
+                UserStartedSpeakingFrame(),
                 AudioRawFrame(
                     audio=self.data_bytes,
                     sample_rate=self.sr,
                 ),
+                UserStoppedSpeakingFrame(),
                 # EndFrame(),
             ]
         )
