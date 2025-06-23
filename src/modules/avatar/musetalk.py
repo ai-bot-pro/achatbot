@@ -173,10 +173,10 @@ class MusetalkAvatar(EngineClass):
 
     def __init__(
         self,
-        avatar_id,
-        video_path,
-        bbox_shift,
-        batch_size,
+        avatar_id="avatar_0",
+        video_path="deps/MuseTalk",
+        bbox_shift=0,
+        batch_size=20,
         force_preparation=False,
         parsing_mode="jaw",
         left_cheek_width=90,
@@ -187,7 +187,7 @@ class MusetalkAvatar(EngineClass):
         version="v15",
         result_dir="./results",
         extra_margin=10,
-        model_dir=None,
+        model_dir=os.path.join(MODELS_DIR, "weege007/musetalk"),
         gpu_id=0,
         debug=False,
     ):
@@ -1012,6 +1012,8 @@ def run_batch_test(args):
 python -m src.modules.avatar.musetalk
 
 python -m src.modules.avatar.musetalk --model_dir ./models/weege007/musetalk
+
+python -m src.modules.avatar.musetalk --version v1 --model_dir ./models/weege007/musetalk
 """
 
 # Run main function
