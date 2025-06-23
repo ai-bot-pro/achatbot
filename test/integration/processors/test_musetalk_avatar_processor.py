@@ -19,6 +19,15 @@ from src.types.avatar.lite_avatar import MODELS_DIR, AvatarInitOption
 from src.transports.daily import DailyTransport
 from src.common.types import DailyParams
 from src.types.avatar.musetalk import AvatarMuseTalkConfig
+from src.types.frames.control_frames import (
+    AvatarArgsUpdateFrame,
+    AvatarLanguageUpdateFrame,
+    AvatarModelUpdateFrame,
+    UserStartedSpeakingFrame,
+    UserStoppedSpeakingFrame,
+    TTSStartedFrame,
+    TTSStoppedFrame,
+)
 
 
 from dotenv import load_dotenv
@@ -30,14 +39,17 @@ load_dotenv(override=True)
 # download model weights
 huggingface-cli download weege007/musetalk --local-dir ./models/weege007/musetalk
 
-python -m unittest test.integration.processors.test_lite_avatar_processor.TestMusetalkProcessor.test_gen
+python -m unittest test.integration.processors.test_musetalk_avatar_processor.TestMusetalkProcessor.test_gen
 
 WEIGHT_DIR=./models/weege007/musetalk \
-    python -m unittest test.integration.processors.test_lite_avatar_processor.TestMusetalkProcessor.test_gen
+    python -m unittest test.integration.processors.test_musetalk_avatar_processor.TestMusetalkProcessor.test_gen
 
 DAILY_ROOM_URL=https://weedge.daily.co/jk5g4mFlZkPHvOyaEZe5 \
     WEIGHT_DIR=./models/weege007/musetalk \
-    python -m unittest test.integration.processors.test_lite_avatar_processor.TestMusetalkProcessor.test_gen
+    python -m unittest test.integration.processors.test_musetalk_avatar_processor.TestMusetalkProcessor.test_gen
+DAILY_ROOM_URL=https://weedge.daily.co/jk5g4mFlZkPHvOyaEZe5 DEBUG=true \
+    WEIGHT_DIR=./models/weege007/musetalk \
+    python -m unittest test.integration.processors.test_musetalk_avatar_processor.TestMusetalkProcessor.test_gen
 """
 
 
@@ -47,27 +59,26 @@ class TestMusetalkProcessor(unittest.IsolatedAsyncioTestCase):
         # use for gpu to test
         assert torch.cuda.is_available()
 
-        Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
+        cls._debug = os.getenv("DEBUG", "false").lower() == "true"
 
         # https://isv-data.oss-cn-hangzhou.aliyuncs.com/ics/MaaS/asr/test_audio/asr_example_zh.wav
         audio_file = os.path.join(TEST_DIR, "audio_files/asr_example_zh.wav")
         cls.audio_file = os.getenv("AUDIO_FILE", audio_file)
         cls.data_bytes, cls.sr = read_wav_to_bytes(cls.audio_file)
 
-        weight_dir = os.path.join(MODELS_DIR, "weege007/musetalk")
-        cls.weight_dir = os.getenv("WEIGHT_DIR", weight_dir)
-
         cls.room_url = os.getenv("DAILY_ROOM_URL", "https://weedge.daily.co/chat-room")
 
         cls.version = os.getenv("VERSION", "v15")  # v1, v15
         cls.result_dir = os.getenv("RESULT_DIR", "./results")
-        cls.model_dir = os.getenv("MODEL_DIR", os.path.join(MODELS_DIR, "weege007/musetalk"))
+        cls.model_dir = os.getenv("WEIGHT_DIR", os.path.join(MODELS_DIR, "weege007/musetalk"))
         cls.gpu_id = int(os.getenv("GPU_ID", "0"))
         cls.material_video_path = os.getenv(
             "MATERIAL_VIDEO_PATH", "./deps/MuseTalk/data/video/sun.mp4"
         )
 
-        cls.sleep_to_end_time_s = int(os.getenv("SLEEP_TO_END_TIME_S", "60"))
+        cls.sleep_to_end_time_s = int(os.getenv("SLEEP_TO_END_TIME_S", "20"))
+
+        Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
 
     @classmethod
     def tearDownClass(cls):
@@ -97,6 +108,12 @@ class TestMusetalkProcessor(unittest.IsolatedAsyncioTestCase):
             ),
         )
 
+        config = AvatarMuseTalkConfig(
+            debug=self._debug,
+            debug_save_handler_audio=self._debug,
+            algo_audio_sample_rate=self.sr,
+            output_audio_sample_rate=self.sr,
+        )
         avatar = MusetalkAvatar(
             avatar_id="avator_test",
             material_video_path=self.material_video_path,
@@ -104,8 +121,9 @@ class TestMusetalkProcessor(unittest.IsolatedAsyncioTestCase):
             result_dir=self.result_dir,
             model_dir=self.model_dir,
             gpu_id=self.gpu_id,
+            debug=config.debug,
         )
-        musetalkProcessor = MusetalkAvatarProcessor(avatar=avatar, config=AvatarMuseTalkConfig())
+        musetalkProcessor = MusetalkAvatarProcessor(avatar=avatar, config=config)
         pipeline = Pipeline(
             [
                 musetalkProcessor,
@@ -133,10 +151,12 @@ class TestMusetalkProcessor(unittest.IsolatedAsyncioTestCase):
         # ctrl + C to stop
         await self.task.queue_frames(
             [
+                UserStartedSpeakingFrame(),
                 AudioRawFrame(
                     audio=self.data_bytes,
                     sample_rate=self.sr,
                 ),
+                UserStoppedSpeakingFrame(),
                 # EndFrame(),
             ]
         )

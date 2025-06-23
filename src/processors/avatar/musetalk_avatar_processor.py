@@ -9,8 +9,8 @@ import cv2
 import librosa
 import numpy as np
 import soundfile as sf
-from apipeline.frames import Frame, StartFrame, EndFrame, CancelFrame
 import torch
+from apipeline.frames import Frame, StartFrame, EndFrame, CancelFrame
 
 from src.modules.avatar.musetalk import MusetalkAvatar
 from src.processors.avatar.base import AvatarProcessorBase, SegmentedAvatarProcessor
@@ -18,6 +18,7 @@ from src.types.frames import AudioRawFrame, OutputAudioRawFrame, OutputImageRawF
 from src.types.avatar.musetalk import AvatarMuseTalkConfig
 from src.types.avatar import AvatarStatus, SpeechAudio
 from src.types.avatar.lite_avatar import AudioResult, VideoResult
+from src.processors.avatar.help.speech_audio_slicer import SpeechAudioSlicer
 
 
 # class MusetalkAvatarProcessor(AvatarProcessorBase):
@@ -25,7 +26,7 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
     def __init__(self, avatar: MusetalkAvatar, config: AvatarMuseTalkConfig, **kwargs):
         self._avatar = avatar
         self._config = config
-        super().__init__(sample_rate=self._init_option.audio_sample_rate, **kwargs)
+        super().__init__(sample_rate=config.algo_audio_sample_rate, **kwargs)
         logging.info(f"init {__name__} init_config: {self._config}")
 
         # Internal algorithm sample rate, fixed at 16000
@@ -57,13 +58,24 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
         # Audio cache for each speech_id
         self._audio_cache = {}
 
+        # audio input slice
+        self._speech_audio_slicer: SpeechAudioSlicer = None
+
         self._avatar.load()
 
     async def start(self, frame: StartFrame):
         await super().start(frame)
         self._session_running = True
+        self._init()
         self._start_tasks()
         self._session_start_time = time.time()
+
+    def _init(self):
+        self._speech_audio_slicer = SpeechAudioSlicer(
+            input_sample_rate=self._config.input_audio_sample_rate,  # input
+            output_sample_rate=self._config.algo_audio_sample_rate,  # output for avatar input audio sample rate
+            audio_slice_duration=self._config.input_audio_slice_duration,
+        )
 
     def _start_tasks(self):
         self._audio_queue = asyncio.Queue()  # Input audio queue
@@ -73,15 +85,15 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
         self._output_queue = asyncio.Queue()  # Output queue after composition
 
         self._feature_task: asyncio.Task = self.get_event_loop().create_task(
-            self._feature_extractor_loop
+            self._feature_extractor_loop()
         )
         self._frame_gen_task: asyncio.Task = self.get_event_loop().create_task(
-            self._frame_generator_loop
+            self._frame_generator_loop()
         )
         self._frame_collect_task: asyncio.Task = self.get_event_loop().create_task(
-            self._frame_collector_loop
+            self._frame_collector_loop()
         )
-        self._compose_task: asyncio.Task = self.get_event_loop().create_task(self._compose_loop)
+        self._compose_task: asyncio.Task = self.get_event_loop().create_task(self._compose_loop())
 
     async def stop(self, frame: EndFrame):
         await super().stop(frame)
@@ -165,35 +177,42 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
                 self._audio_duration_sum = 0.0
                 self._first_add_audio_time = None
 
-        audio_data = speech_audio.audio_data
-        if isinstance(audio_data, bytes):
-            audio_data = np.frombuffer(audio_data, dtype=np.float32)
-        elif isinstance(audio_data, np.ndarray):
-            audio_data = audio_data.astype(np.float32)
-        else:
-            logging.error(f"audio_data must be bytes or np.ndarray, got {type(audio_data)}")
-            return
+        audio_slices = self._speech_audio_slicer.get_speech_audio_slice(speech_audio)
+        if self._config.debug:
+            logging.info(f"audio_slices_len: {len(audio_slices)}")
+        for audio_slice in audio_slices:
+            if self._config.debug:
+                logging.info(f"audio_slice: {audio_slices}")
 
-        if len(audio_data) == 0:
-            logging.error(f"Input audio is empty, speech_id={speech_audio.speech_id}")
-            return
+            audio_data = audio_slice.algo_audio_data
+            if isinstance(audio_data, bytes):
+                audio_data = np.frombuffer(audio_data, dtype=np.float32)
+            elif isinstance(audio_data, np.ndarray):
+                audio_data = audio_data.astype(np.float32)
+            else:
+                logging.error(f"audio_data must be bytes or np.ndarray, got {type(audio_data)}")
+                return
 
-        # Length check, process 1s  audio
-        if len(audio_data) > self._output_audio_sample_rate:
-            logging.error(
-                f"Audio segment too long: {len(audio_data)} > {self._algo_audio_sample_rate}, speech_id={speech_audio.speech_id}"
+            if len(audio_data) == 0:
+                logging.error(f"Input audio is empty, speech_id={audio_slice.speech_id}")
+                return
+
+            # Length check, process 1s  audio
+            if len(audio_data) > self._output_audio_sample_rate:
+                logging.error(
+                    f"Audio segment too long: {len(audio_data)} > {self._algo_audio_sample_rate}, speech_id={audio_slice.speech_id}"
+                )
+                return
+
+            assert speech_audio.sample_rate == self._output_audio_sample_rate
+
+            await self._audio_queue.put(
+                {
+                    "audio_data": audio_data,  # Segment at algorithm sample rate (actually original segment)
+                    "speech_id": audio_slice.speech_id,
+                    "end_of_speech": audio_slice.end_of_speech,
+                }
             )
-            return
-
-        assert speech_audio.sample_rate == self._output_audio_sample_rate
-
-        await self._audio_queue.put(
-            {
-                "audio_data": audio_data,  # Segment at algorithm sample rate (actually original segment)
-                "speech_id": speech_audio.speech_id,
-                "end_of_speech": speech_audio.end_of_speech,
-            }
-        )
 
     async def _feature_extractor_loop(self):
         """
@@ -439,7 +458,7 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
         """
         while self._session_running is True:
             try:
-                item = asyncio.wait_for(self._compose_queue.get(), timeout=0.1)
+                item = await asyncio.wait_for(self._compose_queue.get(), timeout=0.1)
                 recon = item["recon"]
                 idx = item["idx"]
                 frame = await asyncio.to_thread(self._avatar.res2combined, recon, idx)
@@ -507,7 +526,7 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
                     avatar_status=avatar_status,
                     end_of_speech=end_of_speech,
                 )
-                self._callback_image(video_result)
+                await self._callback_image(video_result)
 
                 # Logging logic
                 is_idle = avatar_status == AvatarStatus.LISTENING and speech_id is None
@@ -566,7 +585,7 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
 
                 # Audio related
                 audio_len = len(audio_segment) if audio_segment is not None else 0
-                if audio_segment is not None and audio_len > 0:
+                if audio_len > 0:
                     audio_np = np.asarray(audio_segment, dtype=np.float32)
                     if audio_np.ndim == 1:
                         audio_np = audio_np[np.newaxis, :]
@@ -588,7 +607,7 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
                         logging.info(
                             f"[AUDIO_FRAME] frame_id={local_frame_id}, speech_id={speech_id}, end_of_speech={end_of_speech}, audio_timestamp={frame_timestamp}, Cumulative audio duration={audio_len_sum:.3f}s"
                         )
-                    self._callback_audio(audio_result)
+                    await self._callback_audio(audio_result)
 
                 # Status switching etc.
                 if end_of_speech:

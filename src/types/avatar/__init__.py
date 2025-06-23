@@ -21,6 +21,16 @@ class AudioSlice(BaseModel):
     def get_audio_duration(self) -> float:
         return len(self.play_audio_data) / self.play_audio_sample_rate / 2
 
+    def get_algo_audio_duration(self) -> float:
+        return (
+            len(self.algo_audio_data) / self.algo_audio_sample_rate / 2
+            if self.algo_audio_data
+            else 0
+        )
+
+    def __str__(self):
+        return f"{self.speech_id=} {self.get_play_audio_duration()=} {self.get_algo_audio_duration()=} {self.end_of_speech=} {self.front_padding_duration=} {self.end_padding_duration=}"
+
 
 class SpeechAudio(BaseModel):
     """
