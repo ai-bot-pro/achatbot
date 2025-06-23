@@ -80,7 +80,7 @@ def osmakedirs(path_list):
 
 
 class FaceAlignmentLandmark:
-    def __init__(self):
+    def __init__(self, model_dir: str = MODELS_DIR):
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # initialize the mmpose model
@@ -91,7 +91,7 @@ class FaceAlignmentLandmark:
             "dwpose",
             "rtmpose-l_8xb32-270e_coco-ubody-wholebody-384x288.py",
         )
-        checkpoint_file = os.path.join(MODELS_DIR, "musetalk", "dwpose", "dw-ll_ucoco_384.pth")
+        checkpoint_file = os.path.join(model_dir, "dwpose", "dw-ll_ucoco_384.pth")
         self.model = init_model(config_file, checkpoint_file, device=torch.device(device))
 
         # initialize the face detection model
@@ -187,10 +187,7 @@ class MusetalkAvatar(EngineClass):
         version="v15",
         result_dir="./results",
         extra_margin=10,
-        vae_type="sd-vae",
-        unet_model_path=None,
-        unet_config=None,
-        whisper_dir=None,
+        model_dir=None,
         gpu_id=0,
         debug=False,
     ):
@@ -211,10 +208,6 @@ class MusetalkAvatar(EngineClass):
             version (str): MuseTalk version
             result_dir (str): Output directory for results
             extra_margin (int): Extra margin
-            vae_model_dir (str): VAE model directory
-            unet_model_path (str): UNet model path
-            unet_config (str): UNet config file path
-            whisper_dir (str): Whisper model directory
             gpu_id (int): GPU device ID
         """
         self.avatar_id = avatar_id
@@ -231,10 +224,12 @@ class MusetalkAvatar(EngineClass):
         self.version = version
         self.result_dir = result_dir
         self.extra_margin = extra_margin
-        self.unet_model_path = unet_model_path
-        self.vae_type = vae_type
-        self.unet_config = unet_config
-        self.whisper_dir = whisper_dir
+
+        self.model_dir = model_dir
+        self.vae_dir = (os.path.join(model_dir, "sd-vae"),)
+        self.unet_dir = os.path.join(model_dir, "musetalkV15")
+        self.whisper_dir = os.path.join(model_dir, "whisper")
+
         self.gpu_id = gpu_id
         self.debug = debug
 
@@ -333,9 +328,8 @@ class MusetalkAvatar(EngineClass):
 
         # Load models
         self.vae, self.unet, self.pe = load_all_model(
-            unet_model_path=self.unet_model_path,
-            vae_type=self.vae_type,
-            unet_config=self.unet_config,
+            vae_dir=self.vae_dir,
+            unet_dir=self.unet_dir,
             device=self.device,
         )
 
@@ -344,6 +338,8 @@ class MusetalkAvatar(EngineClass):
         self.vae.vae = self.vae.vae.half().to(self.device)
         self.unet.model = self.unet.model.half().to(self.device)
         self.weight_dtype = self.unet.model.dtype
+
+        self.fa_landmark = FaceAlignmentLandmark(model_dir=self.model_dir)
 
         # Initialize audio processor and Whisper model
         self.audio_processor = AudioProcessor(feature_extractor_path=self.whisper_dir)
@@ -389,7 +385,7 @@ class MusetalkAvatar(EngineClass):
             with open(self.masks_path, "rb") as f:
                 self.mask_list_cycle = pickle.load(f)
 
-        self.fa_landmark = FaceAlignmentLandmark()
+        logging.info(f"load is done!")
         # Warm up models is only needed in current thread
         # logging.info("Warming up models...")
         # self._warmup_models()
@@ -413,7 +409,7 @@ class MusetalkAvatar(EngineClass):
             whisper_warmup_time = time.time() - t0
             whisper_warmup_ok = True
         except Exception as e:
-            logging.opt(exception=True).error(f"extract_whisper_feature warmup error: {str(e)}")
+            logging.error(f"extract_whisper_feature warmup error: {str(e)}", exc_info=True)
 
         try:
             t0 = time.time()
@@ -424,7 +420,7 @@ class MusetalkAvatar(EngineClass):
             generate_frames_warmup_time = time.time() - t0
             generate_frames_warmup_ok = True
         except Exception as e:
-            logging.opt(exception=True).error(f"generate_frames warmup error: {str(e)}")
+            logging.error(f"generate_frames warmup error: {str(e)}", exc_info=True)
 
         if torch.cuda.is_available():
             torch.cuda.synchronize()
@@ -577,7 +573,7 @@ class MusetalkAvatar(EngineClass):
             # Resize the generated frame to face region size
             res_frame = cv2.resize(res_frame.astype(np.uint8), (x2 - x1, y2 - y1))
         except Exception as e:
-            logging.opt(exception=True).error(f"res2combined error: {str(e)}")
+            logging.error(f"res2combined error: {str(e)}", exc_info=True)
             return ori_frame
         t2 = time.time()
         # Add protection: if res_frame is all zeros, return original frame directly
@@ -982,12 +978,10 @@ def run_batch_test(args):
         version=args.version,
         result_dir=args.result_dir,
         extra_margin=args.extra_margin,
-        vae_model_dir=args.vae_model_dir,
-        unet_model_path=args.unet_model_path,
-        unet_config=args.unet_config,
-        whisper_dir=args.whisper_dir,
+        model_dir=args.model_dir,
         gpu_id=args.gpu_id,
     )
+    avatar.load()
 
     # Get all audio files in the audio directory
     audio_files = []
@@ -1011,117 +1005,9 @@ def run_batch_test(args):
         )
 
 
-def run_realtime_test(args):
-    """Run real-time processing test, using pipeline to process audio
-
-    Args:
-        args: Command line arguments
-    """
-    import time
-
-    # Initialize digital avatar
-    avatar = MusetalkAvatar(
-        avatar_id=args.avatar_id,
-        video_path=args.video_path,
-        bbox_shift=args.bbox_shift,
-        batch_size=args.batch_size,
-        force_preparation=args.force_preparation,
-        parsing_mode=args.parsing_mode,
-        left_cheek_width=args.left_cheek_width,
-        right_cheek_width=args.right_cheek_width,
-        audio_padding_length_left=args.audio_padding_length_left,
-        audio_padding_length_right=args.audio_padding_length_right,
-        fps=args.fps,
-        version=args.version,
-        result_dir=args.result_dir,
-        extra_margin=args.extra_margin,
-        vae_model_dir=args.vae_model_dir,
-        unet_model_path=args.unet_model_path,
-        unet_config=args.unet_config,
-        whisper_dir=args.whisper_dir,
-        gpu_id=args.gpu_id,
-    )
-
-    # Get all audio files in the audio directory
-    audio_files = []
-    for ext in ["*.wav", "*.mp3"]:
-        audio_files.extend(glob.glob(os.path.join(args.audio_dir, ext)))
-    audio_files.sort()
-
-    # Process each audio file
-    for audio_path in audio_files:
-        try:
-            # Read audio file
-            audio_bytes, sample_rate = read_audio_file(audio_path)
-            if audio_bytes is None or sample_rate is None:
-                logging.error(f"Skip audio {audio_path}: failed to read")
-                continue
-
-            # Check audio length
-            audio_data = np.frombuffer(audio_bytes, dtype=np.float32)
-            duration = len(audio_data) / sample_rate
-            logging.info(f"\nProcessing audio: {audio_path} (duration: {duration:.2f}s)")
-
-            # Add start time record
-            start_time = time.time()
-
-            # Create SpeechAudio object
-            speech_audio = SpeechAudio(
-                audio_data=audio_bytes, speech_id="1", end_of_speech=True, sample_rate=sample_rate
-            )
-
-            # Use real-time processing
-            logging.info("Start real-time processing...")
-            frames, audio_len = avatar.realtime_audio2image(speech_audio)
-            logging.info(f"Real-time processing complete, generated {len(frames)} frames")
-
-            # Save results
-            if not args.skip_save_images:
-                # Create temp directory
-                tmp_dir = os.path.join(avatar.avatar_path, "tmp")
-                os.makedirs(tmp_dir, exist_ok=True)
-
-                # Save frames
-                logging.info("Saving video frames...")
-                for i, frame in enumerate(frames):
-                    cv2.imwrite(os.path.join(tmp_dir, f"{str(i).zfill(8)}.png"), frame)
-
-                # Generate video
-                temp_video = os.path.join(avatar.avatar_path, "temp.mp4")
-                output_name = f"{os.path.splitext(os.path.basename(audio_path))[0]}_pipeline"  # Use pipeline suffix to indicate pipeline processing version
-                output_vid = os.path.join(avatar.video_out_path, f"{output_name}.mp4")
-
-                # 1. Convert image sequence to video
-                logging.info("Generating video...")
-                cmd_img2video = f"ffmpeg -y -v warning -r {args.fps} -f image2 -i {tmp_dir}/%08d.png -vcodec libx264 -vf format=yuv420p -crf 18 {temp_video}"
-                logging.info(cmd_img2video)
-                os.system(cmd_img2video)
-
-                # 2. Combine audio into video
-                os.makedirs(avatar.video_out_path, exist_ok=True)
-                cmd_combine_audio = (
-                    f"ffmpeg -y -v warning -i {audio_path} -i {temp_video} {output_vid}"
-                )
-                logging.info(cmd_combine_audio)
-                os.system(cmd_combine_audio)
-
-                # 3. Clean up temp files
-                os.remove(temp_video)
-                shutil.rmtree(tmp_dir)
-                logging.info(f"Result saved to: {output_vid}")
-
-            process_time = time.time() - start_time
-            logging.info(
-                f"Processing complete, {len(frames)} frames in {process_time:.2f}s, average {len(frames) / process_time:.2f} fps"
-            )
-
-        except Exception as e:
-            logging.opt(exception=True).error(f"Error processing audio {audio_path}: {str(e)}")
-            import traceback
-
-            traceback.print_exc()
-            continue
-
+"""
+python -m src.modules.avatar.musetalk
+"""
 
 # Run main function
 if __name__ == "__main__":
@@ -1129,20 +1015,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--version", type=str, default="v15", choices=["v1", "v15"], help="MuseTalk version"
     )
-    parser.add_argument(
-        "--ffmpeg_path", type=str, default="./ffmpeg-4.4-amd64-static/", help="ffmpeg path"
-    )
     parser.add_argument("--gpu_id", type=int, default=0, help="GPU id")
-    parser.add_argument("--vae_model_dir", type=str, default=None, help="VAE model directory")
-    parser.add_argument("--unet_config", type=str, default=None, help="UNet config file path")
-    parser.add_argument("--unet_model_path", type=str, default=None, help="UNet weights path")
-    parser.add_argument("--whisper_dir", type=str, default=None, help="Whisper model directory")
-    parser.add_argument("--bbox_shift", type=int, default=0, help="Face bbox offset")
+    parser.add_argument("--model_dir", type=str, default=MODELS_DIR, help="model weights directory")
     parser.add_argument(
         "--result_dir", type=str, default="./results", help="Result output directory"
     )
     parser.add_argument("--extra_margin", type=int, default=10, help="Face crop extra margin")
     parser.add_argument("--fps", type=int, default=25, help="Video frame rate")
+    parser.add_argument("--bbox_shift", type=int, default=0, help="Face bbox offset")
     parser.add_argument(
         "--audio_padding_length_left", type=int, default=2, help="Audio left padding"
     )
@@ -1175,34 +1055,11 @@ if __name__ == "__main__":
         default=os.path.join("deps/MuseTalk", "data", "audio"),
         help="Audio directory path",
     )
-    parser.add_argument(
-        "--test_mode",
-        type=str,
-        default="realtime",
-        choices=["batch", "realtime"],
-        help="Test mode: batch or realtime",
-    )
 
     args = parser.parse_args()
-
-    # Automatically infer model and config file paths
-    project_root = os.getcwd()
-    model_dir = os.path.join(project_root, "models", "musetalk")
-    if args.unet_model_path is None:
-        args.unet_model_path = os.path.join(model_dir, "musetalkV15", "unet.pth")
-    if args.unet_config is None:
-        args.unet_config = os.path.join(model_dir, "musetalkV15", "musetalk.json")
-    if args.whisper_dir is None:
-        args.whisper_dir = os.path.join(model_dir, "whisper")
-    if args.vae_model_dir is None:
-        args.vae_model_dir = os.path.join(model_dir, "sd-vae")
 
     logging.info("Current config:")
     for arg in vars(args):
         logging.info(f"  {arg}: {getattr(args, arg)}")
 
-    # Run different tests according to test mode
-    if args.test_mode == "realtime":
-        run_realtime_test(args)
-    else:
-        run_batch_test(args)
+    run_batch_test(args)
