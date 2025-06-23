@@ -11,12 +11,12 @@ import numpy as np
 from apipeline.frames import Frame, StartFrame, EndFrame, CancelFrame
 
 from src.modules.avatar.lite_avatar import AudioSlice, LiteAvatar
+from src.types.avatar import SpeechAudio
 from src.types.avatar.lite_avatar import (
     AudioResult,
     AvatarStatus,
     MouthResult,
     SignalResult,
-    SpeechAudio,
     VideoResult,
 )
 from src.processors.avatar.base import AvatarProcessorBase, SegmentedAvatarProcessor

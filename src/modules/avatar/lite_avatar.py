@@ -24,7 +24,7 @@ try:
     from src.types.avatar.lite_avatar import AvatarConfig, AvatarInitOption, AudioSlice
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
-    logging.error("In order to use lite-avatar, you need to `pip install achatbot[avatar_lite]`. ")
+    logging.error("In order to use lite-avatar, you need to `pip install achatbot[lite_avatar]`. ")
     raise Exception(f"Missing module: {e}")
 
 

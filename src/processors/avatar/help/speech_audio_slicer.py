@@ -4,7 +4,8 @@ from typing import List
 import librosa
 import numpy as np
 
-from src.types.avatar.lite_avatar import AudioSlice, SpeechAudio
+from src.types.avatar import SpeechAudio
+from src.types.avatar.lite_avatar import AudioSlice
 
 
 class SpeechAudioSlicer:

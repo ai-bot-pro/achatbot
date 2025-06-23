@@ -68,3 +68,7 @@
 	path = deps/LiteAvatar
 	url = https://github.com/weedge/lite-avatar.git
 	branch = feat/achatbot
+[submodule "deps/MuseTalk"]
+	path = deps/MuseTalk
+	url = https://github.com/weedge/MuseTalk.git
+	branch = feat/achatbot
