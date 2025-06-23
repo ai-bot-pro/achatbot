@@ -226,7 +226,7 @@ class MusetalkAvatar(EngineClass):
         self.extra_margin = extra_margin
 
         self.model_dir = model_dir
-        self.vae_dir = (os.path.join(model_dir, "sd-vae"),)
+        self.vae_dir = os.path.join(model_dir, "sd-vae")
         self.unet_dir = os.path.join(model_dir, "musetalkV15")
         self.whisper_dir = os.path.join(model_dir, "whisper")
 
@@ -1007,6 +1007,8 @@ def run_batch_test(args):
 
 """
 python -m src.modules.avatar.musetalk
+
+python -m src.modules.avatar.musetalk --model_dir ./models/weege007/musetalk
 """
 
 # Run main function
