@@ -18,7 +18,7 @@ import numpy as np
 from tqdm import tqdm
 
 from src.common.time_utils import timeit
-from src.common.types import RESOURCES_DIR, MODELS_DIR
+from src.common.types import RESOURCES_DIR, MODELS_DIR, TEST_DIR
 from src.common.factory import EngineClass
 from src.modules.avatar.interface import IFaceAvatar
 from src.types.avatar import SpeechAudio
@@ -877,7 +877,7 @@ class MusetalkAvatar(EngineClass):
             # 3. Clean up temp files
             os.remove(temp_video)
             shutil.rmtree(tmp_dir)
-            logging.info(f"Result saved to: {output_vid}")
+            print(f"Result saved to: {output_vid}")
         logging.info("\n")
 
     def process_frames(self, res_frame_queue, video_len, skip_save_images):
@@ -992,6 +992,7 @@ def run_batch_test(args):
         audio_files.extend(glob.glob(os.path.join(args.audio_dir, ext)))
     audio_files.sort()
 
+    audio_files = [os.path.join(TEST_DIR, "audio_files", "asr_example_zh.wav")]
     # Process each audio file
     for audio_path in audio_files:
         # Use audio file name as output video name
@@ -1018,6 +1019,8 @@ python -m src.modules.avatar.musetalk --version v1 --model_dir ./models/weege007
 
 # Run main function
 if __name__ == "__main__":
+    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s"
+    logging.basicConfig(level=logging.INFO, format=log_format)
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--version", type=str, default="v15", choices=["v1", "v15"], help="MuseTalk version"

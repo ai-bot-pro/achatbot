@@ -12,6 +12,7 @@ import soundfile as sf
 import torch
 from apipeline.frames import Frame, StartFrame, EndFrame, CancelFrame
 
+from src.common.utils.audio_utils import bytes2NpArrayWith16
 from src.modules.avatar.musetalk import MusetalkAvatar
 from src.processors.avatar.base import AvatarProcessorBase, SegmentedAvatarProcessor
 from src.types.frames import AudioRawFrame, OutputAudioRawFrame, OutputImageRawFrame
@@ -184,19 +185,7 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
             if self._config.debug:
                 logging.info(f"audio_slice: {str(audio_slice)}")
 
-            audio_data = audio_slice.algo_audio_data
-            if isinstance(audio_data, bytes):
-                audio_data = np.frombuffer(audio_data, dtype=np.float32)
-            elif isinstance(audio_data, np.ndarray):
-                audio_data = audio_data.astype(np.float32)
-            else:
-                logging.error(f"audio_data must be bytes or np.ndarray, got {type(audio_data)}")
-                return
-
-            if len(audio_data) == 0:
-                logging.error(f"Input audio is empty, speech_id={audio_slice.speech_id}")
-                return
-
+            audio_data = bytes2NpArrayWith16(audio_slice.algo_audio_data)
             # Length check, process 1s  audio
             if len(audio_data) > self._output_audio_sample_rate:
                 logging.error(
@@ -233,7 +222,7 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
         while self._session_running is True:
             try:
                 t_start = time.time()
-                item = await asyncio.wait_for(self._audio_queue.get(), timeout=0.1)
+                item = await asyncio.wait_for(self._audio_queue.get(), timeout=0.01)
                 audio_data = item["audio_data"]
                 speech_id = item["speech_id"]
                 end_of_speech = item["end_of_speech"]
@@ -458,7 +447,7 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
         """
         while self._session_running is True:
             try:
-                item = await asyncio.wait_for(self._compose_queue.get(), timeout=0.1)
+                item = await asyncio.wait_for(self._compose_queue.get(), timeout=0.01)
                 recon = item["recon"]
                 idx = item["idx"]
                 frame = await asyncio.to_thread(self._avatar.res2combined, recon, idx)

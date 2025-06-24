@@ -1,4 +1,5 @@
 import asyncio
+from io import BytesIO
 import os
 import logging
 
@@ -8,17 +9,16 @@ from apipeline.pipeline.task import PipelineTask, PipelineParams
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.frames import EndFrame, AudioRawFrame
 from apipeline.processors.output_processor import OutputFrameProcessor
+import librosa
 import torch
+import numpy as np
+import soundfile as sf
 
 from src.common.utils.wav import read_wav_to_bytes
-from src.processors.avatar.musetalk_avatar_processor import MusetalkAvatarProcessor
 from src.common.logger import Logger
-from src.common.types import TEST_DIR
-from src.modules.avatar.musetalk import MusetalkAvatar
-from src.types.avatar.lite_avatar import MODELS_DIR, AvatarInitOption
+from src.common.types import TEST_DIR, MODELS_DIR
 from src.transports.daily import DailyTransport
 from src.common.types import DailyParams
-from src.types.avatar.musetalk import AvatarMuseTalkConfig
 from src.types.frames.control_frames import (
     AvatarArgsUpdateFrame,
     AvatarLanguageUpdateFrame,
@@ -28,6 +28,7 @@ from src.types.frames.control_frames import (
     TTSStartedFrame,
     TTSStoppedFrame,
 )
+from src.types.avatar.musetalk import AvatarMuseTalkConfig
 
 
 from dotenv import load_dotenv
@@ -82,7 +83,7 @@ class TestMusetalkProcessor(unittest.IsolatedAsyncioTestCase):
             "MATERIAL_VIDEO_PATH", "./deps/MuseTalk/data/video/sun.mp4"
         )
 
-        cls.sleep_to_end_time_s = int(os.getenv("SLEEP_TO_END_TIME_S", "20"))
+        cls.sleep_to_end_time_s = int(os.getenv("SLEEP_TO_END_TIME_S", "30"))
 
         Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
 
@@ -99,6 +100,9 @@ class TestMusetalkProcessor(unittest.IsolatedAsyncioTestCase):
         await self.task.queue_frame(EndFrame())
 
     async def asyncSetUp(self):
+        from src.processors.avatar.musetalk_avatar_processor import MusetalkAvatarProcessor
+        from src.modules.avatar.musetalk import MusetalkAvatar
+
         bot_name = "avatar-bot"
         transport = DailyTransport(
             self.room_url,
@@ -119,6 +123,7 @@ class TestMusetalkProcessor(unittest.IsolatedAsyncioTestCase):
             debug_save_handler_audio=self._debug,
             algo_audio_sample_rate=self.sr,
             output_audio_sample_rate=self.sr,
+            input_audio_slice_duration=2,
         )
         avatar = MusetalkAvatar(
             avatar_id="avator_test",
