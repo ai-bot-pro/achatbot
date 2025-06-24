@@ -22,7 +22,9 @@ from src.common.types import RESOURCES_DIR, MODELS_DIR, TEST_DIR
 from src.common.factory import EngineClass
 from src.modules.avatar.interface import IFaceAvatar
 from src.types.avatar import SpeechAudio
+from src.common.logger import Logger
 
+Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
 
 try:
     cur_dir = os.path.dirname(__file__)
@@ -389,10 +391,11 @@ class MusetalkAvatar(EngineClass):
                 self.mask_list_cycle = pickle.load(f)
 
         logging.info(f"load is done!")
+
         # Warm up models is only needed in current thread
-        # logging.info("Warming up models...")
-        # self._warmup_models()
-        # logging.info("Warmup complete")
+        logging.info("Warming up models...")
+        self._warmup_models()
+        logging.info("Warmup complete")
 
     def _warmup_models(self):
         """
@@ -785,10 +788,14 @@ class MusetalkAvatar(EngineClass):
         # Stage 1: Audio feature extraction #
         start_time = time.time()
         # Use Whisper to extract audio features
+        start_time = time.perf_counter()
         whisper_input_features, librosa_length = self.audio_processor.get_audio_feature(
             audio_path, weight_dtype=self.weight_dtype
         )
+        get_audio_feature_time = time.perf_counter() - start_time
+        print(f"{get_audio_feature_time=:.4f}")
         # Chunk audio features
+        start_time = time.perf_counter()
         whisper_chunks = self.audio_processor.get_whisper_chunk(
             whisper_input_features,
             self.device,
@@ -799,6 +806,8 @@ class MusetalkAvatar(EngineClass):
             audio_padding_length_left=self.audio_padding_length_left,
             audio_padding_length_right=self.audio_padding_length_right,
         )
+        get_whisper_chunk_time = time.perf_counter() - start_time
+        print(f"{get_whisper_chunk_time=:.4f}")
         logging.info(f"processing audio:{audio_path} costs {(time.time() - start_time) * 1000}ms")
 
         # Stage 2: Batch generation #
@@ -823,19 +832,27 @@ class MusetalkAvatar(EngineClass):
         for i, (whisper_batch, latent_batch) in enumerate(
             tqdm(gen, total=int(np.ceil(float(video_num) / self.batch_size)))
         ):
+            start_time = time.perf_counter()
             # 1. Process audio features
             audio_feature_batch = self.pe(whisper_batch.to(self.device))
+            pe_cost = time.perf_counter() - start_time
+            print(f"{pe_cost=:.4f}")
             # 2. Prepare latent features
+            start_time = time.perf_counter()
             latent_batch = latent_batch.to(device=self.device, dtype=self.unet.model.dtype)
-
             # 3. Use UNet to generate facial expressions
             pred_latents = self.unet.model(
                 latent_batch, self.timesteps, encoder_hidden_states=audio_feature_batch
             ).sample
+            pred_latents_cost = time.perf_counter() - start_time
+            print(f"{pred_latents_cost=:.4f}")
 
             # 4. Decode generated latent features
+            start_time = time.perf_counter()
             pred_latents = pred_latents.to(device=self.device, dtype=self.vae.vae.dtype)
             recon = self.vae.decode_latents(pred_latents)
+            recon_cost = time.perf_counter() - start_time
+            print(f"{recon_cost=:.4f}")
 
             # 5. Put generated frames into queue
             for res_frame in recon:
@@ -992,7 +1009,10 @@ def run_batch_test(args):
         audio_files.extend(glob.glob(os.path.join(args.audio_dir, ext)))
     audio_files.sort()
 
-    audio_files = [os.path.join(TEST_DIR, "audio_files", "asr_example_zh.wav")]
+    audio_files = [
+        os.path.join(TEST_DIR, "audio_files", "asr_example_zh.wav"),
+        os.path.join(TEST_DIR, "audio_files", "eng_speech.wav"),
+    ]
     # Process each audio file
     for audio_path in audio_files:
         # Use audio file name as output video name
@@ -1019,8 +1039,6 @@ python -m src.modules.avatar.musetalk --version v1 --model_dir ./models/weege007
 
 # Run main function
 if __name__ == "__main__":
-    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s"
-    logging.basicConfig(level=logging.INFO, format=log_format)
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--version", type=str, default="v15", choices=["v1", "v15"], help="MuseTalk version"

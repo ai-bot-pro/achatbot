@@ -123,7 +123,7 @@ class TestMusetalkProcessor(unittest.IsolatedAsyncioTestCase):
             debug_save_handler_audio=self._debug,
             algo_audio_sample_rate=self.sr,
             output_audio_sample_rate=self.sr,
-            input_audio_slice_duration=2,
+            input_audio_slice_duration=1,
         )
         avatar = MusetalkAvatar(
             avatar_id="avator_test",

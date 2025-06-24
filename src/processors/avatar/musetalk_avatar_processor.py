@@ -12,7 +12,6 @@ import soundfile as sf
 import torch
 from apipeline.frames import Frame, StartFrame, EndFrame, CancelFrame
 
-from src.common.utils.audio_utils import bytes2NpArrayWith16
 from src.modules.avatar.musetalk import MusetalkAvatar
 from src.processors.avatar.base import AvatarProcessorBase, SegmentedAvatarProcessor
 from src.types.frames import AudioRawFrame, OutputAudioRawFrame, OutputImageRawFrame
@@ -20,6 +19,7 @@ from src.types.avatar.musetalk import AvatarMuseTalkConfig
 from src.types.avatar import AvatarStatus, SpeechAudio
 from src.types.avatar.lite_avatar import AudioResult, VideoResult
 from src.processors.avatar.help.speech_audio_slicer import SpeechAudioSlicer
+from src.common.utils.audio_utils import bytes2NpArrayWith16
 
 
 # class MusetalkAvatarProcessor(AvatarProcessorBase):
@@ -185,13 +185,18 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
             if self._config.debug:
                 logging.info(f"audio_slice: {str(audio_slice)}")
 
-            audio_data = bytes2NpArrayWith16(audio_slice.algo_audio_data)
-            # Length check, process 1s  audio
-            if len(audio_data) > self._output_audio_sample_rate:
-                logging.error(
-                    f"Audio segment too long: {len(audio_data)} > {self._algo_audio_sample_rate}, speech_id={audio_slice.speech_id}"
-                )
-                return
+            audio_data = audio_slice.algo_audio_data
+
+            # if len(audio_data) == 0:
+            #    logging.error(f"Input audio is empty, speech_id={audio_slice.speech_id}")
+            #    return
+
+            ## Length check, process 1s  audio
+            # if len(audio_data) > self._output_audio_sample_rate:
+            #    logging.error(
+            #        f"Audio segment too long: {len(audio_data)} > {self._algo_audio_sample_rate}, speech_id={audio_slice.speech_id}"
+            #    )
+            #    return
 
             assert speech_audio.sample_rate == self._output_audio_sample_rate
 
@@ -207,51 +212,45 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
         """
         Worker thread for extracting audio features.
         """
-        # warmup: ensure CUDA context and memory allocation (for whisper feature extraction)
-        if torch.cuda.is_available():
-            t0 = time.time()
-            warmup_sr = 16000
-            dummy_audio = np.zeros(warmup_sr, dtype=np.float32)
-            await asyncio.to_thread(self._avatar.extract_whisper_feature, dummy_audio, warmup_sr)
-            torch.cuda.synchronize()
-            t1 = time.time()
-            logging.info(
-                f"_feature_extractor_loop whisper feature warmup once done, time: {(t1 - t0) * 1000:.1f} ms"
-            )
+        ## warmup: ensure CUDA context and memory allocation (for whisper feature extraction)
+        # if torch.cuda.is_available():
+        #    t0 = time.time()
+        #    warmup_sr = 16000
+        #    dummy_audio = np.zeros(warmup_sr, dtype=np.float32)
+        #    await asyncio.to_thread(self._avatar.extract_whisper_feature, dummy_audio, warmup_sr)
+        #    torch.cuda.synchronize()
+        #    t1 = time.time()
+        #    logging.info(
+        #        f"_feature_extractor_loop whisper feature warmup once done, time: {(t1 - t0) * 1000:.1f} ms"
+        #    )
 
         while self._session_running is True:
             try:
                 t_start = time.time()
-                item = await asyncio.wait_for(self._audio_queue.get(), timeout=0.01)
+                item = await asyncio.wait_for(self._audio_queue.get(), timeout=0.1)
                 audio_data = item["audio_data"]
                 speech_id = item["speech_id"]
                 end_of_speech = item["end_of_speech"]
                 fps = self._config.fps if hasattr(self._config, "fps") else 25
 
-                segment = audio_data
+                segment = bytes2NpArrayWith16(audio_data)
                 # Resample to algorithm sample rate
                 if self._output_audio_sample_rate != self._algo_audio_sample_rate:
                     segment = librosa.resample(
-                        audio_data,
+                        segment,
                         orig_sr=self._output_audio_sample_rate,
                         target_sr=self._algo_audio_sample_rate,
                     )
-
                 target_len = self._algo_audio_sample_rate  # 1 second
-                if len(segment) > target_len:
-                    logging.error(
-                        f"Segment too long: {len(segment)} > {target_len}, speech_id={speech_id}"
-                    )
-                    raise ValueError(f"Segment too long: {len(segment)} > {target_len}")
                 if len(segment) < target_len:
                     segment = np.pad(segment, (0, target_len - len(segment)), mode="constant")
 
                 # Feature extraction
-                t0 = time.time()
                 whisper_chunks = await asyncio.to_thread(
                     self._avatar.extract_whisper_feature, segment, self._algo_audio_sample_rate
                 )
-                t1 = time.time()
+
+                audio_data = np.frombuffer(audio_data, dtype=np.float32)
                 orig_audio_data_len = len(audio_data)
                 orig_samples_per_frame = self._output_audio_sample_rate // fps
                 actual_audio_len = orig_audio_data_len
@@ -336,31 +335,31 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
         batch_size = self._config.batch_size  # Can be adjusted based on actual needs
         # max_speaking_buffer = batch_size * 5  # Maximum length of speaking frame buffer
 
-        # warmup, ensure CUDA context and memory allocation
-        if torch.cuda.is_available():
-            t0 = time.time()
-            # Regular batch_size warmup
-            dummy_whisper = torch.zeros(
-                batch_size, 50, 384, device=self._avatar.device, dtype=self._avatar.weight_dtype
-            )
-            await asyncio.to_thread(self._avatar.generate_frames, dummy_whisper, 0, batch_size)
-            # Remainder batch_size warmup (only when there's a remainder)
-            remain = fps % batch_size
-            if remain > 0:
-                dummy_whisper_remain = torch.zeros(
-                    remain, 50, 384, device=self._avatar.device, dtype=self._avatar.weight_dtype
-                )
-                await asyncio.to_thread(
-                    self._avatar.generate_frames, dummy_whisper_remain, 0, remain
-                )
-            torch.cuda.synchronize()
-            t1 = time.time()
-            logging.info(f"_frame_generator_loop self-warmup done, time: {(t1 - t0) * 1000:.1f} ms")
+        ## warmup, ensure CUDA context and memory allocation
+        # if torch.cuda.is_available():
+        #    t0 = time.time()
+        #    # Regular batch_size warmup
+        #    dummy_whisper = torch.zeros(
+        #        batch_size, 50, 384, device=self._avatar.device, dtype=self._avatar.weight_dtype
+        #    )
+        #    await asyncio.to_thread(self._avatar.generate_frames, dummy_whisper, 0, batch_size)
+        #    # Remainder batch_size warmup (only when there's a remainder)
+        #    remain = fps % batch_size
+        #    if remain > 0:
+        #        dummy_whisper_remain = torch.zeros(
+        #            remain, 50, 384, device=self._avatar.device, dtype=self._avatar.weight_dtype
+        #        )
+        #        await asyncio.to_thread(
+        #            self._avatar.generate_frames, dummy_whisper_remain, 0, remain
+        #        )
+        #    torch.cuda.synchronize()
+        #    t1 = time.time()
+        #    logging.info(f"_frame_generator_loop self-warmup done, time: {(t1 - t0) * 1000:.1f} ms")
 
         while self._session_running is True:
             try:
                 if current_item is None:
-                    item = await asyncio.wait_for(self._whisper_queue.get(), timeout=0.01)
+                    item = await asyncio.wait_for(self._whisper_queue.get(), timeout=0.1)
                     fetched_chunks = item["whisper_chunks"]
                     num_fetched_chunks = (
                         fetched_chunks.shape[0]
@@ -383,7 +382,10 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
                     cur_batch = min(batch_size, remain)
                     batch_start_time = time.time()
                     # Get frame_id from frame_id queue
+                    t1 = time.time()
                     frame_ids = [await self._frame_id_queue.get() for _ in range(cur_batch)]
+                    cost = time.time() - t1
+                    print(f"{cost=}")
                     whisper_batch = current_item.whisper_chunks[chunk_idx : chunk_idx + cur_batch]
                     try:
                         recon_idx_list = await asyncio.to_thread(
@@ -447,7 +449,7 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
         """
         while self._session_running is True:
             try:
-                item = await asyncio.wait_for(self._compose_queue.get(), timeout=0.01)
+                item = await asyncio.wait_for(self._compose_queue.get(), timeout=0.1)
                 recon = item["recon"]
                 idx = item["idx"]
                 frame = await asyncio.to_thread(self._avatar.res2combined, recon, idx)
