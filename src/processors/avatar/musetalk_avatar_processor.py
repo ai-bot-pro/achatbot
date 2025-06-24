@@ -383,7 +383,14 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
                     batch_start_time = time.time()
                     # Get frame_id from frame_id queue
                     t1 = time.time()
-                    frame_ids = [await self._frame_id_queue.get() for _ in range(cur_batch)]
+                    frame_ids = []
+                    for _ in range(cur_batch):
+                        try:
+                            item = await self._frame_id_queue.get_nowait()
+                            frame_ids.append(item)
+                        except asyncio.QueueEmpty:
+                            await asyncio.sleep(0.1)
+                            continue
                     cost = time.time() - t1
                     print(f"{cost=}")
                     whisper_batch = current_item.whisper_chunks[chunk_idx : chunk_idx + cur_batch]
