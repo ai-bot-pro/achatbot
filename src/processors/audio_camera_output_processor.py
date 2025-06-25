@@ -56,6 +56,10 @@ class AudioCameraOutputProcessor(OutputProcessor):
         self._audio_out_queue = None
         self._audio_out_task = None
 
+        # Camera queue and task
+        self._camera_out_queue = None
+        self._camera_out_task = None
+
     async def start(self, frame: StartFrame):
         await super().start(frame)
         # Create media threads queues and task
@@ -193,7 +197,11 @@ class AudioCameraOutputProcessor(OutputProcessor):
             return
 
         if self._params.camera_out_is_live:
-            await self._camera_out_queue.put(frame)
+            # NOTE:
+            # out processor is last start to init camera out queue,
+            # if pipeline other processor is start slow,
+            # and push frame before out processor init, out processor will lost frame
+            self._camera_out_queue and await self._camera_out_queue.put(frame)
         else:
             if isinstance(frame, ImageRawFrame):
                 await self._set_camera_images([frame])

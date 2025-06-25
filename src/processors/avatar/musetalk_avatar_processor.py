@@ -48,6 +48,10 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
         self._compose_task: asyncio.Task = None
         self._session_running = False
 
+        # warmup event
+        self._feature_extractor_warmup_event = asyncio.Event()
+        self._frame_generator_warmup_event = asyncio.Event()
+
         # Avatar status
         self._callback_avatar_status = AvatarStatus.LISTENING
         self._last_speech_id = None
@@ -66,8 +70,9 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
         await super().start(frame)
         self._session_running = True
         self._init()
-        self._start_tasks()
+        await self._start_tasks()
         self._session_start_time = time.time()
+        logging.info(f"{__name__} started")
 
     def _init(self):
         self._speech_audio_slicer = SpeechAudioSlicer(
@@ -76,7 +81,7 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
             audio_slice_duration=self._config.input_audio_slice_duration,
         )
 
-    def _start_tasks(self):
+    async def _start_tasks(self):
         self._audio_queue = asyncio.Queue()  # Input audio queue
         self._whisper_queue = asyncio.Queue()  # Whisper feature queue
         self._frame_id_queue = asyncio.Queue()  # Frame ID allocation queue
@@ -94,6 +99,12 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
         )
         self._compose_task: asyncio.Task = self.get_event_loop().create_task(self._compose_loop())
 
+        await self._feature_extractor_warmup_event.wait()
+        self._feature_extractor_warmup_event.clear()
+
+        await self._frame_generator_warmup_event.wait()
+        self._frame_generator_warmup_event.clear()
+
     async def stop(self, frame: EndFrame):
         await super().stop(frame)
         await self._stop()
@@ -106,6 +117,8 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
         logging.info(
             f"stop avatar processor {__name__}, totol session time {time.time() - self._session_start_time:.3f}",
         )
+        self._feature_extractor_warmup_event.clear()
+        self._frame_generator_warmup_event.clear()
         self._session_running = False
         if self._feature_task is not None:
             self._feature_task.cancel()
@@ -212,17 +225,18 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
         """
         Worker thread for extracting audio features.
         """
-        ## warmup: ensure CUDA context and memory allocation (for whisper feature extraction)
-        # if torch.cuda.is_available():
-        #    t0 = time.time()
-        #    warmup_sr = 16000
-        #    dummy_audio = np.zeros(warmup_sr, dtype=np.float32)
-        #    await asyncio.to_thread(self._avatar.extract_whisper_feature, dummy_audio, warmup_sr)
-        #    torch.cuda.synchronize()
-        #    t1 = time.time()
-        #    logging.info(
-        #        f"_feature_extractor_loop whisper feature warmup once done, time: {(t1 - t0) * 1000:.1f} ms"
-        #    )
+        # warmup: ensure CUDA context and memory allocation (for whisper feature extraction)
+        if torch.cuda.is_available():
+            t0 = time.time()
+            warmup_sr = 16000
+            dummy_audio = np.zeros(warmup_sr, dtype=np.float32)
+            await asyncio.to_thread(self._avatar.extract_whisper_feature, dummy_audio, warmup_sr)
+            torch.cuda.synchronize()
+            t1 = time.time()
+            logging.info(
+                f"_feature_extractor_loop whisper feature warmup once done, time: {(t1 - t0) * 1000:.1f} ms"
+            )
+            self._feature_extractor_warmup_event.set()
 
         while self._session_running is True:
             try:
@@ -335,26 +349,27 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
         batch_size = self._config.batch_size  # Can be adjusted based on actual needs
         # max_speaking_buffer = batch_size * 5  # Maximum length of speaking frame buffer
 
-        ## warmup, ensure CUDA context and memory allocation
-        # if torch.cuda.is_available():
-        #    t0 = time.time()
-        #    # Regular batch_size warmup
-        #    dummy_whisper = torch.zeros(
-        #        batch_size, 50, 384, device=self._avatar.device, dtype=self._avatar.weight_dtype
-        #    )
-        #    await asyncio.to_thread(self._avatar.generate_frames, dummy_whisper, 0, batch_size)
-        #    # Remainder batch_size warmup (only when there's a remainder)
-        #    remain = fps % batch_size
-        #    if remain > 0:
-        #        dummy_whisper_remain = torch.zeros(
-        #            remain, 50, 384, device=self._avatar.device, dtype=self._avatar.weight_dtype
-        #        )
-        #        await asyncio.to_thread(
-        #            self._avatar.generate_frames, dummy_whisper_remain, 0, remain
-        #        )
-        #    torch.cuda.synchronize()
-        #    t1 = time.time()
-        #    logging.info(f"_frame_generator_loop self-warmup done, time: {(t1 - t0) * 1000:.1f} ms")
+        # warmup, ensure CUDA context and memory allocation
+        if torch.cuda.is_available():
+            t0 = time.time()
+            # Regular batch_size warmup
+            dummy_whisper = torch.zeros(
+                batch_size, 50, 384, device=self._avatar.device, dtype=self._avatar.weight_dtype
+            )
+            await asyncio.to_thread(self._avatar.generate_frames, dummy_whisper, 0, batch_size)
+            # Remainder batch_size warmup (only when there's a remainder)
+            remain = fps % batch_size
+            if remain > 0:
+                dummy_whisper_remain = torch.zeros(
+                    remain, 50, 384, device=self._avatar.device, dtype=self._avatar.weight_dtype
+                )
+                await asyncio.to_thread(
+                    self._avatar.generate_frames, dummy_whisper_remain, 0, remain
+                )
+            torch.cuda.synchronize()
+            t1 = time.time()
+            logging.info(f"_frame_generator_loop self-warmup done, time: {(t1 - t0) * 1000:.1f} ms")
+            self._frame_generator_warmup_event.set()
 
         while self._session_running is True:
             try:
