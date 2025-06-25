@@ -952,34 +952,6 @@ class MusetalkAvatar(EngineClass):
             self.idx = self.idx + 1
 
 
-def read_audio_file(audio_path: str) -> Tuple[bytes, int]:
-    """Read audio file and return byte stream and sample rate
-
-    Args:
-        audio_path: Audio file path
-
-    Returns:
-        Tuple[bytes, int]: (audio byte stream, sample rate)
-    """
-    try:
-        # Use librosa to read audio file
-        audio_data, sampling_rate = librosa.load(audio_path, sr=16000)  # Fixed sample rate 16kHz
-
-        # Convert numpy array to byte stream
-        audio_bytes = audio_data.astype(np.float32).tobytes()
-
-        logging.info("Successfully read audio file: {}", audio_path)
-        logging.info(
-            "Sample Rate: {}, Duration: {:.2f}s", sampling_rate, len(audio_data) / sampling_rate
-        )
-
-        return audio_bytes, sampling_rate
-
-    except Exception as e:
-        logging.error("Error reading audio file {}: {}", audio_path, str(e))
-        return None, None
-
-
 def run_batch_test(args):
     """Run batch audio test"""
     # Initialize digital avatar

@@ -62,8 +62,6 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
         # audio input slice
         self._speech_audio_slicer: SpeechAudioSlicer = None
 
-        self._avatar.load()
-
     async def start(self, frame: StartFrame):
         await super().start(frame)
         self._session_running = True
@@ -386,7 +384,7 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
                     frame_ids = []
                     for _ in range(cur_batch):
                         try:
-                            item = await self._frame_id_queue.get_nowait()
+                            item = self._frame_id_queue.get_nowait()
                             frame_ids.append(item)
                         except asyncio.QueueEmpty:
                             await asyncio.sleep(0.1)
@@ -492,8 +490,8 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
                 sleep_time = target_time - now
                 if sleep_time > 0.002:
                     await asyncio.sleep(sleep_time - 0.001)
-                while time.perf_counter() < target_time:
-                    pass
+                # while time.perf_counter() < target_time:
+                #    pass
 
                 # Record the start time for profiling
                 t_frame_start = time.perf_counter()
@@ -649,7 +647,7 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
         video_frame: av.VideoFrame = image_result.video_frame
         img = video_frame.to_image()
         if self._session_running:
-            await self.push_frame(
+            await self.queue_frame(
                 OutputImageRawFrame(
                     image=img.tobytes(),
                     size=img.size,

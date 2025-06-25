@@ -135,6 +135,7 @@ class TestMusetalkProcessor(unittest.IsolatedAsyncioTestCase):
             gpu_id=self.gpu_id,
             debug=config.debug,
         )
+        avatar.load()
         musetalkProcessor = MusetalkAvatarProcessor(avatar=avatar, config=config)
         pipeline = Pipeline(
             [
