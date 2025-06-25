@@ -229,6 +229,14 @@ def import_bots(bot_name: str = "DummyBot"):
         from .mcp import livekit_multi_mcp_bot
 
         return True
+    if "LivekitAvatarEchoBot" in bot_name:
+        from .avatar import livekit_musetalk_echo_bot
+
+        return True
+    if "LivekitAvatarChatBot" in bot_name:
+        from .avatar import livekit_musetalk_chat_bot
+
+        return True
     # if "LivekitMoshiVoiceBot" in bot_name:
     #    from .voice import livekit_moshi_bot
 

@@ -6,6 +6,7 @@ from pydantic import BaseModel
 import av
 
 from src.common.types import MODELS_DIR, RATE
+from . import AudioSlice, AvatarStatus
 
 VIDEO_FPS = 25
 
@@ -24,39 +25,6 @@ class AvatarInitOption(BaseModel):
 class AvatarConfig(BaseModel):
     input_audio_sample_rate: int
     input_audio_slice_duration: float  # input audio duration in second
-
-
-class SpeechAudio(BaseModel):
-    """
-    only support mono audio for now
-    """
-
-    end_of_speech: bool = False
-    speech_id: Any = ""
-    sample_rate: int = 16000
-    audio_data: bytes = bytes()
-
-    def get_audio_duration(self):
-        return len(self.audio_data) / self.sample_rate / 2
-
-
-class AudioSlice(BaseModel):
-    speech_id: Any
-    play_audio_data: bytes
-    play_audio_sample_rate: int
-    algo_audio_data: Optional[bytes]
-    algo_audio_sample_rate: int
-    end_of_speech: bool
-    front_padding_duration: float = 0
-    end_padding_duration: float = 0
-
-    def get_audio_duration(self) -> float:
-        return len(self.play_audio_data) / self.play_audio_sample_rate / 2
-
-
-class AvatarStatus(Enum):
-    SPEAKING = 0
-    LISTENING = 1
 
 
 SignalType = TypeVar("SignalType")

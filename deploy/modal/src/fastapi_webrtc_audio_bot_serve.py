@@ -91,13 +91,15 @@ ASSETS_DIR = "/root/.achatbot/assets"
 assets_dir = modal.Volume.from_name("assets", create_if_missing=True)
 HF_MODEL_DIR = "/root/.achatbot/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
+TORCH_CACHE_DIR = "/root/.cache/torch"
+torch_cache_vol = modal.Volume.from_name("torch_cache", create_if_missing=True)
 
 
 # 128 MiB of memory and 0.125 CPU cores by default container runtime
 @app.cls(
     image=ContainerRuntimeConfig.get_img(),
     secrets=[modal.Secret.from_name("achatbot")],
-    volumes={ASSETS_DIR: assets_dir, HF_MODEL_DIR: hf_model_vol},
+    volumes={ASSETS_DIR: assets_dir, HF_MODEL_DIR: hf_model_vol, TORCH_CACHE_DIR: torch_cache_vol},
     allow_concurrent_inputs=ContainerRuntimeConfig.get_allow_concurrent_inputs(),
     cpu=2.0,
     timeout=1200,  # default 300s

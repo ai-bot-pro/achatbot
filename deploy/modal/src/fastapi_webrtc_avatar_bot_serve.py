@@ -1,7 +1,8 @@
 import modal
 import os
 
-achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.18")
+achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.18.post0")
+avatar_tag = os.getenv("AVATAR_TAG", "lite_avatar_gpu")
 image = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
     modal.Image.from_registry(
@@ -19,7 +20,7 @@ image = (
             "openai_llm_processor,google_llm_processor,litellm_processor,"
             "deep_translator,together_ai,"
             "tts_edge,"
-            "lite_avatar_gpu,"
+            f"{avatar_tag},"
             "queue"
             f"]=={achatbot_version}",
         ],
@@ -29,6 +30,9 @@ image = (
         # fix Future exception was never retrieve, when connect timeout ( Connection reset by peer, retry)
         "aiohttp==3.10.11",
         "numpy==1.26.4",
+        "torch==2.4.1",
+        "torchvision==0.19.1",
+        "torchaudio==2.4.1",
     )
     .env(
         {
@@ -48,6 +52,29 @@ image = (
     )
 )
 
+if avatar_tag == "musetalk_avatar":
+    image = (
+        image.apt_install("clang")
+        .run_commands(
+            "which nvcc",
+            "which clang++",
+            "git clone https://github.com/open-mmlab/mmcv.git",
+            "cd /mmcv && git checkout v2.1.0",
+            "cd /mmcv && pip install -r requirements/optional.txt",
+            "cd /mmcv && FORCE_CUDA=1 TORCH_CUDA_ARCH_LIST='7.5 8.0 8.6 8.7 8.9 9.0' pip install -e . -v",
+        )
+        .run_commands(
+            "pip install -q --no-cache-dir -U openmim",
+            "mim install mmengine",
+            "mim install 'mmdet==3.3.0'",
+            "mim install 'mmpose==1.3.2'",
+        )
+    )
+
+# image = image.pip_install(
+#    f"achatbot==0.0.18.post0",
+#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+# )
 
 # ----------------------- app -------------------------------
 app = modal.App("fastapi_webrtc_avatar_bot")
@@ -56,6 +83,10 @@ HF_MODEL_DIR = "/root/.achatbot/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
 RESOURCES_DIR = "/root/.achatbot/resources"
 resources_vol = modal.Volume.from_name("resources", create_if_missing=True)
+ASSETS_DIR = "/root/.achatbot/assets"
+assets_vol = modal.Volume.from_name("assets", create_if_missing=True)
+TORCH_CACHE_DIR = "/root/.cache/torch"
+torch_cache_vol = modal.Volume.from_name("torch_cache", create_if_missing=True)
 
 
 # 128 MiB of memory and 0.125 CPU cores by default container runtime
@@ -66,8 +97,10 @@ resources_vol = modal.Volume.from_name("resources", create_if_missing=True)
     volumes={
         HF_MODEL_DIR: hf_model_vol,
         RESOURCES_DIR: resources_vol,
+        ASSETS_DIR: assets_vol,
+        TORCH_CACHE_DIR: torch_cache_vol,
     },
-    cpu=2.0,
+    cpu=4.0,
     timeout=1200,  # default 300s
     scaledown_window=1200,
     max_containers=1,

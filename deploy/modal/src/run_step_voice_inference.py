@@ -25,13 +25,15 @@ MODEL_DIR = "/root/models"
 ASSETS_DIR = "/root/assets"
 model_dir = modal.Volume.from_name("models", create_if_missing=True)
 assets_dir = modal.Volume.from_name("assets", create_if_missing=True)
+TORCH_CACHE_DIR = "/root/.cache/torch"
+torch_cache_vol = modal.Volume.from_name("torch_cache", create_if_missing=True)
 
 
 @app.function(
     gpu=os.getenv("IMAGE_GPU", "L40S:8"),
     retries=3,
     image=inference_image,
-    volumes={MODEL_DIR: model_dir, ASSETS_DIR: assets_dir},
+    volumes={MODEL_DIR: model_dir, ASSETS_DIR: assets_dir, TORCH_CACHE_DIR: torch_cache_vol},
 )
 def voice_inference(text: str) -> str:
     import os

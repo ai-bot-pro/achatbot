@@ -84,6 +84,8 @@ MODEL_DIR = "/root/.achatbot/models"
 model_dir = modal.Volume.from_name("models", create_if_missing=True)
 ASSETS_DIR = "/root/.achatbot/assets"
 assert_dir = modal.Volume.from_name("assets", create_if_missing=True)
+TORCH_CACHE_DIR = "/root/.cache/torch"
+torch_cache_vol = modal.Volume.from_name("torch_cache", create_if_missing=True)
 
 # ----------------------- app -------------------------------
 app = modal.App("fastapi_webrtc_step_voice_bot")
@@ -98,7 +100,7 @@ allow_concurrent_inputs = ContainerRuntimeConfig.get_allow_concurrent_inputs()
 # 128 MiB of memory and 0.125 CPU cores by default container runtime
 @app.cls(
     image=image,
-    volumes={MODEL_DIR: model_dir, ASSETS_DIR: assert_dir},
+    volumes={MODEL_DIR: model_dir, ASSETS_DIR: assert_dir, TORCH_CACHE_DIR: torch_cache_vol},
     gpu=gpu,
     secrets=[modal.Secret.from_name("achatbot")],
     cpu=2.0,
