@@ -46,18 +46,21 @@ class LivekitAvatarEchoBot(LivekitRoomBot):
             camera_out_is_live=True,
         )
 
-        config = AvatarMuseTalkConfig(
-            input_audio_sample_rate=16000,
-            algo_audio_sample_rate=16000,
-            output_audio_sample_rate=16000,
-            input_audio_slice_duration=1,
-        )
-
         if self._bot_config and self._bot_config.avatar and self._bot_config.avatar.args:
             avatar = MusetalkAvatar(**self._bot_config.avatar.args)
         else:
             avatar = MusetalkAvatar()
         avatar.load()
+
+        config = AvatarMuseTalkConfig(
+            input_audio_sample_rate=16000,
+            algo_audio_sample_rate=16000,
+            output_audio_sample_rate=16000,
+            input_audio_slice_duration=1,
+            batch_size=avatar.gen_batch_size,
+            fps=avatar.fps,
+        )
+
         self.musetalk_processor = MusetalkAvatarProcessor(avatar=avatar, config=config)
 
     async def arun(self):

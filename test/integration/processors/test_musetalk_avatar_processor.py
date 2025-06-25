@@ -56,6 +56,13 @@ DAILY_ROOM_URL=https://weedge.daily.co/jk5g4mFlZkPHvOyaEZe5 DEBUG=true \
     MATERIAL_VIDEO_PATH=./deps/MuseTalk/data/video/yongen.mp4 \
     FORCE_PREPARATION=true \
     python -m unittest test.integration.processors.test_musetalk_avatar_processor.TestMusetalkProcessor.test_gen
+
+DAILY_ROOM_URL=https://weedge.daily.co/jk5g4mFlZkPHvOyaEZe5 DEBUG=true \
+    WEIGHT_DIR=./models/weege007/musetalk \
+    MATERIAL_VIDEO_PATH=./deps/MuseTalk/data/video/yongen.mp4 \
+    FORCE_PREPARATION=true \
+    FPS=25 BATCH_SIZE=20 GEN_BATCH_SIZE=5 \    
+    python -m unittest test.integration.processors.test_musetalk_avatar_processor.TestMusetalkProcessor.test_gen
 """
 
 
@@ -79,6 +86,9 @@ class TestMusetalkProcessor(unittest.IsolatedAsyncioTestCase):
         cls.result_dir = os.getenv("RESULT_DIR", "./results")
         cls.model_dir = os.getenv("WEIGHT_DIR", os.path.join(MODELS_DIR, "weege007/musetalk"))
         cls.gpu_id = int(os.getenv("GPU_ID", "0"))
+        cls.batch_size = int(os.getenv("BATCH_SIZE", "20"))
+        cls.gen_batch_size = int(os.getenv("GEN_BATCH_SIZE", "5"))
+        cls.fps = int(os.getenv("FPS", "25"))
         cls.material_video_path = os.getenv(
             "MATERIAL_VIDEO_PATH", "./deps/MuseTalk/data/video/sun.mp4"
         )
@@ -118,13 +128,6 @@ class TestMusetalkProcessor(unittest.IsolatedAsyncioTestCase):
             ),
         )
 
-        config = AvatarMuseTalkConfig(
-            debug=self._debug,
-            debug_save_handler_audio=self._debug,
-            algo_audio_sample_rate=self.sr,
-            output_audio_sample_rate=self.sr,
-            input_audio_slice_duration=1,
-        )
         avatar = MusetalkAvatar(
             avatar_id="avator_test",
             material_video_path=self.material_video_path,
@@ -133,9 +136,21 @@ class TestMusetalkProcessor(unittest.IsolatedAsyncioTestCase):
             result_dir=self.result_dir,
             model_dir=self.model_dir,
             gpu_id=self.gpu_id,
-            debug=config.debug,
+            debug=self._debug,
+            batch_size=self.batch_size,
+            gen_batch_size=self.gen_batch_size,
+            fps=self.fps,
         )
         avatar.load()
+        config = AvatarMuseTalkConfig(
+            debug=self._debug,
+            debug_save_handler_audio=self._debug,
+            algo_audio_sample_rate=self.sr,
+            output_audio_sample_rate=self.sr,
+            input_audio_slice_duration=1,
+            fps=avatar.fps,
+            batch_size=avatar.gen_batch_size,
+        )
         musetalkProcessor = MusetalkAvatarProcessor(avatar=avatar, config=config)
         pipeline = Pipeline(
             [

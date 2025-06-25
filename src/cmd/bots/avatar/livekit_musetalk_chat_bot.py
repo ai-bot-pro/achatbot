@@ -74,6 +74,8 @@ class LivekitAvatarChatBot(LivekitRoomBot):
             algo_audio_sample_rate=16000,
             output_audio_sample_rate=16000,
             input_audio_slice_duration=1,
+            batch_size=self.avatar.gen_batch_size,
+            fps=self.avatar.fps,
         )
         musetalk_processor = MusetalkAvatarProcessor(avatar=self.avatar, config=config)
 

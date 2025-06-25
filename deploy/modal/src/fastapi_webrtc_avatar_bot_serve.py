@@ -72,8 +72,8 @@ if avatar_tag == "musetalk_avatar":
     )
 
 # image = image.pip_install(
-#   f"achatbot==0.0.18.post13",
-#   extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+#    f"achatbot==0.0.18.post15",
+#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
 # )
 
 # ----------------------- app -------------------------------

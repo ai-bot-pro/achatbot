@@ -178,7 +178,8 @@ class MusetalkAvatar(EngineClass):
         avatar_id="avatar_0",
         material_video_path="./deps/MuseTalk/data/video/sun.mp4",
         bbox_shift=0,
-        batch_size=20,
+        batch_size=20,  # for warmup / inference
+        gen_batch_size=5,  # for frames generation
         force_preparation=False,
         parsing_mode="jaw",
         left_cheek_width=90,
@@ -216,6 +217,7 @@ class MusetalkAvatar(EngineClass):
         self.material_video_path = material_video_path
         self.bbox_shift = bbox_shift
         self.batch_size = batch_size
+        self.gen_batch_size = gen_batch_size
         self.force_preparation = force_preparation
         self.parsing_mode = parsing_mode
         self.left_cheek_width = left_cheek_width
