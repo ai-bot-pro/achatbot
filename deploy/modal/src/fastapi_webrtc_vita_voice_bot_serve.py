@@ -27,7 +27,7 @@ kimi_voice_img = (
         {
             "ACHATBOT_PKG": "1",
             "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
-            "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "VITA-MLLM/VITA-Audio-Plus-Vanilla")}',
+            "LLM_MODEL_NAME_OR_PATH": f"/root/.achatbot/models/{os.getenv('LLM_MODEL_NAME_OR_PATH', 'VITA-MLLM/VITA-Audio-Plus-Vanilla')}",
             # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#gpu-feature-list
             "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
             "TQDM_DISABLE": "1",
@@ -49,6 +49,8 @@ HF_MODEL_DIR = "/root/.achatbot/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
 ASSETS_DIR = "/root/.achatbot/assets"
 assets_dir = modal.Volume.from_name("assets", create_if_missing=True)
+TORCH_CACHE_DIR = "/root/.cache/torch"
+torch_cache_vol = modal.Volume.from_name("torch_cache", create_if_missing=True)
 
 
 # 128 MiB of memory and 0.125 CPU cores by default container runtime
@@ -59,6 +61,7 @@ assets_dir = modal.Volume.from_name("assets", create_if_missing=True)
     volumes={
         HF_MODEL_DIR: hf_model_vol,
         ASSETS_DIR: assets_dir,
+        TORCH_CACHE_DIR: torch_cache_vol,
     },
     cpu=2.0,
     timeout=1200,  # default 300s

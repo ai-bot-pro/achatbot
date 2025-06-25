@@ -247,6 +247,8 @@ HF_MODEL_DIR = "/root/.achatbot/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
 ASSETS_DIR = "/root/.achatbot/assets"
 assets_dir = modal.Volume.from_name("assets", create_if_missing=True)
+TORCH_CACHE_DIR = "/root/.cache/torch"
+torch_cache_vol = modal.Volume.from_name("torch_cache", create_if_missing=True)
 
 
 # ----------------------- app -------------------------------
@@ -263,6 +265,7 @@ app = modal.App(ContainerRuntimeConfig.get_app_name())
     volumes={
         HF_MODEL_DIR: hf_model_vol,
         ASSETS_DIR: assets_dir,
+        TORCH_CACHE_DIR: torch_cache_vol,
     },
     timeout=1200,  # default 300s
     scaledown_window=1200,

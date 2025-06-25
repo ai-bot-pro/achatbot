@@ -196,7 +196,9 @@ class MusetalkAvatarProcessor(SegmentedAvatarProcessor):
             #    )
             #    return
 
-            assert speech_audio.sample_rate == self._output_audio_sample_rate
+            assert speech_audio.sample_rate == self._output_audio_sample_rate, (
+                f"{speech_audio.sample_rate=} != {self._output_audio_sample_rate=}"
+            )
 
             await self._audio_queue.put(
                 {

@@ -16,7 +16,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.18"
+version = "0.0.18.post0"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -641,12 +641,12 @@ lite_avatar_gpu = ["achatbot[lite_avatar]", "onnxruntime-gpu"]
 musetalk_avatar = [
     "ffmpeg-python>=0.2.0",
     "imageio[ffmpeg]>=2.37.0",
-    "numpy==1.23.5",
+    #"numpy==1.23.5",
     "tensorflow==2.12.0",
     "accelerate==0.32.0",
-    "torch==2.4.1",
-    "torchvision==0.19.1",
-    "torchaudio==2.4.1",
+    #"torch==2.4.1",
+    #"torchvision==0.19.1",
+    #"torchaudio==2.4.1",
     "transformers==4.44.1",
     "av",
     "moviepy",

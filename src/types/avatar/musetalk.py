@@ -18,6 +18,7 @@ class AvatarMuseTalkConfig(BaseModel):
     input_audio_sample_rate: int = 16000  # input audio sample rate
     input_audio_slice_duration: int = 1  # 1 second duration slice
     # Internal algorithm sample rate, fixed at 16000, used for input audio resampling
+    # WhisperFeatureExtractor was trained using a sampling rate of 16000.
     algo_audio_sample_rate: int = 16000
-    output_audio_sample_rate: int = 24000  # Output audio sample rate (for resampling)
+    output_audio_sample_rate: int = 16000  # Output audio sample rate (for resampling)
     model_dir: str = os.path.join(MODELS_DIR, "musetalk")  # Root directory for models
