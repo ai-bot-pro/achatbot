@@ -68,7 +68,9 @@ llm_processor = None
 tts_processor = None
 
 
-def load(kwargs={"bot_config": defualt_bot_config}):
+def load(kwargs=None):
+    if kwargs is None:
+        kwargs={"bot_config": defualt_bot_config}
     print(f"asr_llm_tts init load with kwargs: {kwargs}")
     global ai_bot, vad_analyzer, asr_processor, llm_processor, tts_processor
     if ai_bot is not None:
