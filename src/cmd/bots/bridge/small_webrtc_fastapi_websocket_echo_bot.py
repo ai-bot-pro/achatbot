@@ -8,7 +8,7 @@ from apipeline.pipeline.runner import PipelineRunner
 from apipeline.frames import EndFrame
 from apipeline.pipeline.parallel_pipeline import ParallelPipeline
 
-from src.cmd.bots.bridge.base import AISmallWebRPCFastapiWebsocketBot
+from src.cmd.bots.bridge.base import AISmallWebRTCFastapiWebsocketBot
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.cmd.bots import register_ai_fastapi_ws_bots
 from src.types.network.fastapi_websocket import AudioCameraParams, FastapiWebsocketServerParams
@@ -23,7 +23,7 @@ load_dotenv(override=True)
 
 
 @register_ai_fastapi_ws_bots.register
-class SmallWebRTCFastapiWebsocketEchoBot(AISmallWebRPCFastapiWebsocketBot):
+class SmallWebRTCFastapiWebsocketEchoBot(AISmallWebRTCFastapiWebsocketBot):
     """
     MRO (SmallWebrtcAIBot, AIFastapiWebsocketBot)
 

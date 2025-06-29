@@ -10,7 +10,7 @@ from fastapi import FastAPI, WebSocket, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from src.cmd.bots.bridge.base import AISmallWebRPCFastapiWebsocketBot
+from src.cmd.bots.bridge.base import AISmallWebRTCFastapiWebsocketBot
 from src.cmd.bots.base import AIBot
 from src.cmd.bots.bot_loader import BotLoader
 from src.common.types import CONFIG_DIR
@@ -23,7 +23,7 @@ from src.services.webrtc_peer_connection import SmallWebRTCConnection, IceServer
 load_dotenv(override=True)
 Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
 
-run_bot: AISmallWebRPCFastapiWebsocketBot = None
+run_bot: AISmallWebRTCFastapiWebsocketBot = None
 # Store websocket connection
 ws_map: Dict[str, WebSocket] = {}
 # Store rtc connections
