@@ -175,8 +175,6 @@ class AsrLlmTtsTrack(BaseTrack):
                         chunk = frame_out.audio
                     self.out_processor.out_queue.task_done()
                     self.out_processor.set_sink_event()
-                except TimeoutError:
-                    chunk = bytes(self._bytes_per_10ms)  # silence
                 except asyncio.TimeoutError:
                     chunk = bytes(self._bytes_per_10ms)  # silence
                 # Convert the byte data to an ndarray of int16 samples
