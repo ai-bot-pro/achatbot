@@ -169,10 +169,10 @@ class AsrLlmTtsTrack(BaseTrack):
                         )
                 # out
                 try:
-                    frame = await asyncio.wait_for(self.out_processor.out_queue.get(), 0.01)
+                    frame_out = await asyncio.wait_for(self.out_processor.out_queue.get(), 0.01)
                     chunk = bytes(self._bytes_per_10ms)  # silence
-                    if isinstance(frame, AudioRawFrame):
-                        chunk = bytes(self._bytes_per_10ms)  # silence
+                    if isinstance(frame_out, AudioRawFrame):
+                        chunk = frame_out.audio
                     self.out_processor.out_queue.task_done()
                     self.out_processor.set_sink_event()
                 except TimeoutError:
