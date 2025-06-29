@@ -11,7 +11,7 @@ from src.transports.small_webrtc import SmallWebRTCTransport
 from src.types.frames import TransportMessageFrame
 
 
-class AISmallWebRPCFastapiWebsocketBot(AIBot):
+class AISmallWebRTCFastapiWebsocketBot(AIBot):
     def __init__(
         self,
         webrtc_connection: SmallWebRTCConnection | None = None,
