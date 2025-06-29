@@ -1,0 +1,182 @@
+import asyncio
+import logging
+import os
+import argparse
+from contextlib import asynccontextmanager
+import traceback
+from typing import Dict
+
+from fastapi import FastAPI, WebSocket, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+
+from src.cmd.bots.bridge.base import AISmallWebRPCFastapiWebsocketBot
+from src.cmd.bots.base import AIBot
+from src.cmd.bots.bot_loader import BotLoader
+from src.common.types import CONFIG_DIR
+from src.common.const import *
+from src.common.logger import Logger
+from src.cmd.http.server.fastapi_daily_bot_serve import ngrok_proxy
+from src.services.webrtc_peer_connection import SmallWebRTCConnection, IceServer
+
+
+load_dotenv(override=True)
+Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
+
+run_bot: AISmallWebRPCFastapiWebsocketBot = None
+# Store websocket connection
+ws_map: Dict[str, WebSocket] = {}
+# Store rtc connections
+pcs_map: Dict[str, SmallWebRTCConnection] = {}
+
+ice_servers = [
+    IceServer(
+        urls="stun:stun.l.google.com:19302",
+    )
+]
+
+
+# https://fastapi.tiangolo.com/advanced/events/#lifespan
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global run_bot
+    try:
+        # load model before running
+        run_bot = await BotLoader.load_bot(config.f, bot_type="fastapi_ws_bot")
+    except Exception as e:
+        print(e)
+        traceback.print_exc()
+
+    print(f"load bot {run_bot} success")
+
+    yield  # Run app
+
+    # app life end to clear resources
+    # clear websocket connection
+    coros = [ws.close() for ws in ws_map.values() if ws.state == "OPEN"]
+    await asyncio.gather(*coros)
+    ws_map.clear()
+    print(f"websocket connections clear success")
+
+    # clear webrtc connection
+    coros = [pc.disconnect() for pc in pcs_map.values() if pc.connectionState == "connected"]
+    await asyncio.gather(*coros)
+    pcs_map.clear()
+    print(f"rtc peer connections clear success")
+
+
+app = FastAPI(lifespan=lifespan)
+
+# 配置CORS中间件
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 允许所有来源，生产环境中应该限制为特定域名
+    allow_credentials=True,  # 允许携带凭证
+    allow_methods=["*"],  # 允许所有HTTP方法
+    allow_headers=["*"],  # 允许所有HTTP头部
+)
+
+
+@app.post("/api/offer/{peer_id}")
+async def handle_offer(request: dict, background_tasks: BackgroundTasks, peer_id: str):
+    pc_id = peer_id
+    logging.info(f"request pc_id: {pc_id}")
+
+    if not pc_id:
+        logging.error(f"pc_id is empty")
+        return None
+
+    if pc_id and pc_id in pcs_map:
+        connection = pcs_map[pc_id]
+        logging.info(f"Reusing existing connection for pc_id: {pc_id}")
+        await connection.renegotiate(
+            sdp=request.get("sdp"),
+            type=request.get("type"),
+            restart_pc=request.get("restart_pc", False),
+        )
+    else:
+        connection = SmallWebRTCConnection(ice_servers)
+        await connection.initialize(
+            sdp=request.get("sdp"),
+            type=request.get("type"),
+        )
+
+        @connection.event_handler("closed")
+        async def handle_disconnected(webrtc_connection: SmallWebRTCConnection):
+            logging.info(f"Discarding peer connection for pc_id: {webrtc_connection.pc_id}")
+            pcs_map.pop(webrtc_connection.pc_id, None)
+
+        # run_bot.set_webrtc_connection(connection)
+        # run_bot.set_fastapi_websocket(ws_map[pc_id])
+        # background_tasks.add_task(run_bot.async_run)
+
+    answer = connection.get_answer()
+    logging.info(f"answer pc_id: {answer.get('pc_id')}")
+    # Updating the peer connection inside the map
+    # pcs_map[answer.get("pc_id")] = connection
+    pcs_map[pc_id] = connection
+
+    return answer
+
+
+@app.websocket("/{peer_id}")
+async def websocket_endpoint(websocket: WebSocket, peer_id: str):
+    try:
+        if not peer_id:
+            logging.error(f"pc_id is empty")
+            return
+        if peer_id and peer_id not in pcs_map:
+            logging.error(f"{peer_id=} not found webrtc peer connection")
+            return
+
+        await websocket.accept()
+        ws_map[peer_id] = websocket
+        logging.info(f"accept {peer_id=} client: {websocket.client}")
+        run_bot.set_webrtc_connection(pcs_map[peer_id])
+        run_bot.set_fastapi_websocket(websocket)
+        await run_bot.async_run()
+    except Exception as e:
+        logging.error(e, exc_info=True)
+
+
+"""
+python -m src.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve -f config/bots/small_webrtc_fastapi_websocket_echo_bot.json
+"""
+
+if __name__ == "__main__":
+    import uvicorn
+
+    default_host = os.getenv("HOST", "0.0.0.0")
+    default_port = int(os.getenv("FAST_API_PORT", "4321"))
+
+    parser = argparse.ArgumentParser(description="Fastapi Websocket Bot Runner")
+    parser.add_argument("--host", type=str, default=default_host, help="Host address")
+    parser.add_argument("--port", type=int, default=default_port, help="Port number")
+    parser.add_argument("--reload", action="store_true", help="Reload code on change")
+    parser.add_argument("--ngrok", action="store_true", help="use ngrok proxy")
+    parser.add_argument(
+        "-f",
+        type=str,
+        default=os.path.join(CONFIG_DIR, "bots/dummy_bot.json"),
+        help="Bot configuration json file",
+    )
+
+    config = parser.parse_args()
+
+    if config.ngrok:
+        ngrok_proxy(config.port)
+
+    # Note: not event loop to new one
+    # run_bot: AIFastapiWebsocketBot = asyncio.get_event_loop().run_until_complete(BotLoader.load_bot(config.f, bot_type="fastapi_ws_bot"))
+
+    # use one event loop to run
+    # run_bot: AIFastapiWebsocketBot = asyncio.run(
+    #    BotLoader.load_bot(config.f, bot_type="fastapi_ws_bot"))
+
+    # api docs: http://0.0.0.0:4321/docs
+    uvicorn.run(
+        app,
+        host=config.host,
+        port=config.port,
+        reload=config.reload,
+    )
