@@ -18,13 +18,14 @@ from src.cmd.bots.base import AIBot
 from src.services.webrtc_peer_connection import SmallWebRTCConnection, IceServer
 from src.cmd.bots.bot_loader import BotLoader
 from src.common.types import CONFIG_DIR
+from src.cmd.bots.base_small_webrtc import SmallWebrtcAIBot
 
 
 # Load environment variables
 load_dotenv(override=True)
 
 
-run_bot: AIBot = None
+run_bot: SmallWebrtcAIBot = None
 # Store connections by pc_id
 pcs_map: Dict[str, SmallWebRTCConnection] = {}
 

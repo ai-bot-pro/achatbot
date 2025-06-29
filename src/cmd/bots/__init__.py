@@ -313,12 +313,22 @@ def import_fastapi_websocket_bots(bot_name: str = "DummyBot"):
 
         return True
 
+    if "SmallWebRTCFastapiWebsocketEchoBot" in bot_name:
+        from .bridge import small_webrtc_fastapi_websocket_echo_bot
+
+        return True
+
     return False
 
 
 def import_small_webrtc_bots(bot_name: str = "DummyBot"):
     if "SmallWebrtcBot" == bot_name:
         from . import small_webrtc_bot
+
+        return True
+
+    if "SmallWebRTCFastapiWebsocketEchoBot" in bot_name:
+        from .bridge import small_webrtc_fastapi_websocket_echo_bot
 
         return True
 

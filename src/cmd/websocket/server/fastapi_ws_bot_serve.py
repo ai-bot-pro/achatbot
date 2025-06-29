@@ -21,7 +21,7 @@ from src.cmd.http.server.fastapi_daily_bot_serve import ngrok_proxy
 load_dotenv(override=True)
 Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
 
-run_bot: AIBot = None
+run_bot: AIFastapiWebsocketBot = None
 # Store websocket
 ws_map: Dict[str, WebSocket] = {}
 
@@ -42,7 +42,7 @@ async def lifespan(app: FastAPI):
     yield  # Run app
 
     # clear
-    coros = [ws.close() for ws in ws_map.values()]
+    coros = [ws.close() for ws in ws_map.values() if ws.state == "OPEN"]
     await asyncio.gather(*coros)
     ws_map.clear()
     print(f"clear success")
@@ -59,11 +59,13 @@ async def websocket_endpoint(websocket: WebSocket):
     ws_map[key] = websocket
     run_bot.set_fastapi_websocket(websocket)
     logging.info(f"accept client: {websocket.client}")
-    await run_bot.try_run()
+    await run_bot.async_run()
 
 
 """
 python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_websocket_echo_voice_bot.json
+
+python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_websocket_server_bot.json
 """
 
 if __name__ == "__main__":

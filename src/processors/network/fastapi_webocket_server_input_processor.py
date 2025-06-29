@@ -59,4 +59,5 @@ class FastapiWebsocketServerInputProcessor(AudioVADInputProcessor):
             logging.error(f"receive_messages error: {e}")
             return
 
+        print(f"{self._websocket=} disconnected")
         await self._callbacks.on_client_disconnected(self._websocket)
