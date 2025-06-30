@@ -60,7 +60,7 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
         await super().stop(frame)
         await self._stop()
 
-    async def cancle(self, frame: CancelFrame):
+    async def cancel(self, frame: CancelFrame):
         await super().cancel(frame)
         await self._stop()
 
