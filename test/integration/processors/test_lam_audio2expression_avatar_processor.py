@@ -199,7 +199,7 @@ class TestLamAudio2ExpressionFastApiWebsocketProcessor(TestLamAudio2ExpressionBa
 
             # app life end to clear resources
             # clear websocket connection
-            coros = [ws.close() for ws in cls.ws_map.values() if ws.state == "OPEN"]
+            coros = [ws.close() for ws in cls.ws_map.values() if ws.client_state == WebSocketState.CONNECTED]
             await asyncio.gather(*coros)
             cls.ws_map.clear()
             print(f"websocket connections clear success")
