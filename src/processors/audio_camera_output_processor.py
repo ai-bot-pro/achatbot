@@ -19,7 +19,7 @@ from src.types.frames.control_frames import (
     BotStartedSpeakingFrame,
     BotStoppedSpeakingFrame,
 )
-from src.types.frames.data_frames import SpriteFrame, TransportMessageFrame
+from src.types.frames.data_frames import SpriteFrame, TransportMessageFrame, AnimationAudioRawFrame
 
 
 class AudioCameraOutputProcessor(OutputProcessor):
@@ -117,6 +117,8 @@ class AudioCameraOutputProcessor(OutputProcessor):
         elif isinstance(frame, TransportMessageFrame):
             # transport mssage
             await self.send_message(frame)
+        elif isinstance(frame, AnimationAudioRawFrame):  # audio + animation
+            await self._handle_audio_animation(frame)
         elif isinstance(frame, AudioRawFrame):  # audio
             await self._handle_audio(frame)
         elif isinstance(frame, ImageRawFrame) or isinstance(frame, SpriteFrame):  # image
@@ -152,6 +154,20 @@ class AudioCameraOutputProcessor(OutputProcessor):
 
     async def send_audio(self, frame: AudioRawFrame):
         await self.process_frame(frame, FrameDirection.DOWNSTREAM)
+
+    async def write_animation_audio_frame(self, frame: AnimationAudioRawFrame):
+        """
+        - default call handel_audio to process audio raw frame
+        - subclass can override this method to process animation audio raw frame
+            - fastapi_websocket_output_processor to process animation audio raw frame
+        """
+        # logging.info(f"no subclass implement {frame=}")
+        await self._handle_audio(frame)
+
+    async def _handle_audio_animation(self, frame: AnimationAudioRawFrame):
+        if not self._params.audio_out_enabled:
+            return
+        await self.write_animation_audio_frame(frame)
 
     async def _handle_audio(self, frame: AudioRawFrame):
         if not self._params.audio_out_enabled:

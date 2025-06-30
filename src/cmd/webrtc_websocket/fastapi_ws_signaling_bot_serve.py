@@ -43,6 +43,7 @@ async def lifespan(app: FastAPI):
     try:
         # load model before running
         run_bot = await BotLoader.load_bot(config.f, bot_type="fastapi_ws_bot")
+        run_bot.load()
     except Exception as e:
         print(e)
         traceback.print_exc()

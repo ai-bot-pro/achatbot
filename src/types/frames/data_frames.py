@@ -275,3 +275,15 @@ class UserVisionImageVoiceRawFrame(VisionImageVoiceRawFrame):
 
     def __str__(self):
         return f"user_id:{self.user_id} {super().__str__()}"
+
+
+@dataclass
+class AnimationAudioRawFrame(AudioRawFrame):
+    animation_json: str = "{}"
+    avatar_status: str = ""
+
+    def __str__(self):
+        super_str = super().__str__()
+        return (
+            f"{super_str} animation_json: {self.animation_json} avatar_status: {self.avatar_status}"
+        )

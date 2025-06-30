@@ -3,6 +3,7 @@ import time
 import os
 import shutil
 import sys
+import json
 import subprocess as sp
 from typing import Dict, Optional, List
 
@@ -99,9 +100,13 @@ class LAMAudio2ExpressionAvatar(EngineClass):
         dur_warmup = time.monotonic() - t_start
         logging.info(f"LAM_Audio2Expression warmup finished in {dur_warmup * 1000} milliseconds.")
 
-    def export_json(self, bs_array, json_path):
-        os.makedirs(os.path.dirname(json_path), exist_ok=True)
-        export_blendshape_animation(bs_array, json_path, self.arkit_channels, fps=30.0)
+    def export_animation_json(self, bs_array, json_path=None):
+        if json_path is not None:
+            os.makedirs(os.path.dirname(json_path), exist_ok=True)
+        animation_data = export_blendshape_animation(
+            bs_array, json_path, self.arkit_channels, fps=30.0
+        )
+        return json.dumps(animation_data)
 
 
 """
@@ -158,19 +163,24 @@ if __name__ == "__main__":
     avatar.load()
 
     audio, sample_rate = librosa.load(args.audio_path, sr=16000)
+    print(f"{audio=} {sample_rate=} {audio.shape[0]=}")
     context = None
     input_num = audio.shape[0] // 16000 + 1
     gap = 16000
     all_exp = []
     for i in tqdm(range(input_num)):
         start = time.time()
+        # infer streaming audio with 30 fps
         output, context = avatar.infer.infer_streaming_audio(
             audio[i * gap : (i + 1) * gap], sample_rate, context
         )
         end = time.time()
         print("Inference time {}".format(end - start))
+        print(f"{output['expression'].shape=}")
         all_exp.append(output["expression"])
 
     all_exp = np.concatenate(all_exp, axis=0)
+    print(f"{all_exp.shape=}")
 
-    avatar.export_json(all_exp, args.save_json_path)
+    animation_json_str = avatar.export_animation_json(all_exp, args.save_json_path)
+    # print(f"{animation_json_str=}")

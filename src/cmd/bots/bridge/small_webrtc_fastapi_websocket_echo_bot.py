@@ -25,7 +25,7 @@ load_dotenv(override=True)
 @register_ai_fastapi_ws_bots.register
 class SmallWebRTCFastapiWebsocketEchoBot(AISmallWebRTCFastapiWebsocketBot):
     """
-    MRO (SmallWebrtcAIBot, AIFastapiWebsocketBot)
+    don't use MRO (SmallWebrtcAIBot, AIFastapiWebsocketBot)
 
     - webrtc input (audio) / fastapi websocket output(audio)
     - fastapi websocket input(audio) / webrtc output (audio)

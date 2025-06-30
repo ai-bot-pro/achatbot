@@ -10,6 +10,7 @@ from apipeline.processors.frame_processor import FrameDirection
 
 from src.processors.audio_camera_output_processor import AudioCameraOutputProcessor
 from src.types.network.fastapi_websocket import FastapiWebsocketServerParams
+from src.types.frames.data_frames import AnimationAudioRawFrame
 
 
 class FastapiWebsocketServerOutputProcessor(AudioCameraOutputProcessor):
@@ -57,6 +58,9 @@ class FastapiWebsocketServerOutputProcessor(AudioCameraOutputProcessor):
             self._websocket_audio_buffer = self._websocket_audio_buffer[
                 self._params.audio_frame_size :
             ]
+
+    async def write_animation_audio_frame(self, frame: AnimationAudioRawFrame):
+        await self.send_payload(frame)
 
     async def _write_frame(self, frame: Frame):
         await self.send_payload(frame)
