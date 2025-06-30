@@ -165,7 +165,7 @@ if __name__ == "__main__":
     audio, sample_rate = librosa.load(args.audio_path, sr=16000)
     print(f"{audio=} {sample_rate=} {audio.shape[0]=}")
     context = None
-    input_num = audio.shape[0] // 16000 + 1
+    input_num = (audio.shape[0] + 15999) // 16000
     gap = 16000
     all_exp = []
     for i in tqdm(range(input_num)):
