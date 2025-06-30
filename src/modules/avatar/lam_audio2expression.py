@@ -84,8 +84,9 @@ class LAMAudio2ExpressionAvatar(EngineClass):
         self.infer.model.eval()
         arkit_channel_list_path = os.path.join(ASSETS_DIR, "arkit_face_channels.txt")
         self.arkit_channels.clear()
-        for line in open(arkit_channel_list_path, "r"):
-            self.arkit_channels.append(line.strip())
+        with open(arkit_channel_list_path, "r") as f:
+            for line in f:
+                self.arkit_channels.append(line.strip())
 
         self.warm_up()
 
