@@ -160,7 +160,6 @@ class AIBot(IBot):
         avatar_processor: AvatarProcessorBase | None = None
         # use avatar engine processor
 
-        avatar: EngineClass | None = None
         if self._bot_config.avatar and self._bot_config.avatar.tag:
             if self._bot_config.avatar.tag == "lam_audio2expression_avatar":
                 from src.processors.avatar.lam_audio2expression_avatar_processor import (

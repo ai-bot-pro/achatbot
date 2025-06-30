@@ -12,6 +12,7 @@ from apipeline.pipeline.task import PipelineTask, PipelineParams
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.frames import EndFrame, AudioRawFrame
 from fastapi import FastAPI, WebSocket
+from fastapi.websockets import WebSocketState
 import uvicorn
 import aiohttp
 
@@ -111,7 +112,6 @@ class TestLamAudio2ExpressionBaseProcessor(unittest.IsolatedAsyncioTestCase):
                 audio_sample_rate=self.sr,
             ).__dict__
         )
-        avatar.load()
         self.avatar_processor = LAMAudio2ExpressionAvatarProcessor(avatar)
 
     async def asyncTearDown(self):
@@ -199,7 +199,11 @@ class TestLamAudio2ExpressionFastApiWebsocketProcessor(TestLamAudio2ExpressionBa
 
             # app life end to clear resources
             # clear websocket connection
-            coros = [ws.close() for ws in cls.ws_map.values() if ws.client_state == WebSocketState.CONNECTED]
+            coros = [
+                ws.close()
+                for ws in cls.ws_map.values()
+                if ws.client_state == WebSocketState.CONNECTED
+            ]
             await asyncio.gather(*coros)
             cls.ws_map.clear()
             print(f"websocket connections clear success")
