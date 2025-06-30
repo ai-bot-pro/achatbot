@@ -136,7 +136,7 @@ class AIBot(IBot):
             if self._bot_config.avatar.tag == "lam_audio2expression_avatar":
                 from src.modules.avatar.lam_audio2expression import LAMAudio2ExpressionAvatar
 
-                if self._bot_config.avatar and self._bot_config.avatar.args:
+                if self._bot_config.avatar.args:
                     avatar = LAMAudio2ExpressionAvatar(**self._bot_config.avatar.args)
                 else:
                     avatar = LAMAudio2ExpressionAvatar()
