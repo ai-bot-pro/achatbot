@@ -192,7 +192,26 @@ class AIBot(IBot):
                 avatar = avatar or LiteAvatar()
             return LiteAvatarProcessor(avatar)
 
-    def get_asr_processor(self) -> ASRProcessorBase:
+    def get_asr(self) -> interface.IAsr | EngineClass | None:
+        asr: interface.IAsr | EngineClass | None = None
+        if (
+            self._bot_config.asr
+            and self._bot_config.asr.tag
+            and self._bot_config.asr.tag == "deepgram_asr_processor"
+            and self._bot_config.asr.args
+        ):
+            pass
+        else:
+            if self._bot_config.asr and self._bot_config.asr.tag and self._bot_config.asr.args:
+                asr = ASREnvInit.getEngine(self._bot_config.asr.tag, **self._bot_config.asr.args)
+            else:
+                logging.info("use default asr engine processor")
+                asr = ASREnvInit.initASREngine()
+        return asr
+
+    def get_asr_processor(
+        self, asr: interface.IAsr | EngineClass | None = None
+    ) -> ASRProcessorBase:
         asr_processor: ASRProcessorBase | None = None
         if (
             self._bot_config.asr
@@ -209,12 +228,13 @@ class AIBot(IBot):
             # use asr engine processor
             from src.processors.speech.asr.asr_processor import ASRProcessor
 
-            asr: interface.IAsr | EngineClass | None = None
             if self._bot_config.asr and self._bot_config.asr.tag and self._bot_config.asr.args:
-                asr = ASREnvInit.getEngine(self._bot_config.asr.tag, **self._bot_config.asr.args)
+                asr = asr or ASREnvInit.getEngine(
+                    self._bot_config.asr.tag, **self._bot_config.asr.args
+                )
             else:
                 logging.info("use default asr engine processor")
-                asr = ASREnvInit.initASREngine()
+                asr = asr or ASREnvInit.initASREngine()
                 self._bot_config.asr = ASRConfig(tag=asr.SELECTED_TAG, args=asr.get_args_dict())
             asr_processor = ASRProcessor(asr=asr, session=self.session)
         return asr_processor

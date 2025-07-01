@@ -323,6 +323,11 @@ def import_fastapi_websocket_bots(bot_name: str = "DummyBot"):
 
         return True
 
+    if "SmallWebRTCFastapiWebsocketAvatarChatBot" in bot_name:
+        from .bridge import small_webrtc_fastapi_websocket_avatar_chat_bot
+
+        return True
+
     return False
 
 
@@ -339,6 +344,11 @@ def import_small_webrtc_bots(bot_name: str = "DummyBot"):
 
     if "SmallWebRTCFastapiWebsocketAvatarEchoBot" in bot_name:
         from .bridge import small_webrtc_fastapi_websocket_avatar_echo_bot
+
+        return True
+
+    if "SmallWebRTCFastapiWebsocketAvatarChatBot" in bot_name:
+        from .bridge import small_webrtc_fastapi_websocket_avatar_chat_bot
 
         return True
 

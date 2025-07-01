@@ -13,8 +13,8 @@ tar -xzvf ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar -C ./models/LAM_aud
 git clone --depth 1 https://www.modelscope.cn/AI-ModelScope/wav2vec2-base-960h.git ./models/facebook/wav2vec2-base-960h
 
 ```
-1. run small_webrtc_fastapi_websocket_avatar_echo_bot server:
-- local start bot
+1. local bot
+- run small_webrtc_fastapi_websocket_avatar_echo_bot server:
 ```shell
 python -m src.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve -f config/bots/small_webrtc_fastapi_websocket_avatar_echo_bot.json
 ```
@@ -47,8 +47,70 @@ config/bots/small_webrtc_fastapi_websocket_avatar_echo_bot.json
     }
 }
 ```
+- run small_webrtc_fastapi_websocket_avatar_chat_bot server:
+```shell
+python -m src.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve -f config/bots/small_webrtc_fastapi_websocket_avatar_chat_bot.json
+```
+config/bots/small_webrtc_fastapi_websocket_avatar_chat_bot.json
+```json
+{
+  "chat_bot_name": "SmallWebRTCFastapiWebsocketAvatarChatBot",
+  "handle_sigint": false,
+  "services": {
+    "pipeline": "achatbot",
+    "vad": "silero",
+    "asr": "sense_voice",
+    "llm": "groq",
+    "tts": "edge",
+    "avatar": "lam_audio2expression_avatar"
+  },
+  "config": {
+    "vad": {
+      "tag": "silero_vad_analyzer",
+      "args": {
+        "stop_secs": 0.7
+      }
+    },
+    "asr": {
+      "tag": "sense_voice_asr",
+      "args": {
+        "language": "zn",
+        "model_name_or_path": "./models/FunAudioLLM/SenseVoiceSmall"
+      }
+    },
+    "llm": {
+      "tag": "openai_llm_processor",
+      "base_url": "https://api.together.xyz/v1",
+      "model": "Qwen/Qwen2-72B-Instruct",
+      "language": "zh",
+      "messages": [
+        {
+          "role": "system",
+          "content": "你是一名智能助理。保持回答简短和清晰。请用中文回答。"
+        }
+      ]
+    },
+    "tts": {
+      "tag": "tts_edge",
+      "args": {
+        "voice_name": "zh-CN-YunjianNeural",
+        "language": "zh",
+        "gender": "Male"
+      }
+    },
+    "avatar": {
+      "tag": "lam_audio2expression_avatar",
+      "args": {
+        "weight_path": "./models/LAM_audio2exp/pretrained_models/lam_audio2exp_streaming.tar",
+        "wav2vec_dir": "./models/facebook/wav2vec2-base-960h"
+      }
+    }
+  },
+  "config_list": []
+}
+```
 
-2. run webrtc + websocket voice avatar agent web demo
+1. run webrtc + websocket voice avatar agent web demo
 ```shell
 cd ui/webrtc_websocket/lam_audio2expression_avatar_ts && npm install && npm run dev
 ```
