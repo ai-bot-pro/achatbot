@@ -85,9 +85,14 @@ class AIBot(IBot):
         return self._bot_config
 
     def load(self):
-        # !TODO: load model ckpt when bot start @weedge
-        # when deploy need load model ckpt, then run serve
-        # now just support one person with one bot agent
+        """
+        NOTE:
+        - init modules here
+            # load model ckpt when bot start
+            # when deploy need load model ckpt, then run serve
+        - don't init processor; processor for each connect session
+        have fun :)
+        """
         pass
 
     def run(self):
@@ -125,31 +130,88 @@ class AIBot(IBot):
             vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
         return vad_analyzer
 
-    def get_avatar_processor(self) -> AvatarProcessorBase:
+    def get_avatar(self) -> EngineClass | None:
+        avatar: EngineClass | None = None
+        if self._bot_config.avatar and self._bot_config.avatar.tag:
+            if self._bot_config.avatar.tag == "lam_audio2expression_avatar":
+                from src.modules.avatar.lam_audio2expression import LAMAudio2ExpressionAvatar
+
+                if self._bot_config.avatar.args:
+                    avatar = LAMAudio2ExpressionAvatar(**self._bot_config.avatar.args)
+                else:
+                    avatar = LAMAudio2ExpressionAvatar()
+            else:
+                # TODO: use avatar engine
+                args = self._bot_config.avatar.args or {}
+                avatar = AvatarEnvInit.getEngine(self._bot_config.avatar.tag, **args)
+                raise NotImplementedError("don't support use tag to create avatar engine")
+            avatar.load()
+            return avatar
+        else:
+            from src.modules.avatar.lite_avatar import LiteAvatar
+
+            logging.info("use default lite avatar engine processor")
+            if self._bot_config.avatar and self._bot_config.avatar.args:
+                avatar = LiteAvatar(**self._bot_config.avatar.args)
+            else:
+                avatar = LiteAvatar()
+            avatar.load()
+        return avatar
+
+    def get_avatar_processor(self, avatar=None) -> AvatarProcessorBase:
         avatar_processor: AvatarProcessorBase | None = None
         # use avatar engine processor
 
-        avatar: interface.Iavatar | EngineClass | None = None
         if self._bot_config.avatar and self._bot_config.avatar.tag:
-            # TODO: use avatar engine processor
-            args = self._bot_config.avatar.args or {}
-            avatar = AvatarEnvInit.getEngine(self._bot_config.avatar.tag, **args)
-            _ = avatar
-            raise NotImplementedError("don't support use tag to create avatar engine")
-            return avatar_processor
+            if self._bot_config.avatar.tag == "lam_audio2expression_avatar":
+                from src.processors.avatar.lam_audio2expression_avatar_processor import (
+                    LAMAudio2ExpressionAvatarProcessor,
+                )
+                from src.modules.avatar.lam_audio2expression import LAMAudio2ExpressionAvatar
+
+                if self._bot_config.avatar and self._bot_config.avatar.args:
+                    avatar = avatar or LAMAudio2ExpressionAvatar(**self._bot_config.avatar.args)
+                else:
+                    avatar = avatar or LAMAudio2ExpressionAvatar()
+                return LAMAudio2ExpressionAvatarProcessor(avatar)
+            else:
+                # TODO: use avatar engine processor
+                args = self._bot_config.avatar.args or {}
+                avatar = AvatarEnvInit.getEngine(self._bot_config.avatar.tag, **args)
+                _ = avatar
+                raise NotImplementedError("don't support use tag to create avatar engine")
+                return avatar_processor
         else:
             from src.processors.avatar.lite_avatar_processor import LiteAvatarProcessor
             from src.modules.avatar.lite_avatar import LiteAvatar
 
             logging.info("use default lite avatar engine processor")
             if self._bot_config.avatar and self._bot_config.avatar.args:
-                liteAvatarProcessor = LiteAvatarProcessor(
-                    LiteAvatar(**self._bot_config.avatar.args),
-                )
-                return liteAvatarProcessor
-            return LiteAvatarProcessor(LiteAvatar())
+                avatar = avatar or LiteAvatar(**self._bot_config.avatar.args)
+            else:
+                avatar = avatar or LiteAvatar()
+            return LiteAvatarProcessor(avatar)
 
-    def get_asr_processor(self) -> ASRProcessorBase:
+    def get_asr(self) -> interface.IAsr | EngineClass | None:
+        asr: interface.IAsr | EngineClass | None = None
+        if (
+            self._bot_config.asr
+            and self._bot_config.asr.tag
+            and self._bot_config.asr.tag == "deepgram_asr_processor"
+            and self._bot_config.asr.args
+        ):
+            pass
+        else:
+            if self._bot_config.asr and self._bot_config.asr.tag and self._bot_config.asr.args:
+                asr = ASREnvInit.getEngine(self._bot_config.asr.tag, **self._bot_config.asr.args)
+            else:
+                logging.info("use default asr engine processor")
+                asr = ASREnvInit.initASREngine()
+        return asr
+
+    def get_asr_processor(
+        self, asr: interface.IAsr | EngineClass | None = None
+    ) -> ASRProcessorBase:
         asr_processor: ASRProcessorBase | None = None
         if (
             self._bot_config.asr
@@ -166,12 +228,13 @@ class AIBot(IBot):
             # use asr engine processor
             from src.processors.speech.asr.asr_processor import ASRProcessor
 
-            asr: interface.IAsr | EngineClass | None = None
             if self._bot_config.asr and self._bot_config.asr.tag and self._bot_config.asr.args:
-                asr = ASREnvInit.getEngine(self._bot_config.asr.tag, **self._bot_config.asr.args)
+                asr = asr or ASREnvInit.getEngine(
+                    self._bot_config.asr.tag, **self._bot_config.asr.args
+                )
             else:
                 logging.info("use default asr engine processor")
-                asr = ASREnvInit.initASREngine()
+                asr = asr or ASREnvInit.initASREngine()
                 self._bot_config.asr = ASRConfig(tag=asr.SELECTED_TAG, args=asr.get_args_dict())
             asr_processor = ASRProcessor(asr=asr, session=self.session)
         return asr_processor

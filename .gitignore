@@ -210,3 +210,6 @@ runs
 
 # xml
 *.xml
+
+# avatar
+exp/

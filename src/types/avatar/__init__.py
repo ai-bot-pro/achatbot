@@ -4,8 +4,24 @@ from pydantic import BaseModel
 
 
 class AvatarStatus(Enum):
-    SPEAKING = 0
+    IDEL = 0
     LISTENING = 1
+    THINKING = 2
+    RESPONDING = 3
+    SPEAKING = 4
+
+    def __str__(self) -> str:
+        if self == AvatarStatus.IDEL:
+            return "Idel"
+        if self == AvatarStatus.LISTENING:
+            return "Listening"
+        if self == AvatarStatus.THINKING:
+            return "Thinking"
+        if self == AvatarStatus.RESPONDING:
+            return "Responding"
+        if self == AvatarStatus.SPEAKING:
+            return "Speaking"
+        return self.name
 
 
 class AudioSlice(BaseModel):

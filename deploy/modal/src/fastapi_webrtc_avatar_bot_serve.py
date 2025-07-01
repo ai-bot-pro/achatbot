@@ -1,7 +1,7 @@
 import modal
 import os
 
-achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.18.post0")
+achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.19")
 avatar_tag = os.getenv("AVATAR_TAG", "lite_avatar_gpu")
 image = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
@@ -39,7 +39,6 @@ image = (
             "HF_HUB_ENABLE_HF_TRANSFER": "1",
             "ACHATBOT_PKG": "1",
             "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
-            "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
             # asr module engine TAG, default whisper_timestamped_asr
             "ASR_TAG": "sense_voice_asr",
             "ASR_LANG": "zn",
@@ -71,9 +70,23 @@ if avatar_tag == "musetalk_avatar":
         )
     )
 
+if avatar_tag == "lam_audio2expression_avatar":
+    image = (
+        image.pip_install("spleeter==2.4.2")
+        .pip_install("typing_extensions==4.14.0", "aiortc==1.13.0")
+        .env(
+            {
+                "TRANSPORT": os.getenv("TRANSPORT", "webrtc_websocket"),
+                "CONFIG_FILE": os.getenv(
+                    "CONFIG_FILE", "config/bots/small_webrtc_fastapi_websocket_avatar_echo_bot.json"
+                ),
+            }
+        )
+    )
+
 # image = image.pip_install(
-#    f"achatbot==0.0.18.post15",
-#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+#  f"achatbot==0.0.19.dev1",
+#  extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
 # )
 
 # ----------------------- app -------------------------------
@@ -126,6 +139,14 @@ class Srv:
 
     @modal.asgi_app()
     def app(self):
-        from achatbot.cmd.http.server.fastapi_daily_bot_serve import app as fastapi_app
+        transport = os.getenv("TRANSPORT", "daily")
+        if transport == "webrtc_websocket":
+            from achatbot.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve import (
+                app as fastapi_app,
+            )
 
-        return fastapi_app
+            return fastapi_app
+        else:
+            from achatbot.cmd.http.server.fastapi_daily_bot_serve import app as fastapi_app
+
+            return fastapi_app

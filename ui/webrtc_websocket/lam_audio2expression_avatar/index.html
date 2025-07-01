@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/protobufjs@7.X.X/dist/protobuf.min.js"></script>
+    <title>WebRTC Voice Agent</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        #status {
+            font-size: 20px;
+            margin: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+
+        #visualizer {
+            width: 600px;
+            height: 100px;
+            margin: 20px auto;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+        }
+
+        #wsUrl {
+            resize: both; /* 允许水平和垂直调整 */
+            overflow: auto; /* 允许出现滚动条 */
+            width: 100%; /* 设置宽度为100% */
+            max-width: 600px; /* 设置最大宽度 */
+        }
+    </style>
+</head>
+
+<body>
+    <h1>WebRTC + Websocket Voice Agent</h1>
+    <div style="margin: 20px;">
+        <label for="serverUrl">Server URL:</label>
+        <input type="text" id="serverUrl" value="http://localhost:4321/api/offer" placeholder="例如: https://example.com/api/offer" style="width: 300px; padding: 8px; margin-right: 10px;" />
+    </div>
+    <div style="margin: 20px;">
+        <label for="wsUrl">Websocket URL:</label>
+        <input type="text" id="wsUrl" placeholder="Enter WebSocket URL" value="ws://localhost:4321" style="width: 300px; padding: 8px; margin-right: 10px;" />
+    </div>
+    <p id="status">Disconnected</p>
+    <button id="connect-btn">Connect</button>
+    <audio id="audio-el" autoplay></audio>
+    
+    <div style="margin: 20px; max-width: 600px; margin-left: auto; margin-right: auto;">
+        <div style="display: flex; justify-content: space-between;">
+        </div>
+    </div>
+
+    <script type="module" src="main.js"></script>
+</body>
+
+</html>

@@ -5,9 +5,13 @@ import argparse
 from contextlib import asynccontextmanager
 import traceback
 from typing import Dict
+import json
+from asyncio import TimeoutError
+
 
 from fastapi import FastAPI, WebSocket, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import WebSocketDisconnect
 from dotenv import load_dotenv
 
 from src.cmd.bots.bridge.base import AISmallWebRTCFastapiWebsocketBot
@@ -24,6 +28,7 @@ load_dotenv(override=True)
 Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
 
 run_bot: AISmallWebRTCFastapiWebsocketBot = None
+config = None
 # Store websocket connection
 ws_map: Dict[str, WebSocket] = {}
 # Store rtc connections
@@ -42,7 +47,9 @@ async def lifespan(app: FastAPI):
     global run_bot
     try:
         # load model before running
-        run_bot = await BotLoader.load_bot(config.f, bot_type="fastapi_ws_bot")
+        config_file = config.f if config else os.getenv("CONFIG_FILE")
+        run_bot = await BotLoader.load_bot(config_file, bot_type="fastapi_ws_bot")
+        run_bot.load()
     except Exception as e:
         print(e)
         traceback.print_exc()
@@ -103,8 +110,24 @@ async def handle_offer(request: dict, background_tasks: BackgroundTasks, peer_id
 
         @connection.event_handler("closed")
         async def handle_disconnected(webrtc_connection: SmallWebRTCConnection):
-            logging.info(f"Discarding peer connection for pc_id: {webrtc_connection.pc_id}")
-            pcs_map.pop(webrtc_connection.pc_id, None)
+            pc_id = webrtc_connection.pc_id
+            logging.info(f"Discarding peer connection for pc_id: {pc_id}")
+
+            # Remove from pcs_map
+            pcs_map.pop(pc_id, None)
+
+            # Close associated websocket if it exists
+            if pc_id in ws_map:
+                try:
+                    ws = ws_map[pc_id]
+                    if ws.state == "OPEN":
+                        await ws.close(code=1000, reason="WebRTC connection closed")
+                    ws_map.pop(pc_id, None)
+                    logging.info(
+                        f"Closed websocket for peer_id: {pc_id} due to WebRTC disconnection"
+                    )
+                except Exception as e:
+                    logging.error(f"Error closing websocket for {pc_id}: {str(e)}")
 
         # run_bot.set_webrtc_connection(connection)
         # run_bot.set_fastapi_websocket(ws_map[pc_id])
@@ -117,6 +140,10 @@ async def handle_offer(request: dict, background_tasks: BackgroundTasks, peer_id
     pcs_map[pc_id] = connection
 
     return answer
+
+
+# 添加心跳超时设置
+HEARTBEAT_TIMEOUT = 35  # 35 seconds (slightly longer than client's 30-second interval)
 
 
 @app.websocket("/{peer_id}")
@@ -132,11 +159,62 @@ async def websocket_endpoint(websocket: WebSocket, peer_id: str):
         await websocket.accept()
         ws_map[peer_id] = websocket
         logging.info(f"accept {peer_id=} client: {websocket.client}")
+
+        # Set up the WebRTC connection
         run_bot.set_webrtc_connection(pcs_map[peer_id])
         run_bot.set_fastapi_websocket(websocket)
-        await run_bot.async_run()
+
+        # Start the main bot task
+        bot_task = asyncio.create_task(run_bot.async_run())
+
+        # Start the heartbeat monitoring loop
+        last_heartbeat = asyncio.get_event_loop().time()
+
+        try:
+            while True:
+                try:
+                    # Wait for a message with timeout
+                    message = await asyncio.wait_for(
+                        websocket.receive_text(), timeout=HEARTBEAT_TIMEOUT
+                    )
+
+                    try:
+                        data = json.loads(message)
+                        if data.get("type") == "ping":
+                            # Respond to heartbeat
+                            await websocket.send_text(json.dumps({"type": "pong"}))
+                            last_heartbeat = asyncio.get_event_loop().time()
+                            continue
+                    except json.JSONDecodeError:
+                        # Not a JSON message, ignore
+                        pass
+
+                except TimeoutError:
+                    # Check if we've exceeded the heartbeat timeout
+                    if asyncio.get_event_loop().time() - last_heartbeat > HEARTBEAT_TIMEOUT:
+                        logging.warning(f"Heartbeat timeout for peer {peer_id}")
+                        break
+                    continue
+                except WebSocketDisconnect:
+                    logging.info(f"Client {peer_id} disconnected")
+                    break
+
+        finally:
+            # Clean up
+            if peer_id in ws_map:
+                del ws_map[peer_id]
+            if not bot_task.done():
+                bot_task.cancel()
+                try:
+                    await bot_task
+                except asyncio.CancelledError:
+                    pass
+            logging.info(f"WebSocket connection closed for peer {peer_id}")
+
     except Exception as e:
-        logging.error(e, exc_info=True)
+        logging.error(f"Error in websocket endpoint: {str(e)}", exc_info=True)
+        if peer_id in ws_map:
+            del ws_map[peer_id]
 
 
 """
