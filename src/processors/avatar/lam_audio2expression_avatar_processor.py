@@ -3,6 +3,7 @@ import logging
 from typing import AsyncGenerator, cast
 import asyncio
 
+from apipeline.processors.frame_processor import FrameDirection
 from apipeline.frames import Frame, StartFrame, EndFrame, CancelFrame
 import numpy as np
 
@@ -12,6 +13,12 @@ from src.processors.avatar.base import AvatarProcessorBase, SegmentedAvatarProce
 from src.processors.avatar.help.speech_audio_slicer import SpeechAudioSlicer
 from src.types.frames import AudioRawFrame, AnimationAudioRawFrame
 from src.common.utils.audio_utils import bytes2NpArrayWith16
+from src.types.frames.control_frames import (
+    UserStartedSpeakingFrame,
+    UserStoppedSpeakingFrame,
+    TTSStartedFrame,
+    TTSStoppedFrame,
+)
 
 
 # class LAMAudio2ExpressionAvatarProcessor(AvatarProcessorBase):
@@ -75,6 +82,38 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
             self._audio2expression_task = None
         logging.info("avatar processor stopped")
 
+    async def process_frame(self, frame: Frame, direction: FrameDirection):
+        await super().process_frame(frame, direction)
+
+        if isinstance(frame, UserStartedSpeakingFrame):
+            await self.queue_frame(
+                AnimationAudioRawFrame(
+                    audio=b"",
+                    avatar_status=str(AvatarStatus.LISTENING),
+                )
+            )
+        elif isinstance(frame, UserStoppedSpeakingFrame):
+            await self.queue_frame(
+                AnimationAudioRawFrame(
+                    audio=b"",
+                    avatar_status=str(AvatarStatus.THINKING),
+                )
+            )
+        if isinstance(frame, TTSStartedFrame):
+            await self.queue_frame(
+                AnimationAudioRawFrame(
+                    audio=b"",
+                    avatar_status=str(AvatarStatus.RESPONDING),
+                )
+            )
+        elif isinstance(frame, TTSStoppedFrame):
+            await self.queue_frame(
+                AnimationAudioRawFrame(
+                    audio=b"",
+                    avatar_status=str(AvatarStatus.LISTENING),
+                )
+            )
+
     async def run_avatar(self, frame: AudioRawFrame) -> AsyncGenerator[Frame, None]:
         await self._add_audio(
             SpeechAudio(
@@ -101,6 +140,7 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
         audio_slice = None
         target_round_time = 0.9
         inference_context = None
+        get_data_time = time.time()
         while self._session_running:
             start_time = time.time()
             try:
@@ -111,6 +151,7 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
                     f"audio2expression input audio durtaion {audio_slice.get_audio_duration()}"
                 )
 
+                get_data_time = time.time()
                 target_round_time = audio_slice.get_audio_duration() - 0.1
 
                 np_audio = bytes2NpArrayWith16(audio_slice.algo_audio_data)
@@ -145,6 +186,13 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
                 logging.warning("audio2expression_loop task cancelled")
                 break
             except asyncio.TimeoutError:
+                if time.time() - get_data_time > 1:
+                    await self.queue_frame(
+                        AnimationAudioRawFrame(
+                            audio=b"",
+                            avatar_status=str(AvatarStatus.RESPONDING),
+                        )
+                    )
                 continue
             except Exception as e:
                 logging.exception(f"audio2expression_loop task error: {e}")

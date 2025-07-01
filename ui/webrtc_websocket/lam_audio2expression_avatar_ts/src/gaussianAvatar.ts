@@ -33,6 +33,7 @@ export class GaussianAvatar {
       },
     );
     this.startTime = performance.now() / 1000;
+    /*
     setTimeout(() => {
       this.curState = "Listening"
     }, 5000);
@@ -42,7 +43,13 @@ export class GaussianAvatar {
     setTimeout(() => {
       this.curState = "Responding"
     }, 10000);
+    */
+  }
 
+  public updateAvatarStatus(status: string) {
+    if (status) {
+      this.curState = status;
+    }
   }
 
   expressitionData: any;

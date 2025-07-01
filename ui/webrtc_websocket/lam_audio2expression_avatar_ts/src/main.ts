@@ -65,6 +65,9 @@ const _onDisconnected = (): void => {
         buttonEl.textContent = "WebRTC Connect";
     }
     rtc_connected = false;
+    ws_connected = false;
+    // gaussianAvatar render speaking -> Idle have some bug :)
+    gaussianAvatar.updateAvatarStatus("Idle");
 };
 
 const _onWSOpening = (): void => {
@@ -94,6 +97,8 @@ const _onWSClose = (): void => {
         buttonEl.textContent = "WebSocket Connect";
     }
     ws_connected = false;
+    // gaussianAvatar render speaking -> Idle have some bug :)
+    gaussianAvatar.updateAvatarStatus("Idle");
 };
 
 const _onTrack = (e: RTCTrackEvent): void => {

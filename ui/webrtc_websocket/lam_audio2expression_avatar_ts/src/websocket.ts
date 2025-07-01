@@ -190,13 +190,29 @@ function enqueueAudioFromProto(arrayBuffer: ArrayBuffer): boolean {
         return false;
     }
 
-    const animationJsonStr = parsedFrame.animationAudio.animationJson;
+    const avatarStatus = parsedFrame.animationAudio?.avatarStatus;
+    console.log("avatarStatus:", avatarStatus);
+    // 将avatarStatus数据传递给GaussianAvatar实例
+    if (avatarInstance && avatarStatus) {
+        avatarInstance.updateAvatarStatus(avatarStatus);
+    }
+
+    const animationJsonStr = parsedFrame.animationAudio?.animationJson;
+    if (animationJsonStr == null || animationJsonStr.length == 0 || animationJsonStr == "{}" || animationJsonStr == "[]") {
+        // no animation, return 
+        return true;
+    }
+
     const animationJson = JSON.parse(animationJsonStr);
     console.log("Animation JSON:", animationJson);
-
     // 将animationJson数据传递给GaussianAvatar实例
     if (avatarInstance) {
         avatarInstance.updateAnimationData(animationJson);
+    }
+
+    if (parsedFrame.animationAudio.audio.length == 0) {
+        // no audio,return 
+        return true;
     }
 
     // Reset play time if it's been a while we haven't played anything.
