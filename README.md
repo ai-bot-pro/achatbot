@@ -228,7 +228,7 @@ bash scripts/pypi_achatbot.sh dev
 pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
 ```
 
-## run locat lite avatar chat bot
+## run local lite avatar chat bot
 
 ```shell
 # install dependencies (replace $version) (if use cpu(default) install lite_avatar)
@@ -248,7 +248,7 @@ python -m src.cmd.bots.main -f config/bots/daily_liteavatar_chat_bot.json
 
 More details: https://github.com/ai-bot-pro/achatbot/pull/161
 
-## run locat lam_audio2expression avatar chat bot
+## run local lam_audio2expression avatar chat bot
 
 ```shell
 # install dependencies (replace $version) 
