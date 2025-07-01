@@ -50,9 +50,9 @@ config/bots/small_webrtc_fastapi_websocket_avatar_echo_bot.json
 
 2. run webrtc + websocket voice avatar agent web demo
 ```shell
-cd ui/webrtc_websocket/lam_audio2expression_avatar && python -m http.server
+cd ui/webrtc_websocket/lam_audio2expression_avatar_ts && npm install && npm run dev
 ```
-access http://localhost:8000/  to click `Connect` to chat with bot
+access http://localhost:5173/ to click `Connect` to chat with bot
 
 
 # references
