@@ -232,9 +232,9 @@ pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
 
 ```shell
 # install dependencies (replace $version) (if use cpu(default) install lite_avatar)
-pip install "dist/achatbot-{$version}-py3-none-any.whl["fastapi_bot_server,livekit,livekit-api,daily,agora,silero_vad_analyzer,sense_voice_asr,openai_llm_processor,google_llm_processor,litellm_processor,together_ai,tts_edge,lite_avatar"]
+pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server,livekit,livekit-api,daily,agora,silero_vad_analyzer,sense_voice_asr,openai_llm_processor,google_llm_processor,litellm_processor,together_ai,tts_edge,lite_avatar]"
 # install dependencies (replace $version) (if use gpu(cuda) install lite_avatar_gpu)
-pip install "dist/achatbot-{$version}-py3-none-any.whl["fastapi_bot_server,livekit,livekit-api,daily,agora,silero_vad_analyzer,sense_voice_asr,openai_llm_processor,google_llm_processor,litellm_processor,together_ai,tts_edge,lite_avatar_gpu"]
+pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server,livekit,livekit-api,daily,agora,silero_vad_analyzer,sense_voice_asr,openai_llm_processor,google_llm_processor,litellm_processor,together_ai,tts_edge,lite_avatar_gpu]"
 
 # download model weights
 huggingface-cli download weege007/liteavatar --local-dir ./models/weege007/liteavatar
@@ -247,6 +247,28 @@ python -m src.cmd.bots.main -f config/bots/daily_liteavatar_chat_bot.json
 ```
 
 More details: https://github.com/ai-bot-pro/achatbot/pull/161
+
+## run locat lam_audio2expression avatar chat bot
+
+```shell
+# install dependencies (replace $version) (if use cpu(default) install lite_avatar)
+pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server,webrtc,silero_vad_analyzer,sense_voice_asr,openai_llm_processor,google_llm_processor,litellm_processor,together_ai,tts_edge,lam_audio2expression_avatar]"
+
+# download model weights
+wget https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LAM/LAM_audio2exp_streaming.tar -P ./models/LAM_audio2exp/
+tar -xzvf ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar -C ./models/LAM_audio2exp && rm ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar
+git clone --depth 1 https://www.modelscope.cn/AI-ModelScope/wav2vec2-base-960h.git ./models/facebook/wav2vec2-base-960h
+
+# run local lam_audio2expression-avatar chat bot
+python -m src.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve -f config/bots/small_webrtc_fastapi_websocket_avatar_echo_bot.json
+python -m src.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve -f config/bots/small_webrtc_fastapi_websocket_avatar_chat_bot.json
+
+# run webrtc + websocket voice avatar agent web demo
+cd ui/webrtc_websocket/lam_audio2expression_avatar_ts && npm install && npm run dev
+
+```
+
+More details: https://github.com/ai-bot-pro/achatbot/pull/164
 
 #  Run chat bots
 

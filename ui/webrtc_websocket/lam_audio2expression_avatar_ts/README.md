@@ -110,7 +110,7 @@ config/bots/small_webrtc_fastapi_websocket_avatar_chat_bot.json
 }
 ```
 
-1. run webrtc + websocket voice avatar agent web demo
+2. run webrtc + websocket voice avatar agent web demo
 ```shell
 cd ui/webrtc_websocket/lam_audio2expression_avatar_ts && npm install && npm run dev
 ```
