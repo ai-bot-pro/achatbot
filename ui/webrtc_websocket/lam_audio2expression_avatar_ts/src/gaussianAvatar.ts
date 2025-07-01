@@ -1,8 +1,7 @@
 import * as GaussianSplats3D from "gaussian-splat-renderer-for-lam"
-//import bsData from "../asset/test_expression_1s.json"
-import bsData from "../asset/asr_example_expression.json"
 
 export class GaussianAvatar {
+  private _currentAnimationData: any = null;
   private _avatarDivEle: HTMLDivElement;
   private _assetsPath = "";
   public curState = "Idle";
@@ -47,23 +46,38 @@ export class GaussianAvatar {
   }
 
   expressitionData: any;
-  startTime = 0
+  startTime = 0;
+  private _lastAnimationTime = 0;
+
   public getChatState() {
     return this.curState;
   }
-  public getArkitFaceFrame() {
-    const length = bsData["frames"].length
 
+  public updateAnimationData(animationJson: any) {
+    this._currentAnimationData = animationJson;
+    this._lastAnimationTime = performance.now() / 1000;
+  }
+
+  public getArkitFaceFrame() {
+    if (!this._currentAnimationData) {
+      return {};
+    }
+
+    const length = this._currentAnimationData["frames"].length;
     const frameInfoInternal = 1.0 / 30.0;
     const currentTime = performance.now() / 1000;
-    const calcDelta = (currentTime - this.startTime) % (length * frameInfoInternal);
-    const frameIndex = Math.floor(calcDelta / frameInfoInternal)
+    const calcDelta = (currentTime - this._lastAnimationTime) % (length * frameInfoInternal);
+    const frameIndex = Math.floor(calcDelta / frameInfoInternal);
+
+    if (frameIndex >= length) {
+      return {};
+    }
+
     this.expressitionData = {};
+    this._currentAnimationData["names"].forEach((name: string, index: number) => {
+      this.expressitionData[name] = this._currentAnimationData["frames"][frameIndex]["weights"][index];
+    });
 
-
-    bsData["names"].forEach((name: string, index: number) => {
-      this.expressitionData[name] = bsData["frames"][frameIndex]["weights"][index]
-    })
     return this.expressitionData;
   }
 }

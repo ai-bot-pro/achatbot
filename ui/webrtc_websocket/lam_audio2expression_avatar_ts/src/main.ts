@@ -10,6 +10,9 @@ const div = document.getElementById('LAM_WebRender');
 const gaussianAvatar = new GaussianAvatar(div as HTMLDivElement, assetPath);
 gaussianAvatar.start();
 
+// 将GaussianAvatar实例传递给websocket模块
+WebSocket.setAvatarInstance(gaussianAvatar);
+
 const audioEl = document.getElementById("audio-el") as HTMLAudioElement;
 const statusEl = document.getElementById("status") as HTMLElement;
 const buttonEl = document.getElementById("connect-btn") as HTMLButtonElement;

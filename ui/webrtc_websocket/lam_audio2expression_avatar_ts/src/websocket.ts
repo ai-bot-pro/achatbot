@@ -1,6 +1,15 @@
 import * as protobuf from 'protobufjs';
+import { json } from 'stream/consumers';
+import { GaussianAvatar } from './gaussianAvatar';
 
 export const SAMPLE_RATE = 16000;
+// 全局变量，用于存储GaussianAvatar实例的引用
+let avatarInstance: GaussianAvatar | null = null;
+
+// 设置GaussianAvatar实例的方法
+export function setAvatarInstance(avatar: GaussianAvatar): void {
+    avatarInstance = avatar;
+}
 export const SAMPLE_WIDTH = 2;
 export const NUM_CHANNELS = 1;
 
@@ -10,6 +19,11 @@ const PLAY_TIME_RESET_THRESHOLD_MS = 1;
 interface Frame {
     animationAudio?: {
         audio: Uint8Array;
+        sampleRate: number;
+        numChannels: number;
+        sampleWidth: number;
+        animationJson: string;
+        avatarStatus: string;
     };
 }
 
@@ -174,6 +188,15 @@ function enqueueAudioFromProto(arrayBuffer: ArrayBuffer): boolean {
     const parsedFrame = Frame.decode(new Uint8Array(arrayBuffer)) as Frame;
     if (!parsedFrame?.animationAudio) {
         return false;
+    }
+
+    const animationJsonStr = parsedFrame.animationAudio.animationJson;
+    const animationJson = JSON.parse(animationJsonStr);
+    console.log("Animation JSON:", animationJson);
+
+    // 将animationJson数据传递给GaussianAvatar实例
+    if (avatarInstance) {
+        avatarInstance.updateAnimationData(animationJson);
     }
 
     // Reset play time if it's been a while we haven't played anything.
