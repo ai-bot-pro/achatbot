@@ -19,8 +19,6 @@ import aiohttp
 from src.common.utils.wav import read_wav_to_bytes
 from src.common.logger import Logger
 from src.common.types import TEST_DIR, MODELS_DIR
-from src.transports.daily import DailyTransport
-from src.common.types import DailyParams
 from src.types.frames.control_frames import (
     AvatarArgsUpdateFrame,
     AvatarLanguageUpdateFrame,
@@ -141,6 +139,9 @@ class TestLamAudio2ExpressionProcessor(TestLamAudio2ExpressionBaseProcessor):
         cls.room_url = os.getenv("DAILY_ROOM_URL", "https://weedge.daily.co/chat-room")
 
     async def asyncSetUp(self):
+        from src.transports.daily import DailyTransport
+        from src.common.types import DailyParams
+
         await super().asyncSetUp()
         bot_name = "avatar-bot"
         transport = DailyTransport(

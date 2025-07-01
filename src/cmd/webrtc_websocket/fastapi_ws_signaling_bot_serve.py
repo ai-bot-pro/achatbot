@@ -28,6 +28,7 @@ load_dotenv(override=True)
 Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
 
 run_bot: AISmallWebRTCFastapiWebsocketBot = None
+config = None
 # Store websocket connection
 ws_map: Dict[str, WebSocket] = {}
 # Store rtc connections
@@ -46,7 +47,8 @@ async def lifespan(app: FastAPI):
     global run_bot
     try:
         # load model before running
-        run_bot = await BotLoader.load_bot(config.f, bot_type="fastapi_ws_bot")
+        config_file = config.f if config else os.getenv("CONFIG_FILE")
+        run_bot = await BotLoader.load_bot(config_file, bot_type="fastapi_ws_bot")
         run_bot.load()
     except Exception as e:
         print(e)

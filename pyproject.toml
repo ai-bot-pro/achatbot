@@ -654,15 +654,15 @@ musetalk_avatar = [
     "achatbot[conf,opencv,einops,librosa,soundfile]",
 ]
 lam_audio2expression_avatar = [
-    "spleeter==2.4.2",
-    "opencv_python_headless==4.11.0.86",
-    "omegaconf==2.3.0",
+    #"spleeter==2.4.2",
+    "opencv_python_headless",
+    "omegaconf",
     "addict==2.4.0",
     "yapf==0.40.1",
-    "transformers==4.36.2",
-    "termcolor==3.0.1",
-    #"numpy==1.26.3",
-    "achatbot[librosa]",
+    "librosa",
+    "termcolor",
+    "numpy==1.24.3",
+    "protobuf==5.29.4",
 ]
 
 # asr

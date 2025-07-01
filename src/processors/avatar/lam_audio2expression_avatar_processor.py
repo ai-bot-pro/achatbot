@@ -150,6 +150,8 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
                 logging.info(
                     f"audio2expression input audio durtaion {audio_slice.get_audio_duration()}"
                 )
+                if self._avatar.infer is None:
+                    continue
 
                 get_data_time = time.time()
                 target_round_time = audio_slice.get_audio_duration() - 0.1

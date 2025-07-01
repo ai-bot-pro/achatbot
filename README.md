@@ -251,13 +251,16 @@ More details: https://github.com/ai-bot-pro/achatbot/pull/161
 ## run locat lam_audio2expression avatar chat bot
 
 ```shell
-# install dependencies (replace $version) (if use cpu(default) install lite_avatar)
-pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server,webrtc,silero_vad_analyzer,sense_voice_asr,openai_llm_processor,google_llm_processor,litellm_processor,together_ai,tts_edge,lam_audio2expression_avatar]"
+# install dependencies (replace $version) 
+pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server,silero_vad_analyzer,sense_voice_asr,openai_llm_processor,google_llm_processor,litellm_processor,together_ai,tts_edge,lam_audio2expression_avatar]"
+pip install spleeter==2.4.2
+pip install typing_extensions==4.14.0 aiortc==1.13.0
 
 # download model weights
 wget https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LAM/LAM_audio2exp_streaming.tar -P ./models/LAM_audio2exp/
 tar -xzvf ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar -C ./models/LAM_audio2exp && rm ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar
 git clone --depth 1 https://www.modelscope.cn/AI-ModelScope/wav2vec2-base-960h.git ./models/facebook/wav2vec2-base-960h
+huggingface-cli download FunAudioLLM/SenseVoiceSmall  --local-dir ./models/FunAudioLLM/SenseVoiceSmall
 
 # run local lam_audio2expression-avatar chat bot
 python -m src.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve -f config/bots/small_webrtc_fastapi_websocket_avatar_echo_bot.json
