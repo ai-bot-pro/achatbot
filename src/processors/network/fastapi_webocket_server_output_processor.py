@@ -60,6 +60,17 @@ class FastapiWebsocketServerOutputProcessor(AudioCameraOutputProcessor):
             ]
 
     async def write_animation_audio_frame(self, frame: AnimationAudioRawFrame):
+        if self._params.add_wav_header:
+            content = io.BytesIO()
+            ww = wave.open(content, "wb")
+            ww.setsampwidth(frame.sample_width)
+            ww.setnchannels(frame.num_channels)
+            ww.setframerate(frame.sample_rate)
+            ww.writeframes(frame.audio)
+            ww.close()
+            content.seek(0)
+            frame.audio = content.read()
+
         await self.send_payload(frame)
 
     async def _write_frame(self, frame: Frame):

@@ -64,11 +64,11 @@ class SmallWebRTCFastapiWebsocketAvatarEchoBot(AISmallWebRTCFastapiWebsocketBot)
         params = FastapiWebsocketServerParams(
             audio_in_enabled=False,
             audio_out_enabled=True,
-            add_wav_header=True,
             vad_enabled=True,
             vad_analyzer=self.vad_analyzer,
             vad_audio_passthrough=True,
             transcription_enabled=False,
+            add_wav_header=True,
             audio_frame_size=6400,  # output 200ms with 16K hz 1 channel 2 sample_width
         )
         if (

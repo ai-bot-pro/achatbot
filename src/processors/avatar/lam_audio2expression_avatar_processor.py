@@ -33,8 +33,8 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
         # audio input slice
         self._speech_audio_slicer: SpeechAudioSlicer = None
 
-        # load avatar
-        self._avatar.load()
+        # don't to load avatar, outside to load, processor just to run with session
+        # self._avatar.load()
 
     async def start(self, frame: StartFrame):
         await super().start(frame)

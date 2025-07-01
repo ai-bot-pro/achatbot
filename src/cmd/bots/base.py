@@ -145,6 +145,7 @@ class AIBot(IBot):
                 args = self._bot_config.avatar.args or {}
                 avatar = AvatarEnvInit.getEngine(self._bot_config.avatar.tag, **args)
                 raise NotImplementedError("don't support use tag to create avatar engine")
+            avatar.load()
             return avatar
         else:
             from src.modules.avatar.lite_avatar import LiteAvatar
@@ -154,6 +155,7 @@ class AIBot(IBot):
                 avatar = LiteAvatar(**self._bot_config.avatar.args)
             else:
                 avatar = LiteAvatar()
+            avatar.load()
         return avatar
 
     def get_avatar_processor(self, avatar=None) -> AvatarProcessorBase:

@@ -7,7 +7,8 @@ const buttonEl = document.getElementById("connect-btn");
 const serverUrl = document.getElementById("serverUrl");
 const wsUrl = document.getElementById("wsUrl");
 
-let connected = false;
+let rtc_connected = false;
+let ws_connected = false;
 let peerConnection = null;
 
 function generateShortUUID() {
@@ -21,21 +22,59 @@ function generateShortUUID() {
   return result;
 }
 const _onConnecting = () => {
-  statusEl.textContent = "Connecting";
-  buttonEl.textContent = "Disconnect";
-  connected = true;
+  statusEl.textContent = "WebRTC Connecting";
+  buttonEl.textContent = "WebRTC Disconnect";
+  rtc_connected = false;
 };
 
 const _onConnected = () => {
-  statusEl.textContent = "Connected, Please talk with chatbot";
-  buttonEl.textContent = "Disconnect";
-  connected = true;
+  if (!ws_connected) {
+    statusEl.textContent = "WebRTC Connected, wait WebsScket connection";
+    buttonEl.textContent = "WebRTC Disconnect";
+  } else {
+    statusEl.textContent =
+      "WebRTC/WebSocket Connected, Please talk with chatbot";
+    buttonEl.textContent = "Disconnect";
+  }
+  rtc_connected = true;
 };
 
 const _onDisconnected = () => {
-  statusEl.textContent = "Disconnected";
-  buttonEl.textContent = "Connect";
-  connected = false;
+  if (!ws_connected) {
+    statusEl.textContent = "Disconnected";
+    buttonEl.textContent = "Connect";
+  } else {
+    statusEl.textContent = "WebRTC Disconnected";
+    buttonEl.textContent = "WebRTC Connect";
+  }
+  rtc_connected = false;
+};
+
+const _onWSOpening = () => {
+  statusEl.textContent = "WebSocket Connecting";
+  buttonEl.textContent = "WebSocket Disconnect";
+  rtc_connected = false;
+};
+const _onWSOpen = () => {
+  if (!rtc_connected) {
+    statusEl.textContent = "WebsScket Connected, wait WebRTC connection";
+    buttonEl.textContent = "WebSocket Disconnect";
+  } else {
+    statusEl.textContent =
+      "WebRTC/WebSocket Connected, Please talk with chatbot";
+    buttonEl.textContent = "Disconnect";
+  }
+  ws_connected = true;
+};
+const _onWSClose = () => {
+  if (!rtc_connected) {
+    statusEl.textContent = "Disconnected";
+    buttonEl.textContent = "Connect";
+  } else {
+    statusEl.textContent = "WebSocket Disconnected";
+    buttonEl.textContent = "WebSocket Connect";
+  }
+  ws_connected = false;
 };
 
 const _onTrack = (e) => {
@@ -72,24 +111,30 @@ const connect = async () => {
     _onTrack
   );
 
+  _onWSOpening();
   // connect websocket
-  WebSocket.startAudio(wsUrl.value + "/" + peerID);
+  WebSocket.startAudio(wsUrl.value + "/" + peerID, _onWSOpen, _onWSClose);
 };
 
 const disconnect = () => {
-  if (!peerConnection) {
-    return;
+  if (rtc_connected) {
+    _onDisconnected();
   }
-  peerConnection.close();
-  peerConnection = null;
+  if (peerConnection) {
+    peerConnection.close();
+    peerConnection = null;
+  }
 
-  WebSocket.stopAudio();
-
-  _onDisconnected();
+  if (ws_connected) {
+    WebSocket.stopAudio();
+    _onWSClose();
+  }
+  statusEl.textContent = "Disconnected";
+  buttonEl.textContent = "Connect";
 };
 
 buttonEl.addEventListener("click", async () => {
-  if (!connected) {
+  if (!rtc_connected && !ws_connected) {
     await connect();
   } else {
     disconnect();
