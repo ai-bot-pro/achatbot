@@ -110,7 +110,7 @@ async def handle_ice_candidate(candidate: dict, peer_id: str):
         pending_candidates[peer_id].append(candidate)
     else:
         if len(pending_candidates[peer_id]) > 0:
-            [await pcs_map[peer_id].add_ice_candidate(c) for c in pending_candidates[peer_id]]
+            await asyncio.gather(*(pcs_map[peer_id].add_ice_candidate(c) for c in pending_candidates[peer_id]))
             pending_candidates[peer_id] = []
         await pcs_map[peer_id].add_ice_candidate(candidate)
 
