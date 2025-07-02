@@ -100,11 +100,11 @@ torch_cache_vol = modal.Volume.from_name("torch_cache", create_if_missing=True)
     image=ContainerRuntimeConfig.get_img(),
     secrets=[modal.Secret.from_name("achatbot")],
     volumes={ASSETS_DIR: assets_dir, HF_MODEL_DIR: hf_model_vol, TORCH_CACHE_DIR: torch_cache_vol},
-    allow_concurrent_inputs=ContainerRuntimeConfig.get_allow_concurrent_inputs(),
     cpu=2.0,
     timeout=1200,  # default 300s
     scaledown_window=1200,
 )
+@modal.concurrent(max_inputs=int(os.getenv("IMAGE_CONCURRENT_CN", "1")))  # inputs per container
 class Srv:
     @modal.enter()
     def enter(self):

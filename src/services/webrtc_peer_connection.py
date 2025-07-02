@@ -15,6 +15,7 @@ from src.common.event import EventHandlerManager
 try:
     from aiortc.rtcdatachannel import RTCDataChannel
     from aiortc.rtcrtpreceiver import RemoteStreamTrack
+    from aiortc.sdp import candidate_from_sdp
     from aiortc import (
         AudioStreamTrack,
         VideoStreamTrack,
@@ -23,6 +24,7 @@ try:
         RTCIceServer,
         RTCPeerConnection,
         RTCSessionDescription,
+        RTCIceCandidate,
     )
     from av import AudioFrame, VideoFrame
     from av.frame import Frame
@@ -530,3 +532,12 @@ class SmallWebRTCConnection(EventHandlerManager):
                 )()
                 if track:
                     track.set_enabled(signalling_message.enabled)
+
+    async def add_ice_candidate(self, candidate: dict):
+        if candidate is None:
+            return
+
+        ice_candidate: RTCIceCandidate = candidate_from_sdp(candidate.get("candidate_sdp"))
+        ice_candidate.sdpMid = candidate.get("sdpMid")
+        ice_candidate.sdpMLineIndex = candidate.get("sdpMLineIndex")
+        await self._pc.addIceCandidate(ice_candidate)

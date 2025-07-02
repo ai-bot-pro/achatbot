@@ -88,8 +88,8 @@ app = modal.App("fastapi_webrtc_glm_voice_bot")
     cpu=2.0,
     scaledown_window=300,
     timeout=600,
-    allow_concurrent_inputs=ContainerRuntimeConfig.get_allow_concurrent_inputs(),
 )
+@modal.concurrent(max_inputs=int(os.getenv("IMAGE_CONCURRENT_CN", "1")))  # inputs per container
 class Srv:
     @modal.build()
     def setup(self):
