@@ -184,8 +184,7 @@ const ice_candidate = async (
     signalingServerUrl: string,
     iceCandidate: Record<string, unknown>,
 ): Promise<void> => {
-    let serverUrl = signalingServerUrl.trim();
-    serverUrl = serverUrl + "/api/ice_candidate/" + peerID;
+    const serverUrl = new URL(`/api/ice_candidate/${peerID}`, signalingServerUrl.trim()).toString();
     console.log("ice_candidate api:", serverUrl);
     const response = await fetch(serverUrl, {
         body: JSON.stringify(iceCandidate),
