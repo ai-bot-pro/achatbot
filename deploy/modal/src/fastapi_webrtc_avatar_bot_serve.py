@@ -104,7 +104,7 @@ RESOURCES_DIR = "/root/.achatbot/resources"
 resources_vol = modal.Volume.from_name("resources", create_if_missing=True)
 ASSETS_DIR = "/root/.achatbot/assets"
 assets_vol = modal.Volume.from_name("assets", create_if_missing=True)
-CONIFG_DIR = "/root/.achatbot/config"
+CONFIG_DIR = "/root/.achatbot/config"
 config_vol = modal.Volume.from_name("config", create_if_missing=True)
 TORCH_CACHE_DIR = "/root/.cache/torch"
 torch_cache_vol = modal.Volume.from_name("torch_cache", create_if_missing=True)
@@ -119,7 +119,7 @@ torch_cache_vol = modal.Volume.from_name("torch_cache", create_if_missing=True)
         HF_MODEL_DIR: hf_model_vol,
         RESOURCES_DIR: resources_vol,
         ASSETS_DIR: assets_vol,
-        CONIFG_DIR: config_vol,
+        CONFIG_DIR: config_vol,
         TORCH_CACHE_DIR: torch_cache_vol,
     },
     cpu=4.0,
