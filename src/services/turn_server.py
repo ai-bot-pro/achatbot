@@ -3,8 +3,8 @@ import aiohttp
 
 
 async def get_cloudflare_turn_servers(ttl=86400):
-    auth_token = os.environ["CLOUDFLARE_TURN_API_TOKEN"]
-    key_id = os.environ["CLOUDFLARE_TURN_TOKEN"]
+    auth_token = os.environ.get("CLOUDFLARE_TURN_API_TOKEN")
+    key_id = os.environ.get("CLOUDFLARE_TURN_TOKEN")
     url = f"https://rtc.live.cloudflare.com/v1/turn/keys/{key_id}/credentials/generate-ice-servers"
 
     headers = {"Authorization": f"Bearer {auth_token}", "Content-Type": "application/json"}
