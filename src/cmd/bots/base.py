@@ -4,7 +4,7 @@ import asyncio
 import sys
 import uuid
 
-from apipeline.frames.control_frames import EndFrame
+from apipeline.frames import EndFrame, CancelFrame
 from apipeline.pipeline.task import PipelineTask
 
 from src.processors.omni.base import VisionVoiceProcessorBase
@@ -104,11 +104,13 @@ class AIBot(IBot):
         except asyncio.CancelledError:
             logging.info("CancelledError, Exiting!")
             if self.task is not None:
-                await self.task.queue_frame(EndFrame())
+                logging.info("Cancelling task!")
+                await self.task.queue_frame(CancelFrame())
         except KeyboardInterrupt:
             logging.warning("Ctrl-C detected. Exiting!")
             if self.task is not None:
-                await self.task.queue_frame(EndFrame())
+                logging.info("Cancelling task!")
+                await self.task.queue_frame(CancelFrame())
         except Exception as e:
             logging.error(f"run error: {e}", exc_info=True)
 

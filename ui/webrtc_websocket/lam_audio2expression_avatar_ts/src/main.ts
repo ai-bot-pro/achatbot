@@ -102,7 +102,9 @@ const _onWSClose = (): void => {
 };
 
 const _onTrack = (e: RTCTrackEvent): void => {
-    audioEl.srcObject = e.streams[0];
+    console.log('Received remote stream:', e.streams[0]);
+    // remote audio [0] track
+    //audioEl.srcObject = e.streams[0];
 };
 
 interface MediaDevicesWithSampleRate extends MediaDevices {

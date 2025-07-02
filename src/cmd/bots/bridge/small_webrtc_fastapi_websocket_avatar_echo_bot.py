@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import WebSocket
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
@@ -81,6 +83,7 @@ class SmallWebRTCFastapiWebsocketAvatarEchoBot(AISmallWebRTCFastapiWebsocketBot)
         ws_transport = FastapiWebsocketTransport(
             websocket=self._websocket,
             params=params,
+            loop=asyncio.get_running_loop(),
         )
 
         avatar_processor = self.get_avatar_processor(self.avatar)

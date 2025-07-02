@@ -57,6 +57,7 @@ class SmallWebRTCFastapiWebsocketAvatarChatBot(AISmallWebRTCFastapiWebsocketBot)
     async def arun(self):
         assert self.vad_analyzer is not None
         assert self.avatar is not None
+        assert self.asr is not None
 
         rtc_transport = SmallWebRTCTransport(
             webrtc_connection=self._webrtc_connection,

@@ -261,7 +261,7 @@ app = modal.App(ContainerRuntimeConfig.get_app_name())
     gpu=ContainerRuntimeConfig.get_gpu(),
     secrets=[modal.Secret.from_name(secret)],
     cpu=2.0,
-    allow_concurrent_inputs=ContainerRuntimeConfig.get_allow_concurrent_inputs(),
+    # allow_concurrent_inputs=ContainerRuntimeConfig.get_allow_concurrent_inputs(),
     volumes={
         HF_MODEL_DIR: hf_model_vol,
         ASSETS_DIR: assets_dir,
@@ -270,6 +270,7 @@ app = modal.App(ContainerRuntimeConfig.get_app_name())
     timeout=1200,  # default 300s
     scaledown_window=1200,
 )
+@modal.concurrent(max_inputs=int(os.getenv("IMAGE_CONCURRENT_CN", "1")))  # inputs per container
 class Srv:
     @modal.enter()
     def enter(self):

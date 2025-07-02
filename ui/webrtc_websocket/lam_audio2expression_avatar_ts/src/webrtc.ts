@@ -42,74 +42,93 @@ export const createSmallWebRTCConnection = async (
     onDisconnected: () => void,
     onTrack: (e: RTCTrackEvent) => void
 ): Promise<RTCPeerConnection> => {
-    const audioTrack = audioStream.getAudioTracks()[0];
-    console.log("audioTrack", audioTrack);
+    try {
+        const audioTrack = audioStream.getAudioTracks()[0];
+        console.log("audioTrack", audioTrack);
 
-    const config: RTCConfiguration = {
-        iceServers: [
-            {
-                urls: ["stun:stun.l.google.com:19302"], // Google's public STUN server
-            },
-        ],
-    };
-    const pc = new RTCPeerConnection(config);
+        const config: RTCConfiguration = {
+            iceServers: [
+                {
+                    urls: ["stun:stun.l.google.com:19302"], // Google's public STUN server
+                },
+            ],
+        };
+        const pc = new RTCPeerConnection(config);
 
-    // SmallWebRTCTransport expects to receive both transceivers
-    // pc.addTransceiver(audioTrack, { direction: 'sendrecv' })
-    // Add local stream to peer connection
-    pc.addTrack(audioTrack);
+        // SmallWebRTCTransport expects to receive both transceivers
+        // pc.addTransceiver(audioTrack, { direction: 'sendrecv' })
+        // Add local stream to peer connection
+        pc.addTrack(audioTrack);
 
-    // Add peer connection event listeners
-    addPeerConnectionEventListeners(pc, onConnected, onDisconnected, onTrack);
-    await waitForIceGatheringComplete(pc);
+        // Add peer connection event listeners
+        addPeerConnectionEventListeners(peerID, signalingServerUrl, pc, onConnected, onDisconnected, onTrack);
+        // await waitForIceGatheringComplete(pc);
 
-    // Caller create data channel and listen event (open, close, message)
-    localChannel = pc.createDataChannel("messaging-channel", { ordered: true });
-    localChannel.binaryType = "arraybuffer";
-    localChannel.addEventListener("open", () => {
-        console.log("Local channel open!");
-    });
-    localChannel.addEventListener("close", () => {
-        console.log("Local channel closed!");
-    });
-    localChannel.addEventListener("message", (event: MessageEvent) => {
-        console.log(`Received Remote message : ${event.data}`);
-    });
+        // Caller create data channel and listen event (open, close, message)
+        localChannel = pc.createDataChannel("messaging-channel", { ordered: true });
+        localChannel.binaryType = "arraybuffer";
+        localChannel.addEventListener("open", () => {
+            console.log("Local channel open!");
+        });
+        localChannel.addEventListener("close", () => {
+            console.log("Local channel closed!");
+        });
+        localChannel.addEventListener("message", (event: MessageEvent) => {
+            console.log(`Received Remote message : ${event.data}`);
+        });
 
-    // Caller Create offer
-    await pc.setLocalDescription(await pc.createOffer());
-    const offer = pc.localDescription;
+        // if don't post ice candidates, and waitForIceGatheringComplete, 
+        // need Caller Create offer
+        // https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/setLocalDescription#providing_your_own_offer_or_answer
+        // await pc.setLocalDescription(await pc.createOffer());
+        // const offer = pc.localDescription;
 
-    if (!offer) {
-        throw new Error("Failed to create offer");
+        // @NOTE: https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/setLocalDescription#implicit_descriptions
+        await pc.setLocalDescription();
+        const offer = pc.localDescription;
+
+        if (!offer) {
+            throw new Error("Failed to create offer");
+        }
+
+        // send offer to server
+        const answer: RTCSessionDescriptionInit = await offer_answer(
+            peerID,
+            signalingServerUrl,
+            offer
+        );
+
+        // Caller Set remote description
+        await pc.setRemoteDescription(answer);
+        return pc;
+    } catch (e) {
+        console.error(e);
+        throw e;
     }
+};
 
+const offer_answer = async (
+    peerID: string,
+    signalingServerUrl: string,
+    offer: RTCSessionDescriptionInit
+): Promise<RTCSessionDescriptionInit> => {
     // Caller Send peer connect offer to server, get answer from server
     let serverUrl = signalingServerUrl.trim();
-    if (!serverUrl) {
-        serverUrl = "/api/offer";
-    } else if (
-        !serverUrl.startsWith("http://") &&
-        !serverUrl.startsWith("https://") &&
-        !serverUrl.startsWith("/")
-    ) {
-        serverUrl = "/" + serverUrl;
-    }
-    serverUrl = serverUrl + "/" + peerID;
-    console.log("Connecting to webrtc signaling server:", serverUrl);
+    serverUrl = serverUrl + "/api/offer/" + peerID;
+    console.log("Connecting to webrtc signaling server offer api:", serverUrl);
     const response = await fetch(serverUrl, {
         body: JSON.stringify({ sdp: offer.sdp, type: offer.type }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
     });
-    const answer: RTCSessionDescriptionInit = await response.json();
 
-    // Caller Set remote description
-    await pc.setRemoteDescription(answer);
-    return pc;
+    const answer = await response.json();
+    return answer;
 };
 
 const addPeerConnectionEventListeners = (
+    peerID: string,
+    signalingServerUrl: string,
     pc: RTCPeerConnection,
     onConnected: () => void,
     onDisconnected: () => void,
@@ -117,14 +136,34 @@ const addPeerConnectionEventListeners = (
 ): void => {
     // remote stream track
     pc.ontrack = (e: RTCTrackEvent) => {
+        console.log('Received remote stream:', e.streams[0]);
         onTrack(e);
     };
 
-    pc.oniceconnectionstatechange = () => {
-        console.log("oniceconnectionstatechange", pc?.iceConnectionState);
+    pc.onicecandidate = async (event: RTCPeerConnectionIceEvent) => {
+        if (event.candidate) {
+            console.log("New ICE candidate:", event.candidate);
+        } else {
+            console.log("All ICE candidates have been sent.");
+        }
+
+        if (!event.candidate || !event.candidate.candidate) {
+            return;
+        }
+
+        const iceCandidate = {
+            peer_id: peerID,
+            candidate_sdp: event.candidate.candidate,
+            sdpMid: event.candidate.sdpMid,
+            sdpMLineIndex: event.candidate.sdpMLineIndex,
+            usernameFragment: event.candidate.usernameFragment
+        };
+
+        console.log('Posting ICE candidate: ', iceCandidate);
+        await ice_candidate(peerID, signalingServerUrl, iceCandidate);
     };
 
-    pc.onconnectionstatechange = () => {
+    pc.onconnectionstatechange = async () => {
         console.log("onconnectionstatechange", pc?.connectionState);
         const connectionState = pc?.connectionState;
         if (connectionState === "connected") {
@@ -134,11 +173,23 @@ const addPeerConnectionEventListeners = (
         }
     };
 
-    pc.onicecandidate = (event: RTCPeerConnectionIceEvent) => {
-        if (event.candidate) {
-            console.log("New ICE candidate:", event.candidate);
-        } else {
-            console.log("All ICE candidates have been sent.");
-        }
+    pc.oniceconnectionstatechange = async () => {
+        console.log("oniceconnectionstatechange", pc?.iceConnectionState);
     };
+
 };
+
+const ice_candidate = async (
+    peerID: string,
+    signalingServerUrl: string,
+    iceCandidate: Record<string, unknown>,
+): Promise<void> => {
+    const serverUrl = new URL(`/api/ice_candidate/${peerID}`, signalingServerUrl.trim()).toString();
+    console.log("ice_candidate api:", serverUrl);
+    const response = await fetch(serverUrl, {
+        body: JSON.stringify(iceCandidate),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+    });
+    console.log("ice_candidate response:", response);
+}

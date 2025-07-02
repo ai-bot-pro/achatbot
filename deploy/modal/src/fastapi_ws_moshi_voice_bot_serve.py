@@ -85,6 +85,7 @@ volume = modal.Volume.from_name("bot_config", create_if_missing=True)
     timeout=600,
     allow_concurrent_inputs=1,
 )
+@modal.concurrent(max_inputs=int(os.getenv("IMAGE_CONCURRENT_CN", "1")))  # inputs per container
 class Srv:
     @modal.build()
     def setup(self):

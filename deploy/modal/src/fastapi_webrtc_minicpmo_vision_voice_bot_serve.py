@@ -17,7 +17,7 @@ class ContainerRuntimeConfig:
                     "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
                     "IMAGE_NAME": os.getenv("IMAGE_NAME", "default"),
                     "USE_GPTQ_CKPT": os.getenv("USE_GPTQ_CKPT", ""),
-                    "LLM_MODEL_NAME_OR_PATH": f'/root/.achatbot/models/{os.getenv("LLM_MODEL_NAME_OR_PATH", "openbmb/MiniCPM-o-2_6")}',
+                    "LLM_MODEL_NAME_OR_PATH": f"/root/.achatbot/models/{os.getenv('LLM_MODEL_NAME_OR_PATH', 'openbmb/MiniCPM-o-2_6')}",
                     # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#gpu-feature-list
                     # nvcc --list-gpu-arch
                     "TORCH_CUDA_ARCH_LIST": "7.5;8.0;8.6+PTX;8.9;9.0",  # for auto-gptq install
@@ -105,8 +105,9 @@ app = modal.App("fastapi_webrtc_minicpmo_omni_bot")
     cpu=2.0,
     scaledown_window=300,
     timeout=600,
-    allow_concurrent_inputs=ContainerRuntimeConfig.get_allow_concurrent_inputs(),
+    # allow_concurrent_inputs=ContainerRuntimeConfig.get_allow_concurrent_inputs(),
 )
+@modal.concurrent(max_inputs=int(os.getenv("IMAGE_CONCURRENT_CN", "1")))  # inputs per container
 class Srv:
     @modal.build()
     def setup(self):

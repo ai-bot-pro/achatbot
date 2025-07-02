@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import WebSocketDisconnect
 from dotenv import load_dotenv
 
+from src.common.utils.helper import ThreadSafeDict
 from src.cmd.bots.bridge.base import AISmallWebRTCFastapiWebsocketBot
 from src.cmd.bots.base import AIBot
 from src.cmd.bots.bot_loader import BotLoader
@@ -29,10 +30,17 @@ Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=Tr
 
 run_bot: AISmallWebRTCFastapiWebsocketBot = None
 config = None
+
+# TODO: connect session mrg
 # Store websocket connection
+# ws_map = ThreadSafeDict()
 ws_map: Dict[str, WebSocket] = {}
 # Store rtc connections
+# pcs_map = ThreadSafeDict()
 pcs_map: Dict[str, SmallWebRTCConnection] = {}
+# Store peer rtc connection pending candidates
+# pending_candidates = ThreadSafeDict()
+pending_candidates: Dict[str, list] = {}
 
 ice_servers = [
     IceServer(
@@ -69,6 +77,7 @@ async def lifespan(app: FastAPI):
     coros = [pc.disconnect() for pc in pcs_map.values() if pc.connectionState == "connected"]
     await asyncio.gather(*coros)
     pcs_map.clear()
+    pending_candidates.clear()
     print(f"rtc peer connections clear success")
 
 
@@ -84,10 +93,32 @@ app.add_middleware(
 )
 
 
+@app.post("/api/ice_candidate/{peer_id}")
+async def handle_ice_candidate(candidate: dict, peer_id: str):
+    """
+    post remote peer ice candidate
+    """
+    if not candidate:
+        return
+
+    logging.info(f"received ice candidate from {peer_id}: {candidate.get('candidate_sdp')}...")
+
+    if not pending_candidates.get(peer_id):
+        pending_candidates[peer_id] = []
+
+    if not pcs_map.get(peer_id):
+        pending_candidates[peer_id].append(candidate)
+    else:
+        if len(pending_candidates[peer_id]) > 0:
+            await asyncio.gather(*(pcs_map[peer_id].add_ice_candidate(c) for c in pending_candidates[peer_id]))
+            pending_candidates[peer_id] = []
+        await pcs_map[peer_id].add_ice_candidate(candidate)
+
+
 @app.post("/api/offer/{peer_id}")
 async def handle_offer(request: dict, background_tasks: BackgroundTasks, peer_id: str):
     pc_id = peer_id
-    logging.info(f"request pc_id: {pc_id}")
+    logging.info(f"request: {request} peer_id: {pc_id}")
 
     if not pc_id:
         logging.error(f"pc_id is empty")

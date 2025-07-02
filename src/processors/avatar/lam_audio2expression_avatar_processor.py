@@ -140,7 +140,7 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
         audio_slice = None
         target_round_time = 0.9
         inference_context = None
-        get_data_time = time.time()
+        data_time = time.time()
         while self._session_running:
             start_time = time.time()
             try:
@@ -153,7 +153,7 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
                 if self._avatar.infer is None:
                     continue
 
-                get_data_time = time.time()
+                data_time = time.time()
                 target_round_time = audio_slice.get_audio_duration() - 0.1
 
                 np_audio = bytes2NpArrayWith16(audio_slice.algo_audio_data)
@@ -188,13 +188,14 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
                 logging.warning("audio2expression_loop task cancelled")
                 break
             except asyncio.TimeoutError:
-                if time.time() - get_data_time > 1:
+                if time.time() - data_time > 1:
                     await self.queue_frame(
                         AnimationAudioRawFrame(
                             audio=b"",
                             avatar_status=str(AvatarStatus.RESPONDING),
                         )
                     )
+                    data_time = time.time()
                 continue
             except Exception as e:
                 logging.exception(f"audio2expression_loop task error: {e}")
