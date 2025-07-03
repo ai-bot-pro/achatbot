@@ -9,6 +9,10 @@ let avatarInstance: GaussianAvatar | null = null;
 // 设置GaussianAvatar实例的方法
 export function setAvatarInstance(avatar: GaussianAvatar): void {
     avatarInstance = avatar;
+    // 当音频上下文创建后，将其传递给头像实例
+    if (audioContext && avatarInstance) {
+        avatarInstance.setAudioContext(audioContext);
+    }
 }
 export const SAMPLE_WIDTH = 2;
 export const NUM_CHANNELS = 1;
@@ -82,6 +86,11 @@ export function startAudio(wsUrl: string, onOpen: () => void, onClose: () => voi
         latencyHint: "interactive",
         sampleRate: SAMPLE_RATE,
     });
+
+    // 如果头像实例已经存在，将音频上下文传递给它
+    if (avatarInstance && audioContext) {
+        avatarInstance.setAudioContext(audioContext);
+    }
 
     if (wsUrl) {
         initWebSocket(wsUrl, onOpen, onClose);
@@ -203,18 +212,15 @@ function enqueueAudioFromProto(arrayBuffer: ArrayBuffer): boolean {
         return true;
     }
 
-    let animationJson = {}
+    // 声明在函数范围内，以便在音频解码回调中使用
+    let animationData = {};
     try {
-        animationJson = JSON.parse(animationJsonStr);
-        console.log("Animation JSON:", animationJson);
+        animationData = JSON.parse(animationJsonStr);
     } catch (error) {
         console.error("Error parsing animation JSON:", error);
         return false;
     }
-    // 将animationJson数据传递给GaussianAvatar实例
-    if (avatarInstance) {
-        avatarInstance.updateAnimationData(animationJson);
-    }
+    // 不立即更新动画数据，而是在音频播放时同步更新
 
     if (parsedFrame.animationAudio.audio.length == 0) {
         // no audio,return 
@@ -239,6 +245,13 @@ function enqueueAudioFromProto(arrayBuffer: ArrayBuffer): boolean {
 
         const source = new AudioBufferSourceNode(audioContext);
         source.buffer = buffer;
+
+        // 在音频开始播放时更新动画数据
+        if (avatarInstance && animationData) {
+            // 使用音频上下文的时间作为动画的时间基准
+            avatarInstance.updateAnimationData(animationData, playTime);
+        }
+
         source.start(playTime);
         source.connect(audioContext.destination);
         playTime = playTime + buffer.duration;

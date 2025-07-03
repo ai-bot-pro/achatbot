@@ -2,7 +2,8 @@ import * as WebRTC from "./webrtc";
 import * as WebSocket from "./websocket";
 import { GaussianAvatar } from './gaussianAvatar';
 
-const assetPath = './asset/arkit/me.zip';
+const assetPath = './asset/arkit/p2-1.zip';
+//const assetPath = './asset/arkit/me.zip';
 
 
 // render
