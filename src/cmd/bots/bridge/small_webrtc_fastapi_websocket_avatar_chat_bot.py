@@ -127,7 +127,7 @@ class SmallWebRTCFastapiWebsocketAvatarChatBot(AISmallWebRTCFastapiWebsocketBot)
         self.task = PipelineTask(
             pipeline=pipe,
             params=PipelineParams(
-                allow_interruptions=True,
+                allow_interruptions=False,
                 enable_metrics=True,
                 send_initial_empty_metrics=False,
             ),

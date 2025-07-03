@@ -74,10 +74,11 @@ export class GaussianAvatar {
     }
 
     const length = this._currentAnimationData["frames"].length;
-    const frameInfoInternal = 1.0 / 30.0;
+    const frameInfoInternal = 1.0 / this._currentAnimationData["metadata"]["fps"];
     const currentTime = performance.now() / 1000;
     const calcDelta = (currentTime - this._lastAnimationTime) % (length * frameInfoInternal);
     const frameIndex = Math.floor(calcDelta / frameInfoInternal);
+    console.log(frameIndex, length)
 
     if (frameIndex >= length) {
       return {};

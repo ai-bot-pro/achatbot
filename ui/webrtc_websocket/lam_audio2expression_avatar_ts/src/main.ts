@@ -2,7 +2,7 @@ import * as WebRTC from "./webrtc";
 import * as WebSocket from "./websocket";
 import { GaussianAvatar } from './gaussianAvatar';
 
-const assetPath = './asset/arkit/p2-1.zip';
+const assetPath = './asset/arkit/me.zip';
 
 
 // render
@@ -149,7 +149,9 @@ const connect = async (): Promise<void> => {
 
     _onWSOpening();
     // connect websocket
-    WebSocket.startAudio(wsUrl.value + "/" + peerID, _onWSOpen, _onWSClose);
+    const websocketUrl = new URL(`/${peerID}`, wsUrl.value.trim()).toString();
+    console.log("Connecting to WebSocket server:", websocketUrl);
+    WebSocket.startAudio(websocketUrl, _onWSOpen, _onWSClose);
 };
 
 const disconnect = (): void => {

@@ -141,7 +141,7 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
         """
         logging.info("audio2expression loop started")
         audio_slice = None
-        target_round_time = 0.9
+        target_round_time = 0.0
         inference_context = None
         data_time = time.time()
         while self._session_running:
@@ -157,7 +157,7 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
                     continue
 
                 data_time = time.time()
-                target_round_time = audio_slice.get_audio_duration() - 0.1
+                target_round_time = audio_slice.get_audio_duration()
 
                 np_audio = bytes2NpArrayWith16(audio_slice.algo_audio_data)
                 result, context_update = await asyncio.to_thread(
@@ -182,6 +182,8 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
                     )
                 )
 
+                # NOTE: just for local align audio and expression
+                # if not, need remote(recieve) to align
                 cost = time.time() - start_time
                 sleep_time = target_round_time - cost
                 if sleep_time > 0:

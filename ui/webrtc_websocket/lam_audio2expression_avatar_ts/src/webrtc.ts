@@ -113,8 +113,7 @@ const offer_answer = async (
     offer: RTCSessionDescriptionInit
 ): Promise<RTCSessionDescriptionInit> => {
     // Caller Send peer connect offer to server, get answer from server
-    let serverUrl = signalingServerUrl.trim();
-    serverUrl = serverUrl + "/api/offer/" + peerID;
+    const serverUrl = new URL(`/api/offer/${peerID}`, signalingServerUrl.trim()).toString();
     console.log("Connecting to webrtc signaling server offer api:", serverUrl);
     const response = await fetch(serverUrl, {
         body: JSON.stringify({ sdp: offer.sdp, type: offer.type }),

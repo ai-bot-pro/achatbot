@@ -230,6 +230,7 @@ function enqueueAudioFromProto(arrayBuffer: ArrayBuffer): boolean {
 
     // We should be able to use parsedFrame.audio.audio.buffer but for
     // some reason that contains all the bytes from the protobuf message.
+    console.log("Audio length:", parsedFrame.animationAudio.audio.length);
     const audioVector = Array.from(parsedFrame.animationAudio.audio);
     const audioArray = new Uint8Array(audioVector);
 
