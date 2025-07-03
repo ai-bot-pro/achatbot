@@ -15,7 +15,7 @@ class SpeechAudioSlicer:
     Attributes:
         _input_sample_rate (int): 输入音频采样率
         _output_sample_rate (int): 输出音频采样率
-        _audio_slice_duration (int): 切片时长(秒)
+        _audio_slice_duration (float): 切片时长(秒)
         _enable_fast_mode (bool): 是否启用快速模式
         _current_audio (SpeechAudio): 当前处理的音频对象
 
@@ -31,7 +31,7 @@ class SpeechAudioSlicer:
         self,
         input_sample_rate: int,
         output_sample_rate: int,
-        audio_slice_duration: int,
+        audio_slice_duration: float,
         enable_fast_mode: bool = False,
     ):
         self._input_sample_rate = input_sample_rate
@@ -137,7 +137,7 @@ class SpeechAudioSlicer:
 
     @staticmethod
     def extend_audio_to_duration(
-        audio_data: bytes, sample_rate: int, duration: int, padding_front: bool
+        audio_data: bytes, sample_rate: int, duration: float, padding_front: bool
     ):
         # logging.debug(f"{sample_rate=} {duration=} {padding_front=}")
         target_length = int(2 * sample_rate * duration)
@@ -157,6 +157,11 @@ class SpeechAudioSlicer:
         if origin_sample_rate == target_sample_rate:
             return audio_data
 
+        # if len(audio_data) % 2 != 0:
+        #    """have some noise"""
+        #    audio_data = audio_data.ljust(len(audio_data) + 1, b"\0")
+
+        # NOTE: ValueError: buffer size must be a multiple of element size
         origin_np_array = np.frombuffer(audio_data, np.short)
         audio_float32 = origin_np_array.astype(np.float32) / np.iinfo(np.int16).max
         resampled_float: np.ndarray = librosa.resample(

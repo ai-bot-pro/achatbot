@@ -25,8 +25,8 @@ from src.types.frames.control_frames import (
 class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
     def __init__(self, avatar: LAMAudio2ExpressionAvatar, **kwargs):
         self._avatar = avatar
-        self.input_audio_slice_duration = int(kwargs.get("input_audio_slice_duration", "1"))
-        super().__init__(sample_rate=self._avatar.args.audio_sample_rate, **kwargs)
+        self.input_audio_slice_duration = float(kwargs.get("input_audio_slice_duration", "1"))
+        super().__init__(sample_rate=self._avatar.args.speaker_audio_sample_rate, **kwargs)
 
         # running
         self._session_running = False
@@ -52,8 +52,8 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
 
     def _init(self):
         self._speech_audio_slicer = SpeechAudioSlicer(
-            self._avatar.args.audio_sample_rate,  # input
-            self._avatar.args.audio_sample_rate,  # output for avatar input audio sample rate
+            self._avatar.args.speaker_audio_sample_rate,  # input
+            self._avatar.args.avatar_audio_sample_rate,  # output for avatar input audio sample rate
             self.input_audio_slice_duration,
         )
 
@@ -128,9 +128,12 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
         yield None
 
     async def _add_audio(self, speech_audio: SpeechAudio):
-        audio_slices = self._speech_audio_slicer.get_speech_audio_slice(speech_audio)
-        for audio_slice in audio_slices:
-            await self._audio_slice_queue.put(audio_slice)
+        try:
+            audio_slices = self._speech_audio_slicer.get_speech_audio_slice(speech_audio)
+            for audio_slice in audio_slices:
+                await self._audio_slice_queue.put(audio_slice)
+        except Exception as e:
+            logging.exception(e)
 
     async def _audio2expression_loop(self):
         """
@@ -147,7 +150,7 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
                 audio_slice: AudioSlice = await asyncio.wait_for(
                     self._audio_slice_queue.get(), timeout=0.1
                 )
-                logging.info(
+                logging.debug(
                     f"audio2expression input audio durtaion {audio_slice.get_audio_duration()}"
                 )
                 if self._avatar.infer is None:

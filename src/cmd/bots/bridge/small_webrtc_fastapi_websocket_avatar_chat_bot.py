@@ -106,7 +106,7 @@ class SmallWebRTCFastapiWebsocketAvatarChatBot(AISmallWebRTCFastapiWebsocketBot)
         ):
             # audio_expression frame serializer
             ws_params.serializer = AvatarProtobufFrameSerializer()
-            self.avatar.args.audio_sample_rate = ws_params.audio_out_sample_rate
+            self.avatar.args.speaker_audio_sample_rate = ws_params.audio_out_sample_rate
         ws_transport = FastapiWebsocketTransport(
             websocket=self._websocket,
             params=ws_params,

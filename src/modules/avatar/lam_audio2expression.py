@@ -51,6 +51,7 @@ class LAMAudio2ExpressionAvatar(EngineClass):
     def __init__(self, **kwargs):
         super().__init__()
         self.args = LAMAudio2ExpressionAvatarArgs(**kwargs)
+        logging.info(f"{self.args=}")
         self.infer: Audio2ExpressionInfer = None
         self.arkit_channels: List[str] = []
 
@@ -69,10 +70,13 @@ class LAMAudio2ExpressionAvatar(EngineClass):
             config_file,
             {
                 "weight": self.args.weight_path,
+                "audio_sr": self.args.avatar_audio_sample_rate,
+                "fps": self.args.fps,
                 "model": {
                     "backbone": {
                         "pretrained_encoder_path": self.args.wav2vec_dir,
                         "wav2vec2_config_path": wav2vec_config_file,
+                        "expression_dim": self.args.expression_dim,
                     }
                 },
             },
@@ -95,8 +99,8 @@ class LAMAudio2ExpressionAvatar(EngineClass):
         context: Optional[Dict] = None
         self.infer.infer_streaming_audio(
             context=context,
-            audio=np.zeros([self.args.audio_sample_rate], dtype=np.float32),
-            ssr=self.args.audio_sample_rate,
+            audio=np.zeros([self.args.avatar_audio_sample_rate], dtype=np.float32),
+            ssr=self.args.avatar_audio_sample_rate,
         )
         dur_warmup = time.monotonic() - t_start
         logging.info(f"LAM_Audio2Expression warmup finished in {dur_warmup * 1000} milliseconds.")
@@ -152,22 +156,22 @@ if __name__ == "__main__":
     log_format = "%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s - %(message)s"
     logging.basicConfig(level="INFO", format=log_format)
 
-    use_gpu = True if torch.cuda.is_available() else False
+    audio, sample_rate = librosa.load(args.audio_path, sr=16000)
+    print(f"{audio=} {sample_rate=} {audio.shape[0]=}")
 
     avatar = LAMAudio2ExpressionAvatar(
         **LAMAudio2ExpressionAvatarArgs(
             weight_path=args.weight_path,
             wav2vec_dir=args.wav2vec_dir,
-            audio_sample_rate=args.audio_sample_rate,
+            speaker_audio_sample_rate=sample_rate,
+            avatar_audio_sample_rate=args.audio_sample_rate,
         ).__dict__
     )
     avatar.load()
 
-    audio, sample_rate = librosa.load(args.audio_path, sr=16000)
-    print(f"{audio=} {sample_rate=} {audio.shape[0]=}")
     context = None
-    input_num = (audio.shape[0] + 15999) // 16000
-    gap = 16000
+    input_num = (audio.shape[0] + 15999) // sample_rate
+    gap = sample_rate
     all_exp = []
     for i in tqdm(range(input_num)):
         start = time.time()
