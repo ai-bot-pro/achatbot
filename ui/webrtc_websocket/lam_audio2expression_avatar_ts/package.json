@@ -2,6 +2,7 @@
   "name": "lam_audio2expression_avatar",
   "version": "1.0.0",
   "description": "- this demo is test webrtc p2p bot audio stream with http signaling server,  - use webrtc protocol(RTP) to send multimodal data(audio). - use websocket protocol to get message(protobuff serialization) (audio,audio_expression).",
+  "type": "module",
   "main": "main.js",
   "scripts": {
     "dev": "vite",

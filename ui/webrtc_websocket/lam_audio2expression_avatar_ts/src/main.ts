@@ -2,9 +2,11 @@ import * as WebRTC from "./webrtc";
 import * as WebSocket from "./websocket";
 import { GaussianAvatar } from './gaussianAvatar';
 
-const assetPath = './asset/arkit/p2-1.zip';
-//const assetPath = './asset/arkit/me.zip';
+//const assetPath = './asset/arkit/p2-1.zip';
+const assetPath = './asset/arkit/me.zip';
 
+// 从环境变量获取服务器 URL
+const DEFAULT_SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:4321';
 
 // render
 const div = document.getElementById('LAM_WebRender');
@@ -23,6 +25,9 @@ const wsUrl = document.getElementById("wsUrl") as HTMLInputElement;
 if (!audioEl || !statusEl || !buttonEl || !serverUrl || !wsUrl) {
     throw new Error("Required DOM elements not found");
 }
+
+// 设置默认服务器 URL
+serverUrl.value = DEFAULT_SERVER_URL;
 
 let rtc_connected = false;
 let ws_connected = false;
@@ -149,8 +154,18 @@ const connect = async (): Promise<void> => {
     );
 
     _onWSOpening();
-    // connect websocket
-    const websocketUrl = new URL(`/${peerID}`, wsUrl.value.trim()).toString();
+    let websocketBaseUrl = serverUrl.value.trim();
+    if (websocketBaseUrl.startsWith('http://')) {
+        websocketBaseUrl = websocketBaseUrl.replace('http://', 'ws://');
+    } else if (websocketBaseUrl.startsWith('https://')) {
+        websocketBaseUrl = websocketBaseUrl.replace('https://', 'wss://');
+    } else {
+        // 如果没有协议前缀，默认添加 ws://
+        websocketBaseUrl = 'ws://' + websocketBaseUrl;
+    }
+    wsUrl.value = websocketBaseUrl;
+
+    const websocketUrl = new URL(`/${peerID}`, websocketBaseUrl).toString();
     console.log("Connecting to WebSocket server:", websocketUrl);
     WebSocket.startAudio(websocketUrl, _onWSOpen, _onWSClose);
 };

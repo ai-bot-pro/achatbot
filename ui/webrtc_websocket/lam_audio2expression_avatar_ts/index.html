@@ -14,64 +14,40 @@
         }
 
         #status {
-            font-size: 20px;
-            margin: 20px;
+            font-size: 12px;
+            margin: 10px;
         }
 
         button {
-            padding: 10px 20px;
+            padding: 10px 10px;
             font-size: 16px;
-        }
-
-        #visualizer {
-            width: 600px;
-            height: 100px;
-            margin: 20px auto;
-            background-color: #f0f0f0;
-            border: 1px solid #ccc;
-        }
-
-        #wsUrl {
-            resize: both;
-            /* 允许水平和垂直调整 */
-            overflow: auto;
-            /* 允许出现滚动条 */
-            width: 100%;
-            /* 设置宽度为100% */
-            max-width: 600px;
-            /* 设置最大宽度 */
         }
 
         #LAM_WebRender {
             background-color: #ffffff;
-            margin: 20px auto;
-            height: 60vh;
-            width: 60vh;
+            margin: 0px auto;
+            height: 70vh;
         }
     </style>
 </head>
 
 <body>
-    <h1>WebRTC + Websocket Voice Avatar Agent</h1>
-    <div style="margin: 20px;">
+    <h3>WebRTC + Websocket Voice Avatar Agent</h3>
+    <div id="LAM_WebRender"></div>
+    <div style="margin: 10px; display: none;">
         <label for="serverUrl">Server URL:</label>
-        <input type="text" id="serverUrl" value="http://localhost:4321"
-            placeholder="例如: https://example.com" style="width: 500px; padding: 8px; margin-right: 10px;" />
+        <input type="text" id="serverUrl" value=""
+            placeholder="例如: https://example.com" style="width: 420px; padding: 8px; margin-right: 10px;" />
     </div>
-    <div style="margin: 20px;">
+    <div style="margin: 10px; display: none;">
+        <!-- 隐藏 wsUrl 输入框，因为它将自动从 serverUrl 生成 -->
         <label for="wsUrl">Websocket URL:</label>
         <input type="text" id="wsUrl" placeholder="Enter WebSocket URL" value="ws://localhost:4321"
-            style="width: 500px; padding: 8px; margin-right: 10px;" />
+            style="width: 420px; padding: 8px; margin-right: 10px;" />
     </div>
-    <p id="status">Disconnected</p>
     <button id="connect-btn">Connect</button>
+    <p id="status">Disconnected</p>
     <audio id="audio-el" autoplay></audio>
-
-    <div style="margin: 20px; max-width: 600px; margin-left: auto; margin-right: auto;">
-        <div style="display: flex; justify-content: space-between;">
-        </div>
-    </div>
-    <div id="LAM_WebRender"></div>
     <script type="module" src="src/main.js"></script>
 </body>
 
