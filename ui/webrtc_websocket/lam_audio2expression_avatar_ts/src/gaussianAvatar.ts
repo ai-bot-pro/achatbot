@@ -69,6 +69,9 @@ export class GaussianAvatar {
     if (!this._currentAnimationData) {
       return {};
     }
+    if (!this._currentAnimationData["frames"]) {
+      return {};
+    }
 
     const length = this._currentAnimationData["frames"].length;
     const frameInfoInternal = 1.0 / 30.0;

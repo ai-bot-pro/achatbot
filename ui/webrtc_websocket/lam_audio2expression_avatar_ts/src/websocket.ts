@@ -198,13 +198,19 @@ function enqueueAudioFromProto(arrayBuffer: ArrayBuffer): boolean {
     }
 
     const animationJsonStr = parsedFrame.animationAudio?.animationJson;
-    if (animationJsonStr == null || animationJsonStr.length == 0 || animationJsonStr == "{}" || animationJsonStr == "[]") {
+    if (animationJsonStr == null || animationJsonStr.length == 0 || animationJsonStr == "[]") {
         // no animation, return 
         return true;
     }
 
-    const animationJson = JSON.parse(animationJsonStr);
-    console.log("Animation JSON:", animationJson);
+    let animationJson = {}
+    try {
+        animationJson = JSON.parse(animationJsonStr);
+        console.log("Animation JSON:", animationJson);
+    } catch (error) {
+        console.error("Error parsing animation JSON:", error);
+        return false;
+    }
     // 将animationJson数据传递给GaussianAvatar实例
     if (avatarInstance) {
         avatarInstance.updateAnimationData(animationJson);

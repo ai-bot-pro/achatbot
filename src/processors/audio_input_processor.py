@@ -88,7 +88,7 @@ class AudioVADInputProcessor(InputProcessor):
         vad_state: VADState = VADState.QUIET
         while True:
             try:
-                frame: AudioRawFrame = await self._audio_in_queue.get()
+                frame: AudioRawFrame = await asyncio.wait_for(self._audio_in_queue.get(), timeout=1)
 
                 audio_passthrough = True
 
@@ -101,11 +101,16 @@ class AudioVADInputProcessor(InputProcessor):
                 # Push audio downstream if passthrough.
                 if audio_passthrough:
                     await self.queue_frame(frame)
+            except asyncio.TimeoutError:
+                continue
             except asyncio.CancelledError:
-                logging.warning(f"{self} audio_task_handler cancelled")
+                logging.info(f"{self.name} audio_task_handler cancelled")
                 break
             except Exception as e:
                 logging.exception(f"{self} error reading audio frames: {e}")
+                if self.get_event_loop().is_closed():
+                    logging.warning(f"{self.name} event loop is closed")
+                    break
 
     async def _vad_analyze(self, audio_frames: bytes) -> VADState:
         state = VADState.QUIET

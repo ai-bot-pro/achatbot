@@ -196,13 +196,19 @@ class AudioCameraOutputProcessor(OutputProcessor):
     async def _audio_out_task_handler(self):
         while True:
             try:
-                chunk = await self._audio_out_queue.get()
+                chunk = await asyncio.wait_for(self._audio_out_queue.get(), timeout=1)
                 await self.write_raw_audio_frames(chunk)
                 self._audio_out_queue.task_done()
+            except asyncio.TimeoutError:
+                continue
             except asyncio.CancelledError:
+                logging.info(f"{self.name} _audio_out_task_handler cancelled")
                 break
             except Exception as e:
                 logging.exception(f"{self} error writing audio: {e}")
+                if self.get_event_loop().is_closed():
+                    logging.warning(f"{self.name} event loop is closed")
+                    break
 
     #
     # Camera out

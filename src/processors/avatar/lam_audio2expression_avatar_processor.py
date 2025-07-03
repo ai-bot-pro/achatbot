@@ -185,7 +185,7 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
                     await asyncio.sleep(sleep_time)
 
             except asyncio.CancelledError:
-                logging.warning("audio2expression_loop task cancelled")
+                logging.info(f"{self.name} audio2expression_loop task cancelled")
                 break
             except asyncio.TimeoutError:
                 if time.time() - data_time > 1:
