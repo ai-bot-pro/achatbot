@@ -87,7 +87,8 @@ export class GaussianAvatar {
     const frameInfoInternal = 1.0 / this._currentAnimationData["metadata"]["fps"];
 
     // 使用音频上下文的时间（如果可用）或性能时间
-    const currentTime = this._audioContext ? this._audioContext.currentTime : performance.now() / 1000;
+    let currentTime = this._audioContext ? this._audioContext.currentTime : performance.now() / 1000;
+    currentTime = currentTime > this._lastAnimationTime ? currentTime : this._lastAnimationTime
 
     // 计算从动画开始到现在经过的时间，并确定当前应该显示哪一帧
     const calcDelta = (currentTime - this._lastAnimationTime) % (length * frameInfoInternal);
@@ -107,7 +108,7 @@ export class GaussianAvatar {
     // 检查当前帧是否存在
     const currentFrame = this._currentAnimationData["frames"][frameIndex];
     if (!currentFrame || !currentFrame.weights) {
-      console.warn(`Frame at index ${frameIndex} is invalid or missing weights`);
+      console.warn(`Frame ${currentFrame} at index ${frameIndex} is invalid or missing weights`);
       return {};
     }
 
