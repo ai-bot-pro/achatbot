@@ -6,8 +6,7 @@ interface ImportMeta {
 
 interface ImportMetaEnv {
     readonly VITE_SERVER_URL: string;
+    readonly VITE_AVATAR_PATH: string;
     // 可以在这里添加更多的环境变量
-    // readonly VITE_APP_TITLE: string;
-    // readonly VITE_API_URL: string;
     // ...
 }

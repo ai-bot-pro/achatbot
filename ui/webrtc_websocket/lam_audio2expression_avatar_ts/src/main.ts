@@ -2,8 +2,8 @@ import * as WebRTC from "./webrtc";
 import * as WebSocket from "./websocket";
 import { GaussianAvatar } from './gaussianAvatar';
 
+const assetPath = import.meta.env.VITE_AVATAR_PATH || './asset/arkit/me.zip';
 //const assetPath = './asset/arkit/p2-1.zip';
-const assetPath = './asset/arkit/me.zip';
 
 // 从环境变量获取服务器 URL
 const DEFAULT_SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:4321';
