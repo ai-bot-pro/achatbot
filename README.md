@@ -186,6 +186,10 @@ deploy it to cloudflare page with vite, access https://vision-weedge.pages.dev/
 deploy it to cloudflare page worker with nextjs, access https://storytelling.pages.dev/ 
 - [x] [websocket-demo](https://github.com/ai-bot-pro/achatbot/blob/main/ui/websocket/simple-demo): websocket audio chat bot demo
 - [x] [webrtc-demo](https://github.com/ai-bot-pro/achatbot/blob/main/ui/webrtc/simple-demo): webrtc audio chat bot demo
+- [x] [webrtc websocket voice avatar](https://github.com/ai-bot-pro/achatbot/tree/main/ui/webrtc_websocket):
+  - [x] [webrtc+websocket lam audio2expression avatar bot demo intro](https://github.com/ai-bot-pro/achatbot/tree/main/ui/webrtc_websocket/lam_audio2expression_avatar): native js logic, get audio to play and print expression from websocket pb avatar_data_frames Message
+  - [x] [**lam_audio2expression_avatar_ts**](https://github.com/ai-bot-pro/achatbot/tree/main/ui/webrtc_websocket/lam_audio2expression_avatar_ts): use vite+ts+gaussian-splat-renderer-for-lam to play audio and render expression from websocket pb avatar_data_frames Message, access https://avatar-2lm.pages.dev/ 
+
 
 
 ## Server Deploy (CD)
@@ -271,7 +275,7 @@ cd ui/webrtc_websocket/lam_audio2expression_avatar_ts && npm install && npm run 
 
 ```
 
-More details: https://github.com/ai-bot-pro/achatbot/pull/164
+More details: https://github.com/ai-bot-pro/achatbot/pull/164 | online lam_audio2expression avatar: https://avatar-2lm.pages.dev/
 
 #  Run chat bots
 
