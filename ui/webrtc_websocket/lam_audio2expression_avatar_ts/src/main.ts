@@ -171,6 +171,9 @@ const connect = async (): Promise<void> => {
 };
 
 const disconnect = (): void => {
+    // 标记为用户主动断开连接
+    const userInitiated = true;
+
     if (rtc_connected) {
         _onDisconnected();
     }
@@ -180,7 +183,8 @@ const disconnect = (): void => {
     }
 
     if (ws_connected) {
-        WebSocket.stopAudio(true);
+        // 传递userInitiated参数，确保WebSocket模块知道这是用户主动断开
+        WebSocket.stopAudio(true, userInitiated);
         _onWSClose();
     }
     statusEl.textContent = "Disconnected";

@@ -6,6 +6,8 @@ export class GaussianAvatar {
   private _assetsPath = "";
   public curState = "Idle";
   private _renderer!: GaussianSplats3D.GaussianSplatRenderer;
+  // 添加一个标志，表示是否有音频正在播放
+  private _isAudioPlaying: boolean = false;
   constructor(container: HTMLDivElement, assetsPath: string) {
     this._avatarDivEle = container;
     this._assetsPath = assetsPath;
@@ -75,10 +77,21 @@ export class GaussianAvatar {
     this._audioContext = audioContext;
   }
 
+  // 设置音频播放状态的方法
+  public setAudioPlayingState(isPlaying: boolean) {
+    this._isAudioPlaying = isPlaying;
+    if (!isPlaying) {
+      // 如果音频停止播放，重置动画数据
+      this._currentAnimationData = null;
+    }
+  }
+
   public getArkitFaceFrame() {
-    if (!this._currentAnimationData) {
+    // 如果没有音频播放，或者没有动画数据，返回空对象
+    if (!this._isAudioPlaying || !this._currentAnimationData) {
       return {};
     }
+
     if (!this._currentAnimationData["frames"]) {
       return {};
     }
@@ -96,7 +109,7 @@ export class GaussianAvatar {
 
     // 添加更详细的日志以便调试
     if (frameIndex % 10 === 0) { // 每10帧记录一次，避免日志过多
-      //console.log(`Frame: ${frameIndex}/${length}, Time: ${currentTime.toFixed(3)}, AnimStart: ${this._lastAnimationTime.toFixed(3)}, Delta: ${calcDelta.toFixed(3)}`);
+      console.log(`Frame: ${frameIndex}/${length}, Time: ${currentTime.toFixed(3)}, AnimStart: ${this._lastAnimationTime.toFixed(3)}, Delta: ${calcDelta.toFixed(3)}`);
     }
 
     // 确保frameIndex在有效范围内

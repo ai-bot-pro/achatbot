@@ -110,6 +110,11 @@ export function startAudio(wsUrl: string, onOpen: () => void, onClose: () => voi
     isProcessingQueue = false;
     playTime = 0;
 
+    // 确保初始状态是音频不播放
+    if (avatarInstance) {
+        avatarInstance.setAudioPlayingState(false);
+    }
+
     if (wsUrl) {
         initWebSocket(wsUrl, onOpen, onClose);
     }
@@ -175,6 +180,11 @@ function initWebSocket(wsUrl: string, onOpen: () => void, onClose: () => void): 
         isProcessingQueue = false;
         playTime = 0;
 
+        // 确保初始状态是音频不播放
+        if (avatarInstance) {
+            avatarInstance.setAudioPlayingState(false);
+        }
+
         // 确保音频上下文处于运行状态
         if (audioContext && audioContext.state === 'suspended') {
             console.log("Resuming audio context after WebSocket connection established");
@@ -210,6 +220,14 @@ function initWebSocket(wsUrl: string, onOpen: () => void, onClose: () => void): 
         if (heartbeatInterval) {
             clearInterval(heartbeatInterval);
             heartbeatInterval = null;
+        }
+
+        // 检查是否是用户主动断开连接
+        if (userInitiatedDisconnect) {
+            console.log("User initiated disconnect, not attempting to reconnect");
+            // 重置标志，以便将来的连接可以正常工作
+            userInitiatedDisconnect = false;
+            return;
         }
 
         // Attempt to reconnect if not closed intentionally
@@ -426,6 +444,13 @@ function processAudioQueue(): void {
         // 在音频结束时处理队列中的下一个项目
         source.onended = () => {
             console.log("Audio playback ended, processing next item");
+
+            // 如果队列为空，设置音频播放状态为false
+            if (audioQueue.length === 0 && avatarInstance) {
+                console.log("Audio queue is empty, setting audio playing state to false");
+                avatarInstance.setAudioPlayingState(false);
+            }
+
             // 短暂延迟以确保不会有重叠
             setTimeout(() => {
                 processAudioQueue();
@@ -433,10 +458,15 @@ function processAudioQueue(): void {
         };
 
 
-        // 在音频开始播放时更新动画数据
-        if (avatarInstance && item.animationData) {
-            // 使用音频上下文的时间作为动画的时间基准
-            avatarInstance.updateAnimationData(item.animationData, playTime);
+        // 在音频开始播放时更新动画数据和播放状态
+        if (avatarInstance) {
+            // 设置音频播放状态为true
+            avatarInstance.setAudioPlayingState(true);
+
+            if (item.animationData) {
+                // 使用音频上下文的时间作为动画的时间基准
+                avatarInstance.updateAnimationData(item.animationData, playTime);
+            }
         }
 
         // 连接音频节点：source -> gainNode -> destination
@@ -460,14 +490,27 @@ function processAudioQueue(): void {
     }
 }
 
-export function stopAudio(closeWebsocket: boolean): void {
-    console.log("Stopping audio playback");
+// 添加一个标志来跟踪用户是否主动断开连接
+let userInitiatedDisconnect = false;
+
+export function stopAudio(closeWebsocket: boolean, userInitiated: boolean = false): void {
+    console.log(`Stopping audio playback, user initiated: ${userInitiated}`);
     playTime = 0;
     isPlaying = false;
+
+    // 如果是用户主动断开，设置标志
+    if (userInitiated) {
+        userInitiatedDisconnect = true;
+    }
 
     // 清空音频队列
     audioQueue = [];
     isProcessingQueue = false;
+
+    // 设置音频播放状态为false
+    if (avatarInstance) {
+        avatarInstance.setAudioPlayingState(false);
+    }
 
     // Clear heartbeat interval
     if (heartbeatInterval) {
