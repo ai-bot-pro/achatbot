@@ -121,6 +121,9 @@ access http://localhost:3000 to click `Connect` to chat with bot
 npm run dist
 ```
 
+> [!TIP]
+> deploy static files to CDN (cloudflare Pages): https://avatar-2lm.pages.dev/
+
 
 # references
 - https://github.com/ai-bot-pro/achatbot/pull/164
