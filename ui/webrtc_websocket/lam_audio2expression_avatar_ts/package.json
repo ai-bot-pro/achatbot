@@ -7,8 +7,13 @@
   "scripts": {
     "dev": "vite",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "build:dev": "tsc && vite build --mode development",
+    "build:prod": "tsc && vite build --mode production",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cp_arkit": "mkdir -p ./dist/assets/ && cp ${npm_config_src:-./asset/arkit/*.zip} ./dist/assets/",
+    "cp_proto": "cp ../../../src/types/frames/avatar_data_frames.proto ./dist/assets/",
+    "dist": "npm run build && npm run cp_arkit && npm run cp_proto"
   },
   "keywords": [],
   "author": "",

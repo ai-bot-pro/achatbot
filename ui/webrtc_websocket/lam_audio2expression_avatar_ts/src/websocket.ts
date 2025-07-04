@@ -1,6 +1,7 @@
 import * as protobuf from 'protobufjs';
-import { json } from 'stream/consumers';
 import { GaussianAvatar } from './gaussianAvatar';
+
+const protoPath = import.meta.env.VITE_PROTOBUF_PATH || "./assets/avatar_data_frames.proto";
 
 export const SAMPLE_RATE = 16000;
 // 全局变量，用于存储GaussianAvatar实例的引用
@@ -81,7 +82,7 @@ interface AudioQueueItem {
 let audioQueue: AudioQueueItem[] = [];
 let isProcessingQueue = false;
 
-const proto = protobuf.load("../asset/avatar_data_frames.proto", (err: Error | null, root?: protobuf.Root) => {
+const proto = protobuf.load(protoPath, (err: Error | null, root?: protobuf.Root) => {
     if (err || !root) {
         throw err || new Error('Failed to load protobuf root');
     }

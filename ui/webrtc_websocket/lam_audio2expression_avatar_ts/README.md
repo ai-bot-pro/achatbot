@@ -116,6 +116,11 @@ cd ui/webrtc_websocket/lam_audio2expression_avatar_ts && npm install && npm run 
 ```
 access http://localhost:3000 to click `Connect` to chat with bot
 
+3. publish webrtc + websocket voice avatar agent web demo static files
+```shell
+npm run dist
+```
+
 
 # references
 - https://github.com/ai-bot-pro/achatbot/pull/164
