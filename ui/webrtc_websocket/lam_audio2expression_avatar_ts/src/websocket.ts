@@ -246,14 +246,26 @@ function enqueueAudioFromProto(arrayBuffer: ArrayBuffer): boolean {
         const source = new AudioBufferSourceNode(audioContext);
         source.buffer = buffer;
 
+        // 创建一个增益节点来控制音量，实现淡入效果
+        const gainNode = audioContext.createGain();
+
+        // 设置初始音量为0
+        gainNode.gain.setValueAtTime(0, playTime);
+
+        // 在短时间内（例如50毫秒）将音量从0淡入到1，消除开始播放时的噪音
+        gainNode.gain.linearRampToValueAtTime(1, playTime + 0.05);
+
         // 在音频开始播放时更新动画数据
         if (avatarInstance && animationData) {
             // 使用音频上下文的时间作为动画的时间基准
             avatarInstance.updateAnimationData(animationData, playTime);
         }
 
+        // 连接音频节点：source -> gainNode -> destination
+        source.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
         source.start(playTime);
-        source.connect(audioContext.destination);
         playTime = playTime + buffer.duration;
     });
 
