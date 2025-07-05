@@ -175,7 +175,7 @@ class AIBot(IBot):
                     avatar = avatar or LAMAudio2ExpressionAvatar(**self._bot_config.avatar.args)
                 else:
                     avatar = avatar or LAMAudio2ExpressionAvatar()
-                return LAMAudio2ExpressionAvatarProcessor(avatar)
+                return LAMAudio2ExpressionAvatarProcessor(avatar, **self._bot_config.avatar.args)
             else:
                 # TODO: use avatar engine processor
                 args = self._bot_config.avatar.args or {}

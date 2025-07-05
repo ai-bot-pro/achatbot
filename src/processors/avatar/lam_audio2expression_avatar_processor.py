@@ -25,8 +25,8 @@ from src.types.frames.control_frames import (
 class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
     def __init__(self, avatar: LAMAudio2ExpressionAvatar, **kwargs):
         self._avatar = avatar
-        self.input_audio_slice_duration = int(kwargs.get("input_audio_slice_duration", "1"))
-        super().__init__(sample_rate=self._avatar.args.audio_sample_rate, **kwargs)
+        self.input_audio_slice_duration = float(kwargs.get("input_audio_slice_duration", "1"))
+        super().__init__(sample_rate=self._avatar.args.speaker_audio_sample_rate, **kwargs)
 
         # running
         self._session_running = False
@@ -52,8 +52,8 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
 
     def _init(self):
         self._speech_audio_slicer = SpeechAudioSlicer(
-            self._avatar.args.audio_sample_rate,  # input
-            self._avatar.args.audio_sample_rate,  # output for avatar input audio sample rate
+            self._avatar.args.speaker_audio_sample_rate,  # input
+            self._avatar.args.avatar_audio_sample_rate,  # output for avatar input audio sample rate
             self.input_audio_slice_duration,
         )
 
@@ -128,9 +128,12 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
         yield None
 
     async def _add_audio(self, speech_audio: SpeechAudio):
-        audio_slices = self._speech_audio_slicer.get_speech_audio_slice(speech_audio)
-        for audio_slice in audio_slices:
-            await self._audio_slice_queue.put(audio_slice)
+        try:
+            audio_slices = self._speech_audio_slicer.get_speech_audio_slice(speech_audio)
+            for audio_slice in audio_slices:
+                await self._audio_slice_queue.put(audio_slice)
+        except Exception as e:
+            logging.exception(e)
 
     async def _audio2expression_loop(self):
         """
@@ -138,7 +141,7 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
         """
         logging.info("audio2expression loop started")
         audio_slice = None
-        target_round_time = 0.9
+        target_round_time = 0.0
         inference_context = None
         data_time = time.time()
         while self._session_running:
@@ -147,14 +150,14 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
                 audio_slice: AudioSlice = await asyncio.wait_for(
                     self._audio_slice_queue.get(), timeout=0.1
                 )
-                logging.info(
+                logging.debug(
                     f"audio2expression input audio durtaion {audio_slice.get_audio_duration()}"
                 )
                 if self._avatar.infer is None:
                     continue
 
                 data_time = time.time()
-                target_round_time = audio_slice.get_audio_duration() - 0.1
+                target_round_time = audio_slice.get_audio_duration()
 
                 np_audio = bytes2NpArrayWith16(audio_slice.algo_audio_data)
                 result, context_update = await asyncio.to_thread(
@@ -179,13 +182,15 @@ class LAMAudio2ExpressionAvatarProcessor(SegmentedAvatarProcessor):
                     )
                 )
 
+                # NOTE: just for local align audio and expression
+                # if not, need remote(recieve) to align
                 cost = time.time() - start_time
                 sleep_time = target_round_time - cost
                 if sleep_time > 0:
                     await asyncio.sleep(sleep_time)
 
             except asyncio.CancelledError:
-                logging.warning("audio2expression_loop task cancelled")
+                logging.info(f"{self.name} audio2expression_loop task cancelled")
                 break
             except asyncio.TimeoutError:
                 if time.time() - data_time > 1:

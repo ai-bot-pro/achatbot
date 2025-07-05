@@ -90,10 +90,10 @@ if avatar_tag == "lam_audio2expression_avatar":
         )
     )
 
-#image = image.pip_install(
-#    f"achatbot==0.0.19.dev9",
+# image = image.pip_install(
+#    f"achatbot==0.0.19.post3",
 #    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
-#)
+# )
 
 # ----------------------- app -------------------------------
 app = modal.App("fastapi_webrtc_avatar_bot")

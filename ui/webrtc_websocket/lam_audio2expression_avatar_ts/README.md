@@ -114,7 +114,15 @@ config/bots/small_webrtc_fastapi_websocket_avatar_chat_bot.json
 ```shell
 cd ui/webrtc_websocket/lam_audio2expression_avatar_ts && npm install && npm run dev
 ```
-access http://localhost:5173/ to click `Connect` to chat with bot
+access http://localhost:3000 to click `Connect` to chat with bot
+
+3. publish webrtc + websocket voice avatar agent web demo static files
+```shell
+npm run dist
+```
+
+> [!TIP]
+> deploy static files to CDN (cloudflare Pages): https://avatar-2lm.pages.dev/
 
 
 # references
