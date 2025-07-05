@@ -31,6 +31,7 @@ serverUrl.value = DEFAULT_SERVER_URL;
 
 let rtc_connected = false;
 let ws_connected = false;
+let connecting = false; // 新增状态变量，表示是否正在连接中
 let peerConnection: RTCPeerConnection | null = null;
 
 function generateShortUUID(): string {
@@ -58,6 +59,9 @@ const _onConnected = (): void => {
         statusEl.textContent =
             "WebRTC/WebSocket Connected, Please talk with chatbot";
         buttonEl.textContent = "Disconnect";
+        // 当WebRTC和WebSocket都连接成功时，重置连接状态
+        connecting = false;
+        buttonEl.disabled = false;
     }
     rtc_connected = true;
 };
@@ -72,6 +76,9 @@ const _onDisconnected = (): void => {
     }
     rtc_connected = false;
     ws_connected = false;
+    // 重置连接状态并启用按钮
+    connecting = false;
+    buttonEl.disabled = false;
     // gaussianAvatar render speaking -> Idle have some bug :)
     gaussianAvatar.updateAvatarStatus("Idle");
 };
@@ -90,6 +97,9 @@ const _onWSOpen = (): void => {
         statusEl.textContent =
             "WebRTC/WebSocket Connected, Please talk with chatbot";
         buttonEl.textContent = "Disconnect";
+        // 当WebRTC和WebSocket都连接成功时，重置连接状态
+        connecting = false;
+        buttonEl.disabled = false;
     }
     ws_connected = true;
 };
@@ -124,50 +134,64 @@ interface MediaDevicesWithSampleRate extends MediaDevices {
 }
 
 const connect = async (): Promise<void> => {
-    _onConnecting();
+    // 设置连接状态为正在连接中
+    connecting = true;
+    // 禁用按钮，防止重复点击
+    buttonEl.disabled = true;
 
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert("getUserMedia is not supported in your browser.");
-        return;
+    try {
+        _onConnecting();
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert("getUserMedia is not supported in your browser.");
+            throw new Error("getUserMedia not supported");
+        }
+
+        // Caller Open MediaStream (audio only)
+        const audioStream = await (navigator.mediaDevices as MediaDevicesWithSampleRate).getUserMedia({
+            audio: true,
+            sampleRate: WebSocket.SAMPLE_RATE,
+            channelCount: WebSocket.NUM_CHANNELS,
+            autoGainControl: true,
+            echoCancellation: true,
+            noiseSuppression: true,
+        });
+
+        const peerID = generateShortUUID();
+
+        // Caller Create webrtc peer connection with audio stream
+        peerConnection = await WebRTC.createSmallWebRTCConnection(
+            audioStream,
+            serverUrl.value,
+            peerID,
+            _onConnected,
+            _onDisconnected,
+            _onTrack
+        );
+
+        _onWSOpening();
+        let websocketBaseUrl = serverUrl.value.trim();
+        if (websocketBaseUrl.startsWith('http://')) {
+            websocketBaseUrl = websocketBaseUrl.replace('http://', 'ws://');
+        } else if (websocketBaseUrl.startsWith('https://')) {
+            websocketBaseUrl = websocketBaseUrl.replace('https://', 'wss://');
+        } else {
+            // 如果没有协议前缀，默认添加 ws://
+            websocketBaseUrl = 'ws://' + websocketBaseUrl;
+        }
+        wsUrl.value = websocketBaseUrl;
+
+        const websocketUrl = new URL(`/${peerID}`, websocketBaseUrl).toString();
+        console.log("Connecting to WebSocket server:", websocketUrl);
+        WebSocket.startAudio(websocketUrl, _onWSOpen, _onWSClose);
+    } catch (error) {
+        console.error("Connection failed:", error);
+        // 连接失败时重置连接状态并启用按钮
+        connecting = false;
+        buttonEl.disabled = false;
+        statusEl.textContent = "Connection failed";
+        buttonEl.textContent = "Connect";
     }
-
-    // Caller Open MediaStream (audio only)
-    const audioStream = await (navigator.mediaDevices as MediaDevicesWithSampleRate).getUserMedia({
-        audio: true,
-        sampleRate: WebSocket.SAMPLE_RATE,
-        channelCount: WebSocket.NUM_CHANNELS,
-        autoGainControl: true,
-        echoCancellation: true,
-        noiseSuppression: true,
-    });
-
-    const peerID = generateShortUUID();
-
-    // Caller Create webrtc peer connection with audio stream
-    peerConnection = await WebRTC.createSmallWebRTCConnection(
-        audioStream,
-        serverUrl.value,
-        peerID,
-        _onConnected,
-        _onDisconnected,
-        _onTrack
-    );
-
-    _onWSOpening();
-    let websocketBaseUrl = serverUrl.value.trim();
-    if (websocketBaseUrl.startsWith('http://')) {
-        websocketBaseUrl = websocketBaseUrl.replace('http://', 'ws://');
-    } else if (websocketBaseUrl.startsWith('https://')) {
-        websocketBaseUrl = websocketBaseUrl.replace('https://', 'wss://');
-    } else {
-        // 如果没有协议前缀，默认添加 ws://
-        websocketBaseUrl = 'ws://' + websocketBaseUrl;
-    }
-    wsUrl.value = websocketBaseUrl;
-
-    const websocketUrl = new URL(`/${peerID}`, websocketBaseUrl).toString();
-    console.log("Connecting to WebSocket server:", websocketUrl);
-    WebSocket.startAudio(websocketUrl, _onWSOpen, _onWSClose);
 };
 
 const disconnect = (): void => {
@@ -189,9 +213,18 @@ const disconnect = (): void => {
     }
     statusEl.textContent = "Disconnected";
     buttonEl.textContent = "Connect";
+
+    // 重置连接状态并启用按钮
+    connecting = false;
+    buttonEl.disabled = false;
 };
 
 buttonEl.addEventListener("click", async () => {
+    // 如果正在连接中，不执行任何操作
+    if (connecting) {
+        return;
+    }
+
     if (!rtc_connected && !ws_connected) {
         await connect();
     } else {
