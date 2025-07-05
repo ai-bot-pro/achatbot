@@ -285,7 +285,7 @@ webrtc + websocket transports I/O bridge:
 
 ---
 websocket signaling service + webrtc-queue I/O bridge:
-<img width="1176" alt="image" src="https://github.com/user-attachments/assets/18df2e23-38c6-439c-a008-b2e35f580bdb" />
+<img width="1177" alt="image" src="https://github.com/user-attachments/assets/571d8d02-c161-4867-8f09-1d2777b27f0b" />
 
 
 #  Run chat bots
