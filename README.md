@@ -283,6 +283,11 @@ webrtc + websocket transports I/O bridge:
 
 <img width="1167" alt="image" src="https://github.com/user-attachments/assets/3963ff54-77ff-4c2f-a41f-7f9e9029d041" />
 
+---
+websocket signaling service + webrtc bots:
+<img width="1166" alt="image" src="https://github.com/user-attachments/assets/524c7485-e7a5-404e-bda8-0d999ffca29f" />
+
+
 #  Run chat bots
 
 ## :memo: Run chat bots with colab notebook
