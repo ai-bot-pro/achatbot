@@ -331,16 +331,36 @@ function initWebSocket(wsUrl: string, onOpen: () => void, onClose: () => void): 
 
 // 存储WebRTC信令回调
 type SignalingCallback = (data: any) => void;
-const signalingCallbacks: Record<string, SignalingCallback> = {};
+type CallbackId = string;
 
-// 注册信令回调
-export function registerSignalingCallback(type: string, callback: SignalingCallback): void {
-    signalingCallbacks[type] = callback;
+// 使用Map存储每种类型的多个回调
+const signalingCallbacks: Map<string, Map<CallbackId, SignalingCallback>> = new Map();
+
+// 生成唯一的回调ID
+function generateCallbackId(): CallbackId {
+    return `callback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// 移除信令回调
-export function removeSignalingCallback(type: string): void {
-    delete signalingCallbacks[type];
+// 注册信令回调，返回回调ID用于后续移除
+export function registerSignalingCallback(type: string, callback: SignalingCallback): CallbackId {
+    if (!signalingCallbacks.has(type)) {
+        signalingCallbacks.set(type, new Map());
+    }
+
+    const callbackId = generateCallbackId();
+    signalingCallbacks.get(type)!.set(callbackId, callback);
+    return callbackId;
+}
+
+// 移除指定ID的信令回调
+export function removeSignalingCallback(type: string, callbackId: CallbackId): void {
+    if (signalingCallbacks.has(type)) {
+        signalingCallbacks.get(type)!.delete(callbackId);
+        // 如果该类型没有回调了，清理Map
+        if (signalingCallbacks.get(type)!.size === 0) {
+            signalingCallbacks.delete(type);
+        }
+    }
 }
 
 async function handleWebSocketMessage(event: MessageEvent): Promise<void> {
@@ -357,11 +377,16 @@ async function handleWebSocketMessage(event: MessageEvent): Promise<void> {
                 // 处理WebRTC信令消息
                 if (jsonData.type === "answer" || jsonData.type === "ice_candidate_response") {
                     console.log(`Received WebRTC signaling message: ${jsonData.type}`);
-                    const callback = signalingCallbacks[jsonData.type];
-                    if (callback) {
-                        callback(jsonData);
+                    const callbacksMap = signalingCallbacks.get(jsonData.type);
+
+                    if (callbacksMap && callbacksMap.size > 0) {
+                        // 调用所有注册的回调
+                        callbacksMap.forEach((callback) => {
+                            callback(jsonData);
+                        });
                     } else {
-                        console.warn(`No callback registered for signaling message type: ${jsonData.type}`);
+                        // !NOTE: get one response, maybe ice_candidate_response register some callback, but no problem
+                        //console.warn(`No callbacks registered for signaling message type: ${jsonData.type}`);
                     }
                     return;
                 }

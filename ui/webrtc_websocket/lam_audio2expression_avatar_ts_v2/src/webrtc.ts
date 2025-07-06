@@ -123,19 +123,21 @@ const offer_answer = async (
 
     // 创建一个Promise，等待服务器的answer响应
     let timeoutId: NodeJS.Timeout;
+    let callbackId: string;
+
     const answerPromise = new Promise<RTCSessionDescriptionInit>((resolve, reject) => {
         // 注册一个回调，处理服务器的answer响应
-        registerSignalingCallback("answer", (data) => {
+        callbackId = registerSignalingCallback("answer", (data) => {
             console.log(`Received answer via WebSocket for peer: ${peerID}`);
             // 收到answer后，移除回调并解析Promise
-            removeSignalingCallback("answer");
+            removeSignalingCallback("answer", callbackId);
             clearTimeout(timeoutId);
             resolve(data);
         });
 
         // 设置超时
         timeoutId = setTimeout(() => {
-            removeSignalingCallback("answer");
+            removeSignalingCallback("answer", callbackId);
             reject(new Error("Timeout waiting for answer"));
         }, 10000); // 10秒超时
     });
@@ -216,19 +218,21 @@ const ice_candidate = async (
 
     // 创建一个Promise，等待服务器的ice_candidate_response响应
     let timeoutId: NodeJS.Timeout;
+    let callbackId: string;
+
     const iceResponsePromise = new Promise<void>((resolve, reject) => {
         // 注册一个回调，处理服务器的ice_candidate_response响应
-        registerSignalingCallback("ice_candidate_response", (data) => {
+        callbackId = registerSignalingCallback("ice_candidate_response", (data) => {
             console.log(`Received ICE candidate response via WebSocket for peer: ${peerID}`);
             // 收到响应后，移除回调并解析Promise
-            removeSignalingCallback("ice_candidate_response");
+            removeSignalingCallback("ice_candidate_response", callbackId);
             clearTimeout(timeoutId);
             resolve();
         });
 
         // 设置超时
         timeoutId = setTimeout(() => {
-            removeSignalingCallback("ice_candidate_response");
+            removeSignalingCallback("ice_candidate_response", callbackId);
             reject(new Error("Timeout waiting for ice_candidate_response"));
         }, 5000); // 5秒超时
     });
