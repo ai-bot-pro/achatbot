@@ -243,7 +243,7 @@ async def websocket_endpoint(websocket: WebSocket, peer_id: str):
 
 
 """
-python -m src.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve -f config/bots/small_webrtc_fastapi_websocket_echo_bot.json
+python -m src.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve -f config/bots/small_webrtc_fastapi_websocket_avatar_echo_bot.json
 """
 
 if __name__ == "__main__":
