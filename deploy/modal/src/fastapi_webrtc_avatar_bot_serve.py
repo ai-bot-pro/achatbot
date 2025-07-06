@@ -125,8 +125,7 @@ torch_cache_vol = modal.Volume.from_name("torch_cache", create_if_missing=True)
     cpu=4.0,
     timeout=1200,  # default 300s
     scaledown_window=1200,
-    max_containers=1,
-    # max_inputs=int(os.getenv("IMAGE_CONCURRENT_CN", "1")),
+    max_containers=int(os.getenv("IMAGE_MAX_CONTAINERS", "1")),
 )
 @modal.concurrent(max_inputs=int(os.getenv("IMAGE_CONCURRENT_CN", "10")))  # inputs per container
 class Srv:
