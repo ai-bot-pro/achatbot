@@ -277,6 +277,17 @@ cd ui/webrtc_websocket/lam_audio2expression_avatar_ts && npm install && npm run 
 
 More details: https://github.com/ai-bot-pro/achatbot/pull/164 | online lam_audio2expression avatar: https://avatar-2lm.pages.dev/
 
+---
+webrtc + websocket transports I/O bridge:
+<img width="1151" alt="image" src="https://github.com/user-attachments/assets/59e9eace-b27f-4f4c-b314-ee5988988335" />
+
+<img width="1167" alt="image" src="https://github.com/user-attachments/assets/3963ff54-77ff-4c2f-a41f-7f9e9029d041" />
+
+---
+websocket signaling service + webrtc-queue I/O bridge:
+<img width="1177" alt="image" src="https://github.com/user-attachments/assets/571d8d02-c161-4867-8f09-1d2777b27f0b" />
+
+
 #  Run chat bots
 
 ## :memo: Run chat bots with colab notebook
