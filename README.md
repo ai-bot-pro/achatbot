@@ -173,22 +173,33 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
 
 ## UI (easy to deploy with github like pages)
 - [x] [ui/web-client-ui](https://github.com/ai-bot-pro/web-client-ui)
-deploy it to cloudflare page with vite, access https://chat-client-weedge.pages.dev/
+  deploy it to cloudflare page with vite, access https://chat-client-weedge.pages.dev/
+
 - [x] [ui/educator-client](https://github.com/ai-bot-pro/educator-client)
-deploy it to cloudflare page with vite, access https://educator-client.pages.dev/
+  deploy it to cloudflare page with vite, access https://educator-client.pages.dev/
+
 - [x] [chat-bot-rtvi-web-sandbox](https://github.com/ai-bot-pro/chat-bot-rtvi-client/tree/main/chat-bot-rtvi-web-sandbox)
-use this web sandbox to test config, actions with [DailyRTVIGeneralBot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/rtvi/daily_rtvi_general_bot.py)
+  use this web sandbox to test config, actions with [DailyRTVIGeneralBot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/rtvi/daily_rtvi_general_bot.py)
+
 - [x] [vite-react-rtvi-web-voice](https://github.com/ai-bot-pro/vite-react-rtvi-web-voice) rtvi web voice chat bots, diff cctv roles etc, u can diy your own role by change the system prompt with [DailyRTVIGeneralBot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/rtvi/daily_rtvi_general_bot.py)
-deploy it to cloudflare page with vite, access https://role-chat.pages.dev/
+  deploy it to cloudflare page with vite, access https://role-chat.pages.dev/
+
 - [x] [vite-react-web-vision](https://github.com/ai-bot-pro/vite-react-web-vision) 
-deploy it to cloudflare page with vite, access https://vision-weedge.pages.dev/
+  deploy it to cloudflare page with vite, access https://vision-weedge.pages.dev/
+
 - [x] [nextjs-react-web-storytelling](https://github.com/ai-bot-pro/nextjs-react-web-storytelling) 
-deploy it to cloudflare page worker with nextjs, access https://storytelling.pages.dev/ 
+  deploy it to cloudflare page worker with nextjs, access https://storytelling.pages.dev/ 
+
 - [x] [websocket-demo](https://github.com/ai-bot-pro/achatbot/blob/main/ui/websocket/simple-demo): websocket audio chat bot demo
+
 - [x] [webrtc-demo](https://github.com/ai-bot-pro/achatbot/blob/main/ui/webrtc/simple-demo): webrtc audio chat bot demo
+
 - [x] [webrtc websocket voice avatar](https://github.com/ai-bot-pro/achatbot/tree/main/ui/webrtc_websocket):
   - [x] [webrtc+websocket lam audio2expression avatar bot demo intro](https://github.com/ai-bot-pro/achatbot/tree/main/ui/webrtc_websocket/lam_audio2expression_avatar): native js logic, get audio to play and print expression from websocket pb avatar_data_frames Message
-  - [x] [**lam_audio2expression_avatar_ts**](https://github.com/ai-bot-pro/achatbot/tree/main/ui/webrtc_websocket/lam_audio2expression_avatar_ts): use vite+ts+gaussian-splat-renderer-for-lam to play audio and render expression from websocket pb avatar_data_frames Message, access https://avatar-2lm.pages.dev/ 
+  - [x] [lam_audio2expression_avatar_ts](https://github.com/ai-bot-pro/achatbot/tree/main/ui/webrtc_websocket/lam_audio2expression_avatar_ts_v2): **http signaling service** and use vite+ts+gaussian-splat-renderer-for-lam to play audio and render expression from websocket pb avatar_data_frames Message
+  - [x] [**lam_audio2expression_avatar_ts_v2**](https://github.com/ai-bot-pro/achatbot/tree/main/ui/webrtc_websocket/lam_audio2expression_avatar_ts_v2): **websocket signaling service** and use vite+ts+gaussian-splat-renderer-for-lam to play audio and render expression from websocket pb avatar_data_frames Message, access https://avatar-2lm.pages.dev/ 
+  
+  
 
 
 
@@ -266,25 +277,32 @@ tar -xzvf ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar -C ./models/LAM_aud
 git clone --depth 1 https://www.modelscope.cn/AI-ModelScope/wav2vec2-base-960h.git ./models/facebook/wav2vec2-base-960h
 huggingface-cli download FunAudioLLM/SenseVoiceSmall  --local-dir ./models/FunAudioLLM/SenseVoiceSmall
 
-# run local lam_audio2expression-avatar chat bot
+# run http signaling service + webrtc + websocket local lam_audio2expression-avatar chat bot
 python -m src.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve -f config/bots/small_webrtc_fastapi_websocket_avatar_echo_bot.json
 python -m src.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve -f config/bots/small_webrtc_fastapi_websocket_avatar_chat_bot.json
-
-# run webrtc + websocket voice avatar agent web demo
+# run http signaling service + webrtc + websocket voice avatar agent web ui
 cd ui/webrtc_websocket/lam_audio2expression_avatar_ts && npm install && npm run dev
+
+# run websocket signaling service + webrtc + websocket local lam_audio2expression-avatar chat bot
+python -m src.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve_v2 -f config/bots/small_webrtc_fastapi_websocket_avatar_echo_bot.json
+python -m src.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve_v2 -f config/bots/small_webrtc_fastapi_websocket_avatar_chat_bot.json
+# run websocket signaling service + webrtc + websocket voice avatar agent web ui
+cd ui/webrtc_websocket/lam_audio2expression_avatar_ts_v2 && npm install && npm run dev
 
 ```
 
 More details: https://github.com/ai-bot-pro/achatbot/pull/164 | online lam_audio2expression avatar: https://avatar-2lm.pages.dev/
 
 ---
-webrtc + websocket transports I/O bridge:
+HTTP signaling service +  webrtc + websocket transports I/O bridge:
 <img width="1151" alt="image" src="https://github.com/user-attachments/assets/59e9eace-b27f-4f4c-b314-ee5988988335" />
+
+Websocket signaling service +  webrtc + websocket transports I/O bridge:
 
 <img width="1167" alt="image" src="https://github.com/user-attachments/assets/3963ff54-77ff-4c2f-a41f-7f9e9029d041" />
 
 ---
-websocket signaling service + webrtc-queue I/O bridge:
+Websocket signaling service +  websocket + webrtc-queue transports I/O bridge:
 <img width="1177" alt="image" src="https://github.com/user-attachments/assets/571d8d02-c161-4867-8f09-1d2777b27f0b" />
 
 

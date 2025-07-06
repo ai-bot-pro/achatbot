@@ -110,23 +110,24 @@ async def handle_ice_candidate(candidate: dict, peer_id: str):
         pending_candidates[peer_id].append(candidate)
     else:
         if len(pending_candidates[peer_id]) > 0:
-            await asyncio.gather(*(pcs_map[peer_id].add_ice_candidate(c) for c in pending_candidates[peer_id]))
+            await asyncio.gather(
+                *(pcs_map[peer_id].add_ice_candidate(c) for c in pending_candidates[peer_id])
+            )
             pending_candidates[peer_id] = []
         await pcs_map[peer_id].add_ice_candidate(candidate)
 
 
 @app.post("/api/offer/{peer_id}")
 async def handle_offer(request: dict, background_tasks: BackgroundTasks, peer_id: str):
-    pc_id = peer_id
-    logging.info(f"request: {request} peer_id: {pc_id}")
+    logging.info(f"request: {request} peer_id: {peer_id}")
 
-    if not pc_id:
-        logging.error(f"pc_id is empty")
+    if not peer_id:
+        logging.error(f"peer_id is empty")
         return None
 
-    if pc_id and pc_id in pcs_map:
-        connection = pcs_map[pc_id]
-        logging.info(f"Reusing existing connection for pc_id: {pc_id}")
+    if peer_id and peer_id in pcs_map:
+        connection = pcs_map[peer_id]
+        logging.info(f"Reusing existing connection for peer_id: {peer_id}")
         await connection.renegotiate(
             sdp=request.get("sdp"),
             type=request.get("type"),
@@ -141,34 +142,27 @@ async def handle_offer(request: dict, background_tasks: BackgroundTasks, peer_id
 
         @connection.event_handler("closed")
         async def handle_disconnected(webrtc_connection: SmallWebRTCConnection):
-            pc_id = webrtc_connection.pc_id
-            logging.info(f"Discarding peer connection for pc_id: {pc_id}")
+            logging.info(f"Discarding peer connection for pc_id: {peer_id}")
 
             # Remove from pcs_map
-            pcs_map.pop(pc_id, None)
+            pcs_map.pop(peer_id, None)
 
             # Close associated websocket if it exists
-            if pc_id in ws_map:
+            if peer_id in ws_map:
                 try:
-                    ws = ws_map[pc_id]
+                    ws = ws_map[peer_id]
                     if ws.state == "OPEN":
                         await ws.close(code=1000, reason="WebRTC connection closed")
-                    ws_map.pop(pc_id, None)
+                    ws_map.pop(peer_id, None)
                     logging.info(
-                        f"Closed websocket for peer_id: {pc_id} due to WebRTC disconnection"
+                        f"Closed websocket for peer_id: {peer_id} due to WebRTC disconnection"
                     )
                 except Exception as e:
-                    logging.error(f"Error closing websocket for {pc_id}: {str(e)}")
-
-        # run_bot.set_webrtc_connection(connection)
-        # run_bot.set_fastapi_websocket(ws_map[pc_id])
-        # background_tasks.add_task(run_bot.async_run)
+                    logging.error(f"Error closing websocket for {peer_id}: {str(e)}")
 
     answer = connection.get_answer()
-    logging.info(f"answer pc_id: {answer.get('pc_id')}")
-    # Updating the peer connection inside the map
-    # pcs_map[answer.get("pc_id")] = connection
-    pcs_map[pc_id] = connection
+    logging.info(f"answer bot peer_id: {answer.get('pc_id')}")
+    pcs_map[peer_id] = connection
 
     return answer
 

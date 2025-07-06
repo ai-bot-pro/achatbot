@@ -81,7 +81,7 @@ if avatar_tag == "lam_audio2expression_avatar":
         )
         .env(
             {
-                "TRANSPORT": os.getenv("TRANSPORT", "webrtc_websocket"),
+                "TRANSPORT": os.getenv("TRANSPORT", "webrtc_websocket_v2"),
                 "CONFIG_FILE": os.getenv(
                     "CONFIG_FILE",
                     "/root/.achatbot/config/bots/small_webrtc_fastapi_websocket_avatar_echo_bot.json",
@@ -91,8 +91,8 @@ if avatar_tag == "lam_audio2expression_avatar":
     )
 
 # image = image.pip_install(
-#    f"achatbot==0.0.19.post3",
-#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+#   f"achatbot==0.0.19.post4",
+#   extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
 # )
 
 # ----------------------- app -------------------------------
@@ -152,6 +152,12 @@ class Srv:
         transport = os.getenv("TRANSPORT", "daily")
         if transport == "webrtc_websocket":
             from achatbot.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve import (
+                app as fastapi_app,
+            )
+
+            return fastapi_app
+        elif transport == "webrtc_websocket_v2":
+            from achatbot.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve_v2 import (
                 app as fastapi_app,
             )
 

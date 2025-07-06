@@ -234,7 +234,7 @@ const ice_candidate = async (
         timeoutId = setTimeout(() => {
             removeSignalingCallback("ice_candidate_response", callbackId);
             reject(new Error("Timeout waiting for ice_candidate_response"));
-        }, 5000); // 5秒超时
+        }, 10000); // 10秒超时
     });
 
     // 通过WebSocket发送ice_candidate消息
