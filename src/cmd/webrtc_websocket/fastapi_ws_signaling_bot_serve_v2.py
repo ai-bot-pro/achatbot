@@ -13,6 +13,7 @@ from fastapi import FastAPI, WebSocket, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import WebSocketDisconnect
 from dotenv import load_dotenv
+from fastapi.websockets import WebSocketState
 
 from src.common.utils.helper import ThreadSafeDict
 from src.cmd.bots.bridge.base import AISmallWebRTCFastapiWebsocketBot
@@ -68,7 +69,7 @@ async def lifespan(app: FastAPI):
 
     # app life end to clear resources
     # clear websocket connection
-    coros = [ws.close() for ws in ws_map.values() if ws.state == "OPEN"]
+    coros = [ws.close() for ws in ws_map.values() if ws.client_state == WebSocketState.CONNECTED]
     await asyncio.gather(*coros)
     ws_map.clear()
     print(f"websocket connections clear success")
@@ -149,7 +150,7 @@ async def handle_offer(request: dict, peer_id: str):
             if peer_id in ws_map:
                 try:
                     ws = ws_map[peer_id]
-                    if ws.state == "OPEN":
+                    if ws.client_state == WebSocketState.CONNECTED:
                         await ws.close(code=1000, reason="WebRTC connection closed")
                     ws_map.pop(peer_id, None)
                     logging.info(
@@ -292,7 +293,7 @@ async def websocket_endpoint(websocket: WebSocket, peer_id: str):
 
 
 """
-python -m src.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve -f config/bots/small_webrtc_fastapi_websocket_echo_bot.json
+python -m src.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve_v2 -f config/bots/small_webrtc_fastapi_websocket_echo_bot.json
 """
 
 if __name__ == "__main__":
