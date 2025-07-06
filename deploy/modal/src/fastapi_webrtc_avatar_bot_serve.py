@@ -91,8 +91,8 @@ if avatar_tag == "lam_audio2expression_avatar":
     )
 
 # image = image.pip_install(
-#  f"achatbot==0.0.19.post4",
-#  extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+# f"achatbot==0.0.19.post5",
+# extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
 # )
 
 # ----------------------- app -------------------------------
