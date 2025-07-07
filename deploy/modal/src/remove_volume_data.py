@@ -36,6 +36,8 @@ def remove_data(files: str) -> str:
 """
 VOLUME_NAME=train_output modal run src/remove_volume_data.py --files "finetune_glm4voice_stage1_20250515092352"
 VOLUME_NAME=train_output modal run src/remove_volume_data.py --files "finetune_glm4voice_stage1_20250515092815,finetune_glm4voice_stage1_20250515093726,finetune_glm4voice_stage1_20250515093855,finetune_glm4voice_stage1_20250515100234,finetune_glm4voice_stage1_20250515100902,finetune_glm4voice_stage1_20250515102311,finetune_glm4voice_stage1"
+
+VOLUME_NAME=models modal run src/remove_volume_data.py --files "MeiGen-AI"
 """
 
 

@@ -33,7 +33,7 @@ hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
     timeout=1200,
     scaledown_window=1200,
 )
-def download_ckpt(repo_ids: str) -> str:
+def download_ckpt(repo_ids: str, revision: str = None) -> str:
     # https://huggingface.co/docs/huggingface_hub/guides/download
     from huggingface_hub import snapshot_download
 
@@ -42,6 +42,7 @@ def download_ckpt(repo_ids: str) -> str:
         print(f"{repo_id} model downloading")
         snapshot_download(
             repo_id=repo_id,
+            revision=revision,
             repo_type="model",
             allow_patterns="*",
             # ignore_patterns=["*.pt", "*.bin"],  # using safetensors
@@ -49,6 +50,8 @@ def download_ckpt(repo_ids: str) -> str:
             max_workers=8,
         )
         print(f"{repo_id} model to dir:{HF_MODEL_DIR} done")
+
+    hf_model_vol.commit()
 
 
 @app.function(
@@ -120,6 +123,8 @@ def download_ckpts(ckpt_urls: str) -> str:
             logging.error(f"Error downloading {url}: {e}")
             logging.error(f"curl stderr: {e.stderr}")
 
+    hf_model_vol.commit()
+
     return "All ckpt downloads complete."
 
 
@@ -149,5 +154,5 @@ modal run src/download_models.py::download_ckpts --ckpt-urls "https://virutalbuy
 
 
 @app.local_entrypoint()
-def main(repo_ids: str):
-    download_ckpt.remote(repo_ids)
+def main(repo_ids: str, revision: str = None):
+    download_ckpt.remote(repo_ids, revision)
