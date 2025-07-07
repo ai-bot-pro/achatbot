@@ -139,7 +139,7 @@ const offer_answer = async (
         timeoutId = setTimeout(() => {
             removeSignalingCallback("answer", callbackId);
             reject(new Error("Timeout waiting for answer"));
-        }, 10000); // 10秒超时
+        }, 120000); // 120秒超时
     });
 
     // 通过WebSocket发送offer消息
@@ -234,7 +234,7 @@ const ice_candidate = async (
         timeoutId = setTimeout(() => {
             removeSignalingCallback("ice_candidate_response", callbackId);
             reject(new Error("Timeout waiting for ice_candidate_response"));
-        }, 10000); // 10秒超时
+        }, 120000); // 120秒超时
     });
 
     // 通过WebSocket发送ice_candidate消息
