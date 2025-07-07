@@ -62,7 +62,7 @@ dependencies = [
     "requests",
     "apipeline>=0.2.1",
     "python-dotenv",
-    "pydub",             # need install ffmpeg
+    "pydub",            # need install ffmpeg
     "pillow",
     "aiohttp==3.10.11",
     "scipy",
@@ -278,6 +278,10 @@ llm_transformers_manual_vision_gemma = [
     "achatbot[llm_transformers_manual_vision,accelerate]",
 ]
 llm_transformers_manual_vision_mimo = [
+    "achatbot[llm_transformers_manual_vision]",
+]
+llm_transformers_manual_vision_keye = [
+    "keye-vl-utils[decord]==1.0.0",
     "achatbot[llm_transformers_manual_vision]",
 ]
 

@@ -4,13 +4,19 @@ from PIL import Image
 from time import perf_counter
 
 try:
-    from transformers import AutoProcessor, TextIteratorStreamer, AutoModelForImageTextToText
+    from transformers import (
+        AutoModel,
+        AutoProcessor,
+        TextIteratorStreamer,
+    )
     import torch
+
+    from keye_vl_utils import process_vision_info
 
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        "In order to use Mimo-VLM, you need to `pip install achatbot[llm_transformers_manual_vision_mimo]`"
+        "In order to use Keye VLM, you need to `pip install achatbot[llm_transformers_manual_vision_keye]`"
     )
     raise Exception(f"Missing module: {e}")
 
@@ -24,15 +30,15 @@ from src.types.llm.transformers import TransformersLMArgs
 from .base import TransformersBaseLLM
 
 
-class TransformersManualVisionMimo(TransformersBaseLLM):
-    TAG = "llm_transformers_manual_vision_mimo"
+class TransformersManualVisionKeye(TransformersBaseLLM):
+    TAG = "llm_transformers_manual_vision_keye"
 
     def __init__(self, **args) -> None:
         self.args = TransformersLMArgs(**args)
         gpu_prop = torch.cuda.get_device_properties("cuda")
 
         if self.args.lm_device_map:
-            self._model = AutoModelForImageTextToText.from_pretrained(
+            self._model = AutoModel.from_pretrained(
                 self.args.lm_model_name_or_path,
                 torch_dtype=torch.bfloat16,
                 #!NOTE: https://github.com/huggingface/transformers/issues/20896
@@ -43,7 +49,7 @@ class TransformersManualVisionMimo(TransformersBaseLLM):
             ).eval()
         else:
             self._model = (
-                AutoModelForImageTextToText.from_pretrained(
+                AutoModel.from_pretrained(
                     self.args.lm_model_name_or_path,
                     torch_dtype=torch.bfloat16,
                     attn_implementation="flash_attention_2" if gpu_prop.major >= 8 else None,
@@ -56,11 +62,13 @@ class TransformersManualVisionMimo(TransformersBaseLLM):
         logging.info(f"TransformersLMArgs: {self.args}")
         print_model_params(self._model, self.TAG)
         self._tokenizer = AutoProcessor.from_pretrained(
-            self.args.lm_model_name_or_path, use_fast=True
+            self.args.lm_model_name_or_path,
+            use_fast=True,
+            trust_remote_code=True,
         )
 
         self._chat_history = ChatHistory(self.args.chat_history_size)
-        # not init, use default mimo system promt: You are MiMo, an AI assistant developed by Xiaomi.
+        # not init, use default keye system promt: You are MiMo, an AI assistant developed by Xiaomi.
         if self.args.init_chat_role and self.args.init_chat_prompt:
             self._chat_history.init(
                 {

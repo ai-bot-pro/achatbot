@@ -69,6 +69,7 @@ modal run src/download_models.py --repo-ids "Wan-AI/Wan2.1-I2V-14B-480P"
 
 modal run src/video/meigen_multitalk.py::prepare
 modal run src/video/meigen_multitalk.py::run
+modal run src/video/meigen_multitalk.py::run --mode multi
 """
 
 
@@ -83,16 +84,33 @@ modal run src/video/meigen_multitalk.py::run
     timeout=86400,  # [10,86400]
     max_containers=1,
 )
-def run():
+def run(mode="single"):
+    """
+    mode:
+    - single: Single-Persion
+    - multi: Multi-Person
+    """
     cmd = f"""python generate_multitalk.py \
     --ckpt_dir {HF_MODEL_DIR}/Wan-AI/Wan2.1-I2V-14B-480P \
     --wav2vec_dir {HF_MODEL_DIR}/TencentGameMate/chinese-wav2vec2-base \
-    --input_json examples/multitalk_example_2.json \
+    --input_json examples/multitalk_example_1.json \
     --sample_steps 40 \
     --mode streaming \
     --num_persistent_param_in_dit 0 \
     --use_teacache \
-    --save_file {VIDEO_OUTPUT_DIR}/multi_long_exp"""
+    --save_file {VIDEO_OUTPUT_DIR}/single_long_lowvram_exp"""
+
+    if mode == "multi":
+        cmd = f"""python generate_multitalk.py \
+        --ckpt_dir {HF_MODEL_DIR}/Wan-AI/Wan2.1-I2V-14B-480P \
+        --wav2vec_dir {HF_MODEL_DIR}/TencentGameMate/chinese-wav2vec2-base \
+        --input_json examples/multitalk_example_2.json \
+        --sample_steps 40 \
+        --mode streaming \
+        --num_persistent_param_in_dit 0 \
+        --use_teacache \
+        --save_file {VIDEO_OUTPUT_DIR}/multi_long_lowvram_exp"""
+
     print(cmd)
     subprocess.run(cmd, shell=True, check=True, cwd="/MultiTalk", env=os.environ)
 
