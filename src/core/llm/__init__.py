@@ -65,6 +65,8 @@ class LLMEnvInit:
             from .transformers import manual_vision_speech_phi
         elif "llm_transformers_manual_vision_mimo" in tag:
             from .transformers import manual_vision_mimo
+        elif "llm_transformers_manual_vision_keye" in tag:
+            from .transformers import manual_vision_keye
         elif "llm_transformers_manual" == tag:
             from .transformers import manual
         elif "llm_transformers_pipeline" == tag:
@@ -436,6 +438,7 @@ class LLMEnvInit:
         "llm_transformers_manual_vision_qwen": get_llm_transformers_args,
         "llm_transformers_manual_vision_smollm": get_llm_transformers_args,
         "llm_transformers_manual_vision_mimo": get_llm_transformers_args,
+        "llm_transformers_manual_vision_keye": get_llm_transformers_args,
         "llm_transformers_manual_vision_gemma3": get_llm_transformers_args,
         "llm_transformers_manual_vision_qwen2_5": get_llm_transformers_args,
         "llm_transformers_manual_vision_llama": get_llm_transformers_args,
