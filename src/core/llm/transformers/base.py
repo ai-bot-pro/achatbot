@@ -124,6 +124,9 @@ class TransformersBaseLLM(BaseLLM, ILlm):
         else:
             res = ""
             for text in self.generate(session, **kwargs):
+                if text is None:
+                    yield None
+                    continue
                 res += text
                 pos = self._have_special_char(res)
                 if pos > -1:

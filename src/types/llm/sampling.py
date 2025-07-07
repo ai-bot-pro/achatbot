@@ -92,6 +92,12 @@ class LMGenerateArgs:
         default=3,
         metadata={"help": "The maximum number of tokens to generate per step. Default is 3."},
     )
+    lm_gen_thinking: bool = field(
+        default=None,
+        metadata={
+            "help": "if use think, Whether to output <think>**</think> content; set this to False for deterministic outputs. Default is None. auto thinking"
+        },
+    )
     lm_gen_think_output: bool = field(
         default=True,
         metadata={

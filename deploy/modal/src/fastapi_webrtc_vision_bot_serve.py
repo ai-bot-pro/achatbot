@@ -259,10 +259,10 @@ img = ContainerRuntimeConfig.get_img().pip_install(
     "flash-attn==2.7.4.post1", extra_options="--no-build-isolation"
 )
 
-img = img.pip_install(
-    f"achatbot==0.0.20.dev0",
-    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
-)
+# img = img.pip_install(
+#    f"achatbot==0.0.20.dev7",
+#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+# )
 
 HF_MODEL_DIR = "/root/.achatbot/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)

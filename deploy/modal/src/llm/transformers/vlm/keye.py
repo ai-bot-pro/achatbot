@@ -942,8 +942,8 @@ https://huggingface.co/Kwai-Keye/Keye-VL-8B-Preview
 Following Qwen3, keye also offer a soft switch mechanism
 - nothing(default): auto analysis model 
     - no-thinking: (<analysis>***</analysis>xxxxx)
-    - thinking: (<analysis>***</analysis><thinking>***</thinking>)
-- /think: thinking model (<thinking>***</thinking><answer>xxxxx</answer>)
+    - thinking: (<analysis>***</analysis><think>***</think><answer>xxxxx</answer>)
+- /think: thinking model (<think>***</think><answer>xxxxx</answer>)
 - /no_think: no thinking model (xxxxx)
 
 # download model

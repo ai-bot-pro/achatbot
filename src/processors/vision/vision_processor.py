@@ -3,6 +3,7 @@ import base64
 from io import BytesIO
 from typing import AsyncGenerator
 import uuid
+import asyncio
 
 from PIL import Image
 from apipeline.frames.sys_frames import ErrorFrame
@@ -85,6 +86,9 @@ class VisionProcessor(VisionProcessorBase):
 
         iter = self._llm.chat_completion(self._session)
         for item in iter:
+            if item is None:
+                await asyncio.sleep(0.1)
+                continue
             yield TextFrame(text=item)
 
     async def _run_vision(self, frame: VisionImageRawFrame) -> AsyncGenerator[Frame, None]:
@@ -111,6 +115,9 @@ class VisionProcessor(VisionProcessorBase):
 
         iter = self._llm.chat_completion(self._session)
         for item in iter:
+            if item is None:
+                await asyncio.sleep(0.1)
+                continue
             yield TextFrame(text=item)
 
 

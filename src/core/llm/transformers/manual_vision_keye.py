@@ -1,7 +1,9 @@
 import logging
 from threading import Thread
-from PIL import Image
 from time import perf_counter
+import time
+
+from PIL import Image
 
 try:
     from transformers import (
@@ -110,9 +112,13 @@ class TransformersManualVisionKeye(TransformersBaseLLM):
         warmup_gen_kwargs = dict(
             **inputs,
             streamer=streamer,
-            do_sample=False,
-            min_new_tokens=self.args.lm_gen_min_new_tokens,
-            max_new_tokens=self.args.lm_gen_max_new_tokens,
+            do_sample=True if self.args.lm_gen_temperature > 0 else False,
+            temperature=self.args.lm_gen_temperature,
+            top_k=self.args.lm_gen_top_k,
+            top_p=self.args.lm_gen_top_p,
+            repetition_penalty=self.args.lm_gen_repetition_penalty,
+            min_new_tokens=1,
+            max_new_tokens=128,
         )
 
         self._warmup(
@@ -131,7 +137,15 @@ class TransformersManualVisionKeye(TransformersBaseLLM):
         message = {"role": self.args.user_role, "content": prompt}
         self._chat_history.append(message)
         chat_history = self._chat_history.to_list()
-        logging.debug(f"chat_history:{chat_history}")
+        content = chat_history[-1]["content"]
+        for item in content:
+            if item.get("type") == "text":
+                if self.args.lm_gen_thinking is True:
+                    item["text"] += "/think"
+                if self.args.lm_gen_thinking is False:
+                    item["text"] += "/no_think"
+        # logging.info(f"chat_history:{chat_history}")
+
         inputs = self._tokenizer.apply_chat_template(
             chat_history,
             add_generation_prompt=True,
@@ -168,28 +182,68 @@ class TransformersManualVisionKeye(TransformersBaseLLM):
         start = perf_counter()
         times = []
         is_output_think = self.args.lm_gen_think_output
-        think_interval_time = self.args.lm_gen_think_interval_time
+        is_analysis = False
+        is_thinking = False
+        is_answer = True
         for new_text in streamer:
             times.append(perf_counter() - start)
+            if "<analysis>" in new_text:
+                is_analysis = True
+                continue
+            if "</analysis>" in new_text:
+                is_analysis = False
+                continue
+            if is_analysis is True:
+                continue
+
             if is_output_think is False:
-                if "</think>" in new_text:
-                    new_text = new_text.replace("</think>", "").strip("\n")
-                    is_output_think = True
-                else:
-                    if think_interval_time > 0 and sum(times) > think_interval_time:  # tip once
-                        think_interval_time = 0
-                        yield "思考中，请稍等。"
-                    start = perf_counter()
+                if "<think>" in new_text:
+                    yield "思考中，请稍等。"
+                    is_thinking = True
                     continue
-            generated_text += new_text
-            yield new_text
+                if "</think>" in new_text:
+                    is_thinking = False
+                    continue
+                if is_thinking is True:
+                    yield None
+                    continue
+
+                if "<answer>" in new_text:
+                    is_answer = True
+                    continue
+                if "</answer>" in new_text:
+                    is_answer = False
+                    continue
+
+                if is_answer is True:
+                    generated_text += new_text
+                    yield new_text
+            else:
+                if "<think>" in new_text:
+                    is_thinking = True
+                    continue
+                if "</think>" in new_text:
+                    is_thinking = False
+                    continue
+                if is_thinking is True:
+                    generated_text += new_text
+                    yield new_text
+                    continue
+
+                if "<answer>" in new_text:
+                    is_answer = True
+                    continue
+                if "</answer>" in new_text:
+                    is_answer = False
+                    continue
+
+                if is_answer is True:
+                    generated_text += new_text
+                    yield new_text
             start = perf_counter()
         yield "."  # end the sentence for downstream process sentence, e.g.: tts
         logging.info(f"{generated_text=} TTFT: {times[0]:.4f}s total time: {sum(times):.4f}s")
         torch.cuda.empty_cache()
-        tmp_list = generated_text.split("</think>")
-        if len(tmp_list) > 1:
-            generated_text = tmp_list[1].strip("\n")
         self._chat_history.append(
             {"role": "assistant", "content": [{"type": "text", "text": generated_text}]}
         )
