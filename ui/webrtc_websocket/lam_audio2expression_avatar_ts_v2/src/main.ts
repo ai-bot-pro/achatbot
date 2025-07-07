@@ -10,14 +10,40 @@ const DEFAULT_SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:
 
 // render
 const div = document.getElementById('LAM_WebRender');
+const statusEl = document.getElementById("status") as HTMLElement;
 const gaussianAvatar = new GaussianAvatar(div as HTMLDivElement, assetPath);
+
+// 在启动前更新状态
+if (statusEl) {
+    statusEl.textContent = "Loading Avatar...";
+}
+
+// 启动头像渲染
 gaussianAvatar.start();
 
 // 将GaussianAvatar实例传递给websocket模块
 WebSocket.setAvatarInstance(gaussianAvatar);
 
+// 检查加载状态并更新UI
+const checkLoadingStatus = () => {
+    if (gaussianAvatar.isLoading()) {
+        if (statusEl) {
+            statusEl.textContent = "Loading Avatar...";
+        }
+        // 继续检查
+        setTimeout(checkLoadingStatus, 500);
+    } else {
+        // 加载完成，恢复默认状态
+        if (statusEl && statusEl.textContent === "Loading Avatar...") {
+            statusEl.textContent = "Disconnected";
+        }
+    }
+};
+
+// 开始检查加载状态
+checkLoadingStatus();
+
 const audioEl = document.getElementById("audio-el") as HTMLAudioElement;
-const statusEl = document.getElementById("status") as HTMLElement;
 const buttonEl = document.getElementById("connect-btn") as HTMLButtonElement;
 const serverUrl = document.getElementById("serverUrl") as HTMLInputElement;
 const wsUrl = document.getElementById("wsUrl") as HTMLInputElement;

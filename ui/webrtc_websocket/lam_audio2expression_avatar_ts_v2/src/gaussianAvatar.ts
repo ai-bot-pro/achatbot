@@ -8,6 +8,9 @@ export class GaussianAvatar {
   private _renderer!: GaussianSplats3D.GaussianSplatRenderer;
   // 添加一个标志，表示是否有音频正在播放
   private _isAudioPlaying: boolean = false;
+  // 添加加载状态相关属性
+  private _isLoading: boolean = false;
+  private _loadingElement: HTMLDivElement | null = null;
   constructor(container: HTMLDivElement, assetsPath: string) {
     this._avatarDivEle = container;
     this._assetsPath = assetsPath;
@@ -17,6 +20,52 @@ export class GaussianAvatar {
     if (!this._avatarDivEle || !this._assetsPath) {
       throw new Error("Lack of necessary initialization parameters");
     }
+    // 创建加载指示器
+    this._createLoadingIndicator();
+  }
+
+  /**
+   * 创建加载指示器元素
+   */
+  private _createLoadingIndicator() {
+    // 创建加载指示器元素
+    this._loadingElement = document.createElement('div');
+    this._loadingElement.style.position = 'absolute';
+    this._loadingElement.style.top = '50%';
+    this._loadingElement.style.left = '50%';
+    this._loadingElement.style.transform = 'translate(-50%, -50%)';
+    this._loadingElement.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    this._loadingElement.style.color = 'white';
+    this._loadingElement.style.padding = '20px';
+    this._loadingElement.style.borderRadius = '10px';
+    this._loadingElement.style.fontSize = '18px';
+    this._loadingElement.style.zIndex = '1000';
+    this._loadingElement.style.display = 'none';
+    this._loadingElement.textContent = 'Loading Avatar...';
+
+    // 将加载指示器添加到容器中
+    this._avatarDivEle.style.position = 'relative';
+    this._avatarDivEle.appendChild(this._loadingElement);
+  }
+
+  /**
+   * 显示加载指示器
+   */
+  private _showLoading() {
+    if (this._loadingElement) {
+      this._loadingElement.style.display = 'block';
+    }
+    this._isLoading = true;
+  }
+
+  /**
+   * 隐藏加载指示器
+   */
+  private _hideLoading() {
+    if (this._loadingElement) {
+      this._loadingElement.style.display = 'none';
+    }
+    this._isLoading = false;
   }
 
   public start() {
@@ -24,34 +73,58 @@ export class GaussianAvatar {
   }
 
   public async render() {
-    this._renderer = await GaussianSplats3D.GaussianSplatRenderer.getInstance(
-      this._avatarDivEle,
-      this._assetsPath,
-      {
-        getChatState: this.getChatState.bind(this),
-        getExpressionData: this.getArkitFaceFrame.bind(this),
-        //backgroundColor: "0x000000"
-        backgroundColor: "0xffffff"
-      },
-    );
-    this.startTime = performance.now() / 1000;
-    /*
-    setTimeout(() => {
-      this.curState = "Listening"
-    }, 5000);
-    setTimeout(() => {
-      this.curState = "Thinking"
-    }, 6000);
-    setTimeout(() => {
-      this.curState = "Responding"
-    }, 10000);
-    */
+    try {
+      // 显示加载指示器
+      this._showLoading();
+
+      console.log("开始加载头像资源...");
+
+      // 加载头像资源
+      this._renderer = await GaussianSplats3D.GaussianSplatRenderer.getInstance(
+        this._avatarDivEle,
+        this._assetsPath,
+        {
+          getChatState: this.getChatState.bind(this),
+          getExpressionData: this.getArkitFaceFrame.bind(this),
+          //backgroundColor: "0x000000"
+          backgroundColor: "0xffffff"
+        },
+      );
+
+      console.log("头像资源加载完成");
+
+      this.startTime = performance.now() / 1000;
+      /*
+      setTimeout(() => {
+        this.curState = "Listening"
+      }, 5000);
+      setTimeout(() => {
+        this.curState = "Thinking"
+      }, 6000);
+      setTimeout(() => {
+        this.curState = "Responding"
+      }, 10000);
+      */
+    } catch (error) {
+      console.error("加载头像资源失败:", error);
+    } finally {
+      // 无论成功还是失败，都隐藏加载指示器
+      this._hideLoading();
+    }
   }
 
   public updateAvatarStatus(status: string) {
     if (status) {
       this.curState = status;
     }
+  }
+
+  /**
+   * 获取当前加载状态
+   * @returns 是否正在加载中
+   */
+  public isLoading(): boolean {
+    return this._isLoading;
   }
 
   expressitionData: any;
