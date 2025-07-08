@@ -91,14 +91,15 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
       - [x] llm_transformers_manual_vision_qwen
       - [x] llm_transformers_manual_vision_deepseek
       - [x] llm_transformers_manual_vision_janus_flow
-      - [x] llm_transformers_manual_image_janus_flow
       - [x] llm_transformers_manual_vision_janus
       - [x] llm_transformers_manual_vision_smolvlm
       - [x] llm_transformers_manual_vision_gemma
-      - [ ] llm_transformers_manual_vision_fastvlm
+      - [x] llm_transformers_manual_vision_fastvlm
       - [x] llm_transformers_manual_vision_kimi
       - [x] llm_transformers_manual_vision_mimo
       - [x] llm_transformers_manual_vision_keye
+      - [x] llm_transformers_manual_vision_glm4v
+      - [x] llm_transformers_manual_image_janus_flow
       - [x] llm_transformers_manual_image_janus
       - [x] llm_transformers_manual_speech_llasa
       - [x] llm_transformers_manual_speech_step
@@ -109,7 +110,7 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
       - [x] llm_transformers_manual_vita_text llm_transformers_manual_vita_audio_asr llm_transformers_manual_vita_tts llm_transformers_manual_vita_text_voice llm_transformers_manual_vita_voice
       - [x] llm_transformers_manual_phi4_vision_speech,llm_transformers_manual_phi4_audio_asr,llm_transformers_manual_phi4_audio_translation,llm_transformers_manual_phi4_vision,llm_transformers_manual_phi4_audio_chat
   - remote api llm: personal-ai(like openai api, other ai provider)
-  
+
 - AI modules:
   - functions:
     - [x] search: search,search1,serper
