@@ -213,8 +213,10 @@ class ContainerRuntimeConfig:
                 ],
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
             )
-            .run_commands("pip install git+https://github.com/huggingface/transformers accelerate")
-            .pip_install("keye-vl-utils[decord]==1.0.0")
+            .run_commands(
+                "pip install git+https://github.com/huggingface/transformers@bbca9782ca1b8b358cc832a1b821aa1b450850da"
+            )
+            .pip_install("accelerate")
             .env(
                 {
                     "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
