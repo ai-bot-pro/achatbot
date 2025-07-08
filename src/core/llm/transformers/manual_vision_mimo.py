@@ -171,6 +171,8 @@ class TransformersManualVisionMimo(TransformersBaseLLM):
                     if think_interval_time > 0 and sum(times) > think_interval_time:  # tip once
                         think_interval_time = 0
                         yield "思考中，请稍等。"
+                    else:
+                        yield None
                     start = perf_counter()
                     continue
             generated_text += new_text

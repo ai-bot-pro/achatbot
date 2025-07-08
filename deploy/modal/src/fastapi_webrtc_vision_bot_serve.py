@@ -260,7 +260,7 @@ img = ContainerRuntimeConfig.get_img().pip_install(
 )
 
 # img = img.pip_install(
-#    f"achatbot==0.0.20.dev7",
+#    f"achatbot==0.0.20.dev13",
 #    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
 # )
 

@@ -253,8 +253,9 @@ class AIBot(IBot):
             llm_processor = MockVisionProcessor()
         else:
             logging.debug(f"init engine llm processor tag: {llm_config.tag}")
+            sleep_time_s = llm_config.args.pop("sleep_time_s", 0.15)
             llm_engine = LLMEnvInit.initLLMEngine(llm_config.tag, llm_config.args)
-            llm_processor = VisionProcessor(llm_engine, self.session)
+            llm_processor = VisionProcessor(llm_engine, self.session, sleep_time_s=sleep_time_s)
         return llm_processor
 
     def get_remote_llm_processor(self, llm: LLMConfig | None = None) -> LLMProcessor:

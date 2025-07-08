@@ -70,7 +70,6 @@ class TransformersManualVisionKeye(TransformersBaseLLM):
         )
 
         self._chat_history = ChatHistory(self.args.chat_history_size)
-        # not init, use default keye system promt: You are MiMo, an AI assistant developed by Xiaomi.
         if self.args.init_chat_role and self.args.init_chat_prompt:
             self._chat_history.init(
                 {
@@ -185,61 +184,56 @@ class TransformersManualVisionKeye(TransformersBaseLLM):
         is_analysis = False
         is_thinking = False
         is_answer = True
+        analysis_text = ""
+        think_text = ""
         for new_text in streamer:
             times.append(perf_counter() - start)
             if "<analysis>" in new_text:
                 is_analysis = True
+                analysis_text = ""
+                analysis_text += new_text
                 continue
             if "</analysis>" in new_text:
                 is_analysis = False
-                continue
+                analysis_text += new_text
+                logging.info(f"{analysis_text=}")
+                new_text = new_text.replace("</analysis>", "")
+                analysis_text = ""
             if is_analysis is True:
+                analysis_text += new_text
                 continue
 
-            if is_output_think is False:
-                if "<think>" in new_text:
-                    yield "思考中，请稍等。"
-                    is_thinking = True
-                    continue
-                if "</think>" in new_text:
-                    is_thinking = False
-                    continue
-                if is_thinking is True:
+            if "<think>" in new_text:
+                yield "思考中，请稍等。"
+                is_thinking = True
+                think_text = ""
+                think_text += new_text
+                continue
+            if "</think>" in new_text:
+                is_thinking = False
+                think_text += new_text
+                logging.info(f"{think_text=}")
+                think_text = ""
+                new_text = new_text.replace("</think>", "")
+            if is_thinking is True:
+                think_text += new_text
+                if is_output_think is True:
+                    generated_text += new_text
+                    yield new_text
+                else:
                     yield None
-                    continue
+                continue
 
-                if "<answer>" in new_text:
-                    is_answer = True
-                    continue
-                if "</answer>" in new_text:
-                    is_answer = False
-                    continue
+            if "<answer>" in new_text:
+                is_answer = True
+                new_text = new_text.replace("<answer>", "")
+            if "</answer>" in new_text:
+                is_answer = False
+                continue
 
-                if is_answer is True:
-                    generated_text += new_text
-                    yield new_text
-            else:
-                if "<think>" in new_text:
-                    is_thinking = True
-                    continue
-                if "</think>" in new_text:
-                    is_thinking = False
-                    continue
-                if is_thinking is True:
-                    generated_text += new_text
-                    yield new_text
-                    continue
-
-                if "<answer>" in new_text:
-                    is_answer = True
-                    continue
-                if "</answer>" in new_text:
-                    is_answer = False
-                    continue
-
-                if is_answer is True:
-                    generated_text += new_text
-                    yield new_text
+            if is_answer is True:
+                generated_text += new_text
+                yield new_text
             start = perf_counter()
         yield "."  # end the sentence for downstream process sentence, e.g.: tts
         logging.info(f"{generated_text=} TTFT: {times[0]:.4f}s total time: {sum(times):.4f}s")

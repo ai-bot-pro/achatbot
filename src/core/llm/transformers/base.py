@@ -132,6 +132,8 @@ class TransformersBaseLLM(BaseLLM, ILlm):
                 if pos > -1:
                     yield res[: pos + 1]
                     res = res[pos + 1 :]
+                else:
+                    yield None
             if len(res) > 0:
                 yield res
 
