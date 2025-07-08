@@ -174,6 +174,7 @@ def chat_text(gpu_prop, thinking):
 
     # Construct prompt
     text = "你叫什么名字？"
+    # text = "你叫什么名字？/auto_think"
     if thinking is True:
         text += "/think"
     if thinking is False:
@@ -786,6 +787,8 @@ def chat_tool(gpu_prop, thinking):
     ]
 
     text = "北京的天气"
+    if thinking is None:
+        text += "/agentic_think"
     if thinking is True:
         text += "/think"
     if thinking is False:
@@ -984,6 +987,8 @@ ROUND=4 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task text_vide
 
 # 不支持funciton_calling 需要微调
 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task chat_tool
+IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task chat_tool --thinking
+IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task chat_tool --no-thinking
 
 # json_mode支持, 但是输出markdown格式 ```json\n{}\n```
 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task chat_json_mode
