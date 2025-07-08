@@ -91,8 +91,15 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
       - [x] llm_transformers_manual_vision_qwen
       - [x] llm_transformers_manual_vision_deepseek
       - [x] llm_transformers_manual_vision_janus_flow
-      - [x] llm_transformers_manual_image_janus_flow
       - [x] llm_transformers_manual_vision_janus
+      - [x] llm_transformers_manual_vision_smolvlm
+      - [x] llm_transformers_manual_vision_gemma
+      - [x] llm_transformers_manual_vision_fastvlm
+      - [x] llm_transformers_manual_vision_kimi
+      - [x] llm_transformers_manual_vision_mimo
+      - [x] llm_transformers_manual_vision_keye
+      - [x] llm_transformers_manual_vision_glm4v
+      - [x] llm_transformers_manual_image_janus_flow
       - [x] llm_transformers_manual_image_janus
       - [x] llm_transformers_manual_speech_llasa
       - [x] llm_transformers_manual_speech_step

@@ -9,7 +9,7 @@ from typing import Optional
 import modal
 
 
-app = modal.App("Keye-VL")
+app = modal.App("GLM4.1-VL")
 img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
     modal.Image.from_registry(
@@ -28,12 +28,13 @@ img = (
     .run_commands(
         "pip install git+https://github.com/huggingface/transformers@17b3c96c00cd8421bff85282aec32422bdfebd31"
     )
-    .pip_install("accelerate", "keye-vl-utils[decord]==1.0.0")
+    .pip_install("accelerate", "av")
     .env(
         {
             "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
             # "TQDM_DISABLE": "1",
-            "LLM_MODEL": os.getenv("LLM_MODEL", "Kwai-Keye/Keye-VL-8B-Preview"),
+            # "LLM_MODEL": os.getenv("LLM_MODEL", "THUDM/GLM-4.1V-9B-Base"),
+            "LLM_MODEL": os.getenv("LLM_MODEL", "THUDM/GLM-4.1V-9B-Thinking"),
             "ROUND": os.getenv("ROUND", "1"),
             "IS_OUTPUT_THINK": os.getenv("IS_OUTPUT_THINK", "1"),
         }
@@ -50,9 +51,7 @@ video_out_vol = modal.Volume.from_name("gen_video", create_if_missing=True)
 
 with img.imports():
     import torch
-    from PIL import Image
-    from transformers import AutoModel, AutoTokenizer, AutoProcessor
-    from keye_vl_utils import process_vision_info
+    from transformers import Glm4vForConditionalGeneration, AutoProcessor
 
     from transformers.generation.streamers import TextIteratorStreamer
 
@@ -92,14 +91,16 @@ def dump_model(gpu_prop, thinking):
     vlm text model use qwen3 arch no MTP
     """
     for model_name in [
-        "Kwai-Keye/Keye-VL-8B-Preview",
+        "THUDM/GLM-4.1V-9B-Base",
+        "THUDM/GLM-4.1V-9B-Thinking",
     ]:
         MODEL_PATH = os.path.join(HF_MODEL_DIR, model_name)
         processor = AutoProcessor.from_pretrained(
             MODEL_PATH,
+            use_fast=True,
             trust_remote_code=True,
         )
-        model = AutoModel.from_pretrained(
+        model = Glm4vForConditionalGeneration.from_pretrained(
             MODEL_PATH,
             torch_dtype=torch.bfloat16,
             attn_implementation="flash_attention_2" if gpu_prop.major >= 8 else None,
@@ -120,21 +121,17 @@ def predict_text(gpu_prop, thinking):
     # Load model
     model_name = os.getenv("LLM_MODEL")
     MODEL_PATH = os.path.join(HF_MODEL_DIR, model_name)
-    model = AutoModel.from_pretrained(
+    model = Glm4vForConditionalGeneration.from_pretrained(
         MODEL_PATH,
         torch_dtype=torch.bfloat16,
         attn_implementation="flash_attention_2" if gpu_prop.major >= 8 else None,
         trust_remote_code=True,
     ).to("cuda")
     model = model.eval()
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, use_fast=True)
+    tokenizer = AutoProcessor.from_pretrained(MODEL_PATH, use_fast=True)
 
     # predict with no instruct tpl, use base model | sft-it | rl-it
     text = "你叫什么名字？"
-    if thinking is True:
-        text += "/think"
-    if thinking is False:
-        text += "/no_think"
     inputs = tokenizer([text], return_tensors="pt").to(model.device)
     for key, value in inputs.items():
         print(f"{key}: {value.shape=}")
@@ -165,22 +162,17 @@ def chat_text(gpu_prop, thinking):
     # Load model
     model_name = os.getenv("LLM_MODEL")
     MODEL_PATH = os.path.join(HF_MODEL_DIR, model_name)
-    model = AutoModel.from_pretrained(
+    model = Glm4vForConditionalGeneration.from_pretrained(
         MODEL_PATH,
         torch_dtype=torch.bfloat16,
         attn_implementation="flash_attention_2" if gpu_prop.major >= 8 else None,
         trust_remote_code=True,
     ).to("cuda")
     model = model.eval()
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, use_fast=True)
+    tokenizer = AutoProcessor.from_pretrained(MODEL_PATH, use_fast=True)
 
     # Construct prompt
     text = "你叫什么名字？"
-    # text = "你叫什么名字？/auto_think"
-    if thinking is True:
-        text += "/think"
-    if thinking is False:
-        text += "/no_think"
     messages = [
         {
             "role": "system",
@@ -232,7 +224,7 @@ def predict(gpu_prop, thinking):
         use_fast=True,
         trust_remote_code=True,
     )
-    model = AutoModel.from_pretrained(
+    model = Glm4vForConditionalGeneration.from_pretrained(
         MODEL_PATH,
         torch_dtype=torch.bfloat16,
         _attn_implementation="flash_attention_2" if gpu_prop.major >= 8 else None,
@@ -247,10 +239,6 @@ def predict(gpu_prop, thinking):
     # Construct prompt
     # text = "请用中文描述图片内容"
     text = f"请用中文描述图片内容，不要使用特殊字符回复。"
-    if thinking is True:
-        text += "/think"
-    if thinking is False:
-        text += "/no_think"
 
     # don't to chat with smolvlm, just do vision task
     # text = "Please reply to my message in Chinese simplified(简体中文), don't use Markdown format. 你好"
@@ -304,7 +292,7 @@ def predict_stream(gpu_prop, thinking):
     # Load model
     MODEL_PATH = os.path.join(HF_MODEL_DIR, os.getenv("LLM_MODEL"))
     processor = AutoProcessor.from_pretrained(MODEL_PATH, use_fast=True, trust_remote_code=True)
-    model = AutoModel.from_pretrained(
+    model = Glm4vForConditionalGeneration.from_pretrained(
         MODEL_PATH,
         torch_dtype=torch.bfloat16,
         _attn_implementation="flash_attention_2" if gpu_prop.major >= 8 else None,
@@ -320,10 +308,6 @@ def predict_stream(gpu_prop, thinking):
     # text = "请用中文描述图片内容"
     text = f"请用中文描述图片内容，不要使用特殊字符回复。"
     # text = "Please reply to my message in Chinese simplified(简体中文), don't use Markdown format. 描述下图片内容"
-    if thinking is True:
-        text += "/think"
-    if thinking is False:
-        text += "/no_think"
 
     messages = [
         {
@@ -395,7 +379,7 @@ def chat(gpu_prop, thinking):
     model_name = os.getenv("LLM_MODEL")
     MODEL_PATH = os.path.join(HF_MODEL_DIR, model_name)
     processor = AutoProcessor.from_pretrained(MODEL_PATH, use_fast=True, trust_remote_code=True)
-    model = AutoModel.from_pretrained(
+    model = Glm4vForConditionalGeneration.from_pretrained(
         MODEL_PATH,
         torch_dtype=torch.bfloat16,
         _attn_implementation="flash_attention_2" if gpu_prop.major >= 8 else None,
@@ -409,10 +393,6 @@ def chat(gpu_prop, thinking):
 
     # Construct history chat messages
     text = "讲一个故事"
-    if thinking is True:
-        text += "/think"
-    if thinking is False:
-        text += "/no_think"
     messages = [
         {
             "role": "system",
@@ -506,7 +486,7 @@ def text_vision_chat(gpu_prop, thinking):
     model_name = os.getenv("LLM_MODEL")
     MODEL_PATH = os.path.join(HF_MODEL_DIR, model_name)
     processor = AutoProcessor.from_pretrained(MODEL_PATH, use_fast=True, trust_remote_code=True)
-    model = AutoModel.from_pretrained(
+    model = Glm4vForConditionalGeneration.from_pretrained(
         MODEL_PATH,
         torch_dtype=torch.bfloat16,
         _attn_implementation="flash_attention_2" if gpu_prop.major >= 8 else None,
@@ -520,10 +500,6 @@ def text_vision_chat(gpu_prop, thinking):
 
     # Construct history chat messages
     text = "讲一个故事"
-    if thinking is True:
-        text += "/think"
-    if thinking is False:
-        text += "/no_think"
     messages = [
         {
             "role": "system",
@@ -545,7 +521,7 @@ def text_vision_chat(gpu_prop, thinking):
             "content": [
                 {
                     "type": "text",
-                    "text": "我叫Kwai Keye，是由快手基础大模型团队打造的多模态大模型。我基于海量数据和知识持续进化，拥有广泛的多领域知识和创作才能，具备出色的视觉感知理解、语言理解和生成能力，能够理解并高效执行各类任务。我擅长图像问答、视频问答、知识问答、文案创作、文字翻译、数学逻辑、代码理解和编写等任务，虽然我现在并不完美，偶尔也会出一些小差错，但我仍然在努力提升我的能力和准确度，期待能够为你提供更智能、轻快的互动体验。",  # remove analysis/think content
+                    "text": "我是图片描述助手。",  # remove think content
                 }
             ],
         },
@@ -564,7 +540,7 @@ def text_vision_chat(gpu_prop, thinking):
             "content": [
                 {
                     "type": "text",
-                    "text": "图片中有一只蜜蜂。",  # remove analysis/think content
+                    "text": "图片中有一只蜜蜂。",  # remove think content
                 }
             ],
         },
@@ -610,7 +586,7 @@ def text_video_chat(gpu_prop, thinking):
     model_name = os.getenv("LLM_MODEL")
     MODEL_PATH = os.path.join(HF_MODEL_DIR, model_name)
     processor = AutoProcessor.from_pretrained(MODEL_PATH, use_fast=True, trust_remote_code=True)
-    model = AutoModel.from_pretrained(
+    model = Glm4vForConditionalGeneration.from_pretrained(
         MODEL_PATH,
         torch_dtype=torch.bfloat16,
         _attn_implementation="flash_attention_2" if gpu_prop.major >= 8 else None,
@@ -628,10 +604,6 @@ def text_video_chat(gpu_prop, thinking):
 
     # Construct history chat messages
     text = "讲一个故事"
-    if thinking is True:
-        text += "/think"
-    if thinking is False:
-        text += "/no_think"
     messages = [
         {
             "role": "system",
@@ -653,29 +625,29 @@ def text_video_chat(gpu_prop, thinking):
             "content": [
                 {
                     "type": "text",
-                    "text": "我叫Kwai Keye，是由快手基础大模型团队打造的多模态大模型。我基于海量数据和知识持续进化，拥有广泛的多领域知识和创作才能，具备出色的视觉感知理解、语言理解和生成能力，能够理解并高效执行各类任务。我擅长图像问答、视频问答、知识问答、文案创作、文字翻译、数学逻辑、代码理解和编写等任务，虽然我现在并不完美，偶尔也会出一些小差错，但我仍然在努力提升我的能力和准确度，期待能够为你提供更智能、轻快的互动体验。",  # remove analysis/think content
+                    "text": "我是视频描述助手。",  # remove think content
                 }
             ],
         },
-        {
-            "role": "user",
-            "content": [
-                {
-                    "type": "image",
-                    "image": "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/bee.jpg",
-                },
-                {"type": "text", "text": "图片中有几只蜜蜂"},
-            ],
-        },
-        {
-            "role": "assistant",
-            "content": [
-                {
-                    "type": "text",
-                    "text": "图片中有一只蜜蜂。",  # remove analysis/think content
-                }
-            ],
-        },
+        # {
+        #    "role": "user",
+        #    "content": [
+        #        {
+        #            "type": "image",
+        #            "image": "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/bee.jpg",
+        #        },
+        #        {"type": "text", "text": "图片中有几只蜜蜂"},
+        #    ],
+        # },
+        # {
+        #    "role": "assistant",
+        #    "content": [
+        #        {
+        #            "type": "text",
+        #            "text": "图片中有一只蜜蜂。",  # remove think content
+        #        }
+        #    ],
+        # },
         {
             "role": "user",
             "content": [
@@ -693,7 +665,7 @@ def text_video_chat(gpu_prop, thinking):
             "content": [
                 {
                     "type": "text",
-                    "text": "视频中展示了一对男女在录音室内亲密互动的场景。男子穿着浅色衬衫，女子则身着带有花纹的无袖连衣裙，两人面对面站立，彼此靠近，似乎在深情对唱或交流。他们面前各有一个专业麦克风，背景是典型的录音室环境，有隔音板和声学处理设施。整个画面营造出一种温馨且专注的氛围，显示出两人之间深厚的情感联系。",  # remove analysis/think content
+                    "text": "画面展示了一个录音室场景，一位穿着浅灰色衬衫的男子和一位身着无袖亮片连衣裙的女子面对面站在专业麦克风前。两人身体微微前倾，靠近麦克风，面部表情专注且投入，似乎在共同演唱。录音室环境有黑色的隔音墙面（带有凸起吸音结构）和左侧的木质窗帘，整体氛围专业且温馨，呈现出两人合作演唱的画面。",  # remove think content
                 }
             ],
         },
@@ -707,28 +679,14 @@ def text_video_chat(gpu_prop, thinking):
 
     round = int(os.getenv("ROUND", "1")) * 2 if int(os.getenv("ROUND", "1")) > 0 else 2
     # In Keye-VL, frame rate information is also input into the model to align with absolute time.
-    text = processor.apply_chat_template(
+    inputs = processor.apply_chat_template(
         messages[:round],
         add_generation_prompt=True,
-        tokenize=False,
-        # return_dict=True,
-        # return_tensors="pt",
-    )
-    print(text)
-
-    image_inputs, video_inputs, video_kwargs = process_vision_info(
-        messages[:round], return_video_kwargs=True
-    )
-    print(image_inputs, video_inputs, video_kwargs)
-    inputs = processor(
-        text=[text],
-        images=image_inputs,
-        videos=video_inputs,
-        padding=True,
+        tokenize=True,
+        return_dict=True,
         return_tensors="pt",
-        **video_kwargs,
-    )
-    inputs = inputs.to(model.device, dtype=torch.bfloat16)
+        padding=True,
+    ).to(model.device, dtype=torch.bfloat16)
 
     for key, value in inputs.items():
         print(f"{key}: {value.shape=}")
@@ -756,7 +714,7 @@ def chat_tool(gpu_prop, thinking):
     model_name = os.getenv("LLM_MODEL")
     MODEL_PATH = os.path.join(HF_MODEL_DIR, model_name)
     processor = AutoProcessor.from_pretrained(MODEL_PATH, use_fast=True, trust_remote_code=True)
-    model = AutoModel.from_pretrained(
+    model = Glm4vForConditionalGeneration.from_pretrained(
         MODEL_PATH,
         torch_dtype=torch.bfloat16,
         _attn_implementation="flash_attention_2" if gpu_prop.major >= 8 else None,
@@ -857,7 +815,7 @@ def chat_json_mode(gpu_prop, thinking):
     model_name = os.getenv("LLM_MODEL")
     MODEL_PATH = os.path.join(HF_MODEL_DIR, model_name)
     processor = AutoProcessor.from_pretrained(MODEL_PATH, use_fast=True, trust_remote_code=True)
-    model = AutoModel.from_pretrained(
+    model = Glm4vForConditionalGeneration.from_pretrained(
         MODEL_PATH,
         torch_dtype=torch.bfloat16,
         _attn_implementation="flash_attention_2" if gpu_prop.major >= 8 else None,
@@ -940,57 +898,49 @@ def chat_json_mode(gpu_prop, thinking):
 
 
 """
-https://huggingface.co/Kwai-Keye/Keye-VL-8B-Preview
-Following Qwen3, keye also offer a soft switch mechanism
-- nothing(default): auto analysis model 
-    - no-thinking: (<analysis>***</analysis>xxxxx)
-    - thinking: (<analysis>***</analysis><think>***</think><answer>xxxxx</answer>)
-- /think: thinking model (<think>***</think><answer>xxxxx</answer>)
-- /no_think: no thinking model (xxxxx)
+https://huggingface.co/THUDM/GLM-4.1V-9B-Base
+https://huggingface.co/THUDM/GLM-4.1V-9B-Thinking
+
+TIPS:
+- Base model processor does not have a chat template, use it to post training sft and rl
+- Thinking model processor have chat template(think IT)
+
+if want display thinking,see:
+- https://github.com/THUDM/GLM-4.1V-Thinking/issues/38 (change chat template)
+- https://github.com/THUDM/GLM-4.1V-Thinking/issues/22 (2 infer)
 
 # download model
-modal run src/download_models.py --repo-ids "Kwai-Keye/Keye-VL-8B-Preview"
+modal run src/download_models.py --repo-ids "GLM-4.1V-9B-Base"
+modal run src/download_models.py --repo-ids "GLM-4.1V-9B-Thinking"
 
 # dump model
-IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task dump_model
+IMAGE_GPU=L4 modal run src/llm/transformers/vlm/glm4v.py --task dump_model
 
 # text model
-IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task predict_text
-IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task predict_text --thinking
-IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task predict_text --no-thinking
-IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task chat_text
-IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task chat_text --thinking
-IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task chat_text --no-thinking
+IMAGE_GPU=L4 modal run src/llm/transformers/vlm/glm4v.py --task predict_text
+IMAGE_GPU=L4 LLM_MODEL=THUDM/GLM-4.1V-9B-Base modal run src/llm/transformers/vlm/glm4v.py --task predict_text
+IMAGE_GPU=L4 modal run src/llm/transformers/vlm/glm4v.py --task chat_text
 
 # vision text/image chat
-IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task predict 
-IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task predict --no-thinking
-IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task predict --thinking
-IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task predict_stream
-IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task predict_stream --no-thinking
-IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task predict_stream --thinking
+IMAGE_GPU=L4 modal run src/llm/transformers/vlm/glm4v.py --task predict 
+IMAGE_GPU=L4 modal run src/llm/transformers/vlm/glm4v.py --task predict_stream
+IMAGE_GPU=L40s modal run src/llm/transformers/vlm/glm4v.py --task chat 
 
-IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task chat 
-IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task chat --no-thinking
-IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task chat --thinking
+ROUND=1 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/glm4v.py --task text_vision_chat
+ROUND=2 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/glm4v.py --task text_vision_chat
+ROUND=3 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/glm4v.py --task text_vision_chat
 
-IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task text_vision_chat
-ROUND=2 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task text_vision_chat
-ROUND=3 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task text_vision_chat
-
-# vision text/image/video chat
-ROUND=1 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task text_video_chat
-ROUND=2 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task text_video_chat
-ROUND=3 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task text_video_chat
-ROUND=4 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task text_video_chat
+# vision text/video chat
+ROUND=1 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/glm4v.py --task text_video_chat
+ROUND=2 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/glm4v.py --task text_video_chat
+ROUND=3 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/glm4v.py --task text_video_chat
+#ROUND=4 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/glm4v.py --task text_video_chat
 
 # 不支持funciton_calling 需要微调
-IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task chat_tool
-IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task chat_tool --thinking
-IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task chat_tool --no-thinking
+IMAGE_GPU=L4 modal run src/llm/transformers/vlm/glm4v.py --task chat_tool
 
-# json_mode支持, 但是输出markdown格式 ```json\n{}\n```
-IMAGE_GPU=L4 modal run src/llm/transformers/vlm/keye.py --task chat_json_mode
+# json_mode支持, GUI agents
+IMAGE_GPU=L4 modal run src/llm/transformers/vlm/glm4v.py --task chat_json_mode
 """
 
 

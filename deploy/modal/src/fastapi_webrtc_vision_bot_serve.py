@@ -214,13 +214,31 @@ class ContainerRuntimeConfig:
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
             )
             .run_commands(
-                "pip install git+https://github.com/huggingface/transformers@bbca9782ca1b8b358cc832a1b821aa1b450850da"
+                "pip install git+https://github.com/huggingface/transformers@17b3c96c00cd8421bff85282aec32422bdfebd31"
             )
             .pip_install("accelerate")
             .env(
                 {
                     "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
                     "LLM_MODEL_NAME_OR_PATH": f"/root/.achatbot/models/{os.getenv('LLM_MODEL_NAME_OR_PATH', 'Kwai-Keye/Keye-VL-8B-Preview')}",
+                }
+            )
+        ),
+        "glm4_1v": (
+            vision_bot_img.pip_install(
+                [
+                    f"achatbot[llm_transformers_manual_vision_glm4_1v]=={achatbot_version}",
+                ],
+                extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+            )
+            .run_commands(
+                "pip install git+https://github.com/huggingface/transformers@17b3c96c00cd8421bff85282aec32422bdfebd31"
+            )
+            .pip_install("accelerate")
+            .env(
+                {
+                    "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+                    "LLM_MODEL_NAME_OR_PATH": f"/root/.achatbot/models/{os.getenv('LLM_MODEL_NAME_OR_PATH', 'THUDM/GLM-4.1V-9B-Thinking')}",
                 }
             )
         ),
