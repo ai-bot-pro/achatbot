@@ -1,16 +1,24 @@
 import logging
 from threading import Thread
-from PIL import Image
 from time import perf_counter
+import time
+
+from PIL import Image
 
 try:
-    from transformers import AutoProcessor, TextIteratorStreamer, AutoModelForImageTextToText
+    from transformers import (
+        AutoModel,
+        AutoProcessor,
+        TextIteratorStreamer,
+    )
     import torch
+
+    from keye_vl_utils import process_vision_info
 
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        "In order to use Mimo-VLM, you need to `pip install achatbot[llm_transformers_manual_vision_mimo]`"
+        "In order to use Keye VLM, you need to `pip install achatbot[llm_transformers_manual_vision_keye]`"
     )
     raise Exception(f"Missing module: {e}")
 
@@ -24,15 +32,15 @@ from src.types.llm.transformers import TransformersLMArgs
 from .base import TransformersBaseLLM
 
 
-class TransformersManualVisionMimo(TransformersBaseLLM):
-    TAG = "llm_transformers_manual_vision_mimo"
+class TransformersManualVisionKeye(TransformersBaseLLM):
+    TAG = "llm_transformers_manual_vision_keye"
 
     def __init__(self, **args) -> None:
         self.args = TransformersLMArgs(**args)
         gpu_prop = torch.cuda.get_device_properties("cuda")
 
         if self.args.lm_device_map:
-            self._model = AutoModelForImageTextToText.from_pretrained(
+            self._model = AutoModel.from_pretrained(
                 self.args.lm_model_name_or_path,
                 torch_dtype=torch.bfloat16,
                 #!NOTE: https://github.com/huggingface/transformers/issues/20896
@@ -43,7 +51,7 @@ class TransformersManualVisionMimo(TransformersBaseLLM):
             ).eval()
         else:
             self._model = (
-                AutoModelForImageTextToText.from_pretrained(
+                AutoModel.from_pretrained(
                     self.args.lm_model_name_or_path,
                     torch_dtype=torch.bfloat16,
                     attn_implementation="flash_attention_2" if gpu_prop.major >= 8 else None,
@@ -56,11 +64,12 @@ class TransformersManualVisionMimo(TransformersBaseLLM):
         logging.info(f"TransformersLMArgs: {self.args}")
         print_model_params(self._model, self.TAG)
         self._tokenizer = AutoProcessor.from_pretrained(
-            self.args.lm_model_name_or_path, use_fast=True
+            self.args.lm_model_name_or_path,
+            use_fast=True,
+            trust_remote_code=True,
         )
 
         self._chat_history = ChatHistory(self.args.chat_history_size)
-        # not init, use default mimo system promt: You are MiMo, an AI assistant developed by Xiaomi.
         if self.args.init_chat_role and self.args.init_chat_prompt:
             self._chat_history.init(
                 {
@@ -102,9 +111,13 @@ class TransformersManualVisionMimo(TransformersBaseLLM):
         warmup_gen_kwargs = dict(
             **inputs,
             streamer=streamer,
-            do_sample=False,
-            min_new_tokens=self.args.lm_gen_min_new_tokens,
-            max_new_tokens=self.args.lm_gen_max_new_tokens,
+            do_sample=True if self.args.lm_gen_temperature > 0 else False,
+            temperature=self.args.lm_gen_temperature,
+            top_k=self.args.lm_gen_top_k,
+            top_p=self.args.lm_gen_top_p,
+            repetition_penalty=self.args.lm_gen_repetition_penalty,
+            min_new_tokens=1,
+            max_new_tokens=128,
         )
 
         self._warmup(
@@ -123,7 +136,15 @@ class TransformersManualVisionMimo(TransformersBaseLLM):
         message = {"role": self.args.user_role, "content": prompt}
         self._chat_history.append(message)
         chat_history = self._chat_history.to_list()
-        logging.debug(f"chat_history:{chat_history}")
+        content = chat_history[-1]["content"]
+        for item in content:
+            if item.get("type") == "text":
+                if self.args.lm_gen_thinking is True:
+                    item["text"] += "/think"
+                if self.args.lm_gen_thinking is False:
+                    item["text"] += "/no_think"
+        # logging.info(f"chat_history:{chat_history}")
+
         inputs = self._tokenizer.apply_chat_template(
             chat_history,
             add_generation_prompt=True,
@@ -160,30 +181,63 @@ class TransformersManualVisionMimo(TransformersBaseLLM):
         start = perf_counter()
         times = []
         is_output_think = self.args.lm_gen_think_output
-        think_interval_time = self.args.lm_gen_think_interval_time
+        is_analysis = False
+        is_thinking = False
+        is_answer = True
+        analysis_text = ""
+        think_text = ""
         for new_text in streamer:
             times.append(perf_counter() - start)
-            if is_output_think is False:
-                if "</think>" in new_text:
-                    new_text = new_text.replace("</think>", "").strip("\n")
-                    is_output_think = True
+            if "<analysis>" in new_text:
+                is_analysis = True
+                analysis_text = ""
+                analysis_text += new_text
+                continue
+            if "</analysis>" in new_text:
+                is_analysis = False
+                analysis_text += new_text
+                logging.info(f"{analysis_text=}")
+                new_text = new_text.replace("</analysis>", "")
+                analysis_text = ""
+            if is_analysis is True:
+                analysis_text += new_text
+                continue
+
+            if "<think>" in new_text:
+                yield "思考中，请稍等。"
+                is_thinking = True
+                think_text = ""
+                think_text += new_text
+                continue
+            if "</think>" in new_text:
+                is_thinking = False
+                think_text += new_text
+                logging.info(f"{think_text=}")
+                think_text = ""
+                new_text = new_text.replace("</think>", "")
+            if is_thinking is True:
+                think_text += new_text
+                if is_output_think is True:
+                    generated_text += new_text
+                    yield new_text
                 else:
-                    if think_interval_time > 0 and sum(times) > think_interval_time:  # tip once
-                        think_interval_time = 0
-                        yield "思考中，请稍等。"
-                    else:
-                        yield None
-                    start = perf_counter()
-                    continue
-            generated_text += new_text
-            yield new_text
+                    yield None
+                continue
+
+            if "<answer>" in new_text:
+                is_answer = True
+                new_text = new_text.replace("<answer>", "")
+            if "</answer>" in new_text:
+                is_answer = False
+                continue
+
+            if is_answer is True:
+                generated_text += new_text
+                yield new_text
             start = perf_counter()
         yield "."  # end the sentence for downstream process sentence, e.g.: tts
         logging.info(f"{generated_text=} TTFT: {times[0]:.4f}s total time: {sum(times):.4f}s")
         torch.cuda.empty_cache()
-        tmp_list = generated_text.split("</think>")
-        if len(tmp_list) > 1:
-            generated_text = tmp_list[1].strip("\n")
         self._chat_history.append(
             {"role": "assistant", "content": [{"type": "text", "text": generated_text}]}
         )

@@ -105,7 +105,7 @@ class Audio2AudioChatWorker:
 
                 if len(text.strip()) == 0:
                     logging.info(
-                        f"tts_synthesize msg:{msg} text is empty," f"sid:{session.ctx.client_id}"
+                        f"tts_synthesize msg:{msg} text is empty,sid:{session.ctx.client_id}"
                     )
                     continue
                 logging.info(f"tts_text: {text}")
@@ -163,6 +163,8 @@ class Audio2AudioChatWorker:
         assistant_text = ""
         text_iter = self.llm.chat_completion(session)
         for text in text_iter:
+            if text is None:
+                continue
             assistant_text += text
             conn.send(("LLM_GENERATE_TEXT", text, session), "be")
             self.text_buffer.put_nowait(("LLM_GENERATE_TEXT", text, session))

@@ -3,6 +3,7 @@ import base64
 from io import BytesIO
 from typing import AsyncGenerator
 import uuid
+import asyncio
 
 from PIL import Image
 from apipeline.frames.sys_frames import ErrorFrame
@@ -28,12 +29,14 @@ class VisionProcessor(VisionProcessorBase):
         self,
         llm: ILlm | EngineClass | None = None,
         session: Session | None = None,
+        sleep_time_s: float = 0.15,
     ):
         super().__init__()
         self._llm = llm
         self._session = session
         if self._session is None:
             self._session = Session(**SessionCtx(uuid.uuid4()).__dict__)
+        self.sleep_time_s = sleep_time_s
 
     def set_llm(self, llm: ILlm):
         self._llm = llm
@@ -85,6 +88,9 @@ class VisionProcessor(VisionProcessorBase):
 
         iter = self._llm.chat_completion(self._session)
         for item in iter:
+            if item is None:
+                await asyncio.sleep(self.sleep_time_s)
+                continue
             yield TextFrame(text=item)
 
     async def _run_vision(self, frame: VisionImageRawFrame) -> AsyncGenerator[Frame, None]:
@@ -111,6 +117,9 @@ class VisionProcessor(VisionProcessorBase):
 
         iter = self._llm.chat_completion(self._session)
         for item in iter:
+            if item is None:  # yield coroutine to speak
+                await asyncio.sleep(self.sleep_time_s)
+                continue
             yield TextFrame(text=item)
 
 
