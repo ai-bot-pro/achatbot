@@ -912,6 +912,7 @@ if want display thinking,see:
 # download model
 modal run src/download_models.py --repo-ids "GLM-4.1V-9B-Base"
 modal run src/download_models.py --repo-ids "GLM-4.1V-9B-Thinking"
+modal run src/download_models.py --repo-ids "THUDM/GLM-4.1V-9B-Thinking" --revision "refs/pr/9"
 
 # dump model
 IMAGE_GPU=L4 modal run src/llm/transformers/vlm/glm4v.py --task dump_model

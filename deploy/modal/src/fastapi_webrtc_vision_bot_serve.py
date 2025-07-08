@@ -224,10 +224,10 @@ class ContainerRuntimeConfig:
                 }
             )
         ),
-        "glm4_1v": (
+        "glm4v": (
             vision_bot_img.pip_install(
                 [
-                    f"achatbot[llm_transformers_manual_vision_glm4_1v]=={achatbot_version}",
+                    f"achatbot[llm_transformers_manual_vision_glm4v]=={achatbot_version}",
                 ],
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
             )
@@ -280,8 +280,8 @@ img = ContainerRuntimeConfig.get_img().pip_install(
 )
 
 # img = img.pip_install(
-#    f"achatbot==0.0.20.dev13",
-#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+#   f"achatbot==0.0.20.post0",
+#   extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
 # )
 
 HF_MODEL_DIR = "/root/.achatbot/models"
