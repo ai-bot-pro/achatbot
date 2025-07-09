@@ -81,7 +81,10 @@ def check():
 
 
 def generate():
+    import paddle
     from fastdeploy import LLM, SamplingParams
+
+    gpu_device_count = paddle.device.cuda.device_count()
 
     prompts = [
         "把李白的静夜思改写为现代诗",
@@ -96,7 +99,7 @@ def generate():
     LLM_MODEL = os.getenv("LLM_MODEL")
     model_path = os.path.join(HF_MODEL_DIR, LLM_MODEL)
     # https://github.com/PaddlePaddle/FastDeploy/blob/develop/docs/parameters.md
-    llm = LLM(model=model_path, tensor_parallel_size=1, max_model_len=8192)
+    llm = LLM(model=model_path, tensor_parallel_size=gpu_device_count, max_model_len=8192)
 
     # Batch inference (internal request queuing and dynamic batching)
     outputs = llm.generate(prompts, sampling_params)
@@ -109,7 +112,11 @@ def generate():
 
 
 def chat():
+    import paddle
     from fastdeploy import LLM, SamplingParams
+
+    gpu_device_count = paddle.device.cuda.device_count()
+    print(f"{gpu_device_count=}")
 
     msg1 = [
         {"role": "system", "content": "I'm a helpful AI assistant."},
@@ -129,7 +136,7 @@ def chat():
     LLM_MODEL = os.getenv("LLM_MODEL")
     model_path = os.path.join(HF_MODEL_DIR, LLM_MODEL)
     # https://github.com/PaddlePaddle/FastDeploy/blob/develop/docs/parameters.md
-    llm = LLM(model=model_path, tensor_parallel_size=1, max_model_len=8192)
+    llm = LLM(model=model_path, tensor_parallel_size=gpu_device_count, max_model_len=8192)
     # Batch inference (internal request queuing and dynamic batching)
     outputs = llm.chat(messages, sampling_params)
 
@@ -140,20 +147,94 @@ def chat():
         generated_text = output.outputs.text
 
 
+def vision_chat():
+    import io
+    import os
+    import requests
+    from PIL import Image
+
+    from fastdeploy.entrypoints.llm import LLM
+    from fastdeploy.engine.sampling_params import SamplingParams
+    from fastdeploy.input.ernie_tokenizer import ErnieBotTokenizer
+
+    LLM_MODEL = os.getenv("LLM_MODEL")
+    PATH = os.path.join(HF_MODEL_DIR, LLM_MODEL)
+    tokenizer = ErnieBotTokenizer.from_pretrained(os.path.dirname(PATH))
+
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": "https://ku.baidu-int.com/vk-assets-ltd/space/2024/09/13/933d1e0a0760498e94ec0f2ccee865e0"
+                    },
+                },
+                {"type": "text", "text": "这张图片的内容是什么"},
+            ],
+        }
+    ]
+
+    prompt = tokenizer.apply_chat_template(messages, tokenize=False)
+    images, videos = [], []
+    for message in messages:
+        content = message["content"]
+        if not isinstance(content, list):
+            continue
+        for part in content:
+            if part["type"] == "image_url":
+                url = part["image_url"]["url"]
+                image_bytes = requests.get(url).content
+                img = Image.open(io.BytesIO(image_bytes))
+                images.append(img)
+            elif part["type"] == "video_url":
+                url = part["video_url"]["url"]
+                video_bytes = requests.get(url).content
+                videos.append({"video": video_bytes, "max_frames": 30})
+
+    sampling_params = SamplingParams(temperature=0.1, max_tokens=6400)
+    llm = LLM(
+        model=PATH,
+        tensor_parallel_size=8,
+        max_model_len=32768,
+        enable_mm=True,
+        limit_mm_per_prompt={"image": 100},
+        reasoning_parser="ernie-45-vl",
+    )
+    outputs = llm.generate(
+        prompts={"prompt": prompt, "multimodal_data": {"image": images, "video": videos}},
+        sampling_params=sampling_params,
+    )
+
+    # 输出结果
+    for output in outputs:
+        print(output)
+        generated_text = output.outputs.text
+        reasoning_text = output.outputs.resoning_content
+
+
 """
-# https://github.com/PaddlePaddle/FastDeploy/blob/develop/docs/offline_inference.md
+# 0. download paddle model
+modal run src/download_models.py --repo-ids "baidu/ERNIE-4.5-0.3B-Paddle"
+modal run src/download_models.py --repo-ids "baidu/ERNIE-4.5-VL-28B-A3B-Paddle"
+
+# https://paddlepaddle.github.io/FastDeploy/offline_inference/
 # https://github.com/PaddlePaddle/FastDeploy/blob/develop/docs/offline_inference.md#24-fastdeploysamplingparams
 # https://github.com/PaddlePaddle/FastDeploy/blob/develop/docs/parameters.md
 
-# default 80_90 GPU ARCH use A100
+# 1. default 80_90 GPU ARCH use A100 run check/generate/chat
 modal run src/llm/fastdeploy/offline_inference.py
 modal run src/llm/fastdeploy/offline_inference.py --task generate
 modal run src/llm/fastdeploy/offline_inference.py --task chat
 
-# 86_89 GPU ARCH use L4
+# 2. 86_89 GPU ARCH use L4 run check/generate/chat
 GPU_ARCHS=86_89 IMAGE_GPU=L4 modal run src/llm/fastdeploy/offline_inference.py
 GPU_ARCHS=86_89 IMAGE_GPU=L4 modal run src/llm/fastdeploy/offline_inference.py --task generate
 GPU_ARCHS=86_89 IMAGE_GPU=L4 modal run src/llm/fastdeploy/offline_inference.py --task chat 
+
+# 2. 86_89 GPU ARCH use L40s run vision_chat
+LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s modal run src/llm/fastdeploy/offline_inference.py --task vision_chat 
 """
 
 
@@ -163,6 +244,7 @@ def main(task: str = "check"):
         "check": check,
         "generate": generate,
         "chat": chat,
+        "vision_chat": vision_chat,
     }
     if task not in tasks:
         raise ValueError(f"task {task} not found")
