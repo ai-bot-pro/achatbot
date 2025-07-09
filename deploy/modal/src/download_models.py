@@ -33,12 +33,12 @@ hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
     timeout=1200,
     scaledown_window=1200,
 )
-def download_ckpt(repo_ids: str, revision: str = None) -> str:
+def download_ckpt(repo_ids: str, revision: str = None, local_dir: str = None) -> str:
     # https://huggingface.co/docs/huggingface_hub/guides/download
     from huggingface_hub import snapshot_download
 
     for repo_id in repo_ids.split(","):
-        local_dir = os.path.join(HF_MODEL_DIR, repo_id)
+        local_dir = os.path.join(HF_MODEL_DIR, local_dir) or os.path.join(HF_MODEL_DIR, repo_id)
         print(f"{repo_id} model downloading")
         snapshot_download(
             repo_id=repo_id,
@@ -154,5 +154,5 @@ modal run src/download_models.py::download_ckpts --ckpt-urls "https://virutalbuy
 
 
 @app.local_entrypoint()
-def main(repo_ids: str, revision: str = None):
-    download_ckpt.remote(repo_ids, revision)
+def main(repo_ids: str, revision: str = None, local_dir: str = None):
+    download_ckpt.remote(repo_ids, revision, local_dir)

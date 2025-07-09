@@ -172,10 +172,8 @@ class TransformersManualVisionGLM4v(TransformersBaseLLM):
         start = perf_counter()
         times = []
         is_output_think = self.args.lm_gen_think_output
-        is_analysis = False
         is_thinking = False
         is_answer = True
-        analysis_text = ""
         think_text = ""
         for new_text in streamer:
             times.append(perf_counter() - start)
