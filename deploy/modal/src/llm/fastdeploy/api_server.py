@@ -92,11 +92,12 @@ def serve():
 """
 # https://paddlepaddle.github.io/FastDeploy/get_started/quick_start_vl/
 # https://paddlepaddle.github.io/FastDeploy/parameters/
+# https://paddlepaddle.github.io/FastDeploy/quantization/online_quantization/
 
 # 0. download paddle model
 modal run src/download_models.py --repo-ids "baidu/ERNIE-4.5-VL-28B-A3B-Paddle"
 
-# 1. run serve
+# 1. run serve (just to test)
 LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANTIZATION=wint4 TP=1 modal serve src/llm/fastdeploy/api_server.py
 LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=80_90 IMAGE_GPU=A100-80GB QUANTIZATION=wint8 TP=1 modal serve src/llm/fastdeploy/api_server.py
 
@@ -116,10 +117,43 @@ curl -X POST "https://weedge--fastdeploy-api-server-serve-dev.modal.run/v1/chat/
   ],
   "metadata": {"enable_thinking": false}
 }'
+curl -X POST "https://weedge--fastdeploy-api-server-serve-dev.modal.run/v1/chat/completions" \
+-H "Content-Type: application/json" \
+-d '{
+  "messages": [
+    {"role": "user", "content": [
+      {"type": "image_url", "image_url": {"url": "https://paddlenlp.bj.bcebos.com/datasets/paddlemix/demo_images/example2.jpg"}},
+      {"type": "text", "text": "What era does this artifact belong to?"}
+    ]}
+  ],
+  "metadata": {"enable_thinking": true}
+}'
+curl -X POST "https://weedge--fastdeploy-api-server-serve-dev.modal.run/v1/chat/completions" \
+-H "Content-Type: application/json" \
+-d '{
+  "messages": [
+    {"role": "user", "content": [
+      {"type": "image_url", "image_url": {"url": "https://paddlenlp.bj.bcebos.com/datasets/paddlemix/demo_images/example2.jpg"}},
+      {"type": "text", "text": "What era does this artifact belong to?"}
+    ]}
+  ],
+  "metadata": {"enable_thinking": false},"stream":true
+}'
+curl -X POST "https://weedge--fastdeploy-api-server-serve-dev.modal.run/v1/chat/completions" \
+-H "Content-Type: application/json" \
+-d '{
+  "messages": [
+    {"role": "user", "content": [
+      {"type": "image_url", "image_url": {"url": "https://paddlenlp.bj.bcebos.com/datasets/paddlemix/demo_images/example2.jpg"}},
+      {"type": "text", "text": "What era does this artifact belong to?"}
+    ]}
+  ],
+  "metadata": {"enable_thinking": true},"stream":true
+}'
 
 # 4. run cli with streaming
 modal run src/llm/fastdeploy/api_server.py --url "https://weege126--fastdeploy-api-server-serve-dev.modal.run"
-
+FASTDEPLOY_SERVE_URL https://weege126--fastdeploy-api-server-serve-dev.modal.run python src/llm/fastdeploy/cli.py
 """
 
 
