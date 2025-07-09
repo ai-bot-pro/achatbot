@@ -204,8 +204,8 @@ def split_model(model_name, gpu):
     # splits layers into different GPUs (need use L4/L40s for bfloat16)
     model_splits = {
         "baidu/ERNIE-4_5-VL-28B-A3B-PT_L4:4": {
-            "model": [8, 10, 10],  # 28 layer
-            "vision_model": [9, 12, 11],  # 32 layer
+            "model": [7, 7, 7, 7],  # 28 layer
+            "vision_model": [8, 8, 8, 8],  # 32 layer
         },
         "baidu/ERNIE-4_5-VL-28B-A3B-PT_L40s:2": {
             "model": [11, 17],  # 28 layer
@@ -328,7 +328,7 @@ def test(gpu_prop, thinking):
 
 def dump_model(gpu_prop, thinking):
     """
-    vlm text model use qwen3 arch no MTP
+    vlm text model use ERNIE4.5 arch no MTP
     """
     for model_name in [
         "baidu/ERNIE-4_5-VL-28B-A3B-PT",
@@ -343,8 +343,8 @@ def dump_model(gpu_prop, thinking):
             torch_dtype=torch.bfloat16,
             # attn_implementation="flash_attention_2" if gpu_prop.major >= 8 else None,
             trust_remote_code=True,
-            # device_map="auto",
-        ).to("cuda")
+            device_map="auto",
+        )
         model.add_image_preprocess(processor)
         model = model.eval()
         print(f"{model.config=}")
@@ -547,15 +547,20 @@ def predict(gpu_prop, thinking):
 
 @torch.no_grad()
 def predict_stream(gpu_prop, thinking):
+    model_name = os.getenv("LLM_MODEL")
+    gpu = os.getenv("IMAGE_GPU")
+    device_map = split_model(model_name, gpu)
+    print(device_map)
     # Load model
-    MODEL_PATH = os.path.join(HF_MODEL_DIR, os.getenv("LLM_MODEL"))
+    MODEL_PATH = os.path.join(HF_MODEL_DIR, model_name)
     processor = AutoProcessor.from_pretrained(MODEL_PATH, use_fast=True, trust_remote_code=True)
     processor.eval()
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_PATH,
         torch_dtype=torch.bfloat16,
         trust_remote_code=True,
-    ).to("cuda")
+        device_map=device_map,
+    )
     model.add_image_preprocess(processor)
     # print(f"{model.config=}")
     # print(f"{processor=}")
@@ -1209,20 +1214,30 @@ TIPS:
 - 支持auto-thinking, thinking, non-thinking, 由apply_chat_template `enable_thinking` 设置，分别对应：None,True,False
 - 后续还会对vllm支持，会用到transformers的tokenizer
 
-# download model
-modal run src/download_models.py --repo-ids "baidu/ERNIE-4.5-VL-28B-A3B-PT"
+# 0. download model
+modal run src/download_models.py --repo-ids "baidu/ERNIE-4.5-VL-28B-A3B-PT" --local-dir "baidu/ERNIE-4_5-VL-28B-A3B-PT"
 
-# dump model
+# 1. dump model
 IMAGE_GPU=L40s modal run src/llm/transformers/vlm/ernie4.py --task dump_model
 
-# text model
+# 2. text model
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/ernie4.py --task predict_text
 IMAGE_GPU=A100-80GB LLM_MODEL=THUDM/GLM-4.1V-9B-Base modal run src/llm/transformers/vlm/ernie4.py --task predict_text
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/ernie4.py --task chat_text
 
-# vision text/image chat
+# 3. vision text/image chat case need 68GB GPU HBM
+IMAGE_GPU=L4:4 modal run src/llm/transformers/vlm/ernie4.py --task predict 
+IMAGE_GPU=L4:4 modal run src/llm/transformers/vlm/ernie4.py --task predict --no-thinking
+IMAGE_GPU=L4:4 modal run src/llm/transformers/vlm/ernie4.py --task predict --thinking
+IMAGE_GPU=L40s:2 modal run src/llm/transformers/vlm/ernie4.py --task predict 
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/ernie4.py --task predict 
+IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/ernie4.py --task predict --no-thinking
+IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/ernie4.py --task predict --thinking
+
+IMAGE_GPU=L4:4 modal run src/llm/transformers/vlm/ernie4.py --task predict_stream
+IMAGE_GPU=L40s:2 modal run src/llm/transformers/vlm/ernie4.py --task predict_stream
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/ernie4.py --task predict_stream
+
 # multi images need more GPU HBM, have some bug
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/ernie4.py --task chat 
 
@@ -1230,15 +1245,15 @@ ROUND=1 IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/ernie4.py --task 
 ROUND=2 IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/ernie4.py --task text_vision_chat
 ROUND=3 IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/ernie4.py --task text_vision_chat
 
-# vision text/video chat, need more GPU HBM, have some bug
+# 4. vision text/video chat, need more GPU HBM, have some bug
 ROUND=1 IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/ernie4.py --task text_video_chat
 ROUND=2 IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/ernie4.py --task text_video_chat
 ROUND=3 IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/ernie4.py --task text_video_chat
 
-# 不支持funciton_calling 需要微调
+# 5. 不支持funciton_calling 需要微调
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/ernie4.py --task chat_tool
 
-# json_mode支持不够好, 输出markdown格式```json {xxx} ``` xxx 需要截断, 还是需要微调
+# 6. json_mode支持不够好, 输出markdown格式```json {xxx} ``` xxx 需要截断/微调
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/ernie4.py --task chat_json_mode
 """
 

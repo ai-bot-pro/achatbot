@@ -38,7 +38,10 @@ def download_ckpt(repo_ids: str, revision: str = None, local_dir: str = None) ->
     from huggingface_hub import snapshot_download
 
     for repo_id in repo_ids.split(","):
-        local_dir = os.path.join(HF_MODEL_DIR, local_dir) or os.path.join(HF_MODEL_DIR, repo_id)
+        if local_dir is None:
+            local_dir = os.path.join(HF_MODEL_DIR, repo_id)
+        else:
+            local_dir = os.path.join(HF_MODEL_DIR, local_dir)
         print(f"{repo_id} model downloading")
         snapshot_download(
             repo_id=repo_id,
