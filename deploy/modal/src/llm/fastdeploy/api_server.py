@@ -63,7 +63,7 @@ video_out_vol = modal.Volume.from_name("gen_video", create_if_missing=True)
     max_containers=1,
 )
 @modal.web_server(port=8180, startup_timeout=60 * 60)
-def serve():
+def openai():
     subprocess.run("nvidia-smi --version", shell=True)
     subprocess.run("nvcc --version", shell=True)
     subprocess.run("python -m fastdeploy.entrypoints.openai.api_server --help", shell=True)
@@ -89,6 +89,43 @@ def serve():
     subprocess.Popen(cmd, env=os.environ, shell=True)
 
 
+@app.function(
+    gpu=os.getenv("IMAGE_GPU", "A100"),
+    cpu=2.0,
+    image=img,
+    volumes={
+        HF_MODEL_DIR: hf_model_vol,
+        ASSETS_DIR: assets_dir,
+        VIDEO_OUTPUT_DIR: video_out_vol,
+    },
+    timeout=86400,  # default 300s
+    max_containers=1,
+)
+@modal.web_server(port=9904, startup_timeout=60 * 60)
+def generate():
+    subprocess.run("nvidia-smi --version", shell=True)
+    subprocess.run("nvcc --version", shell=True)
+    subprocess.run("python -m fastdeploy.entrypoints.api_server --help", shell=True)
+
+    TP = os.getenv("TP")
+    QUANTIZATION = os.getenv("QUANTIZATION")
+    LLM_MODEL = os.getenv("LLM_MODEL")
+    MODEL_PATH = os.path.join(HF_MODEL_DIR, LLM_MODEL)
+    cmd = f"""
+    python -m fastdeploy.entrypoints.api_server \
+        --model {MODEL_PATH} \
+        --port 9904 \
+        --max-model-len 32768 \
+        --max-num-seqs 32 \
+        --reasoning-parser ernie-45-vl \
+        --tensor-parallel-size {TP} \
+        --quantization {QUANTIZATION} \
+        --enable-mm
+    """
+    print(cmd)
+    subprocess.Popen(cmd, env=os.environ, shell=True)
+
+
 """
 # https://paddlepaddle.github.io/FastDeploy/get_started/quick_start_vl/
 # https://paddlepaddle.github.io/FastDeploy/parameters/
@@ -102,11 +139,11 @@ LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANT
 LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=80_90 IMAGE_GPU=A100-80GB QUANTIZATION=wint8 TP=1 modal serve src/llm/fastdeploy/api_server.py
 
 # 2. init to run and check health
-curl -i https://weedge--fastdeploy-api-server-serve-dev.modal.run/health
+curl -i https://weedge--fastdeploy-api-server-openai-dev.modal.run/health
 
 
 # 3. run image prompt chat
-curl -X POST "https://weedge--fastdeploy-api-server-serve-dev.modal.run/v1/chat/completions" \
+curl -X POST "https://weedge--fastdeploy-api-server-openai-dev.modal.run/v1/chat/completions" \
 -H "Content-Type: application/json" \
 -d '{
   "messages": [
@@ -117,7 +154,7 @@ curl -X POST "https://weedge--fastdeploy-api-server-serve-dev.modal.run/v1/chat/
   ],
   "metadata": {"enable_thinking": false}
 }'
-curl -X POST "https://weedge--fastdeploy-api-server-serve-dev.modal.run/v1/chat/completions" \
+curl -X POST "https://weedge--fastdeploy-api-server-openai-dev.modal.run/v1/chat/completions" \
 -H "Content-Type: application/json" \
 -d '{
   "messages": [
@@ -128,7 +165,7 @@ curl -X POST "https://weedge--fastdeploy-api-server-serve-dev.modal.run/v1/chat/
   ],
   "metadata": {"enable_thinking": true}
 }'
-curl -X POST "https://weedge--fastdeploy-api-server-serve-dev.modal.run/v1/chat/completions" \
+curl -X POST "https://weedge--fastdeploy-api-server-openai-dev.modal.run/v1/chat/completions" \
 -H "Content-Type: application/json" \
 -d '{
   "messages": [
@@ -139,7 +176,7 @@ curl -X POST "https://weedge--fastdeploy-api-server-serve-dev.modal.run/v1/chat/
   ],
   "metadata": {"enable_thinking": false},"stream":true
 }'
-curl -X POST "https://weedge--fastdeploy-api-server-serve-dev.modal.run/v1/chat/completions" \
+curl -X POST "https://weedge--fastdeploy-api-server-openai-dev.modal.run/v1/chat/completions" \
 -H "Content-Type: application/json" \
 -d '{
   "messages": [
@@ -152,13 +189,13 @@ curl -X POST "https://weedge--fastdeploy-api-server-serve-dev.modal.run/v1/chat/
 }'
 
 # 4. run cli with streaming
-modal run src/llm/fastdeploy/api_server.py --url "https://weege126--fastdeploy-api-server-serve-dev.modal.run"
-FASTDEPLOY_SERVE_URL https://weege126--fastdeploy-api-server-serve-dev.modal.run python src/llm/fastdeploy/cli.py
+modal run src/llm/fastdeploy/api_server.py --url "https://weege126--fastdeploy-api-server-openai-dev.modal.run"
+FASTDEPLOY_SERVE_URL https://weege126--fastdeploy-api-server-openai-dev.modal.run python src/llm/fastdeploy/cli.py
 """
 
 
 @app.local_entrypoint()
-def main(url: str = "https://weedge--fastdeploy-api-server-serve-dev.modal.run"):
+def main(url: str = "https://weedge--fastdeploy-api-server-openai-dev.modal.run"):
     import openai
 
     client = openai.Client(base_url=f"{url}/v1", api_key="null")

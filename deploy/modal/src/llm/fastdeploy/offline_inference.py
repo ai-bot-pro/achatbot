@@ -4,7 +4,10 @@ import os
 import subprocess
 from threading import Thread
 from time import perf_counter
-from typing import Optional
+import time
+import traceback
+from typing import Generator, Optional
+import uuid
 
 import modal
 
@@ -65,14 +68,14 @@ video_out_vol = modal.Volume.from_name("gen_video", create_if_missing=True)
     timeout=86400,  # default 300s
     max_containers=1,
 )
-def run(task):
+def run(task, thinking=True):
     subprocess.run("nvidia-smi --version", shell=True)
     subprocess.run("nvcc --version", shell=True)
 
-    task()
+    task(thinking)
 
 
-def check():
+def check(thinking):
     import paddle
     from paddle.jit.marker import unified
 
@@ -84,7 +87,7 @@ def check():
     from fastdeploy.model_executor.ops.gpu import beam_search_softmax
 
 
-def generate():
+def generate(thinking):
     import paddle
     from fastdeploy import LLM, SamplingParams
 
@@ -115,7 +118,7 @@ def generate():
         generated_text = output.outputs.text
 
 
-def chat():
+def chat(thinking):
     import paddle
     from fastdeploy import LLM, SamplingParams
 
@@ -151,7 +154,7 @@ def chat():
         generated_text = output.outputs.text
 
 
-def vision_chat():
+def vision_chat(thinking):
     import io
     import os
     import requests
@@ -160,9 +163,16 @@ def vision_chat():
     from fastdeploy.entrypoints.llm import LLM
     from fastdeploy.engine.sampling_params import SamplingParams
     from fastdeploy.input.ernie_tokenizer import ErnieBotTokenizer
+    from fastdeploy.utils import llm_logger, retrive_model_from_server
 
     LLM_MODEL = os.getenv("LLM_MODEL")
     PATH = os.path.join(HF_MODEL_DIR, LLM_MODEL)
+
+    vocab_file_names = ["tokenizer.model", "spm.model", "ernie_token_100k.model"]
+    for i in range(len(vocab_file_names)):
+        if os.path.exists(os.path.join(PATH, vocab_file_names[i])):
+            ErnieBotTokenizer.resource_files_names["vocab_file"] = vocab_file_names[i]
+            break
     tokenizer = ErnieBotTokenizer.from_pretrained(PATH)
 
     messages = [
@@ -198,7 +208,30 @@ def vision_chat():
                 videos.append({"video": video_bytes, "max_frames": 30})
 
     sampling_params = SamplingParams(temperature=0.1, max_tokens=6400)
-    llm = LLM(
+    print(f"{sampling_params=}")
+
+    class LLMv2(LLM):
+        def _receive_output(self):
+            """
+            Recieve output from token processor and store them in cache
+            """
+            while True:
+                try:
+                    results = self.llm_engine._get_generated_result()
+                    for request_id, contents in results.items():
+                        with self.mutex:
+                            for result in contents:
+                                print(request_id, result)
+                                if request_id not in self.req_output:
+                                    self.req_output[request_id] = result
+                                    continue
+                                self.req_output[request_id].add(result)
+                except Exception as e:
+                    llm_logger.error(
+                        "Unexcepted error happend: {}, {}".format(e, str(traceback.format_exc()))
+                    )
+
+    llm = LLMv2(
         model=PATH,
         tensor_parallel_size=int(os.getenv("TP", 1)),
         quantization=os.getenv("QUANTIZATION", "wint4"),
@@ -218,6 +251,128 @@ def vision_chat():
         print(prompt, output)
         generated_text = output.outputs.text
         reasoning_text = output.outputs.reasoning_content
+
+
+def llm_engine_generate(thinking):
+    import io
+    import os
+    import requests
+    from PIL import Image
+
+    from fastdeploy.entrypoints.llm import LLM
+    from fastdeploy.engine.sampling_params import SamplingParams
+    from fastdeploy.input.ernie_tokenizer import ErnieBotTokenizer
+    from fastdeploy.utils import FlexibleArgumentParser, api_server_logger, is_port_available
+    from fastdeploy.engine.args_utils import EngineArgs
+    from fastdeploy.utils import llm_logger, retrive_model_from_server
+    from fastdeploy.engine.engine import LLMEngine
+    from fastdeploy.engine.request import RequestOutput
+
+    class LLMEngineMonkey(LLMEngine):
+        def _get_generated_tokens(self, request_id) -> Generator[RequestOutput, None, None]:
+            """
+            Get generated tokens for a specific request ID.
+            This is a generator function that yields results until the generation is complete.
+
+            Args:
+                request_id (str): The ID of the request to get tokens for.
+
+            Yields:
+                RequestOutput: The generated tokens for the request.
+            """
+            finished = False
+            while not finished and self.running:
+                try:
+                    results = self.scheduler.get_results()
+                    if request_id in results:
+                        contents = results[request_id]
+                        for result in contents:
+                            # print(request_id, result)
+                            yield result
+                            if result.finished:
+                                finished = True
+                                break
+                    if not finished:
+                        time.sleep(0.001)  # Small sleep to avoid busy waiting
+                except Exception as e:
+                    llm_logger.error(
+                        f"Error in _get_generated_tokens: {e}, {str(traceback.format_exc())}"
+                    )
+                    break
+
+    LLM_MODEL = os.getenv("LLM_MODEL")
+    PATH = os.path.join(HF_MODEL_DIR, LLM_MODEL)
+    llm_engine = LLMEngineMonkey.from_engine_args(
+        EngineArgs(
+            model=PATH,
+            tensor_parallel_size=int(os.getenv("TP", 1)),
+            quantization=os.getenv("QUANTIZATION", "wint4"),
+            max_model_len=32768,
+            enable_mm=True,
+            limit_mm_per_prompt={"image": 100},
+            reasoning_parser="ernie-45-vl",
+        )
+    )
+    if not llm_engine.start():
+        api_server_logger.error("Failed to initialize FastDeploy LLM engine, service exit now!")
+        return
+    api_server_logger.info(f"FastDeploy LLM engine initialized!")
+
+    vocab_file_names = ["tokenizer.model", "spm.model", "ernie_token_100k.model"]
+    for i in range(len(vocab_file_names)):
+        if os.path.exists(os.path.join(PATH, vocab_file_names[i])):
+            ErnieBotTokenizer.resource_files_names["vocab_file"] = vocab_file_names[i]
+            break
+    tokenizer = ErnieBotTokenizer.from_pretrained(PATH)
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": "https://paddlenlp.bj.bcebos.com/datasets/paddlemix/demo_images/example2.jpg"
+                    },
+                },
+                {"type": "text", "text": "这张图片的内容是什么"},
+            ],
+        }
+    ]
+    prompt = tokenizer.apply_chat_template(messages, tokenize=False)
+    images, videos = [], []
+    for message in messages:
+        content = message["content"]
+        if not isinstance(content, list):
+            continue
+        for part in content:
+            if part["type"] == "image_url":
+                url = part["image_url"]["url"]
+                image_bytes = requests.get(url).content
+                img = Image.open(io.BytesIO(image_bytes))
+                images.append(img)
+            elif part["type"] == "video_url":
+                url = part["video_url"]["url"]
+                video_bytes = requests.get(url).content
+                videos.append({"video": video_bytes, "max_frames": 30})
+
+    prompts = {"prompt": prompt, "multimodal_data": {"image": images, "video": videos}}
+    prompts["request_id"] = str(uuid.uuid4())
+    prompts["max_tokens"] = llm_engine.cfg.max_model_len
+    print(f"{prompts=}")
+    sampling_params = SamplingParams(temperature=0.1, max_tokens=6400)
+    print(f"{sampling_params=}")
+    llm_engine.add_requests(prompts, sampling_params, enable_thinking=thinking)
+
+    for result in llm_engine._get_generated_tokens(prompts["request_id"]):
+        # print(result)
+        if result.outputs and result.outputs.token_ids and len(result.outputs.token_ids) > 0:
+            # print(result.outputs.token_ids)
+            tokens = tokenizer.decode(result.outputs.token_ids)
+            print(tokens, flush=True, end="")
+
+        if result.finished:
+            print("\n")
+            print(prompts["request_id"], "finished")
 
 
 """
@@ -242,18 +397,22 @@ GPU_ARCHS=86_89 IMAGE_GPU=L4 modal run src/llm/fastdeploy/offline_inference.py -
 # 2. 86_89 GPU ARCH use L40s run vision_chat
 LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s modal run src/llm/fastdeploy/offline_inference.py --task vision_chat 
 LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANTIZATION=wint8 TP=1 modal run src/llm/fastdeploy/offline_inference.py --task vision_chat 
+
+LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANTIZATION=wint4 TP=1 modal run src/llm/fastdeploy/offline_inference.py --task llm_engine_generate 
+LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANTIZATION=wint4 TP=1 modal run src/llm/fastdeploy/offline_inference.py --task llm_engine_generate  --no-thinking
 """
 
 
 @app.local_entrypoint()
-def main(task: str = "check"):
+def main(task: str = "check", thinking: bool = True):
     tasks = {
         "check": check,
         "generate": generate,
         "chat": chat,
         "vision_chat": vision_chat,
+        "llm_engine_generate": llm_engine_generate,
     }
     if task not in tasks:
         raise ValueError(f"task {task} not found")
-    print(f"running task {task}")
-    run.remote(tasks[task])
+    print(f"running task {task} {thinking=}")
+    run.remote(tasks[task], thinking)
