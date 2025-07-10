@@ -13,6 +13,8 @@ LLM_MODEL = os.getenv("LLM_MODEL", "baidu/ERNIE-4.5-0.3B-Paddle")
 IMAGE_GPU = os.getenv("IMAGE_GPU", "A100")
 FASTDEPLOY_VERSION = os.getenv("FASTDEPLOY_VERSION", "stable")  # stable, nightly
 GPU_ARCHS = os.getenv("GPU_ARCHS", "80_90")  # 80_90, 86_89
+QUANTIZATION = os.getenv("quantization", "wint4")  # wint8, wint4
+TP = os.getenv("TP", "1")
 app = modal.App("fastdeploy-offline-inference")
 img = (
     # use openai triton
@@ -36,6 +38,8 @@ img = (
             # "TQDM_DISABLE": "1",
             "LLM_MODEL": LLM_MODEL,
             "IMAGE_GPU": IMAGE_GPU,
+            "QUANTIZATION": QUANTIZATION,
+            "TP": TP,
         }
     )
 )
@@ -159,7 +163,7 @@ def vision_chat():
 
     LLM_MODEL = os.getenv("LLM_MODEL")
     PATH = os.path.join(HF_MODEL_DIR, LLM_MODEL)
-    tokenizer = ErnieBotTokenizer.from_pretrained(os.path.dirname(PATH))
+    tokenizer = ErnieBotTokenizer.from_pretrained(PATH)
 
     messages = [
         {
@@ -168,7 +172,7 @@ def vision_chat():
                 {
                     "type": "image_url",
                     "image_url": {
-                        "url": "https://ku.baidu-int.com/vk-assets-ltd/space/2024/09/13/933d1e0a0760498e94ec0f2ccee865e0"
+                        "url": "https://paddlenlp.bj.bcebos.com/datasets/paddlemix/demo_images/example2.jpg"
                     },
                 },
                 {"type": "text", "text": "这张图片的内容是什么"},
@@ -196,7 +200,8 @@ def vision_chat():
     sampling_params = SamplingParams(temperature=0.1, max_tokens=6400)
     llm = LLM(
         model=PATH,
-        tensor_parallel_size=8,
+        tensor_parallel_size=int(os.getenv("TP", 1)),
+        quantization=os.getenv("QUANTIZATION", "wint4"),
         max_model_len=32768,
         enable_mm=True,
         limit_mm_per_prompt={"image": 100},
@@ -209,9 +214,10 @@ def vision_chat():
 
     # 输出结果
     for output in outputs:
-        print(output)
+        prompt = output.prompt
+        print(prompt, output)
         generated_text = output.outputs.text
-        reasoning_text = output.outputs.resoning_content
+        reasoning_text = output.outputs.reasoning_content
 
 
 """
@@ -235,6 +241,7 @@ GPU_ARCHS=86_89 IMAGE_GPU=L4 modal run src/llm/fastdeploy/offline_inference.py -
 
 # 2. 86_89 GPU ARCH use L40s run vision_chat
 LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s modal run src/llm/fastdeploy/offline_inference.py --task vision_chat 
+LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANTIZATION=wint8 TP=1 modal run src/llm/fastdeploy/offline_inference.py --task vision_chat 
 """
 
 
