@@ -2,6 +2,7 @@ import logging
 import traceback
 from typing import Generator
 import uuid
+import time
 
 from src.types.llm.sampling import LMGenerateArgs
 from src.common.interface import ILlmGenerator
@@ -42,7 +43,7 @@ class LLMEngineMonkey(LLMEngine):
                 if request_id in results:
                     contents = results[request_id]
                     for result in contents:
-                        print(request_id, result)
+                        # print(request_id, result)
                         yield result
                         if result.finished:
                             finished = True
@@ -74,11 +75,10 @@ class FastdeployGenerator(BaseLLM, ILlmGenerator):
         )
         self.engine = LLMEngineMonkey.from_engine_args(self.serv_args)
 
-        if not self.llm_engine.start():
+        if not self.engine.start():
             logging.error("Failed to initialize FastDeploy LLM engine, service exit now!")
             return
         logging.info(f"FastDeploy LLM engine initialized!")
-
 
     async def generate(self, session: Session, **kwargs):
         """
@@ -93,7 +93,7 @@ class FastdeployGenerator(BaseLLM, ILlmGenerator):
                 "repetition_penalty", self.gen_args.lm_gen_repetition_penalty
             ),
             temperature=kwargs.get("temperature", self.gen_args.lm_gen_temperature),
-            top_k=kwargs.get("top_k", self.gen_args.lm_gen_top_k),
+            # top_k=kwargs.get("top_k", self.gen_args.lm_gen_top_k),
             top_p=kwargs.get("top_p", self.gen_args.lm_gen_top_p),
             max_tokens=kwargs.get("max_tokens", self.gen_args.lm_gen_max_tokens),
             reasoning_max_tokens=kwargs.get(

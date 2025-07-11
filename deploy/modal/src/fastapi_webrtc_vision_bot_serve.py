@@ -4,10 +4,15 @@ import os
 achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.16")
 secret = os.getenv("SECRET_NAME", "achatbot")
 
+IMAGE_GPU = os.getenv("IMAGE_GPU", "A100")
+IMAGE_NAME = os.getenv("IMAGE_NAME", "default")
+FASTDEPLOY_VERSION = os.getenv("FASTDEPLOY_VERSION", "stable")  # stable, nightly
+GPU_ARCHS = os.getenv("GPU_ARCHS", "80_90")  # 80_90, 86_89
+
 vision_bot_img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
     modal.Image.from_registry(
-        "nvidia/cuda:12.5.1-cudnn-devel-ubuntu22.04",
+        "nvidia/cuda:12.6.1-cudnn-devel-ubuntu22.04",
         add_python="3.10",
     )
     .apt_install("git", "git-lfs", "ffmpeg", "cmake", "ninja-build")
@@ -242,11 +247,27 @@ class ContainerRuntimeConfig:
                 }
             )
         ),
+        "ernie4v": (
+            vision_bot_img.pip_install(
+                [
+                    f"achatbot[llm_transformers_manual_vision]=={achatbot_version}",
+                ],
+                extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+            )
+        ),
+        "fastdeploy_ernie4v": (
+            vision_bot_img.pip_install(
+                "paddlepaddle-gpu==3.1.0",
+                index_url=" https://www.paddlepaddle.org.cn/packages/stable/cu126/",
+            ).run_commands(
+                f"python -m pip install fastdeploy-gpu -i https://www.paddlepaddle.org.cn/packages/{FASTDEPLOY_VERSION}/fastdeploy-gpu-{GPU_ARCHS}/ --extra-index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple"
+            )
+        ),
     }
 
     @staticmethod
     def get_img(image_name: str = None):
-        image_name = image_name or os.getenv("IMAGE_NAME", "default")
+        image_name = image_name or IMAGE_NAME
         if image_name not in ContainerRuntimeConfig.images:
             raise Exception(f"image name {image_name} not found")
         print(f"use image:{image_name}")
@@ -254,7 +275,7 @@ class ContainerRuntimeConfig:
 
     @staticmethod
     def get_app_name(image_name: str = None):
-        image_name = image_name or os.getenv("IMAGE_NAME", "default")
+        image_name = image_name or IMAGE_NAME
         app_name = "fastapi_webrtc_vision_bot"
         if image_name != "default":
             app_name = f"fastapi_webrtc_vision_{image_name}_bot"
@@ -275,13 +296,16 @@ class ContainerRuntimeConfig:
         return concurrent_cn
 
 
-img = ContainerRuntimeConfig.get_img().pip_install(
-    "flash-attn==2.7.4.post1", extra_options="--no-build-isolation"
-)
+if IMAGE_NAME not in ["fastdeploy_ernie4v"]:
+    img = ContainerRuntimeConfig.get_img().pip_install(
+        "flash-attn==2.7.4.post1", extra_options="--no-build-isolation"
+    )
+else:
+    img = ContainerRuntimeConfig.get_img()
 
 # img = img.pip_install(
-#   f"achatbot==0.0.20.post0",
-#   extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+#    f"achatbot==0.0.20.dev26",
+#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
 # )
 
 HF_MODEL_DIR = "/root/.achatbot/models"
@@ -310,6 +334,7 @@ app = modal.App(ContainerRuntimeConfig.get_app_name())
     },
     timeout=1200,  # default 300s
     scaledown_window=1200,
+    max_containers=int(os.getenv("IMAGE_MAX_CONTAINERS", "1")),
 )
 @modal.concurrent(max_inputs=int(os.getenv("IMAGE_CONCURRENT_CN", "1")))  # inputs per container
 class Srv:

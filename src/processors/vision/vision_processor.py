@@ -113,7 +113,7 @@ class VisionProcessor(VisionProcessorBase):
             elif (
                 "llm_fastdeploy" in self._llm.SELECTED_TAG and "vision" in self._llm.SELECTED_TAG
             ):  # fastdeploy vision
-                self._session.ctx.state["prompt"].append({"type": "image", "image": image})
+                self._session.ctx.state["prompt"].append({"type": "image_url", "image_url": image})
             else:  # llamacpp vision
                 self._session.ctx.state["prompt"].append(
                     {"type": "image_url", "image_url": {"url": img_base64_str}}

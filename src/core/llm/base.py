@@ -5,6 +5,10 @@ from src.common.factory import EngineClass
 
 
 class BaseLLM(EngineClass):
+    def __init__(self):
+        super().__init__()
+        self.session_chat_history = {}
+
     def model_name(self):
         if hasattr(self.args, "model_name"):
             return self.args.model_name

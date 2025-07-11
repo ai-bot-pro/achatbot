@@ -12,6 +12,7 @@ import uuid
 import modal
 
 
+APP_NAME = os.getenv("APP_NAME", None)
 LLM_MODEL = os.getenv("LLM_MODEL", "baidu/ERNIE-4.5-0.3B-Paddle")
 IMAGE_GPU = os.getenv("IMAGE_GPU", "A100")
 FASTDEPLOY_VERSION = os.getenv("FASTDEPLOY_VERSION", "stable")  # stable, nightly
@@ -46,6 +47,13 @@ img = (
         }
     )
 )
+
+
+if APP_NAME == "achatbot":
+    img = img.pip_install(
+        f"achatbot==0.0.20.post1",
+        extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+    )
 
 HF_MODEL_DIR = "/root/.achatbot/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
@@ -114,8 +122,6 @@ def generate(thinking):
     # Output results
     for output in outputs:
         print(output)
-        prompt = output.prompt
-        generated_text = output.outputs.text
 
 
 def chat(thinking):
@@ -150,8 +156,6 @@ def chat(thinking):
     # Output results
     for output in outputs:
         print(output)
-        prompt = output.prompt
-        generated_text = output.outputs.text
 
 
 def vision_chat(thinking):
@@ -249,8 +253,6 @@ def vision_chat(thinking):
     for output in outputs:
         prompt = output.prompt
         print(prompt, output)
-        generated_text = output.outputs.text
-        reasoning_text = output.outputs.reasoning_content
 
 
 def llm_engine_generate(thinking):
@@ -309,7 +311,7 @@ def llm_engine_generate(thinking):
             quantization=os.getenv("QUANTIZATION", "wint4"),
             max_model_len=32768,
             enable_mm=True,
-            limit_mm_per_prompt={"image": 100},
+            limit_mm_per_prompt={"image": 10},
             reasoning_parser="ernie-45-vl",
         )
     )
@@ -375,6 +377,61 @@ def llm_engine_generate(thinking):
             print(prompts["request_id"], "finished")
 
 
+def achatbot_engine_generate(thinking):
+    import uuid
+    import time
+    import PIL
+    import io
+    import os
+    import requests
+    from PIL import Image
+
+    from fastdeploy.engine.args_utils import EngineArgs
+    from achatbot.common.types import SessionCtx, TEST_DIR
+    from achatbot.types.llm.fastdeploy import FastDeployEngineArgs, LMGenerateArgs
+    from achatbot.core.llm.fastdeploy.vision_ernie4v import FastdeployVisionERNIE4v
+    from achatbot.common.session import Session
+    from achatbot.common.logger import Logger
+
+    Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
+
+    LLM_MODEL = os.getenv("LLM_MODEL")
+    PATH = os.path.join(HF_MODEL_DIR, LLM_MODEL)
+    generator = FastdeployVisionERNIE4v(
+        # https://paddlepaddle.github.io/FastDeploy/parameters/
+        **FastDeployEngineArgs(
+            serv_args=EngineArgs(
+                model=PATH,
+                tensor_parallel_size=int(os.getenv("TP", 1)),
+                quantization=os.getenv("QUANTIZATION", "wint4"),
+                max_model_len=32768,
+                enable_mm=True,
+                limit_mm_per_prompt={"image": 10, "video": 1},
+                reasoning_parser="ernie-45-vl",
+                gpu_memory_utilization=0.6,
+                use_warmup=0,
+                enable_prefix_caching=False,
+                enable_chunked_prefill=False,
+                use_cudagraph=False,
+                enable_expert_parallel=False,
+            ).__dict__
+        ).__dict__,
+    )
+
+    session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
+    url = "https://paddlenlp.bj.bcebos.com/datasets/paddlemix/demo_images/example2.jpg"
+    image_bytes = requests.get(url).content
+    img = Image.open(io.BytesIO(image_bytes))
+    session.ctx.state["prompt"] = [
+        {"type": "image_url", "image_url": img},
+        {"type": "text", "text": "这张图片的内容是什么"},
+    ]
+
+    for text in generator.generate(session, thinking=True):
+        print(text, flush=True, end="")
+    img.close()
+
+
 """
 # 0. download paddle model
 modal run src/download_models.py --repo-ids "baidu/ERNIE-4.5-0.3B-Paddle"
@@ -394,12 +451,16 @@ GPU_ARCHS=86_89 IMAGE_GPU=L4 modal run src/llm/fastdeploy/offline_inference.py
 GPU_ARCHS=86_89 IMAGE_GPU=L4 modal run src/llm/fastdeploy/offline_inference.py --task generate
 GPU_ARCHS=86_89 IMAGE_GPU=L4 modal run src/llm/fastdeploy/offline_inference.py --task chat 
 
-# 2. 86_89 GPU ARCH use L40s run vision_chat
+# 3. 86_89 GPU ARCH use L40s run vision_chat
 LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s modal run src/llm/fastdeploy/offline_inference.py --task vision_chat 
 LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANTIZATION=wint8 TP=1 modal run src/llm/fastdeploy/offline_inference.py --task vision_chat 
 
+# 4. 86_89 GPU ARCH use L40s run vision streaming generate
 LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANTIZATION=wint4 TP=1 modal run src/llm/fastdeploy/offline_inference.py --task llm_engine_generate 
-LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANTIZATION=wint4 TP=1 modal run src/llm/fastdeploy/offline_inference.py --task llm_engine_generate  --no-thinking
+LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANTIZATION=wint8 TP=1 modal run src/llm/fastdeploy/offline_inference.py --task llm_engine_generate
+
+# 5. 86_89 GPU ARCH use L40s run achatbot vision streaming generate
+EXTRA_INDEX_URL=https://test.pypi.org/simple/ APP_NAME=achatbot LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANTIZATION=wint4 TP=1 modal run src/llm/fastdeploy/offline_inference.py --task achatbot_engine_generate
 """
 
 
@@ -411,6 +472,7 @@ def main(task: str = "check", thinking: bool = True):
         "chat": chat,
         "vision_chat": vision_chat,
         "llm_engine_generate": llm_engine_generate,
+        "achatbot_engine_generate": achatbot_engine_generate,
     }
     if task not in tasks:
         raise ValueError(f"task {task} not found")

@@ -23,18 +23,18 @@ except ModuleNotFoundError as e:
 
 class FastdeployBase(BaseLLM, ILlm):
     def __init__(self, **kwargs) -> None:
+        super().__init__()
         self.args = FastDeployEngineArgs(**kwargs)
         self.gen_args = LMGenerateArgs(**self.args.gen_args)
-        # https://docs.fastdeploy.ai/en/stable/serving/engine_args.html#engine-args
+        # https://paddlepaddle.github.io/FastDeploy/parameters/
         self.serv_args = EngineArgs(**self.args.serv_args)
         logging.info(
             f"server args: {self.serv_args.__dict__} | default generate args: {self.gen_args.__dict__}"
         )
         self.engine = LLMEngineMonkey.from_engine_args(self.serv_args)
 
-        if not self.llm_engine.start():
-            logging.error("Failed to initialize FastDeploy LLM engine, service exit now!")
-            return
+        if not self.engine.start():
+            raise Exception("Failed to initialize FastDeploy LLM engine, service exit now!")
         logging.info(f"FastDeploy LLM engine initialized!")
 
         vocab_file_names = ["tokenizer.model", "spm.model", "ernie_token_100k.model"]
