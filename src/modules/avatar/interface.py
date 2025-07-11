@@ -4,7 +4,7 @@ from typing import List
 import numpy as np
 import torch
 
-from src.types.avatar.lite_avatar import AudioSlice
+from src.types.avatar import AudioSlice
 
 
 class IFaceAvatar(ABC):

@@ -15,6 +15,18 @@ class LMGenerateArgs:
             "help": "Corresponds to the length of the input prompt + max_new_tokens. Its effect is overridden by max_new_tokens, if also set. Default is 2048."
         },
     )
+    lm_gen_max_tokens: int = field(
+        default=2048,
+        metadata={
+            "help": "Maximum number of new tokens to generate in a single completion. Default is 2048."
+        },
+    )
+    lm_gen_reasoning_max_tokens: int = field(
+        default=2048,
+        metadata={
+            "help": "Maximum number of new tokens to generate in a single completion when thinking. Default is 2048."
+        },
+    )
     lm_gen_max_new_tokens: int = field(
         default=1024,
         metadata={

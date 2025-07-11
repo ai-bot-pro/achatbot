@@ -27,6 +27,10 @@ class LLMEnvInit:
             from .tensorrt_llm.generator import TrtLLMRunnerGenerator
         if "llm_sglang_generator" == tag:
             from .sglang.generator import SGlangGenerator
+        if "llm_fastdeploy_generator" == tag:
+            from .fastdeploy.generator import FastdeployGenerator
+        if "llm_fastdeploy_vision_ernie4v" == tag:
+            from .fastdeploy.vision_ernie4v import FastdeployVisionERNIE4v
         elif "llm_personalai_proxy" == tag:
             from . import personalai
         if "llm_transformers_generator" == tag:
@@ -69,6 +73,8 @@ class LLMEnvInit:
             from .transformers import manual_vision_keye
         elif "llm_transformers_manual_vision_glm4v" in tag:
             from .transformers import manual_vision_glm4v
+        elif "llm_transformers_manual_vision_ernie4v" in tag:
+            from .transformers import manual_vision_ernie4v
         elif "llm_transformers_manual" == tag:
             from .transformers import manual
         elif "llm_transformers_pipeline" == tag:
@@ -291,6 +297,28 @@ class LLMEnvInit:
         return kwargs
 
     @staticmethod
+    def get_llm_fastdeploy_args() -> dict:
+        kwargs = dict(
+            serv_args=dict(
+                model=os.getenv(
+                    "LLM_MODEL_NAME_OR_PATH",
+                    os.path.join(MODELS_DIR, "baidu/ERNIE-4.5-VL-28B-A3B-Paddle"),
+                ),
+                tensor_parallel_size=int(os.getenv("TP", "1")),
+                quantization=os.getenv("QUANTIZATION", "wint4"),
+                max_model_len=int(os.getenv("MAX_MODEL_LEN", "1")),
+                enable_mm=bool(os.getenv("ENABLE_MM", "1")),
+                limit_mm_per_prompt={"image": 100},
+                reasoning_parser=os.getenv("REASONING_PARSER", "ernie-45-vl"),
+                gpu_memory_utilization=float(
+                    os.getenv("LLM_GPU_MEMORY_UTILIZATION", "0.9")
+                ),  # default 0.9
+            ),
+            gen_args=LLMEnvInit._get_llm_generate_args(),
+        )
+        return kwargs
+
+    @staticmethod
     def get_llm_trtllm_runner_generator_args() -> dict:
         # from src.types.llm.tensorrt_llm import TensorRTLLMRunnerEngineArgs, TensorRTLLMRunnerArgs
 
@@ -442,6 +470,7 @@ class LLMEnvInit:
         "llm_transformers_manual_vision_mimo": get_llm_transformers_args,
         "llm_transformers_manual_vision_keye": get_llm_transformers_args,
         "llm_transformers_manual_vision_glm4v": get_llm_transformers_args,
+        "llm_transformers_manual_vision_ernie4v": get_llm_transformers_args,
         "llm_transformers_manual_vision_gemma3": get_llm_transformers_args,
         "llm_transformers_manual_vision_qwen2_5": get_llm_transformers_args,
         "llm_transformers_manual_vision_llama": get_llm_transformers_args,
@@ -473,4 +502,6 @@ class LLMEnvInit:
         "llm_sglang_generator": get_llm_sglang_generator_args,
         "llm_trtllm_generator": get_llm_trtllm_generator_args,
         "llm_trtllm_runner_generator": get_llm_trtllm_runner_generator_args,
+        "llm_fastdeploy_generator": get_llm_fastdeploy_args,
+        "llm_fastdeploy_vision_ernie4v": get_llm_fastdeploy_args,
     }
