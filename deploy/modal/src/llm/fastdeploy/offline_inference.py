@@ -360,7 +360,7 @@ def llm_engine_generate(thinking):
     prompts["max_tokens"] = llm_engine.cfg.max_model_len
     print(f"{prompts=}")
     sampling_params = SamplingParams(temperature=0.1, max_tokens=6400)
-    print(f"{sampling_params=}")
+    print(f"{sampling_params=} {thinking=}")
     llm_engine.add_requests(prompts, sampling_params, enable_thinking=thinking)
 
     for result in llm_engine._get_generated_tokens(prompts["request_id"]):
