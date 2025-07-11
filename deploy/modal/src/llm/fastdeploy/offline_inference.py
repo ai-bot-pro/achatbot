@@ -460,7 +460,7 @@ LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANT
 LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANTIZATION=wint8 TP=1 modal run src/llm/fastdeploy/offline_inference.py --task llm_engine_generate
 
 # 5. 86_89 GPU ARCH use L40s run achatbot vision streaming generate
-EXTRA_INDEX_URL=https://test.pypi.org/simple/ APP_NAME=achatbot LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANTIZATION=wint4 TP=1 modal run src/llm/fastdeploy/offline_inference.py --task achatbot_engine_generate
+APP_NAME=achatbot LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANTIZATION=wint4 TP=1 modal run src/llm/fastdeploy/offline_inference.py --task achatbot_engine_generate
 """
 
 
