@@ -29,7 +29,7 @@ from src.cmd.bots.run import RunBotInfo
 from src.cmd.bots import import_bots, register_ai_room_bots
 from src.cmd.http.server.help import (
     ERROR_CODE_BOT_UN_REGISTER,
-    ERROR_CODE_VAILD_ROOM,
+    ERROR_CODE_VALID_ROOM,
     APIResponse,
     check_host_whitelist,
     ngrok_proxy,
@@ -175,7 +175,7 @@ async def bot_join_room(
     is_valid_room = await room_obj.check_valid_room(room_name, bot_info.token)
     if is_valid_room is False:
         detail = f"not valid room: {room_name}"
-        return APIResponse(error_code=ERROR_CODE_VAILD_ROOM, error_detail=detail).model_dump()
+        return APIResponse(error_code=ERROR_CODE_VALID_ROOM, error_detail=detail).model_dump()
 
     background_tasks.add_task(run_bot.async_run)
 
