@@ -4,10 +4,15 @@ import os
 achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.16")
 secret = os.getenv("SECRET_NAME", "achatbot")
 
+SERVE_TYPE = os.getenv("SERVE_TYPE", "room_bots")  # room_bot,room_bots
 IMAGE_GPU = os.getenv("IMAGE_GPU", "A100")
 IMAGE_NAME = os.getenv("IMAGE_NAME", "default")
 FASTDEPLOY_VERSION = os.getenv("FASTDEPLOY_VERSION", "stable")  # stable, nightly
 GPU_ARCHS = os.getenv("GPU_ARCHS", "80_90")  # 80_90, 86_89
+CONFIG_FILE = os.getenv(
+    "CONFIG_FILE",
+    "/root/.achatbot/config/bots/dummy_bot.json",
+)
 
 vision_bot_img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
@@ -44,6 +49,7 @@ vision_bot_img = (
             "GOOGLE_LLM_MODEL": "gemini-2.0-flash",
             # tts module engine TAG,default tts_edge
             "TTS_TAG": "tts_edge",
+            "IMAGE_NAME": IMAGE_NAME,
         }
     )
 )
@@ -303,8 +309,16 @@ if IMAGE_NAME not in ["fastdeploy_ernie4v"]:
 else:
     img = ContainerRuntimeConfig.get_img()
 
+
+if SERVE_TYPE == "room_bot":
+    img = img.env(
+        {
+            "CONFIG_FILE": CONFIG_FILE,
+        }
+    )
+
 # img = img.pip_install(
-#    f"achatbot==0.0.20.dev26",
+#    f"achatbot==0.0.21",
 #    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
 # )
 
@@ -314,6 +328,8 @@ ASSETS_DIR = "/root/.achatbot/assets"
 assets_dir = modal.Volume.from_name("assets", create_if_missing=True)
 TORCH_CACHE_DIR = "/root/.cache/torch"
 torch_cache_vol = modal.Volume.from_name("torch_cache", create_if_missing=True)
+CONFIG_DIR = "/root/.achatbot/config"
+config_vol = modal.Volume.from_name("config", create_if_missing=True)
 
 
 # ----------------------- app -------------------------------
@@ -322,15 +338,17 @@ app = modal.App(ContainerRuntimeConfig.get_app_name())
 
 # 128 MiB of memory and 0.125 CPU cores by default container runtime
 @app.cls(
-    image=img,
+    image=img.env({"SERVE_TYPE": SERVE_TYPE}),
     gpu=ContainerRuntimeConfig.get_gpu(),
     secrets=[modal.Secret.from_name(secret)],
+    retries=0,
     cpu=2.0,
     # allow_concurrent_inputs=ContainerRuntimeConfig.get_allow_concurrent_inputs(),
     volumes={
         HF_MODEL_DIR: hf_model_vol,
         ASSETS_DIR: assets_dir,
         TORCH_CACHE_DIR: torch_cache_vol,
+        CONFIG_DIR: config_vol,
     },
     timeout=1200,  # default 300s
     scaledown_window=1200,
@@ -344,21 +362,48 @@ class Srv:
         import subprocess
         import torch
 
+        from achatbot.common.logger import Logger
+
+        Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
+
         subprocess.run("nvidia-smi --version", shell=True)
         gpu_prop = None
         if torch.cuda.is_available():
             gpu_prop = torch.cuda.get_device_properties("cuda:0")
             print(gpu_prop)
-            torch.multiprocessing.set_start_method("spawn", force=True)
+            IMAGE_NAME = os.getenv("IMAGE_NAME")
+            if "fastdeploy" not in IMAGE_NAME:
+                torch.multiprocessing.set_start_method("spawn", force=True)
         else:
             print("CUDA is not available.")
 
     @modal.asgi_app()
     def app(self):
-        from achatbot.cmd.http.server.fastapi_daily_bot_serve import app
+        SERVE_TYPE = os.getenv("SERVE_TYPE")
+        if SERVE_TYPE == "room_bot":
+            from achatbot.cmd.http.server.fastapi_room_bot_serve import app
+        else:
+            from achatbot.cmd.http.server.fastapi_daily_bot_serve import app
 
         return app
 
 
-if __name__ == "__main__":
-    pass
+"""
+
+# run dummy bot to join room for test
+EXTRA_INDEX_URL=https://pypi.org/simple/ \
+    SERVE_TYPE=room_bot \
+    ACHATBOT_VERSION=0.0.21 \
+    IMAGE_NAME=fastdeploy_ernie4v IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L40s \
+    GPU_ARCHS=86_89 \
+    modal serve src/fastapi_webrtc_vision_bot_serve.py
+
+# run fastdeploy ernie4v bot to join room
+EXTRA_INDEX_URL=https://pypi.org/simple/ \
+    SERVE_TYPE=room_bot \
+    CONFIG_FILE=/root/.achatbot/config/bots/daily_describe_fastdeploy_ernie4v_vision_bot.json \
+    ACHATBOT_VERSION=0.0.21 \
+    IMAGE_NAME=fastdeploy_ernie4v IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L40s \
+    GPU_ARCHS=86_89 \
+    modal serve src/fastapi_webrtc_vision_bot_serve.py
+"""

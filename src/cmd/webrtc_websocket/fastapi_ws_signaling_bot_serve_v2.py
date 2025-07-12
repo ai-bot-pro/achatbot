@@ -59,6 +59,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(e)
         traceback.print_exc()
+        return
 
     print(f"load bot {run_bot} success")
 

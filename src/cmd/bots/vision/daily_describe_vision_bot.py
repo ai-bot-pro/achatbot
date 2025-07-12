@@ -20,6 +20,20 @@ class DailyDescribeVisionBot(DailyRoomBot):
     def __init__(self, **args) -> None:
         super().__init__(**args)
         self.init_bot_config()
+        self.llm_engine = None
+
+    def load(self):
+        from src.core.llm import LLMEnvInit
+
+        try:
+            vision_llm_config = self._bot_config.llm or self._bot_config.vision_llm
+            if "fastdeploy" in vision_llm_config.tag:
+                self.llm_engine = LLMEnvInit.initLLMEngine(
+                    vision_llm_config.tag, vision_llm_config.args
+                )
+        except Exception as e:
+            logging.error(f"err: {e}", exc_info=True)
+            raise e
 
     async def arun(self):
         vad_analyzer = self.get_vad_analyzer()
@@ -50,7 +64,7 @@ class DailyDescribeVisionBot(DailyRoomBot):
         in_aggr = UserResponseAggregator()
         image_requester = UserImageRequestProcessor()
         vision_aggregator = VisionImageFrameAggregator()
-        llm_processor = self.get_llm_processor()
+        llm_processor = self.get_llm_processor(llm_engine=self.llm_engine)
         # llm_out_aggr = LLMAssistantResponseAggregator()
 
         @transport.event_handler("on_first_participant_joined")

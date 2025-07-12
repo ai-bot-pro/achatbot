@@ -306,7 +306,7 @@ class LLMEnvInit:
                 ),
                 tensor_parallel_size=int(os.getenv("TP", "1")),
                 quantization=os.getenv("QUANTIZATION", "wint4"),
-                max_model_len=int(os.getenv("MAX_MODEL_LEN", "1")),
+                max_model_len=int(os.getenv("MAX_MODEL_LEN", "2048")),
                 enable_mm=bool(os.getenv("ENABLE_MM", "1")),
                 limit_mm_per_prompt={"image": 100},
                 reasoning_parser=os.getenv("REASONING_PARSER", "ernie-45-vl"),
