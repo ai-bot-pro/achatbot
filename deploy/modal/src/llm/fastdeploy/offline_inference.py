@@ -51,7 +51,7 @@ img = (
 
 if APP_NAME == "achatbot":
     img = img.pip_install(
-        f"achatbot==0.0.20.post1",
+        f"achatbot==0.0.21",
         extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
     )
 

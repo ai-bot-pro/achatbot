@@ -85,6 +85,17 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
 - core module:
   - local llm: 
     - [x] llama-cpp (support text,vision with function-call model)
+      - [x] llm_llamacpp_generator
+    - [x] fastdeploy:
+      - [x] llm_fastdeploy_vision_ernie4v
+      - [x] llm_fastdeploy_generator
+    - [x] tensorrt_llm:
+      - [x] llm_trtllm_generator
+      - [x] llm_trtllm_runner_generator
+    - [x] sglang:
+      - [x] llm_sglang_generator
+    - [x] vllm:
+      - [x] llm_vllm_generator
     - [x] transformers(manual, pipeline) (support text; vision,vision+image; speech,voice; vision+voice)
       - [x] llm_transformers_manual_vision_llama
       - [x] llm_transformers_manual_vision_molmo
@@ -110,7 +121,7 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
       - [x] llm_transformers_manual_vita_text llm_transformers_manual_vita_audio_asr llm_transformers_manual_vita_tts llm_transformers_manual_vita_text_voice llm_transformers_manual_vita_voice
       - [x] llm_transformers_manual_phi4_vision_speech,llm_transformers_manual_phi4_audio_asr,llm_transformers_manual_phi4_audio_translation,llm_transformers_manual_phi4_vision,llm_transformers_manual_phi4_audio_chat
   - remote api llm: personal-ai(like openai api, other ai provider)
-
+  
 - AI modules:
   - functions:
     - [x] search: search,search1,serper
