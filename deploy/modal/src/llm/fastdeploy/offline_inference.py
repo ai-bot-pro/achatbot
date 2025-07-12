@@ -361,8 +361,10 @@ def llm_engine_generate(thinking):
     prompts["request_id"] = str(uuid.uuid4())
     prompts["max_tokens"] = llm_engine.cfg.max_model_len
     print(f"{prompts=}")
-    sampling_params = SamplingParams(temperature=0.1, max_tokens=6400)
+    sampling_params = SamplingParams(temperature=0.1, max_tokens=6400, reasoning_max_tokens=1)
     print(f"{sampling_params=} {thinking=}")
+    # https://paddlepaddle.github.io/FastDeploy/offline_inference/#text-completion-interface-llmgenerate
+    # The generate interface does not currently support passing parameters to control the thinking function (on/off). It always uses the model's default parameters.
     llm_engine.add_requests(prompts, sampling_params, enable_thinking=thinking)
 
     for result in llm_engine._get_generated_tokens(prompts["request_id"]):
@@ -414,7 +416,9 @@ def achatbot_engine_generate(thinking):
                 enable_chunked_prefill=False,
                 use_cudagraph=False,
                 enable_expert_parallel=False,
-            ).__dict__
+            ).__dict__,
+            init_chat_prompt="你是一个语音聊天智能助手，不要使用特殊字符回复，请用中文交流。",
+            chat_history_size=2,
         ).__dict__,
     )
 
@@ -422,13 +426,14 @@ def achatbot_engine_generate(thinking):
     url = "https://paddlenlp.bj.bcebos.com/datasets/paddlemix/demo_images/example2.jpg"
     image_bytes = requests.get(url).content
     img = Image.open(io.BytesIO(image_bytes))
-    session.ctx.state["prompt"] = [
-        {"type": "image_url", "image_url": img},
-        {"type": "text", "text": "这张图片的内容是什么"},
-    ]
-
-    for text in generator.generate(session, thinking=True):
-        print(text, flush=True, end="")
+    chat_texts = ["这张图片的内容是什么", "你叫什么名字", "讲个故事"]
+    for text in chat_texts:
+        session.ctx.state["prompt"] = [
+            {"type": "image_url", "image_url": img},
+            {"type": "text", "text": text},
+        ]
+        for text in generator.generate(session, thinking=thinking):
+            print(text, flush=True, end="")
     img.close()
 
 

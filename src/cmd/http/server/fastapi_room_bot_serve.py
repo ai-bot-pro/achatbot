@@ -9,10 +9,10 @@ run webrtc channel/room bot worker with config
 """
 
 import logging
+from multiprocessing import current_process
 import os
 import argparse
 from contextlib import asynccontextmanager
-import traceback
 from typing import Any
 
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
@@ -70,6 +70,9 @@ async def create_room(bot_info: RunBotInfo):
 async def lifespan(app: FastAPI):
     global run_bot, bot_info, cmd_args
     try:
+        cur_process = current_process()
+        assert cur_process.name == "MainProcess"
+
         # load bot before running
         config_file = cmd_args.f if cmd_args else os.getenv("CONFIG_FILE")
         bot_info = load_bot_config_from_local(config_file)

@@ -22,9 +22,9 @@ class LMGenerateArgs:
         },
     )
     lm_gen_reasoning_max_tokens: int = field(
-        default=2048,
+        default=1024,
         metadata={
-            "help": "Maximum number of new tokens to generate in a single completion when thinking. Default is 2048."
+            "help": "Maximum number of new tokens to generate in a single completion when thinking. reasoning_max_tokens must be less than max_tokens, Default is 1024."
         },
     )
     lm_gen_max_new_tokens: int = field(

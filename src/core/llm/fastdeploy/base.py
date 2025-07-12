@@ -6,6 +6,8 @@ from src.common.session import Session
 from src.common.interface import ILlm
 from src.common.chat_history import ChatHistory
 from src.core.llm.base import BaseLLM
+from src.common.logger import Logger
+
 
 try:
     from fastdeploy.input.ernie_tokenizer import ErnieBotTokenizer
@@ -23,6 +25,7 @@ except ModuleNotFoundError as e:
 
 class FastdeployBase(BaseLLM, ILlm):
     def __init__(self, **kwargs) -> None:
+        Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
         super().__init__()
         self.args = FastDeployEngineArgs(**kwargs)
         self.gen_args = LMGenerateArgs(**self.args.gen_args)
