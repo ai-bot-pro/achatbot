@@ -4,7 +4,7 @@ import asyncio
 import sys
 import uuid
 
-from apipeline.frames import EndFrame, CancelFrame
+from apipeline.frames import CancelFrame
 from apipeline.pipeline.task import PipelineTask
 
 from src.processors.omni.base import VisionVoiceProcessorBase
@@ -42,6 +42,7 @@ from src.common.logger import Logger
 
 from dotenv import load_dotenv
 
+
 load_dotenv(override=True)
 
 Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
@@ -75,11 +76,20 @@ class AIBot(IBot):
         try:
             logging.debug(f"args.bot_config: {self.args.bot_config}")
             self._bot_config: AIConfig = AIConfig(**self.args.bot_config)
+            if len(self._bot_config_list) > 0:
+                from src.types.rtvi import RTVIConfig
+
+                rtvi_config = RTVIConfig(config_list=self.args.bot_config_list)
+                self._bot_config = AIConfig(**rtvi_config._arguments_dict)
             if self._bot_config.llm is None:
                 self._bot_config.llm = LLMConfig()
         except Exception as e:
             raise Exception(f"Failed to parse bot configuration: {e}")
         logging.info(f"ai bot_config: {self._bot_config}")
+
+    def set_args(self, args):
+        merge_args = {**self.args.__dict__, **args}
+        self.args = BotRunArgs(**merge_args)
 
     def bot_config(self):
         return self._bot_config
@@ -241,7 +251,9 @@ class AIBot(IBot):
             asr_processor = ASRProcessor(asr=asr, session=self.session)
         return asr_processor
 
-    def get_vision_llm_processor(self, llm_config: LLMConfig | None = None) -> LLMProcessor:
+    def get_vision_llm_processor(
+        self, llm_config: LLMConfig | None = None, llm_engine=None
+    ) -> LLMProcessor:
         """
         get local vision llm
         """
@@ -252,9 +264,9 @@ class AIBot(IBot):
         if "mock" in llm_config.tag:
             llm_processor = MockVisionProcessor()
         else:
-            logging.debug(f"init engine llm processor tag: {llm_config.tag}")
+            logging.info(f"init engine llm processor tag: {llm_config.tag}")
             sleep_time_s = llm_config.args.pop("sleep_time_s", 0.15)
-            llm_engine = LLMEnvInit.initLLMEngine(llm_config.tag, llm_config.args)
+            llm_engine = llm_engine or LLMEnvInit.initLLMEngine(llm_config.tag, llm_config.args)
             llm_processor = VisionProcessor(llm_engine, self.session, sleep_time_s=sleep_time_s)
         return llm_processor
 
@@ -333,13 +345,13 @@ class AIBot(IBot):
         llm_processor = LiteLLMProcessor(model=llm.model, set_verbose=False)
         return llm_processor
 
-    def get_llm_processor(self, llm: LLMConfig | None = None) -> LLMProcessor:
+    def get_llm_processor(self, llm: LLMConfig | None = None, llm_engine=None) -> LLMProcessor:
         if not llm:
-            llm = self._bot_config.llm
+            llm = self._bot_config.llm or self._bot_config.vision_llm
         if llm and llm.tag and "vision" in llm.tag:
             # engine llm processor(just support vision model, other TODO):
             # (llm_llamacpp, llm_personalai_proxy, llm_transformers etc..)
-            llm_processor = self.get_vision_llm_processor(llm)
+            llm_processor = self.get_vision_llm_processor(llm, llm_engine)
         else:
             llm_processor = self.get_remote_llm_processor(llm)
         return llm_processor

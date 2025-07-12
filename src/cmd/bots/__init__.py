@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 
 from src.common.register import Register
+from src.common.const import *
 
 register_ai_room_bots = Register("ai-room-bots")
 register_ai_fastapi_ws_bots = Register("fastapi-ws-bots")
@@ -15,6 +16,7 @@ class BotInfo(BaseModel):
     room_name: str = "chat-room"
     room_url: str = ""
     token: str = ""
+    room_expire: int = ROOM_EXPIRE_TIME
     config_list: list = []
     services: dict = {}
     websocket_server_host: str = "localhost"

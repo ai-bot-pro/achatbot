@@ -61,6 +61,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(e)
         traceback.print_exc()
+        return
 
     print(f"load bot {run_bot} success")
 
@@ -260,7 +261,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-f",
         type=str,
-        default=os.path.join(CONFIG_DIR, "bots/dummy_bot.json"),
+        default=os.path.join(CONFIG_DIR, "config/bots/dummy_bot.json"),
         help="Bot configuration json file",
     )
 

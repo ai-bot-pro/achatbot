@@ -25,14 +25,26 @@ from src.cmd.bots import (
 !TODO: load bot config from remote(config center) or flow config UI
 """
 
+bots_config = {}
+
 
 def load_bot_config_from_local(file_path: str):
-    bot_config = {}
+    global bots_config
+
+    if not os.path.isfile(file_path):
+        logging.error(f"config_path: {file_path} not found")
+        raise FileNotFoundError
+
+    if file_path in bots_config:
+        return bots_config[file_path]
+
     with open(file_path, "r") as f:
         bot_config = json.load(f)
         print(json.dumps(bot_config, indent=4, sort_keys=True))
     bot_info = RunBotInfo(**bot_config)
     logging.info(f"bot_info:{bot_info}")
+    bots_config[file_path] = bot_info
+
     return bot_info
 
 

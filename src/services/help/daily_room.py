@@ -114,11 +114,13 @@ class DailyRoom(EngineClass, IRoomManager):
             return None
 
     async def check_valid_room(self, room_name: str, token: str) -> bool:
-        if not room_name or not token:
+        if not room_name:
             return False
 
         if self.args.privacy == "private":
             try:
+                if not token:
+                    return False
                 token = self.daily_rest_helper.verify_token(token)
                 logging.debug(f"token:{token}")
             except Exception as ex:

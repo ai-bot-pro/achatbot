@@ -44,6 +44,7 @@ vision_bot_img = (
             "GOOGLE_LLM_MODEL": "gemini-2.0-flash",
             # tts module engine TAG,default tts_edge
             "TTS_TAG": "tts_edge",
+            "IMAGE_NAME": IMAGE_NAME,
         }
     )
 )
@@ -303,10 +304,10 @@ if IMAGE_NAME not in ["fastdeploy_ernie4v"]:
 else:
     img = ContainerRuntimeConfig.get_img()
 
-# img = img.pip_install(
-#    f"achatbot==0.0.20.dev26",
-#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
-# )
+img = img.pip_install(
+    f"achatbot==0.0.20.dev29",
+    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+)
 
 HF_MODEL_DIR = "/root/.achatbot/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
@@ -344,6 +345,10 @@ class Srv:
         import subprocess
         import torch
 
+        from achatbot.common.logger import Logger
+
+        Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
+
         subprocess.run("nvidia-smi --version", shell=True)
         gpu_prop = None
         if torch.cuda.is_available():
@@ -355,10 +360,10 @@ class Srv:
 
     @modal.asgi_app()
     def app(self):
-        from achatbot.cmd.http.server.fastapi_daily_bot_serve import app
+        IMAGE_NAME = os.getenv("IMAGE_NAME", "daily")
+        if "fastdeploy" in IMAGE_NAME:
+            from achatbot.cmd.http.server.fastapi_room_bot_serve import app
+        else:
+            from achatbot.cmd.http.server.fastapi_daily_bot_serve import app
 
         return app
-
-
-if __name__ == "__main__":
-    pass
