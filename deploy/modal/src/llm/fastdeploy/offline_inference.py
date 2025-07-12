@@ -427,13 +427,13 @@ def achatbot_engine_generate(thinking):
     image_bytes = requests.get(url).content
     img = Image.open(io.BytesIO(image_bytes))
     chat_texts = ["这张图片的内容是什么", "你叫什么名字", "讲个故事"]
-    for text in chat_texts:
+    for chat_text in chat_texts:
         session.ctx.state["prompt"] = [
             {"type": "image_url", "image_url": img},
-            {"type": "text", "text": text},
+            {"type": "text", "text": chat_text},
         ]
-        for text in generator.generate(session, thinking=thinking):
-            print(text, flush=True, end="")
+        for result_text in generator.generate(session, thinking=thinking):
+            print(result_text, flush=True, end="")
     img.close()
 
 
