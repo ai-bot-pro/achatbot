@@ -76,6 +76,9 @@ class FastdeployGenerator(BaseLLM, ILlmGenerator):
         self.engine = LLMEngineMonkey.from_engine_args(self.serv_args)
 
         if not self.engine.start():
+            """
+            NOTE: data_processor in llm engine is init, u can use engine.data_processor.tokenizer to get token_ids and deocde token_ids
+            """
             logging.error("Failed to initialize FastDeploy LLM engine, service exit now!")
             return
         logging.info(f"FastDeploy LLM engine initialized!")
@@ -129,8 +132,17 @@ if __name__ == "__main__":
     from src.common.types import SessionCtx
 
     model = os.getenv("MODEL", "baidu/ERNIE-4.5-0.3B")
+    engine_args = EngineArgs(model=model)
+    if "VL" in model:
+        engine_args.gpu_memory_utilization = 0.6
+        engine_args.tensor_parallel_size = int(os.getenv("TP", 1))
+        engine_args.quantization = os.getenv("QUANTIZATION", "wint4")
+        engine_args.max_model_len = 32768
+        engine_args.enable_mm = True
+        engine_args.limit_mm_per_prompt = {"image": 10}
+        engine_args.reasoning_parser = "ernie-45-vl"
     generator = FastdeployGenerator(
-        **FastDeployEngineArgs(serv_args=EngineArgs(model=model).__dict__).__dict__,
+        **FastDeployEngineArgs(serv_args=engine_args.__dict__).__dict__,
     )
     tokenizer = AutoTokenizer.from_pretrained(model)
 

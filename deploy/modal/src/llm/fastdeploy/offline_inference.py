@@ -51,7 +51,7 @@ img = (
 
 if APP_NAME == "achatbot":
     img = img.pip_install(
-        f"achatbot==0.0.21",
+        f"achatbot==0.0.21.post0",
         extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
     )
 
@@ -149,9 +149,75 @@ def chat(thinking):
     LLM_MODEL = os.getenv("LLM_MODEL")
     model_path = os.path.join(HF_MODEL_DIR, LLM_MODEL)
     # https://github.com/PaddlePaddle/FastDeploy/blob/develop/docs/parameters.md
-    llm = LLM(model=model_path, tensor_parallel_size=gpu_device_count, max_model_len=8192)
+    llm = LLM(
+        model=model_path,
+        tensor_parallel_size=gpu_device_count,
+        gpu_memory_utilization=0.6,
+        max_model_len=8192,
+    )
     # Batch inference (internal request queuing and dynamic batching)
-    outputs = llm.chat(messages, sampling_params)
+    outputs = llm.chat(
+        messages, sampling_params, chat_template_kwargs={"enable_thinking": thinking}
+    )
+
+    # Output results
+    for output in outputs:
+        print(output)
+
+
+def batch_vision_chat(thinking):
+    import paddle
+    from fastdeploy import LLM, SamplingParams
+
+    gpu_device_count = paddle.device.cuda.device_count()
+    print(f"{gpu_device_count=}")
+
+    msg1 = [
+        {"role": "system", "content": "I'm a helpful AI assistant."},
+        {"role": "user", "content": "把李白的静夜思改写为现代诗"},
+    ]
+    msg2 = [
+        {"role": "system", "content": "I'm a helpful AI assistant."},
+        {"role": "user", "content": "Write me a poem about large language model."},
+    ]
+    msg3 = [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": "https://paddlenlp.bj.bcebos.com/datasets/paddlemix/demo_images/example2.jpg"
+                    },
+                },
+                {"type": "text", "text": "图中的文物属于哪个年代"},
+            ],
+        }
+    ]
+    messages = [msg1, msg2, msg3]
+
+    # Sampling parameters
+    # https://github.com/PaddlePaddle/FastDeploy/blob/develop/docs/offline_inference.md#24-fastdeploysamplingparams
+    sampling_params = SamplingParams(top_p=0.95, max_tokens=6400)
+
+    # Load model
+    LLM_MODEL = os.getenv("LLM_MODEL")
+    model_path = os.path.join(HF_MODEL_DIR, LLM_MODEL)
+    # https://github.com/PaddlePaddle/FastDeploy/blob/develop/docs/parameters.md
+    llm = LLM(
+        model=model_path,
+        gpu_memory_utilization=0.6,
+        tensor_parallel_size=int(os.getenv("TP", 1)),
+        quantization=os.getenv("QUANTIZATION", "wint4"),
+        max_model_len=32768,
+        enable_mm=True,
+        limit_mm_per_prompt={"image": 100},
+        reasoning_parser="ernie-45-vl",
+    )
+    # Batch inference (internal request queuing and dynamic batching)
+    outputs = llm.chat(
+        messages, sampling_params, chat_template_kwargs={"enable_thinking": thinking}
+    )
 
     # Output results
     for output in outputs:
@@ -320,12 +386,6 @@ def llm_engine_generate(thinking):
         return
     api_server_logger.info(f"FastDeploy LLM engine initialized!")
 
-    vocab_file_names = ["tokenizer.model", "spm.model", "ernie_token_100k.model"]
-    for i in range(len(vocab_file_names)):
-        if os.path.exists(os.path.join(PATH, vocab_file_names[i])):
-            ErnieBotTokenizer.resource_files_names["vocab_file"] = vocab_file_names[i]
-            break
-    tokenizer = ErnieBotTokenizer.from_pretrained(PATH)
     messages = [
         {
             "role": "user",
@@ -340,7 +400,7 @@ def llm_engine_generate(thinking):
             ],
         }
     ]
-    prompt = tokenizer.apply_chat_template(messages, tokenize=False)
+    prompt = llm_engine.data_processor.tokenizer.apply_chat_template(messages, tokenize=False)
     images, videos = [], []
     for message in messages:
         content = message["content"]
@@ -360,23 +420,58 @@ def llm_engine_generate(thinking):
     prompts = {"prompt": prompt, "multimodal_data": {"image": images, "video": videos}}
     prompts["request_id"] = str(uuid.uuid4())
     prompts["max_tokens"] = llm_engine.cfg.max_model_len
+    if thinking is False:
+        prompts["prompt"] = prompts["prompt"].replace("<think>", "<think>\n</think>\n")
     print(f"{prompts=}")
-    sampling_params = SamplingParams(temperature=0.1, max_tokens=6400, reasoning_max_tokens=1)
+    sampling_params = SamplingParams(temperature=0.1, max_tokens=6400)
     print(f"{sampling_params=} {thinking=}")
     # https://paddlepaddle.github.io/FastDeploy/offline_inference/#text-completion-interface-llmgenerate
-    # The generate interface does not currently support passing parameters to control the thinking function (on/off). It always uses the model's default parameters.
     llm_engine.add_requests(prompts, sampling_params, enable_thinking=thinking)
 
-    for result in llm_engine._get_generated_tokens(prompts["request_id"]):
-        # print(result)
-        if result.outputs and result.outputs.token_ids and len(result.outputs.token_ids) > 0:
-            # print(result.outputs.token_ids)
-            tokens = tokenizer.decode(result.outputs.token_ids)
-            print(tokens, flush=True, end="")
+    start = perf_counter()
+    times = []
+    decode_texts_1 = ""
+    decode_texts_thinking_2 = ""
+    decode_texts_answer_2 = ""
 
-        if result.finished:
+    for item in llm_engine._get_generated_tokens(prompts["request_id"]):
+        times.append(perf_counter() - start)
+        result = item.to_dict()
+        # print(result)
+        if (
+            result.get("outputs")
+            and result.get("outputs").get("token_ids")
+            and len(result.get("outputs").get("token_ids")) > 0
+        ):
+            tokens = llm_engine.data_processor.tokenizer.decode(
+                result.get("outputs").get("token_ids")
+            )
+            decode_texts_1 += tokens
+
+            # result = llm_engine.data_processor.process_response(result)
+            result = llm_engine.data_processor.process_response_dict_streaming(
+                result, enable_thinking=thinking
+            )
+            # print(result)
+
+            if result.get("outputs").get("reasoning_content"):
+                # print(result.get("outputs").get("reasoning_content"), flush=True, end="")
+                decode_texts_thinking_2 += result.get("outputs").get("reasoning_content")
+
+            if result.get("outputs").get("text"):
+                # print(result.get("outputs").get("text"), flush=True, end="")
+                decode_texts_answer_2 += result.get("outputs").get("text")
+
+        if result.get("finished") is True:
+            print(f"{decode_texts_1=}")
+            print("\n============\n")
+            print(f"{decode_texts_thinking_2=}")
+            print(f"{decode_texts_answer_2=}")
             print("\n")
             print(prompts["request_id"], "finished")
+
+        start = perf_counter()
+    print(f"TTFT: {times[0]:.4f}s total time: {sum(times):.4f}s")
 
 
 def achatbot_engine_generate(thinking):
@@ -457,15 +552,20 @@ GPU_ARCHS=86_89 IMAGE_GPU=L4 modal run src/llm/fastdeploy/offline_inference.py -
 GPU_ARCHS=86_89 IMAGE_GPU=L4 modal run src/llm/fastdeploy/offline_inference.py --task chat 
 
 # 3. 86_89 GPU ARCH use L40s run vision_chat
+LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s modal run src/llm/fastdeploy/offline_inference.py --task batch_vision_chat
+
 LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s modal run src/llm/fastdeploy/offline_inference.py --task vision_chat 
 LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANTIZATION=wint8 TP=1 modal run src/llm/fastdeploy/offline_inference.py --task vision_chat 
 
 # 4. 86_89 GPU ARCH use L40s run vision streaming generate
 LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANTIZATION=wint4 TP=1 modal run src/llm/fastdeploy/offline_inference.py --task llm_engine_generate 
+LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANTIZATION=wint4 TP=1 modal run src/llm/fastdeploy/offline_inference.py --task llm_engine_generate --no-thinking
 LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANTIZATION=wint8 TP=1 modal run src/llm/fastdeploy/offline_inference.py --task llm_engine_generate
+LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANTIZATION=wint8 TP=1 modal run src/llm/fastdeploy/offline_inference.py --task llm_engine_generate --no-thinking
 
 # 5. 86_89 GPU ARCH use L40s run achatbot vision streaming generate
 APP_NAME=achatbot LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANTIZATION=wint4 TP=1 modal run src/llm/fastdeploy/offline_inference.py --task achatbot_engine_generate
+APP_NAME=achatbot LLM_MODEL=baidu/ERNIE-4.5-VL-28B-A3B-Paddle GPU_ARCHS=86_89 IMAGE_GPU=L40s QUANTIZATION=wint4 TP=1 modal run src/llm/fastdeploy/offline_inference.py --task achatbot_engine_generate --no-thinking
 """
 
 
@@ -475,6 +575,7 @@ def main(task: str = "check", thinking: bool = True):
         "check": check,
         "generate": generate,
         "chat": chat,
+        "batch_vision_chat": batch_vision_chat,
         "vision_chat": vision_chat,
         "llm_engine_generate": llm_engine_generate,
         "achatbot_engine_generate": achatbot_engine_generate,

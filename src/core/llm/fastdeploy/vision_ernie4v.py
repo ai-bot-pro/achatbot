@@ -40,6 +40,8 @@ class FastdeployVisionERNIE4v(FastdeployBase):
             {"type": "text", "text": "这张图片的内容是什么"},
         ]
         """
+        enable_thinking = kwargs.get("thinking", self.gen_args.lm_gen_thinking)
+
         prompt = session.ctx.state["prompt"]
         assert len(prompt) > 0
         message = {"role": self.args.user_role, "content": prompt}
@@ -79,6 +81,8 @@ class FastdeployVisionERNIE4v(FastdeployBase):
         prompts = {"prompt": prompt, "multimodal_data": {"image": images, "video": videos}}
         prompts["request_id"] = session.ctx.client_id
         prompts["max_tokens"] = self.engine.cfg.max_model_len
+        if enable_thinking is False:
+            prompts["prompt"] = prompts["prompt"].replace("<think>", "<think>\n</think>\n")
         logging.info(f"{prompts=}")
         sampling_params = SamplingParams(
             n=1,
@@ -96,7 +100,6 @@ class FastdeployVisionERNIE4v(FastdeployBase):
             stop_token_ids=kwargs.get("stop_token_ids", self.gen_args.lm_gen_stop_ids),
         )
         logging.info(f"{sampling_params=}")
-        enable_thinking = kwargs.get("thinking", True)
         self.engine.add_requests(prompts, sampling_params, enable_thinking=enable_thinking)
 
         generated_text = ""
@@ -107,10 +110,24 @@ class FastdeployVisionERNIE4v(FastdeployBase):
         is_answer = True
         think_text = ""
 
-        for result in self.engine._get_generated_tokens(prompts["request_id"]):
+        for item in self.engine._get_generated_tokens(prompts["request_id"]):
             times.append(perf_counter() - start)
-            if result.outputs and result.outputs.token_ids and len(result.outputs.token_ids) > 0:
-                new_text = self.tokenizer.decode(result.outputs.token_ids)
+            result = item.to_dict()
+            if (
+                result.get("outputs")
+                and result.get("outputs").get("token_ids")
+                and len(result.get("outputs").get("token_ids")) > 0
+            ):
+                result = self.engine.data_processor.process_response_dict_streaming(
+                    result,
+                    # all text(inclued <think> *** </think>) in result["outputs"]["text"]
+                    enable_thinking=False,
+                )
+                new_text = ""
+                if result.get("outputs").get("text"):
+                    new_text = result.get("outputs").get("text")
+                elif result.get("outputs").get("reasoning_content"):
+                    new_text = result.get("outputs").get("reasoning_content")
                 # print(new_text, flush=True, end="\n")
                 if ("<think>" in new_text or enable_thinking is True) and think_text == "":
                     yield "思考中，请稍等。"
@@ -128,15 +145,19 @@ class FastdeployVisionERNIE4v(FastdeployBase):
                         yield new_text
                     else:
                         yield None
+                    start = perf_counter()
                     continue
 
-                if "</s>" in new_text:
+                if "</s>" in new_text or result.get("finished") is True:
                     is_answer = False
+                    start = perf_counter()
                     break
 
                 if is_answer is True:
                     generated_text += new_text
                     yield new_text
+                    start = perf_counter()
+
             start = perf_counter()
         yield "."  # end the sentence for downstream process sentence, e.g.: tts
         logging.info(f"{generated_text=} TTFT: {times[0]:.4f}s total time: {sum(times):.4f}s")
