@@ -321,7 +321,12 @@ Websocket signaling service +  webrtc + websocket transports I/O bridge:
 
 ---
 Websocket signaling service +  websocket + webrtc-queue transports I/O bridge:
-<img width="1177" alt="image" src="https://github.com/user-attachments/assets/571d8d02-c161-4867-8f09-1d2777b27f0b" />
+<img width="1183" height="405" alt="image" src="https://github.com/user-attachments/assets/557056cf-07db-494b-a289-f363fc82ac0b" />
+
+---
+Local/Global Scheduler + webrtc-queue bots :
+<img width="1172" height="477" alt="image" src="https://github.com/user-attachments/assets/f1c074e6-220c-478f-9435-05b3a7d4d083" />
+
 
 
 #  Run chat bots
