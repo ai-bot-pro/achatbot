@@ -10,7 +10,6 @@ from src.common.logger import Logger
 
 
 try:
-    from fastdeploy.input.ernie_tokenizer import ErnieBotTokenizer
     from fastdeploy.engine.args_utils import EngineArgs
 
     from src.types.llm.fastdeploy import FastDeployEngineArgs, LMGenerateArgs
@@ -40,12 +39,7 @@ class FastdeployBase(BaseLLM, ILlm):
             raise Exception("Failed to initialize FastDeploy LLM engine, service exit now!")
         logging.info(f"FastDeploy LLM engine initialized!")
 
-        vocab_file_names = ["tokenizer.model", "spm.model", "ernie_token_100k.model"]
-        for i in range(len(vocab_file_names)):
-            if os.path.exists(os.path.join(self.serv_args.model, vocab_file_names[i])):
-                ErnieBotTokenizer.resource_files_names["vocab_file"] = vocab_file_names[i]
-                break
-        self.tokenizer = ErnieBotTokenizer.from_pretrained(self.serv_args.model)
+        self.tokenizer = self.engine.data_processor.tokenizer
 
         self._chat_history = ChatHistory(self.args.chat_history_size)
         if self.args.init_chat_role and self.args.init_chat_prompt:
@@ -97,4 +91,7 @@ class FastdeployBase(BaseLLM, ILlm):
                 yield res
 
     def count_tokens(self, text: str | bytes) -> int:
-        return len(self.tokenizer(text)) if self.tokenizer else 0
+        """
+        use sentencepiece tokenizer to count tokens
+        """
+        return len(self.tokenizer.tokenize(text)) if self.tokenizer else 0

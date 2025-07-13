@@ -318,7 +318,7 @@ if SERVE_TYPE == "room_bot":
     )
 
 # img = img.pip_install(
-#    f"achatbot==0.0.21",
+#    f"achatbot==0.0.21.post0",
 #    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
 # )
 
@@ -393,7 +393,7 @@ class Srv:
 # run dummy bot to join room for test
 EXTRA_INDEX_URL=https://pypi.org/simple/ \
     SERVE_TYPE=room_bot \
-    ACHATBOT_VERSION=0.0.21 \
+    ACHATBOT_VERSION=0.0.21.post0 \
     IMAGE_NAME=fastdeploy_ernie4v IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L40s \
     GPU_ARCHS=86_89 \
     modal serve src/fastapi_webrtc_vision_bot_serve.py
@@ -402,7 +402,7 @@ EXTRA_INDEX_URL=https://pypi.org/simple/ \
 EXTRA_INDEX_URL=https://pypi.org/simple/ \
     SERVE_TYPE=room_bot \
     CONFIG_FILE=/root/.achatbot/config/bots/daily_describe_fastdeploy_ernie4v_vision_bot.json \
-    ACHATBOT_VERSION=0.0.21 \
+    ACHATBOT_VERSION=0.0.21.post0 \
     IMAGE_NAME=fastdeploy_ernie4v IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L40s \
     GPU_ARCHS=86_89 \
     modal serve src/fastapi_webrtc_vision_bot_serve.py
