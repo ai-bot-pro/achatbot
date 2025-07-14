@@ -175,7 +175,7 @@ def get_prompt(conv_template, messages, thinking=True):
     return prompt
 
 
-class TransformersManualVisionKeye(TransformersBaseLLM):
+class TransformersManualVisionSkyworkR1V(TransformersBaseLLM):
     TAG = "llm_transformers_manual_vision_skyworkr1v"
 
     def __init__(self, **args) -> None:

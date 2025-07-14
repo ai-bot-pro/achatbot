@@ -287,6 +287,9 @@ llm_transformers_manual_vision_keye = [
 llm_transformers_manual_vision_glm4v = [
     "achatbot[llm_transformers_manual_vision]",
 ]
+llm_transformers_manual_vision_skyworkr1v = [
+    "achatbot[llm_transformers_manual_vision]",
+]
 
 # vision + audio -> text
 llm_transformers_manual_vision_speech_phi = [
