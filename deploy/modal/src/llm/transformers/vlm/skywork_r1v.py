@@ -43,6 +43,7 @@ img = (
             "ROUND": os.getenv("ROUND", "1"),
             "IS_OUTPUT_THINK": os.getenv("IS_OUTPUT_THINK", "1"),
             "IMAGE_GPU": os.getenv("IMAGE_GPU", ""),
+            "TEST_CHAT": os.getenv("TEST_CHAT", ""),
         }
     )
 )
@@ -386,7 +387,7 @@ def test(gpu_prop, thinking):
         trust_remote_code=True,
         device_map="auto",
         load_in_8bit=False,
-        low_cpu_mem_usage=True,
+        low_cpu_mem_usage=False,
         use_flash_attn=True if gpu_prop.major >= 8 else False,
         # attn_implementation="flash_attention_2" if gpu_prop.major >= 8 else None,
     )
@@ -407,56 +408,70 @@ def test(gpu_prop, thinking):
     # image_file = io.BytesIO(requests.get(image).content)
     text = "<image>\n" + text
 
-    model.conv_template.append_message(model.conv_template.roles[0], text)
-    model.conv_template.append_message(model.conv_template.roles[1], None)
-    prompt = model.conv_template.get_prompt()
-    if prompt[-len("\n<think>") :] != "\n<think>":
-        prompt += "\n<think>"
-    if thinking is False:
-        prompt = re.sub(r"\n<think>", "", prompt, count=1)
-
     image_file = os.path.join(ASSETS_DIR, "03-Confusing-Pictures.jpg")
     pixel_values = load_image(image_file).to(torch.bfloat16).to(model.device)
     num_patches_list = [pixel_values.shape[0]]
     print(f"{pixel_values.shape=}")
-    # replace <image> placeholder
-    for num_patches in num_patches_list:
-        image_tokens = "<img>" + "<IMG_CONTEXT>" * model.num_image_token * num_patches + "</img>"
-        prompt = prompt.replace("<image>", image_tokens, 1)
-    print(f"{prompt=}")
 
-    inputs = tokenizer([prompt], padding=True, return_tensors="pt").to(model.device)
-    for key, value in inputs.items():
-        print(f"{key}: {value.shape=}") if isinstance(value, torch.Tensor) else print(
-            f"{key}: {value}"
+    test_chat = os.getenv("TEST_CHAT")
+    if test_chat:
+        generation_config = dict(
+            max_new_tokens=64000,
+            do_sample=True,
+            temperature=0.6,
+            top_p=0.95,
+            repetition_penalty=1.05,
         )
+        # https://huggingface.co/Skywork/Skywork-R1V3-38B/blob/main/modeling_skywork_chat.py#L253
+        response = model.chat(
+            tokenizer,
+            pixel_values,
+            text,
+            generation_config,
+            num_patches_list=num_patches_list,
+            mode="no-think" if thinking is False else "think",
+        )
+        print(response)
+    else:
+        model.conv_template.append_message(model.conv_template.roles[0], text)
+        model.conv_template.append_message(model.conv_template.roles[1], None)
+        prompt = model.conv_template.get_prompt()
+        if thinking is False:
+            prompt = re.sub(r"\n<think>", "", prompt, count=1)
 
-    # generation_config = dict(
-    #    max_new_tokens=64000, do_sample=True, temperature=0.6, top_p=0.95, repetition_penalty=1.05
-    # )
+        # replace <image> placeholder
+        # NOTE: just process curr user image query
+        for num_patches in num_patches_list:
+            image_tokens = (
+                "<img>" + "<IMG_CONTEXT>" * model.num_image_token * num_patches + "</img>"
+            )
+            prompt = prompt.replace("<image>", image_tokens, 1)
 
-    temperature = 0.6
-    # https://huggingface.co/Skywork/Skywork-R1V3-38B/blob/main/modeling_skywork_chat.py#L316
-    generated_ids = model.generate(
-        **inputs,
-        do_sample=True if temperature > 0 else False,
-        temperature=temperature,
-        top_k=20,
-        top_p=0.95,
-        repetition_penalty=1.05,
-        max_new_tokens=64000,
-        eos_token_id=eos_token_id,
-    )
-    print(f"{generated_ids.shape=}")
+        inputs = tokenizer([prompt], padding=True, return_tensors="pt").to(model.device)
+        for key, value in inputs.items():
+            print(f"{key}: {value.shape=}") if isinstance(value, torch.Tensor) else print(
+                f"{key}: {value} {value.dtype=}"
+            )
+        input_ids = inputs["input_ids"]
+        prompt = tokenizer.decode(input_ids[0])
+        print(f"{prompt=}")
 
-    response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
-    print(response)
-
-    generated_text = tokenizer.decode(
-        generated_ids[0],
-        # skip_special_tokens=True,
-    )
-    print(generated_text)
+        generated_ids = model.generate(
+            **inputs,
+            pixel_values=pixel_values,
+            max_new_tokens=64000,
+            do_sample=True,
+            temperature=0.6,
+            top_p=0.95,
+            repetition_penalty=1.05,
+            eos_token_id=eos_token_id,
+        )
+        print(f"{generated_ids.shape=}")
+        generated_text = tokenizer.decode(
+            generated_ids[0],
+            # skip_special_tokens=True,
+        )
+        print(generated_text)
 
 
 @torch.inference_mode()
@@ -637,7 +652,12 @@ def predict(gpu_prop, thinking):
                 image_file = io.BytesIO(requests.get(item["image"]).content)
             pixel_values.append(load_image(image_file))
     num_patches_list = [img.size(0) for img in pixel_values]
-    # print(pixel_values, num_patches_list)
+    pixel_values = (
+        torch.cat(pixel_values, dim=0).to(torch.bfloat16).to(model.device)
+        if len(pixel_values) > 0
+        else None
+    )
+    pixel_values is not None and print(f"{pixel_values.shape=}")
 
     # replace <image> placeholder
     # NOTE: just process curr user image query
@@ -657,6 +677,7 @@ def predict(gpu_prop, thinking):
     temperature = 0.6
     generated_ids = model.generate(
         **inputs,
+        pixel_values=pixel_values,
         do_sample=True if temperature > 0 else False,
         temperature=temperature,
         top_k=20,
@@ -736,7 +757,12 @@ def predict_stream(gpu_prop, thinking):
                 image_file = io.BytesIO(requests.get(item["image"]).content)
             pixel_values.append(load_image(image_file))
     num_patches_list = [img.size(0) for img in pixel_values]
-    # print(pixel_values, num_patches_list)
+    pixel_values = (
+        torch.cat(pixel_values, dim=0).to(torch.bfloat16).to(model.device)
+        if len(pixel_values) > 0
+        else None
+    )
+    pixel_values is not None and print(f"{pixel_values.shape=}")
 
     # replace <image> placeholder
     # NOTE: just process curr user image query
@@ -762,6 +788,7 @@ def predict_stream(gpu_prop, thinking):
         temperature = 0.6
         generation_kwargs = dict(
             **inputs,
+            pixel_values=pixel_values,
             do_sample=True if temperature > 0 else False,
             temperature=temperature,
             # top_k=20,
@@ -909,7 +936,12 @@ def chat(gpu_prop, thinking):
                 image_file = io.BytesIO(requests.get(item["image"]).content)
             pixel_values.append(load_image(image_file))
     num_patches_list = [img.size(0) for img in pixel_values]
-    # print(pixel_values, num_patches_list)
+    pixel_values = (
+        torch.cat(pixel_values, dim=0).to(torch.bfloat16).to(model.device)
+        if len(pixel_values) > 0
+        else None
+    )
+    pixel_values is not None and print(f"{pixel_values.shape=}")
 
     # replace <image> placeholder
     # NOTE: just process curr user image query
@@ -929,6 +961,7 @@ def chat(gpu_prop, thinking):
     temperature = 0.6
     generated_ids = model.generate(
         **inputs,
+        pixel_values=pixel_values,
         do_sample=True if temperature > 0 else False,
         temperature=temperature,
         top_k=20,
@@ -1040,7 +1073,12 @@ def text_vision_chat(gpu_prop, thinking):
                 image_file = io.BytesIO(requests.get(item["image"]).content)
             pixel_values.append(load_image(image_file))
     num_patches_list = [img.size(0) for img in pixel_values]
-    # print(pixel_values, num_patches_list)
+    pixel_values = (
+        torch.cat(pixel_values, dim=0).to(torch.bfloat16).to(model.device)
+        if len(pixel_values) > 0
+        else None
+    )
+    pixel_values is not None and print(f"{pixel_values.shape=}")
 
     # replace <image> placeholder
     # NOTE: just process curr user image query
@@ -1060,6 +1098,7 @@ def text_vision_chat(gpu_prop, thinking):
     temperature = 0.6
     generated_ids = model.generate(
         **inputs,
+        pixel_values=pixel_values,
         do_sample=True if temperature > 0 else False,
         temperature=temperature,
         top_p=0.9,
@@ -1159,7 +1198,12 @@ def chat_tool(gpu_prop, thinking):
                 image_file = io.BytesIO(requests.get(item["image"]).content)
             pixel_values.append(load_image(image_file))
     num_patches_list = [img.size(0) for img in pixel_values]
-    # print(pixel_values, num_patches_list)
+    pixel_values = (
+        torch.cat(pixel_values, dim=0).to(torch.bfloat16).to(model.device)
+        if len(pixel_values) > 0
+        else None
+    )
+    pixel_values is not None and print(f"{pixel_values.shape=}")
 
     # replace <image> placeholder
     # NOTE: just process curr user image query
@@ -1176,15 +1220,18 @@ def chat_tool(gpu_prop, thinking):
     prompt = tokenizer.decode(input_ids[0])
     print(f"{prompt=}")
 
+    eos_token_id = tokenizer.convert_tokens_to_ids(model.conv_template.sep.strip())
     temperature = 0.6
     generated_ids = model.generate(
         **inputs,
+        pixel_values=pixel_values,
         do_sample=True if temperature > 0 else False,
         temperature=temperature,
         top_k=20,
         top_p=0.9,
         repetition_penalty=1.1,
         max_new_tokens=1024,
+        eos_token_id=eos_token_id,
     )
     print(f"{generated_ids.shape=}")
     generated_text = tokenizer.decode(
@@ -1196,8 +1243,6 @@ def chat_tool(gpu_prop, thinking):
 
 @torch.inference_mode()
 def chat_json_mode(gpu_prop, thinking):
-    # Load model
-    # Load model
     model_name = os.getenv("LLM_MODEL")
     # gpu = os.getenv("IMAGE_GPU")
     # Load model
@@ -1270,7 +1315,12 @@ def chat_json_mode(gpu_prop, thinking):
                 image_file = io.BytesIO(requests.get(item["image"]).content)
             pixel_values.append(load_image(image_file))
     num_patches_list = [img.size(0) for img in pixel_values]
-    # print(pixel_values, num_patches_list)
+    pixel_values = (
+        torch.cat(pixel_values, dim=0).to(torch.bfloat16).to(model.device)
+        if len(pixel_values) > 0
+        else None
+    )
+    pixel_values is not None and print(f"{pixel_values.shape=}")
 
     # replace <image> placeholder
     # NOTE: just process curr user image query
@@ -1290,6 +1340,7 @@ def chat_json_mode(gpu_prop, thinking):
     temperature = 0.6
     generated_ids = model.generate(
         **inputs,
+        pixel_values=pixel_values,
         do_sample=True if temperature > 0 else False,
         temperature=temperature,
         top_k=20,

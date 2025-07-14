@@ -75,6 +75,8 @@ class LLMEnvInit:
             from .transformers import manual_vision_glm4v
         elif "llm_transformers_manual_vision_ernie4v" in tag:
             from .transformers import manual_vision_ernie4v
+        elif "llm_transformers_manual_vision_skyworkr1v" in tag:
+            from .transformers import manual_vision_skyworkr1v
         elif "llm_transformers_manual" == tag:
             from .transformers import manual
         elif "llm_transformers_pipeline" == tag:
@@ -471,6 +473,7 @@ class LLMEnvInit:
         "llm_transformers_manual_vision_keye": get_llm_transformers_args,
         "llm_transformers_manual_vision_glm4v": get_llm_transformers_args,
         "llm_transformers_manual_vision_ernie4v": get_llm_transformers_args,
+        "llm_transformers_manual_vision_skyworkr1v": get_llm_transformers_args,
         "llm_transformers_manual_vision_gemma3": get_llm_transformers_args,
         "llm_transformers_manual_vision_qwen2_5": get_llm_transformers_args,
         "llm_transformers_manual_vision_llama": get_llm_transformers_args,
