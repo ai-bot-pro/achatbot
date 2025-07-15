@@ -167,7 +167,7 @@ def get_prompt(conv_template, messages, thinking=True):
     conv_template.append_message("assistant", None)
 
     prompt = conv_template.get_prompt()
-    if prompt[-len("\n<think>") :] != "\n<think>":
+if not prompt.endswith("\n<think>"):
         prompt += "\n<think>"
     if thinking is False:
         prompt = re.sub(r"\n<think>", "", prompt, count=1)
