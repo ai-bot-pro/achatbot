@@ -269,6 +269,14 @@ class ContainerRuntimeConfig:
                 f"python -m pip install fastdeploy-gpu -i https://www.paddlepaddle.org.cn/packages/{FASTDEPLOY_VERSION}/fastdeploy-gpu-{GPU_ARCHS}/ --extra-index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple"
             )
         ),
+        "skyworkr1v": (
+            vision_bot_img.pip_install(
+                [
+                    f"achatbot[llm_transformers_manual_vision]=={achatbot_version}",
+                ],
+                extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+            ).pip_install("timm")
+        ),
     }
 
     @staticmethod
@@ -317,10 +325,10 @@ if SERVE_TYPE == "room_bot":
         }
     )
 
-# img = img.pip_install(
-#    f"achatbot==0.0.21.post0",
-#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
-# )
+img = img.pip_install(
+   f"achatbot==0.0.21.dev30",
+   extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+)
 
 HF_MODEL_DIR = "/root/.achatbot/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)

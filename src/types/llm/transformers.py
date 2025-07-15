@@ -45,6 +45,12 @@ class TransformersLMArgs(LMGenerateArgs):
         default="user",
         metadata={"help": "Role assigned to the user in the chat context. Default is 'user'."},
     )
+    assistant_role: str = field(
+        default="assistant",
+        metadata={
+            "help": "Role assigned to the assistant in the chat context. Default is 'assistant'."
+        },
+    )
     warnup_prompt: str = field(
         default="Repeat the word 'weedge niu bi'.",
         metadata={"help": "warnup llm generate prompt. Default is 'weedge niu bi'."},

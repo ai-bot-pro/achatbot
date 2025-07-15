@@ -109,7 +109,12 @@ class VisionProcessor(VisionProcessorBase):
             if (
                 "llm_transformers" in self._llm.SELECTED_TAG and "vision" in self._llm.SELECTED_TAG
             ):  # transformers vision
-                self._session.ctx.state["prompt"].append({"type": "image", "image": img_base64_str})
+                if "skyworkr1v" in self._llm.SELECTED_TAG:
+                    self._session.ctx.state["prompt"].append({"type": "image", "image": image})
+                else:
+                    self._session.ctx.state["prompt"].append(
+                        {"type": "image", "image": img_base64_str}
+                    )
             elif (
                 "llm_fastdeploy" in self._llm.SELECTED_TAG and "vision" in self._llm.SELECTED_TAG
             ):  # fastdeploy vision

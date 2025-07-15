@@ -48,9 +48,6 @@ class TransformersBaseLLM(BaseLLM, ILlm):
         self._tokenizer = AutoTokenizer.from_pretrained(
             self.args.lm_model_name_or_path, trust_remote_code=True
         )
-        self._streamer = TextIteratorStreamer(
-            self._tokenizer, skip_prompt=True, skip_special_tokens=True
-        )
 
         self._chat_history = ChatHistory(self.args.chat_history_size)
         if self.args.init_chat_role and self.args.init_chat_prompt:
