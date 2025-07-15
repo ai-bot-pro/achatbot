@@ -8,12 +8,13 @@ import subprocess
 from threading import Thread
 from time import perf_counter
 from typing import Optional
+import uuid
 
 
 import modal
 import requests
 
-
+APP_NAME = os.getenv("APP_NAME", "")
 app = modal.App("skywork_r1-VL")
 img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
@@ -47,6 +48,12 @@ img = (
         }
     )
 )
+
+if APP_NAME == "achatbot":
+    img = img.pip_install(
+        f"achatbot==0.0.21.dev28",
+        extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+    )
 
 HF_MODEL_DIR = "/root/.achatbot/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
@@ -199,10 +206,6 @@ def split_model(model_path):
     return device_map
 
 
-"""
-"""
-
-
 def dump_model(gpu_prop, thinking):
     """
     vlm text model use Skywork/Skywork-R1V3-38B
@@ -267,7 +270,7 @@ def get_prompt(conv_template, messages, thinking=True):
     conv_template.append_message("assistant", None)
 
     prompt = conv_template.get_prompt()
-if not prompt.endswith("\n<think>"):
+    if not prompt.endswith("\n<think>"):
         prompt += "\n<think>"
     if thinking is False:
         prompt = re.sub(r"\n<think>", "", prompt, count=1)
@@ -866,12 +869,10 @@ def chat(gpu_prop, thinking):
             "role": "user",
             "content": [
                 {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": "https://paddlenlp.bj.bcebos.com/datasets/paddlemix/demo_images/example1.jpg"
-                        # 高分辨率的图片需要更多的GPU BHM
-                        # "url": "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/bee.jpg"
-                    },
+                    "type": "image",
+                    "image": "https://paddlenlp.bj.bcebos.com/datasets/paddlemix/demo_images/example1.jpg",
+                    # 高分辨率的图片需要更多的GPU BHM
+                    # "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/bee.jpg"
                 },
                 {"type": "text", "text": "请描述图片内容"},
             ],
@@ -889,12 +890,10 @@ def chat(gpu_prop, thinking):
             "role": "user",
             "content": [
                 {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": "https://paddlenlp.bj.bcebos.com/datasets/paddlemix/demo_images/example1.jpg"
-                        # 高分辨率的图片需要更多的GPU BHM
-                        # "url": "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/bee.jpg"
-                    },
+                    "type": "image",
+                    "image": "https://paddlenlp.bj.bcebos.com/datasets/paddlemix/demo_images/example1.jpg",
+                    # 高分辨率的图片需要更多的GPU BHM
+                    # "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/bee.jpg"
                 },
                 {"type": "text", "text": "图片中有几个人"},
             ],
@@ -912,12 +911,13 @@ def chat(gpu_prop, thinking):
             "role": "user",
             "content": [
                 {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": "https://paddlenlp.bj.bcebos.com/datasets/paddlemix/demo_images/example1.jpg"
-                        # 高分辨率的图片需要更多的GPU BHM
-                        # "url": "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/bee.jpg"
-                    },
+                    "type": "image",
+                    "image": "https://paddlenlp.bj.bcebos.com/datasets/paddlemix/demo_images/example1.jpg",
+                },
+                {
+                    "type": "image",
+                    # 高分辨率的图片需要更多的GPU BHM
+                    "image": "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/bee.jpg",
                 },
                 {"type": "text", "text": text},
             ],
@@ -1356,6 +1356,46 @@ def chat_json_mode(gpu_prop, thinking):
     print(generated_text)
 
 
+def achatbot_generate(gpu_prop, thinking):
+    from achatbot.core.llm.transformers.manual_vision_skyworkr1v import (
+        TransformersManualVisionSkyworkR1V,
+    )
+    from achatbot.types.llm.transformers import TransformersLMArgs
+    from achatbot.common.types import MODELS_DIR, SessionCtx
+    from achatbot.common.session import Session
+    from achatbot.common.logger import Logger
+
+    Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
+
+    LLM_MODEL = os.getenv("LLM_MODEL")
+    PATH = os.path.join(HF_MODEL_DIR, LLM_MODEL)
+    model = TransformersManualVisionSkyworkR1V(
+        **TransformersLMArgs(
+            lm_model_name_or_path=PATH,
+            init_chat_prompt="你是一个中文语音智能助手，不要使用特殊字符回复，请使用中文回复。",
+            lm_device="cuda",
+            lm_gen_temperature=0.6,
+            lm_gen_thinking=thinking,
+            lm_gen_repetition_penalty=1.1,
+        ).__dict__
+    )
+
+    session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
+    url = "https://paddlenlp.bj.bcebos.com/datasets/paddlemix/demo_images/example2.jpg"
+    image_bytes = requests.get(url).content
+    img = Image.open(io.BytesIO(image_bytes))
+    # chat_texts = ["这张图片的内容是什么", "你叫什么名字", "讲个故事"]
+    chat_texts = ["这张图片的内容是什么"]
+    for chat_text in chat_texts:
+        session.ctx.state["prompt"] = [
+            {"type": "image", "image": img},
+            {"type": "text", "text": chat_text},
+        ]
+        for result_text in model.generate(session, thinking=thinking):
+            print(result_text, flush=True, end="")
+    img.close()
+
+
 """
 https://huggingface.co/Skywork/Skywork-R1V3-38B
 
@@ -1390,7 +1430,7 @@ IMAGE_GPU=L4:4 modal run src/llm/transformers/vlm/skywork_r1v.py --task predict_
 IMAGE_GPU=L40s:2 modal run src/llm/transformers/vlm/skywork_r1v.py --task predict_stream
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/skywork_r1v.py --task predict_stream
 
-# multi images need more GPU HBM, have some bug
+# multi images
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/skywork_r1v.py --task chat 
 
 ROUND=1 IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/skywork_r1v.py --task text_vision_chat
@@ -1403,6 +1443,9 @@ IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/skywork_r1v.py --task cha
 
 # 6. json_mode支持不够好, 输出markdown格式```json {xxx} ``` xxx 需要截断/微调
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/skywork_r1v.py --task chat_json_mode
+
+# 7. use achatbot to generate
+IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/skywork_r1v.py --task achatbot_generate
 """
 
 
@@ -1421,6 +1464,7 @@ def main(task: str = "dump_model", thinking: Optional[bool] = None):
         "text_vision_chat": text_vision_chat,
         "chat_tool": chat_tool,
         "chat_json_mode": chat_json_mode,
+        "achatbot_generate": achatbot_generate,
     }
     if task not in tasks:
         raise ValueError(f"task {task} not found")

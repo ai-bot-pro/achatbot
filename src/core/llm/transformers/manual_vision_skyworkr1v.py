@@ -133,14 +133,11 @@ def load_image(image: Image.Image, input_size=448, max_num=12):
 
 
 def get_prompt(conv_template, messages, thinking=True):
-    assert len(messages) % 2 == 0
-    assert messages[0]["role"] == "system"
     assert messages[-1]["role"] == "user"
 
     for i, message in enumerate(messages):
         assert message.get("content")
         assert len(message.get("content")) > 0
-        print(f"{message=}")
 
         if message["role"] == "system":
             if message["content"][0]["text"]:
@@ -162,12 +159,11 @@ def get_prompt(conv_template, messages, thinking=True):
             for item in message["content"]:
                 if item["type"] == "text":
                     answer += item["text"]
-            print(f"{answer=}")
             conv_template.append_message("assistant", answer)
     conv_template.append_message("assistant", None)
 
     prompt = conv_template.get_prompt()
-if not prompt.endswith("\n<think>"):
+    if not prompt.endswith("\n<think>"):
         prompt += "\n<think>"
     if thinking is False:
         prompt = re.sub(r"\n<think>", "", prompt, count=1)
@@ -221,11 +217,12 @@ class TransformersManualVisionSkyworkR1V(TransformersBaseLLM):
             use_fast=True,
             trust_remote_code=True,
         )
+        self._model.img_context_token_id = self._tokenizer.convert_tokens_to_ids("<IMG_CONTEXT>")
         self.eos_token_id = self._tokenizer.convert_tokens_to_ids(
             self._model.conv_template.sep.strip()
         )
 
-        self._chat_history = ChatHistory(0)  # no history
+        self._chat_history = ChatHistory(self.args.chat_history_size)  # no history
         if self.args.init_chat_role and self.args.init_chat_prompt:
             self._chat_history.init(
                 {
@@ -233,6 +230,7 @@ class TransformersManualVisionSkyworkR1V(TransformersBaseLLM):
                     "content": [{"type": "text", "text": self.args.init_chat_prompt}],
                 }
             )
+        self.session_chat_history = {}
 
         self.warmup()
 
@@ -305,7 +303,9 @@ class TransformersManualVisionSkyworkR1V(TransformersBaseLLM):
 
     @torch.inference_mode()
     def generate(self, session: Session, **kwargs):
-        enable_thinking = kwargs.get("thinking", self.gen_args.lm_gen_thinking)
+        enable_thinking = kwargs.get("thinking", self.args.lm_gen_thinking)
+        if enable_thinking is None:  # default thinking is True
+            enable_thinking = True
         seed = kwargs.get("seed", self.args.lm_gen_seed)
         set_all_random_seed(seed)
 
@@ -319,7 +319,7 @@ class TransformersManualVisionSkyworkR1V(TransformersBaseLLM):
         logging.info(f"{session.ctx.client_id} chat_history:{chat_history}")
 
         tpl = self._model.conv_template.copy()
-        prompt = get_prompt(tpl, chat_history)
+        prompt = get_prompt(tpl, chat_history, thinking=enable_thinking)
 
         pixel_values = []
         for item in chat_history[-1]["content"]:
@@ -333,9 +333,10 @@ class TransformersManualVisionSkyworkR1V(TransformersBaseLLM):
             else None
         )
         pixel_values is not None and logging.info(f"{pixel_values.shape=}")
+        logging.info(f"{prompt=}")
 
         # replace <image> placeholder
-        # NOTE: just process curr user image query
+        # NOTE: just process current user image query
         for num_patches in num_patches_list:
             image_tokens = (
                 "<img>" + "<IMG_CONTEXT>" * self._model.num_image_token * num_patches + "</img>"
@@ -379,7 +380,7 @@ class TransformersManualVisionSkyworkR1V(TransformersBaseLLM):
         think_text = ""
         for new_text in streamer:
             times.append(perf_counter() - start)
-            if ("<think>" in new_text or enable_thinking is True) and think_text == "":
+            if ("<think>" in new_text or enable_thinking is True) and is_thinking is False:
                 yield "思考中，请稍等。"
                 is_thinking = True
             if "</think>" in new_text:
