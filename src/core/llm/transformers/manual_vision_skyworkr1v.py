@@ -380,7 +380,11 @@ class TransformersManualVisionSkyworkR1V(TransformersBaseLLM):
         think_text = ""
         for new_text in streamer:
             times.append(perf_counter() - start)
-            if ("<think>" in new_text or enable_thinking is True) and is_thinking is False:
+            if (
+                ("<think>" in new_text or enable_thinking is True)
+                and is_thinking is False
+                and think_text == ""
+            ):
                 yield "思考中，请稍等。"
                 is_thinking = True
             if "</think>" in new_text:

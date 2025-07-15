@@ -51,7 +51,7 @@ img = (
 
 if APP_NAME == "achatbot":
     img = img.pip_install(
-        f"achatbot==0.0.21.dev28",
+        f"achatbot==0.0.21.post1",
         extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
     )
 
@@ -1446,6 +1446,8 @@ IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/skywork_r1v.py --task cha
 
 # 7. use achatbot to generate
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/skywork_r1v.py --task achatbot_generate
+IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/skywork_r1v.py --task achatbot_generate --no-thinking
+IMAGE_GPU=A100-80GB modal run src/llm/transformers/vlm/skywork_r1v.py --task achatbot_generate --thinking
 """
 
 
