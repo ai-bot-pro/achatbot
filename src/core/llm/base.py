@@ -10,7 +10,8 @@ class BaseLLM(EngineClass):
         self.session_chat_history = {}
 
     def get_session_chat_history(self, session_id: str) -> list:
-        return self.session_chat_history.get(session_id).to_list() or []
+        history = self.session_chat_history.get(session_id)
+        return history.to_list() if history else []
 
     def model_name(self):
         if hasattr(self.args, "model_name"):
