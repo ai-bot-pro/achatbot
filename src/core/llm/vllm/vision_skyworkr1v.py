@@ -3,6 +3,7 @@ import re
 import uuid
 from time import perf_counter
 import asyncio
+import copy
 
 from PIL import Image
 
@@ -18,7 +19,6 @@ from src.common.random import set_all_random_seed
 from src.common.interface import ILlm
 from src.common.session import Session
 from src.core.llm.vllm.base import VllmBase
-
 
 
 class VllmVisionSkyworkr1v(VllmBase):
@@ -153,7 +153,10 @@ class VllmVisionSkyworkr1v(VllmBase):
                 yield new_text
             start = perf_counter()
         yield "."  # end the sentence for downstream process sentence, e.g.: tts
-        logging.info(f"{generated_text=} TTFT: {times[0]:.4f}s total time: {sum(times):.4f}s")
         self.session_chat_history[session.ctx.client_id].append(
             {"role": self.args.assistant_role, "content": generated_text}
         )
+        if times:
+            logging.info(f"{generated_text=} TTFT: {times[0]:.4f}s total time: {sum(times):.4f}s")
+        else:
+            logging.info(f"{generated_text=} total time: 0s")

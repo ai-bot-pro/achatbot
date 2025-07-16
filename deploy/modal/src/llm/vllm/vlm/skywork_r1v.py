@@ -62,7 +62,6 @@ if APP_NAME == "achatbot":
 app = modal.App("vllm-vision-skyworkr1v")
 
 IMAGE_GPU = os.getenv("IMAGE_GPU", None)
-MINUTES = 60  # seconds
 
 
 with vllm_image.imports():

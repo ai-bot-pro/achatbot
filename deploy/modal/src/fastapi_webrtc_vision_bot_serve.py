@@ -283,7 +283,7 @@ class ContainerRuntimeConfig:
         "vllm_skyworkr1v": (
             vision_bot_img.pip_install(
                 "vllm==0.9.2", extra_index_url="https://download.pytorch.org/whl/cu126"
-            )
+            )  # default use flash-attention
             .pip_install(
                 "huggingface_hub[hf_transfer]",
             )
@@ -329,7 +329,7 @@ class ContainerRuntimeConfig:
         return concurrent_cn
 
 
-if IMAGE_NAME not in ["fastdeploy_ernie4v"]:
+if IMAGE_NAME not in ["fastdeploy_ernie4v", "vllm_skyworkr1v"]:
     img = ContainerRuntimeConfig.get_img().pip_install(
         "flash-attn==2.7.4.post1", extra_options="--no-build-isolation"
     )

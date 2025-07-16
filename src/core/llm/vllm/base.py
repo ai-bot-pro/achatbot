@@ -69,7 +69,7 @@ class VllmBase(BaseLLM, ILlm):
         dummy_pil_image = Image.new("RGB", (100, 100), color="white")
         session.ctx.state["prompt"] = [
             {"type": "image", "image": dummy_pil_image},
-            {"type": "text", "text": self.args.warnup_prompt},
+            {"type": "text", "text": self.args.warmup_prompt},
         ]
         for i in range(self.args.warmup_steps):
             logging.info(f"{i} warmup start")
@@ -77,7 +77,6 @@ class VllmBase(BaseLLM, ILlm):
                 session, thinking=self.gen_args.lm_gen_thinking
             ):
                 pass
-        raise NotImplementedError("must be implemented in the child class")
 
     def generate(self, session: Session, **kwargs):
         pass
