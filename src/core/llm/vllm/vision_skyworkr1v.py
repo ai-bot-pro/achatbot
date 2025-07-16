@@ -53,7 +53,7 @@ class VllmVisionSkyworkr1v(VllmBase):
         message = {"role": self.args.user_role, "content": text}
 
         if session.ctx.client_id not in self.session_chat_history:
-            self.session_chat_history[session.ctx.client_id] = self._chat_history
+            self.session_chat_history[session.ctx.client_id] = copy.deepcopy(self._chat_history)
         self.session_chat_history[session.ctx.client_id].append(message)
         chat_history = self.session_chat_history[session.ctx.client_id].to_list()
         logging.info(f"{session.ctx.client_id} chat_history:{chat_history}")
