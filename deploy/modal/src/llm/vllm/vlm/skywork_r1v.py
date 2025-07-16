@@ -9,6 +9,7 @@ import io
 
 import modal
 
+BACKEND = os.getenv("BACKEND", "")
 APP_NAME = os.getenv("APP_NAME", "")
 TP = os.getenv("TP", "1")
 
@@ -50,8 +51,15 @@ vllm_image = vllm_image.env(
         "VLLM_TORCH_PROFILER_DIR": PROFILE_DIR,
         "LLM_MODEL": os.getenv("LLM_MODEL", "Skywork/Skywork-R1V3-38B"),
         "TP": TP,
+        "VLLM_WORKER_MULTIPROC_METHOD": "spawn",
+        "TORCH_CUDA_ARCH_LIST": "8.0 8.9 9.0+PTX",
     }
 )
+if BACKEND == "flashinfer":
+    vllm_image = vllm_image.pip_install(
+        f"flashinfer-python==0.2.2.post1",  # FlashInfer 0.2.3+ does not support per-request generators
+        extra_index_url="https://flashinfer.ai/whl/cu126/torch2.6",
+    )
 
 if APP_NAME == "achatbot":
     vllm_image = vllm_image.pip_install(
@@ -258,24 +266,37 @@ VOLUME_NAME=vllm-cache modal run src/remove_volume_data.py --files "torch_compil
 IMAGE_GPU=L40s:4 TP=4 modal run src/llm/vllm/vlm/skywork_r1v.py --task generate
 IMAGE_GPU=A100:4 TP=4 modal run src/llm/vllm/vlm/skywork_r1v.py --task generate
 IMAGE_GPU=A100-80GB:2 TP=2 modal run src/llm/vllm/vlm/skywork_r1v.py --task generate
+# use flashinfer
+IMAGE_GPU=L40s:4 TP=4 BACKEND=flashinfer modal run src/llm/vllm/vlm/skywork_r1v.py --task generate
+IMAGE_GPU=A100:4 TP=4 BACKEND=flashinfer modal run src/llm/vllm/vlm/skywork_r1v.py --task generate
+IMAGE_GPU=A100-80GB:2 TP=2 BACKEND=flashinfer modal run src/llm/vllm/vlm/skywork_r1v.py --task generate
 
 # _CudaDeviceProperties(name='NVIDIA H200', major=9, minor=0, total_memory=143156MB, multi_processor_count=132, uuid=91a535d7-4157-249a-65e5-73883afa626e, L2_cache_size=60MB)
 IMAGE_GPU=H200 TP=1 modal run src/llm/vllm/vlm/skywork_r1v.py --task generate
+IMAGE_GPU=H200 TP=1 BACKEND=flashinfer modal run src/llm/vllm/vlm/skywork_r1v.py --task generate
 
 # NOTE: need update latest torch version to support sm_100 arch
 # _CudaDeviceProperties(name='NVIDIA B200', major=10, minor=0, total_memory=182642MB, multi_processor_count=148, uuid=d186e4e8-5421-22be-0d31-ba7ed89e6a79, L2_cache_size=126MB)
 IMAGE_GPU=B200 TP=1 modal run src/llm/vllm/vlm/skywork_r1v.py --task generate
+IMAGE_GPU=B200 TP=1 BACKEND=flashinfer modal run src/llm/vllm/vlm/skywork_r1v.py --task generate
 
 # 3. generate_stream
 IMAGE_GPU=L40s:4 TP=4 modal run src/llm/vllm/vlm/skywork_r1v.py --task generate_stream
 IMAGE_GPU=A100:4 TP=4 modal run src/llm/vllm/vlm/skywork_r1v.py --task generate_stream 
 IMAGE_GPU=A100-80GB:2 TP=2 modal run src/llm/vllm/vlm/skywork_r1v.py --task generate_stream
+# use flashinfer
+IMAGE_GPU=L40s:4 TP=4 BACKEND=flashinfer modal run src/llm/vllm/vlm/skywork_r1v.py --task generate_stream
+IMAGE_GPU=A100:4 TP=4 BACKEND=flashinfer modal run src/llm/vllm/vlm/skywork_r1v.py --task generate_stream 
+IMAGE_GPU=A100-80GB:2 TP=2 BACKEND=flashinfer modal run src/llm/vllm/vlm/skywork_r1v.py --task generate_stream
 
 # 4. achatbot_generate_stream
-EXTRA_INDEX_URL=https://test.pypi.org/simple/ IMAGE_GPU=L40s:4 TP=4 modal run src/llm/vllm/vlm/skywork_r1v.py --task achatbot_generate_stream
-IMAGE_GPU=A100:4 TP=4 modal run src/llm/vllm/vlm/skywork_r1v.py --task achatbot_generate_stream 
-IMAGE_GPU=A100-80GB:2 TP=2 modal run src/llm/vllm/vlm/skywork_r1v.py --task achatbot_generate_stream
-
+IMAGE_GPU=L40s:4 TP=4 APP_NAME=achatbot modal run src/llm/vllm/vlm/skywork_r1v.py --task achatbot_generate_stream
+IMAGE_GPU=A100:4 TP=4 APP_NAME=achatbot modal run src/llm/vllm/vlm/skywork_r1v.py --task achatbot_generate_stream 
+IMAGE_GPU=A100-80GB:2 TP=2 APP_NAME=achatbot modal run src/llm/vllm/vlm/skywork_r1v.py --task achatbot_generate_stream
+# use flashinfer
+IMAGE_GPU=L40s:4 TP=4 APP_NAME=achatbot BACKEND=flashinfer modal run src/llm/vllm/vlm/skywork_r1v.py --task achatbot_generate_stream
+IMAGE_GPU=A100:4 TP=4 APP_NAME=achatbot BACKEND=flashinfer modal run src/llm/vllm/vlm/skywork_r1v.py --task achatbot_generate_stream 
+IMAGE_GPU=A100-80GB:2 TP=2 APP_NAME=achatbot BACKEND=flashinfer modal run src/llm/vllm/vlm/skywork_r1v.py --task achatbot_generate_stream
 """
 
 

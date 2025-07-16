@@ -287,12 +287,18 @@ class ContainerRuntimeConfig:
             .pip_install(
                 "huggingface_hub[hf_transfer]",
             )
+            .pip_install(
+                f"flashinfer-python==0.2.2.post1",  # FlashInfer 0.2.3+ does not support per-request generators
+                extra_index_url="https://flashinfer.ai/whl/cu126/torch2.6",
+            )
             .env(
                 {
                     "HF_HUB_ENABLE_HF_TRANSFER": "1",  # faster model transfersrs
                     "VLLM_USE_V1": "1",
                     "VLLM_TORCH_PROFILER_DIR": VLLM_PROFILE_DIR,
                     "LLM_MODEL": os.getenv("LLM_MODEL", "Skywork/Skywork-R1V3-38B"),
+                    "VLLM_WORKER_MULTIPROC_METHOD": "spawn",
+                    "TORCH_CUDA_ARCH_LIST": "8.0 8.9 9.0+PTX",
                 }
             )
         ),
@@ -345,8 +351,8 @@ if SERVE_TYPE == "room_bot":
     )
 
 # img = img.pip_install(
-#   f"achatbot==0.0.21.dev30",
-#   extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+#    f"achatbot==0.0.21.dev45",
+#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
 # )
 
 HF_MODEL_DIR = "/root/.achatbot/models"
@@ -403,8 +409,9 @@ class Srv:
             gpu_prop = torch.cuda.get_device_properties("cuda:0")
             print(gpu_prop)
             IMAGE_NAME = os.getenv("IMAGE_NAME")
-            if "fastdeploy" not in IMAGE_NAME:
+            if "fastdeploy" not in IMAGE_NAME and "vllm" not in IMAGE_NAME:
                 torch.multiprocessing.set_start_method("spawn", force=True)
+                print("multiprocessing set spawn.")
         else:
             print("CUDA is not available.")
 
@@ -429,6 +436,8 @@ EXTRA_INDEX_URL=https://pypi.org/simple/ \
     GPU_ARCHS=86_89 \
     modal serve src/fastapi_webrtc_vision_bot_serve.py
 
+# put config
+modal volume put config ./config/bots/daily_describe_fastdeploy_ernie4v_vision_bot.json   /bots/ -f
 # run fastdeploy ernie4v bot to join room
 EXTRA_INDEX_URL=https://pypi.org/simple/ \
     SERVE_TYPE=room_bot \
@@ -436,5 +445,17 @@ EXTRA_INDEX_URL=https://pypi.org/simple/ \
     ACHATBOT_VERSION=0.0.21.post0 \
     IMAGE_NAME=fastdeploy_ernie4v IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L40s \
     GPU_ARCHS=86_89 \
+    modal serve src/fastapi_webrtc_vision_bot_serve.py
+
+
+# put config
+modal volume put config ./config/bots/daily_describe_vllm_skyworkr1v_vision_bot.json   /bots/ -f
+
+# run fastdeploy ernie4v bot to join room
+EXTRA_INDEX_URL=https://pypi.org/simple/ \
+    SERVE_TYPE=room_bot \
+    CONFIG_FILE=/root/.achatbot/config/bots/daily_describe_vllm_skyworkr1v_vision_bot.json \
+    ACHATBOT_VERSION=0.0.21.post2 \
+    IMAGE_NAME=vllm_skyworkr1v IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L40s:4 \
     modal serve src/fastapi_webrtc_vision_bot_serve.py
 """
