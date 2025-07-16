@@ -16,7 +16,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.21.post1"
+version = "0.0.21.post2"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -206,7 +206,7 @@ vad_recorder = ["achatbot[speech_vad]"]
 llama_cpp = ["llama-cpp-python~=0.2.82"]
 llm_personalai_proxy = ["geocoder~=1.38.1"]
 sglang = ["sglang[all]==0.4.4.post1"]
-vllm = ["vllm==0.7.3"]
+vllm = ["vllm==0.9.2"]
 transformers = ["transformers[torch]"]
 # --extra-index-url https://pypi.nvidia.com python3.10 and python3.12 | python3.11 unsupported
 trtllm = ["tensorrt-llm==0.17.0.post1"]

@@ -96,6 +96,7 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
       - [x] llm_sglang_generator
     - [x] vllm:
       - [x] llm_vllm_generator
+      - [x] llm_vllm_vision_skyworkr1v
     - [x] transformers(manual, pipeline) (support text; vision,vision+image; speech,voice; vision+voice)
       - [x] llm_transformers_manual_vision_llama
       - [x] llm_transformers_manual_vision_molmo

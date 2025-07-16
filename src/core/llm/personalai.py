@@ -1,9 +1,12 @@
+from typing import AsyncGenerator
 import requests
 import logging
 from datetime import datetime
 import json
 import time
 import os
+
+import numpy as np
 
 from src.common.http import HTTPRequest
 from src.common.interface import ILlm
@@ -36,6 +39,18 @@ class PersonalAIProxy(BaseLLM, ILlm):
 
     def generate(self, session: Session):
         # @TODO: personalai proxy need use comletions openai api
+        logging.info("generate use chat_completion")
+        for item in self.chat_completion(session):
+            yield item
+
+    async def async_generate(
+        self, session, **kwargs
+    ) -> AsyncGenerator[str | dict | np.ndarray, None]:
+        logging.info("generate use chat_completion")
+        for item in self.chat_completion(session):
+            yield item
+
+    async def async_chat_completion(self, session, **kwargs) -> AsyncGenerator[str, None]:
         logging.info("generate use chat_completion")
         for item in self.chat_completion(session):
             yield item

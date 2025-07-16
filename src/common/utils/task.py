@@ -17,17 +17,17 @@ async def async_task(sync_func: Callable, *args, **kwargs) -> Any:
         return await loop.run_in_executor(pool, sync_func, *args, **kwargs)
 
 
-def fetch_async_items(queue: queue.Queue, asyncFunc, *args) -> None:
+def fetch_async_items(queue: queue.Queue, asyncFunc, *args, end=None, **kwargs) -> None:
     async def get_items() -> None:
         try:
-            async for item in asyncFunc(*args):
+            async for item in asyncFunc(*args, **kwargs):
                 queue.put(item)
-            queue.put(None)
+            queue.put(end)
         except Exception as e:
             error_message = traceback.format_exc()
             logging.error(f"error:{e} trace: {error_message}")
 
-            queue.put(None)
+            queue.put(end)
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)

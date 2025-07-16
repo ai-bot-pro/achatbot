@@ -27,7 +27,7 @@ class DailyDescribeVisionBot(DailyRoomBot):
 
         try:
             vision_llm_config = self._bot_config.llm or self._bot_config.vision_llm
-            if "fastdeploy" in vision_llm_config.tag:
+            if "fastdeploy" in vision_llm_config.tag or "vllm" in vision_llm_config.tag:
                 self.llm_engine = LLMEnvInit.initLLMEngine(
                     vision_llm_config.tag, vision_llm_config.args
                 )
