@@ -9,6 +9,9 @@ class BaseLLM(EngineClass):
         super().__init__()
         self.session_chat_history = {}
 
+    def get_session_chat_history(self, session_id: str) -> list:
+        return self.session_chat_history.get(session_id).to_list() or []
+
     def model_name(self):
         if hasattr(self.args, "model_name"):
             return self.args.model_name

@@ -1,6 +1,9 @@
 from abc import abstractmethod
 import logging
 import os
+from typing import AsyncGenerator
+
+import numpy as np
 
 from src.common.session import Session
 from src.common.interface import ILlm
@@ -67,6 +70,17 @@ class FastdeployBase(BaseLLM, ILlm):
 
     def generate(self, session: Session, **kwargs):
         pass
+
+    async def async_generate(
+        self, session, **kwargs
+    ) -> AsyncGenerator[str | dict | np.ndarray, None]:
+        for item in self.generate(session, **kwargs):
+            yield item
+
+    async def async_chat_completion(self, session, **kwargs) -> AsyncGenerator[str, None]:
+        logging.info("generate use chat_completion")
+        for item in self.chat_completion(session):
+            yield item
 
     def chat_completion(self, session: Session, **kwargs):
         if self.args.lm_stream is False:

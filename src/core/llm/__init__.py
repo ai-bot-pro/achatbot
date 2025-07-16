@@ -21,6 +21,8 @@ class LLMEnvInit:
             from .llamacpp.generator import LlamacppGenerator
         if "llm_vllm_generator" == tag:
             from .vllm.generator import VllmGenerator
+        if "llm_vllm_vision_skyworkr1v" == tag:
+            from .vllm.vision_skyworkr1v import VllmVisionSkyworkr1v
         if "llm_trtllm_generator" == tag:
             from .tensorrt_llm.generator import TrtLLMGenerator
         if "llm_trtllm_runner_generator" == tag:
@@ -502,6 +504,7 @@ class LLMEnvInit:
         "llm_transformers_generator": get_llm_transformers_args,
         "llm_llamacpp_generator": get_llm_llamacpp_generator_args,
         "llm_vllm_generator": get_llm_vllm_generator_args,
+        "llm_vllm_vision_skyworkr1v": get_llm_vllm_generator_args,
         "llm_sglang_generator": get_llm_sglang_generator_args,
         "llm_trtllm_generator": get_llm_trtllm_generator_args,
         "llm_trtllm_runner_generator": get_llm_trtllm_runner_generator_args,

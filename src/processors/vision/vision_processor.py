@@ -119,17 +119,31 @@ class VisionProcessor(VisionProcessorBase):
                 "llm_fastdeploy" in self._llm.SELECTED_TAG and "vision" in self._llm.SELECTED_TAG
             ):  # fastdeploy vision
                 self._session.ctx.state["prompt"].append({"type": "image_url", "image_url": image})
+            elif (
+                "llm_vllm" in self._llm.SELECTED_TAG and "vision" in self._llm.SELECTED_TAG
+            ):  # vllm vision
+                self._session.ctx.state["prompt"].append({"type": "image", "image": image})
             else:  # llamacpp vision
                 self._session.ctx.state["prompt"].append(
                     {"type": "image_url", "image_url": {"url": img_base64_str}}
                 )
 
-        iter = self._llm.chat_completion(self._session)
-        for item in iter:
-            if item is None:  # yield coroutine to speak
-                await asyncio.sleep(self.sleep_time_s)
-                continue
-            yield TextFrame(text=item)
+        if (
+            "llm_vllm" in self._llm.SELECTED_TAG and "vision" in self._llm.SELECTED_TAG
+        ):  # vllm vision
+            iter = self._llm.async_chat_completion(self._session)
+            async for item in iter:
+                if item is None:  # yield coroutine to speak
+                    await asyncio.sleep(self.sleep_time_s)
+                    continue
+                yield TextFrame(text=item)
+        else:
+            iter = self._llm.chat_completion(self._session)
+            for item in iter:
+                if item is None:  # yield coroutine to speak
+                    await asyncio.sleep(self.sleep_time_s)
+                    continue
+                yield TextFrame(text=item)
 
 
 class MockVisionProcessor(VisionProcessorBase):

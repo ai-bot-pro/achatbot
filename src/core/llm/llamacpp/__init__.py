@@ -3,7 +3,9 @@ import logging
 import json
 import re
 import os
+from typing import AsyncGenerator
 
+import numpy as np
 
 from src.common.interface import ILlm
 from src.common.session import Session
@@ -137,7 +139,7 @@ class LLamacppLLM(BaseLLM, ILlm):
     def count_tokens(self, text: str | bytes):
         return len(self.encode(text))
 
-    def generate(self, session: Session):
+    def generate(self, session: Session, **kwargs):
         prompt = session.ctx.state["prompt"]
         if isinstance(prompt, str) and self.args.llm_prompt_tpl:
             prompt = self.args.llm_prompt_tpl % (prompt,)
@@ -167,6 +169,17 @@ class LLamacppLLM(BaseLLM, ILlm):
                 yield res
         else:
             yield output["choices"][0]["text"]
+
+    async def async_generate(
+        self, session, **kwargs
+    ) -> AsyncGenerator[str | dict | np.ndarray, None]:
+        for item in self.generate(session, **kwargs):
+            yield item
+
+    async def async_chat_completion(self, session, **kwargs) -> AsyncGenerator[str, None]:
+        logging.info("generate use chat_completion")
+        for item in self.chat_completion(session):
+            yield item
 
     def chat_completion(self, session: Session):
         if self.args.model_type not in ["chat", "chat-func"]:
