@@ -1,13 +1,15 @@
 import re
+from typing import Dict
 
 from src.common.interface import ILlm
 from src.common.factory import EngineClass
+from src.common.chat_history import ChatHistory
 
 
 class BaseLLM(EngineClass):
     def __init__(self):
         super().__init__()
-        self.session_chat_history = {}
+        self.session_chat_history: Dict[str, ChatHistory] = {}
 
     def get_session_chat_history(self, session_id: str) -> list:
         history = self.session_chat_history.get(session_id)

@@ -122,6 +122,7 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
       - [x] llm_transformers_manual_kimi_voice,llm_transformers_manual_kimi_audio_asr,llm_transformers_manual_kimi_text_voice
       - [x] llm_transformers_manual_vita_text llm_transformers_manual_vita_audio_asr llm_transformers_manual_vita_tts llm_transformers_manual_vita_text_voice llm_transformers_manual_vita_voice
       - [x] llm_transformers_manual_phi4_vision_speech,llm_transformers_manual_phi4_audio_asr,llm_transformers_manual_phi4_audio_translation,llm_transformers_manual_phi4_vision,llm_transformers_manual_phi4_audio_chat
+      - [x] llm_transformers_manual_vision_speech_gemma3n,llm_transformers_manual_vision_gemma3n,llm_transformers_manual_gemma3n_audio_asr,llm_transformers_manual_gemma3n_audio_translation
   - remote api llm: personal-ai(like openai api, other ai provider)
   
 - AI modules:
@@ -138,6 +139,7 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
       - [x] kimi_asr (whisper)
       - [x] vita_asr (sensevoice-small)
       - [x] phi4_asr (conformer)
+      - [x] gemma3n_asr (matformer)
     - [x] audio_stream: daily_room_audio_stream(in/out), pyaudio_stream(in/out)
     - [x] detector: porcupine_wakeword,pyannote_vad,webrtc_vad,silero_vad,webrtc_silero_vad,fsmn_vad
     - [x] player: stream_player

@@ -302,6 +302,19 @@ class ContainerRuntimeConfig:
                 }
             )
         ),
+        "gemma3n": (
+            vision_bot_img.pip_install(
+                [
+                    f"achatbot[llm_transformers_manual_vision_speech_gemma]=={achatbot_version}",
+                ],
+                extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+            ).env(
+                {
+                    "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+                    "LLM_MODEL_NAME_OR_PATH": f"/root/.achatbot/models/{os.getenv('LLM_MODEL_NAME_OR_PATH', 'google/gemma-3n-E2B-it')}",
+                }
+            )
+        ),
     }
 
     @staticmethod
@@ -335,7 +348,7 @@ class ContainerRuntimeConfig:
         return concurrent_cn
 
 
-if IMAGE_NAME not in ["fastdeploy_ernie4v", "vllm_skyworkr1v"]:
+if IMAGE_NAME not in ["fastdeploy_ernie4v", "vllm_skyworkr1v", "gemma3n"]:
     img = ContainerRuntimeConfig.get_img().pip_install(
         "flash-attn==2.7.4.post1", extra_options="--no-build-isolation"
     )
@@ -351,7 +364,7 @@ if SERVE_TYPE == "room_bot":
     )
 
 # img = img.pip_install(
-#    f"achatbot==0.0.21.dev45",
+#    f"achatbot==0.0.21.post3",
 #    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
 # )
 

@@ -46,19 +46,19 @@ class LMGenerateArgs:
         },
     )
     lm_gen_temperature: float = field(
-        default=0.1,
+        default=0.6,
         metadata={
             "help": "Controls the randomness of the output. Set to 0.0 for deterministic (repeatable) outputs. Default is 0.1."
         },
     )
     lm_gen_top_k: int = field(
-        default=20,
+        default=10,
         metadata={
             "help": "Changing the top - k parameter sets the size of the shortlist the model samples from as it outputs each token. Setting top - k to 1 gives us greedy decoding. Default is 1"
         },
     )
     lm_gen_top_p: float = field(
-        default=0.8,
+        default=0.9,
         metadata={
             "help": "Top-p is usually set to a high value (like 0.75) with the purpose of limiting the long tail of low-probability tokens that may be sampled. We can use both top-k and top-p together. If both k and p are enabled, p acts after k. Default is 0.8."
         },
@@ -119,6 +119,12 @@ class LMGenerateArgs:
     lm_gen_think_interval_time: int = field(
         default=0,
         metadata={"help": "The think interval time to tip user. Default is 0<=. no tip,"},
+    )
+    lm_gen_cache_implementation: str = field(
+        default="dynamic",
+        metadata={
+            "help": "https://huggingface.co/docs/transformers/kv_cache | ['static', 'offloaded_static', 'sliding_window', 'hybrid', 'hybrid_chunked', 'offloaded_hybrid', 'offloaded_hybrid_chunked', 'mamba', 'quantized', 'static', 'offloaded', 'dynamic']"
+        },
     )
 
     def update(self, **kwargs):

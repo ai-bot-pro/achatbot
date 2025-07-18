@@ -312,10 +312,8 @@ class TransformersManualVisionSkyworkR1V(TransformersBaseLLM):
         prompt = session.ctx.state["prompt"]
         assert len(prompt) > 0
         message = {"role": self.args.user_role, "content": prompt}
-        if session.ctx.client_id not in self.session_chat_history:
-            self.session_chat_history[session.ctx.client_id] = self._chat_history
-        self.session_chat_history[session.ctx.client_id].append(message)
-        chat_history = self.session_chat_history[session.ctx.client_id].to_list()
+        self.add_chat_history(session, message)
+        chat_history = self.get_session_chat_history(session.ctx.client_id)
         logging.info(f"{session.ctx.client_id} chat_history:{chat_history}")
 
         tpl = self._model.conv_template.copy()
