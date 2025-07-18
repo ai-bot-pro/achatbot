@@ -165,9 +165,10 @@ class TransformersBaseLLM(BaseLLM, ILlm):
             thread.start()
             times = []
             start_time = time.perf_counter()
-            for _ in streamer:
-                times.append(time.perf_counter() - start_time)
-                start_time = time.perf_counter()
+            with torch.no_grad():
+                for _ in streamer:
+                    times.append(time.perf_counter() - start_time)
+                    start_time = time.perf_counter()
             logging.info(f"step {step} warnup TTFT time: {times[0]} s")
 
         if "cuda" in str(self._model.device):

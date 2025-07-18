@@ -139,6 +139,10 @@ def import_bots(bot_name: str = "DummyBot"):
         from .voice import daily_phi4_voice_bot
 
         return True
+    if "DailyGemma3nVisionSpeechBot" in bot_name:
+        from .omni import daily_gemma3n_vision_speech_bot
+
+        return True
     if "DailyNASABot" in bot_name:
         from .mcp import daily_nasa_bot
 
