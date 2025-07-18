@@ -120,7 +120,7 @@ class LMGenerateArgs:
         default=0,
         metadata={"help": "The think interval time to tip user. Default is 0<=. no tip,"},
     )
-    lm_gen_cache_implementation: int = field(
+    lm_gen_cache_implementation: str = field(
         default="dynamic",
         metadata={
             "help": "https://huggingface.co/docs/transformers/kv_cache | ['static', 'offloaded_static', 'sliding_window', 'hybrid', 'hybrid_chunked', 'offloaded_hybrid', 'offloaded_hybrid_chunked', 'mamba', 'quantized', 'static', 'offloaded', 'dynamic']"

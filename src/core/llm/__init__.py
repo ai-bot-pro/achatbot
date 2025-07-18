@@ -56,7 +56,9 @@ class LLMEnvInit:
         elif "llm_transformers_manual_vision_gemma3" == tag:
             from .transformers import manual_vision_gemma
         elif "llm_transformers_manual_vision_speech_gemma3n" == tag:
-            from .transformers import manual_vision_speech_gemma
+            from .transformers import manual_vision_speech_gemma3n
+        elif "llm_transformers_manual_vision_gemma3n" == tag:
+            from .transformers import manual_vision_speech_gemma3n
         elif "llm_transformers_manual_vision_janus_flow" == tag:
             from .transformers import manual_vision_img_janus_flow
         elif "llm_transformers_manual_image_janus_flow" == tag:
@@ -480,6 +482,7 @@ class LLMEnvInit:
         "llm_transformers_manual_vision_skyworkr1v": get_llm_transformers_args,
         "llm_transformers_manual_vision_gemma3": get_llm_transformers_args,
         "llm_transformers_manual_vision_speech_gemma3n": get_llm_transformers_args,
+        "llm_transformers_manual_vision_gemma3n": get_llm_transformers_args,
         "llm_transformers_manual_vision_qwen2_5": get_llm_transformers_args,
         "llm_transformers_manual_vision_llama": get_llm_transformers_args,
         "llm_transformers_manual_vision_molmo": get_llm_transformers_args,

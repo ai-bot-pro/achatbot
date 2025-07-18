@@ -154,6 +154,9 @@ class TransformersManualVisionGemmaLM(TransformersBaseLLM):
             min_new_tokens=kwargs.get("min_new_tokens", self.args.lm_gen_min_new_tokens),
             max_new_tokens=kwargs.get("max_new_tokens", self.args.lm_gen_max_new_tokens),
             use_cache=True,
+            cache_implementation=kwargs.get(
+                "cache_implementation", self.args.lm_gen_cache_implementation
+            ),
         )
         thread = Thread(target=self._model.generate, kwargs=generation_kwargs)
         thread.start()

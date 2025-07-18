@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from apipeline.pipeline.pipeline import Pipeline
@@ -104,6 +105,7 @@ class DailyGemma3nVisionSpeechBot(DailyRoomBot):
     async def on_first_participant_say_hi(self, transport: DailyTransport, participant):
         transport.capture_participant_video(participant["id"], framerate=0)
         self.image_requester.set_participant_id(participant["id"])
+        await asyncio.sleep(2)
         await self._tts_processor.say(
             "你好，欢迎使用 Vision Speech Omni Bot. 我是一名虚拟助手，可以结合视频进行提问。"
         )

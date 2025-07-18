@@ -35,8 +35,8 @@ img = (
 )
 
 # img = img.pip_install(
-#    f"achatbot==0.0.21.post3",
-#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+#   f"achatbot==0.0.21.dev67",
+#   extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
 # )
 
 # ----------------------- app -------------------------------

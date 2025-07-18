@@ -59,14 +59,6 @@ class TransformersManualVisionSpeechGemmaLM(TransformersBaseLLM):
             self.args.lm_model_name_or_path, use_fast=True
         )
 
-        self._chat_history = ChatHistory(self.args.chat_history_size)
-        if self.args.init_chat_role and self.args.init_chat_prompt:
-            self._chat_history.init(
-                {
-                    "role": self.args.init_chat_role,
-                    "content": [{"type": "text", "text": self.args.init_chat_prompt}],
-                }
-            )
         self.session_chat_history = {}
         torch.set_float32_matmul_precision("high")
 
@@ -97,10 +89,8 @@ class TransformersManualVisionSpeechGemmaLM(TransformersBaseLLM):
         assert len(prompt) > 0
 
         message = {"role": self.args.user_role, "content": prompt}
-        if session.ctx.client_id not in self.session_chat_history:
-            self.session_chat_history[session.ctx.client_id] = self._chat_history
-        self.session_chat_history[session.ctx.client_id].append(message)
-        chat_history = self.session_chat_history[session.ctx.client_id].to_list()
+        self.add_chat_history(session, message)
+        chat_history = self.get_session_chat_history(session.ctx.client_id)
         logging.info(f"{session.ctx.client_id} chat_history:{chat_history}")
         inputs = self._tokenizer.apply_chat_template(
             chat_history,
@@ -160,3 +150,11 @@ class TransformersManualVisionSpeechGemmaLM(TransformersBaseLLM):
                 "content": [{"type": "text", "text": generated_text}],
             }
         )
+
+
+class TransformersManualVisionGemma3nLM(TransformersManualVisionSpeechGemmaLM):
+    TAG = "llm_transformers_manual_vision_gemma3n"
+
+    def generate(self, session: Session, **kwargs):
+        for item in super().generate(session, **kwargs):
+            yield item["text"]
