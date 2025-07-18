@@ -13,15 +13,15 @@ from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR
 from src.modules.speech.asr import ASREnvInit
 
 r"""
-LLM_MODEL_NAME_OR_PATH=./models/microsoft/Phi-4-multimodal-instruct \
+LLM_MODEL_NAME_OR_PATH=./models/google/gemma-3n-E2B-it \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
     python -m unittest test.modules.speech.asr.test_gemma3n_asr.TestGemma3nASR.test_transcribe_stream
 
-LLM_MODEL_NAME_OR_PATH=./models/microsoft/Phi-4-multimodal-instruct \
+LLM_MODEL_NAME_OR_PATH=./models/google/gemma-3N-e2b-it \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
     python -m unittest test.modules.speech.asr.test_gemma3n_asr.TestGemma3nASR.test_transcribe
 
-LLM_MODEL_NAME_OR_PATH=./models/microsoft/Phi-4-multimodal-instruct \
+LLM_MODEL_NAME_OR_PATH=./models/google/gemma-3N-e2b-it \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 \
     python -m unittest test.modules.speech.asr.test_gemma3n_asr.TestGemma3nASR.test_transcribe_with_bytes
 """
