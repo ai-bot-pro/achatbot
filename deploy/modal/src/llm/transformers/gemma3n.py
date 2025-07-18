@@ -5,6 +5,7 @@ from time import perf_counter
 import requests
 import io
 import uuid
+import asyncio
 
 
 import modal
@@ -86,13 +87,16 @@ with img.imports():
     scaledown_window=1200,
     max_containers=1,
 )
-def run(func):
+async def run(func):
     subprocess.run("nvidia-smi --version", shell=True)
     subprocess.run("nvcc --version", shell=True)
     gpu_prop = torch.cuda.get_device_properties("cuda")
     print(gpu_prop)
 
-    func(gpu_prop)
+    if asyncio.iscoroutinefunction(func):
+        await func(gpu_prop)
+    else:
+        func(gpu_prop)
 
 
 def print_model_params(model: torch.nn.Module, extra_info=""):
@@ -462,6 +466,50 @@ def achatbot_gen_stream(gpu_prop):
     img.close()
 
 
+async def achatbot_asr(gpu_prop):
+    from achatbot.modules.speech.asr.gemma3n_asr import Gemma3nAsr
+    from achatbot.types.llm.transformers import TransformersLMArgs
+    from achatbot.common.types import MODELS_DIR, SessionCtx
+    from achatbot.common.session import Session
+    from achatbot.common.logger import Logger
+
+    Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
+
+    LLM_MODEL = os.getenv("LLM_MODEL")
+    PATH = os.path.join(HF_MODEL_DIR, LLM_MODEL)
+    asr = Gemma3nAsr(
+        **TransformersLMArgs(
+            lm_model_name_or_path=PATH,
+            chat_history_size=0,
+            lm_device="cuda",
+            warmup_steps=0,
+            warnup_prompt="描述下图片",
+            lm_gen_temperature=0.6,
+            lm_gen_repetition_penalty=1.1,
+        ).__dict__
+    )
+
+    session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
+
+    audio_path = os.path.join(ASSETS_DIR, "asr_example_zh.wav")
+    audio_nparr, _ = librosa.load(audio_path, sr=16000, mono=True)
+    texts = [
+        "Based on the attached audio, generate a comprehensive text transcription of the spoken content. ",
+        "Based on the attached audio, generate a comprehensive text transcription of the spoken content. please use simple chinese",
+    ]
+    for text in texts:
+        session.ctx.state["prompt"] = [
+            {
+                "type": "text",
+                "text": text,
+            },
+            {"type": "audio", "audio": audio_nparr},
+        ]
+
+        async for text in asr.transcribe_stream(session):
+            print(text, flush=True, end="")
+
+
 """
 Gemma 3n:
 Multimodal: 2b, 4b
@@ -474,6 +522,7 @@ IMAGE_GPU=L4 modal run src/llm/transformers/gemma3n.py --task generate_stream
 
 APP_NAME=achatbot IMAGE_GPU=L4 modal run src/llm/transformers/gemma3n.py --task achatbot_gen_stream
 
+APP_NAME=achatbot IMAGE_GPU=L4 modal run src/llm/transformers/gemma3n.py --task achatbot_asr
 """
 
 
@@ -486,6 +535,7 @@ def main(task: str = "dump_model"):
         "generate_audio": generate_audio,
         "generate_stream": generate_stream,
         "achatbot_gen_stream": achatbot_gen_stream,
+        "achatbot_asr": achatbot_asr,
     }
     if task not in tasks:
         raise ValueError(f"task {task} not found")

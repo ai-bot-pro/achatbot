@@ -158,3 +158,23 @@ class TransformersManualVisionGemma3nLM(TransformersManualVisionSpeechGemmaLM):
     def generate(self, session: Session, **kwargs):
         for item in super().generate(session, **kwargs):
             yield item["text"]
+
+
+class TransformersManualAudioGemma3nLM(TransformersManualVisionSpeechGemmaLM):
+    """
+    audio understanding
+
+    - speech -> text
+    """
+
+    TAG = [
+        "llm_transformers_manual_gemma3n_audio_asr",
+        "llm_transformers_manual_gemma3n_audio_translation",
+    ]
+
+    def generate(self, session: Session, **kwargs):
+        for item in super().generate(session, **kwargs):
+            text = item.pop("text", "")
+            if text == "":
+                continue
+            yield text

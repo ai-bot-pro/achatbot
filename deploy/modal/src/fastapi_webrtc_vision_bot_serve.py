@@ -364,7 +364,7 @@ if SERVE_TYPE == "room_bot":
     )
 
 # img = img.pip_install(
-#    f"achatbot==0.0.21.dev67",
+#    f"achatbot==0.0.21.post3",
 #    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
 # )
 
