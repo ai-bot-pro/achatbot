@@ -54,6 +54,7 @@ class AudioVADInputProcessor(InputProcessor):
     async def stop(self):
         # Wait for the task to finish.
         if self._params.audio_in_enabled or self._params.vad_enabled:
+            logging.info("stop to Cancelling audio task")
             self._audio_task.cancel()
             await self._audio_task
 
@@ -71,6 +72,7 @@ class AudioVADInputProcessor(InputProcessor):
         Cancel all the tasks and wait for them to finish.
         """
         if self._params.audio_in_enabled or self._params.vad_enabled:
+            logging.info("cancel to Cancelling audio task")
             # Wait for audio_task cancel to finish
             self._audio_task.cancel()
             await self._audio_task
@@ -86,7 +88,7 @@ class AudioVADInputProcessor(InputProcessor):
         vad_state: VADState = VADState.QUIET
         while True:
             try:
-                frame: AudioRawFrame = await self._audio_in_queue.get()
+                frame: AudioRawFrame = await asyncio.wait_for(self._audio_in_queue.get(), timeout=1)
 
                 audio_passthrough = True
 
@@ -99,10 +101,16 @@ class AudioVADInputProcessor(InputProcessor):
                 # Push audio downstream if passthrough.
                 if audio_passthrough:
                     await self.queue_frame(frame)
+            except asyncio.TimeoutError:
+                continue
             except asyncio.CancelledError:
+                logging.info(f"{self.name} audio_task_handler cancelled")
                 break
             except Exception as e:
                 logging.exception(f"{self} error reading audio frames: {e}")
+                if self.get_event_loop().is_closed():
+                    logging.warning(f"{self.name} event loop is closed")
+                    break
 
     async def _vad_analyze(self, audio_frames: bytes) -> VADState:
         state = VADState.QUIET
@@ -155,10 +163,10 @@ class AudioVADInputProcessor(InputProcessor):
                 logging.debug("Bot interruption")
                 await self._start_interruption()
             elif isinstance(frame, UserStartedSpeakingFrame):
-                logging.debug("User started speaking")
+                logging.info("User started speaking")
                 await self._start_interruption()
             elif isinstance(frame, UserStoppedSpeakingFrame):
-                logging.debug("User stopped speaking")
+                logging.info("User stopped speaking")
                 await self._stop_interruption()
 
         if push_frame:

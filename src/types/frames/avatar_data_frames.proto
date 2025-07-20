@@ -1,0 +1,25 @@
+/*
+  python -m grpc_tools.protoc \
+    --proto_path=./ \
+    --python_out=./protobufs \
+    avatar_data_frames.proto
+*/
+
+syntax = "proto3";
+
+package achatbot_frames;
+
+message AnimationAudioRawFrame {
+  uint64 id = 1;
+  string name = 2;
+  bytes audio = 3;
+  uint32 sample_rate = 4;
+  uint32 num_channels = 5;
+  uint32 sample_width = 6;
+  string animation_json = 7;
+  string avatar_status = 8;
+}
+
+message Frame {
+  oneof frame { AnimationAudioRawFrame animation_audio = 1; }
+}

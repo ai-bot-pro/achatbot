@@ -12,6 +12,8 @@ import logging
 
 from PIL import Image
 
+from src.schemas.tools_schema import ToolsSchema
+
 try:
     from openai._types import NOT_GIVEN, NotGiven
     from openai.types.chat import (
@@ -60,7 +62,7 @@ class OpenAILLMContext:
     def __init__(
         self,
         messages: List[ChatCompletionMessageParam] | None = None,
-        tools: List[ChatCompletionToolParam] | NotGiven = NOT_GIVEN,
+        tools: List[ChatCompletionToolParam] | NotGiven | ToolsSchema = NOT_GIVEN,
         tool_choice: ChatCompletionToolChoiceOptionParam | NotGiven = NOT_GIVEN,
     ):
         self._messages: List[ChatCompletionMessageParam] = messages if messages else []
@@ -106,7 +108,13 @@ class OpenAILLMContext:
         return self._messages
 
     @property
-    def tools(self) -> List[ChatCompletionToolParam] | NotGiven:
+    def tools(self) -> List[ChatCompletionToolParam] | NotGiven | List[dict]:
+        if isinstance(self._tools, ToolsSchema):
+            functions_schema = self._tools.standard_tools
+            self._tools = [
+                {"function": func.to_default_dict(), "type": "function"}
+                for func in functions_schema
+            ]
         return self._tools
 
     @property
@@ -131,8 +139,8 @@ class OpenAILLMContext:
     def set_tool_choice(self, tool_choice: ChatCompletionToolChoiceOptionParam | NotGiven):
         self._tool_choice = tool_choice
 
-    def set_tools(self, tools: List[ChatCompletionToolParam] | NotGiven = NOT_GIVEN):
-        if tools != NOT_GIVEN and len(tools) == 0:
+    def set_tools(self, tools: List[ChatCompletionToolParam] | NotGiven | ToolsSchema = NOT_GIVEN):
+        if tools != NOT_GIVEN and isinstance(tools, list) and len(tools) == 0:
             tools = NOT_GIVEN
         self._tools = tools
 

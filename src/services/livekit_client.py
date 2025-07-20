@@ -784,4 +784,4 @@ class LivekitTransportClient:
             rtc_frame_type,
             frame.image,
         )
-        self._out_video_source.capture_frame(video_frame)
+        self._out_video_source and self._out_video_source.capture_frame(video_frame)

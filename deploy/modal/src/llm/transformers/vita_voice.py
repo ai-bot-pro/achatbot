@@ -31,6 +31,7 @@ vita_audio_img = (
         "torchvision==0.21.0",
         index_url="https://download.pytorch.org/whl/cu126",
     )
+    .pip_install("wheel")
     # https://github.com/Dao-AILab/flash-attention/releases/tag/v2.7.4.post1
     .pip_install("flash-attn", extra_options="--no-build-isolation")
     .run_commands(
@@ -108,7 +109,8 @@ with vita_audio_img.imports():
         # glm-4-voice-decoder (flow + hift) from cosyvoice (support streaming)
         flow_path = os.path.join(HF_MODEL_DIR, "THUDM/glm-4-voice-decoder")
         # sensevoice_small encoder(no ctc head) + qwen2 model (no mtp)
-        model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Plus-Vanilla")
+        # model_path = os.path.join(HF_MODEL_DIR, "VITA-MLLM/VITA-Audio-Plus-Vanilla")
+        model_path = mtp_llm_model
 
     if audio_tokenizer_type == "glm4voice":
         audio_tokenizer_model_path = os.path.join(HF_MODEL_DIR, "THUDM/glm-4-voice-tokenizer")
@@ -340,9 +342,9 @@ def text():
     )
 
     for text in [
-        "How many helicopters can a human eat in one sitting?",
-        "你叫什么名字？",
-        "写一首诗",
+        # "How many helicopters can a human eat in one sitting?",
+        # "你叫什么名字？",
+        # "写一首诗",
         "介绍一下上海",
     ]:
         print("=" * 100)
@@ -445,7 +447,7 @@ def text_audio_stream():
     )
     for text in [
         "你叫什么名字？",
-        "请讲一个儿童故事。",
+        # "请讲一个儿童故事。",
     ]:
         print("=" * 100)
         print("text_audio_stream_task")
@@ -462,7 +464,7 @@ def text_audio_stream():
         ):
             times.append(perf_counter() - start_time)
             generated_text += new_text
-            print(new_text, end="", flush=True)
+            print(new_text, end=" ", flush=True)
             start_time = perf_counter()
 
         print(
@@ -644,8 +646,8 @@ def asr_text_stream():
     )
 
     for audio_path in [
-        os.path.join(ASSETS_DIR, "asr_example_zh.wav"),
-        # "/VITA-Audio/asset/介绍一下上海.wav",
+        # os.path.join(ASSETS_DIR, "asr_example_zh.wav"),
+        "/VITA-Audio/asset/介绍一下上海.wav",
         # "/VITA-Audio/asset/发表一个悲伤的演讲.wav",
         # "/VITA-Audio/asset/发表一个振奋人心的演讲.wav",
     ]:
@@ -827,7 +829,7 @@ def tts_stream():
         ):
             times.append(perf_counter() - start_time)
             generated_text += new_text
-            print(new_text, end="", flush=True)
+            print(new_text, end=" ", flush=True)
             start_time = perf_counter()
         print(
             f"\ngenerate first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s\n"
@@ -1198,6 +1200,7 @@ class TextAudioIteratorStreamer(TextIteratorStreamer):
         """
         Receives tokens, decodes them, and prints them to stdout as soon as they form entire words.
         """
+        print(f"{value=}")
         if len(value.shape) > 1 and value.shape[0] > 1:
             raise ValueError("TextStreamer only supports batch size 1")
         elif len(value.shape) > 1:
@@ -1799,7 +1802,7 @@ AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_
 MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task text 
 MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Boost AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task text_stream
 
-# LLM(Vanilla): sensevoice(no use ctc)_qwen2_mtp(no mtp) + AudioTokenizer: sensevoice_glm4voice(sensevoice WavFrontend, decoder)
+# LLM(Plus-Vanilla): sensevoice(no use ctc)_qwen2_mtp(no mtp) + AudioTokenizer: sensevoice_glm4voice(sensevoice WavFrontend, decoder)
 IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task sts
 IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task sts_stream
 IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task asr
@@ -1809,6 +1812,17 @@ IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_stream
 IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_clone
 IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_audio_chunk_static_stream
 IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_audio_chunk_dynamic_stream
+
+# LLM(Plus-Boost): sensevoice(no use ctc)_qwen2_mtp(no mtp) + AudioTokenizer: sensevoice_glm4voice(sensevoice WavFrontend, decoder)
+MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Plus-Boost IMAGE_GPU=L40s modal run src/llm/transformers/vita_voice.py --task sts
+MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Plus-Boost IMAGE_GPU=L40s modal run src/llm/transformers/vita_voice.py --task sts_stream
+MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Plus-Boost IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task asr
+MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Plus-Boost IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task asr_text_stream
+MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Plus-Boost IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts
+MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Plus-Boost IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_stream
+MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Plus-Boost IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_clone
+MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Plus-Boost IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_audio_chunk_static_stream
+MTP_LLM_MODEL=VITA-MLLM/VITA-Audio-Plus-Boost IMAGE_GPU=L4 modal run src/llm/transformers/vita_voice.py --task tts_audio_chunk_dynamic_stream
 
 # LLM(Boost/Balance): qwen2_mtp + AudioTokenizer: glm4voice(tokenizer, decoder)
 AUDIO_TOKENIZER_TYPE=glm4voice IMAGE_GPU=L40s modal run src/llm/transformers/vita_voice.py --task sts
@@ -1851,7 +1865,7 @@ def main(task: str = "tokenize"):
         "tts_clone": tts_clone,
         "tts_audio_chunk_static_stream": tts_audio_chunk_static_stream,
         "tts_audio_chunk_dynamic_stream": tts_audio_chunk_dynamic_stream,
-        # "benchmark_llm": benchmark_llm,
+        "benchmark_llm": benchmark_llm,
         # "benchmark_sts": benchmark_sts,
     }
     if task not in tasks:

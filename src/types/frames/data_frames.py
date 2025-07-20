@@ -6,6 +6,20 @@ from apipeline.frames.data_frames import Frame, DataFrame, TextFrame, ImageRawFr
 
 
 @dataclass
+class InputImageRawFrame(ImageRawFrame):
+    """
+    input image frame
+    """
+
+
+@dataclass
+class OutputImageRawFrame(ImageRawFrame):
+    """
+    output image frame
+    """
+
+
+@dataclass
 class URLImageRawFrame(ImageRawFrame):
     """An image with an associated URL. Will be shown by the transport if the
     transport's camera is enabled.
@@ -178,6 +192,16 @@ class FunctionCallResultFrame(DataFrame):
 
 
 @dataclass
+class InputAudioRawFrame(AudioRawFrame):
+    """Input audio frame"""
+
+
+@dataclass
+class OutputAudioRawFrame(AudioRawFrame):
+    """output audio frame"""
+
+
+@dataclass
 class PathAudioRawFrame(AudioRawFrame):
     """An audio with saved path."""
 
@@ -251,3 +275,15 @@ class UserVisionImageVoiceRawFrame(VisionImageVoiceRawFrame):
 
     def __str__(self):
         return f"user_id:{self.user_id} {super().__str__()}"
+
+
+@dataclass
+class AnimationAudioRawFrame(AudioRawFrame):
+    animation_json: str = "{}"
+    avatar_status: str = ""
+
+    def __str__(self):
+        super_str = super().__str__()
+        return (
+            f"{super_str} animation_json: {self.animation_json} avatar_status: {self.avatar_status}"
+        )

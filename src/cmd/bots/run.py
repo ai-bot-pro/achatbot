@@ -77,11 +77,19 @@ class BotTaskRunner:
             bot_config_list=bot_info.config_list,
             services=bot_info.services,
         ).__dict__
-        self._bot_obj = register_ai_room_bots[bot_info.chat_bot_name](**kwargs)
+        self._bot_obj: IBot = register_ai_room_bots[bot_info.chat_bot_name](**kwargs)
+        logging.info(f"bot {bot_info.chat_bot_name} loading")
+        self._bot_obj.load()
+        logging.info(f"bot {bot_info.chat_bot_name} load done")
 
-        self._pid = await self.task_mgr.run_task(
-            self._bot_obj.run, bot_info.chat_bot_name, bot_info.room_name
-        )
+        logging.info(f"bot {bot_info.chat_bot_name} starting with pid {self._pid}")
+        if self.run_bot_info.is_background is True:
+            self._pid = await self.task_mgr.run_task(
+                self._bot_obj.run, bot_info.chat_bot_name, bot_info.room_name
+            )
+        else:
+            await self._bot_obj.async_run()
+        logging.info(f"bot {bot_info.chat_bot_name} started with pid {self._pid}")
 
     async def _run_websocket_bot(self, bot_info: BotInfo):
         kwargs = BotRunArgs(
@@ -92,7 +100,8 @@ class BotTaskRunner:
             websocket_server_port=bot_info.websocket_server_port,
             websocket_server_host=bot_info.websocket_server_host,
         ).__dict__
-        self._bot_obj = register_ai_room_bots[bot_info.chat_bot_name](**kwargs)
+        self._bot_obj: IBot = register_ai_room_bots[bot_info.chat_bot_name](**kwargs)
+        self._bot_obj.load()
         self._pid = await self.task_mgr.run_task(
             self._bot_obj.run, bot_info.chat_bot_name, bot_info.room_name
         )

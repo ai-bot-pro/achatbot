@@ -61,3 +61,17 @@
 [submodule "deps/VITAAudio"]
 	path = deps/VITAAudio
 	url = https://github.com/weedge/VITA-Audio.git
+[submodule "deps/FastVLM"]
+	path = deps/FastVLM
+	url = https://github.com/weedge/ml-fastvlm.git
+[submodule "deps/LiteAvatar"]
+	path = deps/LiteAvatar
+	url = https://github.com/weedge/lite-avatar.git
+	branch = feat/achatbot
+[submodule "deps/MuseTalk"]
+	path = deps/MuseTalk
+	url = https://github.com/weedge/MuseTalk.git
+	branch = feat/achatbot
+[submodule "deps/LAM_Audio2Expression"]
+	path = deps/LAM_Audio2Expression
+	url = https://github.com/weedge/LAM_Audio2Expression.git

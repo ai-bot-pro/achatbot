@@ -76,17 +76,42 @@ def file_md5_hash(file_path: str):
 
 class ThreadSafeDict:
     def __init__(self):
-        self._dict = {}
+        self._map = {}
         self._lock = threading.RLock()
-
-    def get(self, key, default=None):
-        with self._lock:
-            return self._dict.get(key, default)
 
     def set(self, key, value):
         with self._lock:
-            self._dict[key] = value
+            self._map[key] = value
+
+    def get(self, key):
+        with self._lock:
+            return self._map.get(key)
 
     def pop(self, key):
         with self._lock:
-            return self._dict.pop(key, None)
+            return self._map.pop(key, None)
+
+    def delete(self, key):
+        with self._lock:
+            if key in self._map:
+                del self._map[key]
+
+    def contains(self, key):
+        with self._lock:
+            return key in self._map
+
+    def size(self):
+        with self._lock:
+            return len(self._map)
+
+    def keys(self):
+        with self._lock:
+            return list(self._map.keys())
+
+    def values(self):
+        with self._lock:
+            return list(self._map.values())
+
+    def items(self):
+        with self._lock:
+            return list(self._map.items())

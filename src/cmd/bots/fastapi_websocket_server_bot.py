@@ -31,7 +31,7 @@ class FastapiWebsocketServerBot(AIFastapiWebsocketBot):
     """
 
     def __init__(self, websocket: WebSocket | None = None, **args) -> None:
-        super().__init__(**args)
+        super().__init__(websocket=websocket, **args)
         self.init_bot_config()
 
         self.vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()

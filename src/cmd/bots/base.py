@@ -4,7 +4,7 @@ import asyncio
 import sys
 import uuid
 
-from apipeline.frames.control_frames import EndFrame
+from apipeline.frames import CancelFrame
 from apipeline.pipeline.task import PipelineTask
 
 from src.processors.omni.base import VisionVoiceProcessorBase
@@ -15,6 +15,7 @@ from src.modules.vision.ocr import VisionOCREnvInit
 from src.modules.vision.detector import VisionDetectorEnvInit
 from src.processors.ai_processor import AIProcessor
 from src.processors.vision.vision_processor import MockVisionProcessor
+from src.processors.avatar.base import AvatarProcessorBase
 from src.processors.speech.asr.base import ASRProcessorBase
 from src.processors.llm.base import LLMProcessor
 from src.processors.speech.tts.base import TTSProcessorBase
@@ -22,6 +23,7 @@ from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.modules.speech.asr import ASREnvInit
 from src.core.llm import LLMEnvInit
 from src.modules.speech.tts import TTSEnvInit
+from src.modules.avatar import AvatarEnvInit
 from src.types.ai_conf import (
     TOGETHER_LLM_MODEL,
     TOGETHER_LLM_URL,
@@ -39,6 +41,7 @@ from src.common.types import SessionCtx
 from src.common.logger import Logger
 
 from dotenv import load_dotenv
+
 
 load_dotenv(override=True)
 
@@ -73,35 +76,51 @@ class AIBot(IBot):
         try:
             logging.debug(f"args.bot_config: {self.args.bot_config}")
             self._bot_config: AIConfig = AIConfig(**self.args.bot_config)
+            if len(self._bot_config_list) > 0:
+                from src.types.rtvi import RTVIConfig
+
+                rtvi_config = RTVIConfig(config_list=self.args.bot_config_list)
+                self._bot_config = AIConfig(**rtvi_config._arguments_dict)
             if self._bot_config.llm is None:
                 self._bot_config.llm = LLMConfig()
         except Exception as e:
             raise Exception(f"Failed to parse bot configuration: {e}")
         logging.info(f"ai bot_config: {self._bot_config}")
 
+    def set_args(self, args):
+        merge_args = {**self.args.__dict__, **args}
+        self.args = BotRunArgs(**merge_args)
+
     def bot_config(self):
         return self._bot_config
 
     def load(self):
-        # !TODO: load model ckpt when bot start @weedge
-        # when deploy need load model ckpt, then run serve
-        # now just support one person with one bot agent
+        """
+        NOTE:
+        - init modules here
+            # load model ckpt when bot start
+            # when deploy need load model ckpt, then run serve
+        - don't init processor; processor for each connect session
+        have fun :)
+        """
         pass
 
     def run(self):
-        asyncio.run(self.try_run())
+        asyncio.run(self.async_run())
 
-    async def try_run(self):
+    async def async_run(self):
         try:
             await self.arun()
         except asyncio.CancelledError:
             logging.info("CancelledError, Exiting!")
             if self.task is not None:
-                await self.task.queue_frame(EndFrame())
+                logging.info("Cancelling task!")
+                await self.task.queue_frame(CancelFrame())
         except KeyboardInterrupt:
             logging.warning("Ctrl-C detected. Exiting!")
             if self.task is not None:
-                await self.task.queue_frame(EndFrame())
+                logging.info("Cancelling task!")
+                await self.task.queue_frame(CancelFrame())
         except Exception as e:
             logging.error(f"run error: {e}", exc_info=True)
 
@@ -123,7 +142,88 @@ class AIBot(IBot):
             vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
         return vad_analyzer
 
-    def get_asr_processor(self) -> ASRProcessorBase:
+    def get_avatar(self) -> EngineClass | None:
+        avatar: EngineClass | None = None
+        if self._bot_config.avatar and self._bot_config.avatar.tag:
+            if self._bot_config.avatar.tag == "lam_audio2expression_avatar":
+                from src.modules.avatar.lam_audio2expression import LAMAudio2ExpressionAvatar
+
+                if self._bot_config.avatar.args:
+                    avatar = LAMAudio2ExpressionAvatar(**self._bot_config.avatar.args)
+                else:
+                    avatar = LAMAudio2ExpressionAvatar()
+            else:
+                # TODO: use avatar engine
+                args = self._bot_config.avatar.args or {}
+                avatar = AvatarEnvInit.getEngine(self._bot_config.avatar.tag, **args)
+                raise NotImplementedError("don't support use tag to create avatar engine")
+            avatar.load()
+            return avatar
+        else:
+            from src.modules.avatar.lite_avatar import LiteAvatar
+
+            logging.info("use default lite avatar engine processor")
+            if self._bot_config.avatar and self._bot_config.avatar.args:
+                avatar = LiteAvatar(**self._bot_config.avatar.args)
+            else:
+                avatar = LiteAvatar()
+            avatar.load()
+        return avatar
+
+    def get_avatar_processor(self, avatar=None) -> AvatarProcessorBase:
+        avatar_processor: AvatarProcessorBase | None = None
+        # use avatar engine processor
+
+        if self._bot_config.avatar and self._bot_config.avatar.tag:
+            if self._bot_config.avatar.tag == "lam_audio2expression_avatar":
+                from src.processors.avatar.lam_audio2expression_avatar_processor import (
+                    LAMAudio2ExpressionAvatarProcessor,
+                )
+                from src.modules.avatar.lam_audio2expression import LAMAudio2ExpressionAvatar
+
+                if self._bot_config.avatar and self._bot_config.avatar.args:
+                    avatar = avatar or LAMAudio2ExpressionAvatar(**self._bot_config.avatar.args)
+                else:
+                    avatar = avatar or LAMAudio2ExpressionAvatar()
+                return LAMAudio2ExpressionAvatarProcessor(avatar, **self._bot_config.avatar.args)
+            else:
+                # TODO: use avatar engine processor
+                args = self._bot_config.avatar.args or {}
+                avatar = AvatarEnvInit.getEngine(self._bot_config.avatar.tag, **args)
+                _ = avatar
+                raise NotImplementedError("don't support use tag to create avatar engine")
+                return avatar_processor
+        else:
+            from src.processors.avatar.lite_avatar_processor import LiteAvatarProcessor
+            from src.modules.avatar.lite_avatar import LiteAvatar
+
+            logging.info("use default lite avatar engine processor")
+            if self._bot_config.avatar and self._bot_config.avatar.args:
+                avatar = avatar or LiteAvatar(**self._bot_config.avatar.args)
+            else:
+                avatar = avatar or LiteAvatar()
+            return LiteAvatarProcessor(avatar)
+
+    def get_asr(self) -> interface.IAsr | EngineClass | None:
+        asr: interface.IAsr | EngineClass | None = None
+        if (
+            self._bot_config.asr
+            and self._bot_config.asr.tag
+            and self._bot_config.asr.tag == "deepgram_asr_processor"
+            and self._bot_config.asr.args
+        ):
+            pass
+        else:
+            if self._bot_config.asr and self._bot_config.asr.tag and self._bot_config.asr.args:
+                asr = ASREnvInit.getEngine(self._bot_config.asr.tag, **self._bot_config.asr.args)
+            else:
+                logging.info("use default asr engine processor")
+                asr = ASREnvInit.initASREngine()
+        return asr
+
+    def get_asr_processor(
+        self, asr: interface.IAsr | EngineClass | None = None
+    ) -> ASRProcessorBase:
         asr_processor: ASRProcessorBase | None = None
         if (
             self._bot_config.asr
@@ -140,17 +240,20 @@ class AIBot(IBot):
             # use asr engine processor
             from src.processors.speech.asr.asr_processor import ASRProcessor
 
-            asr: interface.IAsr | EngineClass | None = None
             if self._bot_config.asr and self._bot_config.asr.tag and self._bot_config.asr.args:
-                asr = ASREnvInit.getEngine(self._bot_config.asr.tag, **self._bot_config.asr.args)
+                asr = asr or ASREnvInit.getEngine(
+                    self._bot_config.asr.tag, **self._bot_config.asr.args
+                )
             else:
                 logging.info("use default asr engine processor")
-                asr = ASREnvInit.initASREngine()
+                asr = asr or ASREnvInit.initASREngine()
                 self._bot_config.asr = ASRConfig(tag=asr.SELECTED_TAG, args=asr.get_args_dict())
             asr_processor = ASRProcessor(asr=asr, session=self.session)
         return asr_processor
 
-    def get_vision_llm_processor(self, llm_config: LLMConfig | None = None) -> LLMProcessor:
+    def get_vision_llm_processor(
+        self, llm_config: LLMConfig | None = None, llm_engine=None
+    ) -> LLMProcessor:
         """
         get local vision llm
         """
@@ -161,9 +264,10 @@ class AIBot(IBot):
         if "mock" in llm_config.tag:
             llm_processor = MockVisionProcessor()
         else:
-            logging.debug(f"init engine llm processor tag: {llm_config.tag}")
-            llm_engine = LLMEnvInit.initLLMEngine(llm_config.tag, llm_config.args)
-            llm_processor = VisionProcessor(llm_engine, self.session)
+            logging.info(f"init engine llm processor tag: {llm_config.tag}")
+            sleep_time_s = llm_config.args.pop("sleep_time_s", 0.15)
+            llm_engine = llm_engine or LLMEnvInit.initLLMEngine(llm_config.tag, llm_config.args)
+            llm_processor = VisionProcessor(llm_engine, self.session, sleep_time_s=sleep_time_s)
         return llm_processor
 
     def get_remote_llm_processor(self, llm: LLMConfig | None = None) -> LLMProcessor:
@@ -222,6 +326,7 @@ class AIBot(IBot):
 
         llm_config = llm
         if llm_config and llm_config.args:
+            logging.info(f"use google llm processor args:{llm_config.args}")
             llm_processor = GoogleAILLMProcessor(**llm_config.args)
         else:
             logging.info("use default google llm processor")
@@ -240,13 +345,13 @@ class AIBot(IBot):
         llm_processor = LiteLLMProcessor(model=llm.model, set_verbose=False)
         return llm_processor
 
-    def get_llm_processor(self, llm: LLMConfig | None = None) -> LLMProcessor:
+    def get_llm_processor(self, llm: LLMConfig | None = None, llm_engine=None) -> LLMProcessor:
         if not llm:
-            llm = self._bot_config.llm
+            llm = self._bot_config.llm or self._bot_config.vision_llm
         if llm and llm.tag and "vision" in llm.tag:
             # engine llm processor(just support vision model, other TODO):
             # (llm_llamacpp, llm_personalai_proxy, llm_transformers etc..)
-            llm_processor = self.get_vision_llm_processor(llm)
+            llm_processor = self.get_vision_llm_processor(llm, llm_engine)
         else:
             llm_processor = self.get_remote_llm_processor(llm)
         return llm_processor
@@ -418,6 +523,17 @@ class AIBot(IBot):
             llm_processor = VITAAudioVoiceProcessor()
         return llm_processor
 
+    def get_audio_phi4_speech_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
+        from src.processors.voice.phi4_speech_processor import Phi4AudioTextProcessor
+
+        if not llm:
+            llm = self._bot_config.voice_llm
+        if llm.args:
+            llm_processor = Phi4AudioTextProcessor(**llm.args)
+        else:
+            llm_processor = Phi4AudioTextProcessor()
+        return llm_processor
+
     def get_minicpmo_vision_voice_processor(
         self, llm: LLMConfig | None = None
     ) -> VisionVoiceProcessorBase:
@@ -448,6 +564,38 @@ class AIBot(IBot):
             llm_processor = Qwen2_5OmnVisionVoiceProcessor(**llm.args)
         else:
             llm_processor = Qwen2_5OmnVisionVoiceProcessor()
+        return llm_processor
+
+    def get_phi4_vision_speech_processor(
+        self, llm: LLMConfig | None = None
+    ) -> VisionVoiceProcessorBase:
+        from src.processors.omni.phi4_vision_speech import Phi4VisionSpeechProcessor
+        from src.processors.omni.base import MockVisionVoiceProcessor
+
+        if not llm:
+            llm = self._bot_config.omni_llm
+        if "mock" in llm.tag:
+            return MockVisionVoiceProcessor()
+        if llm.args:
+            llm_processor = Phi4VisionSpeechProcessor(**llm.args)
+        else:
+            llm_processor = Phi4VisionSpeechProcessor()
+        return llm_processor
+
+    def get_gemma3n_vision_speech_processor(
+        self, llm: LLMConfig | None = None
+    ) -> VisionVoiceProcessorBase:
+        from src.processors.omni.gemma_vision_speech import Gemma3nVisionSpeechProcessor
+        from src.processors.omni.base import MockVisionVoiceProcessor
+
+        if not llm:
+            llm = self._bot_config.omni_llm
+        if "mock" in llm.tag:
+            return MockVisionVoiceProcessor()
+        if llm.args:
+            llm_processor = Gemma3nVisionSpeechProcessor(**llm.args)
+        else:
+            llm_processor = Gemma3nVisionSpeechProcessor()
         return llm_processor
 
     def get_text_glm_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:

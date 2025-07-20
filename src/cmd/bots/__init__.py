@@ -1,18 +1,22 @@
 from pydantic import BaseModel
 
 from src.common.register import Register
+from src.common.const import *
 
 register_ai_room_bots = Register("ai-room-bots")
 register_ai_fastapi_ws_bots = Register("fastapi-ws-bots")
+register_ai_small_webrtc_bots = Register("small-webrtc-bots")
 
 
 class BotInfo(BaseModel):
     is_agent: bool = False
+    is_background: bool = True  # background task
     chat_bot_name: str = ""
     config: dict = {}  # @deprecated use config_list options to conf
     room_name: str = "chat-room"
     room_url: str = ""
     token: str = ""
+    room_expire: int = ROOM_EXPIRE_TIME
     config_list: list = []
     services: dict = {}
     websocket_server_host: str = "localhost"
@@ -127,6 +131,34 @@ def import_bots(bot_name: str = "DummyBot"):
         from .voice import daily_asr_step_voice_bot
 
         return True
+    if "DailyPhi4VisionSpeechBot" in bot_name:
+        from .omni import daily_phi4_vision_speech_bot
+
+        return True
+    if "DailyPhi4VoiceBot" in bot_name:
+        from .voice import daily_phi4_voice_bot
+
+        return True
+    if "DailyGemma3nVisionSpeechBot" in bot_name:
+        from .omni import daily_gemma3n_vision_speech_bot
+
+        return True
+    if "DailyNASABot" in bot_name:
+        from .mcp import daily_nasa_bot
+
+        return True
+    if "DailyMultiMCPBot" in bot_name:
+        from .mcp import daily_multi_mcp_bot
+
+        return True
+    if "DailyAvatarEchoBot" in bot_name:
+        from .avatar import daily_liteavatar_echo_bot
+
+        return True
+    if "DailyAvatarChatBot" in bot_name:
+        from .avatar import daily_liteavatar_chat_bot
+
+        return True
     if "LivekitBot" in bot_name:
         from . import livekit_bot
 
@@ -195,6 +227,22 @@ def import_bots(bot_name: str = "DummyBot"):
         from .voice import livekit_vita_voice_bot
 
         return True
+    if "LivekitNASABot" in bot_name:
+        from .mcp import livekit_nasa_bot
+
+        return True
+    if "LivekitMultiMCPBot" in bot_name:
+        from .mcp import livekit_multi_mcp_bot
+
+        return True
+    if "LivekitAvatarEchoBot" in bot_name:
+        from .avatar import livekit_musetalk_echo_bot
+
+        return True
+    if "LivekitAvatarChatBot" in bot_name:
+        from .avatar import livekit_musetalk_chat_bot
+
+        return True
     # if "LivekitMoshiVoiceBot" in bot_name:
     #    from .voice import livekit_moshi_bot
 
@@ -239,6 +287,14 @@ def import_bots(bot_name: str = "DummyBot"):
         from .vision import agora_ocr_vision_bot
 
         return True
+    if "AgoraNASABot" in bot_name:
+        from .mcp import agora_nasa_bot
+
+        return True
+    if "AgoraMultiMCPBot" in bot_name:
+        from .mcp import agora_multi_mcp_bot
+
+        return True
 
     return False
 
@@ -260,6 +316,45 @@ def import_fastapi_websocket_bots(bot_name: str = "DummyBot"):
 
     if "FastapiWebsocketMoshiVoiceBot" in bot_name:
         from .voice import fastapi_websocket_moshi_bot
+
+        return True
+
+    if "SmallWebRTCFastapiWebsocketEchoBot" in bot_name:
+        from .bridge import small_webrtc_fastapi_websocket_echo_bot
+
+        return True
+
+    if "SmallWebRTCFastapiWebsocketAvatarEchoBot" in bot_name:
+        from .bridge import small_webrtc_fastapi_websocket_avatar_echo_bot
+
+        return True
+
+    if "SmallWebRTCFastapiWebsocketAvatarChatBot" in bot_name:
+        from .bridge import small_webrtc_fastapi_websocket_avatar_chat_bot
+
+        return True
+
+    return False
+
+
+def import_small_webrtc_bots(bot_name: str = "DummyBot"):
+    if "SmallWebrtcBot" == bot_name:
+        from . import small_webrtc_bot
+
+        return True
+
+    if "SmallWebRTCFastapiWebsocketEchoBot" in bot_name:
+        from .bridge import small_webrtc_fastapi_websocket_echo_bot
+
+        return True
+
+    if "SmallWebRTCFastapiWebsocketAvatarEchoBot" in bot_name:
+        from .bridge import small_webrtc_fastapi_websocket_avatar_echo_bot
+
+        return True
+
+    if "SmallWebRTCFastapiWebsocketAvatarChatBot" in bot_name:
+        from .bridge import small_webrtc_fastapi_websocket_avatar_chat_bot
 
         return True
 

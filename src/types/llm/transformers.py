@@ -45,6 +45,12 @@ class TransformersLMArgs(LMGenerateArgs):
         default="user",
         metadata={"help": "Role assigned to the user in the chat context. Default is 'user'."},
     )
+    assistant_role: str = field(
+        default="assistant",
+        metadata={
+            "help": "Role assigned to the assistant in the chat context. Default is 'assistant'."
+        },
+    )
     warnup_prompt: str = field(
         default="Repeat the word 'weedge niu bi'.",
         metadata={"help": "warnup llm generate prompt. Default is 'weedge niu bi'."},
@@ -86,8 +92,12 @@ class TransformersLMArgs(LMGenerateArgs):
         },
     )
     lm_bnb_quant_type: str = field(
-        default="int4",
-        metadata={"help": "The BitsAndBytes quantization type, default int4."},
+        default=None,
+        metadata={"help": "The BitsAndBytes quantization type, default None."},
+    )
+    lm_language_code: str = field(
+        default="zh",
+        metadata={"help": "The chat language code, default zh."},
     )
 
     def to_dict(self) -> dict:

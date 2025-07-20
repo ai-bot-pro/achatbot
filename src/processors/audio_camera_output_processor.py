@@ -19,7 +19,7 @@ from src.types.frames.control_frames import (
     BotStartedSpeakingFrame,
     BotStoppedSpeakingFrame,
 )
-from src.types.frames.data_frames import SpriteFrame, TransportMessageFrame
+from src.types.frames.data_frames import SpriteFrame, TransportMessageFrame, AnimationAudioRawFrame
 
 
 class AudioCameraOutputProcessor(OutputProcessor):
@@ -37,12 +37,13 @@ class AudioCameraOutputProcessor(OutputProcessor):
         # framerate.
         self._camera_images = None
 
-        # We will write 20ms audio at a time. If we receive long audio frames we
+        # We will write 10ms*CHUNKS of audio at a time (where CHUNKS is the
+        # `audio_out_10ms_chunks` parameter). If we receive long audio frames we
         # will chunk them. This will help with interruption handling.
         audio_bytes_10ms = (
             int(self._params.audio_out_sample_rate / 100) * self._params.audio_out_channels * 2
         )
-        self._audio_chunk_size = audio_bytes_10ms * 2
+        self._audio_chunk_size = audio_bytes_10ms * self._params.audio_out_10ms_chunks
         # Audio accumlation buffer for 16-bit samples to write out stream device
         self._audio_out_buff = bytearray()
 
@@ -54,6 +55,10 @@ class AudioCameraOutputProcessor(OutputProcessor):
         # Audio queue and task
         self._audio_out_queue = None
         self._audio_out_task = None
+
+        # Camera queue and task
+        self._camera_out_queue = None
+        self._camera_out_task = None
 
     async def start(self, frame: StartFrame):
         await super().start(frame)
@@ -112,6 +117,8 @@ class AudioCameraOutputProcessor(OutputProcessor):
         elif isinstance(frame, TransportMessageFrame):
             # transport mssage
             await self.send_message(frame)
+        elif isinstance(frame, AnimationAudioRawFrame):  # audio + animation
+            await self._handle_audio_animation(frame)
         elif isinstance(frame, AudioRawFrame):  # audio
             await self._handle_audio(frame)
         elif isinstance(frame, ImageRawFrame) or isinstance(frame, SpriteFrame):  # image
@@ -148,6 +155,20 @@ class AudioCameraOutputProcessor(OutputProcessor):
     async def send_audio(self, frame: AudioRawFrame):
         await self.process_frame(frame, FrameDirection.DOWNSTREAM)
 
+    async def write_animation_audio_frame(self, frame: AnimationAudioRawFrame):
+        """
+        - default call handel_audio to process audio raw frame
+        - subclass can override this method to process animation audio raw frame
+            - fastapi_websocket_output_processor to process animation audio raw frame
+        """
+        # logging.info(f"no subclass implement {frame=}")
+        await self._handle_audio(frame)
+
+    async def _handle_audio_animation(self, frame: AnimationAudioRawFrame):
+        if not self._params.audio_out_enabled:
+            return
+        await self.write_animation_audio_frame(frame)
+
     async def _handle_audio(self, frame: AudioRawFrame):
         if not self._params.audio_out_enabled:
             return
@@ -160,7 +181,7 @@ class AudioCameraOutputProcessor(OutputProcessor):
         # print( f"len audio_out_buff:{len(self._audio_out_buff)}, audio_chunk_size{self._audio_chunk_size}")
         for i in range(0, len(audio), self._audio_chunk_size):
             chunk = audio[i : i + self._audio_chunk_size]
-            # if len(chunk) % 2 != 0: don't do that, need subclass to do
+            # if len(chunk) % 2 != 0: don't do that, need subclass to do(write_raw_audio_frames)
             #    chunk = chunk[:len(chunk) - 1]
             await self._audio_out_queue.put(chunk)
             await self.push_frame(BotSpeakingFrame(), FrameDirection.UPSTREAM)
@@ -175,13 +196,19 @@ class AudioCameraOutputProcessor(OutputProcessor):
     async def _audio_out_task_handler(self):
         while True:
             try:
-                chunk = await self._audio_out_queue.get()
+                chunk = await asyncio.wait_for(self._audio_out_queue.get(), timeout=1)
                 await self.write_raw_audio_frames(chunk)
                 self._audio_out_queue.task_done()
+            except asyncio.TimeoutError:
+                continue
             except asyncio.CancelledError:
+                logging.info(f"{self.name} _audio_out_task_handler cancelled")
                 break
             except Exception as e:
                 logging.exception(f"{self} error writing audio: {e}")
+                if self.get_event_loop().is_closed():
+                    logging.warning(f"{self.name} event loop is closed")
+                    break
 
     #
     # Camera out
@@ -192,7 +219,11 @@ class AudioCameraOutputProcessor(OutputProcessor):
             return
 
         if self._params.camera_out_is_live:
-            await self._camera_out_queue.put(frame)
+            # NOTE:
+            # out processor is last start to init camera out queue,
+            # if pipeline other processor is start slow,
+            # and push frame before out processor init, out processor will lost frame
+            self._camera_out_queue and await self._camera_out_queue.put(frame)
         else:
             if isinstance(frame, ImageRawFrame):
                 await self._set_camera_images([frame])
@@ -203,6 +234,7 @@ class AudioCameraOutputProcessor(OutputProcessor):
         await self.process_frame(frame, FrameDirection.DOWNSTREAM)
 
     async def _set_camera_images(self, images: List[ImageRawFrame]):
+        # cycle images for display image frame like video
         self._camera_images = itertools.cycle(images)
 
     async def write_frame_to_camera(self, frame: ImageRawFrame):
@@ -214,10 +246,11 @@ class AudioCameraOutputProcessor(OutputProcessor):
     async def _draw_image(self, frame: ImageRawFrame):
         desired_size = (self._params.camera_out_width, self._params.camera_out_height)
 
+        # @TODO: self._params need in the ctx
         if frame.size != desired_size:
             image = Image.frombytes(frame.mode, frame.size, frame.image)
             resized_image = image.resize(desired_size)
-            logging.warning(f"{frame} does not have the expected size {desired_size}, resizing")
+            # logging.warning(f"{frame} does not have the expected size {desired_size}, resizing")
             frame = ImageRawFrame(
                 image=resized_image.tobytes(),
                 size=resized_image.size,
@@ -264,9 +297,9 @@ class AudioCameraOutputProcessor(OutputProcessor):
                 elif self._camera_images:
                     image = next(self._camera_images)
                     await self._draw_image(image)
-                    await asyncio.sleep(1.0 / self._params.camera_out_framerate)
+                    await asyncio.sleep(self._camera_out_frame_duration)
                 else:
-                    await asyncio.sleep(1.0 / self._params.camera_out_framerate)
+                    await asyncio.sleep(self._camera_out_frame_duration)
             except asyncio.CancelledError:
                 break
             except Exception as e:

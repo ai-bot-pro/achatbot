@@ -14,7 +14,7 @@ sglang_image = (
     )
     .env(
         {
-            "TORCH_CUDA_ARCH_LIST": "7.5,8.0 8.6 8.7 8.9 9.0",
+            "TORCH_CUDA_ARCH_LIST": "7.5 8.0 8.6 8.7 8.9 9.0",
         }
     )
 )

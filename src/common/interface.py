@@ -170,7 +170,22 @@ class ILlm(ABC):
         raise NotImplementedError("must be implemented in the child class")
 
     @abstractmethod
+    async def async_generate(
+        self, session, **kwargs
+    ) -> AsyncGenerator[str | dict | np.ndarray, None]:
+        """
+        async generate text or tokens with stream iterator
+        - local llm cpu/gpu bind
+        - api llm io bind
+        """
+        raise NotImplementedError("must be implemented in the child class")
+
+    @abstractmethod
     def chat_completion(self, session, **kwargs) -> Iterator[str]:
+        raise NotImplementedError("must be implemented in the child class")
+
+    @abstractmethod
+    async def async_chat_completion(self, session, **kwargs) -> AsyncGenerator[str, None]:
         raise NotImplementedError("must be implemented in the child class")
 
     @abstractmethod
@@ -289,11 +304,15 @@ class IConnector(ABC):
 
 class IBot(ABC):
     @abstractmethod
+    def load(self):
+        raise NotImplementedError("must be implemented in the child class")
+
+    @abstractmethod
     def run(self):
         raise NotImplementedError("must be implemented in the child class")
 
     @abstractmethod
-    async def arun(self):
+    async def async_run(self):
         raise NotImplementedError("must be implemented in the child class")
 
     @abstractmethod

@@ -2,8 +2,10 @@ from abc import abstractmethod
 import logging
 from threading import Thread
 import time
+from typing import AsyncGenerator
 
 import torch
+import numpy as np
 
 from src.common.session import Session
 from src.common.interface import ILlm
@@ -48,18 +50,6 @@ class TransformersBaseLLM(BaseLLM, ILlm):
         self._tokenizer = AutoTokenizer.from_pretrained(
             self.args.lm_model_name_or_path, trust_remote_code=True
         )
-        self._streamer = TextIteratorStreamer(
-            self._tokenizer, skip_prompt=True, skip_special_tokens=True
-        )
-
-        self._chat_history = ChatHistory(self.args.chat_history_size)
-        if self.args.init_chat_role and self.args.init_chat_prompt:
-            self._chat_history.init(
-                {
-                    "role": self.args.init_chat_role,
-                    "content": self.args.init_chat_prompt,
-                }
-            )
 
         # subclass to init
         self.init()
@@ -69,6 +59,19 @@ class TransformersBaseLLM(BaseLLM, ILlm):
     @property
     def chat_history(self) -> ChatHistory:
         return self._chat_history if self._chat_history else ChatHistory()
+
+    def add_chat_history(self, session: Session, message: list):
+        if session.ctx.client_id not in self.session_chat_history:
+            chat_history = ChatHistory(self.args.chat_history_size)
+            if self.args.init_chat_role and self.args.init_chat_prompt:
+                chat_history.init(
+                    {
+                        "role": self.args.init_chat_role,
+                        "content": [{"type": "text", "text": self.args.init_chat_prompt}],
+                    }
+                )
+            self.session_chat_history[session.ctx.client_id] = chat_history
+        self.session_chat_history[session.ctx.client_id].append(message)
 
     def set_system_prompt(self, **kwargs):
         pass
@@ -115,6 +118,17 @@ class TransformersBaseLLM(BaseLLM, ILlm):
         """
         pass
 
+    async def async_generate(
+        self, session, **kwargs
+    ) -> AsyncGenerator[str | dict | np.ndarray, None]:
+        for item in self.generate(session, **kwargs):
+            yield item
+
+    async def async_chat_completion(self, session, **kwargs) -> AsyncGenerator[str, None]:
+        logging.info("generate use chat_completion")
+        for item in self.chat_completion(session):
+            yield item
+
     def chat_completion(self, session: Session, **kwargs):
         if self.args.lm_stream is False:
             res = ""
@@ -124,11 +138,16 @@ class TransformersBaseLLM(BaseLLM, ILlm):
         else:
             res = ""
             for text in self.generate(session, **kwargs):
+                if text is None:
+                    yield None
+                    continue
                 res += text
                 pos = self._have_special_char(res)
                 if pos > -1:
                     yield res[: pos + 1]
                     res = res[pos + 1 :]
+                else:
+                    yield None
             if len(res) > 0:
                 yield res
 
@@ -150,9 +169,10 @@ class TransformersBaseLLM(BaseLLM, ILlm):
             thread.start()
             times = []
             start_time = time.perf_counter()
-            for _ in streamer:
-                times.append(time.perf_counter() - start_time)
-                start_time = time.perf_counter()
+            with torch.no_grad():
+                for _ in streamer:
+                    times.append(time.perf_counter() - start_time)
+                    start_time = time.perf_counter()
             logging.info(f"step {step} warnup TTFT time: {times[0]} s")
 
         if "cuda" in str(self._model.device):

@@ -1,5 +1,5 @@
 import os
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -60,12 +60,18 @@ class ASRConfig(BaseModel):
     args: Optional[dict] = None
 
 
+class AvatarConfig(BaseModel):
+    tag: Optional[str] = None
+    args: Optional[dict] = None
+
+
 class LLMConfig(BaseModel):
     base_url: Optional[str] = None
     model: Optional[str] = None
     language: Optional[str] = None
     messages: Optional[List[dict]] = None
     tools: Optional[List[dict]] = None
+    # is_use_tools_description: Optional[bool] = False
     tag: Optional[str] = None
     args: Optional[dict] = None
 
@@ -77,9 +83,16 @@ class TTSConfig(BaseModel):
     args: Optional[dict] = None
 
 
+class MCPServerConfig(BaseModel):
+    transport: Optional[str] = "stdio"
+    parameters: Optional[Dict[str, Any]] = None
+
+
 class AIConfig(BaseModel):
     vad: Optional[VADConfig] = None
     asr: Optional[ASRConfig] = None
+    avatar: Optional[AvatarConfig] = None
+    mcp_servers: Optional[Dict[str, MCPServerConfig]] = None
     llm: Optional[LLMConfig] = None
     nlp_task_llm: Optional[LLMConfig] = None
     voice_llm: Optional[LLMConfig] = None

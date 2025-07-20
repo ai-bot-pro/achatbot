@@ -26,7 +26,7 @@ class SileroVAD(BaseVAD):
         self.args = SileroVADArgs(**args)
         if self.args.sample_rate != 16000 and self.args.sample_rate != 8000:
             raise ValueError("Silero VAD sample rate needs to be 16000 or 8000")
-        torch.set_num_threads(1)
+        # torch.set_num_threads(1)
         # torchaudio.set_audio_backend("soundfile")
         self.model, utils = torch.hub.load(
             repo_or_dir=self.args.repo_or_dir,
@@ -74,7 +74,7 @@ class SileroVAD(BaseVAD):
         if self.args.check_frames_mode == VAD_CHECK_ALL_FRAMES:
             if speech_frames == num_frames:
                 logging.debug(
-                    f"{self.TAG} Speech detected in {speech_frames} of " f"{num_frames} frames"
+                    f"{self.TAG} Speech detected in {speech_frames} of {num_frames} frames"
                 )
             else:
                 logging.debug(f"{self.TAG} Speech not detected in all {num_frames} frames")

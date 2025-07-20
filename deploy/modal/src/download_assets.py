@@ -68,6 +68,25 @@ def download_assets(asset_urls: str) -> str:
             )
             logging.info(f"Download of {url} complete.")
             logging.debug(f"curl output:{result.stdout}")
+            # Check if the downloaded file is a zip or tar archive and extract it
+            if filename.endswith(".zip"):
+                import zipfile
+
+                with zipfile.ZipFile(local_path, "r") as zip_ref:
+                    zip_ref.extractall(dir_path)
+                os.remove(local_path)
+                logging.info(f"Extracted and removed {filename}")
+            elif (
+                filename.endswith(".tar")
+                or filename.endswith(".tar.gz")
+                or filename.endswith(".tgz")
+            ):
+                import tarfile
+
+                with tarfile.open(local_path, "r") as tar_ref:
+                    tar_ref.extractall(dir_path)
+                os.remove(local_path)
+                logging.info(f"Extracted and removed {filename}")
 
         except subprocess.CalledProcessError as e:
             logging.error(f"Error downloading {url}: {e}")
@@ -84,6 +103,8 @@ modal run src/download_assets.py --asset-urls "https://raw.githubusercontent.com
 modal run src/download_assets.py --asset-urls "https://raw.githubusercontent.com/SWivid/F5-TTS/refs/heads/main/src/f5_tts/infer/examples/basic/basic_ref_zh.wav"
 
 modal run src/download_assets.py --asset-urls "https://raw.githubusercontent.com/ai-bot-pro/achatbot/refs/heads/main/test/audio_files/asr_example_zh.wav"
+
+modal run src/download_assets.py --asset-urls "https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LAM/LAM_audio2exp_assets.tar"
 """
 
 

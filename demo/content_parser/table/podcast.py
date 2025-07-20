@@ -15,12 +15,15 @@ load_dotenv(override=True)
 
 genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
 client = instructor.from_gemini(
+    # https://ai.google.dev/gemini-api/docs/models?hl=zh-cn#model-variations
     client=genai.GenerativeModel(
         # model_name="models/gemini-1.5-flash-latest",
         # model_name="models/gemini-2.0-flash-exp",
         # model_name="models/gemini-2.0-flash",
-        # model_name=os.getenv("GEMINI_MODEL", "models/gemini-2.0-pro-exp-02-05"),
-        model_name=os.getenv("GEMINI_MODEL", "models/gemini-2.5-pro-exp-03-25"),
+        # model_name="models/gemini-2.0-pro-exp-02-05",
+        # model_name="models/gemini-2.5-pro-exp-03-25",
+        # model_name=f"models/{os.getenv('GEMINI_MODEL','gemini-2.5-flash-preview-04-17')}",
+        model_name=f"models/{os.getenv('GEMINI_MODEL','gemini-2.5-pro-preview-05-06')}",
     ),
     mode=instructor.Mode.GEMINI_JSON,
     generation_config={

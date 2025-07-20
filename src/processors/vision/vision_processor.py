@@ -3,6 +3,7 @@ import base64
 from io import BytesIO
 from typing import AsyncGenerator
 import uuid
+import asyncio
 
 from PIL import Image
 from apipeline.frames.sys_frames import ErrorFrame
@@ -28,12 +29,14 @@ class VisionProcessor(VisionProcessorBase):
         self,
         llm: ILlm | EngineClass | None = None,
         session: Session | None = None,
+        sleep_time_s: float = 0.15,
     ):
         super().__init__()
         self._llm = llm
         self._session = session
         if self._session is None:
             self._session = Session(**SessionCtx(uuid.uuid4()).__dict__)
+        self.sleep_time_s = sleep_time_s
 
     def set_llm(self, llm: ILlm):
         self._llm = llm
@@ -64,7 +67,13 @@ class VisionProcessor(VisionProcessorBase):
         ):  # transformers vision MiniCPM-o
             async for item in self._run_imgs_text_vision(frame):
                 yield item
-        else:  # qwen vision (kimi vision) is default, nice vision prompt
+        elif (
+            "llm_transformers" in self._llm.SELECTED_TAG
+            and "vision_fastvlm" in self._llm.SELECTED_TAG
+        ):  # transformers vision FastVLM
+            async for item in self._run_imgs_text_vision(frame):
+                yield item
+        else:  # gemma3, smolvlm, qwen vision (kimi vision) is default, nice vision prompt
             async for item in self._run_vision(frame):
                 yield item
 
@@ -79,6 +88,9 @@ class VisionProcessor(VisionProcessorBase):
 
         iter = self._llm.chat_completion(self._session)
         for item in iter:
+            if item is None:
+                await asyncio.sleep(self.sleep_time_s)
+                continue
             yield TextFrame(text=item)
 
     async def _run_vision(self, frame: VisionImageRawFrame) -> AsyncGenerator[Frame, None]:
@@ -97,15 +109,41 @@ class VisionProcessor(VisionProcessorBase):
             if (
                 "llm_transformers" in self._llm.SELECTED_TAG and "vision" in self._llm.SELECTED_TAG
             ):  # transformers vision
-                self._session.ctx.state["prompt"].append({"type": "image", "image": img_base64_str})
+                if "skyworkr1v" in self._llm.SELECTED_TAG:
+                    self._session.ctx.state["prompt"].append({"type": "image", "image": image})
+                else:
+                    self._session.ctx.state["prompt"].append(
+                        {"type": "image", "image": img_base64_str}
+                    )
+            elif (
+                "llm_fastdeploy" in self._llm.SELECTED_TAG and "vision" in self._llm.SELECTED_TAG
+            ):  # fastdeploy vision
+                self._session.ctx.state["prompt"].append({"type": "image_url", "image_url": image})
+            elif (
+                "llm_vllm" in self._llm.SELECTED_TAG and "vision" in self._llm.SELECTED_TAG
+            ):  # vllm vision
+                self._session.ctx.state["prompt"].append({"type": "image", "image": image})
             else:  # llamacpp vision
                 self._session.ctx.state["prompt"].append(
                     {"type": "image_url", "image_url": {"url": img_base64_str}}
                 )
 
-        iter = self._llm.chat_completion(self._session)
-        for item in iter:
-            yield TextFrame(text=item)
+        if (
+            "llm_vllm" in self._llm.SELECTED_TAG and "vision" in self._llm.SELECTED_TAG
+        ):  # vllm vision
+            iter = self._llm.async_chat_completion(self._session)
+            async for item in iter:
+                if item is None:  # yield coroutine to speak
+                    await asyncio.sleep(self.sleep_time_s)
+                    continue
+                yield TextFrame(text=item)
+        else:
+            iter = self._llm.chat_completion(self._session)
+            for item in iter:
+                if item is None:  # yield coroutine to speak
+                    await asyncio.sleep(self.sleep_time_s)
+                    continue
+                yield TextFrame(text=item)
 
 
 class MockVisionProcessor(VisionProcessorBase):

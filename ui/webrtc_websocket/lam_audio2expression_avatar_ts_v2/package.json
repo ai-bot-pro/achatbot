@@ -1,0 +1,32 @@
+{
+  "name": "lam_audio2expression_avatar",
+  "version": "1.0.0",
+  "description": "- this demo is test webrtc p2p bot audio stream with http signaling server,  - use webrtc protocol(RTP) to send multimodal data(audio). - use websocket protocol to get message(protobuff serialization) (audio,audio_expression).",
+  "type": "module",
+  "main": "main.js",
+  "scripts": {
+    "dev": "vite",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:dev": "tsc && vite build --mode development",
+    "build:prod": "tsc && vite build --mode production",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "cp_arkit": "mkdir -p ./dist/assets/ && cp ${npm_config_src:-./asset/arkit/*.zip} ./dist/assets/",
+    "cp_proto": "cp ../../../src/types/frames/avatar_data_frames.proto ./dist/assets/",
+    "dist": "npm run build && npm run cp_arkit && npm run cp_proto"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^24.0.8",
+    "@types/protobufjs": "^6.0.0",
+    "@types/webrtc": "^0.0.46",
+    "protobufjs": "^7.5.3",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0"
+  },
+  "dependencies": {
+    "gaussian-splat-renderer-for-lam": "^0.0.8"
+  }
+}

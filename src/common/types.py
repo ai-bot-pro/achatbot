@@ -45,6 +45,7 @@ MODELS_DIR = os.path.normpath(os.path.join(DIR_PATH, "models"))
 RECORDS_DIR = os.path.normpath(os.path.join(DIR_PATH, "records"))
 VIDEOS_DIR = os.path.normpath(os.path.join(DIR_PATH, "videos"))
 ASSETS_DIR = os.path.normpath(os.path.join(DIR_PATH, "assets"))
+RESOURCES_DIR = os.path.normpath(os.path.join(DIR_PATH, "resources"))  # np.ndarray features
 
 TEST_DIR = os.path.normpath(os.path.join(SRC_PATH, os.pardir, "test"))
 
@@ -482,6 +483,7 @@ class AudioParams(BaseModel):
     audio_out_enabled: bool = False
     audio_out_sample_rate: int = RATE
     audio_out_channels: int = CHANNELS
+    audio_out_10ms_chunks: int = 2
     audio_in_enabled: bool = False
     audio_in_participant_enabled: bool = False
     audio_in_sample_rate: int = RATE

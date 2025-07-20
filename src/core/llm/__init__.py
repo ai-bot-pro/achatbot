@@ -21,12 +21,18 @@ class LLMEnvInit:
             from .llamacpp.generator import LlamacppGenerator
         if "llm_vllm_generator" == tag:
             from .vllm.generator import VllmGenerator
+        if "llm_vllm_vision_skyworkr1v" == tag:
+            from .vllm.vision_skyworkr1v import VllmVisionSkyworkr1v
         if "llm_trtllm_generator" == tag:
             from .tensorrt_llm.generator import TrtLLMGenerator
         if "llm_trtllm_runner_generator" == tag:
             from .tensorrt_llm.generator import TrtLLMRunnerGenerator
         if "llm_sglang_generator" == tag:
             from .sglang.generator import SGlangGenerator
+        if "llm_fastdeploy_generator" == tag:
+            from .fastdeploy.generator import FastdeployGenerator
+        if "llm_fastdeploy_vision_ernie4v" == tag:
+            from .fastdeploy.vision_ernie4v import FastdeployVisionERNIE4v
         elif "llm_personalai_proxy" == tag:
             from . import personalai
         if "llm_transformers_generator" == tag:
@@ -43,6 +49,16 @@ class LLMEnvInit:
             from .transformers import manual_vision_deepseek
         elif "llm_transformers_manual_vision_kimi" == tag:
             from .transformers import manual_vision_kimi
+        elif "llm_transformers_manual_vision_fastvlm" == tag:
+            from .transformers import manual_vision_fastvlm
+        elif "llm_transformers_manual_vision_smollm" == tag:
+            from .transformers import manual_vision_smolvlm
+        elif "llm_transformers_manual_vision_gemma3" == tag:
+            from .transformers import manual_vision_gemma
+        elif "llm_transformers_manual_vision_speech_gemma3n" == tag:
+            from .transformers import manual_vision_speech_gemma3n
+        elif "llm_transformers_manual_vision_gemma3n" == tag:
+            from .transformers import manual_vision_speech_gemma3n
         elif "llm_transformers_manual_vision_janus_flow" == tag:
             from .transformers import manual_vision_img_janus_flow
         elif "llm_transformers_manual_image_janus_flow" == tag:
@@ -55,6 +71,18 @@ class LLMEnvInit:
             from .transformers import manual_vision_voice_minicpmo
         elif "llm_transformers_manual_qwen2_5omni" in tag:
             from .transformers import manual_vision_voice_qwen
+        elif "llm_transformers_manual_phi4" in tag:
+            from .transformers import manual_vision_speech_phi
+        elif "llm_transformers_manual_vision_mimo" in tag:
+            from .transformers import manual_vision_mimo
+        elif "llm_transformers_manual_vision_keye" in tag:
+            from .transformers import manual_vision_keye
+        elif "llm_transformers_manual_vision_glm4v" in tag:
+            from .transformers import manual_vision_glm4v
+        elif "llm_transformers_manual_vision_ernie4v" in tag:
+            from .transformers import manual_vision_ernie4v
+        elif "llm_transformers_manual_vision_skyworkr1v" in tag:
+            from .transformers import manual_vision_skyworkr1v
         elif "llm_transformers_manual" == tag:
             from .transformers import manual
         elif "llm_transformers_pipeline" == tag:
@@ -277,6 +305,28 @@ class LLMEnvInit:
         return kwargs
 
     @staticmethod
+    def get_llm_fastdeploy_args() -> dict:
+        kwargs = dict(
+            serv_args=dict(
+                model=os.getenv(
+                    "LLM_MODEL_NAME_OR_PATH",
+                    os.path.join(MODELS_DIR, "baidu/ERNIE-4.5-VL-28B-A3B-Paddle"),
+                ),
+                tensor_parallel_size=int(os.getenv("TP", "1")),
+                quantization=os.getenv("QUANTIZATION", "wint4"),
+                max_model_len=int(os.getenv("MAX_MODEL_LEN", "2048")),
+                enable_mm=bool(os.getenv("ENABLE_MM", "1")),
+                limit_mm_per_prompt={"image": 100},
+                reasoning_parser=os.getenv("REASONING_PARSER", "ernie-45-vl"),
+                gpu_memory_utilization=float(
+                    os.getenv("LLM_GPU_MEMORY_UTILIZATION", "0.9")
+                ),  # default 0.9
+            ),
+            gen_args=LLMEnvInit._get_llm_generate_args(),
+        )
+        return kwargs
+
+    @staticmethod
     def get_llm_trtllm_runner_generator_args() -> dict:
         # from src.types.llm.tensorrt_llm import TensorRTLLMRunnerEngineArgs, TensorRTLLMRunnerArgs
 
@@ -424,16 +474,30 @@ class LLMEnvInit:
         "llm_transformers_manual": get_llm_transformers_args,
         "llm_transformers_pipeline": get_llm_transformers_args,
         "llm_transformers_manual_vision_qwen": get_llm_transformers_args,
+        "llm_transformers_manual_vision_smollm": get_llm_transformers_args,
+        "llm_transformers_manual_vision_mimo": get_llm_transformers_args,
+        "llm_transformers_manual_vision_keye": get_llm_transformers_args,
+        "llm_transformers_manual_vision_glm4v": get_llm_transformers_args,
+        "llm_transformers_manual_vision_ernie4v": get_llm_transformers_args,
+        "llm_transformers_manual_vision_skyworkr1v": get_llm_transformers_args,
+        "llm_transformers_manual_vision_gemma3": get_llm_transformers_args,
+        "llm_transformers_manual_vision_speech_gemma3n": get_llm_transformers_args,
+        "llm_transformers_manual_vision_gemma3n": get_llm_transformers_args,
         "llm_transformers_manual_vision_qwen2_5": get_llm_transformers_args,
         "llm_transformers_manual_vision_llama": get_llm_transformers_args,
         "llm_transformers_manual_vision_molmo": get_llm_transformers_args,
         "llm_transformers_manual_vision_deepseek": get_llm_transformers_args,
         "llm_transformers_manual_vision_kimi": get_llm_transformers_args,
+        "llm_transformers_manual_vision_fastvlm": get_llm_transformers_args,
         "llm_transformers_manual_vision_janus": get_llm_transformers_args,
         "llm_transformers_manual_image_janus": get_llm_transformers_args,
         "llm_transformers_manual_vision_janus_flow": get_llm_transformers_args,
         "llm_transformers_manual_image_janus_flow": get_llm_transformers_manual_image_janus_flow_args,
         "llm_transformers_manual_vision_minicpmo": get_llm_transformers_args,
+        "llm_transformers_manual_phi4_vision_speech": get_llm_transformers_args,
+        "llm_transformers_manual_phi4_vision": get_llm_transformers_args,
+        "llm_transformers_manual_phi4_audio_asr": get_llm_transformers_args,
+        "llm_transformers_manual_phi4_audio_translation": get_llm_transformers_args,
         "llm_transformers_manual_qwen2_5omni": get_qwen2_5omni_transformers_args,
         "llm_transformers_manual_qwen2_5omni_vision": get_qwen2_5omni_transformers_args,
         "llm_transformers_manual_qwen2_5omni_audio": get_qwen2_5omni_transformers_args,
@@ -446,7 +510,10 @@ class LLMEnvInit:
         "llm_transformers_generator": get_llm_transformers_args,
         "llm_llamacpp_generator": get_llm_llamacpp_generator_args,
         "llm_vllm_generator": get_llm_vllm_generator_args,
+        "llm_vllm_vision_skyworkr1v": get_llm_vllm_generator_args,
         "llm_sglang_generator": get_llm_sglang_generator_args,
         "llm_trtllm_generator": get_llm_trtllm_generator_args,
         "llm_trtllm_runner_generator": get_llm_trtllm_runner_generator_args,
+        "llm_fastdeploy_generator": get_llm_fastdeploy_args,
+        "llm_fastdeploy_vision_ernie4v": get_llm_fastdeploy_args,
     }

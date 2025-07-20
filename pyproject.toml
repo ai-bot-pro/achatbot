@@ -16,14 +16,23 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-# todo
-version = "0.0.11"
+version = "0.0.21.post3"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
 readme = "README.md"
 license = { file = "LICENSE" }
-keywords = ["ai", "chat bot", "audio", "speech", "video", "image"]
+keywords = [
+    "ai",
+    "chat bot",
+    "audio",
+    "speech",
+    "video",
+    "image",
+    "vision",
+    "mcp",
+    "avatar",
+]
 # https://pypi.org/classifiers/
 classifiers = [
     # How mature is this project? Common values are
@@ -51,13 +60,14 @@ classifiers = [
 ]
 dependencies = [
     "requests",
-    "apipeline~=0.1.32",
+    "apipeline>=0.2.1",
     "python-dotenv",
-    "pydub",             # need install ffmpeg
+    "pydub",            # need install ffmpeg
     "pillow",
-    "aiohttp",
+    "aiohttp==3.10.11",
     "scipy",
     "pyloudnorm",
+    "pydantic",
     "numpy>=1.22.0",
 ]
 
@@ -82,19 +92,24 @@ einops = ["einops~=0.8.0"]
 flash-attn = ["flash-attn==2.7.3"]
 tiktoken = ["tiktoken~=0.7.0"]
 verovio = ["verovio~=4.3.1"]
-accelerate = ["accelerate~=0.28.0"]
+accelerate = ["accelerate~=1.7.0"]
 opencv = ["opencv-python~=4.10.0.84"]
 librosa = ["librosa~=0.10.2.post1"]
 soundfile = ["soundfile~=0.12.1"]
+torch_vision_audio = [
+    "torch~=2.6.0",
+    "torchaudio~=2.6.0",
+    "torchvision~=0.21.0",
+]
+# https://github.com/modelcontextprotocol
+# https://github.com/modelcontextprotocol/python-sdk
+# https://github.com/jlowin/fastmcp
+# https://gofastmcp.com/
+mcp = ["mcp[cli]~=1.9.1", "fastmcp"]
 
 
 # diffusers DiT with quantizing model
-diffusers = [
-    "torch==2.4.1",
-    "torchvision==0.19.1",
-    "torchaudio==2.4.1",
-    "diffusers[torch]~=0.31.0",
-]
+diffusers = ["achatbot[torch_vision_audio]", "diffusers[torch]~=0.31.0"]
 
 # quantization
 # for transformers model weights with BitsAndBytes to 4bit/8bit quantization
@@ -118,13 +133,15 @@ agora = [
     #need move colorlog
     "colorlog",
     "agora-realtime-ai-api-v1~=0.0.3",   # dep agora_python_server_sdk_v1
-    "agora_python_server_sdk_v1~=0.0.2",
+    "agora_python_server_sdk_v1~=0.0.3",
+    #"agora_python_server_sdk~=2.2.4",
     "achatbot[opencv]",
 ]
 daily = ["daily-python~=0.11.0"]
 livekit = ["livekit~=0.17.5"]
 # http api sdk
 livekit-api = ["livekit-api~=0.7.1"]
+webrtc = ["aiortc~=1.13.0"]
 
 # api llm
 google_ai = ["google-generativeai~=0.8.3"]
@@ -165,7 +182,7 @@ speech_waker = ["achatbot[porcupine_wakeword]"]
 # vad module tag -> pkgs
 pyannote_vad = ["pyannote.audio~=3.2.0"]
 webrtcvad = ["webrtcvad~=2.0.10"]
-silero_vad = ["torch", "torchaudio"]
+silero_vad = ["achatbot[torch_vision_audio]"]
 webrtc_silero_vad = ["achatbot[webrtcvad,silero_vad]"]
 speech_vad = ["achatbot[pyannote_vad,webrtcvad,silero_vad]"]
 
@@ -189,7 +206,7 @@ vad_recorder = ["achatbot[speech_vad]"]
 llama_cpp = ["llama-cpp-python~=0.2.82"]
 llm_personalai_proxy = ["geocoder~=1.38.1"]
 sglang = ["sglang[all]==0.4.4.post1"]
-vllm = ["vllm==0.7.3"]
+vllm = ["vllm==0.9.2"]
 transformers = ["transformers[torch]"]
 # --extra-index-url https://pypi.nvidia.com python3.10 and python3.12 | python3.11 unsupported
 trtllm = ["tensorrt-llm==0.17.0.post1"]
@@ -202,12 +219,10 @@ flashinfer-python = ["flashinfer-python==0.2.3"]
 # vision llm
 llm_transformers_manual_vision = [
     #"transformers@git+https://github.com/huggingface/transformers",
-    "transformers~=4.50.3",
+    "transformers",
     "qwen-vl-utils",
     "av",
-    "torch~=2.2.2",
-    "torchaudio~=2.2.2",
-    "torchvision~=0.17.2",
+    "achatbot[torch_vision_audio]",
 ]
 llm_transformers_manual_vision_qwen = [
     "achatbot[llm_transformers_manual_vision]",
@@ -240,11 +255,60 @@ llm_transformers_manual_vision_kimi = [
     "blobfile",
     "achatbot[llm_transformers_manual_vision,tiktoken,accelerate]",
 ]
+llm_transformers_manual_vision_fastvlm = [
+    "achatbot[torch_vision_audio,accelerate]",
+    "numpy==1.26.4",
+    "transformers==4.48.3",
+    "tokenizers==0.21.0",
+    "sentencepiece==0.1.99",
+    "shortuuid",
+    "peft>=0.10.0,<0.14.0",
+    "bitsandbytes",
+    "markdown2[all]",
+    "scikit-learn==1.2.2",
+    "einops==0.6.1",
+    "einops-exts==0.0.4",
+    "timm==1.0.15",
+]
+llm_transformers_manual_vision_smolvlm = [
+    "achatbot[llm_transformers_manual_vision]",
+    "num2words",
+]
+llm_transformers_manual_vision_gemma = [
+    "achatbot[llm_transformers_manual_vision,accelerate]",
+]
+llm_transformers_manual_vision_mimo = [
+    "achatbot[llm_transformers_manual_vision]",
+]
+llm_transformers_manual_vision_keye = [
+    "keye-vl-utils[decord]==1.0.0",
+    "achatbot[llm_transformers_manual_vision]",
+]
+llm_transformers_manual_vision_glm4v = [
+    "achatbot[llm_transformers_manual_vision]",
+]
+llm_transformers_manual_vision_skyworkr1v = [
+    "achatbot[llm_transformers_manual_vision]",
+    "timm",
+]
+
+# vision + audio -> text
+llm_transformers_manual_vision_speech_phi = [
+    "achatbot[torch_vision_audio,accelerate,soundfile]",
+    "transformers==4.48.2",
+    "backoff",
+    "peft",
+    "qwen-omni-utils",
+]
+llm_transformers_manual_vision_speech_gemma = [
+    "achatbot[llm_transformers_manual_vision_gemma,librosa]",
+    "timm",
+]
 
 # voice llm
 llm_transformers_manual_voice = [
     #"transformers@git+https://github.com/huggingface/transformers",
-    # https://github.com/huggingface/transformers/releases/tag/v4.45.transformers~=4.45.2
+    # https://github.com/huggingface/transformers/releases/tag/v4.45.2
     "transformers~=4.45.2",
     "torch~=2.2.2",
     "torchaudio~=2.2.2",
@@ -314,10 +378,7 @@ llm_transformers_manual_voice_kimi = [
     "timm",
 ]
 llm_transformers_manual_voice_vita = [
-    "achatbot[accelerate,librosa,soundfile,conf]",
-    "torch~=2.6.0",
-    "torchaudio~=2.6.0",
-    "torchvision~=0.21.0",
+    "achatbot[torch_vision_audio,accelerate,librosa,soundfile,conf]",
     # https://github.com/huggingface/transformers/tags
     "transformers",     # use latest version, preview can see some new models
     "tiktoken",
@@ -577,6 +638,48 @@ ai_langchain_framework_processor = ["langchain~=0.3.9"]
 # multi ai framework modules processor
 ai_frameworks_processor = ["achatbot[ai_langchain_framework_processor]"]
 
+# avatar
+lite_avatar = [
+    "funasr",
+    "av",
+    "h5py",
+    "jieba",
+    "pypinyin",
+    "transformers",
+    "typeguard==2.13.3",
+    "vector-quantize-pytorch",
+    "vocos",
+    "onnxruntime",
+    "numpy==1.26.4",
+]
+lite_avatar_gpu = ["achatbot[lite_avatar]", "onnxruntime-gpu"]
+musetalk_avatar = [
+    "ffmpeg-python>=0.2.0",
+    "imageio[ffmpeg]>=2.37.0",
+    #"numpy==1.23.5",
+    "tensorflow==2.12.0",
+    "accelerate==0.32.0",
+    #"torch==2.4.1",
+    #"torchvision==0.19.1",
+    #"torchaudio==2.4.1",
+    "transformers==4.44.1",
+    "av",
+    "moviepy",
+    "diffusers",
+    "achatbot[conf,opencv,einops,librosa,soundfile]",
+]
+lam_audio2expression_avatar = [
+    #"spleeter==2.4.2",
+    "opencv_python_headless",
+    "omegaconf",
+    "addict==2.4.0",
+    "yapf==0.40.1",
+    "librosa",
+    "termcolor",
+    "numpy==1.24.3",
+    "protobuf==5.29.4",
+    "transformers==4.36.2",
+]
 
 # asr
 deepgram_asr_processor = ["deepgram-sdk~=3.7.7"]

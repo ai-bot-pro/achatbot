@@ -15,6 +15,18 @@ class LMGenerateArgs:
             "help": "Corresponds to the length of the input prompt + max_new_tokens. Its effect is overridden by max_new_tokens, if also set. Default is 2048."
         },
     )
+    lm_gen_max_tokens: int = field(
+        default=2048,
+        metadata={
+            "help": "Maximum number of new tokens to generate in a single completion. Default is 2048."
+        },
+    )
+    lm_gen_reasoning_max_tokens: int = field(
+        default=1024,
+        metadata={
+            "help": "Maximum number of new tokens to generate in a single completion when thinking. reasoning_max_tokens must be less than max_tokens, Default is 1024."
+        },
+    )
     lm_gen_max_new_tokens: int = field(
         default=1024,
         metadata={
@@ -34,19 +46,19 @@ class LMGenerateArgs:
         },
     )
     lm_gen_temperature: float = field(
-        default=0.1,
+        default=0.6,
         metadata={
             "help": "Controls the randomness of the output. Set to 0.0 for deterministic (repeatable) outputs. Default is 0.1."
         },
     )
     lm_gen_top_k: int = field(
-        default=20,
+        default=10,
         metadata={
             "help": "Changing the top - k parameter sets the size of the shortlist the model samples from as it outputs each token. Setting top - k to 1 gives us greedy decoding. Default is 1"
         },
     )
     lm_gen_top_p: float = field(
-        default=0.8,
+        default=0.9,
         metadata={
             "help": "Top-p is usually set to a high value (like 0.75) with the purpose of limiting the long tail of low-probability tokens that may be sampled. We can use both top-k and top-p together. If both k and p are enabled, p acts after k. Default is 0.8."
         },
@@ -91,6 +103,28 @@ class LMGenerateArgs:
     lm_gen_max_tokens_per_step: int = field(
         default=3,
         metadata={"help": "The maximum number of tokens to generate per step. Default is 3."},
+    )
+    lm_gen_thinking: bool = field(
+        default=None,
+        metadata={
+            "help": "if use think, Whether to output <think>**</think> content; set this to False for deterministic outputs. Default is None. auto thinking"
+        },
+    )
+    lm_gen_think_output: bool = field(
+        default=True,
+        metadata={
+            "help": "if use RL model, Whether to output <think>**</think> content; set this to False for deterministic outputs. Default is True."
+        },
+    )
+    lm_gen_think_interval_time: int = field(
+        default=0,
+        metadata={"help": "The think interval time to tip user. Default is 0<=. no tip,"},
+    )
+    lm_gen_cache_implementation: str = field(
+        default="dynamic",
+        metadata={
+            "help": "https://huggingface.co/docs/transformers/kv_cache | ['static', 'offloaded_static', 'sliding_window', 'hybrid', 'hybrid_chunked', 'offloaded_hybrid', 'offloaded_hybrid_chunked', 'mamba', 'quantized', 'static', 'offloaded', 'dynamic']"
+        },
     )
 
     def update(self, **kwargs):
