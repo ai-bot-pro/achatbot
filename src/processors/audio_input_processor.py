@@ -1,6 +1,7 @@
 import logging
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Dict, Optional
 
 from apipeline.frames.base import Frame
 from apipeline.frames.control_frames import StartFrame
@@ -15,22 +16,23 @@ from apipeline.processors.frame_processor import FrameDirection
 from apipeline.processors.input_processor import InputProcessor
 
 from src.common.interface import IVADAnalyzer
-from src.common.types import AudioVADParams, VADState
+from src.common.types import AudioVADTurnParams, VADState
 from src.types.frames.control_frames import UserStartedSpeakingFrame, UserStoppedSpeakingFrame
-from src.types.frames.sys_frames import BotInterruptionFrame
+from src.types.frames.sys_frames import BotInterruptionFrame, MetricsFrame
+from src.types.speech.turn_analyzer import EndOfTurnState
 
 
 class AudioVADInputProcessor(InputProcessor):
     def __init__(
         self,
-        params: AudioVADParams,
+        params: AudioVADTurnParams,
         name: str | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
         **kwargs,
     ):
         super().__init__(name=name, loop=loop, **kwargs)
         self._params = params
-        self._executor = ThreadPoolExecutor(max_workers=3)
+        self._executor = ThreadPoolExecutor(max_workers=1)
 
         self._vad_analyzer: IVADAnalyzer | None = params.vad_analyzer
 
@@ -92,11 +94,15 @@ class AudioVADInputProcessor(InputProcessor):
 
                 audio_passthrough = True
 
+                previous_vad_state = vad_state
                 # Check VAD and push event if necessary. We just care about
                 # changes from QUIET to SPEAKING and vice versa.
                 if self._params.vad_enabled:
                     vad_state = await self._handle_vad(frame.audio, vad_state)
                     audio_passthrough = self._params.vad_audio_passthrough
+
+                if self._params.turn_analyzer:
+                    await self._run_turn_analyzer(frame, vad_state, previous_vad_state)
 
                 # Push audio downstream if passthrough.
                 if audio_passthrough:
@@ -138,6 +144,36 @@ class AudioVADInputProcessor(InputProcessor):
 
             vad_state = new_vad_state
         return vad_state
+
+    async def _run_turn_analyzer(
+        self, frame: AudioRawFrame, vad_state: VADState, previous_vad_state: VADState
+    ):
+        """Run turn analysis on audio frame and handle results."""
+        is_speech = vad_state == VADState.SPEAKING or vad_state == VADState.STARTING
+        # If silence exceeds threshold, we are going to receive EndOfTurnState.COMPLETE
+        end_of_turn_state = self._params.turn_analyzer.append_audio(frame.audio, is_speech)
+        if end_of_turn_state == EndOfTurnState.COMPLETE:
+            await self._handle_end_of_turn_complete(end_of_turn_state)
+        # Otherwise we are going to trigger to check if the turn is completed based on the VAD
+        elif vad_state == VADState.QUIET and vad_state != previous_vad_state:
+            await self._handle_end_of_turn()
+
+    async def _handle_end_of_turn_complete(self, state: EndOfTurnState):
+        """Handle completion of end-of-turn analysis."""
+        if state == EndOfTurnState.COMPLETE:
+            await self._handle_interruptions(UserStoppedSpeakingFrame(), True)
+
+    async def _handle_end_of_turn(self):
+        """Handle end-of-turn analysis and generate prediction results."""
+        if self.turn_analyzer:
+            state, prediction = await self.turn_analyzer.analyze_end_of_turn()
+            await self._handle_prediction_result(prediction)
+            await self._handle_end_of_turn_complete(state)
+
+    async def _handle_prediction_result(self, result: Optional[Dict[str, Any]] = None):
+        """Handle a prediction result event from the turn analyzer."""
+        pass
+        # todo: add metrics frame to push
 
     #
     # Handle interruptions
