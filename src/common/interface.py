@@ -129,8 +129,8 @@ class IVADAnalyzer(ABC):
 class ITurnAnalyzer(ABC):
     """Abstract base class for analyzing user end of turn.
 
-    This class inherits from BaseObject to leverage its event handling system
-    while still defining an abstract interface through abstract methods.
+    This class defines the abstract interface for turn analyzers, which are
+    responsible for determining when a user has finished speaking.
     """
 
     @property
