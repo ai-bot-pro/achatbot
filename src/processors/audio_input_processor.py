@@ -48,6 +48,7 @@ class AudioVADInputProcessor(InputProcessor):
     #
 
     async def start(self, frame: StartFrame):
+        logging.info(f"{self.name} start, params: {self._params}")
         # Create audio input queue and task if needed.
         if self._params.audio_in_enabled or self._params.vad_enabled:
             self._audio_in_queue = asyncio.Queue()
@@ -134,10 +135,16 @@ class AudioVADInputProcessor(InputProcessor):
             and new_vad_state != VADState.STOPPING
         ):
             frame = None
+            can_create_user_frames = (
+                self._params.turn_analyzer is None
+                or not self._params.turn_analyzer.speech_triggered
+            )
             if new_vad_state == VADState.SPEAKING:
-                frame = UserStartedSpeakingFrame()
+                if can_create_user_frames:
+                    frame = UserStartedSpeakingFrame()
             elif new_vad_state == VADState.QUIET:
-                frame = UserStoppedSpeakingFrame()
+                if can_create_user_frames:
+                    frame = UserStoppedSpeakingFrame()
 
             if frame:
                 await self._handle_interruptions(frame, True)
@@ -165,8 +172,8 @@ class AudioVADInputProcessor(InputProcessor):
 
     async def _handle_end_of_turn(self):
         """Handle end-of-turn analysis and generate prediction results."""
-        if self.turn_analyzer:
-            state, prediction = await self.turn_analyzer.analyze_end_of_turn()
+        if self._params.turn_analyzer:
+            state, prediction = await self._params.turn_analyzer.analyze_end_of_turn()
             await self._handle_prediction_result(prediction)
             await self._handle_end_of_turn_complete(state)
 

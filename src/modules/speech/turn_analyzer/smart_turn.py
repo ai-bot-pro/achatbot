@@ -179,7 +179,7 @@ class BaseSmartTurn(ITurnAnalyzer, EngineClass):
 
                 e2e_processing_time_ms = (end_time - start_time) * 1000
 
-                logging.info(f"processing time_ms: {e2e_processing_time_ms}")
+                logging.info(f"{e2e_processing_time_ms=} {state=} {result=}")
             except TurnTimeoutException:
                 logging.warning(
                     f"End of Turn complete due to stop_secs. Silence in ms: {self._silence_ms}"

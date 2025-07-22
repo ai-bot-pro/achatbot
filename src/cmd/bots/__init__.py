@@ -43,6 +43,10 @@ def import_bots(bot_name: str = "DummyBot"):
         from . import daily_bot
 
         return True
+    if "DailyTurnBot" in bot_name:
+        from .turn import daily_turn_bot
+
+        return True
     if "DailyLangchainRAGBot" in bot_name:
         from .rag import daily_langchain_rag_bot
 
@@ -161,6 +165,10 @@ def import_bots(bot_name: str = "DummyBot"):
         return True
     if "LivekitBot" in bot_name:
         from . import livekit_bot
+
+        return True
+    if "LivekitTurnBot" in bot_name:
+        from .turn import livekit_turn_bot
 
         return True
     if "LivekitDescribeVisionBot" in bot_name:
