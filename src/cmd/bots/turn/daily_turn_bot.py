@@ -117,10 +117,11 @@ class DailyTurnBot(DailyRoomBot):
             hi_text = "Please introduce yourself first."
             if self._bot_config.llm.language and self._bot_config.llm.language == "zh":
                 hi_text = "请用中文介绍下自己。"
-            self._bot_config.llm.messages.append(
+            messages = self._bot_config.llm.messages.copy()
+            messages.append(
                 {
                     "role": "user",
                     "content": hi_text,
                 }
             )
-            await self.task.queue_frames([LLMMessagesFrame(self._bot_config.llm.messages)])
+            await self.task.queue_frames([LLMMessagesFrame(messages)])
