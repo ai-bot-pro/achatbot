@@ -1,5 +1,5 @@
 import os
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.common.types import MODELS_DIR, RATE
 
@@ -20,6 +20,10 @@ class SmartTurnArgs(BaseModel):
     """
 
     model_path: str = os.path.join(MODELS_DIR, "pipecat-ai/smart-turn-v2")
+    torch_dtype: str = Field(
+        default="float32",
+        description="The PyTorch data type for the model and input tensors. One of `float32` (full-precision),  `bfloat16` (half-precision), default float32.",
+    )
     warmup_steps: int = 2
     sample_rate: int = RATE
     stop_secs: float = STOP_SECS

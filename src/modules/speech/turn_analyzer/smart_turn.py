@@ -19,7 +19,7 @@ try:
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        "In order to use SmartTurnAnalyzerV2, you need to `pip install achatbot[smart-turn]`."
+        "In order to use SmartTurnAnalyzerV2, you need to `pip install achatbot[smart_turn]`."
     )
     raise Exception(f"Missing module: {e}")
 
@@ -219,9 +219,24 @@ class SmartTurnAnalyzerV2(BaseSmartTurn):
         """
         super().__init__(**kwargs)
 
+        self.torch_dtype = torch.float32
+        if self.args.torch_dtype != "auto":
+            self.torch_dtype = getattr(torch, self.args.torch_dtype)
+
+        gpu_major = 0
+        if torch.cuda.is_available():
+            gpu_prop = torch.cuda.get_device_properties("cuda")
+            gpu_major = gpu_prop.major
+
         logging.debug("Loading Local Smart Turn v2 model...")
         # Load the pretrained model for sequence classification
-        self._turn_model = _Wav2Vec2ForEndpointing.from_pretrained(self.args.model_path)
+        self._turn_model = Wav2Vec2ForEndpointing.from_pretrained(
+            self.args.model_path,
+            torch_dtype=self.torch_dtype,
+            attn_implementation="flash_attention_2"
+            if gpu_major >= 8 and self.torch_dtype == torch.bfloat16
+            else None,
+        )
         # Load the corresponding feature extractor for preprocessing audio
         self._turn_processor = Wav2Vec2Processor.from_pretrained(self.args.model_path)
         # Set device to GPU if available, else CPU
@@ -246,7 +261,7 @@ class SmartTurnAnalyzerV2(BaseSmartTurn):
             max_length=16000 * 16,
             return_attention_mask=True,
             return_tensors="pt",
-        )
+        ).to(self._device, dtype=self.torch_dtype)
 
         for i in range(self.args.warmup_steps):
             with torch.no_grad():
@@ -266,7 +281,7 @@ class SmartTurnAnalyzerV2(BaseSmartTurn):
             max_length=16000 * 16,  # 16 seconds at 16kHz
             return_attention_mask=True,
             return_tensors="pt",
-        )
+        ).to(self._device, dtype=self.torch_dtype)
 
         # Move inputs to device
         inputs = {k: v.to(self._device) for k, v in inputs.items()}
@@ -287,7 +302,7 @@ class SmartTurnAnalyzerV2(BaseSmartTurn):
         }
 
 
-class _Wav2Vec2ForEndpointing(Wav2Vec2PreTrainedModel):
+class Wav2Vec2ForEndpointing(Wav2Vec2PreTrainedModel):
     def __init__(self, config: Wav2Vec2Config):
         super().__init__(config)
         self.wav2vec2 = Wav2Vec2Model(config)

@@ -1,8 +1,8 @@
 import logging
 import unittest
 import os
-import wave
 
+import wave
 from pydub import AudioSegment
 
 from src.common.logger import Logger
@@ -14,6 +14,7 @@ from src.modules.speech.turn_analyzer import TurnAnalyzerEnvInit
 
 r"""
 LOG_LEVEL=debug TURN_ANALYZER_TAG=v2_smart_turn_analyzer python -m unittest test.modules.speech.turn_analyzer.test_smart_turn.TestTurnAnalyzer.test_end
+TURN_TORCH_DTYPE=bfloat16 TURN_ANALYZER_TAG=v2_smart_turn_analyzer python -m unittest test.modules.speech.turn_analyzer.test_smart_turn.TestTurnAnalyzer.test_end
 
 TURN_ANALYZER_TAG=v2_smart_turn_analyzer python -m unittest test.modules.speech.turn_analyzer.test_smart_turn.TestTurnAnalyzer.test_no_end
 """
@@ -31,6 +32,7 @@ class TestTurnAnalyzer(unittest.IsolatedAsyncioTestCase):
         cls.model_name_or_path = os.getenv(
             "TURN_MODEL_PATH", os.path.join(MODELS_DIR, "pipecat-ai/smart-turn-v2")
         )
+        cls.torch_dtype = os.getenv("TURN_TORCH_DTYPE", "float32")
         Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
 
     @classmethod
@@ -40,6 +42,7 @@ class TestTurnAnalyzer(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         kwargs = {}
         kwargs["model_path"] = self.model_name_or_path
+        kwargs["torch_dtype"] = self.torch_dtype
 
         self.turn: ITurnAnalyzer = TurnAnalyzerEnvInit.initTurnAnalyzerEngine(self.tag, kwargs)
 

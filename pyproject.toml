@@ -16,7 +16,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.21.post3"
+version = "0.0.22"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -186,12 +186,19 @@ silero_vad = ["achatbot[torch_vision_audio]"]
 webrtc_silero_vad = ["achatbot[webrtcvad,silero_vad]"]
 speech_vad = ["achatbot[pyannote_vad,webrtcvad,silero_vad]"]
 
+
 #speech_vad_analyzer
 # vad_analyzer module tag -> pkgs
 daily_webrtc_vad_analyzer = ["achatbot[daily]"]
 silero_vad_analyzer = ["achatbot[silero_vad]"]
 speech_vad_analyzer = [
     "achatbot[daily_webrtc_vad_analyzer,silero_vad_analyzer]",
+]
+
+# turn analyzer module tag -> pkgs
+smart_turn = [
+   "torch",
+   "transformers",
 ]
 
 # recorder module tag -> pkgs
