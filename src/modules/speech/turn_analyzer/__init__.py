@@ -19,12 +19,15 @@ class TurnAnalyzerEnvInit:
     def get_smart_turn_analyzer_args() -> dict:
         args = dict(
             **SmartTurnArgs(
-                model_path=os.getenv("TURN_MODEL_PATH", os.path.join(MODELS_DIR, "pipecat-ai/smart-turn-v2")),
+                model_path=os.getenv(
+                    "TURN_MODEL_PATH", os.path.join(MODELS_DIR, "pipecat-ai/smart-turn-v2")
+                ),
+                warmup_steps=int(os.getenv("TURN_WARMUP_STEPS", "2")),
                 sample_rate=int(os.getenv("TURN_SAMPLE_RATE", "16000")),
                 stop_secs=float(os.getenv("TURN_STOP_SECS", "3")),
                 pre_speech_ms=float(os.getenv("TURN_PRE_SPEECH_MS", "0")),
                 max_duration_secs=float(os.getenv("TURN_MAX_DURATION_SECS", "8")),
-
+            )
         )
         return args
 

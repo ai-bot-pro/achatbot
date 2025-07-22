@@ -20,6 +20,7 @@ class SmartTurnArgs(BaseModel):
     """
 
     model_path: str = os.path.join(MODELS_DIR, "pipecat-ai/smart-turn-v2")
+    warmup_steps: int = 2
     sample_rate: int = RATE
     stop_secs: float = STOP_SECS
     pre_speech_ms: float = PRE_SPEECH_MS

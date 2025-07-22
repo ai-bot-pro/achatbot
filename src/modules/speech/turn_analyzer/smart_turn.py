@@ -27,6 +27,7 @@ from src.types.speech.turn_analyzer import EndOfTurnState
 from src.types.speech.turn_analyzer.smart_turn import SmartTurnArgs
 from src.common.factory import EngineClass
 from src.common.interface import ITurnAnalyzer
+from src.common.utils.helper import print_model_params
 
 
 class TurnTimeoutException(Exception):
@@ -228,7 +229,32 @@ class SmartTurnAnalyzerV2(BaseSmartTurn):
         # Move model to selected device and set it to evaluation mode
         self._turn_model = self._turn_model.to(self._device)
         self._turn_model.eval()
-        logging.debug("Loaded Local Smart Turn v2")
+        print_model_params(self._turn_model, extra_info="Smart Turn v2")
+
+        self.warmup()
+
+    def warmup(self):
+        if self.args.warmup_steps <= 0:
+            return
+        # Sample input for tracing (16 seconds of audio at 16kHz)
+        audio_random = torch.randn(16000 * 16)  # 16-second dummy audio
+        sample_input = self._turn_processor(
+            audio_random,
+            sampling_rate=16000,
+            padding="max_length",
+            truncation=True,
+            max_length=16000 * 16,
+            return_attention_mask=True,
+            return_tensors="pt",
+        )
+
+        for i in range(self.args.warmup_steps):
+            with torch.no_grad():
+                start_time = time.perf_counter()
+                _ = self._turn_model(**sample_input)
+                end_time = time.perf_counter()
+                e2e_processing_time_ms = (end_time - start_time) * 1000
+                logging.info(f"warmup step {i} {e2e_processing_time_ms=} ms")
 
     async def _predict_endpoint(self, audio_array: np.ndarray) -> Dict[str, Any]:
         """Predict end-of-turn using local PyTorch model."""

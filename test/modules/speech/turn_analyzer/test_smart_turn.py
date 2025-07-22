@@ -13,7 +13,7 @@ from src.modules.speech.turn_analyzer import TurnAnalyzerEnvInit
 
 
 r"""
-TURN_ANALYZER_TAG=v2_smart_turn_analyzer python -m unittest test.modules.speech.turn_analyzer.test_smart_turn.TestTurnAnalyzer.test_end
+LOG_LEVEL=debug TURN_ANALYZER_TAG=v2_smart_turn_analyzer python -m unittest test.modules.speech.turn_analyzer.test_smart_turn.TestTurnAnalyzer.test_end
 
 TURN_ANALYZER_TAG=v2_smart_turn_analyzer python -m unittest test.modules.speech.turn_analyzer.test_smart_turn.TestTurnAnalyzer.test_no_end
 """
