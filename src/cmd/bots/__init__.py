@@ -259,6 +259,10 @@ def import_bots(bot_name: str = "DummyBot"):
         from . import agora_bot
 
         return True
+    if "AgoraTurnBot" in bot_name:
+        from .turn import agora_turn_bot
+
+        return True
     if "AgoraEchoVisionBot" in bot_name:
         from .vision import agora_echo_vision_bot
 
