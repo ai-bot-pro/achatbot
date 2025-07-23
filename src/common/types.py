@@ -27,6 +27,7 @@ from .interface import (
     ILlm,
     ITts,
     IVADAnalyzer,
+    ITurnAnalyzer,
 )
 from .factory import EngineClass
 
@@ -497,6 +498,11 @@ class AudioVADParams(AudioParams):
     vad_analyzer: IVADAnalyzer | EngineClass | None = None
 
 
+class AudioVADTurnParams(AudioVADParams):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    turn_analyzer: ITurnAnalyzer | EngineClass | None = None
+
+
 class CameraParams(BaseModel):
     camera_in_enabled: bool = False
     camera_in_color_format: str = "RGB"
@@ -509,7 +515,7 @@ class CameraParams(BaseModel):
     camera_out_color_format: str = "RGB"
 
 
-class AudioCameraParams(CameraParams, AudioVADParams):
+class AudioCameraParams(CameraParams, AudioVADTurnParams):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
