@@ -75,3 +75,6 @@
 [submodule "deps/LAM_Audio2Expression"]
 	path = deps/LAM_Audio2Expression
 	url = https://github.com/weedge/LAM_Audio2Expression.git
+[submodule "deps/HiggsAudio"]
+	path = deps/HiggsAudio
+	url = https://github.com/weedge/higgs-audio.git
