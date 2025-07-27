@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 import subprocess
 import asyncio
 import threading
@@ -24,8 +25,10 @@ img = (
     .pip_install("flash-attn", extra_options="--no-build-isolation")
     .pip_install("soundfile")
     .run_commands(
-        "cd /higgs-audio && git pull origin feat/achatbot",
-        "cd /higgs-audio && git checkout ff9028f8fe58b7555c9cbafb2d4d59c7c1047bc9",
+        # "cd /higgs-audio && git pull origin feat/achatbot",
+        # "cd /higgs-audio && git checkout 314ff3595dfe260901f17205c1340fe97b7e6453",
+        "cd /higgs-audio && git pull origin feat/stream",
+        "cd /higgs-audio && git checkout 49984bcc38a0b25e140b49cf2eb087f738f52b8a",
         "cd /higgs-audio && pip install -e .",
     )
     .env(
@@ -51,11 +54,12 @@ hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
 ASSETS_DIR = "/root/.achatbot/assets"
 assets_dir = modal.Volume.from_name("assets", create_if_missing=True)
 
+
 with img.imports():
     # import torchaudio
     import torch
     import soundfile
-    import time
+    import numpy as np
 
     from loguru import logger
     from transformers.generation.streamers import BaseStreamer
@@ -66,8 +70,9 @@ with img.imports():
         HiggsAudioResponse,
         HiggsAudioStreamerDelta,
     )
-    from boson_multimodal.data_types import ChatMLSample, Message, AudioContent
+    from boson_multimodal.data_types import ChatMLSample, Message
     from boson_multimodal.audio_processing.higgs_audio_tokenizer import load_higgs_audio_tokenizer
+    from boson_multimodal.model.higgs_audio.utils import revert_delay_pattern
 
     MODEL_PATH = os.getenv("LLM_MODEL", "bosonai/higgs-audio-v2-generation-3B-base")
     AUDIO_TOKENIZER_PATH = os.getenv("AUDIO_TOKENIZER_PATH", "bosonai/higgs-audio-v2-tokenizer")
@@ -75,7 +80,7 @@ with img.imports():
     audio_tokenizer_path = os.path.join(HF_MODEL_DIR, AUDIO_TOKENIZER_PATH)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    class AsyncHiggsAudioStreamer(BaseStreamer):
+    class AsyncHiggsAudioStreamerDebug(BaseStreamer):
         def __init__(
             self,
             tokenizer: "AutoTokenizer",
@@ -106,7 +111,7 @@ with img.imports():
             For text tokens, decodes and caches them until complete words are formed.
             For audio tokens, directly queues them.
             """
-            logger.info(f"{value=}, {value.shape=}, {self.next_tokens_are_prompt=}")
+            # logger.info(f"{value=}, {value.shape=}, {self.next_tokens_are_prompt=}")
             if value.shape[0] > 1 and not self.next_tokens_are_prompt:
                 # This is likely audio tokens (shape: [audio_num_codebooks])
                 if value.shape[0] != self.audio_num_codebooks:
@@ -195,7 +200,7 @@ with img.imports():
 
                 self._prepare_kv_caches()
 
-                streamer = AsyncHiggsAudioStreamer(self.tokenizer, skip_prompt=True)
+                streamer = AsyncHiggsAudioStreamerDebug(self.tokenizer, skip_prompt=True)
                 generation_kwargs = dict(
                     **inputs,
                     max_new_tokens=max_new_tokens,
@@ -229,7 +234,7 @@ def print_model_params(model: torch.nn.Module, extra_info="", f=None):
 @app.function(
     gpu=os.getenv("IMAGE_GPU", None),
     cpu=2.0,
-    retries=1,
+    retries=0,
     image=img,
     volumes={
         HF_MODEL_DIR: hf_model_vol,
@@ -298,12 +303,12 @@ def audio_generate(**kwargs):
         ),
         Message(
             role="user",
-            # content="The sun rises in the east and sets in the west. This simple fact has been observed by humans for thousands of years.",
+            content="The sun rises in the east and sets in the west. This simple fact has been observed by humans for thousands of years.",
             # content="太阳东升西落。这个简单的现象，人类已经观察了数千年。",
-            content="好",
+            # content="好",
         ),
     ]
-    for i in range(2):
+    for i in range(1):
         logger.info(f"{i} Starting generation...")
         start_time = time.time()
         output: HiggsAudioResponse = serve_engine.generate(
@@ -358,7 +363,8 @@ def generation(**kwargs):
 
 
 async def audio_generate_stream(**kwargs):
-    serve_engine = HiggsAudioStreamServeEngine(
+    # serve_engine = HiggsAudioStreamServeEngine(
+    serve_engine = HiggsAudioServeEngine(
         model_path,
         audio_tokenizer_path,
         device=device,
@@ -374,14 +380,15 @@ async def audio_generate_stream(**kwargs):
         ),
         Message(
             role="user",
-            # content="The sun rises in the east and sets in the west. This simple fact has been observed by humans for thousands of years.",
+            content="The sun rises in the east and sets in the west. This simple fact has been observed by humans for thousands of years.",
             # content="太阳东升西落。这个简单的现象，人类已经观察了数千年。",
-            content="好",
+            # content="好",
         ),
     ]
     for i in range(1):
         logger.info(f"{i} Starting generation...")
-        output = serve_engine.generate_stream(
+        # output = serve_engine.generate_stream(
+        output = serve_engine.generate_delta_stream(
             chat_ml_sample=ChatMLSample(messages=messages),
             max_new_tokens=1024,
             temperature=0.3,
@@ -392,17 +399,93 @@ async def audio_generate_stream(**kwargs):
 
         audio_tokens = []
         audio_tensor = None
-        chunk_size = 2
-        async for delta in output:
-            if delta.text:
-                print(delta.text, end="", flush=True)
+        CHUNK_SIZE = 8
+        seq_len = 0
+        waveform_list = []
 
-            if delta.audio_tokens is None:
-                continue
-            # print(f"{delta.audio_tokens=}")
-            audio_tokens.append(delta.audio_tokens[:, None])
-            audio_tensor = torch.cat(audio_tokens, dim=-1)
-            print(f"{audio_tensor=}")
+        chunk_overlap_duration = kwargs.get("chunk_overlap_duration", 0.1)
+        cross_fade_samples = int(
+            chunk_overlap_duration * serve_engine.audio_tokenizer.sampling_rate
+        )
+        fade_out = np.linspace(1, 0, cross_fade_samples)
+        fade_in = np.linspace(0, 1, cross_fade_samples)
+
+        with torch.no_grad():
+            async for delta in output:
+                if delta.text:
+                    print(delta.text, end="", flush=True)
+
+                if delta.audio_tokens is None:
+                    continue
+
+                if torch.all(delta.audio_tokens == 1025):
+                    break
+
+                # print(f"{delta.audio_tokens=}")
+                audio_tokens.append(delta.audio_tokens[:, None])
+                audio_tensor = torch.cat(audio_tokens, dim=-1)
+                print(f"{audio_tensor=}")
+
+                if torch.all(delta.audio_tokens != 1024):
+                    seq_len += 1
+                    print(f"{delta.audio_tokens=} {seq_len=}")
+                if seq_len > 0 and seq_len % CHUNK_SIZE == 0:
+                    vq_code = (
+                        revert_delay_pattern(audio_tensor, start_idx=seq_len - CHUNK_SIZE + 1)
+                        .clip(0, 1023)
+                        .to(device)
+                    )
+
+                    print(f"vq_code shape: {vq_code.shape} {vq_code=}")
+                    waveform_numpy = serve_engine.audio_tokenizer.decode(vq_code.unsqueeze(0))[0, 0]
+                    waveform_list.append(waveform_numpy)
+
+                    # gen_audio_path = os.path.join(ASSETS_DIR, f"higgsv2_gen_audio_{i}_{seq_len}.wav")
+                    # soundfile.write(gen_audio_path, waveform_numpy, serve_engine.audio_tokenizer.sampling_rate)
+                    # info = soundfile.info(gen_audio_path, verbose=True)
+                    # print(f"\nSaved audio chunk to {gen_audio_path}, duration: {info.duration:.2f} seconds")
+
+            if seq_len > 0 and seq_len % CHUNK_SIZE != 0 and audio_tensor is not None:
+                print(f"{audio_tensor=} {seq_len=}")
+                vq_code = (
+                    revert_delay_pattern(audio_tensor, start_idx=seq_len - seq_len % CHUNK_SIZE + 1)
+                    .clip(0, 1023)
+                    .to(device)
+                )
+
+                print(f"vq_code shape: {vq_code.shape} {vq_code=}")
+                waveform_numpy = serve_engine.audio_tokenizer.decode(vq_code.unsqueeze(0))[0, 0]
+                waveform_list.append(waveform_numpy)
+
+            # new_audio = np.concatenate(waveform_list)
+
+            for j, audio in enumerate(waveform_list):
+                if j == 0:
+                    new_audio = audio[:-cross_fade_samples]
+                else:
+                    cross_faded_overlap = (
+                        waveform_list[j - 1][-cross_fade_samples:] * fade_out
+                        + audio[:cross_fade_samples] * fade_in
+                    )
+                    new_audio = np.concatenate(
+                        [
+                            new_audio,
+                            cross_faded_overlap,
+                            audio[cross_fade_samples:-cross_fade_samples],
+                        ]
+                    )
+            new_audio = np.concatenate([new_audio, audio[-cross_fade_samples:]])
+
+            gen_audio_path = os.path.join(ASSETS_DIR, f"higgsv2_gen_audio_stream_{i}.wav")
+            soundfile.write(
+                gen_audio_path,
+                new_audio,
+                serve_engine.audio_tokenizer.sampling_rate,
+                "PCM_16",
+            )
+            info = soundfile.info(gen_audio_path, verbose=True)
+            print(info)
+            print(f"\nSaved audio chunk to {gen_audio_path}, duration: {info.duration:.2f} seconds")
 
 
 """
@@ -427,6 +510,10 @@ HiggsAudioModel
     # Built on top of GenerationMixin._sample.
     # We revise the implementation to support generating both audio / text.
     def _sample()
+"""
+"""
+TIP:
+- 中文简单的词，比如 "好", 可能没有声音（人类所能分辨的音频段)
 """
 
 """
