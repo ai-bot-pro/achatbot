@@ -527,7 +527,7 @@ async def audio_generate_stream(**kwargs):
             gen_audio_path = os.path.join(ASSETS_DIR, f"higgsv2_gen_audio_stream_{i}.wav")
             soundfile.write(
                 gen_audio_path,
-                new_audio,
+                data,
                 serve_engine.audio_tokenizer.sampling_rate,
                 "PCM_16",
             )
