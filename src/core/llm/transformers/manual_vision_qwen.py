@@ -82,7 +82,7 @@ class TransformersManualVisionQwenLLM(TransformersBaseLLM):
         self.warmup()
 
     def warmup(self):
-        dummy_input_text = self.args.warnup_prompt
+        dummy_input_text = self.args.warmup_prompt
         dummy_msgs = [{"role": self.args.user_role, "content": dummy_input_text}]
 
         # Preparation for inference

@@ -56,6 +56,8 @@ class TTSEnvInit:
             from . import mega3_tts
         elif "tts_vita" == tag:
             from . import vita_tts
+        elif "tts_higgs" == tag:
+            from . import higgs_tts
         # elif "tts_openai" in tag:
         # from . import openai_tts
 
@@ -410,6 +412,40 @@ class TTSEnvInit:
         kwargs = LLMEnvInit.get_vita_audio_transformers_args()
         return kwargs
 
+    @staticmethod
+    def get_tts_higgs_args() -> dict:
+        from src.types.speech.tts.higgs import HiggsTTSArgs
+        from src.types.llm.transformers import TransformersSpeechLMArgs
+
+        kwargs = HiggsTTSArgs(
+            device=os.getenv("TTS_DEVICE", None),
+            audio_tokenizer_path=os.getenv(
+                "TTS_AUDIO_TOKENIZER_PATH",
+                os.path.join(MODELS_DIR, "bosonai/higgs-audio-v2-tokenizer"),
+            ),
+            lm_args=TransformersSpeechLMArgs(
+                lm_model_name_or_path=os.getenv(
+                    "TTS_LM_MODEL_PATH",
+                    os.path.join(MODELS_DIR, "bosonai/higgs-audio-v2-generation-3B-base"),
+                ),
+                lm_device=os.getenv("TTS_LM_DEVICE", None),
+                lm_gen_max_new_tokens=int(
+                    os.getenv("TTS_LM_GEN_MAX_NEW_TOKENS", "8192")
+                ),  # qwen2.5
+                warmup_steps=int(os.getenv("TTS_WARMUP_sparkS", "1")),
+                lm_gen_top_k=int(os.getenv("TTS_LM_GEN_TOP_K", "50")),
+                lm_gen_top_p=float(os.getenv("TTS_LM_GEN_TOP_P", "0.95")),
+                lm_gen_temperature=float(os.getenv("TTS_LM_GEN_TEMPERATURE", "0.8")),
+                lm_gen_repetition_penalty=float(os.getenv("TTS_LM_GEN_REPETITION_PENALTY", "1.1")),
+            ).__dict__,
+            chunk_size=int(os.getenv("TTS_CHUNK_SIZE", "8")),
+            ref_text=os.getenv("TTS_REF_TEXT", "对，这就是我，万人敬仰的太乙真人。"),
+            ref_audio_path=os.getenv(
+                "TTS_REF_AUDIO_PATH", os.path.join(ASSETS_DIR, "basic_ref_zh.wav")
+            ),
+        ).__dict__
+        return kwargs
+
     # TAG : config
     map_config_func = {
         "tts_coqui": get_tts_coqui_args,
@@ -432,6 +468,7 @@ class TTSEnvInit:
         "tts_generator_spark": get_tts_generator_spark_args,
         "tts_mega3": get_tts_mega3_args,
         "tts_vita": get_tts_vita_args,
+        "tts_higgs": get_tts_higgs_args,
     }
 
     @staticmethod

@@ -35,11 +35,11 @@ class TransformersManualSpeechOrpheus(TransformersBaseLLM):
         self.warmup()
 
     def warmup(self):
-        if self.args.warmup_steps <= 0 or not self.args.warnup_prompt:
+        if self.args.warmup_steps <= 0 or not self.args.warmup_prompt:
             logging.info("no warmup!")
             return
 
-        input_ids = self._tokenizer(self.args.warnup_prompt, return_tensors="pt").input_ids
+        input_ids = self._tokenizer(self.args.warmup_prompt, return_tensors="pt").input_ids
         start_token = torch.tensor([[128259]], dtype=torch.int64)  # Start of human
         end_tokens = torch.tensor([[128009, 128260]], dtype=torch.int64)  # End of text,
         modified_input_ids = torch.cat(

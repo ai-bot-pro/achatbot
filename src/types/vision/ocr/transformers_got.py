@@ -39,7 +39,7 @@ class TransformersGoTOCRArgs:
             "help": "The attention implementation to use. One of 'sdpa', 'flash_attention_2', default no attention implementation."
         },
     )
-    warnup_prompt: str = field(
+    warmup_prompt: str = field(
         default="Repeat the word 'weedge niu bi'.",
         metadata={"help": "warnup llm generate prompt. Default is 'weedge niu bi'."},
     )

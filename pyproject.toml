@@ -16,7 +16,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.22"
+version = "0.0.23"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -335,6 +335,24 @@ llm_transformers_manual_speech_spark = [
 ]
 llm_transformers_manual_speech_llama = [
     "achatbot[llm_transformers_manual_voice]",
+]
+llm_transformers_manual_speech_higgs = [
+    "torch",
+    "transformers>=4.45.1,<4.47.0",
+    "librosa",
+    "omegaconf",
+    "dacite",
+    "torchaudio",
+    "json_repair",
+    "pandas",
+    "pydantic",
+    "vector_quantize_pytorch",
+    "loguru",
+    "pydub",
+    "jieba",
+    "accelerate>=0.26.0",
+    "soundfile",
+    "descript-audio-codec",
 ]
 # vision voice llm
 llm_transformers_manual_vision_voice_minicpmo = [

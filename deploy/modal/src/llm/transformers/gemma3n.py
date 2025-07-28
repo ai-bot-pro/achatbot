@@ -427,7 +427,7 @@ def achatbot_gen_stream(gpu_prop):
             chat_history_size=10,
             lm_device="cuda",
             warmup_steps=1,
-            warnup_prompt="描述下图片",
+            warmup_prompt="描述下图片",
             lm_gen_temperature=0.6,
             lm_gen_repetition_penalty=1.1,
         ).__dict__
@@ -483,7 +483,7 @@ async def achatbot_asr(gpu_prop):
             chat_history_size=0,
             lm_device="cuda",
             warmup_steps=0,
-            warnup_prompt="描述下图片",
+            warmup_prompt="描述下图片",
             lm_gen_temperature=0.6,
             lm_gen_repetition_penalty=1.1,
         ).__dict__

@@ -61,12 +61,12 @@ class TransformersManualSpeechLlasa(TransformersBaseLLM):
         self.warmup()
 
     def warmup(self):
-        if self.args.warmup_steps <= 0 or not self.args.warnup_prompt:
+        if self.args.warmup_steps <= 0 or not self.args.warmup_prompt:
             logging.info("no warmup!")
             return
 
         formatted_text = (
-            f"<|TEXT_UNDERSTANDING_START|>{self.args.warnup_prompt}<|TEXT_UNDERSTANDING_END|>"
+            f"<|TEXT_UNDERSTANDING_START|>{self.args.warmup_prompt}<|TEXT_UNDERSTANDING_END|>"
         )
 
         # Tokenize the text

@@ -1,3 +1,4 @@
+import base64
 import sys
 import os
 import time
@@ -25,10 +26,10 @@ img = (
     .pip_install("flash-attn", extra_options="--no-build-isolation")
     .pip_install("soundfile")
     .run_commands(
-        # "cd /higgs-audio && git pull origin feat/achatbot",
-        # "cd /higgs-audio && git checkout 314ff3595dfe260901f17205c1340fe97b7e6453",
-        "cd /higgs-audio && git pull origin feat/stream",
-        "cd /higgs-audio && git checkout 49984bcc38a0b25e140b49cf2eb087f738f52b8a",
+        "cd /higgs-audio && git pull origin feat/achatbot",
+        "cd /higgs-audio && git checkout 59c590a82b4d0814b65b2b06c13b2d2a8fe69883",
+        # "cd /higgs-audio && git pull origin feat/stream",
+        # "cd /higgs-audio && git checkout 49984bcc38a0b25e140b49cf2eb087f738f52b8a",
         "cd /higgs-audio && pip install -e .",
     )
     .env(
@@ -45,8 +46,12 @@ img = (
 
 if APP_NAME == "achatbot":
     img = img.pip_install(
-        f"achatbot==0.0.22.dev0",
+        f"achatbot==0.0.23",
         extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+    ).env(
+        {
+            "ACHATBOT_PKG": "1",
+        }
     )
 
 HF_MODEL_DIR = "/root/.achatbot/models"
@@ -55,11 +60,20 @@ ASSETS_DIR = "/root/.achatbot/assets"
 assets_dir = modal.Volume.from_name("assets", create_if_missing=True)
 
 
+def encode_base64_content_from_file(file_path: str) -> str:
+    """Encode a content from a local file to base64 format."""
+    # Read the audio file as binary and encode it directly to Base64
+    with open(file_path, "rb") as audio_file:
+        audio_base64 = base64.b64encode(audio_file.read()).decode("utf-8")
+    return audio_base64
+
+
 with img.imports():
     # import torchaudio
     import torch
     import soundfile
     import numpy as np
+    import librosa
 
     from loguru import logger
     from transformers.generation.streamers import BaseStreamer
@@ -70,7 +84,7 @@ with img.imports():
         HiggsAudioResponse,
         HiggsAudioStreamerDelta,
     )
-    from boson_multimodal.data_types import ChatMLSample, Message
+    from boson_multimodal.data_types import ChatMLSample, Message, AudioContent
     from boson_multimodal.audio_processing.higgs_audio_tokenizer import load_higgs_audio_tokenizer
     from boson_multimodal.model.higgs_audio.utils import revert_delay_pattern
 
@@ -296,7 +310,7 @@ def audio_generate(**kwargs):
 
     system_prompt = "Generate audio following instruction.\n\n<|scene_desc_start|>\nAudio is recorded from a quiet room.\n<|scene_desc_end|>"
 
-    messages = [
+    zero_shot_messages = [
         Message(
             role="system",
             content=system_prompt,
@@ -308,6 +322,39 @@ def audio_generate(**kwargs):
             # content="好",
         ),
     ]
+
+    reference_text = (
+        "I would imagine so. A wand with a dragon heartstring core is capable of dazzling magic."
+    )
+    reference_audio = encode_base64_content_from_file(
+        "/higgs-audio/examples/serve_engine/voice_examples/old_man.wav"
+    )
+    ref_messages = [
+        Message(
+            role="system",
+            content=system_prompt,
+        ),
+        Message(
+            role="user",
+            content=reference_text,
+        ),
+        Message(
+            role="assistant",
+            content=AudioContent(raw_audio=reference_audio, audio_url="placeholder"),
+        ),
+        Message(
+            role="user",
+            # content="Hey, everyone! Welcome back to Tech Talk Tuesdays.\n"
+            # "It's your host, Alex, and today, we're diving into a topic that's become absolutely crucial in the tech world — deep learning.\n"
+            # "And let's be honest, if you've been even remotely connected to tech, AI, or machine learning lately, you know that deep learning is everywhere.",
+            content="嘿，各位！欢迎回到“科技对话星期二”。\n"
+            "我是主持人亚历克斯，今天我们要探讨的话题在科技界已经变得至关重要——深度学习。\n"
+            "说实话，如果你最近哪怕只是稍微关注一下科技、人工智能或者机器学习，你就会知道深度学习无处不在。",
+        ),
+    ]
+    example = kwargs.get("example", "zero_shot")
+    messages = ref_messages if example == "voice_clone" else zero_shot_messages
+
     for i in range(1):
         logger.info(f"{i} Starting generation...")
         start_time = time.time()
@@ -403,14 +450,14 @@ async def audio_generate_stream(**kwargs):
         seq_len = 0
         waveform_list = []
 
-        chunk_overlap_duration = kwargs.get("chunk_overlap_duration", 0.1)
+        chunk_overlap_duration = kwargs.get("chunk_overlap_duration", 0.04)
         cross_fade_samples = int(
             chunk_overlap_duration * serve_engine.audio_tokenizer.sampling_rate
         )
         fade_out = np.linspace(1, 0, cross_fade_samples)
         fade_in = np.linspace(0, 1, cross_fade_samples)
 
-        with torch.no_grad():
+        with torch.inference_mode():
             async for delta in output:
                 if delta.text:
                     print(delta.text, end="", flush=True)
@@ -475,6 +522,7 @@ async def audio_generate_stream(**kwargs):
                         ]
                     )
             new_audio = np.concatenate([new_audio, audio[-cross_fade_samples:]])
+            data, _ = librosa.effects.trim(new_audio, top_db=60)
 
             gen_audio_path = os.path.join(ASSETS_DIR, f"higgsv2_gen_audio_stream_{i}.wav")
             soundfile.write(
@@ -486,6 +534,88 @@ async def audio_generate_stream(**kwargs):
             info = soundfile.info(gen_audio_path, verbose=True)
             print(info)
             print(f"\nSaved audio chunk to {gen_audio_path}, duration: {info.duration:.2f} seconds")
+
+
+async def achatbot_audio_generate_stream(**kwargs):
+    from achatbot.common.interface import ITts
+    from achatbot.modules.speech.tts import TTSEnvInit
+    from achatbot.common.session import Session
+    from achatbot.common.types import SessionCtx
+    from achatbot.common.logger import Logger
+
+    Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
+
+    tts: ITts = TTSEnvInit.initTTSEngine("tts_higgs")
+    session = Session(**SessionCtx("test_tts_client_id").__dict__)
+    voices = tts.get_voices()
+    assert len(voices) == 1
+    print(voices)
+    tts.set_voice(
+        "/higgs-audio/examples/serve_engine/voice_examples/old_man.wav",
+        ref_speaker="test_speaker",
+        ref_text="I would imagine so. A wand with a dragon heartstring core is capable of dazzling magic.",
+    )
+    add_voices = tts.get_voices()
+    assert len(add_voices) == len(voices) + 1
+    print(add_voices)
+
+    stream_info = tts.get_stream_info()
+    print(f"stream_info:{stream_info}")
+
+    session.ctx.state["tts_text"] = "太阳东升西落。这个简单的现象，人类已经观察了数千年。"
+    session.ctx.state["temperature"] = 0.3
+    session.ctx.state["chunk_size"] = 8
+    # session.ctx.state["ref_speaker"] = "test_speaker"
+    # print(session.ctx)
+
+    times = []
+    start_time = time.perf_counter()
+    waveform_list = []
+    # for chunk_bytes in tts.synthesize_sync(session):
+    async for chunk_bytes in tts.synthesize(session):
+        times.append(time.perf_counter() - start_time)
+        waveform_numpy = np.frombuffer(chunk_bytes, dtype=stream_info["np_dtype"])
+        waveform_list.append(waveform_numpy)
+        start_time = time.perf_counter()
+    print(f"generate first time: {times[0]} s, cost time: {sum(times)} s")
+
+    chunk_overlap_duration = kwargs.get("chunk_overlap_duration", 0.04)
+    cross_fade_samples = int(chunk_overlap_duration * stream_info["rate"])
+    fade_out = np.linspace(1, 0, cross_fade_samples)
+    fade_in = np.linspace(0, 1, cross_fade_samples)
+
+    file_name = f"test_{tts.TAG}.wav"
+    file_path = os.path.join(ASSETS_DIR, file_name)
+
+    # new_audio = np.concatenate(waveform_list)
+
+    for j, audio in enumerate(waveform_list):
+        if j == 0:
+            new_audio = audio[:-cross_fade_samples]
+        else:
+            cross_faded_overlap = (
+                waveform_list[j - 1][-cross_fade_samples:] * fade_out
+                + audio[:cross_fade_samples] * fade_in
+            )
+            new_audio = np.concatenate(
+                [
+                    new_audio,
+                    cross_faded_overlap,
+                    audio[cross_fade_samples:-cross_fade_samples],
+                ]
+            )
+    new_audio = np.concatenate([new_audio, audio[-cross_fade_samples:]])
+    # 去除静音部分
+    new_audio, _ = librosa.effects.trim(new_audio, top_db=60)
+    soundfile.write(
+        file_path,
+        new_audio,
+        stream_info["rate"],
+        "PCM_16",
+    )
+    info = soundfile.info(file_path, verbose=True)
+    print(info)
+    print(f"\nSaved audio chunk to {file_path}, duration: {info.duration:.2f} seconds")
 
 
 """
@@ -513,14 +643,18 @@ HiggsAudioModel
 """
 """
 TIP:
-- 中文简单的词，比如 "好", 可能没有声音（人类所能分辨的音频段)
+- 中文简单的词，比如 "好", 有时没有生成声音（人类所能分辨的音频段)
 """
 
 """
 IMAGE_GPU=L4 modal run src/llm/transformers/higgs_audio.py --task dump_model
 
 IMAGE_GPU=L4 modal run src/llm/transformers/higgs_audio.py --task audio_generate
+IMAGE_GPU=L4 modal run src/llm/transformers/higgs_audio.py --task audio_generate --example voice_clone
+
 IMAGE_GPU=L4 modal run src/llm/transformers/higgs_audio.py --task audio_generate_stream
+
+APP_NAME=achatbot IMAGE_GPU=L4 modal run src/llm/transformers/higgs_audio.py --task achatbot_audio_generate_stream 
 
 IMAGE_GPU=L4 modal run src/llm/transformers/higgs_audio.py --task run_hf_example --example zero_shot
 IMAGE_GPU=L4 modal run src/llm/transformers/higgs_audio.py --task run_hf_example --example voice_clone 
@@ -660,6 +794,7 @@ def main(
         "audio_generate_stream": audio_generate_stream,
         "run_hf_example": run_hf_example,
         "generation": generation,
+        "achatbot_audio_generate_stream": achatbot_audio_generate_stream,
     }
     if task not in tasks:
         raise ValueError(f"task {task} not found")
