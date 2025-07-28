@@ -432,7 +432,7 @@ class TTSEnvInit:
                 lm_gen_max_new_tokens=int(
                     os.getenv("TTS_LM_GEN_MAX_NEW_TOKENS", "8192")
                 ),  # qwen2.5
-                warmup_steps=int(os.getenv("TTS_WARMUP_sparkS", "1")),
+                warmup_steps=int(os.getenv("TTS_WARMUP_STEPS", "1")),
                 lm_gen_top_k=int(os.getenv("TTS_LM_GEN_TOP_K", "50")),
                 lm_gen_top_p=float(os.getenv("TTS_LM_GEN_TOP_P", "0.95")),
                 lm_gen_temperature=float(os.getenv("TTS_LM_GEN_TEMPERATURE", "0.8")),
