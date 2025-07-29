@@ -124,7 +124,7 @@ class TransformersManualVisionDeepSeekVL2(TransformersBaseLLM):
         self.warmup()
 
     def warmup(self):
-        dummy_input_text = self.args.warnup_prompt
+        dummy_input_text = self.args.warmup_prompt
         conversation = [
             {
                 "role": "<|User|>",

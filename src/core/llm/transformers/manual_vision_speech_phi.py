@@ -79,7 +79,7 @@ class TransformersManualVisionSpeechPhiLM(TransformersBaseLLM):
     def warmup(self):
         if self.args.warmup_steps <= 0:
             return
-        dummy_input_text = self.args.warnup_prompt
+        dummy_input_text = self.args.warmup_prompt
         dummy_pil_image = Image.new("RGB", (100, 100), color="white")
         dummy_msgs = [
             {
@@ -134,9 +134,9 @@ class TransformersManualVisionSpeechPhiLM(TransformersBaseLLM):
                 image_cn += sub_image_cn
                 audio_cn += sub_audio_cn
                 for i in range(image_cn - sub_image_cn, image_cn):
-                    tmp_content += f"<|image_{i+1}|>"
+                    tmp_content += f"<|image_{i + 1}|>"
                 for i in range(audio_cn - sub_audio_cn, audio_cn):
-                    tmp_content += f"<|audio_{i+1}|>"
+                    tmp_content += f"<|audio_{i + 1}|>"
                 if tmp_text:
                     tmp_content += tmp_text
                 new_chat[-1]["content"] = tmp_content

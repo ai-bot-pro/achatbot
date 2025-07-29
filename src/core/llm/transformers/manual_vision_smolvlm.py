@@ -55,14 +55,16 @@ class TransformersManualVisionSmolLM(TransformersBaseLLM):
 
         logging.info(f"TransformersLMArgs: {self.args}")
         print_model_params(self._model, self.TAG)
-        self._tokenizer = AutoProcessor.from_pretrained(self.args.lm_model_name_or_path, use_fast=True)
+        self._tokenizer = AutoProcessor.from_pretrained(
+            self.args.lm_model_name_or_path, use_fast=True
+        )
 
         self.warmup()
 
     def warmup(self):
         if self.args.warmup_steps <= 0:
             return
-        dummy_input_text = self.args.warnup_prompt
+        dummy_input_text = self.args.warmup_prompt
         dummy_pil_image = Image.new("RGB", (100, 100), color="white")
         dummy_msgs = [
             {

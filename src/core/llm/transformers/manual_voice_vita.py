@@ -179,7 +179,7 @@ class TransformersManualTextVITALLM(TransformersBaseLLM):
         if self.args.warmup_steps < 1:
             return
         logging.info(f"Warming up {self.__class__.__name__} device: {self._model.device}")
-        dummy_input_text = self.args.warnup_prompt.strip()
+        dummy_input_text = self.args.warmup_prompt.strip()
 
         if "cuda" in str(self._model.device):
             start_event = torch.cuda.Event(enable_timing=True)
@@ -357,7 +357,7 @@ class TransformersManualTextVITALLM(TransformersBaseLLM):
             start_time = time.perf_counter()
 
         logging.info(
-            f"text [{text}] TTFT: {times[0]} s | total: {sum(times)} s | len: {len(times)} | avg: {sum(times)/len(times)} s"
+            f"text [{text}] TTFT: {times[0]} s | total: {sum(times)} s | len: {len(times)} | avg: {sum(times) / len(times)} s"
         )
 
 

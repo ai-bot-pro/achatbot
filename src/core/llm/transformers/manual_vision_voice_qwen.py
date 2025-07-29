@@ -158,7 +158,7 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
             {
                 "role": self.args.user_role,
                 "content": [
-                    {"type": "text", "text": self.args.warnup_prompt or "请简单介绍下自己"}
+                    {"type": "text", "text": self.args.warmup_prompt or "请简单介绍下自己"}
                 ],
             },
         ]

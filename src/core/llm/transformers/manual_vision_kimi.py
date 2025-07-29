@@ -122,7 +122,7 @@ class TransformersManualVisionKimi(TransformersBaseLLM):
     def warmup(self):
         if self.args.warmup_steps <= 0:
             return
-        dummy_input_text = self.args.warnup_prompt
+        dummy_input_text = self.args.warmup_prompt
         dummy_pil_image = Image.new("RGB", (100, 100), color="white")
         dummy_msgs = [
             {

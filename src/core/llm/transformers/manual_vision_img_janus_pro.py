@@ -84,7 +84,7 @@ class TransformersManualVisionJanusPro(TransformersManualJanusPro):
     TAG = "llm_transformers_manual_vision_janus"
 
     def warmup(self):
-        dummy_input_text = self.args.warnup_prompt
+        dummy_input_text = self.args.warmup_prompt
         conversation = [
             {
                 "role": "User",

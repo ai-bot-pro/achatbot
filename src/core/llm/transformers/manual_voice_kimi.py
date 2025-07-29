@@ -124,7 +124,7 @@ class TransformersManualVoiceKimiLLM(TransformersBaseLLM):
         if self.args.warmup_steps < 1:
             return
         logging.info(f"Warming up {self.__class__.__name__} device: {self._model.device}")
-        dummy_input_text = self.args.warnup_prompt.strip()
+        dummy_input_text = self.args.warmup_prompt.strip()
         text_token_ids = [self.extra_tokens.kimia_text_blank]  # user
         token_ids = self.prompt_manager.text_tokenizer.encode(
             dummy_input_text, bos=False, eos=False
@@ -178,7 +178,6 @@ class TransformersManualVoiceKimiLLM(TransformersBaseLLM):
                 )
             else:
                 logging.warning(f"step {step} warmup no generate stream")
-            step += 1
 
         if "cuda" in str(self._model.device):
             end_event.record()
@@ -406,11 +405,11 @@ class TransformersManualVoiceKimiLLM(TransformersBaseLLM):
             yield {"audio_wav": gen_speech}
 
         logging.info(
-            f"text [{audio_text}] TTFT: {times[0]} s | total: {sum(times)} s | len: {len(times)} | avg: {sum(times)/len(times)} s"
+            f"text [{audio_text}] TTFT: {times[0]} s | total: {sum(times)} s | len: {len(times)} | avg: {sum(times) / len(times)} s"
         )
         if len(audio_chunk_times) > 0:
             logging.info(
-                f"audio TTFT(chunk): {audio_chunk_times[0]} s | total: {sum(audio_chunk_times)} s | len: {len(audio_chunk_times)} | avg: {sum(audio_chunk_times)/len(audio_chunk_times)} s"
+                f"audio TTFT(chunk): {audio_chunk_times[0]} s | total: {sum(audio_chunk_times)} s | len: {len(audio_chunk_times)} | avg: {sum(audio_chunk_times) / len(audio_chunk_times)} s"
             )
 
 

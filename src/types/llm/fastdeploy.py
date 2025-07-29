@@ -18,7 +18,7 @@ class FastDeployEngineArgs:
         default="user",
         metadata={"help": "Role assigned to the user in the chat context. Default is 'user'."},
     )
-    warnup_prompt: str = field(
+    warmup_prompt: str = field(
         default="Repeat the word 'weedge niu bi'.",
         metadata={"help": "warnup llm generate prompt. Default is 'weedge niu bi'."},
     )

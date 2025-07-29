@@ -113,12 +113,10 @@ def convert_sampling_rate_to_16k(input_file, output_file):
     write(output_file, 16000, resampled_data.astype(np.int16))
 
 
-""" Smoothly combine audio segments using crossfade transitions." """
-
-
 def combine_audio_segments(
-    segments: List[np.ndarray], crossfade_duration=0.16, sr=24000
+    segments: List[np.ndarray], crossfade_duration=0.04, sr=24000
 ) -> np.ndarray:
+    """Smoothly combine audio segments using crossfade transitions." """
     window_length = int(sr * crossfade_duration)
     hanning_window = np.hanning(2 * window_length)
     # Combine

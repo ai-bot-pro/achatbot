@@ -78,7 +78,7 @@ class TransformersManualVisionMolmoLLM(TransformersBaseLLM):
         self.warmup()
 
     def warmup(self):
-        dummy_input_text = self.args.warnup_prompt
+        dummy_input_text = self.args.warmup_prompt
 
         dummy_image = Image.new(mode="RGB", size=(300, 300))
         img_obj = None

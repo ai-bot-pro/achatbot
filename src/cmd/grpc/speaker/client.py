@@ -255,6 +255,14 @@ TTS_TAG=tts_vita IS_SAVE=1 \
     FLOW_PATH=./models/THUDM/glm-4-voice-decoder \
     LLM_DEVICE=cuda LLM_TORCH_DTYPE=bfloat16 LLM_ATTN_IMP=flash_attention_2 \
     python -m src.cmd.grpc.speaker.client
+
+TTS_TAG=tts_higgs IS_SAVE=1 \
+    TTS_AUDIO_TOKENIZER_PATH=./models/bosonai/higgs-audio-v2-tokenizer \
+    TTS_LM_MODEL_PATH=./models/bosonai/higgs-audio-v2-generation-3B-base \
+    TTS_REF_TEXT="对，这就是我，万人敬仰的太乙真人。" \
+    TTS_REF_AUDIO_PATH="./assets/basic_ref_zh.wav" \
+    TTS_CHUNK_SIZE=16 \
+    python -m src.cmd.grpc.speaker.client
 """
 if __name__ == "__main__":
     player = None

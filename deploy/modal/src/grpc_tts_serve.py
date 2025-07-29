@@ -2,7 +2,7 @@ import os
 import modal
 
 app = modal.App("tts-grpc")
-achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.9.post7")
+achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.23")
 
 tts_grpc_image = (
     modal.Image.debian_slim(python_version="3.11")
@@ -10,6 +10,9 @@ tts_grpc_image = (
     .pip_install(
         f"achatbot[{os.getenv('TTS_TAG', 'tts_edge')},grpc]=={achatbot_version}",
         extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+    )
+    .pip_install(
+        "protobuf==5.29.2",
     )
     .env(
         {
@@ -37,9 +40,9 @@ torch_cache_vol = modal.Volume.from_name("torch_cache", create_if_missing=True)
         ASSETS_DIR: assets_dir,
         TORCH_CACHE_DIR: torch_cache_vol,
     },
-    timeout=1200,  # default 300s
+    timeout=86400,  # default 300s
     scaledown_window=1200,
-    max_containers=100,
+    max_containers=10,
 )
 def run():
     import subprocess
@@ -69,6 +72,27 @@ TTS_TAG=tts_orpheus IMAGE_GPU=T4 modal run src/grpc_tts_serve.py
 
 # tts_mega3
 TTS_TAG=tts_mega3 IMAGE_GPU=T4 modal run src/grpc_tts_serve.py
+
+# tts_higgs
+TTS_TAG=tts_higgs IMAGE_GPU=L4 modal run src/grpc_tts_serve.py
+
+# run grpc client
+TTS_TAG=tts_higgs IS_SAVE=1 SERVE_ADDR=r447.modal.host:35591 \
+    TTS_AUDIO_TOKENIZER_PATH=/root/.achatbot/models/bosonai/higgs-audio-v2-tokenizer \
+    TTS_LM_MODEL_PATH=/root/.achatbot/models/bosonai/higgs-audio-v2-generation-3B-base \
+    TTS_REF_TEXT="对，这就是我，万人敬仰的太乙真人。" \
+    TTS_REF_AUDIO_PATH="/root/.achatbot/assets/basic_ref_zh.wav" \
+    TTS_CHUNK_SIZE=16 \
+    python -m src.cmd.grpc.speaker.client
+
+# tips: u can pip install achatbot to run grpc client
+ACHATBOT_PKG=1 TTS_TAG=tts_higgs IS_SAVE=1 SERVE_ADDR=r447.modal.host:35591 \
+    TTS_AUDIO_TOKENIZER_PATH=/root/.achatbot/models/bosonai/higgs-audio-v2-tokenizer \
+    TTS_LM_MODEL_PATH=/root/.achatbot/models/bosonai/higgs-audio-v2-generation-3B-base \
+    TTS_REF_TEXT="对，这就是我，万人敬仰的太乙真人。" \
+    TTS_REF_AUDIO_PATH="/root/.achatbot/assets/basic_ref_zh.wav" \
+    TTS_CHUNK_SIZE=16 \
+    python -m achatbot.cmd.grpc.speaker.client
 """
 
 
