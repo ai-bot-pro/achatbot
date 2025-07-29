@@ -1,7 +1,10 @@
 from dataclasses import dataclass
+from typing import List
 
 
 from apipeline.frames.sys_frames import SystemFrame
+
+from src.types.metrics.metrics import MetricsData
 
 
 @dataclass
@@ -22,3 +25,16 @@ class FunctionCallInProgressFrame(SystemFrame):
     function_name: str
     tool_call_id: str
     arguments: str
+
+
+@dataclass
+class MetricsFrame(SystemFrame):
+    """Frame containing performance metrics data.
+
+    Emitted by processors that can compute metrics like latencies.
+
+    Parameters:
+        data: List of metrics data collected by the processor.
+    """
+
+    data: List[MetricsData]

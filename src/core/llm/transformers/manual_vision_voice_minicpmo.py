@@ -198,7 +198,7 @@ class TransformersManualMiniCPMO(TransformersBaseLLM):
             return
         logging.info(f"Warming up {self.__class__.__name__} device: {self._model.device}")
 
-        dummy_input_text = self.args.warnup_prompt
+        dummy_input_text = self.args.warmup_prompt
         content = [dummy_input_text]
         if self.init_vision is True:
             dummy_pil_image = Image.new("RGB", (100, 100), color="white")

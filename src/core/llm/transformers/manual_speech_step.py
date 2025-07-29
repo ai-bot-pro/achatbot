@@ -129,7 +129,7 @@ class TransformersManualSpeechStep(TransformersBaseLLM):
         if self.args.warmup_steps < 1:
             return
         logging.info(f"Warming up {self.__class__.__name__} device: {self._model.device}")
-        dummy_input_text = self.args.warnup_prompt.strip()
+        dummy_input_text = self.args.warmup_prompt.strip()
         prompt = f"<s><|BOT|><s> system\n{self.sys_prompt}"
         prompt += f"<|EOT|><|BOT|><s> human\n{dummy_input_text}"
         prompt += "<|EOT|><|BOT|><s> assistant\n"

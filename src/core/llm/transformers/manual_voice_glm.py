@@ -78,7 +78,7 @@ class TransformersManualVoicGLM(TransformersBaseLLM):
         # self.warmup()
 
     def warmup(self):
-        dummy_input_text = self.args.warnup_prompt.strip()
+        dummy_input_text = self.args.warmup_prompt.strip()
         # NOTE: must use system prompt.
         inputs = f"<|system|>\n{self.DEFAULT_SYS_PROMPT}<|user|>\n{dummy_input_text}<|assistant|>streaming_transcription\n"
         model_inputs = self._tokenizer([inputs], return_tensors="pt").to(self._model.device)

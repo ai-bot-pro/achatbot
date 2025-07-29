@@ -1537,7 +1537,7 @@ def omni_chatting_for_math_stream():
         print(f"Audio saved to {save_audio_path}")
         info = sf.info(save_audio_path, verbose=True)
         print(
-            f"thinker->talker->code2wav streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+            f"thinker->talker->code2wav streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times) / info.duration}"
         )
 
 
@@ -1593,7 +1593,7 @@ def omni_chatting_for_math_chunk_stream():
         print(f"All Audio saved to {save_audio_path}")
         info = sf.info(save_audio_path, verbose=True)
         print(
-            f"thinker->talker->code2wav chunk streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+            f"thinker->talker->code2wav chunk streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times) / info.duration}"
         )
 
 
@@ -1658,7 +1658,7 @@ def omni_chatting_for_music_stream():
         print(f"Audio saved to {save_audio_path}")
         info = sf.info(save_audio_path, verbose=True)
         print(
-            f"thinker->talker->code2wav streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+            f"thinker->talker->code2wav streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times) / info.duration}"
         )
 
 
@@ -1713,7 +1713,7 @@ def omni_chatting_for_music_chunk_stream():
         print(f"All Audio saved to {save_audio_path}")
         info = sf.info(save_audio_path, verbose=True)
         print(
-            f"thinker->talker->code2wav chunk streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+            f"thinker->talker->code2wav chunk streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times) / info.duration}"
         )
 
 
@@ -2150,7 +2150,7 @@ def omni_chatting_stream():
         sf.write(save_audio_path, np.concatenate(audios), samplerate=24000)
         info = sf.info(save_audio_path, verbose=True)
         print(
-            f"thinker->talker->code2wav streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+            f"thinker->talker->code2wav streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times) / info.duration}"
         )
 
 
@@ -2196,7 +2196,7 @@ def omni_chatting_segment_stream():
     print(f"All Audio saved to {save_audio_path}")
     info = sf.info(save_audio_path, verbose=True)
     print(
-        f"thinker->talker->code2wav chunk streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+        f"thinker->talker->code2wav chunk streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times) / info.duration}"
     )
 
 
@@ -2242,7 +2242,7 @@ def image_chatting_stream():
         sf.write(save_audio_path, np.concatenate(audios), samplerate=24000)
         info = sf.info(save_audio_path, verbose=True)
         print(
-            f"thinker->talker->code2wav streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+            f"thinker->talker->code2wav streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times) / info.duration}"
         )
 
 
@@ -2298,7 +2298,7 @@ def image_chatting_segment_stream():
     print(f"All Audio saved to {save_audio_path}")
     info = sf.info(save_audio_path, verbose=True)
     print(
-        f"thinker->talker->code2wav chunk streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+        f"thinker->talker->code2wav chunk streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times) / info.duration}"
     )
 
 
@@ -2344,7 +2344,7 @@ def audio_image_chatting_stream():
         sf.write(save_audio_path, np.concatenate(audios), samplerate=24000)
         info = sf.info(save_audio_path, verbose=True)
         print(
-            f"thinker->talker->code2wav streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+            f"thinker->talker->code2wav streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times) / info.duration}"
         )
 
 
@@ -2396,7 +2396,7 @@ def audio_image_chatting_segment_stream():
     print(f"All Audio saved to {save_audio_path}")
     info = sf.info(save_audio_path, verbose=True)
     print(
-        f"thinker->talker->code2wav chunk streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+        f"thinker->talker->code2wav chunk streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times) / info.duration}"
     )
 
 
@@ -2475,7 +2475,7 @@ def achatbot_generate():
     args["speaker"] = "Ethan"
     args["lm_attn_impl"] = "flash_attention_2"
     args["warmup_steps"] = 1
-    args["warnup_prompt"] = "你叫什么名字？"
+    args["warmup_prompt"] = "你叫什么名字？"
     args["is_use_sliding_window_code2wav"] = True
     args["thinker_all_talker_stream"] = False
     args["code2wav_args"]["enable_torch_compile"] = False
@@ -2536,7 +2536,7 @@ def achatbot_generate():
         print(f"All Audio saved to {save_audio_path}")
         info = sf.info(save_audio_path, verbose=True)
         print(
-            f"thinker->talker->code2wav chunk streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times)/info.duration}"
+            f"thinker->talker->code2wav chunk streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times) / info.duration}"
         )
 
 

@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Any, Iterator, AsyncGenerator, Generator, List
+from typing import Any, Iterator, AsyncGenerator, Generator, List, Dict, Optional, Tuple
+
+from src.types.speech.turn_analyzer import EndOfTurnState
 
 import numpy as np
 
@@ -122,6 +124,51 @@ class IVADAnalyzer(ABC):
     @abstractmethod
     def analyze_audio(self, buffer):
         raise NotImplementedError("must be implemented in the child class")
+
+
+class ITurnAnalyzer(ABC):
+    """Abstract base class for analyzing user end of turn.
+
+    This class defines the abstract interface for turn analyzers, which are
+    responsible for determining when a user has finished speaking.
+    """
+
+    @property
+    @abstractmethod
+    def speech_triggered(self) -> bool:
+        """Determines if speech has been detected.
+
+        Returns:
+            bool: True if speech is triggered, otherwise False.
+        """
+        pass
+
+    @abstractmethod
+    def append_audio(self, buffer: bytes, is_speech: bool) -> EndOfTurnState:
+        """Appends audio data for analysis.
+
+        Args:
+            buffer (bytes): The audio data to append.
+            is_speech (bool): Indicates whether the appended audio is speech or not.
+
+        Returns:
+            EndOfTurnState: The resulting state after appending the audio.
+        """
+        pass
+
+    @abstractmethod
+    async def analyze_end_of_turn(self) -> Tuple[EndOfTurnState, Optional[Dict[str, Any]]]:
+        """Analyzes if an end of turn has occurred based on the audio input.
+
+        Returns:
+            EndOfTurnState: The result of the end of turn analysis.
+        """
+        pass
+
+    @abstractmethod
+    def clear(self):
+        """Reset the turn analyzer to its initial state."""
+        pass
 
 
 class IAsr(ABC):

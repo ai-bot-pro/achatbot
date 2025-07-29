@@ -11,7 +11,7 @@ class TransformersManualLLM(TransformersBaseLLM):
     TAG = "llm_transformers_manual"
 
     def warmup(self):
-        dummy_input_text = self.args.warnup_prompt
+        dummy_input_text = self.args.warmup_prompt
         dummy_msgs = [{"role": self.args.user_role, "content": dummy_input_text}]
         text = self._tokenizer.apply_chat_template(
             dummy_msgs,

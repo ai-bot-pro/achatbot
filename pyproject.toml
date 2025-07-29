@@ -16,7 +16,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.21.post3"
+version = "0.0.23"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -150,9 +150,9 @@ together_ai = ["together~=1.3.3"]
 litellm = ["litellm~=1.52.0"]
 
 # rpc
-grpc = ["grpcio>=1.65.1"]
-grpc_tools = ["grpcio-tools>=1.65.1"]
-rpc = ["grpcio>=1.65.1"]
+grpc = ["grpcio>=1.71.0"]
+grpc_tools = ["grpcio-tools>=1.71.0"]
+rpc = ["grpcio>=1.71.0"]
 
 # queue
 redis = ["redis~=5.0.0"]
@@ -186,12 +186,19 @@ silero_vad = ["achatbot[torch_vision_audio]"]
 webrtc_silero_vad = ["achatbot[webrtcvad,silero_vad]"]
 speech_vad = ["achatbot[pyannote_vad,webrtcvad,silero_vad]"]
 
+
 #speech_vad_analyzer
 # vad_analyzer module tag -> pkgs
 daily_webrtc_vad_analyzer = ["achatbot[daily]"]
 silero_vad_analyzer = ["achatbot[silero_vad]"]
 speech_vad_analyzer = [
     "achatbot[daily_webrtc_vad_analyzer,silero_vad_analyzer]",
+]
+
+# turn analyzer module tag -> pkgs
+smart_turn = [
+   "torch",
+   "transformers",
 ]
 
 # recorder module tag -> pkgs
@@ -328,6 +335,23 @@ llm_transformers_manual_speech_spark = [
 ]
 llm_transformers_manual_speech_llama = [
     "achatbot[llm_transformers_manual_voice]",
+]
+llm_transformers_manual_speech_higgs = [
+    "torch",
+    "torchaudio",
+    "transformers>=4.45.1,<4.47.0",
+    "librosa",
+    "omegaconf",
+    "dacite",
+    "json_repair",
+    "pandas",
+    "vector_quantize_pytorch",
+    "loguru",
+    "jieba",
+    "accelerate>=0.26.0",
+    "soundfile",
+    # descript-audiotools need "protobuf >= 3.19.6, != 4.24.0, < 5.0.0", :(
+    "descript-audio-codec",
 ]
 # vision voice llm
 llm_transformers_manual_vision_voice_minicpmo = [
@@ -607,6 +631,9 @@ tts_mega3 = [
     "attrdict",
     "setproctitle==1.3.3",
     "achatbot[librosa]",
+]
+tts_higgs=[
+    "achatbot[llm_transformers_manual_speech_higgs]"
 ]
 
 

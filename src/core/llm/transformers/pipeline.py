@@ -23,7 +23,7 @@ class TransformersPipelineLLM(TransformersBaseLLM, ILlm):
         )
 
     def warmup(self):
-        dummy_input_text = self.args.warnup_prompt
+        dummy_input_text = self.args.warmup_prompt
         dummy_msgs = [{"role": self.args.user_role, "content": dummy_input_text}]
         streamer = TextIteratorStreamer(self._tokenizer, skip_prompt=True, skip_special_tokens=True)
         warmup_gen_kwargs = dict(

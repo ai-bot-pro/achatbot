@@ -57,12 +57,12 @@ class TransformersGenerator(TransformersBaseLLM, ILlmGenerator):
         self.warmup()
 
     def warmup(self):
-        if self.args.warmup_steps <= 0 or not self.args.warnup_prompt:
+        if self.args.warmup_steps <= 0 or not self.args.warmup_prompt:
             logging.info("no warmup!")
             return
 
         self.tokenizer = AutoTokenizer.from_pretrained(self.args.lm_model_name_or_path)
-        model_inputs = self.tokenizer([self.args.warnup_prompt], return_tensors="pt").to(
+        model_inputs = self.tokenizer([self.args.warmup_prompt], return_tensors="pt").to(
             self.args.lm_device
         )
 

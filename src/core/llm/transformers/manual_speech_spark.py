@@ -138,12 +138,12 @@ class TransformersManualSpeechSpark(TransformersBaseLLM):
         return inputs
 
     def warmup(self):
-        if self.args.warmup_steps <= 0 or not self.args.warnup_prompt:
+        if self.args.warmup_steps <= 0 or not self.args.warmup_prompt:
             logging.info("no warmup!")
             return
 
         prompt = self.process_prompt_control(
-            "female", "moderate", "moderate", self.args.warnup_prompt
+            "female", "moderate", "moderate", self.args.warmup_prompt
         )
         model_inputs = self.tokenizer([prompt], return_tensors="pt").to(self.args.lm_device)
 

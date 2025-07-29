@@ -39,6 +39,11 @@ class VADConfig(BaseModel):
     args: Optional[dict] = None
 
 
+class TurnConfig(BaseModel):
+    tag: Optional[str] = None
+    args: Optional[dict] = None
+
+
 class VisionDetectorConfig(BaseModel):
     tag: Optional[str] = None
     args: Optional[dict] = None
@@ -90,6 +95,7 @@ class MCPServerConfig(BaseModel):
 
 class AIConfig(BaseModel):
     vad: Optional[VADConfig] = None
+    turn: Optional[TurnConfig] = None
     asr: Optional[ASRConfig] = None
     avatar: Optional[AvatarConfig] = None
     mcp_servers: Optional[Dict[str, MCPServerConfig]] = None
