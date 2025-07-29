@@ -438,7 +438,7 @@ class TTSEnvInit:
                 lm_gen_temperature=float(os.getenv("TTS_LM_GEN_TEMPERATURE", "0.8")),
                 lm_gen_repetition_penalty=float(os.getenv("TTS_LM_GEN_REPETITION_PENALTY", "1.1")),
             ).__dict__,
-            chunk_size=int(os.getenv("TTS_CHUNK_SIZE", "8")),
+            chunk_size=int(os.getenv("TTS_CHUNK_SIZE", "16")),
             ref_text=os.getenv("TTS_REF_TEXT", "对，这就是我，万人敬仰的太乙真人。"),
             ref_audio_path=os.getenv(
                 "TTS_REF_AUDIO_PATH", os.path.join(ASSETS_DIR, "basic_ref_zh.wav")

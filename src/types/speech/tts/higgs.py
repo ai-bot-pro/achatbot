@@ -22,7 +22,7 @@ class HiggsTTSArgs:
     ref_audio_path: str = os.path.join(ASSETS_DIR, "basic_ref_zh.wav")
 
     # stream
-    chunk_size: int = 8
+    chunk_size: int = 16
     tts_stream: bool = True
     chunk_length_seconds: int = 1
 

@@ -27,7 +27,7 @@ img = (
     .pip_install("soundfile")
     .run_commands(
         "cd /higgs-audio && git pull origin feat/achatbot",
-        "cd /higgs-audio && git checkout 59c590a82b4d0814b65b2b06c13b2d2a8fe69883",
+        "cd /higgs-audio && git checkout b026c052bd2b6259947c1248f1cf2f14810f395e",
         # "cd /higgs-audio && git pull origin feat/stream",
         # "cd /higgs-audio && git checkout 49984bcc38a0b25e140b49cf2eb087f738f52b8a",
         "cd /higgs-audio && pip install -e .",
@@ -35,7 +35,7 @@ img = (
     .env(
         {
             "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
-            "TQDM_DISABLE": "0",
+            # "TQDM_DISABLE": "1",
             "LLM_MODEL": os.getenv("LLM_MODEL", "bosonai/higgs-audio-v2-generation-3B-base"),
             "AUDIO_TOKENIZER_PATH": os.getenv(
                 "AUDIO_TOKENIZER_PATH", "bosonai/higgs-audio-v2-tokenizer"
@@ -298,6 +298,25 @@ def audio_tokenize(**kwargs):
         "AUDIO_TOKENIZER_PATH", "bosonai/higgs-audio-v2-tokenizer"
     )
     audio_tokenizer = load_higgs_audio_tokenizer(audio_tokenizer_name_or_path, device=device)
+    print_model_params(audio_tokenizer, "higgs-audio-v2-tokenizer")
+    print_model_params(audio_tokenizer.semantic_model, "hubert_base")
+    # I would imagine so. A wand with a dragon heartstring core is capable of dazzling magic.
+    audio_file = "/higgs-audio/examples/serve_engine/voice_examples/old_man.wav"
+    vq_code = audio_tokenizer.encode(audio_file)
+    print(f"{vq_code.shape} {vq_code=}")
+
+    with torch.no_grad():
+        wavform_np = audio_tokenizer.decode(vq_code.unsqueeze(0))[0, 0]
+    print(f"{wavform_np.shape} {wavform_np=}")
+    file_path = os.path.join(ASSETS_DIR, "audio_tokenize.wav")
+    soundfile.write(
+        file_path,
+        wavform_np,
+        audio_tokenizer.sampling_rate,
+        "PCM_16",
+    )
+    info = soundfile.info(file_path, verbose=True)
+    print(info)
 
 
 def audio_generate(**kwargs):
@@ -427,9 +446,11 @@ async def audio_generate_stream(**kwargs):
         ),
         Message(
             role="user",
-            content="The sun rises in the east and sets in the west. This simple fact has been observed by humans for thousands of years.",
-            # content="太阳东升西落。这个简单的现象，人类已经观察了数千年。",
+            # content="The sun rises in the east and sets in the west. This simple fact has been observed by humans for thousands of years.",
+            content="太阳东升西落。这个简单的现象，人类已经观察了数千年。",
             # content="好",
+            # content="好！",
+            # content="good",
         ),
     ]
     for i in range(1):
@@ -446,7 +467,7 @@ async def audio_generate_stream(**kwargs):
 
         audio_tokens = []
         audio_tensor = None
-        CHUNK_SIZE = 8
+        CHUNK_SIZE = 16
         seq_len = 0
         waveform_list = []
 
@@ -522,12 +543,12 @@ async def audio_generate_stream(**kwargs):
                         ]
                     )
             new_audio = np.concatenate([new_audio, audio[-cross_fade_samples:]])
-            data, _ = librosa.effects.trim(new_audio, top_db=60)
+            new_audio, _ = librosa.effects.trim(new_audio, top_db=60)
 
             gen_audio_path = os.path.join(ASSETS_DIR, f"higgsv2_gen_audio_stream_{i}.wav")
             soundfile.write(
                 gen_audio_path,
-                data,
+                new_audio,
                 serve_engine.audio_tokenizer.sampling_rate,
                 "PCM_16",
             )

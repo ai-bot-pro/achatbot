@@ -58,6 +58,8 @@ class HiggsTTS(BaseTTS, ITts):
         self.lm_model = TransformersManualSpeechHiggs(**self.lm_args.__dict__)
         self.lm_tokenizer = self.lm_model.serve_engine.tokenizer
         self.audio_tokenizer = self.lm_model.serve_engine.audio_tokenizer
+        self.audio_stream_bos_id = self.lm_model.serve_engine.model.config.audio_stream_bos_id
+        self.audio_stream_eos_id = self.lm_model.serve_engine.model.config.audio_stream_eos_id
 
         self.voices = {}
         self.set_voice(self.args.ref_audio_path, ref_text=self.args.ref_text, ref_speaker="default")
@@ -129,13 +131,13 @@ class HiggsTTS(BaseTTS, ITts):
                 if delta["audio_vq_tokens"] is None:
                     continue
 
-                if torch.all(delta["audio_vq_tokens"] == 1025):
+                if torch.all(delta["audio_vq_tokens"] == self.audio_stream_eos_id):
                     break
 
                 audio_tokens.append(delta["audio_vq_tokens"][:, None])
                 audio_tensor = torch.cat(audio_tokens, dim=-1)
 
-                if torch.all(delta["audio_vq_tokens"] != 1024):
+                if torch.all(delta["audio_vq_tokens"] != self.audio_stream_bos_id):
                     seq_len += 1
                 if seq_len > 0 and seq_len % CHUNK_SIZE == 0:
                     vq_code = (
