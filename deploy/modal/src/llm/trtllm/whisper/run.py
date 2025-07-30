@@ -82,6 +82,13 @@ def run(
     subprocess.run("nvidia-smi --version", shell=True)
     subprocess.run("which nvcc", shell=True)
     subprocess.run("nvcc --version", shell=True)
+    cmd = f"python3 run.py --help"
+    subprocess.run(
+        cmd,
+        shell=True,
+        check=True,
+        cwd=WHISPER_DIRS[GIT_TAG_OR_HASH],
+    )
 
     if func is None:
         run_single_wav_test(app_name, engine_dir, other_args)
@@ -140,10 +147,9 @@ modal run src/llm/trtllm/whisper/run.py \
 
 ## Python runtime
 modal run src/llm/trtllm/whisper/run.py \
-    --other-args "--use_py_session" \
     --app-name "whisper" \
     --engine-dir "trt_engines_float16" \
-    --other-args "--log_level info"
+    --other-args "--log_level info --use_py_session"
 
 # run_dataset_bench, NOTE: have WER eval
 ## C++ runtime

@@ -1,3 +1,5 @@
+import os
+import logging
 import asyncio
 from typing import AsyncGenerator
 
@@ -21,13 +23,6 @@ class WhisperAsr(ASRBase):
         self.model = whisper.load_model(
             self.args.model_name_or_path, download_root=self.args.download_path
         )
-
-    def set_audio_data(self, audio_data):
-        if isinstance(audio_data, (bytes, bytearray)):
-            self.asr_audio = bytes2NpArrayWith16(audio_data)
-        if isinstance(audio_data, str):
-            self.asr_audio = audio_data
-        return
 
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
         transcription = await asyncio.to_thread(
@@ -152,13 +147,6 @@ class WhisperFasterAsr(ASRBase):
             )
         self.asr_audio = None
 
-    def set_audio_data(self, audio_data):
-        if isinstance(audio_data, (bytes, bytearray)):
-            self.asr_audio = bytes2NpArrayWith16(audio_data)
-        if isinstance(audio_data, str):
-            self.asr_audio = audio_data
-        return
-
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
         segmentsIter, _ = await asyncio.to_thread(
             self.model.transcribe,
@@ -227,13 +215,6 @@ class WhisperTransformersAsr(ASRBase):
                 torch_dtype=torch.float32,
             )
 
-    def set_audio_data(self, audio_data):
-        if isinstance(audio_data, (bytes, bytearray)):
-            self.asr_audio = bytes2NpArrayWith16(audio_data)
-        if isinstance(audio_data, str):
-            self.asr_audio = audio_data
-        return
-
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
         outputs = await asyncio.to_thread(
             self.pipe,
@@ -271,13 +252,6 @@ class WhisperTransformersAsr(ASRBase):
 
 class WhisperMLXAsr(ASRBase):
     TAG = "whisper_mlx_asr"
-
-    def set_audio_data(self, audio_data):
-        if isinstance(audio_data, (bytes, bytearray)):
-            self.asr_audio = bytes2NpArrayWith16(audio_data)
-        if isinstance(audio_data, str):
-            self.asr_audio = audio_data
-        return
 
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
         import mlx_whisper
