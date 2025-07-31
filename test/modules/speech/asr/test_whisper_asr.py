@@ -5,22 +5,31 @@ ASR_TAG=whisper_asr python -m unittest test.modules.speech.asr.test_whisper_asr.
 ASR_TAG=whisper_timestamped_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
 ASR_TAG=whisper_timestamped_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
 
-MODEL_NAME_OR_PATH=./models/Systran/faster-whisper-base ASR_VERBOSE=True ASR_TAG=whisper_faster_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
-MODEL_NAME_OR_PATH=./models/Systran/faster-whisper-base ASR_VERBOSE=True ASR_TAG=whisper_faster_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
+ASR_MODEL_NAME_OR_PATH=./models/Systran/faster-whisper-base ASR_VERBOSE=True ASR_TAG=whisper_faster_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
+ASR_MODEL_NAME_OR_PATH=./models/Systran/faster-whisper-base ASR_VERBOSE=True ASR_TAG=whisper_faster_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
 
-ASR_TAG=whisper_transformers_asr MODEL_NAME_OR_PATH=./models/openai/whisper-base python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
-ASR_TAG=whisper_transformers_asr MODEL_NAME_OR_PATH=./models/openai/whisper-base python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
+ASR_TAG=whisper_transformers_asr ASR_MODEL_NAME_OR_PATH=./models/openai/whisper-base python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
+ASR_TAG=whisper_transformers_asr ASR_MODEL_NAME_OR_PATH=./models/openai/whisper-base python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
 
 ASR_TAG=whisper_mlx_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
 ASR_TAG=whisper_mlx_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
 
-ASR_LANG=zn MODEL_NAME_OR_PATH=./models/FunAudioLLM/SenseVoiceSmall ASR_VERBOSE=True ASR_TAG=sense_voice_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
-ASR_LANG=zn MODEL_NAME_OR_PATH=./models/FunAudioLLM/SenseVoiceSmall ASR_VERBOSE=True ASR_TAG=sense_voice_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
+ASR_LANG=zn ASR_MODEL_NAME_OR_PATH=./models/FunAudioLLM/SenseVoiceSmall ASR_VERBOSE=True ASR_TAG=sense_voice_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
+ASR_LANG=zn ASR_MODEL_NAME_OR_PATH=./models/FunAudioLLM/SenseVoiceSmall ASR_VERBOSE=True ASR_TAG=sense_voice_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
 
-ASR_LANG=zh MODEL_NAME_OR_PATH=whisper-large-v3 ASR_TAG=whisper_groq_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
+ASR_LANG=zh ASR_MODEL_NAME_OR_PATH=whisper-large-v3 ASR_TAG=whisper_groq_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
 
-ASR_TAG=whisper_openvino_asr MODEL_NAME_OR_PATH=./models/OpenVINO/whisper-tiny-fp16-ov python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
-ASR_TAG=whisper_openvino_asr MODEL_NAME_OR_PATH=./models/OpenVINO/whisper-tiny-fp16-ov python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
+ASR_TAG=whisper_openvino_asr ASR_MODEL_NAME_OR_PATH=./models/OpenVINO/whisper-tiny-fp16-ov python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
+ASR_TAG=whisper_openvino_asr ASR_MODEL_NAME_OR_PATH=./models/OpenVINO/whisper-tiny-fp16-ov python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
+
+ASR_TAG=whisper_trtllm_asr \
+    ASR_TRTLLM_ENGINE_DIR=./models/Whisper/whisper-tiny-fp16-trtllm \
+    ASR_TRTLLM_ASSETS_DIR=./assets \
+    python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
+ASR_TAG=whisper_trtllm_asr \
+    ASR_TRTLLM_ENGINE_DIR=./models/Whisper/whisper-tiny-fp16-trtllm \
+    ASR_TRTLLM_ASSETS_DIR=./assets \
+    python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
 """
 
 import logging
@@ -32,13 +41,10 @@ import asyncio
 from src.common.logger import Logger
 from src.common.utils.helper import load_json, get_audio_segment
 from src.common.utils.wav import save_audio_to_file
-from src.common.factory import EngineFactory, EngineClass
 from src.common.session import Session
 from src.common.interface import IAsr
 from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR
-import src.modules.speech.asr.whisper_asr
-import src.modules.speech.asr.whisper_groq_asr
-import src.modules.speech.asr.sense_voice_asr
+from src.modules.speech.asr import ASREnvInit
 
 
 class TestWhisperASR(unittest.TestCase):
@@ -50,10 +56,7 @@ class TestWhisperASR(unittest.TestCase):
         audio_file = os.path.join(TEST_DIR, "audio_files/asr_example_zh.wav")
         # Use an environment variable to get the ASR model TAG
         cls.asr_tag = os.getenv("ASR_TAG", "whisper_faster_asr")
-        cls.asr_lang = os.getenv("ASR_LANG", "zh")
         cls.audio_file = os.getenv("AUDIO_FILE", audio_file)
-        cls.verbose = os.getenv("ASR_VERBOSE", "")
-        cls.model_name_or_path = os.getenv("MODEL_NAME_OR_PATH", "base")
         Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False)
 
     @classmethod
@@ -61,11 +64,7 @@ class TestWhisperASR(unittest.TestCase):
         pass
 
     def setUp(self):
-        kwargs = {}
-        kwargs["model_name_or_path"] = self.model_name_or_path
-        kwargs["download_path"] = MODELS_DIR
-        kwargs["verbose"] = bool(self.verbose)
-        self.asr: IAsr = EngineFactory.get_engine_by_tag(EngineClass, self.asr_tag, **kwargs)
+        self.asr: IAsr = ASREnvInit.initASREngine(self.asr_tag)
 
         self.annotations_path = os.path.join(TEST_DIR, "audio_files/annotations.json")
 
@@ -76,7 +75,6 @@ class TestWhisperASR(unittest.TestCase):
 
     def test_transcribe_stream(self):
         self.asr.set_audio_data(self.audio_file)
-        self.asr.args.language = self.asr_lang
         res = self.asr.transcribe_stream_sync(self.session)
         for word in res:
             print(word)
@@ -108,13 +106,11 @@ class TestWhisperASR(unittest.TestCase):
     def test_transcribe_with_bytes(self):
         with open(self.audio_file, "rb") as file:
             self.asr.set_audio_data(file.read())
-            self.asr.args.language = self.asr_lang
             res = asyncio.run(self.asr.transcribe(self.session))
             print(res)
 
     def test_transcribe(self):
         self.asr.set_audio_data(self.audio_file)
-        self.asr.args.language = self.asr_lang
         res = asyncio.run(self.asr.transcribe(self.session))
         print(res)
 

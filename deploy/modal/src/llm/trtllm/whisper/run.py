@@ -5,14 +5,14 @@ import subprocess
 import modal
 
 app = modal.App("trtllm-run-whisper")
-# https://github.com/NVIDIA/TensorRT-LLM/blob/v0.20.0rc0/examples/models/core/whisper/README.md
-# GIT_TAG_OR_HASH = "v0.20.0rc0"
 # https://github.com/NVIDIA/TensorRT-LLM/tree/v0.15.0/examples/whisper
+# https://github.com/NVIDIA/TensorRT-LLM/tree/v0.18.0/examples/whisper
+# https://github.com/NVIDIA/TensorRT-LLM/blob/v0.20.0/examples/models/core/whisper/README.md
 GIT_TAG_OR_HASH = os.getenv("GIT_TAG_OR_HASH", "v0.18.0")
 WHISPER_DIRS = {
     "0.15.0.dev2024110500": "/TensorRT-LLM/examples/whisper",
     "v0.18.0": "/TensorRT-LLM/examples/whisper",
-    # "v0.20.0rc0": "/TensorRT-LLM/examples/models/core/whisper",
+    "v0.20.0": "/TensorRT-LLM/examples/models/core/whisper",
 }
 
 trtllm_image = (
@@ -69,6 +69,7 @@ assets_dir = modal.Volume.from_name("assets", create_if_missing=True)
 def run(
     app_name: str,
     engine_dir: str = "trt_engines_float16",
+    whisper_dir: str = WHISPER_DIRS[GIT_TAG_OR_HASH],
     other_args: str = "",
     func: callable = None,
 ) -> None:
@@ -87,16 +88,16 @@ def run(
         cmd,
         shell=True,
         check=True,
-        cwd=WHISPER_DIRS[GIT_TAG_OR_HASH],
+        cwd=whisper_dir,
     )
 
     if func is None:
-        run_single_wav_test(app_name, engine_dir, other_args)
+        run_single_wav_test(app_name, engine_dir, whisper_dir, other_args)
     else:
-        func(app_name, engine_dir, other_args)
+        func(app_name, engine_dir, whisper_dir, other_args)
 
 
-def run_single_wav_test(app_name: str, engine_dir: str, other_args: str) -> None:
+def run_single_wav_test(app_name: str, engine_dir: str, whisper_dir: str, other_args: str) -> None:
     local_trt_build_dir = os.path.join(TRT_MODEL_DIR, app_name, engine_dir)
     input_file = os.path.join(ASSETS_DIR, "1221-135766-0002.wav")
     cmd = f"python3 run.py --name single_wav_test --engine_dir {local_trt_build_dir} --input_file {input_file} --assets_dir {ASSETS_DIR} --results_dir {ASSETS_DIR} {other_args}"
@@ -106,13 +107,13 @@ def run_single_wav_test(app_name: str, engine_dir: str, other_args: str) -> None
             cmd,
             shell=True,
             check=True,
-            cwd=WHISPER_DIRS[GIT_TAG_OR_HASH],
+            cwd=whisper_dir,
         )
     except subprocess.CalledProcessError as e:
         print(f"run stderr: {e.stderr}")
 
 
-def run_dataset_bench(app_name: str, engine_dir: str, other_args: str) -> None:
+def run_dataset_bench(app_name: str, engine_dir: str, whisper_dir: str, other_args: str) -> None:
     local_trt_build_dir = os.path.join(TRT_MODEL_DIR, app_name, engine_dir)
     cmd = f"python3 run.py --name librispeech_dummy_large_v3 --engine_dir {local_trt_build_dir} --dataset hf-internal-testing/librispeech_asr_dummy --assets_dir {ASSETS_DIR} --results_dir {ASSETS_DIR} --enable_warmup {other_args}"
     print(cmd)
@@ -121,7 +122,7 @@ def run_dataset_bench(app_name: str, engine_dir: str, other_args: str) -> None:
             cmd,
             shell=True,
             check=True,
-            cwd=WHISPER_DIRS[GIT_TAG_OR_HASH],
+            cwd=whisper_dir,
         )
     except subprocess.CalledProcessError as e:
         print(f"run stderr: {e.stderr}")
@@ -131,6 +132,11 @@ def run_dataset_bench(app_name: str, engine_dir: str, other_args: str) -> None:
 # run_single_wav_test, NOTE: no WER eval
 ## C++ runtime
 modal run src/llm/trtllm/whisper/run.py \
+    --app-name "whisper" \
+    --engine-dir "trt_engines_float16" \
+    --other-args "--log_level info"
+
+GIT_TAG_OR_HASH=v0.20.0 modal run src/llm/trtllm/whisper/run.py \
     --app-name "whisper" \
     --engine-dir "trt_engines_float16" \
     --other-args "--log_level info"
@@ -197,6 +203,7 @@ def main(
     run.remote(
         app_name,
         engine_dir,
+        WHISPER_DIRS[GIT_TAG_OR_HASH],
         other_args,
         func=tasks[task],
     )

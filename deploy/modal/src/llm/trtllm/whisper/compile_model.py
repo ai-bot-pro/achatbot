@@ -9,7 +9,7 @@ GIT_TAG_OR_HASH = os.getenv("GIT_TAG_OR_HASH", "v0.18.0")
 CONVERSION_SCRIPT_URLS = {
     "0.15.0.dev2024110500": "https://raw.githubusercontent.com/NVIDIA/TensorRT-LLM/v0.15.0/examples/whisper/convert_checkpoint.py",
     "v0.18.0": "https://raw.githubusercontent.com/NVIDIA/TensorRT-LLM/v0.18.0/examples/whisper/convert_checkpoint.py",
-    # "v0.20.0rc0": "https://raw.githubusercontent.com/NVIDIA/TensorRT-LLM/v0.20.0rc0/examples/models/core/whisper/convert_checkpoint.py",
+    "v0.20.0": "https://raw.githubusercontent.com/NVIDIA/TensorRT-LLM/v0.20.0/examples/models/core/whisper/convert_checkpoint.py",
 }
 
 
@@ -148,6 +148,13 @@ def trtllm_build(
 # C++ runtime
 
 modal run src/llm/trtllm/whisper/compile_model.py \
+    --app-name "whisper" \
+    --model-name "large-v3" \
+    --trt-dtype "float16" \
+    --convert-other-args "" \
+    --compile-other-args ""
+
+GIT_TAG_OR_HASH=v0.20.0 modal run src/llm/trtllm/whisper/compile_model.py \
     --app-name "whisper" \
     --model-name "large-v3" \
     --trt-dtype "float16" \
