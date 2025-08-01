@@ -34,6 +34,12 @@ class ASREnvInit:
             from . import whisper_openvino_asr
         elif "whisper_trtllm_asr" in tag:
             from . import whisper_trtllm_asr
+        elif "whisper_vllm_asr" in tag:
+            from . import whisper_vllm_asr
+        elif "whisper_transformers_torch_compile_asr" in tag:
+            from . import whisper_torch_compile_asr
+        elif "whisper_transformers_pipeline_torch_compile_asr" in tag:
+            from . import whisper_torch_compile_asr
         elif "whisper_" in tag:
             from . import whisper_asr
 

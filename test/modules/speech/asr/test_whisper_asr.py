@@ -10,6 +10,8 @@ ASR_MODEL_NAME_OR_PATH=./models/Systran/faster-whisper-base ASR_VERBOSE=True ASR
 
 ASR_TAG=whisper_transformers_asr ASR_MODEL_NAME_OR_PATH=./models/openai/whisper-base python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
 ASR_TAG=whisper_transformers_asr ASR_MODEL_NAME_OR_PATH=./models/openai/whisper-base python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
+ASR_TAG=whisper_transformers_torch_compile_asr ASR_MODEL_NAME_OR_PATH=./models/openai/whisper-base python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
+ASR_TAG=whisper_transformers_torch_compile_asr ASR_MODEL_NAME_OR_PATH=./models/openai/whisper-base python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
 
 ASR_TAG=whisper_mlx_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
 ASR_TAG=whisper_mlx_asr python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
@@ -21,6 +23,9 @@ ASR_LANG=zh ASR_MODEL_NAME_OR_PATH=whisper-large-v3 ASR_TAG=whisper_groq_asr pyt
 
 ASR_TAG=whisper_openvino_asr ASR_MODEL_NAME_OR_PATH=./models/OpenVINO/whisper-tiny-fp16-ov python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
 ASR_TAG=whisper_openvino_asr ASR_MODEL_NAME_OR_PATH=./models/OpenVINO/whisper-tiny-fp16-ov python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
+
+ASR_TAG=whisper_vllm_asr ASR_MODEL_NAME_OR_PATH=./models/openai/whisper-base python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
+ASR_TAG=whisper_vllm_asr ASR_MODEL_NAME_OR_PATH=./models/openai/whisper-base python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
 
 ASR_TAG=whisper_trtllm_asr \
     ASR_TRTLLM_ENGINE_DIR=./models/Whisper/whisper-tiny-fp16-trtllm \

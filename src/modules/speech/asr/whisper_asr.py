@@ -1,12 +1,16 @@
 import os
+import time
 import logging
 import asyncio
 from typing import AsyncGenerator
+
+import numpy as np
 
 from src.common.utils.audio_utils import bytes2NpArrayWith16
 from src.common.session import Session
 from src.common.device_cuda import CUDAInfo
 from src.modules.speech.asr.base import ASRBase
+from src.modules.speech.help.audio_mock import generate_random_sine
 
 """
 https://huggingface.co/learn/audio-course/en/chapter5/asr_models
@@ -27,7 +31,7 @@ class WhisperAsr(ASRBase):
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
         transcription = await asyncio.to_thread(
             self.model.transcribe,
-            self.asr_audio,
+            self.asr_audio if isinstance(self.asr_audio, str) else self.asr_audio.copy(),
             verbose=self.args.verbose,
             language=self.args.language,
             word_timestamps=True,
@@ -40,7 +44,7 @@ class WhisperAsr(ASRBase):
     async def transcribe(self, session: Session) -> dict:
         transcription = await asyncio.to_thread(
             self.model.transcribe,
-            self.asr_audio,
+            self.asr_audio if isinstance(self.asr_audio, str) else self.asr_audio.copy(),
             verbose=self.args.verbose,
             language=self.args.language,
             word_timestamps=True,
@@ -67,7 +71,7 @@ class WhisperTimestampedAsr(WhisperAsr):
         transcription = await asyncio.to_thread(
             transcribe_timestamped,
             self.model,
-            self.asr_audio,
+            self.asr_audio if isinstance(self.asr_audio, str) else self.asr_audio.copy(),
             language=self.args.language,
             condition_on_previous_text=True,
             verbose=self.args.verbose,
@@ -82,7 +86,7 @@ class WhisperTimestampedAsr(WhisperAsr):
         transcription = await asyncio.to_thread(
             transcribe_timestamped,
             self.model,
-            self.asr_audio,
+            self.asr_audio if isinstance(self.asr_audio, str) else self.asr_audio.copy(),
             language=self.args.language,
             condition_on_previous_text=True,
             verbose=self.args.verbose,
@@ -150,7 +154,7 @@ class WhisperFasterAsr(ASRBase):
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
         segmentsIter, _ = await asyncio.to_thread(
             self.model.transcribe,
-            self.asr_audio,
+            self.asr_audio if isinstance(self.asr_audio, str) else self.asr_audio.copy(),
             language=self.args.language,
             beam_size=5,
             word_timestamps=True,
@@ -163,7 +167,7 @@ class WhisperFasterAsr(ASRBase):
     async def transcribe(self, session: Session) -> dict:
         segmentsIter, info = await asyncio.to_thread(
             self.model.transcribe,
-            self.asr_audio,
+            self.asr_audio if isinstance(self.asr_audio, str) else self.asr_audio.copy(),
             language=self.args.language,
             beam_size=5,
             word_timestamps=True,
@@ -203,6 +207,9 @@ class WhisperTransformersAsr(ASRBase):
                 device="cuda:0",
                 torch_dtype=torch.float16 if info.compute_capability_major >= 7 else torch.float32,
                 model_kwargs={"use_flash_attention_2": info.compute_capability_major >= 8},
+                # for long-form audio processing
+                chunk_length_s=30,
+                batch_size=self.args.batch_size,
             )
 
             if info.compute_capability_major == 7 or info.compute_capability_major == 6:
@@ -213,15 +220,18 @@ class WhisperTransformersAsr(ASRBase):
                 model=self.args.model_name_or_path,
                 device="cpu",
                 torch_dtype=torch.float32,
+                # for long-form audio processing
+                chunk_length_s=30,
+                batch_size=self.args.batch_size,
             )
 
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
         outputs = await asyncio.to_thread(
             self.pipe,
-            self.asr_audio,
+            self.asr_audio if isinstance(self.asr_audio, str) else self.asr_audio.copy(),
             chunk_length_s=30,
             batch_size=1,
-            generate_kwargs={"language": self.args.language},
+            generate_kwargs={"language": self.args.language, "task": "transcribe"},
             return_timestamps="word",
         )
         for item in outputs["chunks"]:
@@ -232,10 +242,10 @@ class WhisperTransformersAsr(ASRBase):
         # https://huggingface.co/openai/whisper-large-v3/discussions/12
         outputs = await asyncio.to_thread(
             self.pipe,
-            self.asr_audio,
+            self.asr_audio if isinstance(self.asr_audio, str) else self.asr_audio.copy(),
             chunk_length_s=30,
             batch_size=1,
-            generate_kwargs={"language": self.args.language},
+            generate_kwargs={"language": self.args.language, "task": "transcribe"},
             return_timestamps="word",
         )
         res = {
@@ -260,7 +270,7 @@ class WhisperMLXAsr(ASRBase):
         transcribe_kargs["language"] = self.args.language
         outputs = await asyncio.to_thread(
             mlx_whisper.transcribe,
-            self.asr_audio,
+            self.asr_audio if isinstance(self.asr_audio, str) else self.asr_audio.copy(),
             path_or_hf_repo=self.args.model_name_or_path,
             word_timestamps=True,
             **transcribe_kargs,

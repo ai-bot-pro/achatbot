@@ -211,6 +211,7 @@ vad_recorder = ["achatbot[speech_vad]"]
 # init use cpu Pre-built Wheel to install, 
 # if want to use other lib(cuda), see: https://github.com/abetlen/llama-cpp-python#installation-configuration
 llama_cpp = ["llama-cpp-python~=0.2.82"]
+whisper_cpp = ["pywhispercpp"]
 llm_personalai_proxy = ["geocoder~=1.38.1"]
 sglang = ["sglang[all]==0.4.4.post1"]
 vllm = ["vllm==0.9.2"]
