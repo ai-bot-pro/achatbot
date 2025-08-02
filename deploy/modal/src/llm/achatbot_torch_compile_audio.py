@@ -148,7 +148,7 @@ async def run_transcribe(**kwargs):
     model.forward = torch.compile(model.forward, mode="reduce-overhead", fullgraph=True)
     model.generation_config.cache_implementation = "static"
     max_new_tokens = model.generation_config.max_new_tokens
-    for i in range(0):
+    for i in range(3):
         start = time.time()
         with sdpa_kernel(SDPBackend.MATH):
             model.generate(
@@ -264,7 +264,7 @@ async def run_pipeline_transcribe(**kwargs):
     )
 
     # 2 warmup steps
-    for i in range(0):
+    for i in range(2):
         start = time.time()
         with sdpa_kernel(SDPBackend.MATH):
             result = pipe(

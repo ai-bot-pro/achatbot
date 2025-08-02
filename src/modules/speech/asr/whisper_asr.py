@@ -1,16 +1,10 @@
-import os
-import time
-import logging
 import asyncio
 from typing import AsyncGenerator
 
-import numpy as np
 
-from src.common.utils.audio_utils import bytes2NpArrayWith16
 from src.common.session import Session
 from src.common.device_cuda import CUDAInfo
 from src.modules.speech.asr.base import ASRBase
-from src.modules.speech.help.audio_mock import generate_random_sine
 
 """
 https://huggingface.co/learn/audio-course/en/chapter5/asr_models

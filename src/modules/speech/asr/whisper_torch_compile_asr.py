@@ -76,19 +76,6 @@ class WhisperTransformersTorchCompileAsr(ASRBase):
                 )
                 logging.info(f"Warmup {i} step took {time.perf_counter() - start:.2f} seconds")
 
-    def set_audio_data(self, audio_data):
-        self.lock.acquire()
-        if isinstance(audio_data, (bytes, bytearray)):
-            self.asr_audio = bytes2NpArrayWith16(audio_data)
-        if (
-            isinstance(audio_data, str)
-            and audio_data.endswith(".wav")
-            and os.path.exists(audio_data)
-        ):
-            with open(audio_data, "rb") as f:
-                self.asr_audio = bytes2NpArrayWith16(f.read())
-        self.lock.release()
-        return
 
     def gen(self, input_ids: dict, **kwargs):
         with sdpa_kernel(SDPBackend.MATH):
@@ -96,7 +83,7 @@ class WhisperTransformersTorchCompileAsr(ASRBase):
             return pred_ids
 
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
-        res = self.transcribe(session)
+        res = await self.transcribe(session)
         yield res["text"]
 
     async def transcribe(self, session: Session) -> dict:

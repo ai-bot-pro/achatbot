@@ -35,6 +35,19 @@ ASR_TAG=whisper_trtllm_asr \
     ASR_TRTLLM_ENGINE_DIR=./models/Whisper/whisper-tiny-fp16-trtllm \
     ASR_TRTLLM_ASSETS_DIR=./assets \
     python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
+
+    
+# NOTE: pywhispercpp have bug with torch on cpu device
+# whisper cpp
+huggingface-cli download ggerganov/whisper.cpp  ggml-base.bin --local-dir ./models/
+huggingface-cli download ggerganov/whisper.cpp  ggml-large-v3-turbo-q5_0.bin --local-dir ./models/ 
+
+ASR_TAG=whisper_cpp_asr ASR_MODEL_NAME_OR_PATH=./models/ggml-base.bin python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
+ASR_TAG=whisper_cpp_asr ASR_MODEL_NAME_OR_PATH=./models/ggml-large-v3-turbo-q5_0.bin python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
+
+ASR_TAG=whisper_cpp_cstyle_asr ASR_MODEL_NAME_OR_PATH=./models/ggml-base.bin python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe
+ASR_TAG=whisper_cpp_cstyle_asr ASR_MODEL_NAME_OR_PATH=./models/ggml-base.bin python -m unittest test.modules.speech.asr.test_whisper_asr.TestWhisperASR.test_transcribe_stream
+
 """
 
 import logging
@@ -44,11 +57,10 @@ import asyncio
 
 
 from src.common.logger import Logger
-from src.common.utils.helper import load_json, get_audio_segment
-from src.common.utils.wav import save_audio_to_file
 from src.common.session import Session
 from src.common.interface import IAsr
 from src.common.types import SessionCtx, TEST_DIR, MODELS_DIR, RECORDS_DIR
+from src.common.utils.wav import save_audio_to_file
 from src.modules.speech.asr import ASREnvInit
 
 
@@ -59,6 +71,7 @@ class TestWhisperASR(unittest.TestCase):
         # https://isv-data.oss-cn-hangzhou.aliyuncs.com/ics/MaaS/ASR/test_audio/asr_example_zh.wav
         # -O records/asr_example_zh.wav
         audio_file = os.path.join(TEST_DIR, "audio_files/asr_example_zh.wav")
+        print(audio_file)
         # Use an environment variable to get the ASR model TAG
         cls.asr_tag = os.getenv("ASR_TAG", "whisper_faster_asr")
         cls.audio_file = os.getenv("AUDIO_FILE", audio_file)
@@ -121,6 +134,7 @@ class TestWhisperASR(unittest.TestCase):
 
     def test_transcribe_segments(self):
         from sentence_transformers import SentenceTransformer, util
+        from src.common.utils.helper import load_json, get_audio_segment
 
         self.similarity_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
         annotations = asyncio.run(load_json(self.annotations_path))

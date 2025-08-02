@@ -30,6 +30,10 @@ class ASREnvInit:
             from . import sense_voice_asr
         elif "groq" in tag:
             from . import whisper_groq_asr
+        elif "whisper_cpp_asr" in tag:
+            from . import whisper_cpp_asr
+        elif "whisper_cpp_cstyle_asr" in tag:
+            from . import whisper_cpp_asr
         elif "whisper_openvino_asr" in tag:
             from . import whisper_openvino_asr
         elif "whisper_trtllm_asr" in tag:

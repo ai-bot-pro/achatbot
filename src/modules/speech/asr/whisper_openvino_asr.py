@@ -7,6 +7,7 @@ from src.common.utils.audio_utils import bytes2NpArrayWith16
 from src.common.session import Session
 from src.modules.speech.asr.base import ASRBase
 
+
 class WhisperOpenVINOAsr(ASRBase):
     """
     - https://docs.openvino.ai/2024/learn-openvino/llm_inference_guide/genai-guide.html
@@ -32,20 +33,6 @@ class WhisperOpenVINOAsr(ASRBase):
 
         # Initialize the ASR pipeline
         self.pipe = ov_genai.WhisperPipeline(self.args.model_name_or_path, device=self.device)
-
-    def set_audio_data(self, audio_data):
-        self.lock.acquire()
-        if isinstance(audio_data, (bytes, bytearray)):
-            self.asr_audio = bytes2NpArrayWith16(audio_data)
-        if (
-            isinstance(audio_data, str)
-            and audio_data.endswith(".wav")
-            and os.path.exists(audio_data)
-        ):
-            with open(audio_data, "rb") as f:
-                self.asr_audio = bytes2NpArrayWith16(f.read())
-        self.lock.release()
-        return
 
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
         if not self.args.language.startswith("<|"):

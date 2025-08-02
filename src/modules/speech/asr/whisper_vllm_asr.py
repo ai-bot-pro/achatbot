@@ -45,20 +45,6 @@ class WhisperVllmAsr(ASRBase):
         # VLLM_USE_V1=1 is not supported with ['WhisperForConditionalGeneration']
         self.llm = LLM(**asdict(engine_args))
 
-    def set_audio_data(self, audio_data):
-        self.lock.acquire()
-        if isinstance(audio_data, (bytes, bytearray)):
-            self.asr_audio = bytes2NpArrayWith16(audio_data)
-        if (
-            isinstance(audio_data, str)
-            and audio_data.endswith(".wav")
-            and os.path.exists(audio_data)
-        ):
-            with open(audio_data, "rb") as f:
-                self.asr_audio = bytes2NpArrayWith16(f.read())
-        self.lock.release()
-        return
-
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
         # stream word text @todo
         res = await self.transcribe(session)
