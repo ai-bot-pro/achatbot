@@ -4,10 +4,14 @@ import modal
 
 app = modal.App("tritonserver")
 
-# https://github.com/NVIDIA/TensorRT-LLM/blob/v0.20.0rc0/examples/models/core/whisper/README.md
 # https://github.com/NVIDIA/TensorRT-LLM/tree/v0.18.0/examples/whisper
+# https://github.com/NVIDIA/TensorRT-LLM/blob/v0.20.0/examples/models/core/whisper/README.md
 GIT_TAG_OR_HASH = os.getenv("GIT_TAG_OR_HASH", "v0.18.0")
-TRITONSERVER_VERSION = "25.03"
+tritonserver_versions = {
+    "v0.18.0": "25.03",
+    "v0.20.0": "25.07",
+}
+TRITONSERVER_VERSION = tritonserver_versions.get(GIT_TAG_OR_HASH, "25.03")
 
 
 tritonserver_image = (

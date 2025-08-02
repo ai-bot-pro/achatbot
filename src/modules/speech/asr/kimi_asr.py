@@ -41,7 +41,7 @@ class KimiAsr(ASRBase):
                 "content": self.asr_audio,
             },
         ]
-        session.ctx.state["prompt"] = session.ctx.state.get("prompt", prompt)
+        session.ctx.state["prompt"] = session.ctx.state.get("prompt", prompt.copy())
         transcription = self.model.generate(session)
         for text in transcription:
             yield text

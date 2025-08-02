@@ -3,7 +3,6 @@ import asyncio
 import re
 
 from src.common.utils.helper import get_device
-from src.common.utils.audio_utils import bytes2TorchTensorWith16
 from src.common.session import Session
 from src.modules.speech.asr.base import ASRBase
 
@@ -22,13 +21,6 @@ class SenseVoiceAsr(ASRBase):
             device=self.args.device,
         )
         self.model.eval()
-
-    def set_audio_data(self, audio_data):
-        if isinstance(audio_data, (bytes, bytearray)):
-            self.asr_audio = bytes2TorchTensorWith16(audio_data)
-        if isinstance(audio_data, str):
-            self.asr_audio = audio_data
-        return
 
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
         transcription, _ = await asyncio.to_thread(

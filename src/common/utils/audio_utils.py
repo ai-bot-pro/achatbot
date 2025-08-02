@@ -5,6 +5,7 @@ from scipy.io.wavfile import read, write
 # import pyloudnorm as pyln
 import numpy as np
 import torch
+import wave
 
 from src.common.types import INT16_MAX_ABS_VALUE
 
@@ -132,3 +133,47 @@ def combine_audio_segments(
                 [combined_audio[:-window_length], overlap, segment[window_length:]]
             )
     return combined_audio
+
+
+def read_wav_to_np(file_path) -> tuple[np.ndarray, int]:
+    with wave.open(file_path, "rb") as wf:
+        num_channels = wf.getnchannels()
+        sample_width = wf.getsampwidth()
+        sample_rate = wf.getframerate()
+        num_frames = wf.getnframes()
+
+        if num_channels not in (1, 2):
+            raise Exception(f"WAV file must be mono or stereo")
+
+        if sample_width != 2:
+            raise Exception(f"WAV file must be 16-bit")
+
+        raw = wf.readframes(num_frames)
+
+    audio = np.frombuffer(raw, dtype=np.int16).astype(np.float32)
+    if num_channels == 1:
+        pcmf32 = audio / 32768.0
+    else:
+        audio = audio.reshape(-1, 2)
+        # Averaging the two channels
+        pcmf32 = (audio[:, 0] + audio[:, 1]) / 65536.0
+    return pcmf32, sample_rate
+
+
+"""
+python -m src.common.utils.audio_utils
+"""
+if __name__ == "__main__":
+    import time
+    import librosa
+
+    audio_file = "./test/audio_files/asr_example_zh.wav"
+    start = time.perf_counter()
+    audio_np, sr = read_wav_to_np(audio_file)
+    end = time.perf_counter()
+    print(audio_np, "wave cost--->", end - start)
+
+    start = time.perf_counter()
+    audio_np, _ = librosa.load(audio_file, sr=16000)
+    end = time.perf_counter()
+    print(audio_np, "librosa cost--->", end - start)

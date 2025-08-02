@@ -231,7 +231,6 @@ def train_fsdp_tp_llama2(rank, world_size, tp_size=2, num_samples=64):
     rank_log(rank, logger, f"2D DP{dp_size}TP{tp_size} training successfully completed!")
 
 
-# modal run src/train/demo/cp.py
 @app.local_entrypoint()
 def main():
     run.remote()

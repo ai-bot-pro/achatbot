@@ -118,10 +118,9 @@ modal run src/llm/trtllm/whisper/run.py \
 
 ## Python runtime
 modal run src/llm/trtllm/whisper/run.py \
-    --other-args "--use_py_session" \
     --app-name "whisper" \
     --engine-dir "trt_engines_float16" \
-    --other-args "--log_level info"
+    --other-args "--log_level info --use_py_session"
 
 # run_dataset_bench, NOTE: have WER
 ## C++ runtime
