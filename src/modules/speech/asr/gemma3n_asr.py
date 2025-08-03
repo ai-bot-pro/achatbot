@@ -43,7 +43,7 @@ class Gemma3nAsr(ASRBase):
         )
 
     async def transcribe_stream(self, session: Session) -> AsyncGenerator[str, None]:
-        session.ctx.state["prompt"] = session.ctx.state.get("prompt", self.default_prompt)
+        session.ctx.state["prompt"] = session.ctx.state.get("prompt", self.default_prompt.copy())
         transcription = self.model.generate(session)
         for text in transcription:
             yield text
