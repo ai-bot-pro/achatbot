@@ -102,7 +102,7 @@ def dump_model(**kwargs):
             model_path,
             torch_dtype="auto",
             device_map="auto",
-        ).to("cuda")
+        )
 
         model = model.eval()
         print(f"{model.config=}")
@@ -682,7 +682,7 @@ modal run src/llm/transformers/openai_gpt_oss.py --task openai_harmony_stream_de
 
 IMAGE_GPU=L40s modal run src/llm/transformers/openai_gpt_oss.py --task openai_harmony_generate --reasoning low
 IMAGE_GPU=L40s modal run src/llm/transformers/openai_gpt_oss.py --task openai_harmony_generate --reasoning medium
-IMAGE_GPU=L40s modal run src/llm/transformers/openai_gpt_oss.py --task openai_harmony_generate --reasoning hight
+IMAGE_GPU=L40s modal run src/llm/transformers/openai_gpt_oss.py --task openai_harmony_generate --reasoning high
 
 IMAGE_GPU=L40s modal run src/llm/transformers/openai_gpt_oss.py --task openai_harmony_generate_tool --reasoning low
 IMAGE_GPU=L40s modal run src/llm/transformers/openai_gpt_oss.py --task openai_harmony_generate_tool --reasoning medium
@@ -692,11 +692,11 @@ IMAGE_GPU=L4:3 modal run src/llm/transformers/openai_gpt_oss.py --task split_mod
 
 IMAGE_GPU=L4:3 modal run src/llm/transformers/openai_gpt_oss.py --task multi_gpu_generate --reasoning low 
 IMAGE_GPU=L4:3 modal run src/llm/transformers/openai_gpt_oss.py --task multi_gpu_generate --reasoning medium
-IMAGE_GPU=L4:3 modal run src/llm/transformers/openai_gpt_oss.py --task multi_gpu_generate --reasoning hight
+IMAGE_GPU=L4:3 modal run src/llm/transformers/openai_gpt_oss.py --task multi_gpu_generate --reasoning high
 IMAGE_GPU=L40:1 modal run src/llm/transformers/openai_gpt_oss.py --task multi_gpu_generate
-IMAGE_GPU=L40:2 modal run src/llm/transformers/openai_gpt_oss.py --task multi_gpu_generate --reasoning hight
+IMAGE_GPU=L40:2 modal run src/llm/transformers/openai_gpt_oss.py --task multi_gpu_generate --reasoning high
 IMAGE_GPU=H100:1 modal run src/llm/transformers/openai_gpt_oss.py --task multi_gpu_generate
-IMAGE_GPU=H100:2 modal run src/llm/transformers/openai_gpt_oss.py --task multi_gpu_generate --reasoning hight
+IMAGE_GPU=H100:2 modal run src/llm/transformers/openai_gpt_oss.py --task multi_gpu_generate --reasoning high
 
 """
 
