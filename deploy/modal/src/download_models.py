@@ -26,12 +26,11 @@ hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
 @app.function(
     # gpu="T4",
     retries=0,
-    cpu=8.0,
+    cpu=20.0,
     image=download_image,
     secrets=[modal.Secret.from_name("achatbot")],
     volumes={HF_MODEL_DIR: hf_model_vol},
-    timeout=1200,
-    scaledown_window=1200,
+    timeout=86400,
 )
 def download_ckpt(repo_ids: str, revision: str = None, local_dir: str = None) -> str:
     # https://huggingface.co/docs/huggingface_hub/guides/download
@@ -50,7 +49,7 @@ def download_ckpt(repo_ids: str, revision: str = None, local_dir: str = None) ->
             allow_patterns="*",
             # ignore_patterns=["*.pt", "*.bin"],  # using safetensors
             local_dir=local_dir,
-            max_workers=8,
+            max_workers=20,
         )
         print(f"{repo_id} model to dir:{HF_MODEL_DIR} done")
 
