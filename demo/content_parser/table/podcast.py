@@ -24,7 +24,9 @@ client = instructor.from_gemini(
         # model_name="models/gemini-2.5-pro-exp-03-25",
         # model_name=f"models/{os.getenv('GEMINI_MODEL','gemini-2.5-flash-preview-04-17')}",
         # model_name=f"models/{os.getenv('GEMINI_MODEL','gemini-2.5-pro-preview-05-06')}",
-        model_name=f"models/{os.getenv('GEMINI_MODEL', 'gemini-2.5-flash-lite')}",
+        model_name=f"models/{os.getenv('GEMINI_MODEL', 'gemini-2.5-pro')}",
+        # model_name=f"models/{os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')}",
+        # model_name=f"models/{os.getenv('GEMINI_MODEL', 'gemini-2.5-flash-lite')}",
     ),
     mode=instructor.Mode.GEMINI_JSON,
     generation_config={
@@ -125,7 +127,8 @@ class PaperRoleSystemPromptArgs(BaseModel):
     ]
     dialogue_structure: List[str] = [
         "Introduction",
-        "Main Content Detail Explain and SummarizeWhat problem is this paper trying to solve",
+        "Main Content Detail Explain and Summarize",
+        "What problem is this paper trying to solve",
         "What are the relevant studies",
         "How does the paper solve this problem",
         "What experiments were done in the paper",
