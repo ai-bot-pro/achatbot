@@ -636,8 +636,6 @@ async def chat_tool_stream(**kwargs):
 
                 if text.startswith("{"):
                     # this is json, try to extract the patch from it
-                    import json
-
                     try:
                         some_dict = json.loads(text)
                         _, text = some_dict.popitem()
@@ -777,15 +775,10 @@ IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_tool_stream 
 
 
 def run_async_in_thread(coroutine, **kwargs):
-    async def wrapper():
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            await coroutine(**kwargs)
-        finally:
-            loop.close()
+    def run_coro_in_thread():
+        asyncio.run(coroutine(**kwargs))
 
-    thread = threading.Thread(target=asyncio.run, args=(wrapper(),))
+    thread = threading.Thread(target=run_coro_in_thread)
     thread.start()
     return thread
 
