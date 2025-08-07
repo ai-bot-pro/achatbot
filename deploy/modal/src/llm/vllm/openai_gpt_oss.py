@@ -120,6 +120,7 @@ with img.imports():
             prompt_tokens: list[int],
             stop_tokens: list[int] | None = None,
             temperature: float = 1.0,
+            top_p: float = 1.0,
             max_tokens: int = 0,
             return_logprobs: bool = False,
         ):
@@ -129,6 +130,7 @@ with img.imports():
             self.request_id += 1
             sampling_params = SamplingParams(
                 temperature=temperature,
+                top_p=top_p,
                 max_tokens=max_tokens,
                 stop_token_ids=stop_tokens,
                 logprobs=0 if return_logprobs else None,
@@ -169,6 +171,7 @@ with img.imports():
         HF_MODEL_DIR: hf_model_vol,
         VLL_CACHE_DIR: vllm_cache_vol,
     },
+    secrets=[modal.Secret.from_name("achatbot")],
     timeout=1200,  # default 300s
     scaledown_window=1200,
     max_containers=1,
@@ -341,8 +344,9 @@ def generate_stream(**kwargs):
     )
     tokenizer = get_tokenizer()
 
-    temperature = kwargs.get("temperature", 0.6)
+    temperature = kwargs.get("temperature", 1.0)
     max_tokens = kwargs.get("max_tokens", 128)
+    top_p = kwargs.get("top_p", 1.0)
 
     for i in range(3):  # compile, need warmup
         prompt = kwargs.get("prompt", "什么是快乐星球?")
@@ -356,6 +360,7 @@ def generate_stream(**kwargs):
             token_ids,
             stop_tokens=[tokenizer.eot_token],
             temperature=temperature,
+            top_p=top_p,
             max_tokens=max_tokens,
             return_logprobs=True,
         ):
@@ -417,7 +422,13 @@ def chat_stream(**kwargs):
     field_created = False
     current_output_text = ""
     output_text_delta_buffer = ""
-    for predicted_token in generator.generate(prompt_token_ids, stop_tokens=stop_token_ids):
+    for predicted_token in generator.generate(
+        prompt_token_ids,
+        stop_tokens=stop_token_ids,
+        temperature=kwargs.get("temperature", 1.0),
+        top_p=kwargs.get("top_p", 1.0),
+        max_tokens=kwargs.get("max_tokens", 128),
+    ):
         parser.process(predicted_token)
 
         if parser.state == StreamState.EXPECT_START:
@@ -649,7 +660,10 @@ async def chat_tool_stream(**kwargs):
                 result = [message]
                 messages += result
             else:
-                raise ValueError(f"Unknown tool or function call: {last_message.recipient}")
+                msg = f"Unknown tool or function call: {last_message=}"
+                print(msg)
+                # raise ValueError(f"Unknown tool or function call: {last_message.recipient}")
+
             # Print the tool or function call result
             if raw:
                 rendered_result = encoding.render_conversation(Conversation.from_messages(result))
@@ -677,7 +691,11 @@ async def chat_tool_stream(**kwargs):
         current_output_text = ""
         output_text_delta_buffer = ""
         for predicted_token in generator.generate(
-            tokens, encoding.stop_tokens_for_assistant_actions()
+            tokens,
+            stop_tokens=encoding.stop_tokens_for_assistant_actions(),
+            temperature=kwargs.get("temperature", 1.0),
+            top_p=kwargs.get("top_p", 1.0),
+            max_tokens=kwargs.get("max_tokens", 2048),
         ):
             parser.process(predicted_token)
             if raw:
@@ -742,14 +760,19 @@ IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task generate_stream
 IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_stream
 
 # local input --- queue --> remote to loop chat
+
+## use browser tool(find,open,search), need env EXA_API_KEY from https://exa.ai
 IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_tool_stream --build-in-tool browser
-IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_tool_stream --build-in-tool browser --show-browser-results
-IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_tool_stream --build-in-tool browser --is-apply-patch 
-IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_tool_stream --build-in-tool browser --raw
-IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_tool_stream --build-in-tool python
+IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_tool_stream \
+    --max-tokens 2048 --temperature=1.0 --top-p=1.0 \
+    --build-in-tool browser --show-browser-results --model-identity "你是一名聊天助手，请用中文回复。"
+IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_tool_stream --build-in-tool browser --is-apply-patch --show-browser-results
+IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_tool_stream --build-in-tool browser --raw --is-apply-patch --show-browser-results
+
+## need python tool to run script need change python docker, u can change python tools to do local env python or use serverless function 
 IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_tool_stream --build-in-tool python
 IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_tool_stream --build-in-tool python --is-apply-patch 
-IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_tool_stream --build-in-tool python --raw
+IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_tool_stream --build-in-tool python --raw --is-apply-patch
 """
 
 
