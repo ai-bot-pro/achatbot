@@ -94,27 +94,23 @@ async def run(func, **kwargs):
 
 
 def dump_model(**kwargs):
-    for model_name in [
-        "openai/gpt-oss-20b",
-        "openai/gpt-oss-120b",
-    ]:
-        model = AutoModelForCausalLM.from_pretrained(
-            model_path,
-            torch_dtype="auto",
-            device_map="auto",
-        )
+    model = AutoModelForCausalLM.from_pretrained(
+        model_path,
+        torch_dtype="auto",
+        device_map="auto",
+    )
 
-        model = model.eval()
-        print(f"{model.config=}")
-        tokenizer = AutoTokenizer.from_pretrained(model_path)
+    model = model.eval()
+    print(f"{model.config=}")
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
 
-        file_path = os.path.join(model_path, "model.txt")
-        with open(file_path, "w") as f:
-            print(f"text tokenizer: {tokenizer}", file=f)
-            print_model_params(model, f"{model_name}", f)
+    file_path = os.path.join(model_path, "model.txt")
+    with open(file_path, "w") as f:
+        print(f"text tokenizer: {tokenizer}", file=f)
+        print_model_params(model, f"{MODEL_PATH}", f)
 
-        del model
-        torch.cuda.empty_cache()
+    del model
+    torch.cuda.empty_cache()
 
 
 def tokenize(**kwargs):
