@@ -273,6 +273,10 @@ IMAGE_GPU=H100 modal run src/train/swift/openai_gpt_oss.py --task train
 
 IMAGE_GPU=L40s modal run src/train/swift/openai_gpt_oss.py --task generate 
 IMAGE_GPU=L40s modal run src/train/swift/openai_gpt_oss.py --task generate inference --no-stream
+
+# see: openai/gpt-oss-20b with Mxfp4HfQuantizer on T4 : https://colab.research.google.com/drive/1Gsgdydt4KgTm3S_Dbc_Gz08S2mQG4G8X?usp=sharing
+IMAGE_GPU=T4 modal run src/train/swift/openai_gpt_oss.py --task generate 
+IMAGE_GPU=T4 modal run src/train/swift/openai_gpt_oss.py --task generate inference --no-stream
 """
 
 
