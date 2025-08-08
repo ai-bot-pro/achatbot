@@ -6,7 +6,7 @@ import subprocess
 import modal
 
 
-app = modal.App("openai_gpt_oss_train")
+app = modal.App("openai_gpt_oss_trl")
 IMAGE_GPU = os.getenv("IMAGE_GPU", None)
 img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
@@ -161,7 +161,7 @@ def train(**kwargs):
     trainer.push_to_hub(dataset_name="HuggingFaceH4/Multilingual-Thinking")
 
 
-def generate(**kwargs):
+def inference(**kwargs):
     # Load the tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_path)
 
@@ -240,8 +240,8 @@ def generate(**kwargs):
 """
 IMAGE_GPU=H100 modal run src/train/trl/openai_gpt_oss.py --task train
 
-IMAGE_GPU=L40s modal run src/train/trl/openai_gpt_oss.py --task generate
-IMAGE_GPU=H100 modal run src/train/trl/openai_gpt_oss.py --task generate
+IMAGE_GPU=L40s modal run src/train/trl/openai_gpt_oss.py --task inference
+IMAGE_GPU=H100 modal run src/train/trl/openai_gpt_oss.py --task inference
 """
 
 
@@ -252,7 +252,7 @@ def main(
     print(task)
     tasks = {
         "train": train,
-        "generate": generate,
+        "inference": inference,
     }
     if task not in tasks:
         raise ValueError(f"task {task} not found")
