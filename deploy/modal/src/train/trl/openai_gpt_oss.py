@@ -144,7 +144,9 @@ def train(**kwargs):
         warmup_ratio=0.03,
         lr_scheduler_type="cosine_with_min_lr",
         lr_scheduler_kwargs={"min_lr_rate": 0.1},
-        output_dir=os.path.join(TRAIN_OUTPUT_DIR, f"{MODEL_PATH.split('/')[-1]}-trl-multilingual-reasoner"),
+        output_dir=os.path.join(
+            TRAIN_OUTPUT_DIR, f"{MODEL_PATH.split('/')[-1]}-trl-multilingual-reasoner"
+        ),
         report_to="trackio",
         push_to_hub=True,
     )
