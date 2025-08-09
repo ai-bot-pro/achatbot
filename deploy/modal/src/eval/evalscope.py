@@ -183,6 +183,7 @@ def main(
     print(task)
     run_tasks = {
         "inference_speed_test": inference_speed_test,
+        "benchmark_aime25": benchmark_aime25,
     }
     if task not in run_tasks:
         raise ValueError(f"task {task} not found")
