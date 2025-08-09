@@ -60,7 +60,7 @@ if BACKEND == "flashinfer":
 
 HF_MODEL_DIR = "/root/.achatbot/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
-VLL_CACHE_DIR = "/root/.cache/vllm"
+VLLM_CACHE_DIR = "/root/.cache/vllm"
 vllm_cache_vol = modal.Volume.from_name("vllm-cache", create_if_missing=True)
 
 
@@ -98,6 +98,7 @@ with img.imports():
 
     MODEL_PATH = os.getenv("LLM_MODEL", "openai/gpt-oss-20b")
     model_path = os.path.join(HF_MODEL_DIR, MODEL_PATH)
+    model_name = MODEL_PATH.split("/")[-1]
 
     class TokenGenerator:
         def __init__(
@@ -169,7 +170,7 @@ with img.imports():
     image=img,
     volumes={
         HF_MODEL_DIR: hf_model_vol,
-        VLL_CACHE_DIR: vllm_cache_vol,
+        VLLM_CACHE_DIR: vllm_cache_vol,
     },
     secrets=[modal.Secret.from_name("achatbot")],
     timeout=1200,  # default 300s
@@ -179,6 +180,7 @@ with img.imports():
 async def run(func, **kwargs):
     subprocess.run("nvidia-smi --version", shell=True)
     subprocess.run("nvcc --version", shell=True)
+    subprocess.run("which vllm", shell=True)
     if torch.cuda.is_available():
         gpu_prop = torch.cuda.get_device_properties("cuda")
         print(gpu_prop)
@@ -736,6 +738,31 @@ async def chat_tool_stream(**kwargs):
         messages += parser.messages
 
 
+@app.function(
+    gpu=IMAGE_GPU,
+    image=img,
+    volumes={
+        HF_MODEL_DIR: hf_model_vol,
+        VLLM_CACHE_DIR: vllm_cache_vol,
+    },
+    # secrets=[modal.Secret.from_name("achatbot")],
+    timeout=86400,  # default 300s
+    # max_containers=1,
+)
+@modal.web_server(port=8801, startup_timeout=60 * 60)
+@modal.concurrent(max_inputs=100, target_inputs=10)
+def serve():
+    """
+    modal + vllm :
+    - https://modal.com/docs/examples/vllm_inference
+    - https://modal.com/llm-almanac/advisor
+    """
+    cmd = f"""
+    VLLM_ATTENTION_BACKEND=TRITON_ATTN_VLLM_V1 vllm serve {model_path} --served-model-name {model_name} --trust_remote_code --port 8801
+    """
+    subprocess.Popen(cmd, shell=True, env=os.environ)
+
+
 """
 # download hf tranformers weight(safetensors) for vllm to load
 modal run src/download_models.py --repo-ids "openai/gpt-oss-20b"
@@ -771,6 +798,45 @@ IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_tool_stream 
 IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_tool_stream --build-in-tool python
 IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_tool_stream --build-in-tool python --is-apply-patch 
 IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_tool_stream --build-in-tool python --raw --is-apply-patch
+
+# run vllm serve
+IMAGE_GPU=H100 modal serve src/llm/vllm/openai_gpt_oss.py 
+IMAGE_GPU=H200 modal serve src/llm/vllm/openai_gpt_oss.py 
+# first ping to start serve
+curl -XGET "https://weedge--openai-gpt-oss-serve-dev.modal.run/ping"
+```
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /openapi.json, Methods: HEAD, GET
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /docs, Methods: HEAD, GET
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /docs/oauth2-redirect, Methods: HEAD, GET
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /redoc, Methods: HEAD, GET
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /health, Methods: GET
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /load, Methods: GET
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /ping, Methods: POST
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /ping, Methods: GET
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /tokenize, Methods: POST
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /detokenize, Methods: POST
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /v1/models, Methods: GET
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /version, Methods: GET
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /v1/responses, Methods: POST
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /v1/responses/{response_id}, Methods: GET
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /v1/responses/{response_id}/cancel, Methods: POST
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /v1/chat/completions, Methods: POST
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /v1/completions, Methods: POST
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /v1/embeddings, Methods: POST
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /pooling, Methods: POST
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /classify, Methods: POST
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /score, Methods: POST
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /v1/score, Methods: POST
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /v1/audio/transcriptions, Methods: POST
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /v1/audio/translations, Methods: POST
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /rerank, Methods: POST
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /v1/rerank, Methods: POST
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /v2/rerank, Methods: POST
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /scale_elastic_ep, Methods: POST
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /is_scaling_elastic_ep, Methods: POST
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /invocations, Methods: POST
+(APIServer pid=28) INFO 08-09 07:26:21 [launcher.py:37] Route: /metrics, Methods: GET
+```
 """
 
 
