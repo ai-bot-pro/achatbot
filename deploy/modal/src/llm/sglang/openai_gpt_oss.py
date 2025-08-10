@@ -298,7 +298,7 @@ LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=A100-80GB TP=1 modal run src/llm/sg
 # fp8/bf16
 LLM_MODEL=lmsys/gpt-oss-20b-bf16 SERVE_IMAGE_GPU=A100-80GB TP=1 modal run src/llm/sglang/openai_gpt_oss.py::main --task local_api_completions
 LLM_MODEL=lmsys/gpt-oss-20b-bf16 SERVE_IMAGE_GPU=H100 TP=1 modal run src/llm/sglang/openai_gpt_oss.py::main --task local_api_completions
-LLM_MODEL=lmsys/gpt-oss-20b-bf16 SERVE_IMAGE_GPU=L40s:2 TP=2 SERVE_ARGS="--cuda-graph-max-bs 4" modal run src/llm/sglang/openai_gpt_oss.py::main --task local_api_completionsa 
+LLM_MODEL=lmsys/gpt-oss-20b-bf16 SERVE_IMAGE_GPU=L40s:2 TP=2 SERVE_ARGS="--cuda-graph-max-bs 4" modal run src/llm/sglang/openai_gpt_oss.py::main --task local_api_completions 
 # mxfp4 
 LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=A100-80GB TP=1 modal run src/llm/sglang/openai_gpt_oss.py::main --task local_api_tool_completions
 LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=H100 TP=1 modal run src/llm/sglang/openai_gpt_oss.py::main --task local_api_tool_completions
