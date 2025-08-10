@@ -744,8 +744,8 @@ async def chat_tool_stream(**kwargs):
     timeout=86400,  # default 300s
     # max_containers=1,
 )
-@modal.web_server(port=8801, startup_timeout=60 * 60)
-@modal.concurrent(max_inputs=100, target_inputs=10)
+@modal.web_server(port=8000, startup_timeout=60 * 60)
+@modal.concurrent(max_inputs=100, target_inputs=4)
 def serve():
     """
     modal + vllm :
@@ -753,7 +753,7 @@ def serve():
     - https://modal.com/llm-almanac/advisor
     """
     cmd = f"""
-    VLLM_ATTENTION_BACKEND=TRITON_ATTN_VLLM_V1 vllm serve {model_path} --async-scheduling --served-model-name {model_name} --trust_remote_code --port 8801 --tensor-parallel-size {os.getenv("TP", "1")}
+    VLLM_ATTENTION_BACKEND=TRITON_ATTN_VLLM_V1 vllm serve {model_path} --async-scheduling --served-model-name {model_name} --trust_remote_code --port 8000 --tensor-parallel-size {os.getenv("TP", "1")}
     """
     subprocess.Popen(cmd, shell=True, env=os.environ)
 
