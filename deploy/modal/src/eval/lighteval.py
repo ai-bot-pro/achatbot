@@ -6,7 +6,7 @@ import subprocess
 import modal
 
 
-app = modal.App("openai_gpt_oss_trl")
+app = modal.App("openai_gpt_oss_lighteval")
 IMAGE_GPU = os.getenv("IMAGE_GPU", None)
 img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
@@ -55,7 +55,8 @@ with img.imports():
 
     MODEL_PATH = os.getenv("LLM_MODEL", "openai/gpt-oss-20b")
     model_path = os.path.join(HF_MODEL_DIR, MODEL_PATH)
-    eval_out_dir = os.path.join(EVAL_OUTPUT_DIR, MODEL_PATH.split("/")[-1])
+    eval_out_dir = os.path.join(EVAL_OUTPUT_DIR, "lighteval", MODEL_PATH.split("/")[-1])
+    os.makedirs(eval_out_dir, exist_ok=True)
 
 
 @app.function(
