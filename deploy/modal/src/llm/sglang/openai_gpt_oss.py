@@ -15,6 +15,7 @@ SERVE_MAX_CONTAINERS = int(os.getenv("SERVE_MAX_CONTAINERS", 1))
 LLM_MODEL = os.getenv("LLM_MODEL", "openai/gpt-oss-20b")
 TP = os.getenv("TP", "1")
 SERVE_ARGS = os.getenv("SERVE_ARGS", "")
+SGLANG_VER = os.getenv("SGLANG_VER", "v0.5.0rc0")
 
 img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
@@ -25,7 +26,7 @@ img = (
     .apt_install("git", "git-lfs")
     .run_commands(
         "git clone https://github.com/sgl-project/sglang",
-        "cd /sglang && git checkout 3817a37d87619469bd5f2fc5d62c20caaedd666a",
+        f"cd /sglang && git checkout {SGLANG_VER}",
         "cd /sglang && pip install -e python[all]",  # make sure you have the correct transformers version installed!
     )
     .run_commands(
@@ -35,6 +36,9 @@ img = (
         "pip3 install https://github.com/sgl-project/whl/releases/download/v0.3.3/sgl_kernel-0.3.3-cp39-abi3-manylinux2014_x86_64.whl --force-reinstall"
     )
     .apt_install("libnuma-dev")  # Add NUMA library for sgl_kernel
+    .run_commands(
+        "pip install git+https://github.com/huggingface/transformers.git",
+    )
     .env(
         {
             "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
@@ -176,6 +180,13 @@ def serve():
     - https://modal.com/llm-almanac/advisor
     """
     run_cmd("python3 -m sglang.launch_server --help")
+
+    subprocess.run("nvidia-smi --version", shell=True)
+    subprocess.run("nvcc --version", shell=True)
+    if torch.cuda.is_available():
+        gpu_prop = torch.cuda.get_device_properties("cuda")
+        print(gpu_prop)
+
     cmd = f"""
     python3 -m sglang.launch_server --model {model_path} --host 0.0.0.0 --port 30000 \\
         --tp {os.getenv("TP", "1")} {os.getenv("SERVE_ARGS", "")}
@@ -243,7 +254,6 @@ def local_api_tool_completions(**kwargs):
 def url_request(test_timeout=30 * 60):
     import json
     import time
-    import urllib
 
     url = serve.get_web_url()
     print(f"Running health check for server at {url}")
@@ -287,18 +297,19 @@ modal run src/download_models.py --repo-ids "openai/gpt-oss-20b"
 modal run src/download_models.py --repo-ids "openai/gpt-oss-120b"
 
 
-# 1. run server and test with urllib request raw http api
+# 1. run server and test with urllib request raw http api (dev)
 # fp8/bf16
 LLM_MODEL=lmsys/gpt-oss-20b-bf16 SERVE_IMAGE_GPU=A100-80GB TP=1 modal run src/llm/sglang/openai_gpt_oss.py::url_request
 # mxfp4 
 LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=A100-80GB TP=1 modal run src/llm/sglang/openai_gpt_oss.py::url_request
 
 
-# 2. run server and test with openai client sdk
+# 2. run server and test with openai client sdk (dev/test)
 # fp8/bf16
 LLM_MODEL=lmsys/gpt-oss-20b-bf16 SERVE_IMAGE_GPU=A100-80GB TP=1 modal run src/llm/sglang/openai_gpt_oss.py::main --task local_api_completions
 LLM_MODEL=lmsys/gpt-oss-20b-bf16 SERVE_IMAGE_GPU=H100 TP=1 modal run src/llm/sglang/openai_gpt_oss.py::main --task local_api_completions
 LLM_MODEL=lmsys/gpt-oss-20b-bf16 SERVE_IMAGE_GPU=L40s:2 TP=2 SERVE_ARGS="--cuda-graph-max-bs 4" modal run src/llm/sglang/openai_gpt_oss.py::main --task local_api_completions 
+LLM_MODEL=lmsys/gpt-oss-120b-bf16 SERVE_IMAGE_GPU=H200:4 TP=4 SERVE_ARGS="--cuda-graph-max-bs 2" modal run src/llm/sglang/openai_gpt_oss.py::main --task local_api_completions 
 # mxfp4 
 LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=A100-80GB TP=1 modal run src/llm/sglang/openai_gpt_oss.py::main --task local_api_tool_completions
 LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=H100 TP=1 modal run src/llm/sglang/openai_gpt_oss.py::main --task local_api_tool_completions
@@ -312,6 +323,10 @@ LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=A100-80GB TP=1 modal run src/llm/sg
 LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=A100-80GB TP=1 modal run src/llm/sglang/openai_gpt_oss.py::main --task benchmark --num-prompts 20 --max-concurrency 4
 LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=H100 TP=1 modal run src/llm/sglang/openai_gpt_oss.py::main --task benchmark
 LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=H100 TP=1 modal run src/llm/sglang/openai_gpt_oss.py::main --task benchmark --num-prompts 20 --max-concurrency 4
+LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=H100 TP=1 modal run src/llm/sglang/openai_gpt_oss.py::main --task benchmark --num-prompts 40 --max-concurrency 8
+LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=H100 TP=1 modal run src/llm/sglang/openai_gpt_oss.py::main --task benchmark --num-prompts 80 --max-concurrency 16
+LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=H100 TP=1 modal run src/llm/sglang/openai_gpt_oss.py::main --task benchmark --num-prompts 160 --max-concurrency 32
+LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=H100 TP=1 modal run src/llm/sglang/openai_gpt_oss.py::main --task benchmark --num-prompts 320 --max-concurrency 64
 LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=H200 TP=1 modal run src/llm/sglang/openai_gpt_oss.py::main --task benchmark
 LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=H200 TP=1 modal run src/llm/sglang/openai_gpt_oss.py::main --task benchmark --num-prompts 20 --max-concurrency 4
 LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=H200 TP=1 modal run src/llm/sglang/openai_gpt_oss.py::main --task benchmark --num-prompts 80 --max-concurrency 16
@@ -320,14 +335,23 @@ LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=B200 TP=1 modal run src/llm/sglang/
 LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=B200 TP=1 modal run src/llm/sglang/openai_gpt_oss.py::main --task benchmark --num-prompts 20 --max-concurrency 4
 LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=B200 TP=1 modal run src/llm/sglang/openai_gpt_oss.py::main --task benchmark --num-prompts 80 --max-concurrency 16
 LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=B200 TP=1 modal run src/llm/sglang/openai_gpt_oss.py::main --task benchmark --num-prompts 160 --max-concurrency 32
+LLM_MODEL=lmsys/gpt-oss-120b-bf16 SERVE_IMAGE_GPU=H100:8 TP=8 modal run src/llm/sglang/openai_gpt_oss.py::main --task benchmark --num-prompts 320 --max-concurrency 64
 
-# 4. run server or deploy
+# 4. run server (gray)
 # fp8/bf16
 LLM_MODEL=lmsys/gpt-oss-20b-bf16 SERVE_IMAGE_GPU=H100 TP=1 modal serve src/llm/sglang/openai_gpt_oss.py
 LLM_MODEL=lmsys/gpt-oss-20b-bf16 SERVE_IMAGE_GPU=L40s:2 TP=2 SERVE_ARGS="--cuda-graph-max-bs 4" modal serve src/llm/sglang/openai_gpt_oss.py
 # mxfp4
 LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=H100 TP=1 modal serve src/llm/sglang/openai_gpt_oss.py
 LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=L40s:2 TP=2 SERVE_ARGS="--cuda-graph-max-bs 4" modal serve src/llm/sglang/openai_gpt_oss.py
+
+# 5. deploy (online)
+# fp8/bf16
+LLM_MODEL=lmsys/gpt-oss-20b-bf16 SERVE_IMAGE_GPU=H100 TP=1 SERVE_MAX_CONTAINERS=10 modal deploy src/llm/sglang/openai_gpt_oss.py
+LLM_MODEL=lmsys/gpt-oss-20b-bf16 SERVE_IMAGE_GPU=L40s:2 TP=2 SERVE_MAX_CONTAINERS=10 SERVE_ARGS="--cuda-graph-max-bs 4" modal serve src/llm/sglang/openai_gpt_oss.py
+# mxfp4
+LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=H100 TP=1 SERVE_MAX_CONTAINERS=10 modal deploy src/llm/sglang/openai_gpt_oss.py
+LLM_MODEL=openai/gpt-oss-20b SERVE_IMAGE_GPU=L40s:2 TP=2 SERVE_MAX_CONTAINERS=10 SERVE_ARGS="--cuda-graph-max-bs 4" modal deploy src/llm/sglang/openai_gpt_oss.py
 
 """
 
