@@ -5,7 +5,6 @@ import sys
 import asyncio
 import subprocess
 import threading
-import uuid
 import json
 from time import perf_counter
 
@@ -27,7 +26,7 @@ img = (
     )
     .apt_install("git", "git-lfs")
     .run_commands(
-        "uv pip install --system --pre vllm==0.10.1+gptoss "
+        "uv pip install --system --pre --no-cache vllm==0.10.1+gptoss "
         "--extra-index-url https://wheels.vllm.ai/gpt-oss/ "
         "--extra-index-url https://download.pytorch.org/whl/nightly/cu128 "
         "--index-strategy unsafe-best-match",
@@ -42,6 +41,7 @@ img = (
             "TP": TP,
             "VLLM_WORKER_MULTIPROC_METHOD": "spawn",
             "TORCH_CUDA_ARCH_LIST": "8.0 8.9 9.0+PTX",
+            "VLLM_ATTENTION_BACKEND": "TRITON_ATTN_VLLM_V1",
         }
     )
     .run_commands("git clone https://github.com/weedge/gpt-oss.git")
@@ -51,11 +51,6 @@ if BACKEND == "flashinfer":
         f"flashinfer-python",
         extra_index_url="https://wheels.vllm.ai/gpt-oss/",
     )
-
-# if IMAGE_GPU in ["H100", "B100", "H200", "B200"]:
-#    img = img.pip_install("triton==3.4.0")
-# else:
-#    img = img.pip_install("triton==3.3.1")
 
 
 HF_MODEL_DIR = "/root/.achatbot/models"
@@ -184,7 +179,7 @@ async def run(func, **kwargs):
     if torch.cuda.is_available():
         gpu_prop = torch.cuda.get_device_properties("cuda")
         print(gpu_prop)
-        assert gpu_prop.major > 8, f"now vllm gpt oss model just support cuda arch 9.0+ :)"
+        assert gpu_prop.major >= 8, f"now vllm gpt oss model just support cuda arch sm8.0+ :)"
 
     if asyncio.iscoroutinefunction(func):
         await func(**kwargs)
@@ -758,7 +753,7 @@ def serve():
     - https://modal.com/llm-almanac/advisor
     """
     cmd = f"""
-    VLLM_ATTENTION_BACKEND=TRITON_ATTN_VLLM_V1 vllm serve {model_path} --served-model-name {model_name} --trust_remote_code --port 8801
+    VLLM_ATTENTION_BACKEND=TRITON_ATTN_VLLM_V1 vllm serve {model_path} --async-scheduling --served-model-name {model_name} --trust_remote_code --port 8801 --tensor-parallel-size {os.getenv("TP", "1")}
     """
     subprocess.Popen(cmd, shell=True, env=os.environ)
 
@@ -777,17 +772,27 @@ modal run src/llm/vllm/openai_gpt_oss.py --task tokenizer
 modal run src/llm/vllm/openai_gpt_oss.py --task harmony_chat_tokenizer
 
 # generate
+IMAGE_GPU=A100 modal run src/llm/vllm/openai_gpt_oss.py --task generate
+IMAGE_GPU=L40s modal run src/llm/vllm/openai_gpt_oss.py --task generate
 IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task generate
 
+IMAGE_GPU=A100 modal run src/llm/vllm/openai_gpt_oss.py --task generate_stream
+IMAGE_GPU=L40s modal run src/llm/vllm/openai_gpt_oss.py --task generate_stream
 IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task generate_stream
 
 # chat
+IMAGE_GPU=A100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_stream
+IMAGE_GPU=L40s modal run src/llm/vllm/openai_gpt_oss.py --task chat_stream
 IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_stream
 
 # local input --- queue --> remote to loop chat
 
 ## use browser tool(find,open,search), need env EXA_API_KEY from https://exa.ai
+IMAGE_GPU=L40s modal run src/llm/vllm/openai_gpt_oss.py --task chat_tool_stream --build-in-tool browser
 IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_tool_stream --build-in-tool browser
+IMAGE_GPU=L40s modal run src/llm/vllm/openai_gpt_oss.py --task chat_tool_stream \
+    --max-tokens 2048 --temperature=1.0 --top-p=1.0 \
+    --build-in-tool browser --show-browser-results --model-identity "你是一名聊天助手，请用中文回复。"
 IMAGE_GPU=H100 modal run src/llm/vllm/openai_gpt_oss.py --task chat_tool_stream \
     --max-tokens 2048 --temperature=1.0 --top-p=1.0 \
     --build-in-tool browser --show-browser-results --model-identity "你是一名聊天助手，请用中文回复。"
