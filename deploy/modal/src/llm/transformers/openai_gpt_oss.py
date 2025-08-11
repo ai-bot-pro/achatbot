@@ -13,6 +13,7 @@ import modal
 
 app = modal.App("openai_gpt_oss")
 IMAGE_GPU = os.getenv("IMAGE_GPU", None)
+QUANTIZATION = os.getenv("QUANTIZATION", "")  # mxfp4
 img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
     modal.Image.from_registry(
@@ -28,17 +29,21 @@ img = (
         "pip install -U git+https://github.com/triton-lang/triton.git@main#subdirectory=python/triton_kernels",
     )
     .pip_install("openai-harmony")
+    .run_commands(
+        "pip install -U git+https://github.com/huggingface/transformers",
+    )
     .env(
         {
             "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
             # "TQDM_DISABLE": "1",
             "LLM_MODEL": os.getenv("LLM_MODEL", "openai/gpt-oss-20b"),
+            "QUANTIZATION": QUANTIZATION,
         }
     )
 )
 
-if IMAGE_GPU in ["H100", "B100", "H200", "B200"]:
-    img = img.pip_install("triton==3.4.0")
+if QUANTIZATION in ["mxfp4"]:
+    img = img.pip_install("triton>=3.4.0")
 else:
     img = img.pip_install("triton==3.3.1")
 
@@ -55,6 +60,7 @@ with img.imports():
         AutoTokenizer,
         TextIteratorStreamer,
         AutoConfig,
+        Mxfp4Config,
     )
 
     MODEL_PATH = os.getenv("LLM_MODEL", "openai/gpt-oss-20b")
@@ -94,17 +100,27 @@ async def run(func, **kwargs):
 
 
 def dump_model(**kwargs):
+    config = AutoConfig.from_pretrained(model_path)
+    print(config)
+
+    # quantization_config = Mxfp4Config.from_dict(config.quantization_config, pre_quantized=True)
+    # print(quantization_config)
+
+    gpu_prop = torch.cuda.get_device_properties("cuda")
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
         torch_dtype="auto",
         device_map="auto",
+        attn_implementation="kernels-community/vllm-flash-attn3" if gpu_prop.major > 8 else None,
+        # quantization_config=quantization_config,
     )
 
     model = model.eval()
     print(f"{model.config=}")
     tokenizer = AutoTokenizer.from_pretrained(model_path)
 
-    file_path = os.path.join(model_path, "model.txt")
+    QUANTIZATION = os.getenv("QUANTIZATION", "bf16")
+    file_path = os.path.join(model_path, f"model_{QUANTIZATION}.txt")
     with open(file_path, "w") as f:
         print(f"text tokenizer: {tokenizer}", file=f)
         print_model_params(model, f"{MODEL_PATH}", f)
@@ -650,7 +666,7 @@ def multi_gpu_generate(**kwargs):
 # NOTE: u can use text tokenizer lib (tiktoken use openai-harmony or HF tokenizers lib) + gpt oss LLM generator
 
 modal run src/download_models.py --repo-ids "openai/gpt-oss-20b"
-modal run src/download_models.py --repo-ids "openai/gpt-oss-120b"
+modal run src/download_models.py --repo-ids "openai/gpt-oss-120b" --ignore-patterns "*.pt|*.bin|*original*|*metal*"
 
 
 modal run src/llm/transformers/openai_gpt_oss.py --task tokenize --reasoning low 
@@ -659,17 +675,27 @@ modal run src/llm/transformers/openai_gpt_oss.py --task tokenize --reasoning hig
 modal run src/llm/transformers/openai_gpt_oss.py --task tokenize --reasoning low  --model-identity "you are a helpful assistant."
 
 IMAGE_GPU=L40s modal run src/llm/transformers/openai_gpt_oss.py --task dump_model
-IMAGE_GPU=H100 LLM_MODEL="openai/gpt-oss-120b" modal run src/llm/transformers/openai_gpt_oss.py --task dump_model
+IMAGE_GPU=H100:4 LLM_MODEL="openai/gpt-oss-120b" modal run src/llm/transformers/openai_gpt_oss.py --task dump_model
+
+QUANTIZATION=mxfp4 IMAGE_GPU=T4 modal run src/llm/transformers/openai_gpt_oss.py --task dump_model
+QUANTIZATION=mxfp4 IMAGE_GPU=A100-80GB LLM_MODEL="openai/gpt-oss-120b" modal run src/llm/transformers/openai_gpt_oss.py --task dump_model
+QUANTIZATION=mxfp4 IMAGE_GPU=H100 LLM_MODEL="openai/gpt-oss-120b" modal run src/llm/transformers/openai_gpt_oss.py --task dump_model
 
 IMAGE_GPU=L40s modal run src/llm/transformers/openai_gpt_oss.py --task pipe
 IMAGE_GPU=H100 modal run src/llm/transformers/openai_gpt_oss.py --task pipe
+QUANTIZATION=mxfp4 IMAGE_GPU=T4 modal run src/llm/transformers/openai_gpt_oss.py --task pipe
+QUANTIZATION=mxfp4 IMAGE_GPU=A100-80GB LLM_MODEL="openai/gpt-oss-120b" modal run src/llm/transformers/openai_gpt_oss.py --task pipe
 
 IMAGE_GPU=L40s modal run src/llm/transformers/openai_gpt_oss.py --task generate
 IMAGE_GPU=H100 modal run src/llm/transformers/openai_gpt_oss.py --task generate
+QUANTIZATION=mxfp4 IMAGE_GPU=T4 modal run src/llm/transformers/openai_gpt_oss.py --task generate
+QUANTIZATION=mxfp4 IMAGE_GPU=A100-80GB LLM_MODEL="openai/gpt-oss-120b" modal run src/llm/transformers/openai_gpt_oss.py --task generate
 
 IMAGE_GPU=L40s modal run src/llm/transformers/openai_gpt_oss.py --task generate_stream --reasoning low
 IMAGE_GPU=L40s modal run src/llm/transformers/openai_gpt_oss.py --task generate_stream --reasoning medium
 IMAGE_GPU=L40s modal run src/llm/transformers/openai_gpt_oss.py --task generate_stream --reasoning high 
+QUANTIZATION=mxfp4 IMAGE_GPU=T4 modal run src/llm/transformers/openai_gpt_oss.py --task generate_stream --reasoning high
+QUANTIZATION=mxfp4 IMAGE_GPU=A100-80GB LLM_MODEL="openai/gpt-oss-120b" modal run src/llm/transformers/openai_gpt_oss.py --task generate_stream --reasoning high
 IMAGE_GPU=H100 modal run src/llm/transformers/openai_gpt_oss.py --task generate_stream --reasoning low
 IMAGE_GPU=H100 modal run src/llm/transformers/openai_gpt_oss.py --task generate_stream --reasoning medium
 IMAGE_GPU=H100 modal run src/llm/transformers/openai_gpt_oss.py --task generate_stream --reasoning high 
@@ -679,20 +705,25 @@ modal run src/llm/transformers/openai_gpt_oss.py --task openai_harmony_stream_de
 IMAGE_GPU=L40s modal run src/llm/transformers/openai_gpt_oss.py --task openai_harmony_generate --reasoning low
 IMAGE_GPU=L40s modal run src/llm/transformers/openai_gpt_oss.py --task openai_harmony_generate --reasoning medium
 IMAGE_GPU=L40s modal run src/llm/transformers/openai_gpt_oss.py --task openai_harmony_generate --reasoning high
+QUANTIZATION=mxfp4 IMAGE_GPU=T4 modal run src/llm/transformers/openai_gpt_oss.py --task openai_harmony_generate --reasoning high
+QUANTIZATION=mxfp4 IMAGE_GPU=A100-80GB LLM_MODEL="openai/gpt-oss-120b" modal run src/llm/transformers/openai_gpt_oss.py --task openai_harmony_generate --reasoning high
 
 IMAGE_GPU=L40s modal run src/llm/transformers/openai_gpt_oss.py --task openai_harmony_generate_tool --reasoning low
 IMAGE_GPU=L40s modal run src/llm/transformers/openai_gpt_oss.py --task openai_harmony_generate_tool --reasoning medium
 IMAGE_GPU=L40s modal run src/llm/transformers/openai_gpt_oss.py --task openai_harmony_generate_tool --reasoning high
+QUANTIZATION=mxfp4 IMAGE_GPU=T4 modal run src/llm/transformers/openai_gpt_oss.py --task openai_harmony_generate_tool --reasoning high
+QUANTIZATION=mxfp4 IMAGE_GPU=A100-80GB LLM_MODEL="openai/gpt-oss-120b" modal run src/llm/transformers/openai_gpt_oss.py --task openai_harmony_generate_tool --reasoning high
 
 IMAGE_GPU=L4:3 modal run src/llm/transformers/openai_gpt_oss.py --task split_model
 
 IMAGE_GPU=L4:3 modal run src/llm/transformers/openai_gpt_oss.py --task multi_gpu_generate --reasoning low 
 IMAGE_GPU=L4:3 modal run src/llm/transformers/openai_gpt_oss.py --task multi_gpu_generate --reasoning medium
 IMAGE_GPU=L4:3 modal run src/llm/transformers/openai_gpt_oss.py --task multi_gpu_generate --reasoning high
-IMAGE_GPU=L40:1 modal run src/llm/transformers/openai_gpt_oss.py --task multi_gpu_generate
-IMAGE_GPU=L40:2 modal run src/llm/transformers/openai_gpt_oss.py --task multi_gpu_generate --reasoning high
+IMAGE_GPU=L40s:1 modal run src/llm/transformers/openai_gpt_oss.py --task multi_gpu_generate
+IMAGE_GPU=L40s:2 modal run src/llm/transformers/openai_gpt_oss.py --task multi_gpu_generate --reasoning high
 IMAGE_GPU=H100:1 modal run src/llm/transformers/openai_gpt_oss.py --task multi_gpu_generate
 IMAGE_GPU=H100:2 modal run src/llm/transformers/openai_gpt_oss.py --task multi_gpu_generate --reasoning high
+QUANTIZATION=mxfp4 IMAGE_GPU=L4:4 LLM_MODEL="openai/gpt-oss-120b" modal run src/llm/transformers/openai_gpt_oss.py --task multi_gpu_generate --reasoning high
 
 """
 

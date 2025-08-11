@@ -1028,7 +1028,7 @@ async def loop_input(q: modal.Queue):
 modal run src/download_models.py --repo-ids "lmsys/gpt-oss-20b-bf16"
 modal run src/download_models.py --repo-ids "lmsys/gpt-oss-120b-bf16"
 modal run src/download_models.py --repo-ids "openai/gpt-oss-20b"
-modal run src/download_models.py --repo-ids "openai/gpt-oss-120b"
+modal run src/download_models.py --repo-ids "openai/gpt-oss-120b" --ignore-patterns "*.pt|*.bin|*original*|*metal*"
 
 
 # 1. run server and test with urllib request raw http api (dev)

@@ -761,7 +761,7 @@ def serve():
 """
 # download hf tranformers weight(safetensors) for vllm to load
 modal run src/download_models.py --repo-ids "openai/gpt-oss-20b"
-modal run src/download_models.py --repo-ids "openai/gpt-oss-120b"
+modal run src/download_models.py --repo-ids "openai/gpt-oss-120b" --ignore-patterns "*.pt|*.bin|*original*|*metal*"
 
 # see help
 modal run src/llm/vllm/openai_gpt_oss.py --help 
