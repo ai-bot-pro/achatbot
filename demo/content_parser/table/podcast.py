@@ -24,7 +24,8 @@ client = instructor.from_gemini(
         # model_name="models/gemini-2.5-pro-exp-03-25",
         # model_name=f"models/{os.getenv('GEMINI_MODEL','gemini-2.5-flash-preview-04-17')}",
         # model_name=f"models/{os.getenv('GEMINI_MODEL','gemini-2.5-pro-preview-05-06')}",
-        model_name=f"models/{os.getenv('GEMINI_MODEL', 'gemini-2.5-flash-lite')}",
+        # model_name=f"models/{os.getenv('GEMINI_MODEL', 'gemini-2.5-flash-lite')}",
+        model_name=f"models/{os.getenv('GEMINI_MODEL', 'gemini-2.5-pro')}",
     ),
     mode=instructor.Mode.GEMINI_JSON,
     generation_config={
