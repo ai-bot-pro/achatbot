@@ -12,7 +12,10 @@ download_image = (
     .run_commands()
     .pip_install("hf-transfer", "huggingface_hub[hf_xet]")
     .env(
-        {"HF_HUB_ENABLE_HF_TRANSFER": "1"},  # hf-transfer for faster downloads
+        {
+            "HF_HUB_ENABLE_HF_TRANSFER": "1",  # hf-transfer for faster downloads
+            "HF_HUB_DOWNLOAD_TIMEOUT": "30",
+        },
     )
 )
 
@@ -26,14 +29,18 @@ hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
 @app.function(
     # gpu="T4",
     retries=0,
-    cpu=8.0,
+    cpu=20.0,
     image=download_image,
     secrets=[modal.Secret.from_name("achatbot")],
     volumes={HF_MODEL_DIR: hf_model_vol},
-    timeout=1200,
-    scaledown_window=1200,
+    timeout=86400,
 )
-def download_ckpt(repo_ids: str, revision: str = None, local_dir: str = None) -> str:
+def download_ckpt(
+    repo_ids: str,
+    revision: str = None,
+    local_dir: str = None,
+    ignore_patterns: list = ["*.pt", "*.bin"],
+) -> str:
     # https://huggingface.co/docs/huggingface_hub/guides/download
     from huggingface_hub import snapshot_download
 
@@ -42,15 +49,15 @@ def download_ckpt(repo_ids: str, revision: str = None, local_dir: str = None) ->
             local_dir = os.path.join(HF_MODEL_DIR, repo_id)
         else:
             local_dir = os.path.join(HF_MODEL_DIR, local_dir)
-        print(f"{repo_id} model downloading")
+        print(f"{repo_id} model downloading, {ignore_patterns=}")
         snapshot_download(
             repo_id=repo_id,
             revision=revision,
             repo_type="model",
             allow_patterns="*",
-            # ignore_patterns=["*.pt", "*.bin"],  # using safetensors
+            ignore_patterns=ignore_patterns,  # using safetensors
             local_dir=local_dir,
-            max_workers=8,
+            max_workers=20,
         )
         print(f"{repo_id} model to dir:{HF_MODEL_DIR} done")
 
@@ -157,5 +164,6 @@ modal run src/download_models.py::download_ckpts --ckpt-urls "https://virutalbuy
 
 
 @app.local_entrypoint()
-def main(repo_ids: str, revision: str = None, local_dir: str = None):
-    download_ckpt.remote(repo_ids, revision, local_dir)
+def main(repo_ids: str, revision: str = None, local_dir: str = None, ignore_patterns: str = ""):
+    ignore_patterns = ignore_patterns.split("|")
+    download_ckpt.remote(repo_ids, revision, local_dir, ignore_patterns=ignore_patterns)
