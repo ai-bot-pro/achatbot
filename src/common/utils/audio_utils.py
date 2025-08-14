@@ -29,6 +29,7 @@ VIDEO_EXTENSIONS = {
 
 
 def bytes2NpArrayWith16(frames: bytes | bytearray):
+    """Convert PCM buffer in s16le format to normalized NumPy array."""
     # Convert the buffer frames to a NumPy array
     audio_array = np.frombuffer(frames, dtype=np.int16)
     # Normalize the array to a [-1, 1] range
