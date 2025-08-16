@@ -178,6 +178,7 @@ class IAsr(ABC):
 
     @abstractmethod
     async def transcribe_stream(self, session) -> AsyncGenerator[str, None]:
+        """decode stream (text token step by step)"""
         raise NotImplementedError("must be implemented in the child class")
 
     @abstractmethod
@@ -186,6 +187,12 @@ class IAsr(ABC):
 
     @abstractmethod
     def set_audio_data(self, audio_data):
+        raise NotImplementedError("must be implemented in the child class")
+
+class IPunc(ABC):
+    @abstractmethod
+    def generate(self, session, **kwargs) -> Generator[str, None, None]:
+        """"""
         raise NotImplementedError("must be implemented in the child class")
 
 

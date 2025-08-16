@@ -143,7 +143,6 @@ class FFMPEGPipeProcessor(FrameProcessor):
                     if len(self.pcm_buffer) > self.max_bytes_per_sec:
                         logging.warning(
                             f"Audio buffer too large: {len(self.pcm_buffer) / self.bytes_per_sec:.2f}s. "
-                            f"Consider using a smaller model."
                         )
 
                     # pcm_array = bytes2NpArrayWith16(self.pcm_buffer[: self.max_bytes_per_sec])
