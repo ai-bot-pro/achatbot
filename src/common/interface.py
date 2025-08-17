@@ -100,7 +100,7 @@ class IBuffering(ABC):
 
 class IDetector(ABC):
     @abstractmethod
-    async def detect(self, session) -> list[bytes | None]:
+    async def detect(self, session) -> list[dict | bytes | None]:
         raise NotImplementedError("must be implemented in the child class")
 
     @abstractmethod
@@ -189,10 +189,33 @@ class IAsr(ABC):
     def set_audio_data(self, audio_data):
         raise NotImplementedError("must be implemented in the child class")
 
+
+class IAsrLive(ABC):
+    @abstractmethod
+    async def streaming_transcribe(self, session, **kwargs) -> AsyncGenerator[dict, None]:
+        """
+        return
+        - {"timestamps":[],"text":""}
+        """
+        raise NotImplementedError("must be implemented in the child class")
+
+
 class IPunc(ABC):
     @abstractmethod
     def generate(self, session, **kwargs) -> Generator[str, None, None]:
-        """"""
+        """
+        - generate text with punc
+        """
+        raise NotImplementedError("must be implemented in the child class")
+
+
+class ITextProcessing(ABC):
+    @abstractmethod
+    def normalize(self, session, **kwargs):
+        """
+        - Text Normalize
+        - Inverse Text Normalize
+        """
         raise NotImplementedError("must be implemented in the child class")
 
 

@@ -16,11 +16,11 @@ def timeit(func):
     return wrapper
 
 
-def to_timestamp(t: int, comma: bool = False):
+def to_timestamp(t: int, comma: bool = False, msec: int = 10):
     """
     whisper cpp time to timestamp
     """
-    msec = int(t * 10)
+    msec = int(t * msec)
     hours = int(msec / (1000 * 60 * 60))
     msec = int(msec - hours * (1000 * 60 * 60))
     minutes = int(msec / (1000 * 60))
