@@ -11,10 +11,11 @@ from apipeline.frames.sys_frames import CancelFrame, MetricsFrame, ErrorFrame
 from apipeline.frames.control_frames import EndFrame, StartFrame
 from apipeline.frames.data_frames import Frame, AudioRawFrame
 
+from src.common.types import VADState
 from src.processors.speech.audio_volume_time_processor import AudioVolumeTimeProcessor
 from src.processors.ai_processor import AsyncAIProcessor
 from src.common.utils.helper import exp_smoothing, calculate_audio_volume
-from src.types.frames.data_frames import DailyTransportMessageFrame, TranscriptionFrame
+from src.types.frames.data_frames import TranscriptionFrame, VADStateAudioRawFrame
 from src.types.speech.language import Language
 from src.types.frames.control_frames import (
     ASRArgsUpdateFrame,
@@ -45,7 +46,7 @@ class ASRProcessorBase(AsyncAIProcessor):
         pass
 
     @abstractmethod
-    async def run_asr(self, audio: bytes) -> AsyncGenerator[Frame, None]:
+    async def run_asr(self, audio: bytes, **kwargs) -> AsyncGenerator[Frame, None]:
         """Returns transcript as a string"""
         pass
 
@@ -83,8 +84,6 @@ class SegmentedASRProcessor(ASRProcessorBase):
 
     def __init__(self, *, sample_rate: Optional[int] = None, **kwargs):
         super().__init__(sample_rate=sample_rate, **kwargs)
-        self._content = None
-        self._wave = None
         self._audio_buffer = bytearray()
         self._audio_buffer_size_1s = 0
         self._user_speaking = False
@@ -219,3 +218,72 @@ class TranscriptionTimingLogProcessor(FrameProcessor):
             await self.push_frame(frame, direction)
         except Exception as e:
             logging.debug(f"Exception {e}")
+
+
+class VADSegmentedASRProcessor(ASRProcessorBase):
+    """
+    buffer chunk_length_seconds chunk to process with vad
+    """
+
+    def __init__(self, *, sample_rate: int = 16000, chunk_length_seconds: float = 0.1, **kwargs):
+        super().__init__(sample_rate=sample_rate, **kwargs)
+        self._user_speaking = False
+        self._audio_buffer = bytearray()
+        self._chunk_length_seconds = chunk_length_seconds
+        self._chunk_length_in_bytes = 0
+        self._max_bytes_per_sec = (
+            self._sample_rate * 5 * 2
+        )  # 5 seconds of audio at 16 kHz with sample_width(2)
+
+    async def start(self, frame: StartFrame):
+        await super().start(frame)
+        self._chunk_length_in_bytes = self._chunk_length_seconds * self._sample_rate * 2
+
+        content = io.BytesIO()
+        with wave.open(content, "wb") as wav:
+            wav.setsampwidth(2)
+            wav.setnchannels(1)
+            wav.setframerate(self._sample_rate)
+            wav.writeframes(self._audio_buffer)
+
+        content.seek(0)
+        await self.process_generator(self.run_asr(content.read()))
+
+        self._audio_buffer.clear()
+
+    async def process_audio_frame(self, frame: AudioRawFrame):
+        if not isinstance(frame, VADStateAudioRawFrame):
+            return
+
+        is_start = False
+        is_last = False
+        if self._user_speaking is False and frame.state == VADState.SPEAKING:
+            self._user_speaking = True
+            is_start = True
+
+        if self._user_speaking is True and frame.state == VADState.QUIET:
+            self._user_speaking = False
+            is_last = True
+
+        # If the user is speaking the audio buffer will keep growing.
+        self._audio_buffer.extend(frame.audio)
+
+        if len(self._audio_buffer) >= self._chunk_length_in_bytes:
+            if len(self._audio_buffer) > self._max_bytes_per_sec:
+                logging.warning(
+                    f"Audio buffer too large: {(len(self._audio_buffer) / (self._sample_rate * 2)):.2f}s. "
+                )
+
+            content = io.BytesIO()
+            with wave.open(content, "wb") as wav:
+                wav.setsampwidth(2)
+                wav.setnchannels(1)
+                wav.setframerate(self._sample_rate)
+                wav.writeframes(self._audio_buffer[: self._max_bytes_per_sec].copy())
+
+            content.seek(0)
+            await self.process_generator(
+                self.run_asr(content.read(), is_start=is_start, is_last=is_last)
+            )
+
+            self._audio_buffer = self._audio_buffer[self._max_bytes_per_sec :]

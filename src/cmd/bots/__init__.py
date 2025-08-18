@@ -346,6 +346,11 @@ def import_fastapi_websocket_bots(bot_name: str = "DummyBot"):
 
         return True
 
+    if "FastapiWebsocketStreamingASRBot" in bot_name:
+        from .live import fastapi_websocket_streaming_asr_bot
+
+        return True
+
     return False
 
 

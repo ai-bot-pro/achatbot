@@ -20,6 +20,8 @@ from dotenv import load_dotenv
 from pydantic.main import BaseModel
 from pydantic import ConfigDict
 
+from src.common.utils.thread_safe import ThreadSafeDict
+
 from .interface import (
     IBuffering,
     IDetector,
@@ -66,7 +68,7 @@ class SessionCtx:
     sampling_rate: int = RATE
     sample_width: int = SAMPLE_WIDTH
     read_audio_frames = bytes()
-    state = dict()
+    state = ThreadSafeDict()
     buffering_strategy: IBuffering = None
     waker: IDetector | EngineClass = None
     vad: IDetector | EngineClass = None
@@ -381,6 +383,9 @@ class EdgeTTSArgs:
     rate: str = "+15%"
     volume: str = "+0%"
     pitch: str = "+0Hz"
+    boundary: Literal["WordBoundary", "SentenceBoundary"] = "SentenceBoundary"
+    connect_timeout: int = 10
+    receive_timeout: int = 60
 
 
 @dataclass

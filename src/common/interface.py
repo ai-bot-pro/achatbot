@@ -199,6 +199,10 @@ class IAsrLive(ABC):
         """
         raise NotImplementedError("must be implemented in the child class")
 
+    @abstractmethod
+    def reset(self):
+        raise NotImplementedError("must be implemented in the child class")
+
 
 class IPunc(ABC):
     @abstractmethod

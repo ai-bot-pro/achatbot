@@ -50,7 +50,6 @@ class FastapiWebsocketServerBot(AIFastapiWebsocketBot):
             vad_enabled=True,
             vad_analyzer=self.vad_analyzer,
             vad_audio_passthrough=True,
-            transcription_enabled=False,
         )
         stream_info = self.tts_processor.get_stream_info()
         self.params.audio_out_sample_rate = stream_info["sample_rate"]

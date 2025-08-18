@@ -21,7 +21,7 @@ class TextProcessingEnvInit:
 
     @staticmethod
     def initEngine(tag: str | None = None, **kwargs) -> interface.ITextProcessing | EngineClass:
-        # punc
+        # text normalize processing
         tag = tag or os.getenv("TEXT_PROCESSING_TAG", "we_text_processing")
         logging.info(f"{tag} args: {kwargs}")
         engine = TextProcessingEnvInit.getEngine(tag, **kwargs)

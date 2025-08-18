@@ -9,7 +9,7 @@ from src.modules.speech.asr_live import ASRLiveEnvInit
 from src.common.session import Session, SessionCtx
 from src.common.types import ASSETS_DIR
 
-engine = ASRLiveEnvInit.initEngine()
+engine = ASRLiveEnvInit.initEngine(textnorm=bool(os.getenv("TEXTNORM", "")))
 session = Session(**SessionCtx("test_client_id", 16000, 2).__dict__)
 
 wav_path = os.path.join(ASSETS_DIR, "Chinese_prompt.wav")
@@ -42,3 +42,8 @@ async def run(samples, sr):
 
 
 asyncio.run(run(samples, sr))
+
+"""
+python -m src.modules.speech.asr_live
+TEXTNORM=1 python -m src.modules.speech.asr_live
+"""

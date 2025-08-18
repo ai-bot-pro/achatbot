@@ -4,6 +4,8 @@ from typing import Any, List
 
 from apipeline.frames.data_frames import Frame, DataFrame, TextFrame, ImageRawFrame, AudioRawFrame
 
+from src.common.types import VADState
+
 
 @dataclass
 class InputImageRawFrame(ImageRawFrame):
@@ -79,8 +81,8 @@ class TranscriptionFrame(TextFrame):
 
     """
 
-    user_id: str
-    timestamp: str
+    user_id: str = ""
+    timestamp: str = ""
     language: str | None = None
 
     def __str__(self):
@@ -199,6 +201,13 @@ class InputAudioRawFrame(AudioRawFrame):
 @dataclass
 class OutputAudioRawFrame(AudioRawFrame):
     """output audio frame"""
+
+
+@dataclass
+class VADStateAudioRawFrame(AudioRawFrame):
+    """VAD state audio frame"""
+
+    state: VADState = VADState.QUIET
 
 
 @dataclass

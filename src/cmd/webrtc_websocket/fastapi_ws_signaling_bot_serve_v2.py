@@ -15,7 +15,7 @@ from fastapi import WebSocketDisconnect
 from dotenv import load_dotenv
 from fastapi.websockets import WebSocketState
 
-from src.common.utils.helper import ThreadSafeDict
+from src.common.utils.thread_safe import ThreadSafeDict
 from src.cmd.bots.bridge.base import AISmallWebRTCFastapiWebsocketBot
 from src.cmd.bots.base import AIBot
 from src.cmd.bots.bot_loader import BotLoader

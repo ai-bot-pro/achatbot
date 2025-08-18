@@ -43,9 +43,10 @@ class FFMPEGPipeProcessor(FrameProcessor):
         self.sample_rate = sample_rate
         self.channels = channels
         self.chunk_samples_per_sec = int(sample_rate * min_chunk_s)
-        self.bytes_per_sample = 2
-        self.chunk_bytes_per_sec = self.chunk_samples_per_sec * self.bytes_per_sample
-        self.max_bytes_per_sec = 32000 * 5  # 5 seconds of audio at 32 kHz
+        self.chunk_bytes_per_sec = self.chunk_samples_per_sec * 2
+        self.max_bytes_per_sec = (
+            self.sample_rate * 5 * 2
+        )  # 5 seconds of audio at 16 kHz with sample_width(2)
         self.is_stopping = False
         self.pcm_buffer = bytearray()
 
@@ -54,7 +55,7 @@ class FFMPEGPipeProcessor(FrameProcessor):
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
         if isinstance(frame, AudioRawFrame):
-            await self.process_audio(AudioRawFrame.audio)
+            await self.process_audio(frame.audio)
             return
 
         if isinstance(frame, StartFrame):
@@ -142,7 +143,7 @@ class FFMPEGPipeProcessor(FrameProcessor):
                 if len(self.pcm_buffer) >= self.chunk_bytes_per_sec:
                     if len(self.pcm_buffer) > self.max_bytes_per_sec:
                         logging.warning(
-                            f"Audio buffer too large: {len(self.pcm_buffer) / self.bytes_per_sec:.2f}s. "
+                            f"Audio buffer too large: {(len(self.pcm_buffer) / (self.sample_rate * 2)):.2f}s. "
                         )
 
                     # pcm_array = bytes2NpArrayWith16(self.pcm_buffer[: self.max_bytes_per_sec])

@@ -20,6 +20,7 @@ from src.common.types import AudioVADTurnParams, VADState
 from src.types.frames.control_frames import UserStartedSpeakingFrame, UserStoppedSpeakingFrame
 from src.types.frames.sys_frames import BotInterruptionFrame, MetricsFrame
 from src.types.speech.turn_analyzer import EndOfTurnState
+from src.types.frames import VADStateAudioRawFrame
 
 
 class AudioVADInputProcessor(InputProcessor):
@@ -107,7 +108,18 @@ class AudioVADInputProcessor(InputProcessor):
 
                 # Push audio downstream if passthrough.
                 if audio_passthrough:
-                    await self.queue_frame(frame)
+                    if self._params.vad_enabled:
+                        await self.queue_frame(
+                            VADStateAudioRawFrame(
+                                sample_rate=frame.sample_rate,
+                                audio=frame.audio,
+                                num_channels=frame.num_channels,
+                                sample_width=frame.sample_width,
+                                state=vad_state,
+                            )
+                        )
+                    else:
+                        await self.queue_frame(frame)
             except asyncio.TimeoutError:
                 continue
             except asyncio.CancelledError:

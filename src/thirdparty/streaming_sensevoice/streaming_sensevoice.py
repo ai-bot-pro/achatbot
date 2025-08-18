@@ -35,7 +35,7 @@ class StreamingSenseVoice:
         contexts: List[str] = None,
         language: str = "zh",
         textnorm: bool = False,
-        device: str = "cpu",
+        device: str | None = None,
         model: str = "iic/SenseVoiceSmall",
     ):
         """
@@ -45,7 +45,7 @@ class StreamingSenseVoice:
         textnorm:
             True to enable inverse text normalization; False to disable it.
         """
-        self.device = device
+        self.device = device or "cuda" if torch.cuda.is_available() else "cpu"
         self.model: SenseVoiceSmall = None
         self.model, kwargs = self.load_model(model=model, device=device)
         # language query

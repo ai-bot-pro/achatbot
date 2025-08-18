@@ -12,8 +12,12 @@ class ASRStreamingSenseVoice(EngineClass, IAsrLive):
 
     def __init__(self, **kwargs):
         super().__init__()
+        self.args = kwargs
         model_path = kwargs.pop("model", os.path.join(MODELS_DIR, "FunAudioLLM/SenseVoiceSmall"))
         self.model = StreamingSenseVoice(model=model_path, **kwargs)
+
+    def reset(self):
+        self.model.reset()
 
     async def streaming_transcribe(self, session: Session, **kwargs):
         audio_chunk = session.ctx.state["audio_chunk"]

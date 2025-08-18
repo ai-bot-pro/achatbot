@@ -487,7 +487,7 @@ codec_wavtokenizer = [
 
 # tts module tag -> pkgs
 tts_coqui = ["TTS~=0.22.0"]
-tts_edge = ["edge-tts~=6.1.12"]
+tts_edge = ["edge-tts>=7.2.0"]
 tts_g = ["gTTS~=2.5.1"]
 tts_pyttsx3 = ["pyttsx3~=2.90"]
 tts_cosy_voice = [

@@ -29,7 +29,8 @@ except ModuleNotFoundError as e:
     raise Exception(f"Missing module: {e}")
 
 
-from src.common.utils.helper import ThreadSafeDict, get_device
+from src.common.utils.thread_safe import ThreadSafeDict
+from src.common.utils.helper import get_device
 from src.core.llm.transformers.streamer import TokenStreamer
 from src.common.random import set_all_random_seed
 from src.common.chat_history import ChatHistory
