@@ -79,14 +79,16 @@ class TranscriptionFrame(TextFrame):
     """A text frame with transcription-specific data. Will be placed in the
     transport's receive queue when a participant speaks.
 
+    timestamps is list of word start_time or tuple(start_time,end_time)
     """
 
     user_id: str = ""
     timestamp: str = ""
     language: str | None = None
+    timestamps: list = field(default_factory=list)
 
     def __str__(self):
-        return f"{self.name}(user: {self.user_id}, text: {self.text}, timestamp: {self.timestamp}, language: {self.language})"
+        return f"{self.name}(user: {self.user_id}, text: {self.text}, timestamp: {self.timestamp}, language: {self.language}, len(timestamps):{len(self.timestamps)})"
 
 
 @dataclass

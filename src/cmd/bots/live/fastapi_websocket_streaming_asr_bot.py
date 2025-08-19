@@ -1,17 +1,17 @@
 import logging
 
+from dotenv import load_dotenv
+from fastapi import WebSocket
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
-from fastapi import WebSocket
+from apipeline.processors.logger import FrameLogger
+from apipeline.frames import AudioRawFrame, TextFrame
 
 from src.modules.speech.asr_live import ASRLiveEnvInit
 from src.cmd.bots.base_fastapi_websocket_server import AIFastapiWebsocketBot
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.cmd.bots import register_ai_fastapi_ws_bots
-
-from dotenv import load_dotenv
-
 from src.types.network.fastapi_websocket import FastapiWebsocketServerParams
 from src.transports.fastapi_websocket_server import FastapiWebsocketTransport
 from src.processors.speech.asr.asr_live_processor import ASRLiveProcessor
@@ -69,6 +69,7 @@ class FastapiWebsocketStreamingASRBot(AIFastapiWebsocketBot):
                 [
                     transport.input_processor(),
                     asr_live_processor,
+                    FrameLogger(include_frame_types=[TextFrame]),
                     transport.output_processor(),
                 ]
             ),

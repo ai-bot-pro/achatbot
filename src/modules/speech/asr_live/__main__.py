@@ -20,7 +20,8 @@ if sr != target_sample_rate:
     samples = librosa.resample(samples, orig_sr=sr, target_sr=target_sample_rate)
     sr = target_sample_rate
     print(f"Resampled to {target_sample_rate}Hz {samples.shape=}")
-samples = (samples * 32768).tolist() * 1
+# samples = (samples * 32768).tolist() * 1
+# samples = (samples * 32768) * 1
 
 
 async def run(samples, sr):

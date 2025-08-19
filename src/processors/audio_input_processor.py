@@ -109,7 +109,7 @@ class AudioVADInputProcessor(InputProcessor):
                 # Push audio downstream if passthrough.
                 if audio_passthrough:
                     if self._params.vad_enabled:
-                        await self.queue_frame(
+                        await self.push_frame(
                             VADStateAudioRawFrame(
                                 sample_rate=frame.sample_rate,
                                 audio=frame.audio,

@@ -230,60 +230,49 @@ class VADSegmentedASRProcessor(ASRProcessorBase):
         self._user_speaking = False
         self._audio_buffer = bytearray()
         self._chunk_length_seconds = chunk_length_seconds
-        self._chunk_length_in_bytes = 0
+        self._chunk_length_in_bytes = int(self._chunk_length_seconds * self._sample_rate * 2)
         self._max_bytes_per_sec = (
             self._sample_rate * 5 * 2
         )  # 5 seconds of audio at 16 kHz with sample_width(2)
 
     async def start(self, frame: StartFrame):
         await super().start(frame)
-        self._chunk_length_in_bytes = self._chunk_length_seconds * self._sample_rate * 2
-
-        content = io.BytesIO()
-        with wave.open(content, "wb") as wav:
-            wav.setsampwidth(2)
-            wav.setnchannels(1)
-            wav.setframerate(self._sample_rate)
-            wav.writeframes(self._audio_buffer)
-
-        content.seek(0)
-        await self.process_generator(self.run_asr(content.read()))
-
         self._audio_buffer.clear()
 
+    async def process_frame(self, frame: Frame, direction: FrameDirection):
+        await super().process_frame(frame, direction)
+
+        if isinstance(frame, UserStartedSpeakingFrame):
+            await self._handle_user_started_speaking(frame)
+        elif isinstance(frame, UserStoppedSpeakingFrame):
+            await self._handle_user_stopped_speaking(frame)
+
+    async def _handle_user_started_speaking(self, frame: UserStartedSpeakingFrame):
+        self._user_speaking = True
+
+    async def _handle_user_stopped_speaking(self, frame: UserStoppedSpeakingFrame):
+        self._user_speaking = False
+
     async def process_audio_frame(self, frame: AudioRawFrame):
-        if not isinstance(frame, VADStateAudioRawFrame):
-            return
-
-        is_start = False
-        is_last = False
-        if self._user_speaking is False and frame.state == VADState.SPEAKING:
-            self._user_speaking = True
-            is_start = True
-
-        if self._user_speaking is True and frame.state == VADState.QUIET:
-            self._user_speaking = False
-            is_last = True
-
-        # If the user is speaking the audio buffer will keep growing.
         self._audio_buffer.extend(frame.audio)
-
         if len(self._audio_buffer) >= self._chunk_length_in_bytes:
             if len(self._audio_buffer) > self._max_bytes_per_sec:
                 logging.warning(
                     f"Audio buffer too large: {(len(self._audio_buffer) / (self._sample_rate * 2)):.2f}s. "
                 )
 
-            content = io.BytesIO()
-            with wave.open(content, "wb") as wav:
-                wav.setsampwidth(2)
-                wav.setnchannels(1)
-                wav.setframerate(self._sample_rate)
-                wav.writeframes(self._audio_buffer[: self._max_bytes_per_sec].copy())
+            # content = io.BytesIO()
+            # with wave.open(content, "wb") as wav:
+            #    wav.setsampwidth(2)
+            #    wav.setnchannels(1)
+            #    wav.setframerate(self._sample_rate)
+            #    wav.writeframes(self._audio_buffer[: self._chunk_length_in_bytes].copy())
+            # content.seek(0)
+            # audio_chunk = content.read()
 
-            content.seek(0)
+            audio_chunk = self._audio_buffer[: self._chunk_length_in_bytes]
             await self.process_generator(
-                self.run_asr(content.read(), is_start=is_start, is_last=is_last)
+                self.run_asr(audio_chunk, is_last=self._user_speaking is False)
             )
 
-            self._audio_buffer = self._audio_buffer[self._max_bytes_per_sec :]
+            self._audio_buffer = self._audio_buffer[self._chunk_length_in_bytes :]

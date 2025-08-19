@@ -1,3 +1,4 @@
+import math
 from typing import List
 from scipy import signal
 from scipy.io.wavfile import read, write
@@ -99,7 +100,7 @@ def convertSampleRateTo16khz(audio_data: bytes | bytearray, original_sample_rate
 
 
 def resample_audio(pcm_data: np.ndarray, original_rate: int, target_rate: int) -> np.ndarray:
-    num_samples = int(len(pcm_data) * target_rate / original_rate)
+    num_samples = math.ceil(len(pcm_data) * target_rate / original_rate)
     resampled_audio = signal.resample(pcm_data, num_samples)
     # resampled_audio = signal.resample_poly(pcm_data, target_rate, original_rate)
     return resampled_audio.astype(np.int16)
@@ -134,6 +135,23 @@ def combine_audio_segments(
                 [combined_audio[:-window_length], overlap, segment[window_length:]]
             )
     return combined_audio
+
+
+def read_wav_to_bytes(file_path) -> tuple[bytes, int]:
+    with wave.open(file_path, "rb") as wf:
+        num_channels = wf.getnchannels()
+        sample_width = wf.getsampwidth()
+        sample_rate = wf.getframerate()
+        num_frames = wf.getnframes()
+
+        if num_channels not in (1, 2):
+            raise Exception(f"WAV file must be mono or stereo")
+
+        if sample_width != 2:
+            raise Exception(f"WAV file must be 16-bit")
+
+        raw = wf.readframes(num_frames)
+    return raw, sample_rate
 
 
 def read_wav_to_np(file_path) -> tuple[np.ndarray, int]:

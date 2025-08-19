@@ -194,6 +194,9 @@ class IAsrLive(ABC):
     @abstractmethod
     async def streaming_transcribe(self, session, **kwargs) -> AsyncGenerator[dict, None]:
         """
+        session
+            - session.ctx.state["audio_chunk"]
+            - session.ctx.state["is_last"]
         return
         - {"timestamps":[],"text":""}
         """
