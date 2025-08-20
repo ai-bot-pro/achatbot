@@ -33,6 +33,8 @@ class ASRLiveProcessor(VADSegmentedASRProcessor):
         self._asr = asr
         self._session = session or Session(**SessionCtx(uuid.uuid4()).__dict__)
 
+        self._is_last = False  # keep tmp is_last true for streaming inference empty
+
     def set_asr(self, asr: IAsrLive):
         self._asr = asr
 
@@ -50,11 +52,13 @@ class ASRLiveProcessor(VADSegmentedASRProcessor):
 
     async def start(self, frame: StartFrame):
         await super().start(frame)
+        self.reset()
+
+    def reset(self):
         self._asr.reset()
 
-    async def _handle_user_started_speaking(self, frame: UserStartedSpeakingFrame):
-        await super()._handle_user_started_speaking(frame)
-        self._asr.reset()
+    def set_user_speaking(self, user_speaking: bool = False):
+        self._user_speaking = user_speaking
 
     async def run_asr(self, audio: bytes, **kwargs) -> AsyncGenerator[Frame, None]:
         if self._asr is None:
@@ -62,7 +66,9 @@ class ASRLiveProcessor(VADSegmentedASRProcessor):
             yield ErrorFrame("ASR engine not available")
             return
 
-        self._session.ctx.state["is_last"] = kwargs.get("is_last", False)
+        is_last = kwargs.get("is_last", False)
+        if is_last is True:
+            self._is_last = True
 
         await self.start_processing_metrics()
         await self.start_ttfb_metrics()
@@ -78,18 +84,27 @@ class ASRLiveProcessor(VADSegmentedASRProcessor):
             # audio_np = bytes2NpArrayWith16(audio[44:])
         else:
             audio_np = bytes2NpArrayWith16(audio)
+            # print(f"{audio_np.shape=} {is_last=} {self._is_last=}")
         self._session.ctx.state["audio_chunk"] = audio_np
+        self._session.ctx.state["is_last"] = self._is_last
+
         i = 0
         async for segment in self._asr.streaming_transcribe(self._session):
             if i == 0:  # for first chunk transcription cost time
                 await self.stop_ttfb_metrics()
             i += 1
             text = segment.get("text")
-            if text:
+            # print(f"{text=} {self._user_speaking=} {is_last=} {self._is_last=}")
+            if text and (self._user_speaking or self._is_last):
                 logging.info(f"{self._asr.SELECTED_TAG} Transcription: [{text}]")
                 yield TranscriptionFrame(
-                    text, "", time_now_iso8601(), language, segment.get("timestamps", [])
+                    text,
+                    self._session.ctx.client_id,
+                    time_now_iso8601(),
+                    language,
+                    segment.get("timestamps", []),
                 )
+            self._is_last = False
 
         await self.stop_processing_metrics()
 
@@ -109,7 +124,7 @@ if __name__ == "__main__":
     from src.common.utils.wav import read_wav_to_bytes
 
     async def run():
-        engine = ASRLiveEnvInit.initEngine(textnorm=bool(os.getenv("TEXTNORM", "")))
+        engine = ASRLiveEnvInit.initEngine(textnorm=bool(os.getenv("TEXTNORM", "")), language="zh")
         session = Session(**SessionCtx("test_client_id", 16000, 2).__dict__)
         processor = ASRLiveProcessor(
             asr=engine, session=session, sample_rate=16000, chunk_length_seconds=0.1
@@ -134,9 +149,9 @@ if __name__ == "__main__":
         result = {}
         for i in range(0, len(audio_bytes), step):
             audio = audio_bytes[i : i + step]
-            is_start = i == 0
             is_last = i + step >= len(audio_bytes)
-            async for res in processor.run_asr(audio, is_start=is_start, is_last=is_last):
+            processor.set_user_speaking(True)
+            async for res in processor.run_asr(audio, is_last=is_last):
                 assert isinstance(res, TranscriptionFrame)
                 print(res)
                 for timestamp in res.timestamps[pre_len:]:
@@ -145,5 +160,6 @@ if __name__ == "__main__":
                 result["start_times"] = start_times
                 pre_len = len(res.timestamps)
         print(result)
+        processor.set_user_speaking(False)
 
     asyncio.run(run())

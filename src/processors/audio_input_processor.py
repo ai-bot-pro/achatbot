@@ -16,7 +16,7 @@ from apipeline.processors.frame_processor import FrameDirection
 from apipeline.processors.input_processor import InputProcessor
 
 from src.common.interface import IVADAnalyzer
-from src.common.types import AudioVADTurnParams, VADState
+from src.common.types import AudioVADTurnParams, VADState, VADStateFrame
 from src.types.frames.control_frames import UserStartedSpeakingFrame, UserStoppedSpeakingFrame
 from src.types.frames.sys_frames import BotInterruptionFrame, MetricsFrame
 from src.types.speech.turn_analyzer import EndOfTurnState
@@ -100,7 +100,8 @@ class AudioVADInputProcessor(InputProcessor):
                 # Check VAD and push event if necessary. We just care about
                 # changes from QUIET to SPEAKING and vice versa.
                 if self._params.vad_enabled:
-                    vad_state = await self._handle_vad(frame.audio, vad_state)
+                    vad_state_frame = await self._handle_vad(frame.audio, vad_state)
+                    vad_state = vad_state_frame.state
                     audio_passthrough = self._params.vad_audio_passthrough
 
                 if self._params.turn_analyzer:
@@ -112,10 +113,10 @@ class AudioVADInputProcessor(InputProcessor):
                         await self.push_frame(
                             VADStateAudioRawFrame(
                                 sample_rate=frame.sample_rate,
-                                audio=frame.audio,
+                                audio=vad_state_frame.audio,
                                 num_channels=frame.num_channels,
                                 sample_width=frame.sample_width,
-                                state=vad_state,
+                                state=vad_state_frame.state,
                             )
                         )
                     else:
@@ -131,16 +132,17 @@ class AudioVADInputProcessor(InputProcessor):
                     logging.warning(f"{self.name} event loop is closed")
                     break
 
-    async def _vad_analyze(self, audio_frames: bytes) -> VADState:
-        state = VADState.QUIET
+    async def _vad_analyze(self, audio_bytes: bytes) -> VADStateFrame:
+        vad_state_frame = VADStateFrame(state=VADState.QUIET, audio=audio_bytes)
         if self.vad_analyzer:
-            state = await self.get_event_loop().run_in_executor(
-                self._executor, self.vad_analyzer.analyze_audio, audio_frames
+            vad_state_frame: VADStateFrame = await self.get_event_loop().run_in_executor(
+                self._executor, self.vad_analyzer.analyze_audio, audio_bytes
             )
-        return state
+        return vad_state_frame
 
-    async def _handle_vad(self, audio_frames: bytes, vad_state: VADState):
-        new_vad_state = await self._vad_analyze(audio_frames)
+    async def _handle_vad(self, audio_bytes: bytes, vad_state: VADState) -> VADStateFrame:
+        vad_state_frame = await self._vad_analyze(audio_bytes)
+        new_vad_state = vad_state_frame.state
         if (
             new_vad_state != vad_state
             and new_vad_state != VADState.STARTING
@@ -161,8 +163,8 @@ class AudioVADInputProcessor(InputProcessor):
             if frame:
                 await self._handle_interruptions(frame, True)
 
-            vad_state = new_vad_state
-        return vad_state
+            vad_state_frame.state = new_vad_state
+        return vad_state_frame
 
     async def _run_turn_analyzer(
         self, frame: AudioRawFrame, vad_state: VADState, previous_vad_state: VADState
@@ -225,7 +227,7 @@ class AudioVADInputProcessor(InputProcessor):
                 await self._stop_interruption()
 
         if push_frame:
-            await self.queue_frame(frame)
+            await self.push_frame(frame)
 
     #
     # Process frame

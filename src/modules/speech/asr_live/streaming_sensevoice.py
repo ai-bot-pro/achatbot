@@ -17,7 +17,6 @@ class ASRStreamingSenseVoice(EngineClass, IAsrLive):
         self.model = StreamingSenseVoice(model=model_path, **kwargs)
 
     def reset(self):
-        print("reset====>")
         self.model.reset()
 
     async def streaming_transcribe(self, session: Session, **kwargs):

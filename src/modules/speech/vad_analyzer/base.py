@@ -1,5 +1,5 @@
 from src.common.utils.helper import exp_smoothing, calculate_audio_volume
-from src.common.types import VADAnalyzerArgs, VADState
+from src.common.types import VADAnalyzerArgs, VADStateFrame, VADState
 from src.common.interface import IVADAnalyzer
 from src.common.factory import EngineClass
 
@@ -35,7 +35,7 @@ class BaseVADAnalyzer(IVADAnalyzer, EngineClass):
         volume = calculate_audio_volume(audio, self._args.sample_rate)
         return exp_smoothing(volume, self._prev_volume, self._smoothing_factor)
 
-    def analyze_audio(self, buffer) -> VADState:
+    def analyze_audio(self, buffer) -> VADStateFrame:
         self._vad_buffer += buffer
 
         num_required_bytes = self._vad_frames_num_bytes
@@ -87,4 +87,4 @@ class BaseVADAnalyzer(IVADAnalyzer, EngineClass):
             self._vad_state = VADState.QUIET
             self._vad_stopping_count = 0
 
-        return self._vad_state
+        return VADStateFrame(state=self._vad_state, audio=audio_frames)

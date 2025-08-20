@@ -229,7 +229,7 @@ class FSMNVADArgs:
     # frame_duration_ms: int = 64  # ms,  frame_length: 1024 = 16000*64 / 1000
 
 
-INIT_SILERO_SENSITIVITY = 0.4
+INIT_SILERO_SENSITIVITY = 0.5
 # How often should we reset internal model state
 SILERO_MODEL_RESET_STATES_TIME = 5.0
 
@@ -468,13 +468,19 @@ class VADState(Enum):
 
 
 @dataclass
+class VADStateFrame:
+    state: VADState = VADState.QUIET
+    audio: bytes = b""
+
+
+@dataclass
 class VADAnalyzerArgs:
     sample_rate: int = RATE
     num_channels: int = CHANNELS
-    confidence: float = 0.7
-    start_secs: float = 0.2
-    stop_secs: float = 0.8
-    min_volume: float = 0.6
+    confidence: float = 0.7  # VA detect confidence threshold
+    start_secs: float = 0.032  # defualt use SileroVAD 32ms start once for 16000 samples, 512 frames per second, accumulate 1 times
+    stop_secs: float = 0.32  # defualt use SileroVAD  32ms stop once for 16000 samples, 512 frames per second, accumulate 10 times
+    min_volume: float = 0.6  # voice volume threshold
 
 
 @dataclass

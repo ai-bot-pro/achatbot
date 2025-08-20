@@ -36,8 +36,8 @@ def calculate_audio_volume(audio: bytes, sample_rate: int) -> float:
     meter = pyln.Meter(sample_rate, block_size=block_size)
     loudness = meter.integrated_loudness(audio_float)
 
-    # Loudness goes from -20 to 80 (more or less), where -20 is quiet and 80 is
-    # loud.
+    # Loudness goes from -20 to 80 (more or less),
+    # where -20 is quiet and 80 is loud.
     loudness = normalize_value(loudness, -20, 80)
 
     return loudness

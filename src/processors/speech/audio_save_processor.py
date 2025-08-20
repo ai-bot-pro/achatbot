@@ -12,31 +12,37 @@ from src.types.frames.data_frames import PathAudioRawFrame
 
 
 class AudioSaveProcessor(FrameProcessor):
-    def __init__(self, prefix_name: str = "record", save_dir: str = RECORDS_DIR):
+    def __init__(
+        self, prefix_name: str = "record", save_dir: str = RECORDS_DIR, pass_raw_audio: bool = False
+    ):
         super().__init__()
         os.makedirs(save_dir, exist_ok=True)
         self.save_dir = save_dir
         self.prefix_name = prefix_name
+        self.pass_raw_audio = pass_raw_audio
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
 
         if isinstance(frame, AudioRawFrame):
             file_path = await self.save(frame)
-            path_frame = PathAudioRawFrame(
-                path=file_path,
-                audio=frame.audio,
-                sample_rate=frame.sample_rate,
-                sample_width=frame.sample_width,
-                num_channels=frame.num_channels,
-            )
-            await self.push_frame(path_frame, direction)
+            if self.pass_raw_audio:
+                await self.push_frame(frame, direction)
+            else:
+                path_frame = PathAudioRawFrame(
+                    path=file_path,
+                    audio=frame.audio,
+                    sample_rate=frame.sample_rate,
+                    sample_width=frame.sample_width,
+                    num_channels=frame.num_channels,
+                )
+                await self.push_frame(path_frame, direction)
         else:
             await self.push_frame(frame, direction)
 
     async def save(self, frame: AudioRawFrame) -> str:
         now = datetime.now()
-        formatted_time = now.strftime("%Y-%m-%d_%H-%M-%S.%f")[:-3]
+        formatted_time = now.strftime("%Y-%m-%d_%H-%M-%S.%f")[:-2]
         output_file = os.path.join(self.save_dir, f"{self.prefix_name}_{formatted_time}.wav")
         file_path = await save_audio_to_file(
             frame.audio,
