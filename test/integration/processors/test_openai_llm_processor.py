@@ -109,7 +109,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         if self.vision_tag == "mock_vision_processor":
             return MockVisionProcessor(self.mock_text)
 
-        session = Session(**SessionCtx(uuid.uuid4()).__dict__)
+        session = Session(**SessionCtx(str(uuid.uuid4())).__dict__)
         llm = LLMEnvInit.initLLMEngine()
         return VisionProcessor(llm=llm, session=session)
 

@@ -60,7 +60,7 @@
       let startBtn = document.getElementById('startAudioBtn');
       let stopBtn = document.getElementById('stopAudioBtn');
 
-      const proto = protobuf.load("frames.proto", (err, root) => {
+      const proto = protobuf.load("../protos/data_frames.proto", (err, root) => {
           if (err) {
               throw err;
           }

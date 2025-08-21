@@ -8,6 +8,7 @@ from apipeline.pipeline.runner import PipelineRunner
 from apipeline.processors.logger import FrameLogger
 from apipeline.frames import AudioRawFrame, TextFrame
 
+from src.serializers.transcription_protobuf import TranscriptionFrameSerializer
 from src.processors.speech.audio_save_processor import AudioSaveProcessor
 from src.modules.speech.asr_live import ASRLiveEnvInit
 from src.cmd.bots.base_fastapi_websocket_server import AIFastapiWebsocketBot
@@ -50,6 +51,7 @@ class FastapiWebsocketStreamingASRBot(AIFastapiWebsocketBot):
         if self._websocket is None:
             return
 
+        serializer = TranscriptionFrameSerializer()
         self.params = FastapiWebsocketServerParams(
             audio_in_enabled=True,
             audio_out_enabled=False,
@@ -57,6 +59,7 @@ class FastapiWebsocketStreamingASRBot(AIFastapiWebsocketBot):
             vad_enabled=True,
             vad_analyzer=self.vad_analyzer,
             vad_audio_passthrough=True,
+            serializer=serializer,
         )
         transport = FastapiWebsocketTransport(
             websocket=self._websocket,

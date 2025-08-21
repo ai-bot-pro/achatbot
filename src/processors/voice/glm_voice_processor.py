@@ -81,7 +81,7 @@ class GLMVoiceBaseProcessor(VoiceProcessorBase):
         self._bnb_quant_type = bnb_quant_type
         self._device = device
 
-        self._session = session or Session(**SessionCtx(uuid.uuid4()).__dict__)
+        self._session = session or Session(**SessionCtx(str(uuid.uuid4())).__dict__)
 
         self.reset()
         self.load_models()

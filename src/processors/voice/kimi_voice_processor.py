@@ -33,7 +33,7 @@ class KimiVoiceProcessor(VoiceProcessorBase):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self._session = session or Session(**SessionCtx(uuid.uuid4()).__dict__)
+        self._session = session or Session(**SessionCtx(str(uuid.uuid4())).__dict__)
         self._model: TransformersManualVoiceKimiLLM = None
         self._queue = queue.Queue()
         self._input_queue = queue.Queue()

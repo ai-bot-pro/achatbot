@@ -37,7 +37,7 @@ class ASRProcessor(SegmentedASRProcessor):
             **kwargs,
         )
         self._asr = asr
-        self._session = session or Session(**SessionCtx(uuid.uuid4()).__dict__)
+        self._session = session or Session(**SessionCtx(str(uuid.uuid4())).__dict__)
 
     def set_asr(self, asr: IAsr):
         self._asr = asr

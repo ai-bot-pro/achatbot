@@ -31,7 +31,7 @@ class ASRLiveProcessor(VADSegmentedASRProcessor):
     ):
         super().__init__(**kwargs)
         self._asr = asr
-        self._session = session or Session(**SessionCtx(uuid.uuid4()).__dict__)
+        self._session = session or Session(**SessionCtx(str(uuid.uuid4())).__dict__)
 
         self._is_last = False  # keep tmp is_last true for streaming inference empty
 
@@ -98,11 +98,11 @@ class ASRLiveProcessor(VADSegmentedASRProcessor):
             if text and (self._user_speaking or self._is_last):
                 logging.info(f"{self._asr.SELECTED_TAG} Transcription: [{text}]")
                 yield TranscriptionFrame(
-                    text,
-                    self._session.ctx.client_id,
-                    time_now_iso8601(),
-                    language,
-                    segment.get("timestamps", []),
+                    text=text,
+                    user_id=self._session.ctx.client_id,
+                    timestamp=time_now_iso8601(),
+                    language=language,
+                    timestamps=segment.get("timestamps", []),
                 )
             self._is_last = False
 

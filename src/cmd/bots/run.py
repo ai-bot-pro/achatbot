@@ -46,7 +46,7 @@ class BotTaskRunner:
         else:
             self.room_mgr = RoomManagerEnvInit.initEngine()
 
-        self.session = Session(**SessionCtx(uuid.uuid4()).__dict__)
+        self.session = Session(**SessionCtx(str(uuid.uuid4())).__dict__)
         self._pid = 0
         self._bot_obj: IBot | None = None
 

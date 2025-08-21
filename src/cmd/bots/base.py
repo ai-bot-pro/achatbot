@@ -66,7 +66,7 @@ class AIBot(IBot):
             self.args.bot_name = self.__class__.__name__
 
         self.task: PipelineTask | None = None
-        self.session = Session(**SessionCtx(uuid.uuid4()).__dict__)
+        self.session = Session(**SessionCtx(str(uuid.uuid4())).__dict__)
 
         self._bot_config_list = self.args.bot_config_list
         self._bot_config = self.args.bot_config

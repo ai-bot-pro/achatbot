@@ -14,7 +14,7 @@ class SessionProcessor(FrameProcessor):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.session = session or Session(**SessionCtx(uuid.uuid4()).__dict__)
+        self.session = session or Session(**SessionCtx(str(uuid.uuid4())).__dict__)
 
     def set_ctx_state(self, **kwargs):
         self.session.ctx.state.update(kwargs)
