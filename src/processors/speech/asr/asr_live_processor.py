@@ -17,7 +17,7 @@ from src.common.utils.audio_utils import (
 )
 from src.common.interface import IAsrLive
 from src.processors.speech.asr.base import UserStartedSpeakingFrame, VADSegmentedASRProcessor
-from src.types.frames.data_frames import TranscriptionFrame
+from src.types.frames.data_frames import ASRLiveTranscriptionFrame
 from src.types.speech.language import Language
 
 
@@ -79,7 +79,7 @@ class ASRLiveProcessor(VADSegmentedASRProcessor):
             language = Language(args["language"])
 
         # print(len(audio), audio[:45])
-        if io.BytesIO(audio).read(4) == b"RIFF":  # head len: 44
+        if io.BytesIO(audio).read(4) == b"RIFF":  # head len: 44 for WAVE
             audio_np, _ = read_wav_to_np(io.BytesIO(audio))
             # audio_np = bytes2NpArrayWith16(audio[44:])
         else:
@@ -97,12 +97,17 @@ class ASRLiveProcessor(VADSegmentedASRProcessor):
             # print(f"{text=} {self._user_speaking=} {is_last=} {self._is_last=}")
             if text and (self._user_speaking or self._is_last):
                 logging.info(f"{self._asr.SELECTED_TAG} Transcription: [{text}]")
-                yield TranscriptionFrame(
+                yield ASRLiveTranscriptionFrame(
                     text=text,
                     user_id=self._session.ctx.client_id,
                     timestamp=time_now_iso8601(),
                     language=language,
                     timestamps=segment.get("timestamps", []),
+                    speech_id=kwargs.get("speech_id", 0),
+                    is_final=kwargs.get("is_final", False),
+                    start_at_s=kwargs.get("start_at_s", 0.0),
+                    cur_at_s=kwargs.get("cur_at_s", 0.0),
+                    end_at_s=kwargs.get("end_at_s", 0.0),
                 )
             self._is_last = False
 
@@ -152,7 +157,7 @@ if __name__ == "__main__":
             is_last = i + step >= len(audio_bytes)
             processor.set_user_speaking(True)
             async for res in processor.run_asr(audio, is_last=is_last):
-                assert isinstance(res, TranscriptionFrame)
+                assert isinstance(res, ASRLiveTranscriptionFrame)
                 print(res)
                 for timestamp in res.timestamps[pre_len:]:
                     start_times.append(to_timestamp(timestamp, msec=1))

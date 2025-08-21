@@ -79,16 +79,14 @@ class TranscriptionFrame(TextFrame):
     """A text frame with transcription-specific data. Will be placed in the
     transport's receive queue when a participant speaks.
 
-    timestamps is list of word start_time or tuple(start_time,end_time)
     """
 
-    user_id: str = ""
-    timestamp: str = ""
+    user_id: str
+    timestamp: str
     language: str | None = None
-    timestamps: list = field(default_factory=list)
 
     def __str__(self):
-        return f"{self.name}(user: {self.user_id}, text: {self.text}, timestamp: {self.timestamp}, language: {self.language}, len(timestamps):{len(self.timestamps)})"
+        return f"{self.name}(user: {self.user_id}, text: {self.text}, timestamp: {self.timestamp}, language: {self.language})"
 
 
 @dataclass
@@ -102,6 +100,35 @@ class InterimTranscriptionFrame(TextFrame):
 
     def __str__(self):
         return f"{self.name}(user: {self.user_id}, text: {self.text}, timestamp: {self.timestamp}, language: {self.language})"
+
+
+@dataclass
+class ASRLiveTranscriptionFrame(TextFrame):
+    """
+    user_id: as session id
+    timestamp: transcript time
+    language: Language
+    timestamps: list of word start_time or tuple(start_time,end_time)
+    is_final: active speech segement final
+    speech_id: active speech segment id
+    is_final: is end stat
+    start_at_s: start time point from record start
+    cur_at_s: current time point from record start
+    end_at_s: end time point from record start
+    """
+
+    user_id: str = ""
+    timestamp: str = ""
+    language: str | None = None
+    timestamps: list = field(default_factory=list)
+    speech_id: int = 0
+    is_final: bool = False
+    start_at_s: float = 0.0
+    cur_at_s: float = 0.0
+    end_at_s: float = 0.0
+
+    def __str__(self):
+        return f"{self.name}(user: {self.user_id}, text: {self.text}, timestamp: {self.timestamp}, language: {self.language}, len(timestamps): {len(self.timestamps)} speech_id: {self.speech_id} is_final: {self.is_final}) speech_id: {self.speech_id} start_at_s: {self.start_at_s} cur_at_s: {self.cur_at_s} end_at_s: {self.end_at_s}"
 
 
 @dataclass
@@ -209,7 +236,12 @@ class OutputAudioRawFrame(AudioRawFrame):
 class VADStateAudioRawFrame(AudioRawFrame):
     """VAD state audio frame"""
 
-    state: VADState = VADState.QUIET
+    state: VADState = VADState.QUIET  # Starting/(start)/Speaking/Stopping/(end)/Quiet
+    speech_id: int = 0  # active speech segment id
+    is_final: bool = False  # is end stat
+    start_at_s: float = 0.0  # start time point from record start
+    cur_at_s: float = 0.0  # current time point from record start
+    end_at_s: float = 0.0  # end time point from record start
 
 
 @dataclass

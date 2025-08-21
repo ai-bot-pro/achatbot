@@ -243,7 +243,7 @@ class SileroVADArgs:
     force_reload: bool = False
     trust_repo: bool = True
     verbose: bool = True
-    onnx: bool = False
+    onnx: bool = True
     silero_sensitivity: float = INIT_SILERO_SENSITIVITY
     is_pad_tensor: bool = False
     check_frames_mode: int = VAD_CHECK_PER_FRAMES
@@ -468,15 +468,10 @@ class VADState(Enum):
 
 
 @dataclass
-class VADStateFrame:
-    state: VADState = VADState.QUIET
-    audio: bytes = b""
-
-
-@dataclass
 class VADAnalyzerArgs:
     sample_rate: int = RATE
     num_channels: int = CHANNELS
+    sample_width = SAMPLE_WIDTH
     confidence: float = 0.7  # VA detect confidence threshold
     start_secs: float = 0.032  # defualt use SileroVAD 32ms start once for 16000 samples, 512 frames per second, accumulate 1 times
     stop_secs: float = 0.32  # defualt use SileroVAD  32ms stop once for 16000 samples, 512 frames per second, accumulate 10 times

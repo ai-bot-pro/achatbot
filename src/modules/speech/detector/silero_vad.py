@@ -29,7 +29,7 @@ class SileroVAD(BaseVAD):
         # torch.set_num_threads(1)
         # torchaudio.set_audio_backend("soundfile")
 
-        # https://github.com/snakers4/silero-vad/blob/master/src/silero_vad/model.py
+        # https://github.com/snakers4/silero-vad/blob/master/hubconf.py
         self.model, utils = torch.hub.load(
             repo_or_dir=self.args.repo_or_dir,
             model=self.args.model,
@@ -126,8 +126,14 @@ class SileroVAD(BaseVAD):
                     "constant",
                     0,
                 )
-            speech_dict = self.vad_iter(audio_chunk, return_seconds=True)
+            # Return speech timestamps in seconds (default is samples, cur_samples/sample_rate)
+            speech_dict = self.vad_iter(audio_chunk, return_seconds=False)
             if speech_dict:
+                if "start" in speech_dict:
+                    speech_dict["start_at"] = round(speech_dict["start"] / self.args.sample_rate, 3)
+                if "end" in speech_dict:
+                    speech_dict["end_at"] = round(speech_dict["end"] / self.args.sample_rate, 3)
+
                 yield speech_dict
 
     def get_sample_info(self):

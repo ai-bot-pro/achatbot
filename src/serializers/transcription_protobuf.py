@@ -6,11 +6,16 @@ from apipeline.frames.data_frames import Frame
 from apipeline.serializers.protobuf import ProtobufFrameSerializer
 
 import src.types.frames.protobufs.asr_data_frames_pb2 as data_frame_protos
-from src.types.frames.data_frames import TextFrame, AudioRawFrame, ImageRawFrame, TranscriptionFrame
+from src.types.frames.data_frames import (
+    TextFrame,
+    AudioRawFrame,
+    ImageRawFrame,
+    ASRLiveTranscriptionFrame,
+)
 
 
 class TranscriptionFrameSerializer(ProtobufFrameSerializer):
-    SERIALIZABLE_TYPES = {TranscriptionFrame: "transcription"}
+    SERIALIZABLE_TYPES = {ASRLiveTranscriptionFrame: "asr_live_transcription"}
     SERIALIZABLE_FIELDS = {v: k for k, v in SERIALIZABLE_TYPES.items()}
 
     def serialize(self, frame: Frame) -> str | bytes | None:
@@ -60,7 +65,10 @@ class TranscriptionFrameSerializer(ProtobufFrameSerializer):
         args = getattr(proto, which)
         args_dict = {}
         for field in proto.DESCRIPTOR.fields_by_name[which].message_type.fields:
-            args_dict[field.name] = getattr(args, field.name)
+            if isinstance(getattr(args, field.name), float):
+                args_dict[field.name] = round(getattr(args, field.name), 6)
+            else:
+                args_dict[field.name] = getattr(args, field.name)
 
         # Remove id name
         if "id" in args_dict:
@@ -97,14 +105,18 @@ if __name__ == "__main__":
             format="JPEG",
             mode="RGB",
         ),
-        TranscriptionFrame(
+        ASRLiveTranscriptionFrame(
             text="1234567890",
             user_id="uid",
             timestamp="",
             language=Language("zh"),
             timestamps=[123, 321],
+            speech_id=100,
+            is_final=True,
+            start_at_s=round(0.999111, 6),
+            cur_at_s=round(2.933, 3),
+            end_at_s=round(10.711, 3),
         ),
-        # TranscriptionFrame(user: ef0c73d8-448f-4a2f-93ed-592f28fa374a, text: 你好, timestamp: 2025-08-21T02:39:12.930+00:00, language: zh, len(timestamps):2)
     ]
     for src_frame in test_cases:
         print(f"{src_frame=}")

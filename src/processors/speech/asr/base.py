@@ -252,12 +252,10 @@ class VADSegmentedASRProcessor(ASRProcessorBase):
 
         is_last = False
         if self._user_speaking is False and frame.state == VADState.SPEAKING:
-            # print("=========star=============")
             self._user_speaking = True
             self.reset()
 
         if self._user_speaking is True and frame.state == VADState.QUIET:
-            # print("----------end-------")
             self._user_speaking = False
             is_last = True
 
@@ -269,16 +267,17 @@ class VADSegmentedASRProcessor(ASRProcessorBase):
                     f"Audio buffer too large: {(len(self._audio_buffer) / (self._sample_rate * 2)):.2f}s. "
                 )
 
-            # content = io.BytesIO()
-            # with wave.open(content, "wb") as wav:
-            #    wav.setsampwidth(2)
-            #    wav.setnchannels(1)
-            #    wav.setframerate(self._sample_rate)
-            #    wav.writeframes(self._audio_buffer[: self._chunk_length_in_bytes].copy())
-            # content.seek(0)
-            # audio_chunk = content.read()
-
             audio_chunk = self._audio_buffer[: self._chunk_length_in_bytes]
-            await self.process_generator(self.run_asr(audio_chunk, is_last=is_last))
+            await self.process_generator(
+                self.run_asr(
+                    audio_chunk,
+                    is_last=is_last,
+                    speech_id=frame.speech_id,
+                    is_final=frame.is_final,
+                    start_at_s=frame.start_at_s,
+                    cur_at_s=frame.cur_at_s,
+                    end_at_s=frame.end_at_s,
+                )
+            )
 
             self._audio_buffer = self._audio_buffer[self._chunk_length_in_bytes :]

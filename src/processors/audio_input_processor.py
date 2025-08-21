@@ -16,11 +16,11 @@ from apipeline.processors.frame_processor import FrameDirection
 from apipeline.processors.input_processor import InputProcessor
 
 from src.common.interface import IVADAnalyzer
-from src.common.types import AudioVADTurnParams, VADState, VADStateFrame
+from src.common.types import AudioVADTurnParams, VADState
 from src.types.frames.control_frames import UserStartedSpeakingFrame, UserStoppedSpeakingFrame
 from src.types.frames.sys_frames import BotInterruptionFrame, MetricsFrame
 from src.types.speech.turn_analyzer import EndOfTurnState
-from src.types.frames import VADStateAudioRawFrame
+from src.types.frames.data_frames import VADStateAudioRawFrame
 
 
 class AudioVADInputProcessor(InputProcessor):
@@ -110,15 +110,7 @@ class AudioVADInputProcessor(InputProcessor):
                 # Push audio downstream if passthrough.
                 if audio_passthrough:
                     if self._params.vad_enabled:
-                        await self.push_frame(
-                            VADStateAudioRawFrame(
-                                sample_rate=frame.sample_rate,
-                                audio=vad_state_frame.audio,
-                                num_channels=frame.num_channels,
-                                sample_width=frame.sample_width,
-                                state=vad_state_frame.state,
-                            )
-                        )
+                        await self.push_frame(vad_state_frame)
                     else:
                         await self.queue_frame(frame)
             except asyncio.TimeoutError:
@@ -132,15 +124,15 @@ class AudioVADInputProcessor(InputProcessor):
                     logging.warning(f"{self.name} event loop is closed")
                     break
 
-    async def _vad_analyze(self, audio_bytes: bytes) -> VADStateFrame:
-        vad_state_frame = VADStateFrame(state=VADState.QUIET, audio=audio_bytes)
+    async def _vad_analyze(self, audio_bytes: bytes) -> VADStateAudioRawFrame:
+        vad_state_frame = VADStateAudioRawFrame(state=VADState.QUIET, audio=audio_bytes)
         if self.vad_analyzer:
-            vad_state_frame: VADStateFrame = await self.get_event_loop().run_in_executor(
+            vad_state_frame: VADStateAudioRawFrame = await self.get_event_loop().run_in_executor(
                 self._executor, self.vad_analyzer.analyze_audio, audio_bytes
             )
         return vad_state_frame
 
-    async def _handle_vad(self, audio_bytes: bytes, vad_state: VADState) -> VADStateFrame:
+    async def _handle_vad(self, audio_bytes: bytes, vad_state: VADState) -> VADStateAudioRawFrame:
         vad_state_frame = await self._vad_analyze(audio_bytes)
         new_vad_state = vad_state_frame.state
         if (
