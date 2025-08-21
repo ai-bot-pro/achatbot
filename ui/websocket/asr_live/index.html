@@ -29,6 +29,9 @@
         <br />
         <button id="startAudioBtn">Start Audio</button>
         <button id="stopAudioBtn">Stop Audio</button>
+        <hr>
+        <h2>Transcription</h2>
+        <div id="transcription-container"></div>
         <script>
             const SAMPLE_RATE = 16000;
             const SAMPLE_WIDTH = 2;
@@ -113,10 +116,25 @@
             function enqueueAudioFromProto(arrayBuffer) {
                 const parsedFrame = TranscriptFrame.decode(new Uint8Array(arrayBuffer));
                 console.log(parsedFrame)
-                if (!parsedFrame?.text) {
+                if (!parsedFrame?.asrLiveTranscription?.text) {
                     return false;
                 }
-                // @weedge TODO: realtime display transcription
+
+                const asr = parsedFrame.asrLiveTranscription;
+                const container = document.getElementById('transcription-container');
+                let transcriptionEl = document.getElementById('speech-' + asr.speechId);
+
+                if (!transcriptionEl) {
+                    transcriptionEl = document.createElement('p');
+                    transcriptionEl.id = 'speech-' + asr.speechId;
+                    container.appendChild(transcriptionEl);
+                }
+
+                let content = `[语音 ${asr.speechId}] (开始: ${asr.startAtS.toFixed(2)}s): ${asr.text}`;
+                if (asr.isFinal && asr.endAtS > 0) {
+                    content = `[语音 ${asr.speechId}] (开始: ${asr.startAtS.toFixed(2)}s - 结束: ${asr.endAtS.toFixed(2)}s): ${asr.text}`;
+                }
+                transcriptionEl.textContent = content;
             }
 
             function convertFloat32ToS16PCM(float32Array) {
