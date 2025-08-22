@@ -11,7 +11,7 @@ from apipeline.frames import AudioRawFrame, TextFrame
 
 from src.common.session import Session, SessionCtx
 from src.serializers.transcription_protobuf import TranscriptionFrameSerializer
-from src.processors.speech.audio_save_processor import AudioSaveProcessor
+from src.processors.speech.vad_audio_save_processor import VADAudioSaveProcessor
 from src.modules.speech.asr_live import ASRLiveEnvInit
 from src.cmd.bots.base_fastapi_websocket_server import AIFastapiWebsocketBot
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
@@ -88,8 +88,8 @@ class FastapiWebsocketStreamingASRBot(AIFastapiWebsocketBot):
 
         processors = [
             transport.input_processor(),
-            # AudioSaveProcessor(prefix_name="streaming_asr", pass_raw_audio=True),
             # FrameLogger(include_frame_types=[AudioRawFrame]),
+            # VADAudioSaveProcessor(prefix_name="streaming_asr_vad", pass_raw_audio=True),
             asr_live_processor,
             FrameLogger(include_frame_types=[TextFrame]),
         ]

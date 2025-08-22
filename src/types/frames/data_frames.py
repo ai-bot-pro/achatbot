@@ -243,6 +243,9 @@ class VADStateAudioRawFrame(AudioRawFrame):
     cur_at_s: float = 0.0  # current time point from record start
     end_at_s: float = 0.0  # end time point from record start
 
+    def __str__(self):
+        return f"{super().__str__()} state: {self.state} speech_id: {self.speech_id} is_final: {self.is_final}) speech_id: {self.speech_id} start_at_s: {self.start_at_s} cur_at_s: {self.cur_at_s} end_at_s: {self.end_at_s}"
+
 
 @dataclass
 class PathAudioRawFrame(AudioRawFrame):
@@ -255,6 +258,16 @@ class PathAudioRawFrame(AudioRawFrame):
 
     def __str__(self):
         return f"path:{self.path} {super().__str__()}"
+
+
+@dataclass
+class VADAudioRawFrame(AudioRawFrame):
+    speech_id: int = 0  # active speech segment id
+    start_at_s: float = 0.0  # start time point from record start
+    end_at_s: float = 0.0  # end time point from record start
+
+    def __str__(self):
+        return f"speech_id:{self.speech_id} start_at_s:{self.start_at_s} end_at_s:{self.end_at_s} {super().__str__()}"
 
 
 @dataclass

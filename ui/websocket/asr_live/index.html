@@ -17,6 +17,42 @@
             max-width: 600px;
             /* 设置最大宽度 */
         }
+
+        /* Style the tab */
+        .tab {
+            overflow: hidden;
+            border: 1px solid #ccc;
+            background-color: #f1f1f1;
+        }
+
+        /* Style the buttons inside the tab */
+        .tab button {
+            background-color: inherit;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 16px;
+            transition: 0.3s;
+        }
+
+        /* Change background color of buttons on hover */
+        .tab button:hover {
+            background-color: #ddd;
+        }
+
+        /* Create an active/current tablink class */
+        .tab button.active {
+            background-color: #ccc;
+        }
+
+        /* Style the tab content */
+        .tabcontent {
+            display: none;
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            border-top: none;
+        }
     </style>
 </head>
 
@@ -30,9 +66,85 @@
         <button id="startAudioBtn">Start Audio</button>
         <button id="stopAudioBtn">Stop Audio</button>
         <hr>
-        <h2>Transcription</h2>
+        <div class="tab">
+            <button class="tablinks" onclick="openTab(event, 'tab0')">English Movie</button>
+            <button class="tablinks" onclick="openTab(event, 'tab1')">电台</button>
+            <button class="tablinks" onclick="openTab(event, 'tab2')">背古诗</button>
+            <button class="tablinks" onclick="openTab(event, 'tab3')">讲故事</button>
+            <button class="tablinks" onclick="openTab(event, 'tab4')">会议纪要</button>
+        </div>
+        <div id="tab0" class="tabcontent">
+            <p>
+                "Yesterday is a history, tomorrow is a mystery, only today is a gift, that is why we call it present."
+                <br><br>
+                "Hope is the good thing and maybe the best of things And no good things ever dies ~ Andy Dufresne" <br>– Shawshank Redemption
+            </p>
+        </div>
+        <div id="tab1" class="tabcontent">
+            <p>
+                Question-master: 欢迎收听 AI Radio FM - 技术频道，您的个人生成式 AI 播客！今天，我们来聊一个非常酷的话题：来自 NVIDIA 的一项新技术，叫做流式
+                Sortformer。让我们深入了解一下吧！
+                <br><br>
+                weedge: 我非常兴奋能讨论这个！简单来说，这是一项关于实时“说话人日志”或“语音日记”的技术。它的目标是，在一段多人对话的音频流中，实时、准确地分辨出每一句话是谁说的。
+                <br><br>
+                Question-master: 听起来就像是为实时会议字幕或者智能客服量身定做的。那这个领域的最大挑战是什么呢？为什么说“流式”或者说“在线”的版本要比离线处理难得多？
+                <br>
+            </p>
+        </div>
+        <div id="tab2" class="tabcontent">
+            <p>
+                "路漫漫其修远兮，吾将上下而求索" – 屈原《离骚》
+                <br>
+                "众里寻他千百度。蓦然回首，那人却在，灯火阑珊处" – 辛弃疾《青玉案·元夕》
+                <br>
+                "道生一，一生二，二生三，三生万物" – 老子《道德经》
+                <br>
+                "万物之始，大道至简，衍化至繁" – 老子《道德经》
+                <br>
+            </p>
+        </div>
+        <div id="tab3" class="tabcontent">
+            <p>
+                &target; 从前，在一个绿油油的森林里，住着一只小兔子叫小白。小白非常好奇，总喜欢到处探险。一天，它听说森林深处有一棵神奇的苹果树，能结出金色的苹果，吃一口就能实现一个小愿望。
+                <br>
+                &target;
+                小白决定去寻找这棵树。它背上小背包，出发了。路上，它遇到了一条小河，河水哗哗流。小白不会游泳，正发愁时，一只聪明的小鸭子游过来，说：“我帮你过河吧！你可以骑在我背上。”小白开心地说：“谢谢你，小鸭子！”他们一起过了河，小白送给小鸭子一朵野花作为谢礼。
+            </p>
+        </div>
+        <div id="tab4" class="tabcontent">
+            <p>
+                会议纪要 - 2025年8月22日
+                <br> 会议主题：希望村社区发展项目月度回顾日期：2025年8月22日
+                <br> 时间：上午9:00 - 10:30 (北京时间)
+                <br> 地点：希望村社区中心会议室（线上与线下混合会议）
+                <br> 主持人：张伟，
+                <br> 社区发展委员会主席记录人：李梅
+                <br>
+            </p>
+
+        </div>
+        <hr>
         <div id="transcription-container"></div>
         <script>
+            function openTab(evt, tabName) {
+                var i, tabcontent, tablinks;
+                tabcontent = document.getElementsByClassName("tabcontent");
+                for (i = 0; i < tabcontent.length; i++) {
+                    tabcontent[i].style.display = "none";
+                }
+                tablinks = document.getElementsByClassName("tablinks");
+                for (i = 0; i < tablinks.length; i++) {
+                    tablinks[i].className = tablinks[i].className.replace(" active", "");
+                }
+                document.getElementById(tabName).style.display = "block";
+                evt.currentTarget.className += " active";
+            }
+
+            // Get the element with id="defaultOpen" and click on it
+            document.addEventListener("DOMContentLoaded", function () {
+                document.getElementsByClassName("tablinks")[0].click();
+            });
+
             const SAMPLE_RATE = 16000;
             const SAMPLE_WIDTH = 2;
             const NUM_CHANNELS = 1;
