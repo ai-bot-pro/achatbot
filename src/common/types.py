@@ -490,11 +490,13 @@ class AudioParams(BaseModel):
     audio_out_enabled: bool = False
     audio_out_sample_rate: int = RATE
     audio_out_channels: int = CHANNELS
+    audio_out_sample_width: int = SAMPLE_WIDTH
     audio_out_10ms_chunks: int = 2
     audio_in_enabled: bool = False
     audio_in_participant_enabled: bool = False
     audio_in_sample_rate: int = RATE
     audio_in_channels: int = CHANNELS
+    audio_in_sample_width: int = SAMPLE_WIDTH
 
 
 class AudioVADParams(AudioParams):
