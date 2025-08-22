@@ -35,7 +35,7 @@ class VisionProcessor(VisionProcessorBase):
         self._llm = llm
         self._session = session
         if self._session is None:
-            self._session = Session(**SessionCtx(uuid.uuid4()).__dict__)
+            self._session = Session(**SessionCtx(str(uuid.uuid4())).__dict__)
         self.sleep_time_s = sleep_time_s
 
     def set_llm(self, llm: ILlm):

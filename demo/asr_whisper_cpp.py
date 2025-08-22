@@ -170,7 +170,7 @@ def live():
     from whispercpy.constant import STREAMING_ENDING
 
     core = WhisperCPP(library_path, whisper_model_path, use_gpu=False)
-    asr = WhisperStream(core, language="en", return_token=True)
+    asr = WhisperStream(core, language="zh", return_token=True)
 
     samplerate = 16000
     block_duration = 0.25

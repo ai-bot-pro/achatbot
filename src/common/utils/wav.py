@@ -30,8 +30,9 @@ async def read_audio_file(file_path):
 
 def read_wav_to_bytes(file_path) -> tuple[bytes, int]:
     """
+    remove head and read raw bytes and sample rate
     - params: file_path
-    - return bytes and smaple rate
+    - return bytes and sample rate
     """
     try:
         with wave.open(file_path, "rb") as wav_file:

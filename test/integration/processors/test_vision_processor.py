@@ -67,7 +67,7 @@ class TestVisionProcessor(unittest.IsolatedAsyncioTestCase):
         pass
 
     async def asyncSetUp(self):
-        session = Session(**SessionCtx(uuid.uuid4()).__dict__)
+        session = Session(**SessionCtx(str(uuid.uuid4())).__dict__)
         llm = LLMEnvInit.initLLMEngine()
         llm_processor = VisionProcessor(llm, session)
         pipeline = Pipeline(

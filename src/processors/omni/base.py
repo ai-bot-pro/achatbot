@@ -38,7 +38,7 @@ class VisionVoiceProcessorBase(AsyncAIProcessor):
         self._llm = llm
         self._session = session
         if self._session is None:
-            self._session = Session(**SessionCtx(uuid.uuid4()).__dict__)
+            self._session = Session(**SessionCtx(str(uuid.uuid4())).__dict__)
         self._queue = queue.Queue()
         self._input_queue = queue.Queue()
         self._generate_thread = None

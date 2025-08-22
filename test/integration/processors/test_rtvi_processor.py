@@ -76,7 +76,7 @@ class TestRTVIProcessor(unittest.IsolatedAsyncioTestCase):
         pass
 
     async def asyncSetUp(self):
-        self.session = Session(**SessionCtx(uuid.uuid4()).__dict__)
+        self.session = Session(**SessionCtx(str(uuid.uuid4())).__dict__)
 
         llm_context = OpenAILLMContext()
         llm_user_ctx_aggr = OpenAIUserContextAggregator(llm_context)

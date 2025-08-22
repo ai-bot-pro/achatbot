@@ -31,7 +31,7 @@ class TTSProcessor(TTSProcessorBase):
             tts = TTSEnvInit.initTTSEngine()
         self._tts: ITts | EngineClass = tts
         if session is None:
-            session = Session(**SessionCtx(uuid.uuid4()).__dict__)
+            session = Session(**SessionCtx(str(uuid.uuid4())).__dict__)
         self._session: Session = session
 
     def can_generate_metrics(self) -> bool:

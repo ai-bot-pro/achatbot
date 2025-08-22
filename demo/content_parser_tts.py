@@ -16,9 +16,11 @@ from .content_parser.table import podcast
 app = typer.Typer()
 
 
-async def edge_tts_conversion(text_chunk: str, output_file: str, voice: str):
+async def edge_tts_conversion(
+    text_chunk: str, output_file: str, voice: str, boundary: str = "SentenceBoundary"
+):
     webvtt_file = ".".join(output_file.split(".")[:-1]) + ".vtt"
-    communicate = edge_tts.Communicate(text_chunk, voice, rate="+15%")
+    communicate = edge_tts.Communicate(text_chunk, voice, rate="+15%", boundary=boundary)
     submaker = edge_tts.SubMaker()
     with open(output_file, "wb") as file:
         async for chunk in communicate.stream():
@@ -26,10 +28,12 @@ async def edge_tts_conversion(text_chunk: str, output_file: str, voice: str):
                 file.write(chunk["data"])
             elif chunk["type"] == "WordBoundary":
                 # print(chunk)
-                submaker.create_sub((chunk["offset"], chunk["duration"]), chunk["text"])
-
+                submaker.feed(chunk)
+            elif chunk["type"] == "SentenceBoundary":
+                # print(chunk)
+                submaker.feed(chunk)
     with open(webvtt_file, "w", encoding="utf-8") as file:
-        file.write(submaker.generate_subs())
+        file.write(submaker.get_srt())
 
 
 async def gen_role_tts_audios(
@@ -90,11 +94,11 @@ async def gen_podcast_tts_audios(
             if pre_role == role.name:
                 logging.warning(f"duplicate {role.name}: {role.content}")
                 # remove pre tts audio content
-                pre_audio_file = os.path.join(p_save_dir, f"{role_index-1}_{role.name}.mp3")
+                pre_audio_file = os.path.join(p_save_dir, f"{role_index - 1}_{role.name}.mp3")
                 if os.path.exists(pre_audio_file):
                     os.remove(pre_audio_file)
                     # logging.warning(f"remove {pre_audio_file}")
-                pre_vtt_file = os.path.join(p_save_dir, f"{role_index-1}_{role.name}.vtt")
+                pre_vtt_file = os.path.join(p_save_dir, f"{role_index - 1}_{role.name}.vtt")
                 if os.path.exists(pre_vtt_file):
                     os.remove(pre_vtt_file)
                     # logging.warning(f"remove {pre_vtt_file}")

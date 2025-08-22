@@ -39,7 +39,7 @@ class DetectProcessor(AIProcessor):
         self._detector = detector
         self._session = session
         if self._session is None:
-            self._session = Session(**SessionCtx(uuid.uuid4()).__dict__)
+            self._session = Session(**SessionCtx(str(uuid.uuid4())).__dict__)
 
     def set_detected_text(self, detected_text: str | list):
         self._detected_text = detected_text

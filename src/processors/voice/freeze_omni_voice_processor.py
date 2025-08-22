@@ -120,7 +120,7 @@ class FreezeOmniVoiceProcessor(VoiceProcessorBase):
             self._args = FreezeOmniVoiceProcessorArgs(**args)
         self.inference_pipeline_pool = inference_pipeline_pool
         self.tts_pool = tts_pool
-        self._session = session or Session(**SessionCtx(uuid.uuid4()).__dict__)
+        self._session = session or Session(**SessionCtx(str(uuid.uuid4())).__dict__)
 
         self.reset()
         self.load_models()

@@ -4,6 +4,8 @@ from typing import Any, List
 
 from apipeline.frames.data_frames import Frame, DataFrame, TextFrame, ImageRawFrame, AudioRawFrame
 
+from src.common.types import VADState
+
 
 @dataclass
 class InputImageRawFrame(ImageRawFrame):
@@ -98,6 +100,35 @@ class InterimTranscriptionFrame(TextFrame):
 
     def __str__(self):
         return f"{self.name}(user: {self.user_id}, text: {self.text}, timestamp: {self.timestamp}, language: {self.language})"
+
+
+@dataclass
+class ASRLiveTranscriptionFrame(TextFrame):
+    """
+    user_id: as session id
+    timestamp: transcript time
+    language: Language
+    timestamps: list of word start_time or tuple(start_time,end_time)
+    is_final: active speech segement final
+    speech_id: active speech segment id
+    is_final: is end stat
+    start_at_s: start time point from record start
+    cur_at_s: current time point from record start
+    end_at_s: end time point from record start
+    """
+
+    user_id: str = ""
+    timestamp: str = ""
+    language: str | None = None
+    timestamps: list = field(default_factory=list)
+    speech_id: int = 0
+    is_final: bool = False
+    start_at_s: float = 0.0
+    cur_at_s: float = 0.0
+    end_at_s: float = 0.0
+
+    def __str__(self):
+        return f"{self.name}(user: {self.user_id}, text: {self.text}, timestamp: {self.timestamp}, language: {self.language}, len(timestamps): {len(self.timestamps)} speech_id: {self.speech_id} is_final: {self.is_final}) speech_id: {self.speech_id} start_at_s: {self.start_at_s} cur_at_s: {self.cur_at_s} end_at_s: {self.end_at_s}"
 
 
 @dataclass
@@ -202,6 +233,21 @@ class OutputAudioRawFrame(AudioRawFrame):
 
 
 @dataclass
+class VADStateAudioRawFrame(AudioRawFrame):
+    """VAD state audio frame"""
+
+    state: VADState = VADState.QUIET  # Starting/(start)/Speaking/Stopping/(end)/Quiet
+    speech_id: int = 0  # active speech segment id
+    is_final: bool = False  # is end stat
+    start_at_s: float = 0.0  # start time point from record start
+    cur_at_s: float = 0.0  # current time point from record start
+    end_at_s: float = 0.0  # end time point from record start
+
+    def __str__(self):
+        return f"{super().__str__()} state: {self.state} speech_id: {self.speech_id} is_final: {self.is_final}) speech_id: {self.speech_id} start_at_s: {self.start_at_s} cur_at_s: {self.cur_at_s} end_at_s: {self.end_at_s}"
+
+
+@dataclass
 class PathAudioRawFrame(AudioRawFrame):
     """An audio with saved path."""
 
@@ -212,6 +258,16 @@ class PathAudioRawFrame(AudioRawFrame):
 
     def __str__(self):
         return f"path:{self.path} {super().__str__()}"
+
+
+@dataclass
+class VADAudioRawFrame(AudioRawFrame):
+    speech_id: int = 0  # active speech segment id
+    start_at_s: float = 0.0  # start time point from record start
+    end_at_s: float = 0.0  # end time point from record start
+
+    def __str__(self):
+        return f"speech_id:{self.speech_id} start_at_s:{self.start_at_s} end_at_s:{self.end_at_s} {super().__str__()}"
 
 
 @dataclass

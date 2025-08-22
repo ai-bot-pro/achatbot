@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/protobufjs@7.X.X/dist/protobuf.min.js"></script>
+    <title>Achatbot WebSocket Client Example</title>
+    <style>
+        #wsUrl {
+            resize: both;
+            /* 允许水平和垂直调整 */
+            overflow: auto;
+            /* 允许出现滚动条 */
+            width: 100%;
+            /* 设置宽度为100% */
+            max-width: 600px;
+            /* 设置最大宽度 */
+        }
+
+        /* Style the tab */
+        .tab {
+            overflow: hidden;
+            border: 1px solid #ccc;
+            background-color: #f1f1f1;
+        }
+
+        /* Style the buttons inside the tab */
+        .tab button {
+            background-color: inherit;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 16px;
+            transition: 0.3s;
+        }
+
+        /* Change background color of buttons on hover */
+        .tab button:hover {
+            background-color: #ddd;
+        }
+
+        /* Create an active/current tablink class */
+        .tab button.active {
+            background-color: #ccc;
+        }
+
+        /* Style the tab content */
+        .tabcontent {
+            display: none;
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            border-top: none;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Achatbot WebSocket Client Example</h1>
+    <h3>
+        <div id="progressText">Loading, wait...</div>
+        </h2>
+        <input type="text" id="wsUrl" placeholder="Enter WebSocket URL" value="ws://localhost:4321" />
+        <br />
+        <button id="startAudioBtn">Start Audio</button>
+        <button id="stopAudioBtn">Stop Audio</button>
+        <hr>
+        <div class="tab">
+            <button class="tablinks" onclick="openTab(event, 'tab0')">English Movie</button>
+            <button class="tablinks" onclick="openTab(event, 'tab1')">电台</button>
+            <button class="tablinks" onclick="openTab(event, 'tab2')">背古诗</button>
+            <button class="tablinks" onclick="openTab(event, 'tab3')">讲故事</button>
+            <button class="tablinks" onclick="openTab(event, 'tab4')">会议纪要</button>
+        </div>
+        <div id="tab0" class="tabcontent">
+            <p>
+                "Yesterday is a history, tomorrow is a mystery, only today is a gift, that is why we call it present."
+                <br><br>
+                "Hope is the good thing and maybe the best of things And no good things ever dies ~ Andy Dufresne" <br>– Shawshank Redemption
+            </p>
+        </div>
+        <div id="tab1" class="tabcontent">
+            <p>
+                Question-master: 欢迎收听 AI Radio FM - 技术频道，您的个人生成式 AI 播客！今天，我们来聊一个非常酷的话题：来自 NVIDIA 的一项新技术，叫做流式
+                Sortformer。让我们深入了解一下吧！
+                <br><br>
+                weedge: 我非常兴奋能讨论这个！简单来说，这是一项关于实时“说话人日志”或“语音日记”的技术。它的目标是，在一段多人对话的音频流中，实时、准确地分辨出每一句话是谁说的。
+                <br><br>
+                Question-master: 听起来就像是为实时会议字幕或者智能客服量身定做的。那这个领域的最大挑战是什么呢？为什么说“流式”或者说“在线”的版本要比离线处理难得多？
+                <br>
+            </p>
+        </div>
+        <div id="tab2" class="tabcontent">
+            <p>
+                "路漫漫其修远兮，吾将上下而求索" – 屈原《离骚》
+                <br>
+                "众里寻他千百度。蓦然回首，那人却在，灯火阑珊处" – 辛弃疾《青玉案·元夕》
+                <br>
+                "道生一，一生二，二生三，三生万物" – 老子《道德经》
+                <br>
+                "万物之始，大道至简，衍化至繁" – 老子《道德经》
+                <br>
+            </p>
+        </div>
+        <div id="tab3" class="tabcontent">
+            <p>
+                &target; 从前，在一个绿油油的森林里，住着一只小兔子叫小白。小白非常好奇，总喜欢到处探险。一天，它听说森林深处有一棵神奇的苹果树，能结出金色的苹果，吃一口就能实现一个小愿望。
+                <br>
+                &target;
+                小白决定去寻找这棵树。它背上小背包，出发了。路上，它遇到了一条小河，河水哗哗流。小白不会游泳，正发愁时，一只聪明的小鸭子游过来，说：“我帮你过河吧！你可以骑在我背上。”小白开心地说：“谢谢你，小鸭子！”他们一起过了河，小白送给小鸭子一朵野花作为谢礼。
+            </p>
+        </div>
+        <div id="tab4" class="tabcontent">
+            <p>
+                会议纪要 - 2025年8月22日
+                <br> 会议主题：希望村社区发展项目月度回顾日期：2025年8月22日
+                <br> 时间：上午9:00 - 10:30 (北京时间)
+                <br> 地点：希望村社区中心会议室（线上与线下混合会议）
+                <br> 主持人：张伟，
+                <br> 社区发展委员会主席记录人：李梅
+                <br>
+            </p>
+
+        </div>
+        <hr>
+        <div id="transcription-container"></div>
+        <script>
+            function openTab(evt, tabName) {
+                var i, tabcontent, tablinks;
+                tabcontent = document.getElementsByClassName("tabcontent");
+                for (i = 0; i < tabcontent.length; i++) {
+                    tabcontent[i].style.display = "none";
+                }
+                tablinks = document.getElementsByClassName("tablinks");
+                for (i = 0; i < tablinks.length; i++) {
+                    tablinks[i].className = tablinks[i].className.replace(" active", "");
+                }
+                document.getElementById(tabName).style.display = "block";
+                evt.currentTarget.className += " active";
+            }
+
+            // Get the element with id="defaultOpen" and click on it
+            document.addEventListener("DOMContentLoaded", function () {
+                document.getElementsByClassName("tablinks")[0].click();
+            });
+
+            const SAMPLE_RATE = 16000;
+            const SAMPLE_WIDTH = 2;
+            const NUM_CHANNELS = 1;
+            const PLAY_TIME_RESET_THRESHOLD_MS = 1.0;
+
+            // The protobuf type. We will load it later.
+            let Frame = null;
+            let TranscriptFrame = null;
+
+            // The websocket connection.
+            let ws = null;
+
+            // The audio context
+            let audioContext = null;
+
+            // The audio context media stream source
+            let source = null;
+
+            // The microphone stream from getUserMedia. SHould be sampled to the
+            // proper sample rate.
+            let microphoneStream = null;
+
+            // Script processor to get data from microphone.
+            let scriptProcessor = null;
+
+            // AudioContext play time.
+            let playTime = 0;
+
+            // Last time we received a websocket message.
+            let lastMessageTime = 0;
+
+            // Whether we should be playing audio.
+            let isPlaying = false;
+
+            let startBtn = document.getElementById('startAudioBtn');
+            let stopBtn = document.getElementById('stopAudioBtn');
+
+            const proto = protobuf.load("../protos/data_frames.proto", (err, root) => {
+                if (err) {
+                    throw err;
+                }
+                Frame = root.lookupType("pipeline_frames.Frame");
+                const progressText = document.getElementById("progressText");
+                //progressText.textContent = "We are ready! Make sure to run the server and then click `Start Audio`.";
+
+                //startBtn.disabled = false;
+                //stopBtn.disabled = true;
+            });
+            const asr_proto = protobuf.load("../protos/asr_data_frames.proto", (err, root) => {
+                if (err) {
+                    throw err;
+                }
+                TranscriptFrame = root.lookupType("achatbot_frames.Frame");
+                const progressText = document.getElementById("progressText");
+                progressText.textContent = "We are ready! Make sure to run the server and then click `Start Audio`.";
+
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            });
+
+            function initWebSocket() {
+                const wsUrl = document.getElementById('wsUrl').value;
+                ws = new WebSocket(wsUrl);
+
+                ws.addEventListener('open', () => console.log('WebSocket connection established.'));
+                ws.addEventListener('message', handleWebSocketMessage);
+                ws.addEventListener('close', (event) => {
+                    console.log("WebSocket connection closed.", event.code, event.reason);
+                    stopAudio(false);
+                });
+                ws.addEventListener('error', (event) => console.error('WebSocket error:', event));
+            }
+
+            async function handleWebSocketMessage(event) {
+                const arrayBuffer = await event.data.arrayBuffer();
+                if (isPlaying) {
+                    enqueueAudioFromProto(arrayBuffer);
+                }
+            }
+
+            function enqueueAudioFromProto(arrayBuffer) {
+                const parsedFrame = TranscriptFrame.decode(new Uint8Array(arrayBuffer));
+                console.log(parsedFrame)
+                if (!parsedFrame?.asrLiveTranscription?.text) {
+                    return false;
+                }
+
+                const asr = parsedFrame.asrLiveTranscription;
+                const container = document.getElementById('transcription-container');
+                let transcriptionEl = document.getElementById('speech-' + asr.speechId);
+
+                if (!transcriptionEl) {
+                    transcriptionEl = document.createElement('p');
+                    transcriptionEl.id = 'speech-' + asr.speechId;
+                    container.appendChild(transcriptionEl);
+                }
+
+                let content = `[语音 ${asr.speechId}] (开始: ${asr.startAtS.toFixed(2)}s): ${asr.text}`;
+                if (asr.isFinal && asr.endAtS > 0) {
+                    content = `[语音 ${asr.speechId}] (开始: ${asr.startAtS.toFixed(2)}s - 结束: ${asr.endAtS.toFixed(2)}s): ${asr.text}`;
+                }
+                transcriptionEl.textContent = content;
+            }
+
+            function convertFloat32ToS16PCM(float32Array) {
+                let int16Array = new Int16Array(float32Array.length);
+
+                for (let i = 0; i < float32Array.length; i++) {
+                    let clampedValue = Math.max(-1, Math.min(1, float32Array[i]));
+                    int16Array[i] = clampedValue < 0 ? clampedValue * 32768 : clampedValue * 32767;
+                }
+                return int16Array;
+            }
+
+            function startAudioBtnHandler() {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    alert('getUserMedia is not supported in your browser.');
+                    return;
+                }
+
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    latencyHint: "interactive",
+                    sampleRate: SAMPLE_RATE
+                });
+
+                isPlaying = true;
+
+                initWebSocket();
+
+                navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        sampleRate: SAMPLE_RATE,
+                        channelCount: NUM_CHANNELS,
+                        autoGainControl: true,
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                    }
+                }).then((stream) => {
+                    microphoneStream = stream;
+                    // 512 is closest thing to 200ms.
+                    scriptProcessor = audioContext.createScriptProcessor(512, 1, 1);
+                    source = audioContext.createMediaStreamSource(stream);
+                    source.connect(scriptProcessor);
+                    scriptProcessor.connect(audioContext.destination);
+
+                    scriptProcessor.onaudioprocess = (event) => {
+                        if (!ws) {
+                            return;
+                        }
+
+                        const audioData = event.inputBuffer.getChannelData(0);
+                        const pcmS16Array = convertFloat32ToS16PCM(audioData);
+                        const pcmByteArray = new Uint8Array(pcmS16Array.buffer);
+                        const frame = Frame.create({
+                            audio: {
+                                audio: Array.from(pcmByteArray),
+                                sampleRate: SAMPLE_RATE,
+                                numChannels: NUM_CHANNELS,
+                                sampleWidth: SAMPLE_WIDTH,
+                            }
+                        });
+                        const encodedFrame = new Uint8Array(Frame.encode(frame).finish());
+                        ws.send(encodedFrame);
+                    };
+                }).catch((error) => console.error('Error accessing microphone:', error));
+            }
+
+            function stopAudio(closeWebsocket) {
+                playTime = 0;
+                isPlaying = false;
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+
+                if (ws && closeWebsocket) {
+                    ws.close();
+                    ws = null;
+                }
+
+                if (scriptProcessor) {
+                    scriptProcessor.disconnect();
+                }
+                if (source) {
+                    source.disconnect();
+                }
+            }
+
+            function stopAudioBtnHandler() {
+                stopAudio(true);
+            }
+
+            startBtn.addEventListener('click', startAudioBtnHandler);
+            stopBtn.addEventListener('click', stopAudioBtnHandler);
+            startBtn.disabled = true;
+            stopBtn.disabled = true;
+        </script>
+</body>
+
+</html>

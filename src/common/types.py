@@ -20,6 +20,8 @@ from dotenv import load_dotenv
 from pydantic.main import BaseModel
 from pydantic import ConfigDict
 
+from src.common.utils.thread_safe import ThreadSafeDict
+
 from .interface import (
     IBuffering,
     IDetector,
@@ -66,7 +68,7 @@ class SessionCtx:
     sampling_rate: int = RATE
     sample_width: int = SAMPLE_WIDTH
     read_audio_frames = bytes()
-    state = dict()
+    state = ThreadSafeDict()
     buffering_strategy: IBuffering = None
     waker: IDetector | EngineClass = None
     vad: IDetector | EngineClass = None
@@ -227,7 +229,7 @@ class FSMNVADArgs:
     # frame_duration_ms: int = 64  # ms,  frame_length: 1024 = 16000*64 / 1000
 
 
-INIT_SILERO_SENSITIVITY = 0.4
+INIT_SILERO_SENSITIVITY = 0.5
 # How often should we reset internal model state
 SILERO_MODEL_RESET_STATES_TIME = 5.0
 
@@ -241,7 +243,7 @@ class SileroVADArgs:
     force_reload: bool = False
     trust_repo: bool = True
     verbose: bool = True
-    onnx: bool = False
+    onnx: bool = True
     silero_sensitivity: float = INIT_SILERO_SENSITIVITY
     is_pad_tensor: bool = False
     check_frames_mode: int = VAD_CHECK_PER_FRAMES
@@ -381,6 +383,9 @@ class EdgeTTSArgs:
     rate: str = "+15%"
     volume: str = "+0%"
     pitch: str = "+0Hz"
+    boundary: Literal["WordBoundary", "SentenceBoundary"] = "SentenceBoundary"
+    connect_timeout: int = 10
+    receive_timeout: int = 60
 
 
 @dataclass
@@ -466,10 +471,11 @@ class VADState(Enum):
 class VADAnalyzerArgs:
     sample_rate: int = RATE
     num_channels: int = CHANNELS
-    confidence: float = 0.7
-    start_secs: float = 0.2
-    stop_secs: float = 0.8
-    min_volume: float = 0.6
+    sample_width = SAMPLE_WIDTH
+    confidence: float = 0.7  # VA detect confidence threshold
+    start_secs: float = 0.032  # defualt use SileroVAD 32ms start once for 16000 samples, 512 frames per second, accumulate 1 times
+    stop_secs: float = 0.32  # defualt use SileroVAD  32ms stop once for 16000 samples, 512 frames per second, accumulate 10 times
+    min_volume: float = 0.6  # voice volume threshold
 
 
 @dataclass
@@ -484,11 +490,13 @@ class AudioParams(BaseModel):
     audio_out_enabled: bool = False
     audio_out_sample_rate: int = RATE
     audio_out_channels: int = CHANNELS
+    audio_out_sample_width: int = SAMPLE_WIDTH
     audio_out_10ms_chunks: int = 2
     audio_in_enabled: bool = False
     audio_in_participant_enabled: bool = False
     audio_in_sample_rate: int = RATE
     audio_in_channels: int = CHANNELS
+    audio_in_sample_width: int = SAMPLE_WIDTH
 
 
 class AudioVADParams(AudioParams):

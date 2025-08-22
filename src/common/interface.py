@@ -100,7 +100,7 @@ class IBuffering(ABC):
 
 class IDetector(ABC):
     @abstractmethod
-    async def detect(self, session) -> list[bytes | None]:
+    async def detect(self, session) -> list[dict | bytes | None]:
         raise NotImplementedError("must be implemented in the child class")
 
     @abstractmethod
@@ -123,6 +123,11 @@ class IVADAnalyzer(ABC):
 
     @abstractmethod
     def analyze_audio(self, buffer):
+        raise NotImplementedError("must be implemented in the child class")
+
+    @abstractmethod
+    def reset(self):
+        """reset vad stats and model stats"""
         raise NotImplementedError("must be implemented in the child class")
 
 
@@ -178,6 +183,7 @@ class IAsr(ABC):
 
     @abstractmethod
     async def transcribe_stream(self, session) -> AsyncGenerator[str, None]:
+        """decode stream (text token step by step)"""
         raise NotImplementedError("must be implemented in the child class")
 
     @abstractmethod
@@ -186,6 +192,42 @@ class IAsr(ABC):
 
     @abstractmethod
     def set_audio_data(self, audio_data):
+        raise NotImplementedError("must be implemented in the child class")
+
+
+class IAsrLive(ABC):
+    @abstractmethod
+    async def streaming_transcribe(self, session, **kwargs) -> AsyncGenerator[dict, None]:
+        """
+        session
+            - session.ctx.state["audio_chunk"]
+            - session.ctx.state["is_last"]
+        return
+        - {"timestamps":[],"text":""}
+        """
+        raise NotImplementedError("must be implemented in the child class")
+
+    @abstractmethod
+    def reset(self):
+        raise NotImplementedError("must be implemented in the child class")
+
+
+class IPunc(ABC):
+    @abstractmethod
+    def generate(self, session, **kwargs) -> Generator[str, None, None]:
+        """
+        - generate text with punc
+        """
+        raise NotImplementedError("must be implemented in the child class")
+
+
+class ITextProcessing(ABC):
+    @abstractmethod
+    def normalize(self, session, **kwargs) -> str:
+        """
+        - Text Normalize
+        - Inverse Text Normalize
+        """
         raise NotImplementedError("must be implemented in the child class")
 
 

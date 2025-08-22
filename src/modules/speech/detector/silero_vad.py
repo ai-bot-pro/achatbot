@@ -28,6 +28,8 @@ class SileroVAD(BaseVAD):
             raise ValueError("Silero VAD sample rate needs to be 16000 or 8000")
         # torch.set_num_threads(1)
         # torchaudio.set_audio_backend("soundfile")
+
+        # https://github.com/snakers4/silero-vad/blob/master/hubconf.py
         self.model, utils = torch.hub.load(
             repo_or_dir=self.args.repo_or_dir,
             model=self.args.model,
@@ -37,10 +39,12 @@ class SileroVAD(BaseVAD):
             verbose=self.args.verbose,
             trust_repo=self.args.trust_repo,
         )
-        model_million_params = sum(p.numel() for p in self.model.parameters()) / 1e6
-        logging.debug(f"{self.TAG} have {model_million_params}M parameters")
-        logging.debug(self.model)
+        if self.args.onnx is False:
+            model_million_params = sum(p.numel() for p in self.model.parameters()) / 1e6
+            logging.debug(f"{self.TAG} have {model_million_params}M parameters")
+            logging.debug(self.model)
 
+        # https://github.com/snakers4/silero-vad/blob/master/src/silero_vad/utils_vad.py
         (
             self.get_speech_timestamps,
             self.save_audio,
@@ -48,7 +52,7 @@ class SileroVAD(BaseVAD):
             VADIterator,
             self.collect_chunks,
         ) = utils
-        self.vad_iterator = VADIterator(self.model, sampling_rate=self.args.sample_rate)
+        self.vad_iter = VADIterator(self.model, sampling_rate=self.args.sample_rate)
 
     def set_audio_data(self, audio_data):
         super().set_audio_data(audio_data)
@@ -86,7 +90,7 @@ class SileroVAD(BaseVAD):
     async def detect_chunk(self, chunk, session: Session):
         audio_chunk = self.process_audio_buffer(chunk)
         vad_prob = self.model(audio_chunk, self.args.sample_rate).item()
-        is_silero_speech_active = vad_prob > (1 - self.args.silero_sensitivity)
+        is_silero_speech_active = vad_prob >= (1 - self.args.silero_sensitivity)
         return is_silero_speech_active
 
     def get_speech_timestamps(self):
@@ -123,8 +127,14 @@ class SileroVAD(BaseVAD):
                     "constant",
                     0,
                 )
-            speech_dict = self.vad_iterator(audio_chunk, return_seconds=True)
+            # Return speech timestamps in seconds (default is samples, cur_samples/sample_rate)
+            speech_dict = self.vad_iter(audio_chunk, return_seconds=False)
             if speech_dict:
+                if "start" in speech_dict:
+                    speech_dict["start_at"] = round(speech_dict["start"] / self.args.sample_rate, 3)
+                if "end" in speech_dict:
+                    speech_dict["end_at"] = round(speech_dict["end"] / self.args.sample_rate, 3)
+
                 yield speech_dict
 
     def get_sample_info(self):

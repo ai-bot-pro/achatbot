@@ -120,7 +120,7 @@ class WhisperCPPCstyleAsr(ASRBase):
     async def transcribe(self, session: Session) -> dict:
         # https://absadiki.github.io/pywhispercpp/#pywhispercpp.constants.PARAMS_SCHEMA
         # https://absadiki.github.io/pywhispercpp/#pywhispercpp.model.Model.transcribe
-        # NOTE: if token_timestamps=True, language=zh, token text have special char
+        # NOTE: if token_timestamps=True, language=zh, token text have special char, need prefix buff decode
         segments = await asyncio.to_thread(
             self.model.transcribe,
             self.asr_audio.copy(),

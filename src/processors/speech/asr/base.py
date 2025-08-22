@@ -11,10 +11,11 @@ from apipeline.frames.sys_frames import CancelFrame, MetricsFrame, ErrorFrame
 from apipeline.frames.control_frames import EndFrame, StartFrame
 from apipeline.frames.data_frames import Frame, AudioRawFrame
 
+from src.common.types import VADState
 from src.processors.speech.audio_volume_time_processor import AudioVolumeTimeProcessor
 from src.processors.ai_processor import AsyncAIProcessor
 from src.common.utils.helper import exp_smoothing, calculate_audio_volume
-from src.types.frames.data_frames import DailyTransportMessageFrame, TranscriptionFrame
+from src.types.frames.data_frames import TranscriptionFrame, VADStateAudioRawFrame
 from src.types.speech.language import Language
 from src.types.frames.control_frames import (
     ASRArgsUpdateFrame,
@@ -45,7 +46,7 @@ class ASRProcessorBase(AsyncAIProcessor):
         pass
 
     @abstractmethod
-    async def run_asr(self, audio: bytes) -> AsyncGenerator[Frame, None]:
+    async def run_asr(self, audio: bytes, **kwargs) -> AsyncGenerator[Frame, None]:
         """Returns transcript as a string"""
         pass
 
@@ -69,6 +70,17 @@ class ASRProcessorBase(AsyncAIProcessor):
         else:
             await self.push_frame(frame, direction)
 
+        if isinstance(frame, UserStartedSpeakingFrame):
+            await self._handle_user_started_speaking(frame)
+        elif isinstance(frame, UserStoppedSpeakingFrame):
+            await self._handle_user_stopped_speaking(frame)
+
+    async def _handle_user_started_speaking(self, frame: UserStartedSpeakingFrame):
+        pass
+
+    async def _handle_user_stopped_speaking(self, frame: UserStoppedSpeakingFrame):
+        pass
+
 
 class SegmentedASRProcessor(ASRProcessorBase):
     """SegmentedASRProcessor is an asr processor that uses VAD events to detect
@@ -83,8 +95,6 @@ class SegmentedASRProcessor(ASRProcessorBase):
 
     def __init__(self, *, sample_rate: Optional[int] = None, **kwargs):
         super().__init__(sample_rate=sample_rate, **kwargs)
-        self._content = None
-        self._wave = None
         self._audio_buffer = bytearray()
         self._audio_buffer_size_1s = 0
         self._user_speaking = False
@@ -92,14 +102,6 @@ class SegmentedASRProcessor(ASRProcessorBase):
     async def start(self, frame: StartFrame):
         await super().start(frame)
         self._audio_buffer_size_1s = self._sample_rate * 2
-
-    async def process_frame(self, frame: Frame, direction: FrameDirection):
-        await super().process_frame(frame, direction)
-
-        if isinstance(frame, UserStartedSpeakingFrame):
-            await self._handle_user_started_speaking(frame)
-        elif isinstance(frame, UserStoppedSpeakingFrame):
-            await self._handle_user_stopped_speaking(frame)
 
     async def _handle_user_started_speaking(self, frame: UserStartedSpeakingFrame):
         self._user_speaking = True
@@ -219,3 +221,63 @@ class TranscriptionTimingLogProcessor(FrameProcessor):
             await self.push_frame(frame, direction)
         except Exception as e:
             logging.debug(f"Exception {e}")
+
+
+class VADSegmentedASRProcessor(ASRProcessorBase):
+    """
+    buffer chunk_length_seconds chunk to process with vad
+    """
+
+    def __init__(self, *, sample_rate: int = 16000, chunk_length_seconds: float = 0.1, **kwargs):
+        super().__init__(sample_rate=sample_rate, **kwargs)
+        self._user_speaking = False
+        self._audio_buffer = bytearray()
+        self._chunk_length_seconds = chunk_length_seconds
+        self._chunk_length_in_bytes = int(self._chunk_length_seconds * self._sample_rate * 2)
+        self._max_bytes_per_sec = (
+            self._sample_rate * 5 * 2
+        )  # 5 seconds of audio at 16 kHz with sample_width(2)
+
+    async def start(self, frame: StartFrame):
+        await super().start(frame)
+        self._audio_buffer.clear()
+
+    @abstractmethod
+    def reset(self):
+        pass
+
+    async def process_audio_frame(self, frame: AudioRawFrame):
+        if not isinstance(frame, VADStateAudioRawFrame):
+            return
+
+        is_last = False
+        if self._user_speaking is False and frame.state == VADState.SPEAKING:
+            self._user_speaking = True
+            self.reset()
+
+        if self._user_speaking is True and frame.state == VADState.QUIET:
+            self._user_speaking = False
+            is_last = True
+
+        self._audio_buffer.extend(frame.audio)
+
+        if (len(self._audio_buffer) >= self._chunk_length_in_bytes) or (is_last is True):
+            if len(self._audio_buffer) > self._max_bytes_per_sec:
+                logging.warning(
+                    f"Audio buffer too large: {(len(self._audio_buffer) / (self._sample_rate * 2)):.2f}s. "
+                )
+
+            audio_chunk = self._audio_buffer[: self._chunk_length_in_bytes]
+            await self.process_generator(
+                self.run_asr(
+                    audio_chunk,
+                    is_last=is_last,
+                    speech_id=frame.speech_id,
+                    is_final=frame.is_final,
+                    start_at_s=frame.start_at_s,
+                    cur_at_s=frame.cur_at_s,
+                    end_at_s=frame.end_at_s,
+                )
+            )
+
+            self._audio_buffer = self._audio_buffer[self._chunk_length_in_bytes :]

@@ -74,7 +74,7 @@ class StepVoiceBaseProcessor(VoiceProcessorBase):
         self._device = device
 
         # now just support a single session
-        self._session = session or Session(**SessionCtx(uuid.uuid4()).__dict__)
+        self._session = session or Session(**SessionCtx(str(uuid.uuid4())).__dict__)
 
         self.reset()
         self.load_models()

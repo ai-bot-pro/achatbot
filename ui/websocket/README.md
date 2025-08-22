@@ -7,9 +7,13 @@
 1. run websocket server bot with 2 ways:
 - local start bot
 ```shell
+# voice live chat bot
 python -m src.cmd.bots.main -f config/bots/websocket_server_bot.json
+
+# asr live bot
+python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_websocket_asr_live_bot.json
 ```
-config/bots/websocket_server_bot.json
+- config/bots/websocket_server_bot.json
 ```json
 {
   "chat_bot_name": "WebsocketServerBot",
@@ -59,13 +63,57 @@ config/bots/websocket_server_bot.json
   "config_list": []
 }
 ```
+- config/bots/fastapi_websocket_asr_live_bot.json 
+```json
+{
+  "chat_bot_name": "FastapiWebsocketStreamingASRBot",
+  "transport_type": "websocket",
+  "handle_sigint": false,
+  "services": {
+    "pipeline": "achatbot",
+    "vad": "silero",
+    "asr": "asr_streaming_sensevoice",
+    "punctuation":"punc_ct_tranformer"
+  },
+  "config": {
+    "vad": {
+      "tag": "silero_vad_analyzer",
+      "args": {
+        "start_secs": 0.032,
+        "stop_secs": 0.32,
+        "confidence": 0.7,
+        "min_volume": 0.4
+      }
+    },
+    "asr": {
+      "tag": "asr_streaming_sensevoice",
+      "args": {
+        "chunk_size": 10,
+        "padding": 8,
+        "beam_size": 3,
+        "contexts": [],
+        "language": "zh",
+        "textnorm": false,
+        "model": "./models/FunAudioLLM/SenseVoiceSmall"
+      }
+    },
+    "punctuation": {
+      "tag": "punc_ct_tranformer",
+      "args": {
+        "model":"./models/iic/punc_ct-transformer_zh-cn-common-vad_realtime-vocab272727"
+      }
+    }
+  },
+  "config_list": []
+}
+```
 
 - http api start bot
 ```shell
 # run http server
 python -m src.cmd.http.server.fastapi_daily_bot_serve 
 
-# curl start bot api
+# curl start voice chat bot api
 curl -XPOST "http://0.0.0.0:4321/bot_join/WebsocketServerBot" \                                     
     -H "Content-Type: application/json" \
     -d $'{"transport_type":"websocket","config":{"asr": { "tag": "sense_voice_asr", "args": { "language": "zn", "model_name_or_path": "./models/FunAudioLLM/SenseVoiceSmall" } },"llm": { "tag": "openai_llm_processor", "base_url": "https://api.together.xyz/v1", "model": "Qwen/Qwen2-72B-Instruct", "language": "zh", "messages": [ { "role": "system", "content": "你是一名叫奥利给的智能助理。保持回答简短和清晰。请用中文回答。" } ] }, "tts": { "tag": "tts_edge", "args": { "voice_name": "zh-CN-YunjianNeural", "language": "zh", "gender": "Male" } } }}'  | jq .
@@ -73,12 +121,15 @@ curl -XPOST "http://0.0.0.0:4321/bot_join/WebsocketServerBot" \
 
 2. run websocket client 
 ```shell
-cd ui/websocket/simple-demo && python -m http.server
+cd ui/websocket && python -m http.server
 ```
-access http://localhost:8000/  to click `Start Audio` to chat with bot
+- access http://localhost:8000/simple-demo  to click `Start Audio` to chat with Voice bot
+- access http://localhost:8000/asr_live  to click `Start Audio` to transcript with ASR Live bot
 
 
-> [!NOTE]: [frames.proto](./frames.proto) text/image/audio pb schema from https://github.com/ai-bot-pro/pipeline-py/blob/main/apipeline/frames/data_frames.proto 
+> [!NOTE]
+> - [data_frames.proto](./protos/data_frames.proto) text/image/audio pb schema from https://github.com/ai-bot-pro/pipeline-py/blob/main/apipeline/frames/data_frames.proto 
+> - [asr_data_frames.proto](./protos/asr_data_frames.proto) Frame seq id don't repeat [data_frames.proto](./protos/data_frames.proto)
 
 # references
 - [Websocket](https://en.wikipedia.org/wiki/WebSocket)

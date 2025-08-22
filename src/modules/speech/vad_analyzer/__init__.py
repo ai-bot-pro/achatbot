@@ -18,8 +18,8 @@ class VADAnalyzerEnvInit:
             sample_rate=int(os.getenv("SAMPLE_RATE", "16000")),
             num_channels=int(os.getenv("NUM_CHANNELS", "1")),
             confidence=float(os.getenv("CONFIDENCE", "0.7")),
-            start_secs=float(os.getenv("START_SECS", "0.2")),
-            stop_secs=float(os.getenv("STOP_SECS", "0.8")),
+            start_secs=float(os.getenv("START_SECS", "0.032")),
+            stop_secs=float(os.getenv("STOP_SECS", "0.32")),
             min_volume=float(os.getenv("MIN_VOLUME", "0.6")),
         ).__dict__
 

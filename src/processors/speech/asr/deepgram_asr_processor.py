@@ -56,7 +56,7 @@ class DeepgramAsrProcessor(ASRProcessorBase):
         self._connection: AsyncListenWebSocketClient = self._client.listen.asyncwebsocket.v("1")
         self._connection.on(LiveTranscriptionEvents.Transcript, self._on_message)
 
-    async def run_asr(self, audio: bytes) -> AsyncGenerator[Frame, None]:
+    async def run_asr(self, audio: bytes, **kwargs) -> AsyncGenerator[Frame, None]:
         await self.start_processing_metrics()
         await self._connection.send(audio)
         yield None

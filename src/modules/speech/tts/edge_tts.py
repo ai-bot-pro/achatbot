@@ -51,6 +51,9 @@ class EdgeTTS(BaseTTS, ITts):
             rate=self.args.rate,
             volume=self.args.volume,
             pitch=self.args.pitch,
+            boundary=self.args.boundary,
+            connect_timeout=self.args.connect_timeout,
+            receive_timeout=self.args.receive_timeout,
         )
         self.submaker = edge_tts.SubMaker()
         # "outputFormat":"audio-24khz-48kbitrate-mono-mp3"
@@ -61,7 +64,10 @@ class EdgeTTS(BaseTTS, ITts):
                     f.write(chunk["data"])
                 elif chunk["type"] == "WordBoundary":
                     # logging.info( f"{self.TAG} type:{chunk['type']} chunk: {chunk}")
-                    self.submaker.create_sub((chunk["offset"], chunk["duration"]), chunk["text"])
+                    self.submaker.feed(chunk)
+                elif chunk["type"] == "SentenceBoundary":
+                    # logging.info( f"{self.TAG} type:{chunk['type']} chunk: {chunk}")
+                    self.submaker.feed(chunk)
 
             f.seek(0)
             audio: AudioSegment = AudioSegment.from_mp3(f)
@@ -89,7 +95,7 @@ class EdgeTTS(BaseTTS, ITts):
 
     async def save_submakers(self, vit_file: str):
         with open(vit_file, "w", encoding="utf-8") as file:
-            file.write(self.submaker.generate_subs())
+            file.write(self.submaker.get_srt())
 
     def set_voice(self, voice: str):
         self.args.voice_name = voice

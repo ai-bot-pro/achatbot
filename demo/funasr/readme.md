@@ -1,0 +1,1 @@
+- https://github.com/modelscope/FunASR/blob/main/model_zoo/modelscope_models.md

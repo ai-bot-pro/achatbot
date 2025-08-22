@@ -65,6 +65,11 @@ class ASRConfig(BaseModel):
     args: Optional[dict] = None
 
 
+class PuncConfig(BaseModel):
+    tag: Optional[str] = None
+    args: Optional[dict] = None
+
+
 class AvatarConfig(BaseModel):
     tag: Optional[str] = None
     args: Optional[dict] = None
@@ -97,6 +102,7 @@ class AIConfig(BaseModel):
     vad: Optional[VADConfig] = None
     turn: Optional[TurnConfig] = None
     asr: Optional[ASRConfig] = None
+    punctuation: Optional[PuncConfig] = None
     avatar: Optional[AvatarConfig] = None
     mcp_servers: Optional[Dict[str, MCPServerConfig]] = None
     llm: Optional[LLMConfig] = None

@@ -1,0 +1,29 @@
+/*
+python -m grpc_tools.protoc \
+    --proto_path=./ \
+    --python_out=./protobufs \
+    asr_data_frames.proto
+*/
+syntax = "proto3";
+
+package achatbot_frames;
+
+message ASRLiveTranscriptionFrame {
+    uint64 id = 1;
+    string name = 2;
+    string text = 3;
+    string user_id = 4;
+    string timestamp =5;
+    string language = 6;
+    repeated uint64 timestamps = 7;
+    uint64 speech_id = 8;
+    bool is_final = 9; 
+    float start_at_s = 10;
+    float cur_at_s = 11;
+    float end_at_s = 12;
+}
+
+message Frame {
+  /*Frame in apipeline base data_frame text:1,audio:2,image:3*/
+  oneof frame { ASRLiveTranscriptionFrame asr_live_transcription= 4; }
+}

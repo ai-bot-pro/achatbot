@@ -1,18 +1,20 @@
 import logging
 from typing import AsyncGenerator
+import uuid
 
 from apipeline.frames.data_frames import Frame
 from apipeline.frames.sys_frames import ErrorFrame
 
 from src.common.factory import EngineClass
-from src.common.session import Session
+from src.common.session import Session, SessionCtx
 from src.common.utils.time import time_now_iso8601
 from src.common.interface import IAsr
-from src.processors.speech.asr.base import SegmentedASRProcessor
+from src.processors.speech.asr.base import SegmentedASRProcessor, SegmentedVolumeASRProcessor
 from src.types.frames.data_frames import TranscriptionFrame
 from src.types.speech.language import Language
 
 
+# class ASRProcessor(SegmentedVolumeASRProcessor):
 class ASRProcessor(SegmentedASRProcessor):
     def __init__(
         self,
@@ -35,7 +37,7 @@ class ASRProcessor(SegmentedASRProcessor):
             **kwargs,
         )
         self._asr = asr
-        self._session = session
+        self._session = session or Session(**SessionCtx(str(uuid.uuid4())).__dict__)
 
     def set_asr(self, asr: IAsr):
         self._asr = asr
@@ -43,7 +45,7 @@ class ASRProcessor(SegmentedASRProcessor):
     async def set_asr_args(self, **args):
         self._asr.set_args(**args)
 
-    async def run_asr(self, audio: bytes) -> AsyncGenerator[Frame, None]:
+    async def run_asr(self, audio: bytes, **kwargs) -> AsyncGenerator[Frame, None]:
         if self._asr is None:
             logging.error(f"{self} error: ASR engine not available")
             yield ErrorFrame("ASR engine not available")

@@ -94,4 +94,4 @@ class FastapiWebsocketServerOutputProcessor(AudioCameraOutputProcessor):
                 await self._websocket.send_bytes(payload)
             # logging.debug(f"send payload: {type(payload)} len:{len(payload)}")
         except Exception as e:
-            logging.error(f"send_payload error: {e}")
+            logging.exception(f"send_payload error: {e}")
