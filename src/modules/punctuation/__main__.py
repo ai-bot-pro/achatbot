@@ -13,3 +13,10 @@ for text in vads:
     rec_result_all += punc_text
 
 print(rec_result_all)
+
+"""
+python -m src.modules.punctuation
+
+# have some bad cases
+PUNC_TAG=punc_ct_tranformer_onnx python -m src.modules.punctuation
+"""

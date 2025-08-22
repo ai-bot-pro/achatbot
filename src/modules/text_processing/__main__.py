@@ -1,7 +1,6 @@
 from src.modules.text_processing import TextProcessingEnvInit
 from src.common.session import Session, SessionCtx
 
-engine = TextProcessingEnvInit.initEngine()
 session = Session(**SessionCtx("test_client_id", 16000, 2).__dict__)
 
 zh_tn_text = "你好 WeTextProcessing 1.0，船新版本儿，船新体验儿，简直666，9和10"

@@ -1,4 +1,5 @@
 import logging
+import uuid
 
 from dotenv import load_dotenv
 from fastapi import WebSocket
@@ -8,6 +9,7 @@ from apipeline.pipeline.runner import PipelineRunner
 from apipeline.processors.logger import FrameLogger
 from apipeline.frames import AudioRawFrame, TextFrame
 
+from src.common.session import Session, SessionCtx
 from src.serializers.transcription_protobuf import TranscriptionFrameSerializer
 from src.processors.speech.audio_save_processor import AudioSaveProcessor
 from src.modules.speech.asr_live import ASRLiveEnvInit
@@ -17,6 +19,8 @@ from src.cmd.bots import register_ai_fastapi_ws_bots
 from src.types.network.fastapi_websocket import FastapiWebsocketServerParams
 from src.transports.fastapi_websocket_server import FastapiWebsocketTransport
 from src.processors.speech.asr.asr_live_processor import ASRLiveProcessor
+from src.processors.punctuation_processor import PunctuationProcessor
+from src.modules.punctuation import PuncEnvInit
 
 load_dotenv(override=True)
 
@@ -32,20 +36,33 @@ class FastapiWebsocketStreamingASRBot(AIFastapiWebsocketBot):
         self.init_bot_config()
 
         self.vad_analyzer = None
-        self.engine = None
+        self.asr_engine = None
+        self.punc_engine = None
 
     def load(self):
         # load vad analyer
-        self.vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
+        if self._bot_config.vad:
+            tag = self._bot_config.vad.tag
+            args = self._bot_config.vad.args or {}
+            self.vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine(tag, args)
+        else:
+            self.vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
 
         # load asr live engine
-        if self._bot_config.asr and self._bot_config.asr.tag and self._bot_config.asr.args:
-            self.engine = ASRLiveEnvInit.getEngine(
-                self._bot_config.asr.tag, **self._bot_config.asr.args
-            )
+        if self._bot_config.asr:
+            tag = self._bot_config.asr.tag
+            args = self._bot_config.asr.args or {}
+            self.asr_engine = ASRLiveEnvInit.getEngine(tag, **args)
         else:
-            logging.info("use default asr live engine")
-            self.engine = ASRLiveEnvInit.initEngine()
+            logging.info("use defualt asr live engine")
+            self.asr_engine = ASRLiveEnvInit.getEngine()
+
+        # load punctuation engine
+        if self.asr_engine.get_args_dict().get("textnorm", False) is False:
+            if self._bot_config.punctuation:
+                tag = self._bot_config.punctuation.tag
+                args = self._bot_config.punctuation.args or {}
+                self.punc_engine = PuncEnvInit.initEngine(tag, **args)
 
     async def arun(self):
         if self._websocket is None:
@@ -66,19 +83,25 @@ class FastapiWebsocketStreamingASRBot(AIFastapiWebsocketBot):
             params=self.params,
         )
 
-        asr_live_processor = ASRLiveProcessor(asr=self.engine)
+        session = Session(**SessionCtx(str(uuid.uuid4())).__dict__)
+        asr_live_processor = ASRLiveProcessor(asr=self.asr_engine, session=session)
+
+        processors = [
+            transport.input_processor(),
+            # AudioSaveProcessor(prefix_name="streaming_asr", pass_raw_audio=True),
+            # FrameLogger(include_frame_types=[AudioRawFrame]),
+            asr_live_processor,
+            FrameLogger(include_frame_types=[TextFrame]),
+        ]
+        if self.punc_engine:
+            punc_processor = PunctuationProcessor(engine=self.punc_engine, session=session)
+            processors.append(punc_processor)
+
+        processors.append(FrameLogger(include_frame_types=[TextFrame]))
+        processors.append(transport.output_processor())
 
         self.task = PipelineTask(
-            Pipeline(
-                [
-                    transport.input_processor(),
-                    # AudioSaveProcessor(prefix_name="streaming_asr", pass_raw_audio=True),
-                    # FrameLogger(include_frame_types=[AudioRawFrame]),
-                    asr_live_processor,
-                    FrameLogger(include_frame_types=[TextFrame]),
-                    transport.output_processor(),
-                ]
-            ),
+            Pipeline(processors=processors),
             params=PipelineParams(
                 allow_interruptions=False,
                 enable_metrics=True,

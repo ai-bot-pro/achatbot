@@ -39,9 +39,10 @@ class SileroVAD(BaseVAD):
             verbose=self.args.verbose,
             trust_repo=self.args.trust_repo,
         )
-        model_million_params = sum(p.numel() for p in self.model.parameters()) / 1e6
-        logging.debug(f"{self.TAG} have {model_million_params}M parameters")
-        logging.debug(self.model)
+        if self.args.onnx is False:
+            model_million_params = sum(p.numel() for p in self.model.parameters()) / 1e6
+            logging.debug(f"{self.TAG} have {model_million_params}M parameters")
+            logging.debug(self.model)
 
         # https://github.com/snakers4/silero-vad/blob/master/src/silero_vad/utils_vad.py
         (

@@ -17,8 +17,8 @@ from funasr.utils.load_utils import load_audio_text_image_video, extract_fbank
 class SinusoidalPositionEncoder(torch.nn.Module):
     """ """
 
-    def __int__(self, d_model=80, dropout_rate=0.1):
-        pass
+    def __init__(self, d_model=80, dropout_rate=0.1, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def encode(
         self,
@@ -29,12 +29,11 @@ class SinusoidalPositionEncoder(torch.nn.Module):
         batch_size = positions.size(0)
         positions = positions.type(dtype)
         device = positions.device
-        log_timescale_increment = torch.log(
-            torch.tensor([10000], dtype=dtype, device=device)
-        ) / (depth / 2 - 1)
+        log_timescale_increment = torch.log(torch.tensor([10000], dtype=dtype, device=device)) / (
+            depth / 2 - 1
+        )
         inv_timescales = torch.exp(
-            torch.arange(depth / 2, device=device).type(dtype)
-            * (-log_timescale_increment)
+            torch.arange(depth / 2, device=device).type(dtype) * (-log_timescale_increment)
         )
         inv_timescales = torch.reshape(inv_timescales, [batch_size, -1])
         scaled_time = torch.reshape(positions, [1, -1, 1]) * torch.reshape(
@@ -322,9 +321,7 @@ class EncoderLayerSANM(nn.Module):
         self.stochastic_depth_rate = stochastic_depth_rate
         self.dropout_rate = dropout_rate
 
-    def forward(
-        self, x, mask, cache=None, mask_shfit_chunk=None, mask_att_chunk_encoder=None
-    ):
+    def forward(self, x, mask, cache=None, mask_shfit_chunk=None, mask_att_chunk_encoder=None):
         """Compute encoded features.
 
         Args:
@@ -604,7 +601,6 @@ class SenseVoiceSmall(nn.Module):
         length_normalized_loss: bool = False,
         **kwargs,
     ):
-
         super().__init__()
 
         if specaug is not None:
@@ -677,9 +673,7 @@ class SenseVoiceSmall(nn.Module):
     def from_pretrained(model: str = None, **kwargs):
         from funasr import AutoModel
 
-        model, kwargs = AutoModel.build_model(
-            model=model, trust_remote_code=True, **kwargs
-        )
+        model, kwargs = AutoModel.build_model(model=model, trust_remote_code=True, **kwargs)
 
         return model, kwargs
 
@@ -718,18 +712,12 @@ class SenseVoiceSmall(nn.Module):
             encoder_out[:, 4:, :], encoder_out_lens - 4, text[:, 4:], text_lengths - 4
         )
 
-        loss_rich, acc_rich = self._calc_rich_ce_loss(
-            encoder_out[:, :4, :], text[:, :4]
-        )
+        loss_rich, acc_rich = self._calc_rich_ce_loss(encoder_out[:, :4, :], text[:, :4])
 
         loss = loss_ctc + loss_rich
         # Collect total loss stats
-        stats["loss_ctc"] = (
-            torch.clone(loss_ctc.detach()) if loss_ctc is not None else None
-        )
-        stats["loss_rich"] = (
-            torch.clone(loss_rich.detach()) if loss_rich is not None else None
-        )
+        stats["loss_ctc"] = torch.clone(loss_ctc.detach()) if loss_ctc is not None else None
+        stats["loss_rich"] = torch.clone(loss_rich.detach()) if loss_rich is not None else None
         stats["loss"] = torch.clone(loss.detach()) if loss is not None else None
         stats["acc_rich"] = acc_rich
 
@@ -782,9 +770,9 @@ class SenseVoiceSmall(nn.Module):
         speech = torch.cat((style_query, speech), dim=1)
         speech_lengths += 1
 
-        event_emo_query = self.embed(
-            torch.LongTensor([[1, 2]]).to(speech.device)
-        ).repeat(speech.size(0), 1, 1)
+        event_emo_query = self.embed(torch.LongTensor([[1, 2]]).to(speech.device)).repeat(
+            speech.size(0), 1, 1
+        )
         input_query = torch.cat((language_query, event_emo_query), dim=1)
         speech = torch.cat((input_query, speech), dim=1)
         speech_lengths += 3
@@ -835,11 +823,9 @@ class SenseVoiceSmall(nn.Module):
         frontend=None,
         **kwargs,
     ):
-
         meta_data = {}
         if (
-            isinstance(data_in, torch.Tensor)
-            and kwargs.get("data_type", "sound") == "fbank"
+            isinstance(data_in, torch.Tensor) and kwargs.get("data_type", "sound") == "fbank"
         ):  # fbank
             speech, speech_lengths = data_in, data_lengths
             if len(speech.shape) < 3:
@@ -866,10 +852,7 @@ class SenseVoiceSmall(nn.Module):
             time3 = time.perf_counter()
             meta_data["extract_feat"] = f"{time3 - time2:0.3f}"
             meta_data["batch_data_time"] = (
-                speech_lengths.sum().item()
-                * frontend.frame_shift
-                * frontend.lfr_n
-                / 1000
+                speech_lengths.sum().item() * frontend.frame_shift * frontend.lfr_n / 1000
             )
 
         speech = speech.to(device=kwargs["device"])
@@ -877,9 +860,9 @@ class SenseVoiceSmall(nn.Module):
 
         language = kwargs.get("language", "auto")
         language_query = self.embed(
-            torch.LongTensor(
-                [[self.lid_dict[language] if language in self.lid_dict else 0]]
-            ).to(speech.device)
+            torch.LongTensor([[self.lid_dict[language] if language in self.lid_dict else 0]]).to(
+                speech.device
+            )
         ).repeat(speech.size(0), 1, 1)
 
         use_itn = kwargs.get("use_itn", False)
@@ -892,9 +875,9 @@ class SenseVoiceSmall(nn.Module):
         speech = torch.cat((textnorm_query, speech), dim=1)
         speech_lengths += 1
 
-        event_emo_query = self.embed(
-            torch.LongTensor([[1, 2]]).to(speech.device)
-        ).repeat(speech.size(0), 1, 1)
+        event_emo_query = self.embed(torch.LongTensor([[1, 2]]).to(speech.device)).repeat(
+            speech.size(0), 1, 1
+        )
         input_query = torch.cat((language_query, event_emo_query), dim=1)
         speech = torch.cat((input_query, speech), dim=1)
         speech_lengths += 3

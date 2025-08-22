@@ -30,7 +30,7 @@ def online():
         print(model.model, file=f, flush=True)
 
     # wav_file = os.path.join(model.model_path, "example/asr_example.wav")
-    wav_file = "/Users/wuyong/project/python/chat-bot/assets/Chinese_prompt.wav"
+    wav_file = "./assets/Chinese_prompt.wav"
     print(wav_file)
     speech, sample_rate = soundfile.read(wav_file)
     print(sample_rate, speech.shape)
@@ -81,7 +81,7 @@ def offline():
     )
     with open("./paraformer_model.txt", "w") as f:
         print(model.model, file=f, flush=True)
-    input = "/Users/wuyong/project/python/chat-bot/assets/Chinese_prompt.wav"
+    input = "./assets/Chinese_prompt.wav"
     # input = f"{model.model_path}/example/asr_example.wav"
     res = model.generate(input=input, batch_size_s=300, hotword="魔搭", disable_pbar=True)
     print(res)

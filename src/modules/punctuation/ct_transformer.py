@@ -1,21 +1,38 @@
+import os
+
 from funasr import AutoModel
 
 from src.common.session import Session
 from src.common.factory import EngineClass
 from src.common.interface import IPunc
+from src.common.types import MODELS_DIR
 
 
 class CTTransformerPunc(EngineClass, IPunc):
     """
-    - https://www.modelscope.cn/models/iic/punc_ct-transformer_zh-cn-common-vocab272727-pytorch
+    pytorch realtime Punctuation Restoration
+    - https://www.modelscope.cn/models/iic/punc_ct-transformer_zh-cn-common-vad_realtime-vocab272727
+    - modelscope download --local_dir ./models/iic/punc_ct-transformer_zh-cn-common-vad_realtime-vocab272727 iic/punc_ct-transformer_zh-cn-common-vad_realtime-vocab272727
     """
 
     TAG = "punc_ct_tranformer"
 
     def __init__(self, **kwargs):
+        """
+        - model
+        """
         super().__init__()
-        model = kwargs.get("model", "iic/punc_ct-transformer_zh-cn-common-vad_realtime-vocab272727")
-        self.model = AutoModel(model=model)
+        model = kwargs.get(
+            "model",
+            os.path.join(
+                MODELS_DIR, "iic/punc_ct-transformer_zh-cn-common-vad_realtime-vocab272727"
+            ),
+        )
+        self.model = AutoModel(
+            model=model,
+            disable_pbar=True,
+            disable_log=True,
+        )
 
     def generate(self, session: Session, **kwargs):
         text = session.ctx.state.get("text", None)

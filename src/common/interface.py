@@ -223,7 +223,7 @@ class IPunc(ABC):
 
 class ITextProcessing(ABC):
     @abstractmethod
-    def normalize(self, session, **kwargs):
+    def normalize(self, session, **kwargs) -> str:
         """
         - Text Normalize
         - Inverse Text Normalize

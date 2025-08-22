@@ -30,8 +30,6 @@ def offline():
     - https://modelscope.cn/models/iic/punc_ct-transformer_zh-cn-common-vocab272727-pytorch/summary
     - https://modelscope.cn/models/iic/punc_ct-transformer_cn-en-common-vocab471067-large/summary
     """
-    from funasr import AutoModel
-
     model = AutoModel(
         model="iic/punc_ct-transformer_zh-cn-common-vocab272727-pytorch", model_revision="v2.0.4"
     )

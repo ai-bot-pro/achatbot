@@ -75,12 +75,12 @@ class BaseVADAnalyzer(IVADAnalyzer, EngineClass):
         volume = self._get_smoothed_volume(audio_bytes)
         self._prev_volume = volume
 
+        # @weedge maybe add praat energy threshold
         speaking = confidence >= self._args.confidence and volume >= self._args.min_volume
 
         if speaking:
             match self._vad_state:
                 case VADState.QUIET:
-                    self.reset()  # reset model stats to release memory
                     self._vad_state = VADState.STARTING
                     self._vad_starting_count = 1
                 case VADState.STARTING:
@@ -93,6 +93,7 @@ class BaseVADAnalyzer(IVADAnalyzer, EngineClass):
                 case VADState.STARTING:
                     self._vad_state = VADState.QUIET
                     self._vad_starting_count = 0
+                    self.reset()  # reset model stats to release memory
                 case VADState.SPEAKING:
                     self._vad_state = VADState.STOPPING
                     self._vad_stopping_count = 1
@@ -121,9 +122,7 @@ class BaseVADAnalyzer(IVADAnalyzer, EngineClass):
             self._vad_stopping_count = 0
 
             self._is_final = True
-            self._end_at_s = round(
-                (self._accumulate_speech_bytes_len - len(buffer)) / self._sample_num_bytes, 3
-            )
+            self._end_at_s = round(self._accumulate_speech_bytes_len / self._sample_num_bytes, 3)
 
         # Starting / Speaking / Stopping / Quiet(no active)
         return VADStateAudioRawFrame(

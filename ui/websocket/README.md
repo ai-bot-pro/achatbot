@@ -72,7 +72,8 @@ python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_w
   "services": {
     "pipeline": "achatbot",
     "vad": "silero",
-    "asr": "asr_streaming_sensevoice"
+    "asr": "asr_streaming_sensevoice",
+    "punctuation":"punc_ct_tranformer"
   },
   "config": {
     "vad": {
@@ -94,6 +95,12 @@ python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_w
         "language": "zh",
         "textnorm": false,
         "model": "./models/FunAudioLLM/SenseVoiceSmall"
+      }
+    },
+    "punctuation": {
+      "tag": "punc_ct_tranformer",
+      "args": {
+        "model":"./models/iic/punc_ct-transformer_zh-cn-common-vad_realtime-vocab272727"
       }
     }
   },

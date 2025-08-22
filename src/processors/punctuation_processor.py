@@ -1,3 +1,5 @@
+import logging
+
 import uuid
 from apipeline.frames import Frame, TextFrame
 from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
@@ -23,6 +25,7 @@ class PunctuationProcessor(SessionProcessor):
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
         if isinstance(frame, TextFrame):
+            # logging.info(f"{self.punc_cache=}")
             self.set_ctx_state(text=frame.text, punc_cache=self.punc_cache)
             frame.text = self.engine.generate(self.session)
         await self.push_frame(frame, direction)
