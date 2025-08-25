@@ -165,5 +165,5 @@ modal run src/download_models.py::download_ckpts --ckpt-urls "https://virutalbuy
 
 @app.local_entrypoint()
 def main(repo_ids: str, revision: str = None, local_dir: str = None, ignore_patterns: str = ""):
-    ignore_patterns = ignore_patterns.split("|")
+    ignore_patterns = ignore_patterns.split("|") if len(ignore_patterns) > 0 else None
     download_ckpt.remote(repo_ids, revision, local_dir, ignore_patterns=ignore_patterns)
