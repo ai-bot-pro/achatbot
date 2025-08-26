@@ -35,6 +35,10 @@ img = (
     )
 )
 
+img = img.pip_install(
+    "achatbot==0.0.24.post13",
+    extra_index_url="https://test.pypi.org/simple/",
+)
 
 HF_MODEL_DIR = "/root/.achatbot/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
@@ -119,13 +123,16 @@ def generate(**kwargs):
     if quantization:
         # https://opennmt.net/CTranslate2/quantization.html
         model_dir = f"{ctranslate2_model_path}.{quantization}"
-    generator = ctranslate2.Generator(model_dir, device=device)
+    generator = ctranslate2.Generator(
+        model_dir,
+        device=device,
+    )
 
     messages = [
         # without CoT
-        "Translate the following English sentence into Chinese:\nMay the force be with you <zh>",
+        "Translate the following English sentence into Chinese simplified(简体中文):\nMay the force be with you <zh>",
         # with CoT
-        "Translate the following English sentence into Chinese and explain it in detail:\nMay the force be with you <zh>",
+        "Translate the following English sentence into Chinese simplified(简体中文) and explain it in detail:\nMay the force be with you <zh>",
     ]
     for message in messages:
         token_ids = tokenizer.encode(message)
@@ -151,7 +158,7 @@ def generate(**kwargs):
                 ttft = time.perf_counter() - start_time
                 print(f"generate TTFT time: {ttft} s")
                 first = False
-            # print(step_result)
+            print(step_result)
             if step_result.token_id == tokenizer.bos_token_id:
                 continue
             if step_result.token_id == tokenizer.eos_token_id:
@@ -162,7 +169,12 @@ def generate(**kwargs):
 def generate_batch(**kwargs):
     print(f"{device=}")
     tokenizer = transformers.AutoTokenizer.from_pretrained(model_path)
-    generator = ctranslate2.Generator(ctranslate2_model_path, device=device)
+    quantization = kwargs.get("quantization", "")
+    model_dir = ctranslate2_model_path
+    if quantization:
+        # https://opennmt.net/CTranslate2/quantization.html
+        model_dir = f"{ctranslate2_model_path}.{quantization}"
+    generator = ctranslate2.Generator(model_dir, device=device)
 
     messages = [
         # without CoT
@@ -199,6 +211,138 @@ def generate_batch(**kwargs):
         print(res)
 
 
+async def run_achatbot_generator(**kwargs):
+    import uuid
+    import asyncio
+    import time
+
+    from transformers import AutoTokenizer
+    from achatbot.common.types import SessionCtx
+    from achatbot.common.session import Session
+    from achatbot.core.llm.ctranslate2.generator import (
+        Ctranslate2Generator,
+        Ctranslate2EngineArgs,
+        Ctranslate2ModelArgs,
+    )
+
+    quantization = kwargs.get("quantization", "")
+    model_dir = ctranslate2_model_path
+    if quantization:
+        # https://opennmt.net/CTranslate2/quantization.html
+        model_dir = f"{ctranslate2_model_path}.{quantization}"
+
+    generator = Ctranslate2Generator(
+        **Ctranslate2EngineArgs(
+            model_args=Ctranslate2ModelArgs(
+                model_path=model_dir,
+                device=device,
+            ).__dict__,
+        ).__dict__
+    )
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+
+    messages = [
+        # without CoT
+        "Translate the following English sentence into Chinese:\nMay the force be with you <zh>",
+        # with CoT
+        "Translate the following English sentence into Chinese and explain it in detail:\nMay the force be with you <zh>",
+    ]
+    for message in messages:
+        session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
+        token_ids = tokenizer.encode(message)
+        start_tokens = tokenizer.convert_ids_to_tokens(token_ids)
+        session.ctx.state["tokens"] = start_tokens
+        start_time = time.perf_counter()
+        first = True
+        async for token_id in generator.generate(session, max_new_tokens=512):
+            if first:
+                ttft = time.perf_counter() - start_time
+                print(f"generate TTFT time: {ttft} s")
+                first = False
+            gen_text = tokenizer.decode(token_id)
+            print(token_id, gen_text)
+
+
+async def run_achatbot_processor(**kwargs):
+    import uuid
+    import asyncio
+    import time
+
+    from apipeline.pipeline.pipeline import Pipeline
+    from apipeline.pipeline.runner import PipelineRunner
+    from apipeline.pipeline.task import PipelineTask, PipelineParams
+    from apipeline.processors.logger import FrameLogger
+    from apipeline.frames import TextFrame, EndFrame
+    from transformers import AutoTokenizer
+
+    from achatbot.common.types import SessionCtx
+    from achatbot.common.session import Session
+    from achatbot.types.llm.ctranslate2 import (
+        Ctranslate2ModelArgs,
+        Ctranslate2EngineArgs,
+    )
+    from achatbot.core.llm import LLMEnvInit
+    from achatbot.types.frames import TranslationStreamingFrame, TranslationFrame
+    from achatbot.processors.translation.llm_translate_processor import LLMTranslateProcessor
+    from achatbot.common.logger import Logger
+
+    Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
+
+    quantization = kwargs.pop("quantization", "")
+    model_dir = ctranslate2_model_path
+    if quantization:
+        # https://opennmt.net/CTranslate2/quantization.html
+        model_dir = f"{ctranslate2_model_path}.{quantization}"
+
+    generator = LLMEnvInit.initLLMEngine(
+        tag="llm_ctranslate2_generator",
+        kwargs=Ctranslate2EngineArgs(
+            model_args=Ctranslate2ModelArgs(
+                model_path=model_dir,
+                device=device,
+            ).__dict__,
+        ).__dict__,
+    )
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+
+    src = kwargs.pop("src", "en")
+    target = kwargs.pop("target", "zh")
+    streaming = kwargs.pop("streaming", False)
+    tl_processor = LLMTranslateProcessor(
+        tokenizer=tokenizer,
+        generator=generator,
+        src=src,
+        target=target,
+        streaming=streaming,
+    )
+
+    task = PipelineTask(
+        Pipeline(
+            [
+                FrameLogger(include_frame_types=[TextFrame]),
+                tl_processor,
+                FrameLogger(include_frame_types=[TranslationStreamingFrame, TranslationFrame]),
+            ]
+        ),
+        params=PipelineParams(allow_interruptions=False),
+    )
+    await task.queue_frames(
+        [
+            TextFrame(text="May the force be with you"),
+            TextFrame(text="We are excited to introduce Seed-X, a powerful series of open-source multilingual translation language models, including an instruction model, a reinforcement learning model, and a reward model. It pushes the boundaries of translation capabilities within 7 billion parameters. We develop Seed-X as an accessible, off-the-shelf tool to support the community in advancing translation research and applications"),
+        ]
+    )
+
+    async def end():
+        await asyncio.sleep(10)
+        await task.stop_when_done()
+
+    asyncio.create_task(end())
+
+    runner = PipelineRunner()
+    await runner.run(task)
+
+
 """
 modal run src/llm/ctranslate2/seed_x.py --task tokenize
 modal run src/llm/ctranslate2/seed_x.py --task transformers_convert
@@ -217,6 +361,12 @@ IMAGE_GPU=L4 modal run src/llm/ctranslate2/seed_x.py --task generate --quantizat
 
 # offline batch with beam search
 IMAGE_GPU=L4 modal run src/llm/ctranslate2/seed_x.py --task generate_batch
+
+# achatbot generator
+IMAGE_GPU=L4 modal run src/llm/ctranslate2/seed_x.py --task run_achatbot_generator
+# achatbot processor
+IMAGE_GPU=L4 modal run src/llm/ctranslate2/seed_x.py --task run_achatbot_processor 
+IMAGE_GPU=L4 modal run src/llm/ctranslate2/seed_x.py --task run_achatbot_processor --streaming
 """
 
 
@@ -224,6 +374,10 @@ IMAGE_GPU=L4 modal run src/llm/ctranslate2/seed_x.py --task generate_batch
 def main(
     task: str = "generate",
     quantization: str = "",
+    # processor
+    src: str = "en",
+    target: str = "zh",
+    streaming: bool = False,
 ):
     print(task)
     tasks = {
@@ -231,6 +385,8 @@ def main(
         "transformers_convert": transformers_convert,
         "generate": generate,
         "generate_batch": generate_batch,
+        "run_achatbot_generator": run_achatbot_generator,
+        "run_achatbot_processor": run_achatbot_processor,
     }
     if task not in tasks:
         raise ValueError(f"task {task} not found")
@@ -238,4 +394,7 @@ def main(
     run.remote(
         tasks[task],
         quantization=quantization,
+        src=src,
+        target=target,
+        streaming=streaming,
     )

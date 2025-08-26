@@ -132,6 +132,25 @@ class ASRLiveTranscriptionFrame(TextFrame):
 
 
 @dataclass
+class TranslationStreamingFrame(TextFrame):
+    is_final: bool = False
+
+    def __str__(self):
+        return f"{super().__str__()} is_final: {self.is_final}"
+
+
+@dataclass
+class TranslationFrame(DataFrame):
+    src_lang: str = ""
+    target_lang: str = ""
+    src_text: str = ""
+    target_text: str = ""
+
+    def __str__(self):
+        return f"{self.name}(src_lang: {self.src_lang}, target_lang: {self.target_lang}, src_text: {self.src_text}, target_text: {self.target_text})"
+
+
+@dataclass
 class LLMMessagesFrame(DataFrame):
     """A frame containing a list of LLM messages. Used to signal that an LLM
     service should run a chat completion and emit an LLMStartFrames, TextFrames
