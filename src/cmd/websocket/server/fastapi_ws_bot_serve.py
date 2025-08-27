@@ -8,7 +8,9 @@ from typing import Dict
 
 from fastapi import FastAPI, WebSocket
 from dotenv import load_dotenv
+from fastapi.websockets import WebSocketState
 
+from src.common.utils.thread_safe import ThreadSafeDict
 from src.cmd.bots.base import AIBot
 from src.cmd.bots.bot_loader import BotLoader
 from src.cmd.bots.base_fastapi_websocket_server import AIFastapiWebsocketBot
@@ -21,29 +23,33 @@ from src.cmd.http.server.fastapi_daily_bot_serve import ngrok_proxy
 load_dotenv(override=True)
 Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
 
+config = None
 run_bot: AIFastapiWebsocketBot = None
-# Store websocket
-ws_map: Dict[str, WebSocket] = {}
+# TODO: connect session mrg
+# Store websocket connection
+ws_map = ThreadSafeDict()
 
 
 # https://fastapi.tiangolo.com/advanced/events/#lifespan
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global run_bot
+    global run_bot, ws_map
     try:
         # load model before running
-        run_bot = await BotLoader.load_bot(config.f, bot_type="fastapi_ws_bot")
+        config_file = config.f if config else os.getenv("CONFIG_FILE")
+        run_bot = await BotLoader.load_bot(config_file, bot_type="fastapi_ws_bot")
         run_bot.load()
     except Exception as e:
         print(e)
         traceback.print_exc()
+        return
 
     print(f"load bot {run_bot} success")
 
     yield  # Run app
 
     # clear
-    coros = [ws.close() for ws in ws_map.values() if ws.state == "OPEN"]
+    coros = [ws.close() for ws in ws_map.values() if ws.client_state == WebSocketState.CONNECTED]
     await asyncio.gather(*coros)
     ws_map.clear()
     print(f"clear success")

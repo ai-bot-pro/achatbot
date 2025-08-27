@@ -11,6 +11,7 @@ download_image = (
     .apt_install("curl")
     .run_commands()
     .pip_install("hf-transfer", "huggingface_hub[hf_xet]")
+    .pip_install("modelscope")
     .env(
         {
             "HF_HUB_ENABLE_HF_TRANSFER": "1",  # hf-transfer for faster downloads
@@ -60,6 +61,35 @@ def download_ckpt(
             max_workers=20,
         )
         print(f"{repo_id} model to dir:{HF_MODEL_DIR} done")
+
+    hf_model_vol.commit()
+
+
+@app.function(
+    # gpu="T4",
+    retries=0,
+    cpu=2.0,
+    image=download_image,
+    volumes={HF_MODEL_DIR: hf_model_vol},
+    timeout=1200,
+    scaledown_window=1200,
+)
+def download_modelscope_models(
+    repo_ids: str,
+    local_dir: str = None,
+) -> str:
+    import subprocess
+
+    for repo_id in repo_ids.split(","):
+        if local_dir is None:
+            local_dir = os.path.join(HF_MODEL_DIR, repo_id)
+        else:
+            local_dir = os.path.join(HF_MODEL_DIR, local_dir)
+        print(f"{repo_id} model downloading")
+        cmd = f"modelscope download --local_dir {local_dir} {repo_id}"
+        print(cmd)
+        subprocess.run(cmd, shell=True)
+        print(f"{repo_id} model to dir:{local_dir} done")
 
     hf_model_vol.commit()
 
@@ -160,6 +190,9 @@ modal run src/download_models.py::download_ckpts --ckpt-urls "https://openaipubl
 modal run src/download_models.py::download_ckpts --ckpt-urls "https://ml-site.cdn-apple.com/datasets/fastvlm/llava-fastvithd_1.5b_stage3.zip"
 
 modal run src/download_models.py::download_ckpts --ckpt-urls "https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LAM/LAM_audio2exp_streaming.tar"
+
+
+modal run src/download_models.py::download_modelscope_models --repo-ids "iic/punc_ct-transformer_zh-cn-common-vad_realtime-vocab272727"
 """
 
 

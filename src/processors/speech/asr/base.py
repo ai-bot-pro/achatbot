@@ -104,11 +104,9 @@ class SegmentedASRProcessor(ASRProcessorBase):
         self._audio_buffer_size_1s = self._sample_rate * 2
 
     async def _handle_user_started_speaking(self, frame: UserStartedSpeakingFrame):
-        print("start--->")
         self._user_speaking = True
 
     async def _handle_user_stopped_speaking(self, frame: UserStoppedSpeakingFrame):
-        print("end--->")
         self._user_speaking = False
 
         content = io.BytesIO()
