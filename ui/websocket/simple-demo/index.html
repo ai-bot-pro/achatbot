@@ -18,11 +18,16 @@
 
   <body>
     <h1>Achatbot WebSocket Client Example</h1>
-    <h3><div id="progressText">Loading, wait...</div></h2>
+    <h3 id="progressText">Loading, wait...</h3>
     <input type="text" id="wsUrl" placeholder="Enter WebSocket URL" value="ws://localhost:4321" />
     <br/>
     <button id="startAudioBtn">Start Audio</button>
     <button id="stopAudioBtn">Stop Audio</button>
+    
+    <div id="messageContainer" style="margin-top: 20px; border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto;">
+      <h3>消息记录</h3>
+      <div id="messages"></div>
+    </div>
     <script>
       const SAMPLE_RATE = 16000;
       const SAMPLE_WIDTH = 2;
@@ -59,6 +64,28 @@
 
       let startBtn = document.getElementById('startAudioBtn');
       let stopBtn = document.getElementById('stopAudioBtn');
+      
+      // 用于显示文本消息的函数
+      function displayTextMessage(textData) {
+        const messagesDiv = document.getElementById('messages');
+        const messageElement = document.createElement('div');
+        messageElement.style.marginBottom = '10px';
+        messageElement.style.padding = '8px';
+        messageElement.style.backgroundColor = '#f0f0f0';
+        messageElement.style.borderRadius = '5px';
+        
+        // 格式化消息内容
+        const messageContent = document.createElement('p');
+        messageContent.style.margin = '0';
+        messageContent.textContent = `${textData.name || 'System'}: ${textData.text || ''}`;
+        
+        messageElement.appendChild(messageContent);
+        messagesDiv.appendChild(messageElement);
+        
+        // 自动滚动到底部
+        const messageContainer = document.getElementById('messageContainer');
+        messageContainer.scrollTop = messageContainer.scrollHeight;
+      }
 
       const proto = protobuf.load("../protos/data_frames.proto", (err, root) => {
           if (err) {
@@ -94,6 +121,15 @@
 
       function enqueueAudioFromProto(arrayBuffer) {
           const parsedFrame = Frame.decode(new Uint8Array(arrayBuffer));
+          console.log(parsedFrame)
+          
+          // 处理文本消息
+          if (parsedFrame?.text) {
+              console.log("收到文本消息:", parsedFrame.text);
+              displayTextMessage(parsedFrame.text);
+              return true;
+          }
+          
           if (!parsedFrame?.audio) {
               return false;
           }

@@ -49,5 +49,6 @@ class CTTransformerPuncONNX(EngineClass, IPunc):
         punc_cache = session.ctx.state.get("punc_cache", [])
         param_dict = {"cache": punc_cache}
         rec_result = self.model(text, param_dict=param_dict)
+        session.ctx.state.set("punc_cache", param_dict["cache"])
 
         return rec_result[0]

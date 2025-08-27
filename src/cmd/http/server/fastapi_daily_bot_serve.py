@@ -55,7 +55,7 @@ Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=Tr
 TaskManagerFactory.loop = asyncio.get_event_loop()
 # Bot task dict for status reporting and concurrency control
 bot_task_mgr = TaskManagerFactory.task_manager(
-    type=os.getenv("ACHATBOT_TASK_TYPE", "multiprocessing"),
+    type=os.getenv("ACHATBOT_TASK_TYPE", "asyncio"),
     task_done_timeout=int(os.getenv("ACHATBOT_TASK_DONE_TIMEOUT", "5")),
 )
 atexit.register(lambda: TaskManagerFactory.cleanup(bot_task_mgr.cleanup))
@@ -264,9 +264,10 @@ async def bot_websocket_join(
 
     try:
         info.chat_bot_name = chat_bot_name
-        info.is_background = False
+        info.is_background = True
+        info.handle_sigint = False
         task_runner = BotTaskRunnerFE(bot_task_mgr, **vars(info))
-        background_tasks.add_task(task_runner.run)
+        await task_runner.run()
     except Exception as e:
         detail = f"bot {chat_bot_name} failed to start process: {e}"
         raise Exception(detail)
@@ -320,9 +321,10 @@ async def bot_join(
         info.room_name = room.name
         info.room_url = room.url
         info.token = bot_token
-        info.is_background = False
+        info.is_background = True
+        info.handle_sigint = False
         task_runner = BotTaskRunnerFE(bot_task_mgr, **vars(info))
-        background_tasks.add_task(task_runner.run)
+        await task_runner.run()
     except Exception as e:
         detail = f"bot {chat_bot_name} failed to start process: {e}"
         raise Exception(detail)
@@ -432,9 +434,10 @@ async def bot_join_room(
         info.room_name = room.name
         info.room_url = room.url
         info.token = bot_token
-        info.is_background = False
+        info.is_background = True
+        info.handle_sigint = False
         task_runner = BotTaskRunnerFE(bot_task_mgr, **vars(info))
-        background_tasks.add_task(task_runner.run)
+        await task_runner.run()
     except Exception as e:
         detail = f"bot {chat_bot_name} failed to start process: {e}"
         raise Exception(detail)

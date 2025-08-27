@@ -71,5 +71,5 @@ class ASRProcessor(SegmentedASRProcessor):
             language = Language(args["language"])
 
         if text:
-            logging.info(f"{self._asr.SELECTED_TAG} Transcription: [{text}]")
+            logging.info(f"{self._asr.SELECTED_TAG} Transcription: [{text}] language: {language}")
             yield TranscriptionFrame(text, "", time_now_iso8601(), language)

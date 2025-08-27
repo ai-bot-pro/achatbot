@@ -3,6 +3,11 @@
 - use protobuf to encode and decode data, 
 - use websocket protocol to send data.
 
+# bots:
+- voice live chat bot
+- asr live bot
+- asr translate tts bot
+
 # run demo
 1. run websocket server bot with 2 ways:
 - local start bot
@@ -12,6 +17,9 @@ python -m src.cmd.bots.main -f config/bots/websocket_server_bot.json
 
 # asr live bot
 python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_websocket_asr_live_bot.json
+
+# asr translate tts bot
+python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_websocket_asr_translate_tts_bot.json
 ```
 - config/bots/websocket_server_bot.json
 ```json
@@ -101,6 +109,71 @@ python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_w
       "tag": "punc_ct_tranformer",
       "args": {
         "model":"./models/iic/punc_ct-transformer_zh-cn-common-vad_realtime-vocab272727"
+      }
+    }
+  },
+  "config_list": []
+}
+```
+- config/bots/fastapi_websocket_asr_translate_tts_bot.json
+```json
+{
+  "chat_bot_name": "FastapiWebsocketServerASRTranslateTTSBot",
+  "transport_type": "websocket",
+  "handle_sigint": false,
+  "services": {
+    "pipeline": "achatbot",
+    "vad": "silero",
+    "asr": "sense_voice",
+    "translate_llm": "llm_ctranslate2_generator",
+    "punctuation": "punc_ct_tranformer",
+    "tts": "edge"
+  },
+  "config": {
+    "vad": {
+      "tag": "silero_vad_analyzer",
+      "args": {
+        "start_secs": 0.032,
+        "stop_secs": 0.32,
+        "confidence": 0.7,
+        "min_volume": 0.6,
+        "onnx": true
+      }
+    },
+    "asr": {
+      "tag": "sense_voice_asr",
+      "args": {
+        "language": "zn",
+        "model_name_or_path": "./models/FunAudioLLM/SenseVoiceSmall"
+      }
+    },
+    "translate_llm": {
+      "tag": "llm_ctranslate2_generator",
+      "model": "./models/ByteDance-Seed/Seed-X-PPO-7B",
+      "src": "zh",
+      "target": "en",
+      "streaming": true,
+      "args": {
+        "model_args": {
+          "model_path": "./models/ByteDance-Seed/Seed-X-PPO-7B_ctranslate2",
+          "device": "cuda"
+        },
+        "gen_args": { "lm_gen_temperature": 0.0 }
+      }
+    },
+    "punctuation": {
+      "tag": "punc_ct_tranformer_onnx",
+      "args": {
+        "model": "./models/iic/punc_ct-transformer_zh-cn-common-vad_realtime-vocab272727"
+      }
+    },
+    "tts": {
+      "tag": "tts_edge",
+      "aggregate_sentences": false,
+      "args": {
+        "voice_name": "zh-CN-YunjianNeural",
+        "language": "zh",
+        "gender": "Male"
       }
     }
   },

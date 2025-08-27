@@ -10,9 +10,13 @@ huggingface-cli download FunAudioLLM/SenseVoiceSmall  --local-dir ./models/FunAu
 1. run signaling bot server:
 - local start bot
 ```shell
+# voice chat bot
 python -m src.cmd.webrtc.signaling_bot_server -f config/bots/small_webrtc_server_bot.json
+
+# asr translate tts bot
+python -m src.cmd.webrtc.signaling_bot_server -f config/bots/small_webrtc_asr_translate_tts_bot.json
 ```
-config/bots/websocket_server_bot.json
+- config/bots/websocket_server_bot.json
 ```json
 {
   "chat_bot_name": "SmallWebrtcBot",
@@ -59,6 +63,10 @@ config/bots/websocket_server_bot.json
   },
   "config_list": []
 }
+```
+- config/bots/small_webrtc_asr_translate_tts_bot.json
+```json
+
 ```
 
 2. run webrtc voice agent web demo

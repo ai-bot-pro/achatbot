@@ -163,6 +163,10 @@ def import_bots(bot_name: str = "DummyBot"):
         from .avatar import daily_liteavatar_chat_bot
 
         return True
+    if "DailyASRTranslateTTSBot" in bot_name:
+        from .translation import daily_asr_translate_tts_bot
+
+        return True
     if "LivekitBot" in bot_name:
         from . import livekit_bot
 
@@ -321,6 +325,10 @@ def import_websocket_bots(bot_name: str = "DummyBot"):
 
 
 def import_fastapi_websocket_bots(bot_name: str = "DummyBot"):
+    if "FastapiWebsocketServerASRTranslateTTSBot" in bot_name:
+        from .translation import fastapi_websocket_server_asr_translate_tts_bot
+
+        return True
     if "FastapiWebsocketServerBot" in bot_name:
         from . import fastapi_websocket_server_bot
 
@@ -355,6 +363,10 @@ def import_fastapi_websocket_bots(bot_name: str = "DummyBot"):
 
 
 def import_small_webrtc_bots(bot_name: str = "DummyBot"):
+    if "SmallWebrtcASRTranslateTTSBot" == bot_name:
+        from .translation import small_webrtc_asr_translate_tts_bot
+
+        return True
     if "SmallWebrtcBot" == bot_name:
         from . import small_webrtc_bot
 

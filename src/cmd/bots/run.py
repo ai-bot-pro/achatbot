@@ -76,6 +76,7 @@ class BotTaskRunner:
             bot_config=bot_info.config,
             bot_config_list=bot_info.config_list,
             services=bot_info.services,
+            handle_sigint=bot_info.handle_sigint,
         ).__dict__
         self._bot_obj: IBot = register_ai_room_bots[bot_info.chat_bot_name](**kwargs)
         logging.info(f"bot {bot_info.chat_bot_name} loading")
@@ -99,6 +100,7 @@ class BotTaskRunner:
             services=bot_info.services,
             websocket_server_port=bot_info.websocket_server_port,
             websocket_server_host=bot_info.websocket_server_host,
+            handle_sigint=bot_info.handle_sigint,
         ).__dict__
         self._bot_obj: IBot = register_ai_room_bots[bot_info.chat_bot_name](**kwargs)
         self._bot_obj.load()

@@ -105,9 +105,12 @@ class LLMTranslateProcessor(SessionProcessor):
         if self._streaming:
             await self.queue_frame(TranslationStreamingFrame(text="", is_final=True))
 
-        text = self.tokenizer.decode(gen_token_ids)
         await self.stop_processing_metrics()
 
+        if self._streaming:
+            return
+
+        text = self.tokenizer.decode(gen_token_ids)
         await self.push_frame(
             TranslationFrame(
                 src_lang=self._src,

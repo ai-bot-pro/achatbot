@@ -14,18 +14,19 @@ class PunctuationProcessor(SessionProcessor):
         self,
         engine: interface.IPunc | None = None,
         session: Session | None = None,
-        punc_cache: dict | None = None,
         **kwargs,
     ):
         super().__init__(session=session, **kwargs)
         assert engine is not None
         self.engine = engine
-        self.punc_cache = punc_cache or {}
+
+        # init session punc_cache
+        self.set_ctx_state(punc_cache={})
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
         if isinstance(frame, TextFrame):
-            # logging.info(f"{self.punc_cache=}")
-            self.set_ctx_state(text=frame.text, punc_cache=self.punc_cache)
+            self.set_ctx_state(text=frame.text)
             frame.text = self.engine.generate(self.session)
+            # logging.info(f"{self.get_ctx_state('punc_cache')=}")
         await self.push_frame(frame, direction)

@@ -20,7 +20,7 @@ class ThreadingTaskManager(TaskManager):
             try:
                 if thread.is_alive():
                     thread.join(timeout=self._task_done_timeout)
-                    logging.info(f"tid:{tid} tag:{tag} thread: {thread} joined")
+                    logging.info(f"tid:{tid} tag:{tag} thread: {thread} joined and cleanup")
                 else:
                     logging.warning(f"tid:{tid} tag:{tag} thread: {thread} already finished")
             except Exception as e:

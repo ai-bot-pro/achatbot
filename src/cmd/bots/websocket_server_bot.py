@@ -34,7 +34,7 @@ class WebsocketServerBot(AIRoomBot):
         self.init_bot_config()
 
     async def arun(self):
-        vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
+        vad_analyzer = self.get_vad_analyzer()
         self.params = WebsocketServerParams(
             audio_out_enabled=True,
             add_wav_header=True,

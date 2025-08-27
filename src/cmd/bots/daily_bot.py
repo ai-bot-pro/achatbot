@@ -33,7 +33,7 @@ class DailyBot(DailyRoomBot):
         self.init_bot_config()
 
     async def arun(self):
-        vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
+        vad_analyzer = self.get_vad_analyzer()
         self.daily_params = DailyParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
