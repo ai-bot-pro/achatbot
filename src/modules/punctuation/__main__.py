@@ -10,16 +10,22 @@ inputs = "你好|你叫什么名字|讲一个故事|"
 vads = inputs.split("|")
 rec_result_all = "outputs: "
 for text in vads:
+    if not text:
+        continue
     session.ctx.state["text"] = text
     punc_text = engine.generate(session)
-    print(session.ctx.state.get("punc_cache"))
+    print(session.ctx.state.get("punc_cache"), punc_text)
     rec_result_all += punc_text
 
 print(rec_result_all)
 
 """
+# pytorch
 python -m src.modules.punctuation
+PUNC_TAG=punc_ct_tranformer_offline python -m src.modules.punctuation
 
-# have some bad cases
+# onnx
 PUNC_TAG=punc_ct_tranformer_onnx python -m src.modules.punctuation
+PUNC_TAG=punc_ct_tranformer_onnx_offline python -m src.modules.punctuation
+
 """
