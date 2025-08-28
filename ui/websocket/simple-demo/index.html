@@ -216,7 +216,9 @@
                       }
                   });
                   const encodedFrame = new Uint8Array(Frame.encode(frame).finish());
-                  ws.send(encodedFrame);
+                  if (ws.readyState === WebSocket.OPEN) {
+                      ws.send(encodedFrame);
+                  }
               };
           }).catch((error) => console.error('Error accessing microphone:', error));
       }

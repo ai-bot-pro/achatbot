@@ -133,6 +133,9 @@ class LLamacppLLM(BaseLLM, ILlm):
     def warmup(self):
         pass
 
+    def close(self):
+        self.model.close()
+
     def encode(self, text: str | bytes):
         return self.model.tokenize(text.encode() if isinstance(text, str) else text)
 

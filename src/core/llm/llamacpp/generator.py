@@ -63,6 +63,12 @@ class LlamacppGenerator(LLamacppLLM, ILlmGenerator):
 MODEL=./models/qwen2.5-0.5b-instruct-q8_0.gguf \
     TOKENIZER_PATH=./models/Qwen/Qwen2.5-0.5B-Instruct \
     python -m src.core.llm.llamacpp.generator 
+
+MODEL=./models/Seed-X-PPO-7B.Q2_K.gguf \
+    TOKENIZER_PATH=./models/ByteDance-Seed/Seed-X-PPO-7B \
+    PROMPT="Translate the following English sentence into Chinese: I love programming. <zh>" \
+    STOP_ID=2 \
+    python -m src.core.llm.llamacpp.generator 
 """
 if __name__ == "__main__":
     import uuid
@@ -82,11 +88,14 @@ if __name__ == "__main__":
     model_path = os.getenv("MODEL", "./models/qwen2.5-0.5b-instruct-q8_0.gguf")
     generator = LlamacppGenerator(**LLamcppLLMArgs(model_path=model_path).__dict__)
 
+    prompt = os.getenv("PROMPT", "hello, my name is")
+    stop_id = int(os.getenv("STOP_ID", "13"))
+
     async def run():
         session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
-        session.ctx.state["token_ids"] = tokenizer.encode("hello, my name is")
+        session.ctx.state["token_ids"] = tokenizer.encode(prompt)
         # test max_new_tokens>n_ctx-len(token_ids)
-        gen_iter = generator.generate(session, max_new_tokens=100, stop_ids=[13])
+        gen_iter = generator.generate(session, max_new_tokens=100, stop_ids=[stop_id])
         start_time = time.perf_counter()
         first = True
         async for token_id in gen_iter:
@@ -96,5 +105,7 @@ if __name__ == "__main__":
                 first = False
             gen_text = tokenizer.decode(token_id)
             print(token_id, gen_text)
+
+        generator.close()
 
     asyncio.run(run())

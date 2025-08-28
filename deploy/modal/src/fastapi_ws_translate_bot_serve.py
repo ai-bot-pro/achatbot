@@ -33,7 +33,7 @@ if LLM_TAG == "llm_ctranslate2_generator":
     )
 
 img = img.pip_install(
-    f"achatbot==0.0.24.post21",
+    f"achatbot==0.0.24.post24",
     extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
 )
 

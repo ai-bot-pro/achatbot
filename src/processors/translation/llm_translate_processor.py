@@ -116,6 +116,6 @@ class LLMTranslateProcessor(SessionProcessor):
                 src_lang=self._src,
                 target_lang=self._target,
                 src_text=frame.text,
-                target_text=text,
+                text=text,
             )
         )

@@ -37,6 +37,7 @@ class TTSProcessorBase(AIProcessor):
         # if True, subclass is responsible for pushing TextFrames and LLMFullResponseEndFrames
         push_text_frames: bool = True,
         sync_order_send: bool = False,
+        remove_punctuation: bool = False,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -44,6 +45,7 @@ class TTSProcessorBase(AIProcessor):
 
         self._aggregate_sentences: bool = aggregate_sentences
         self._push_text_frames: bool = push_text_frames
+        self._remove_punctuation: bool = remove_punctuation
         self._current_sentence: str = ""
 
         # sync event: tts done, step by step slow,
@@ -98,8 +100,6 @@ class TTSProcessorBase(AIProcessor):
 
     async def _push_tts_frames(self, text: str, text_passthrough: bool = True):
         text = text.strip()
-        translator = str.maketrans("", "", string.punctuation)
-        text = text.translate(translator)
         if not text:
             return
 
@@ -112,10 +112,13 @@ class TTSProcessorBase(AIProcessor):
         await self.push_frame(TTSStartedFrame())
         await self.start_processing_metrics()
 
+        if self._remove_punctuation:
+            translator = str.maketrans("", "", string.punctuation)
+            text = text.translate(translator)
+        await self.process_generator(self.run_tts(text))
         # !NOTE: when open sync order send frame, u need set sync order
         # run_tts send audio frames over then send tts stopped frame
         # need subclass _tts_done_event to set;
-        await self.process_generator(self.run_tts(text))
         if self._sync_order_send is True:
             await self._tts_done_event.wait()
             self._tts_done_event.clear()

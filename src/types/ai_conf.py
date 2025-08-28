@@ -99,6 +99,8 @@ class TTSConfig(BaseModel):
     voice: Optional[str] = None
     language: Optional[str] = None
     aggregate_sentences: Optional[bool] = True
+    push_text_frames: Optional[bool] = True
+    remove_punctuation: Optional[bool] = False
     tag: Optional[str] = None
     args: Optional[dict] = None
 

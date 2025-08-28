@@ -253,15 +253,22 @@ class AIBot(IBot):
             asr_processor = ASRProcessor(asr=asr, session=self.session)
         return asr_processor
 
-    def get_translate_llm_generator(self):
+    def get_hf_tokenizer(self):
         """
-        get text tokenizer and local translate llm generator
+        To disable this warning, you can either:
+           - Avoid using `tokenizers` before the fork if possible
+           - Explicitly set the environment variable TOKENIZERS_PARALLELISM=(true | false)
         """
         from transformers import AutoTokenizer
 
-        assert self._bot_config.translate_llm, f"translate_llm must be provided {self._bot_config=}"
-        # load text tokenizer
         tokenizer = AutoTokenizer.from_pretrained(self._bot_config.translate_llm.model)
+        return tokenizer
+
+    def get_translate_llm_generator(self):
+        """
+        get local translate llm generator
+        """
+        assert self._bot_config.translate_llm, f"translate_llm must be provided {self._bot_config=}"
         # load llm generator
         tag = self._bot_config.translate_llm.tag
         args = self._bot_config.translate_llm.args or {}
@@ -269,7 +276,7 @@ class AIBot(IBot):
             tag=tag,
             kwargs=args,
         )
-        return tokenizer, generator
+        return generator
 
     def get_vision_llm_processor(
         self, llm_config: LLMConfig | None = None, llm_engine=None
@@ -740,6 +747,8 @@ class AIBot(IBot):
                     tts=tts_engine,
                     session=self.session,
                     aggregate_sentences=self._bot_config.tts.aggregate_sentences,
+                    push_text_frames=self._bot_config.tts.push_text_frames,
+                    remove_punctuation=self._bot_config.tts.remove_punctuation,
                 )
         else:
             # default tts engine processor
@@ -757,6 +766,8 @@ class AIBot(IBot):
                 tts=tts_engine,
                 session=self.session,
                 aggregate_sentences=self._bot_config.tts.aggregate_sentences,
+                push_text_frames=self._bot_config.tts.push_text_frames,
+                remove_punctuation=self._bot_config.tts.remove_punctuation,
             )
 
         return tts_processor

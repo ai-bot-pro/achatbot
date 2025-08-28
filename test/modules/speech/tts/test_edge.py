@@ -1,6 +1,7 @@
 import os
 import logging
 import asyncio
+import json
 
 import unittest
 
@@ -12,6 +13,8 @@ from src.modules.speech.tts.edge_tts import EdgeTTS
 
 r"""
 python -m unittest test.modules.speech.tts.test_edge.TestEdgeTTS.test_get_voices
+LANG=zh python -m unittest test.modules.speech.tts.test_edge.TestEdgeTTS.test_get_lang_voices
+LANG=en python -m unittest test.modules.speech.tts.test_edge.TestEdgeTTS.test_get_lang_voices
 python -m unittest test.modules.speech.tts.test_edge.TestEdgeTTS.test_synthesize
 """
 
@@ -20,6 +23,7 @@ class TestEdgeTTS(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tts_tag = os.getenv("TTS_TAG", "tts_edge")
+        cls.lang = os.getenv("LANG", "zh")
         cls.tts_text = os.getenv(
             "TTS_TEXT",
             "hello, 你好，我是机器人, 有什么可以帮助您的吗？请告诉我您需要的信息或问题，我会尽力为您解答。",
@@ -39,24 +43,16 @@ class TestEdgeTTS(unittest.TestCase):
     def tearDown(self):
         pass
 
+    def test_get_lang_voices(self):
+        for gender in ["Female", "Male"]:
+            voices = asyncio.run(self.tts._get_voices(Language=self.lang, Gender=gender))
+            self.assertGreater(len(voices), 0)
+
+            print(json.dumps(voices, indent=2, ensure_ascii=False))
+            print(len(voices))
+
     def test_get_voices(self):
         voices = self.tts.get_voices()
-        self.assertGreater(len(voices), 0)
-        print(voices, len(voices))
-
-        voices = asyncio.run(self.tts._get_voices(Language="zh", Gender="Female"))
-        self.assertGreater(len(voices), 0)
-        print(voices, len(voices))
-
-        voices = asyncio.run(self.tts._get_voices(Language="zh", Gender="Male"))
-        self.assertGreater(len(voices), 0)
-        print(voices, len(voices))
-
-        voices = asyncio.run(self.tts._get_voices(Language="en", Gender="Female"))
-        self.assertGreater(len(voices), 0)
-        print(voices, len(voices))
-
-        voices = asyncio.run(self.tts._get_voices(Language="en", Gender="Male"))
         self.assertGreater(len(voices), 0)
         print(voices, len(voices))
 

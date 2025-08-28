@@ -11,7 +11,7 @@ from src.cmd.bots.base_fastapi_websocket_server import AIFastapiWebsocketBot
 from src.processors.translation.llm_translate_processor import LLMTranslateProcessor
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
-from src.types.frames.data_frames import TextFrame, AudioRawFrame
+from src.types.frames.data_frames import TextFrame, TranslationFrame, AudioRawFrame
 from src.cmd.bots import register_ai_fastapi_ws_bots
 from src.types.network.fastapi_websocket import FastapiWebsocketServerParams
 from src.transports.fastapi_websocket_server import FastapiWebsocketTransport
@@ -47,7 +47,7 @@ class FastapiWebsocketServerASRTranslateTTSBot(AIFastapiWebsocketBot):
         self.vad_analyzer = self.get_vad_analyzer()
         self.asr_engine = self.get_asr()
         self.tts_engine = self.get_tts()
-        self.tokenizer, self.generator = self.get_translate_llm_generator()
+        self.generator = self.get_translate_llm_generator()
 
         # load punctuation engine
         if self.asr_engine.get_args_dict().get("textnorm", False) is False:
@@ -65,9 +65,9 @@ class FastapiWebsocketServerASRTranslateTTSBot(AIFastapiWebsocketBot):
         processors.append(asr_processor)
         processors.append(FrameLogger(include_frame_types=[TextFrame]))
 
-        if self.tokenizer is not None and self.generator is not None:
+        if self.generator is not None:
             tl_processor = LLMTranslateProcessor(
-                tokenizer=self.tokenizer,
+                tokenizer=self.get_hf_tokenizer(),
                 generator=self.generator,
                 session=self.session,
                 src=self._bot_config.translate_llm.src,
@@ -77,6 +77,7 @@ class FastapiWebsocketServerASRTranslateTTSBot(AIFastapiWebsocketBot):
             processors.append(tl_processor)
 
         if self.punc_engine:
+            processors.append(FrameLogger(include_frame_types=[TranslationFrame]))
             punc_processor = PunctuationProcessor(engine=self.punc_engine, session=self.session)
             processors.append(punc_processor)
             processors.append(FrameLogger(include_frame_types=[TextFrame]))

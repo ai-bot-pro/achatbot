@@ -140,14 +140,13 @@ class TranslationStreamingFrame(TextFrame):
 
 
 @dataclass
-class TranslationFrame(DataFrame):
+class TranslationFrame(TextFrame):
     src_lang: str = ""
     target_lang: str = ""
     src_text: str = ""
-    target_text: str = ""
 
     def __str__(self):
-        return f"{self.name}(src_lang: {self.src_lang}, target_lang: {self.target_lang}, src_text: {self.src_text}, target_text: {self.target_text})"
+        return f"{self.name}(src_lang: {self.src_lang}, target_lang: {self.target_lang}, src_text: {self.src_text}, target_text: {self.text})"
 
 
 @dataclass

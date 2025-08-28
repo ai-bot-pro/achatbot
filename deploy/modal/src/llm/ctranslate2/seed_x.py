@@ -36,7 +36,7 @@ img = (
 )
 
 img = img.pip_install(
-    "achatbot==0.0.24.post13",
+    "achatbot==0.0.24.post21",
     extra_index_url="https://test.pypi.org/simple/",
 )
 
@@ -285,6 +285,7 @@ async def run_achatbot_processor(**kwargs):
     from achatbot.types.frames import TranslationStreamingFrame, TranslationFrame
     from achatbot.processors.translation.llm_translate_processor import LLMTranslateProcessor
     from achatbot.common.logger import Logger
+    from achatbot.types.frames import TranscriptionFrame
 
     Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
 
@@ -328,8 +329,16 @@ async def run_achatbot_processor(**kwargs):
     )
     await task.queue_frames(
         [
-            TextFrame(text="May the force be with you"),
-            TextFrame(text="We are excited to introduce Seed-X, a powerful series of open-source multilingual translation language models, including an instruction model, a reinforcement learning model, and a reward model. It pushes the boundaries of translation capabilities within 7 billion parameters. We develop Seed-X as an accessible, off-the-shelf tool to support the community in advancing translation research and applications"),
+            TranscriptionFrame(
+                user_id="",
+                text="May the force be with you",
+                timestamp="2025-08-27T15:24:31.687+00:00",
+                language="zn",
+            ),
+            # TextFrame(text="May the force be with you"),
+            # TextFrame(
+            #    text="We are excited to introduce Seed-X, a powerful series of open-source multilingual translation language models, including an instruction model, a reinforcement learning model, and a reward model. It pushes the boundaries of translation capabilities within 7 billion parameters. We develop Seed-X as an accessible, off-the-shelf tool to support the community in advancing translation research and applications"
+            # ),
         ]
     )
 
