@@ -87,6 +87,7 @@ class LLMConfig(BaseModel):
 
 
 class TranslateLLMConfig(BaseModel):
+    init_prompt: Optional[str] = None
     model: Optional[str] = None
     src: Optional[str] = None
     target: Optional[str] = None

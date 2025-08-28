@@ -72,4 +72,12 @@ class ASRProcessor(SegmentedASRProcessor):
 
         if text:
             logging.info(f"{self._asr.SELECTED_TAG} Transcription: [{text}] language: {language}")
-            yield TranscriptionFrame(text, "", time_now_iso8601(), language)
+            yield TranscriptionFrame(
+                text=text,
+                user_id=self._session.ctx.client_id,
+                timestamp=time_now_iso8601(),
+                language=language,
+                speech_id=kwargs.get("speech_id", ""),
+                start_at_s=kwargs.get("start_at_s", 0.0),
+                end_at_s=kwargs.get("end_at_s", 0.0),
+            )

@@ -31,7 +31,8 @@ def offline():
     - https://modelscope.cn/models/iic/punc_ct-transformer_cn-en-common-vocab471067-large/summary
     """
     model = AutoModel(
-        model="iic/punc_ct-transformer_zh-cn-common-vocab272727-pytorch", model_revision="v2.0.4"
+        model="iic/punc_ct-transformer_zh-cn-common-vocab272727-pytorch",
+        model_revision=None,
     )
     print(model.model)
 

@@ -23,7 +23,22 @@ message ASRLiveTranscriptionFrame {
     float end_at_s = 12;
 }
 
+message TranscriptionFrame {
+    uint64 id = 1;
+    string name = 2;
+    string text = 3;
+    string user_id = 4;
+    string timestamp =5;
+    string language = 6;
+    uint64 speech_id = 7;
+    float start_at_s = 8;
+    float end_at_s = 9;
+}
+
 message Frame {
   /*Frame in apipeline base data_frame text:1,audio:2,image:3*/
-  oneof frame { ASRLiveTranscriptionFrame asr_live_transcription= 4; }
+  oneof frame { 
+    ASRLiveTranscriptionFrame asr_live_transcription= 4; 
+    TranscriptionFrame transcription= 5;
+  }
 }

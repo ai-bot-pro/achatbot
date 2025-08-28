@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.jsdelivr.net/npm/protobufjs@7.X.X/dist/protobuf.min.js"></script>
-    <title>Achatbot WebSocket Client Example</title>
+    <title>Achatbot WebSocket Client Example - Streaming ASR</title>
     <style>
         #wsUrl {
             resize: both;
@@ -57,7 +57,7 @@
 </head>
 
 <body>
-    <h1>Achatbot WebSocket Client Example</h1>
+    <h1>Achatbot WebSocket Client Example - Streaming ASR</h1>
     <h3>
         <div id="progressText">Loading, wait...</div>
         </h2>
@@ -187,7 +187,7 @@
                     throw err;
                 }
                 Frame = root.lookupType("pipeline_frames.Frame");
-                const progressText = document.getElementById("progressText");
+                //const progressText = document.getElementById("progressText");
                 //progressText.textContent = "We are ready! Make sure to run the server and then click `Start Audio`.";
 
                 //startBtn.disabled = false;

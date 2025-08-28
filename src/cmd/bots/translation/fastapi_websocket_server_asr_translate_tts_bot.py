@@ -2,6 +2,7 @@ import logging
 
 from dotenv import load_dotenv
 from apipeline.pipeline.pipeline import Pipeline
+from apipeline.pipeline.parallel_pipeline import ParallelPipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.processors.logger import FrameLogger
@@ -17,12 +18,13 @@ from src.types.network.fastapi_websocket import FastapiWebsocketServerParams
 from src.transports.fastapi_websocket_server import FastapiWebsocketTransport
 from src.processors.punctuation_processor import PunctuationProcessor
 from src.modules.punctuation import PuncEnvInit
+from src.serializers.transcription_protobuf import TranscriptionFrameSerializer
 
 
 load_dotenv(override=True)
 
 """
-python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_websocket_asr_translate_tts_bot.json
+TOKENIZERS_PARALLELISM=false python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_websocket_asr_translate_tts_bot.json
 """
 
 
@@ -41,7 +43,7 @@ class FastapiWebsocketServerASRTranslateTTSBot(AIFastapiWebsocketBot):
         self.generator = None
         self.tokenizer = None  # text tokenizer
         self.tts_engine = None
-        self.punc_engine = None
+        self.asr_punc_engine = None
 
     def load(self):
         self.vad_analyzer = self.get_vad_analyzer()
@@ -54,17 +56,39 @@ class FastapiWebsocketServerASRTranslateTTSBot(AIFastapiWebsocketBot):
             if self._bot_config.punctuation:
                 tag = self._bot_config.punctuation.tag
                 args = self._bot_config.punctuation.args or {}
-                self.punc_engine = PuncEnvInit.initEngine(tag, **args)
+                self.asr_punc_engine = PuncEnvInit.initEngine(tag, **args)
 
     async def arun(self):
         if self._websocket is None:
             return
 
+        self.params = FastapiWebsocketServerParams(
+            audio_in_enabled=True,
+            audio_out_enabled=True,
+            add_wav_header=True,
+            vad_enabled=True,
+            vad_analyzer=self.vad_analyzer,
+            vad_audio_passthrough=True,
+            serializer=TranscriptionFrameSerializer(),
+        )
+        stream_info = self.tts_engine.get_stream_info()
+        self.params.audio_out_sample_rate = stream_info["rate"]
+        self.params.audio_out_channels = stream_info["channels"]
+        transport = FastapiWebsocketTransport(
+            websocket=self._websocket,
+            params=self.params,
+        )
+
         processors = []
         asr_processor = self.get_asr_processor(asr_engine=self.asr_engine)
-        processors.append(asr_processor)
-        processors.append(FrameLogger(include_frame_types=[TextFrame]))
 
+        punc_processor = None
+        if self.asr_punc_engine:
+            punc_processor = PunctuationProcessor(engine=self.asr_punc_engine, session=self.session)
+            processors.append(punc_processor)
+            processors.append(FrameLogger(include_frame_types=[TextFrame]))
+
+        tl_processor = None
         if self.generator is not None:
             tl_processor = LLMTranslateProcessor(
                 tokenizer=self.get_hf_tokenizer(),
@@ -74,43 +98,28 @@ class FastapiWebsocketServerASRTranslateTTSBot(AIFastapiWebsocketBot):
                 target=self._bot_config.translate_llm.target,
                 streaming=self._bot_config.translate_llm.streaming,
             )
-            processors.append(tl_processor)
-
-        if self.punc_engine:
-            processors.append(FrameLogger(include_frame_types=[TranslationFrame]))
-            punc_processor = PunctuationProcessor(engine=self.punc_engine, session=self.session)
-            processors.append(punc_processor)
-            processors.append(FrameLogger(include_frame_types=[TextFrame]))
 
         self.tts_processor: TTSProcessor = self.get_tts_processor(tts_engine=self.tts_engine)
-        processors.append(self.tts_processor)
 
-        self.params = FastapiWebsocketServerParams(
-            audio_in_enabled=True,
-            audio_out_enabled=True,
-            add_wav_header=True,
-            vad_enabled=True,
-            vad_analyzer=self.vad_analyzer,
-            vad_audio_passthrough=True,
-        )
-        stream_info = self.tts_processor.get_stream_info()
-        self.params.audio_out_sample_rate = stream_info["sample_rate"]
-        self.params.audio_out_channels = stream_info["channels"]
-        transport = FastapiWebsocketTransport(
-            websocket=self._websocket,
-            params=self.params,
-        )
-        processors = (
-            [
-                transport.input_processor(),
-            ]
-            + processors
-            + [
-                FrameLogger(include_frame_types=[TextFrame, AudioRawFrame]),
-                transport.output_processor(),
-            ]
-        )
-        logging.info(f"processors: {processors}")
+        processors = [
+            transport.input_processor(),
+            asr_processor,
+            FrameLogger(include_frame_types=[TextFrame]),
+            punc_processor,
+            FrameLogger(include_frame_types=[TextFrame]),
+            ParallelPipeline(
+                [transport.output_processor()],
+                [
+                    tl_processor,
+                    FrameLogger(include_frame_types=[TextFrame]),
+                    self.tts_processor,
+                    FrameLogger(include_frame_types=[TextFrame, AudioRawFrame]),
+                    transport.output_processor(),
+                ],
+            ),
+        ]
+        processors = [p for p in processors if p is not None]
+        logging.info(f"{processors=}")
 
         self.task = PipelineTask(
             Pipeline(processors=processors),
@@ -134,4 +143,5 @@ class FastapiWebsocketServerASRTranslateTTSBot(AIFastapiWebsocketBot):
         logging.info(f"on_client_connected client:{websocket.client}")
         self.session.set_client_id(client_id=f"{websocket.client.host}:{websocket.client.port}")
 
-        await self.tts_processor.say("hi, welcome to chat with translation bot.")
+        if self._bot_config.translate_llm and self._bot_config.translate_llm.init_prompt:
+            await self.tts_processor.say(self._bot_config.translate_llm.init_prompt)

@@ -84,9 +84,12 @@ class TranscriptionFrame(TextFrame):
     user_id: str
     timestamp: str
     language: str | None = None
+    speech_id: int = 0  # active speech segment id
+    start_at_s: float = 0.0  # start time point from record start
+    end_at_s: float = 0.0  # end time point from record start
 
     def __str__(self):
-        return f"{self.name}(user: {self.user_id}, text: {self.text}, timestamp: {self.timestamp}, language: {self.language})"
+        return f"{self.name}(user: {self.user_id}, text: {self.text}, timestamp: {self.timestamp}, language: {self.language} speech_id:{self.speech_id} start_at_s:{self.start_at_s} end_at_s:{self.end_at_s})"
 
 
 @dataclass
