@@ -125,8 +125,8 @@ python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_w
     "pipeline": "achatbot",
     "vad": "silero",
     "asr": "sense_voice",
-    "translate_llm": "llm_ctranslate2_generator",
     "punctuation": "punc_ct_tranformer",
+    "translate_llm": "llm_llamacpp_generator",
     "tts": "edge"
   },
   "config": {
@@ -147,32 +147,36 @@ python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_w
         "model_name_or_path": "./models/FunAudioLLM/SenseVoiceSmall"
       }
     },
+    "punctuation": {
+      "tag": "punc_ct_tranformer_onnx_offline",
+      "args": {
+        "model": "./models/iic/punc_ct-transformer_zh-cn-common-vocab272727-pytorch"
+      }
+    },
     "translate_llm": {
-      "tag": "llm_ctranslate2_generator",
+      "init_prompt":"hi, welcome to speak with translation bot.",
       "model": "./models/ByteDance-Seed/Seed-X-PPO-7B",
       "src": "zh",
       "target": "en",
-      "streaming": true,
+      "streaming": false,
+      "tag": "llm_llamacpp_generator",
       "args": {
-        "model_args": {
-          "model_path": "./models/ByteDance-Seed/Seed-X-PPO-7B_ctranslate2",
-          "device": "cuda"
-        },
-        "gen_args": { "lm_gen_temperature": 0.0 }
-      }
-    },
-    "punctuation": {
-      "tag": "punc_ct_tranformer_onnx",
-      "args": {
-        "model": "./models/iic/punc_ct-transformer_zh-cn-common-vad_realtime-vocab272727"
+        "save_chat_history": false,
+        "model_path": "./models/Seed-X-PPO-7B.Q2_K.gguf",
+        "model_type": "generate",
+        "llm_temperature": 0.0,
+        "llm_stop_ids": [2],
+        "llm_max_tokens": 2048
       }
     },
     "tts": {
-      "tag": "tts_edge",
       "aggregate_sentences": false,
+      "push_text_frames": true,
+      "remove_punctuation": false,
+      "tag": "tts_edge",
       "args": {
-        "voice_name": "zh-CN-YunjianNeural",
-        "language": "zh",
+        "voice_name": "en-US-GuyNeural",
+        "language": "en",
         "gender": "Male"
       }
     }
@@ -198,6 +202,7 @@ cd ui/websocket && python -m http.server
 ```
 - access http://localhost:8000/simple-demo  to click `Start Audio` to chat with Voice bot
 - access http://localhost:8000/asr_live  to click `Start Audio` to transcript with ASR Live bot
+- access http://localhost:8000/translation  to click `Start Audio` to speech translation with Translation bot
 
 
 > [!NOTE]
