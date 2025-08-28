@@ -41,7 +41,7 @@ def download_ckpt(
     revision: str = None,
     local_dir: str = None,
     ignore_patterns: list = ["*.pt", "*.bin"],
-) -> str:
+):
     # https://huggingface.co/docs/huggingface_hub/guides/download
     from huggingface_hub import snapshot_download
 
@@ -77,19 +77,21 @@ def download_ckpt(
 def download_modelscope_models(
     repo_ids: str,
     local_dir: str = None,
-) -> str:
+) -> None:
     import subprocess
 
+    base_local_dir = local_dir
     for repo_id in repo_ids.split(","):
-        if local_dir is None:
-            local_dir = os.path.join(HF_MODEL_DIR, repo_id)
+        if base_local_dir is None:
+            current_local_dir = os.path.join(HF_MODEL_DIR, repo_id)
         else:
-            local_dir = os.path.join(HF_MODEL_DIR, local_dir)
+            current_local_dir = os.path.join(HF_MODEL_DIR, base_local_dir)
+
         print(f"{repo_id} model downloading")
-        cmd = f"modelscope download --local_dir {local_dir} {repo_id}"
-        print(cmd)
-        subprocess.run(cmd, shell=True)
-        print(f"{repo_id} model to dir:{local_dir} done")
+        cmd = ["modelscope", "download", "--local_dir", current_local_dir, repo_id]
+        print(" ".join(cmd))
+        subprocess.run(cmd, check=True)
+        print(f"{repo_id} model to dir:{current_local_dir} done")
 
     hf_model_vol.commit()
 

@@ -15,7 +15,7 @@ class SenseVoiceAsr(ASRBase):
 
         super().__init__(**args)
         self.model: SenseVoiceSmall = None
-        self.args.device = get_device()
+        self.args.device = self.args.device or get_device()
         self.model, self.kwargs = SenseVoiceSmall.from_pretrained(
             model=self.args.model_name_or_path,
             device=self.args.device,

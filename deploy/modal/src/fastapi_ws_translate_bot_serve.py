@@ -31,11 +31,40 @@ if LLM_TAG == "llm_ctranslate2_generator":
         "ctranslate2",
         "transformers[torch]",
     )
+if LLM_TAG == "llm_vllm_generator":
+    img = img.pip_install(
+        "vllm==0.8.0",
+        "transformers==4.51.3",
+    ).env(
+        {
+            "TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.9 9.0 10.0",
+            "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+            "VLLM_USE_V1": os.getenv("VLLM_USE_V1", "1"),
+            "VLLM_WORKER_MULTIPROC_METHOD": "spawn",
+        }
+    )
+if LLM_TAG == "llm_sglang_generator":
+    img = (
+        img.pip_install(  # add sglang and some Python dependencies
+            # as per sglang website: https://docs.sglang.ai/get_started/install.html
+            "flashinfer-python",
+            "sglang[all]>=0.5.1.post1",
+            extra_options="--find-links https://flashinfer.ai/whl/cu126/torch2.6/flashinfer-python/",
+            extra_index_url="https://flashinfer.ai/whl/cu126/torch2.6/",
+        )
+        .apt_install("libnuma-dev")
+        .env(
+            {
+                "TORCH_CUDA_ARCH_LIST": "7.5 8.0 8.6 8.9 9.0 10.0",
+            }
+        )
+    )
 
-img = img.pip_install(
-    f"achatbot==0.0.24.post24",
-    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
-)
+
+# img = img.pip_install(
+#    f"achatbot==0.0.24.post26",
+#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+# )
 
 img = img.env(
     {
@@ -45,6 +74,7 @@ img = img.env(
             "CONFIG_FILE",
             "/root/.achatbot/config/bots/fastapi_websocket_asr_translate_tts_bot.json",
         ),
+        # "TQDM_DISABLE": "1",
         # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#gpu-feature-list
     }
 )
@@ -61,6 +91,8 @@ TORCH_CACHE_DIR = "/root/.cache/torch"
 torch_cache_vol = modal.Volume.from_name("torch_cache", create_if_missing=True)
 CONFIG_DIR = "/root/.achatbot/config"
 config_vol = modal.Volume.from_name("config", create_if_missing=True)
+VLLM_CACHE_DIR = "/root/.cache/vllm"
+vllm_cache_vol = modal.Volume.from_name("vllm-cache", create_if_missing=True)
 
 
 # 128 MiB of memory and 0.125 CPU cores by default container runtime
@@ -73,6 +105,7 @@ config_vol = modal.Volume.from_name("config", create_if_missing=True)
         ASSETS_DIR: assets_dir,
         TORCH_CACHE_DIR: torch_cache_vol,
         CONFIG_DIR: config_vol,
+        VLLM_CACHE_DIR: vllm_cache_vol,
     },
     cpu=2.0,
     timeout=1200,  # default 300s
@@ -104,3 +137,34 @@ class Srv:
         from achatbot.cmd.websocket.server.fastapi_ws_bot_serve import app as fastapi_app
 
         return fastapi_app
+
+
+"""
+modal volume create config
+
+modal volume put config ./config/bots/fastapi_websocket_asr_translate_tts_bot.json /bots/ -f
+
+IMAGE_GPU=L4 LLM_TAG=llm_ctranslate2_generator EXTRA_INDEX_URL=https://test.pypi.org/simple/ \
+    ACHATBOT_VERSION=0.0.24.post20 \
+    CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate_tts_bot.json \
+    modal serve src/fastapi_ws_translate_bot_serve.py
+
+
+modal volume put config ./config/bots/fastapi_websocket_asr_translate_vllm_tts_bot.json /bots/ -f
+
+IMAGE_GPU=L4 LLM_TAG=llm_vllm_generator EXTRA_INDEX_URL=https://test.pypi.org/simple/ \
+    ACHATBOT_VERSION=0.0.24.post20 \
+    CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate_vllm_tts_bot.json \
+    modal serve src/fastapi_ws_translate_bot_serve.py
+
+
+modal volume put config ./config/bots/fastapi_websocket_asr_translate_vllm_sglang_bot.json /bots/ -f
+
+IMAGE_GPU=L4 LLM_TAG=llm_sglang_generator EXTRA_INDEX_URL=https://test.pypi.org/simple/ \
+    ACHATBOT_VERSION=0.0.24.post20 \
+    CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate_sglang_tts_bot.json \
+    modal serve src/fastapi_ws_translate_bot_serve.py
+    
+# cold start fastapi websocket server
+curl -v -XGET "https://weedge--fastapi-ws-translate-bot-srv-app-dev.modal.run"
+"""

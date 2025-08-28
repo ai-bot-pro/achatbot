@@ -50,7 +50,7 @@ img = img.env(
     }
 )
 img = img.pip_install(
-    "achatbot==0.0.23",
+    "achatbot==0.0.24",
     extra_index_url="https://pypi.org/simple/",
 )
 
@@ -315,7 +315,7 @@ async def run_achatbot_generator():
                 max_num_seqs=512,
                 tensor_parallel_size=int(os.getenv("TP", "1")),
                 enable_prefix_caching=True,
-                gpu_memory_utilization=0.95,
+                gpu_memory_utilization=0.92,
                 task="generate",
             ).__dict__
         ).__dict__,
@@ -341,10 +341,9 @@ async def run_achatbot_generator():
         },
     ]
     # test the same session
-    # session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
+    session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
     for case in prompt_cases:
-        session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
-        session.ctx.state["token_ids"] = tokenizer.encode("hello, my name is")
+        # session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
         tokens = tokenizer(case["prompt"])
         session.ctx.state["token_ids"] = tokens["input_ids"]
         # gen_kwargs = {**generation_config, **case["kwargs"], **tokens} # hack test, vllm have some bug :)
@@ -360,7 +359,7 @@ async def run_achatbot_generator():
                 first = False
             gen_text = tokenizer.decode(token_id)
             gen_texts += gen_text
-            print(session.ctx.client_id, token_id, gen_text)
+            # print(session.ctx.client_id, token_id, gen_text)
         print(session.ctx.client_id, gen_texts)
 
 

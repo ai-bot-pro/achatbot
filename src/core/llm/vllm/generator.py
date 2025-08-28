@@ -75,7 +75,7 @@ class VllmGenerator(BaseLLM, ILlmGenerator):
         iterator = self.engine.generate(
             prompt=TokensPrompt(prompt_token_ids=token_ids),
             sampling_params=sampling_params,
-            request_id=session.ctx.client_id,
+            request_id=str(uuid.uuid4().hex),
         )
         async for part in iterator:
             if part.outputs:
