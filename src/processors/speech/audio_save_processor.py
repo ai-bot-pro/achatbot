@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+import time
 import logging
 
 from apipeline.frames.data_frames import Frame, AudioRawFrame
@@ -74,6 +75,7 @@ class SaveAllAudioProcessor(FrameProcessor):
         sample_rate: int = 16000,
         channels: int = 1,
         sample_width: int = 2,
+        interval_seconds: int = 0,
     ):
         super().__init__()
         os.makedirs(save_dir, exist_ok=True)
@@ -84,6 +86,9 @@ class SaveAllAudioProcessor(FrameProcessor):
         self.channels = channels
         self.sample_width = sample_width
 
+        self.interval_seconds = interval_seconds
+        self._curr_time = 0
+
         self.audio_bytes = b""
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
@@ -92,9 +97,15 @@ class SaveAllAudioProcessor(FrameProcessor):
         if isinstance(frame, StartFrame):
             logging.info(f"{self.name} started")
             self.audio_bytes = b""
+            self.accumulate_time = 0
+            self._curr_time = time.time()
 
         if isinstance(frame, AudioRawFrame):
             self.audio_bytes += frame.audio
+            interval_s = time.time() - self._curr_time
+            if self.interval_seconds > 0 and interval_s > self.interval_seconds:
+                await self.save()
+                self._curr_time = time.time()
 
         await self.push_frame(frame, direction)
 

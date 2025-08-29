@@ -97,16 +97,17 @@ class SmallWebrtcASRTranslateTTSBot(SmallWebrtcAIBot):
 
         self.tts_processor: TTSProcessor = self.get_tts_processor(tts_engine=self.tts_engine)
 
-        record_save_processor = SaveAllAudioProcessor(
-            prefix_name="small_webrtc_asr_translate_tts_bot",
-            sample_rate=self.params.audio_in_sample_rate,
-            channels=self.params.audio_in_channels,
-            sample_width=self.params.audio_in_sample_width,
-        )
+        # record_save_processor = SaveAllAudioProcessor(
+        #    prefix_name="small_webrtc_asr_translate_tts_bot",
+        #    sample_rate=self.params.audio_in_sample_rate,
+        #    channels=self.params.audio_in_channels,
+        #    sample_width=self.params.audio_in_sample_width,
+        #    interval_seconds=5,
+        # )
         processors = [
             transport.input_processor(),
-            FrameLogger(include_frame_types=[AudioRawFrame]),
-            record_save_processor,
+            # FrameLogger(include_frame_types=[AudioRawFrame]),
+            # record_save_processor,
             asr_processor,
             FrameLogger(include_frame_types=[TextFrame]),
             punc_processor,
@@ -135,7 +136,8 @@ class SmallWebrtcASRTranslateTTSBot(SmallWebrtcAIBot):
         )
 
         # NOTE: if bot run in the sub thread like fastapi/starlette background-tasks, handle_sigint set False
-        await PipelineRunner(handle_sigint=self._handle_sigint).run(self.task)
+        self.runner = PipelineRunner(handle_sigint=self._handle_sigint)
+        await self.runner.run(self.task)
 
     async def on_client_connected(
         self,

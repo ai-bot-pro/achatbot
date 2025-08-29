@@ -4,8 +4,10 @@ from typing import Any
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
+from apipeline.processors.logger import FrameLogger
 
 from src.services.webrtc_peer_connection import SmallWebRTCConnection
+from src.processors.speech.audio_save_processor import SaveAllAudioProcessor
 from src.cmd.bots.base_small_webrtc import SmallWebrtcAIBot
 from src.processors.aggregators.llm_response import (
     LLMAssistantResponseAggregator,
@@ -14,7 +16,7 @@ from src.processors.aggregators.llm_response import (
 from src.processors.llm.base import LLMProcessor
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
-from src.types.frames.data_frames import LLMMessagesFrame, TransportMessageFrame
+from src.types.frames.data_frames import LLMMessagesFrame, TransportMessageFrame, AudioRawFrame
 from src.cmd.bots import register_ai_small_webrtc_bots
 from src.common.types import AudioCameraParams
 from src.transports.small_webrtc import SmallWebRTCTransport
@@ -67,10 +69,19 @@ class SmallWebrtcBot(SmallWebrtcAIBot):
         user_response = LLMUserResponseAggregator(messages)
         assistant_response = LLMAssistantResponseAggregator(messages)
 
+        # record_save_processor = SaveAllAudioProcessor(
+        #    prefix_name="small_webrtc_bot",
+        #    sample_rate=self.params.audio_in_sample_rate,
+        #    channels=self.params.audio_in_channels,
+        #    sample_width=self.params.audio_in_sample_width,
+        #    interval_seconds=5,
+        # )
         self.task = PipelineTask(
             Pipeline(
                 [
                     transport.input_processor(),
+                    # FrameLogger(include_frame_types=[AudioRawFrame]),
+                    # record_save_processor,
                     self.asr_processor,
                     user_response,
                     self.llm_processor,
@@ -87,7 +98,8 @@ class SmallWebrtcBot(SmallWebrtcAIBot):
         )
 
         # NOTE: if bot run in the sub thread like fastapi/starlette background-tasks, handle_sigint set False
-        await PipelineRunner(handle_sigint=False).run(self.task)
+        self.runner = PipelineRunner(handle_sigint=self.args.handle_sigint)
+        await self.runner.run(self.task)
 
     async def on_client_connected(
         self,
@@ -113,7 +125,7 @@ class SmallWebrtcBot(SmallWebrtcAIBot):
                     "content": hi_text,
                 }
             )
-            await self.task.queue_frames([LLMMessagesFrame(self._bot_config.llm.messages)])
+            # await self.task.queue_frames([LLMMessagesFrame(self._bot_config.llm.messages)])
 
     async def on_app_message(
         self,

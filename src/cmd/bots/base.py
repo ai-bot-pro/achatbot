@@ -6,6 +6,7 @@ import uuid
 
 from apipeline.frames import CancelFrame
 from apipeline.pipeline.task import PipelineTask
+from apipeline.pipeline.runner import PipelineRunner
 
 from src.processors.omni.base import VisionVoiceProcessorBase
 from src.processors.voice.base import VoiceProcessorBase
@@ -67,6 +68,7 @@ class AIBot(IBot):
 
         self.task: PipelineTask | None = None
         self.session = Session(**SessionCtx(str(uuid.uuid4())).__dict__)
+        self.runner: PipelineRunner | None = None
 
         self._bot_config_list = self.args.bot_config_list
         self._bot_config = self.args.bot_config
@@ -109,6 +111,13 @@ class AIBot(IBot):
 
     def run(self):
         asyncio.run(self.async_run())
+
+    def __del__(self):
+        self.cancel()
+
+    def cancel(self):
+        if self.runner:
+            self.runner.cancel()
 
     async def async_run(self):
         try:

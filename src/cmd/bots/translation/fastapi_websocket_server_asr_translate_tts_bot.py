@@ -98,15 +98,15 @@ class FastapiWebsocketServerASRTranslateTTSBot(AIFastapiWebsocketBot):
 
         self.tts_processor: TTSProcessor = self.get_tts_processor(tts_engine=self.tts_engine)
 
-        record_save_processor = SaveAllAudioProcessor(
-            prefix_name="fastapi_ws_asr_translate_tts_bot",
-            sample_rate=self.params.audio_in_sample_rate,
-            channels=self.params.audio_in_channels,
-            sample_width=self.params.audio_in_sample_width,
-        )
+        # record_save_processor = SaveAllAudioProcessor(
+        #    prefix_name="fastapi_ws_asr_translate_tts_bot",
+        #    sample_rate=self.params.audio_in_sample_rate,
+        #    channels=self.params.audio_in_channels,
+        #    sample_width=self.params.audio_in_sample_width,
+        # )
         processors = [
             transport.input_processor(),
-            record_save_processor,
+            # record_save_processor,
             asr_processor,
             FrameLogger(include_frame_types=[TextFrame]),
             punc_processor,
@@ -137,7 +137,8 @@ class FastapiWebsocketServerASRTranslateTTSBot(AIFastapiWebsocketBot):
         transport.add_event_handler("on_client_connected", self.on_client_connected)
         transport.add_event_handler("on_client_disconnected", self.on_client_disconnected)
 
-        await PipelineRunner(handle_sigint=self._handle_sigint).run(self.task)
+        self.runner = PipelineRunner(handle_sigint=self._handle_sigint)
+        await self.runner.run(self.task)
 
     async def on_client_connected(
         self,

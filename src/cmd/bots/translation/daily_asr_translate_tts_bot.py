@@ -100,16 +100,16 @@ class DailyASRTranslateTTSBot(DailyRoomBot):
 
         self.tts_processor: TTSProcessor = self.get_tts_processor(tts_engine=self.tts_engine)
 
-        record_save_processor = SaveAllAudioProcessor(
-            prefix_name="daily_asr_translate_tts_bot",
-            sample_rate=self.params.audio_in_sample_rate,
-            channels=self.params.audio_in_channels,
-            sample_width=self.params.audio_in_sample_width,
-        )
+        # record_save_processor = SaveAllAudioProcessor(
+        #    prefix_name="daily_asr_translate_tts_bot",
+        #    sample_rate=self.params.audio_in_sample_rate,
+        #    channels=self.params.audio_in_channels,
+        #    sample_width=self.params.audio_in_sample_width,
+        # )
         processors = [
             transport.input_processor(),
-            record_save_processor,
-            FrameLogger(include_frame_types=[AudioRawFrame]),
+            # record_save_processor,
+            # FrameLogger(include_frame_types=[AudioRawFrame]),
             asr_processor,
             FrameLogger(include_frame_types=[TextFrame]),
             punc_processor,
@@ -144,7 +144,8 @@ class DailyASRTranslateTTSBot(DailyRoomBot):
         transport.add_event_handler("on_participant_left", self.on_participant_left)
         transport.add_event_handler("on_call_state_updated", self.on_call_state_updated)
 
-        await PipelineRunner(handle_sigint=self.args.handle_sigint).run(self.task)
+        self.runner = PipelineRunner(handle_sigint=self._handle_sigint)
+        await self.runner.run(self.task)
 
     async def on_first_participant_say_hi(self, transport: DailyTransport, participant):
         self.session.set_client_id(participant["id"])
