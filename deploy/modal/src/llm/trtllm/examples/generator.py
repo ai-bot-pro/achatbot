@@ -19,26 +19,27 @@ app_name = "qwen2.5-0.5B"
 app = modal.App("trtllm-generator")
 
 trtllm_image = (
-    # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
+    # https://nvidia.github.io/TensorRT-LLM/release-notes.html
+    # https://catalog.ngc.nvidia.com/orgs/nvidia/teams/tensorrt-llm/containers/release/tags
     modal.Image.from_registry(
-        "nvidia/cuda:12.8.0-devel-ubuntu22.04",
-        add_python="3.10",
+        "nvcr.io/nvidia/tensorrt-llm/release:0.21.0",
+        add_python="3.12",
     )
-    .apt_install(
-        "git", "git-lfs", "openmpi-bin", "libopenmpi-dev", "wget"
-    )  # OpenMPI for distributed communication
-    .pip_install(
-        "tensorrt-llm==0.17.0.post1",
-        # "pynvml<12",  # avoid breaking change to pynvml version API for tensorrt_llm
-        # "tensorrt==10.8.0.43",
-        pre=True,
-        extra_index_url="https://pypi.nvidia.com",
-    )
-    .env({"TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.7 8.9 9.0"})
+    # .apt_install(
+    #    "git", "git-lfs", "openmpi-bin", "libopenmpi-dev", "wget"
+    # )  # OpenMPI for distributed communication
+    # .pip_install(
+    #    "tensorrt-llm==0.21.0",
+    #    # "pynvml<12",  # avoid breaking change to pynvml version API for tensorrt_llm
+    #    # "tensorrt==10.8.0.43",
+    #    pre=True,
+    #    extra_index_url="https://pypi.nvidia.com",
+    # )
+    .env({"TORCH_CUDA_ARCH_LIST": "8.0 8.9 9.0"})
 )
 
 achatbot_trtllm_image = trtllm_image.pip_install(
-    "achatbot==0.0.9.post2",
+    "achatbot==0.0.23",
     extra_index_url="https://pypi.org/simple/",
 ).env(
     {
@@ -88,7 +89,7 @@ def run_sync():
     sampling_params = SamplingParams(temperature=0.8, top_p=0.95)
 
     # https://github.com/NVIDIA/TensorRT-LLM/blob/main/tensorrt_llm/llmapi/llm_args.py#L520
-    kv_cache_config=KvCacheConfig(free_gpu_memory_fraction=0.5)
+    kv_cache_config = KvCacheConfig(free_gpu_memory_fraction=0.5)
     # load hf model, convert to tensorrt, build tensorrt engine, load tensorrt engine
     llm = LLM(model=MODEL_ID, kv_cache_config=kv_cache_config)
 
@@ -580,7 +581,10 @@ async def run_achatbot_generator():
     import os
     import asyncio
     import time
+    import subprocess
 
+    subprocess.run("nvidia-smi --version", shell=True)
+    subprocess.run("nvcc --version", shell=True)
     from achatbot.core.llm.tensorrt_llm.generator import (
         TrtLLMGenerator,
         TensorRTLLMEngineArgs,

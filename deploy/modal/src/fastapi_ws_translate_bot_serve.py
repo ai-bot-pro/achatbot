@@ -144,27 +144,27 @@ modal volume create config
 
 modal volume put config ./config/bots/fastapi_websocket_asr_translate_tts_bot.json /bots/ -f
 
-IMAGE_GPU=L4 LLM_TAG=llm_ctranslate2_generator EXTRA_INDEX_URL=https://test.pypi.org/simple/ \
-    ACHATBOT_VERSION=0.0.24.post20 \
+IMAGE_GPU=L4 LLM_TAG=llm_ctranslate2_generator \
+    ACHATBOT_VERSION=0.0.24 \
     CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate_tts_bot.json \
     modal serve src/fastapi_ws_translate_bot_serve.py
 
 
 modal volume put config ./config/bots/fastapi_websocket_asr_translate_vllm_tts_bot.json /bots/ -f
 
-IMAGE_GPU=L4 LLM_TAG=llm_vllm_generator EXTRA_INDEX_URL=https://test.pypi.org/simple/ \
-    ACHATBOT_VERSION=0.0.24.post20 \
+IMAGE_GPU=L4 LLM_TAG=llm_vllm_generator \
+    ACHATBOT_VERSION=0.0.24 \
     CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate_vllm_tts_bot.json \
     modal serve src/fastapi_ws_translate_bot_serve.py
 
 
 modal volume put config ./config/bots/fastapi_websocket_asr_translate_vllm_sglang_bot.json /bots/ -f
 
-IMAGE_GPU=L4 LLM_TAG=llm_sglang_generator EXTRA_INDEX_URL=https://test.pypi.org/simple/ \
-    ACHATBOT_VERSION=0.0.24.post20 \
+IMAGE_GPU=L4 LLM_TAG=llm_sglang_generator \
+    ACHATBOT_VERSION=0.0.24 \
     CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate_sglang_tts_bot.json \
     modal serve src/fastapi_ws_translate_bot_serve.py
     
 # cold start fastapi websocket server
-curl -v -XGET "https://weedge--fastapi-ws-translate-bot-srv-app-dev.modal.run"
+curl -v -XGET "https://weedge--fastapi-ws-translate-bot-srv-app-dev.modal.run/health"
 """

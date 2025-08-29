@@ -16,6 +16,7 @@ from src.types.frames.data_frames import TextFrame, TranslationFrame, AudioRawFr
 from src.cmd.bots import register_ai_fastapi_ws_bots
 from src.types.network.fastapi_websocket import FastapiWebsocketServerParams
 from src.transports.fastapi_websocket_server import FastapiWebsocketTransport
+from src.processors.speech.audio_save_processor import SaveAllAudioProcessor
 from src.processors.punctuation_processor import PunctuationProcessor
 from src.modules.punctuation import PuncEnvInit
 from src.serializers.transcription_protobuf import TranscriptionFrameSerializer
@@ -41,7 +42,6 @@ class FastapiWebsocketServerASRTranslateTTSBot(AIFastapiWebsocketBot):
         self.vad_analyzer = None
         self.asr_engine = None
         self.generator = None
-        self.tokenizer = None  # text tokenizer
         self.tts_engine = None
         self.asr_punc_engine = None
 
@@ -79,14 +79,11 @@ class FastapiWebsocketServerASRTranslateTTSBot(AIFastapiWebsocketBot):
             params=self.params,
         )
 
-        processors = []
         asr_processor = self.get_asr_processor(asr_engine=self.asr_engine)
 
         punc_processor = None
         if self.asr_punc_engine:
             punc_processor = PunctuationProcessor(engine=self.asr_punc_engine, session=self.session)
-            processors.append(punc_processor)
-            processors.append(FrameLogger(include_frame_types=[TextFrame]))
 
         tl_processor = None
         if self.generator is not None:
@@ -101,8 +98,15 @@ class FastapiWebsocketServerASRTranslateTTSBot(AIFastapiWebsocketBot):
 
         self.tts_processor: TTSProcessor = self.get_tts_processor(tts_engine=self.tts_engine)
 
+        record_save_processor = SaveAllAudioProcessor(
+            prefix_name="fastapi_ws_asr_translate_tts_bot",
+            sample_rate=self.params.audio_in_sample_rate,
+            channels=self.params.audio_in_channels,
+            sample_width=self.params.audio_in_sample_width,
+        )
         processors = [
             transport.input_processor(),
+            record_save_processor,
             asr_processor,
             FrameLogger(include_frame_types=[TextFrame]),
             punc_processor,

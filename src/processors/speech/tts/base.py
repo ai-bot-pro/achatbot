@@ -5,8 +5,8 @@ from abc import abstractmethod
 from typing import AsyncGenerator
 
 from apipeline.processors.frame_processor import FrameDirection, FrameProcessorMetrics
-from apipeline.frames.control_frames import EndFrame
-from apipeline.frames.sys_frames import Frame, MetricsFrame, StartInterruptionFrame
+from apipeline.frames.control_frames import EndFrame, StartFrame
+from apipeline.frames.sys_frames import Frame, MetricsFrame, StartInterruptionFrame, CancelFrame
 from apipeline.utils.string import match_endofsentence
 
 from src.processors.ai_processor import AIProcessor
@@ -71,6 +71,15 @@ class TTSProcessorBase(AIProcessor):
     @abstractmethod
     async def run_tts(self, text: str) -> AsyncGenerator[Frame, None]:
         pass
+
+    async def start(self, frame: StartFrame):
+        logging.info(f"{self.name} started")
+
+    async def stop(self, frame: EndFrame):
+        logging.info(f"{self.name} end")
+
+    async def cancel(self, frame: CancelFrame):
+        logging.info(f"{self.name} canceled")
 
     async def start_tts_usage_metrics(self, text: str):
         if self.can_generate_metrics() and self.usage_metrics_enabled:

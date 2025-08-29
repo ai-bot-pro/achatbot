@@ -3,6 +3,8 @@ import os
 import logging
 
 from apipeline.frames.data_frames import Frame, AudioRawFrame
+from apipeline.frames.control_frames import StartFrame, EndFrame
+from apipeline.frames.sys_frames import CancelFrame
 from apipeline.pipeline.pipeline import FrameDirection
 from apipeline.processors.frame_processor import FrameProcessor
 
@@ -12,6 +14,10 @@ from src.types.frames.data_frames import PathAudioRawFrame
 
 
 class AudioSaveProcessor(FrameProcessor):
+    """
+    Save AudioRawFrame to file
+    """
+
     def __init__(
         self, prefix_name: str = "record", save_dir: str = RECORDS_DIR, pass_raw_audio: bool = False
     ):
@@ -54,3 +60,63 @@ class AudioSaveProcessor(FrameProcessor):
         )
         logging.debug(f"save frame:{frame} to path:{file_path}")
         return file_path
+
+
+class SaveAllAudioProcessor(FrameProcessor):
+    """
+    Save all audio to file
+    """
+
+    def __init__(
+        self,
+        prefix_name: str = "record",
+        save_dir: str = RECORDS_DIR,
+        sample_rate: int = 16000,
+        channels: int = 1,
+        sample_width: int = 2,
+    ):
+        super().__init__()
+        os.makedirs(save_dir, exist_ok=True)
+        self.save_dir = save_dir
+        self.prefix_name = prefix_name
+
+        self.sample_rate = sample_rate
+        self.channels = channels
+        self.sample_width = sample_width
+
+        self.audio_bytes = b""
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection):
+        await super().process_frame(frame, direction)
+
+        if isinstance(frame, StartFrame):
+            logging.info(f"{self.name} started")
+            self.audio_bytes = b""
+
+        if isinstance(frame, AudioRawFrame):
+            self.audio_bytes += frame.audio
+
+        await self.push_frame(frame, direction)
+
+        if isinstance(frame, EndFrame):
+            logging.info(f"{self.name} end")
+            await self.save()
+        if isinstance(frame, CancelFrame):
+            logging.info(f"{self.name} cancelled")
+            await self.save()
+
+    async def save(self) -> str:
+        if len(self.audio_bytes) == 0:
+            return
+        now = datetime.now()
+        formatted_time = now.strftime("%Y-%m-%d_%H-%M-%S.%f")[:-2]
+        output_file = os.path.join(self.save_dir, f"{self.prefix_name}_{formatted_time}.wav")
+        file_path = await save_audio_to_file(
+            self.audio_bytes,
+            output_file,
+            audio_dir=self.save_dir,
+            channles=self.channels,
+            sample_rate=self.sample_rate,
+            sample_width=self.sample_width,
+        )
+        logging.info(f"save {len(self.audio_bytes)=} to path:{file_path}")
