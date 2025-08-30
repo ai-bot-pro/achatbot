@@ -434,10 +434,16 @@ async def bot_join_room(
         info.room_name = room.name
         info.room_url = room.url
         info.token = bot_token
-        info.is_background = True
-        info.handle_sigint = False
-        task_runner = BotTaskRunnerFE(bot_task_mgr, **vars(info))
-        await task_runner.run()
+        if info.is_background is True:
+            logging.info("run in background mode")
+            info.handle_sigint = False
+            # TODO: Graceful Exit
+            task_runner = BotTaskRunnerFE(bot_task_mgr, **vars(info))
+            await task_runner.run()
+        else:
+            logging.info("run in fastapi background task mode")
+            task_runner = BotTaskRunnerFE(bot_task_mgr, **vars(info))
+            background_tasks.add_task(task_runner.run)
     except Exception as e:
         detail = f"bot {chat_bot_name} failed to start process: {e}"
         raise Exception(detail)

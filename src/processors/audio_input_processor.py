@@ -94,7 +94,6 @@ class AudioVADInputProcessor(InputProcessor):
             try:
                 frame: AudioRawFrame = await asyncio.wait_for(self._audio_in_queue.get(), timeout=1)
 
-
                 previous_vad_state = vad_state
                 # Check VAD and push event if necessary. We just care about
                 # changes from QUIET to SPEAKING and vice versa.
@@ -106,7 +105,7 @@ class AudioVADInputProcessor(InputProcessor):
                     await self._run_turn_analyzer(frame, vad_state, previous_vad_state)
 
                 # Push audio downstream if passthrough.
-                if self._params.vad_enabled and self._params.vad_audio_passthrough :
+                if self._params.vad_enabled and self._params.vad_audio_passthrough:
                     if len(vad_state_frame.audio) > 0:
                         await self.queue_frame(vad_state_frame)
                 else:
@@ -120,6 +119,12 @@ class AudioVADInputProcessor(InputProcessor):
                 logging.exception(f"{self} error reading audio frames: {e}")
                 if self.get_event_loop().is_closed():
                     logging.warning(f"{self.name} event loop is closed")
+                    break
+                # Handle RuntimeError for shutdown executor
+                if isinstance(
+                    e, RuntimeError
+                ) and "cannot schedule new futures after shutdown" in str(e):
+                    logging.warning(f"{self.name} executor shutdown, stopping audio task")
                     break
 
     async def _vad_analyze(self, audio_bytes: bytes) -> VADStateAudioRawFrame:

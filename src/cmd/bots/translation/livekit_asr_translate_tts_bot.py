@@ -1,19 +1,20 @@
 import logging
-import asyncio
+
 import uuid
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.parallel_pipeline import ParallelPipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.processors.logger import FrameLogger
+from livekit import rtc
 
 from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.processors.speech.audio_save_processor import SaveAllAudioProcessor
 from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.modules.speech.asr_live import ASRLiveEnvInit
-from src.common.types import DailyParams
-from src.transports.daily import DailyTransport
-from src.cmd.bots.base_daily import DailyRoomBot
+from src.common.types import LivekitParams
+from src.transports.livekit import LivekitTransport
+from src.cmd.bots.base_livekit import LivekitRoomBot
 from src.cmd.bots import register_ai_room_bots
 from src.types.frames.data_frames import TextFrame, AudioRawFrame
 from src.core.llm import LLMEnvInit
@@ -30,25 +31,25 @@ load_dotenv(override=True)
 some ways to run, below: 
 
 # 1. run cmd signal webrtc bot
-TOKENIZERS_PARALLELISM=false python -m src.cmd.bots.main -f config/bots/daily_asr_translate_llamacpp_tts_bot.json
+TOKENIZERS_PARALLELISM=false python -m src.cmd.bots.main -f config/bots/livekit_asr_translate_llamacpp_tts_bot.json
 
 # 2. run webrtc room http signal bot server
-TOKENIZERS_PARALLELISM=false python -m src.cmd.http.server.fastapi_room_bot_serve -f config/bots/daily_asr_translate_llamacpp_tts_bot.json
-# DailyASRTranslateTTSBot join chat-room
-curl -XPOST "http://0.0.0.0:4321/bot_join/chat-room/DailyASRTranslateTTSBot"
+TOKENIZERS_PARALLELISM=false python -m src.cmd.http.server.fastapi_room_bot_serve -f config/bots/livekit_asr_translate_llamacpp_tts_bot.json
+# LivekitASRTranslateTTSBot join chat-room
+curl -XPOST "http://0.0.0.0:4321/bot_join/chat-room/LivekitASRTranslateTTSBot"
 
 # 3. run webrtc room http bots server (experimental)
-TOKENIZERS_PARALLELISM=false python -m src.cmd.http.server.fastapi_daily_bot_serve
-# DailyASRTranslateTTSBot join chat-room with bot config
-curl --location 'http://0.0.0.0:4321/bot_join/chat-room/DailyASRTranslateTTSBot' \
+TOKENIZERS_PARALLELISM=false python -m src.cmd.http.server.fastapi_livekit_bot_serve
+# LivekitASRTranslateTTSBot join chat-room with bot config
+curl --location 'http://0.0.0.0:4321/bot_join/chat-room/LivekitASRTranslateTTSBot' \
 --header 'Content-Type: application/json' \
 --data '{
-    "chat_bot_name": "DailyASRTranslateTTSBot",
+    "chat_bot_name": "LivekitASRTranslateTTSBot",
     "room_name": "chat-room",
     "room_url": "",
     "token": "",
     "room_manager": {
-        "tag": "daily_room",
+        "tag": "livekit_room",
         "args": {
             "privacy": "public"
         }
@@ -123,9 +124,9 @@ curl --location 'http://0.0.0.0:4321/bot_join/chat-room/DailyASRTranslateTTSBot'
 
 
 @register_ai_room_bots.register
-class DailyASRTranslateTTSBot(DailyRoomBot):
+class LivekitASRTranslateTTSBot(LivekitRoomBot):
     """
-    daily transport(webrtc) with vad -> asr -> translate LLM -> punc -> tts
+    livekit transport(webrtc) with vad -> asr -> translate LLM -> punc -> tts
     """
 
     def __init__(self, **args) -> None:
@@ -152,23 +153,20 @@ class DailyASRTranslateTTSBot(DailyRoomBot):
                 self.asr_punc_engine = PuncEnvInit.initEngine(tag, **args)
 
     async def arun(self):
-        self.params = DailyParams(
+        self.params = LivekitParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
             vad_enabled=True,
             vad_analyzer=self.vad_analyzer,
             vad_audio_passthrough=True,
-            transcription_enabled=False,
         )
 
         stream_info = self.tts_engine.get_stream_info()
         self.params.audio_out_sample_rate = stream_info["rate"]
         self.params.audio_out_channels = stream_info["channels"]
 
-        transport = DailyTransport(
-            self.args.room_url,
+        transport = LivekitTransport(
             self.args.token,
-            self.args.bot_name,
             self.params,
         )
 
@@ -192,7 +190,7 @@ class DailyASRTranslateTTSBot(DailyRoomBot):
         self.tts_processor: TTSProcessor = self.get_tts_processor(tts_engine=self.tts_engine)
 
         # record_save_processor = SaveAllAudioProcessor(
-        #    prefix_name="daily_asr_translate_tts_bot",
+        #    prefix_name="livekit_asr_translate_tts_bot",
         #    sample_rate=self.params.audio_in_sample_rate,
         #    channels=self.params.audio_in_channels,
         #    sample_width=self.params.audio_in_sample_width,
@@ -228,15 +226,12 @@ class DailyASRTranslateTTSBot(DailyRoomBot):
             "on_first_participant_joined",
             [self.on_first_participant_joined, self.on_first_participant_say_hi],
         )
-        transport.add_event_handler("on_participant_left", self.on_participant_left)
-        transport.add_event_handler("on_call_state_updated", self.on_call_state_updated)
 
         self.runner = PipelineRunner(handle_sigint=self._handle_sigint)
         await self.runner.run(self.task)
 
-    async def on_first_participant_say_hi(self, transport: DailyTransport, participant):
-        self.session.set_client_id(participant["id"])
-        if self.params.transcription_enabled:
-            transport.capture_participant_transcription(participant["id"])
-        await asyncio.sleep(2)
+    async def on_first_participant_say_hi(
+        self, transport: LivekitTransport, participant: rtc.RemoteParticipant
+    ):
+        self.session.set_client_id(participant.sid)
         await self.tts_processor.say("hi, welcome to chat with translation bot.")

@@ -81,6 +81,7 @@ class AudioCameraOutputProcessor(OutputProcessor):
         if self._params.audio_out_enabled:
             self._audio_out_task.cancel()
             await self._audio_out_task
+        logging.info("stop audio_camera_output_processor Done")
 
     async def cancel(self, frame: CancelFrame):
         await super().cancel(frame)
@@ -90,6 +91,7 @@ class AudioCameraOutputProcessor(OutputProcessor):
         if self._params.audio_out_enabled:
             self._audio_out_task.cancel()
             await self._audio_out_task
+        logging.info("Cancel audio_camera_output_processor Done")
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
