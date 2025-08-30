@@ -617,6 +617,7 @@ class LivekitTransportClient:
             audio_frame: rtc.AudioFrame = self._convert_output_audio(frames)
             await self._out_audio_source.capture_frame(audio_frame)
         except Exception as e:
+            # NOTE: Exception: an RtcError occured: InvalidState - failed to capture frame
             logging.error(f"Error publishing audio: {e}", exc_info=True)
 
     def _convert_output_audio(self, audio_data: bytes) -> rtc.AudioFrame:

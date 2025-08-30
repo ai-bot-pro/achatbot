@@ -255,6 +255,10 @@ def import_bots(bot_name: str = "DummyBot"):
         from .avatar import livekit_musetalk_chat_bot
 
         return True
+    if "LivekitASRTranslateTTSBot" in bot_name:
+        from .translation import livekit_asr_translate_tts_bot
+
+        return True
     # if "LivekitMoshiVoiceBot" in bot_name:
     #    from .voice import livekit_moshi_bot
 
@@ -309,6 +313,10 @@ def import_bots(bot_name: str = "DummyBot"):
         return True
     if "AgoraMultiMCPBot" in bot_name:
         from .mcp import agora_multi_mcp_bot
+
+        return True
+    if "AgoraASRTranslateTTSBot" in bot_name:
+        from .translation import agora_asr_translate_tts_bot
 
         return True
 

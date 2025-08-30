@@ -94,6 +94,7 @@ async def lifespan(app: FastAPI):
     yield  # Run app
 
     # app life end to clear resources
+    logging.info("app life end to clear resources")
 
 
 app = FastAPI(lifespan=lifespan)
@@ -170,9 +171,9 @@ async def bot_join_room(
         detail = f"bot {chat_bot_name} don't exist"
         return APIResponse(error_code=ERROR_CODE_BOT_UN_REGISTER, error_detail=detail).model_dump()
 
-    token_id = token_id or bot_info.token
+    token_id = token_id or bot_info.token or run_bot.args.token
     room_obj = getRoomMgr(bot_info)
-    is_valid_room = await room_obj.check_valid_room(room_name, bot_info.token)
+    is_valid_room = await room_obj.check_valid_room(room_name, token_id)
     if is_valid_room is False:
         detail = f"not valid room: {room_name}"
         return APIResponse(error_code=ERROR_CODE_VALID_ROOM, error_detail=detail).model_dump()
@@ -228,4 +229,5 @@ if __name__ == "__main__":
         host=cmd_args.host,
         port=cmd_args.port,
         reload=cmd_args.reload,
+        lifespan="on",
     )

@@ -84,7 +84,7 @@ class AgoraBot(AgoraChannelBot):
             "on_first_participant_joined", [self.on_first_participant_say_hi]
         )
 
-        await PipelineRunner().run(self.task)
+        await PipelineRunner(handle_sigint=self.args.handle_sigint).run(self.task)
 
     async def on_first_participant_say_hi(self, transport: AgoraTransport, user_id: int):
         # joined use tts say "hello" to introduce with llm generate
