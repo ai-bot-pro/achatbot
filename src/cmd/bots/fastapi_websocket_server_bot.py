@@ -34,7 +34,7 @@ class FastapiWebsocketServerBot(AIFastapiWebsocketBot):
         super().__init__(websocket=websocket, **args)
         self.init_bot_config()
 
-        self.vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
+        self.vad_analyzer = self.get_vad_analyzer()
         self.asr_processor = self.get_asr_processor()
         self.llm_processor: LLMProcessor = self.get_llm_processor()
         self.tts_processor: TTSProcessor = self.get_tts_processor()

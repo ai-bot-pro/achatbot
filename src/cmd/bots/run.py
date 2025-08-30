@@ -68,6 +68,11 @@ class BotTaskRunner:
             room_url = room.url
             room_name = room.name
 
+        if not room_url:
+            room: GeneralRoomInfo = await self.room_mgr.get_room(bot_info.room_name)
+            room_url = room.url
+            room_name = room.name
+
         kwargs = BotRunArgs(
             room_name=room_name,
             room_url=room_url,
@@ -76,6 +81,7 @@ class BotTaskRunner:
             bot_config=bot_info.config,
             bot_config_list=bot_info.config_list,
             services=bot_info.services,
+            handle_sigint=bot_info.handle_sigint,
         ).__dict__
         self._bot_obj: IBot = register_ai_room_bots[bot_info.chat_bot_name](**kwargs)
         logging.info(f"bot {bot_info.chat_bot_name} loading")
@@ -87,9 +93,10 @@ class BotTaskRunner:
             self._pid = await self.task_mgr.run_task(
                 self._bot_obj.run, bot_info.chat_bot_name, bot_info.room_name
             )
+            logging.info(f"bot {bot_info.chat_bot_name} started with pid {self._pid}")
         else:
             await self._bot_obj.async_run()
-        logging.info(f"bot {bot_info.chat_bot_name} started with pid {self._pid}")
+            logging.info(f"bot {bot_info.chat_bot_name} done")
 
     async def _run_websocket_bot(self, bot_info: BotInfo):
         kwargs = BotRunArgs(
@@ -99,6 +106,7 @@ class BotTaskRunner:
             services=bot_info.services,
             websocket_server_port=bot_info.websocket_server_port,
             websocket_server_host=bot_info.websocket_server_host,
+            handle_sigint=bot_info.handle_sigint,
         ).__dict__
         self._bot_obj: IBot = register_ai_room_bots[bot_info.chat_bot_name](**kwargs)
         self._bot_obj.load()

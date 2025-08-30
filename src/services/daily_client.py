@@ -296,10 +296,11 @@ class DailyTransportClient(EventHandler):
 
         self._client.leave(completion=handle_leave_response)
 
-        return await asyncio.wait_for(future, timeout=10)
+        return await asyncio.wait_for(future, timeout=5)
 
     async def cleanup(self):
-        await task.async_task(self._cleanup)
+        await self.leave()
+        # await task.async_task(self._cleanup)
 
     def _cleanup(self):
         if self._client:

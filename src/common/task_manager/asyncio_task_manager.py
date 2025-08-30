@@ -19,7 +19,6 @@ class AsyncioTaskManager(TaskManager):
         super().__init__(task_done_timeout=task_done_timeout)
         self._loop = loop or asyncio.get_event_loop()
         self._tasks: Dict[str, asyncio.Task] = {}
-        self._loop: Optional[asyncio.AbstractEventLoop] = None
 
     async def run_task(self, target, name: str, tag: str, **kwargs):
         task_id = str(uuid.uuid4())
@@ -53,8 +52,6 @@ class AsyncioTaskManager(TaskManager):
                     logging.warning(f"task_id:{task_id} tag:{tag} task: {task} already completed")
             except Exception as e:
                 logging.error(f"Error while cleaning up task {task_id}: {e}")
-
-
 
     def set_event_loop(self, loop: asyncio.AbstractEventLoop):
         self._loop = loop

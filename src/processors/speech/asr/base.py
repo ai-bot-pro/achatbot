@@ -103,25 +103,38 @@ class SegmentedASRProcessor(ASRProcessorBase):
         await super().start(frame)
         self._audio_buffer_size_1s = self._sample_rate * 2
 
-    async def _handle_user_started_speaking(self, frame: UserStartedSpeakingFrame):
-        self._user_speaking = True
-
-    async def _handle_user_stopped_speaking(self, frame: UserStoppedSpeakingFrame):
-        self._user_speaking = False
-
-        content = io.BytesIO()
-        with wave.open(content, "wb") as wav:
-            wav.setsampwidth(2)
-            wav.setnchannels(1)
-            wav.setframerate(self._sample_rate)
-            wav.writeframes(self._audio_buffer)
-
-        content.seek(0)
-        await self.process_generator(self.run_asr(content.read()))
-
-        self._audio_buffer.clear()
+    def reset(self):
+        pass
 
     async def process_audio_frame(self, frame: AudioRawFrame):
+        if not isinstance(frame, VADStateAudioRawFrame):
+            return
+
+        if self._user_speaking is False and frame.state == VADState.SPEAKING:
+            self._user_speaking = True
+            self.reset()
+
+        if self._user_speaking is True and frame.state == VADState.QUIET:
+            self._user_speaking = False
+            content = io.BytesIO()
+            with wave.open(content, "wb") as wav:
+                wav.setsampwidth(2)
+                wav.setnchannels(1)
+                wav.setframerate(self._sample_rate)
+                wav.writeframes(self._audio_buffer)
+
+            content.seek(0)
+            await self.process_generator(
+                self.run_asr(
+                    content.read(),
+                    speech_id=frame.speech_id,
+                    start_at_s=frame.start_at_s,
+                    end_at_s=frame.end_at_s,
+                )
+            )
+
+            self._audio_buffer.clear()
+
         # If the user is speaking the audio buffer will keep growing.
         self._audio_buffer += frame.audio
 

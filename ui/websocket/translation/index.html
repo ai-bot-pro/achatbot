@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/protobufjs@7.X.X/dist/protobuf.min.js"></script>
+    <title>Achatbot WebSocket Client Example - Translation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            height: 100vh;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #wsUrl {
+            resize: both;
+            /* 允许水平和垂直调整 */
+            overflow: auto;
+            /* 允许出现滚动条 */
+            width: 100%;
+            /* 设置宽度为100% */
+            max-width: 600px;
+            /* 设置最大宽度 */
+        }
+        
+        .header-section {
+            flex-shrink: 0;
+            margin-bottom: 20px;
+        }
+        
+        #messageContainer {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            overflow: hidden;
+            min-height: 0; /* 确保flex子项可以缩小 */
+        }
+        
+        #messageContainer h3 {
+            margin: 0;
+            padding: 10px 15px;
+            background-color: #f5f5f5;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            flex-shrink: 0;
+        }
+        
+        #messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background-color: #fafafa;
+        }
+        
+        /* 自定义滚动条样式 */
+        #messages::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        #messages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        #messages::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        
+        #messages::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header-section">
+        <h1>Achatbot WebSocket Client Example - Translation</h1>
+        <h3 id="progressText">Loading, wait...</h3>
+        <input type="text" id="wsUrl" placeholder="Enter WebSocket URL" value="ws://localhost:4321" />
+        <br /><br />
+        <button id="startAudioBtn">Start Audio</button>
+        <button id="stopAudioBtn">Stop Audio</button>
+    </div>
+
+    <div id="messageContainer">
+        <h3>消息记录</h3>
+        <div id="messages"></div>
+    </div>
+    <script>
+        const SAMPLE_RATE = 16000;
+        const SAMPLE_WIDTH = 2;
+        const NUM_CHANNELS = 1;
+        const PLAY_TIME_RESET_THRESHOLD_MS = 1.0;
+
+        // The protobuf type. We will load it later.
+        let Frame = null;
+        let TranscriptFrame = null
+
+        // The websocket connection.
+        let ws = null;
+
+        // The audio context
+        let audioContext = null;
+
+        // The audio context media stream source
+        let source = null;
+
+        // The microphone stream from getUserMedia. SHould be sampled to the
+        // proper sample rate.
+        let microphoneStream = null;
+
+        // Script processor to get data from microphone.
+        let scriptProcessor = null;
+
+        // AudioContext play time.
+        let playTime = 0;
+
+        // Last time we received a websocket message.
+        let lastMessageTime = 0;
+
+        // Whether we should be playing audio.
+        let isPlaying = false;
+
+        let startBtn = document.getElementById('startAudioBtn');
+        let stopBtn = document.getElementById('stopAudioBtn');
+
+        // 用于显示文本消息的函数
+        function displayTextMessage(textData) {
+            const messagesDiv = document.getElementById('messages');
+            const messageElement = document.createElement('div');
+            
+            // 设置文本消息的样式
+            messageElement.style.cssText = `
+                margin-bottom: 12px;
+                padding: 12px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border-radius: 12px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                position: relative;
+                overflow: hidden;
+            `;
+
+            // 添加装饰性边框效果
+            const decorativeBorder = document.createElement('div');
+            decorativeBorder.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 3px;
+                background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1);
+            `;
+            messageElement.appendChild(decorativeBorder);
+
+            // 创建消息头部
+            const messageHeader = document.createElement('div');
+            messageHeader.style.cssText = `
+                display: flex;
+                align-items: center;
+                margin-bottom: 8px;
+                gap: 8px;
+            `;
+
+            // 添加用户头像/图标
+            const avatarIcon = document.createElement('div');
+            avatarIcon.style.cssText = `
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.2);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 12px;
+                color: white;
+                font-weight: bold;
+            `;
+            avatarIcon.textContent = (textData.name || 'System').charAt(0).toUpperCase();
+
+            // 用户名标签
+            const nameLabel = document.createElement('span');
+            nameLabel.style.cssText = `
+                color: rgba(255, 255, 255, 0.9);
+                font-size: 14px;
+                font-weight: 600;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            `;
+            nameLabel.textContent = textData.name || 'System';
+
+            // 时间戳
+            const timestamp = document.createElement('span');
+            timestamp.style.cssText = `
+                color: rgba(255, 255, 255, 0.7);
+                font-size: 12px;
+                margin-left: auto;
+            `;
+            timestamp.textContent = new Date().toLocaleTimeString();
+
+            messageHeader.appendChild(avatarIcon);
+            messageHeader.appendChild(nameLabel);
+            messageHeader.appendChild(timestamp);
+
+            // 格式化消息内容
+            const messageContent = document.createElement('p');
+            messageContent.style.cssText = `
+                margin: 0;
+                color: white;
+                font-size: 16px;
+                line-height: 1.6;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+                word-wrap: break-word;
+                position: relative;
+                z-index: 1;
+            `;
+            messageContent.textContent = textData.text || '';
+
+            // 添加消息类型标签
+            const messageTypeTag = document.createElement('div');
+            messageTypeTag.style.cssText = `
+                position: absolute;
+                bottom: 8px;
+                right: 12px;
+                background: rgba(255, 255, 255, 0.2);
+                color: white;
+                font-size: 10px;
+                padding: 2px 6px;
+                border-radius: 8px;
+                backdrop-filter: blur(10px);
+            `;
+            messageTypeTag.textContent = '文本';
+
+            // 组装元素
+            messageElement.appendChild(messageHeader);
+            messageElement.appendChild(messageContent);
+            messageElement.appendChild(messageTypeTag);
+            messagesDiv.appendChild(messageElement);
+
+            // 添加入场动画
+            messageElement.style.opacity = '0';
+            messageElement.style.transform = 'translateY(20px)';
+            
+            requestAnimationFrame(() => {
+                messageElement.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                messageElement.style.opacity = '1';
+                messageElement.style.transform = 'translateY(0)';
+            });
+
+            // 自动滚动到底部
+            const messageContainer = document.getElementById('messageContainer');
+            setTimeout(() => {
+                messageContainer.scrollTop = messageContainer.scrollHeight;
+            }, 100);
+        }
+
+        // 用于显示转录消息的函数
+        function displayTranscriptionMessage(transcriptionData) {
+            const messagesDiv = document.getElementById('messages');
+            const messageElement = document.createElement('div');
+            
+            // 设置转录消息的样式
+            messageElement.style.cssText = `
+                margin-bottom: 12px;
+                padding: 10px;
+                background-color: #e8f4fd;
+                border-left: 4px solid #1890ff;
+                border-radius: 6px;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            `;
+
+            // 创建转录内容容器
+            const transcriptionContent = document.createElement('div');
+            
+            // 主要转录文本
+            const textElement = document.createElement('p');
+            textElement.style.cssText = `
+                margin: 0 0 8px 0;
+                font-size: 16px;
+                font-weight: 500;
+                color: #262626;
+                line-height: 1.5;
+            `;
+            textElement.textContent = transcriptionData.text || '';
+
+            // 元数据信息
+            const metaElement = document.createElement('div');
+            metaElement.style.cssText = `
+                font-size: 12px;
+                color: #8c8c8c;
+                display: flex;
+                gap: 16px;
+                flex-wrap: wrap;
+            `;
+
+            // 构建元数据信息
+            const metaInfo = [
+                `用户: ${transcriptionData.userId || 'Unknown'}`,
+                `语言: ${transcriptionData.language || 'auto'}`,
+                `语音段: #${transcriptionData.speechId || 'N/A'}`,
+            ];
+
+            // 添加时间信息
+            if (transcriptionData.startAtS !== undefined && transcriptionData.endAtS !== undefined) {
+                const duration = (transcriptionData.endAtS - transcriptionData.startAtS).toFixed(2);
+                metaInfo.push(`时长: ${duration}s`);
+                metaInfo.push(`时间: ${transcriptionData.startAtS.toFixed(2)}s - ${transcriptionData.endAtS.toFixed(2)}s`);
+            }
+
+            // 添加时间戳
+            if (transcriptionData.timestamp) {
+                const date = new Date(transcriptionData.timestamp);
+                metaInfo.push(`时间戳: ${date.toLocaleTimeString()}`);
+            }
+
+            metaElement.textContent = metaInfo.join(' | ');
+
+            // 组装元素
+            transcriptionContent.appendChild(textElement);
+            transcriptionContent.appendChild(metaElement);
+            messageElement.appendChild(transcriptionContent);
+            messagesDiv.appendChild(messageElement);
+
+            // 自动滚动到底部
+            const messageContainer = document.getElementById('messageContainer');
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+        }
+
+        // 用于显示实时转录消息的函数
+        function displayLiveTranscriptionMessage(liveTranscriptionData) {
+            const messagesDiv = document.getElementById('messages');
+            
+            // 查找或创建实时转录容器
+            let liveContainer = document.getElementById(`live-transcription-${liveTranscriptionData.speechId}`);
+            
+            if (!liveContainer) {
+                liveContainer = document.createElement('div');
+                liveContainer.id = `live-transcription-${liveTranscriptionData.speechId}`;
+                liveContainer.style.cssText = `
+                    margin-bottom: 12px;
+                    padding: 10px;
+                    background-color: #f6ffed;
+                    border-left: 4px solid #52c41a;
+                    border-radius: 6px;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                `;
+                messagesDiv.appendChild(liveContainer);
+            }
+
+            // 更新内容
+            const textElement = liveContainer.querySelector('.live-text') || document.createElement('p');
+            if (!textElement.classList.contains('live-text')) {
+                textElement.className = 'live-text';
+                textElement.style.cssText = `
+                    margin: 0 0 8px 0;
+                    font-size: 16px;
+                    color: #262626;
+                    line-height: 1.5;
+                `;
+                liveContainer.appendChild(textElement);
+            }
+
+            // 添加状态指示
+            const statusIndicator = liveTranscriptionData.isFinal ? '✓' : '...';
+            const textContent = `${statusIndicator} ${liveTranscriptionData.text || ''}`;
+            
+            textElement.textContent = textContent;
+
+            // 如果是最终结果，更新样式
+            if (liveTranscriptionData.isFinal) {
+                liveContainer.style.backgroundColor = '#e6f7ff';
+                liveContainer.style.borderLeftColor = '#1890ff';
+                textElement.style.fontWeight = '500';
+            }
+
+            // 自动滚动
+            const messageContainer = document.getElementById('messageContainer');
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+        }
+
+        const proto = protobuf.load("../protos/data_frames.proto", (err, root) => {
+            if (err) {
+                throw err;
+            }
+            Frame = root.lookupType("pipeline_frames.Frame");
+        });
+        const asr_proto = protobuf.load("../protos/asr_data_frames.proto", (err, root) => {
+            if (err) {
+                throw err;
+            }
+            TranscriptFrame = root.lookupType("achatbot_frames.Frame");
+            const progressText = document.getElementById("progressText");
+            progressText.textContent = "We are ready! Make sure to run the server and then click `Start Audio`.";
+
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+        });
+
+        function initWebSocket() {
+            const wsUrl = document.getElementById('wsUrl').value;
+            ws = new WebSocket(wsUrl);
+
+            ws.addEventListener('open', () => console.log('WebSocket connection established.'));
+            ws.addEventListener('message', handleWebSocketMessage);
+            ws.addEventListener('close', (event) => {
+                console.log("WebSocket connection closed.", event.code, event.reason);
+                stopAudio(false);
+            });
+            ws.addEventListener('error', (event) => console.error('WebSocket error:', event));
+        }
+
+        async function handleWebSocketMessage(event) {
+            const arrayBuffer = await event.data.arrayBuffer();
+            if (isPlaying) {
+                enqueueAudioFromProto(arrayBuffer);
+            }
+        }
+
+        function enqueueAudioFromProto(arrayBuffer) {
+            // 尝试解码标准 Frame
+            try {
+                const parsedFrame = Frame.decode(new Uint8Array(arrayBuffer));
+                console.log("解码 Frame:", parsedFrame);
+
+                // 处理文本消息
+                if (parsedFrame?.text) {
+                    console.log("收到文本消息:", parsedFrame.text);
+                    displayTextMessage(parsedFrame.text);
+                    return true;
+                }
+
+                // 处理音频数据
+                if (parsedFrame?.audio) {
+                    // 继续处理音频逻辑（保持原有逻辑）
+                    // Reset play time if it's been a while we haven't played anything.
+                    const diffTime = audioContext.currentTime - lastMessageTime;
+                    if ((playTime == 0) || (diffTime > PLAY_TIME_RESET_THRESHOLD_MS)) {
+                        playTime = audioContext.currentTime;
+                    }
+                    lastMessageTime = audioContext.currentTime;
+
+                    // We should be able to use parsedFrame.audio.audio.buffer but for
+                    // some reason that contains all the bytes from the protobuf message.
+                    const audioVector = Array.from(parsedFrame.audio.audio);
+                    const audioArray = new Uint8Array(audioVector);
+
+                    audioContext.decodeAudioData(audioArray.buffer, function (buffer) {
+                        const source = new AudioBufferSourceNode(audioContext);
+                        source.buffer = buffer;
+                        source.start(playTime);
+                        source.connect(audioContext.destination);
+                        playTime = playTime + buffer.duration;
+                    });
+                    return true;
+                }
+            } catch (error) {
+                console.log("Frame 解码失败，尝试 TranscriptFrame:", error);
+            }
+
+            // 尝试解码 TranscriptFrame
+            try {
+                const parsedTranscriptFrame = TranscriptFrame.decode(new Uint8Array(arrayBuffer));
+                console.log("解码 TranscriptFrame:", parsedTranscriptFrame);
+
+                // 处理转录帧
+                if (parsedTranscriptFrame?.transcription) {
+                    console.log("收到转录消息:", parsedTranscriptFrame.transcription);
+                    displayTranscriptionMessage(parsedTranscriptFrame.transcription);
+                    return true;
+                }
+
+                // 处理实时转录帧
+                if (parsedTranscriptFrame?.asrLiveTranscription) {
+                    console.log("收到实时转录:", parsedTranscriptFrame.asrLiveTranscription);
+                    displayLiveTranscriptionMessage(parsedTranscriptFrame.asrLiveTranscription);
+                    return true;
+                }
+
+            } catch (error) {
+                console.log("TranscriptFrame 解码失败:", error);
+                return false;
+            }
+
+            return false;
+        }
+
+        function convertFloat32ToS16PCM(float32Array) {
+            let int16Array = new Int16Array(float32Array.length);
+
+            for (let i = 0; i < float32Array.length; i++) {
+                let clampedValue = Math.max(-1, Math.min(1, float32Array[i]));
+                int16Array[i] = clampedValue < 0 ? clampedValue * 32768 : clampedValue * 32767;
+            }
+            return int16Array;
+        }
+
+        function startAudioBtnHandler() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('getUserMedia is not supported in your browser.');
+                return;
+            }
+
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+
+            audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                latencyHint: "interactive",
+                sampleRate: SAMPLE_RATE
+            });
+
+            isPlaying = true;
+
+            initWebSocket();
+
+            navigator.mediaDevices.getUserMedia({
+                audio: {
+                    sampleRate: SAMPLE_RATE,
+                    channelCount: NUM_CHANNELS,
+                    autoGainControl: true,
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                }
+            }).then((stream) => {
+                microphoneStream = stream;
+                // 512 is closest thing to 200ms.
+                scriptProcessor = audioContext.createScriptProcessor(512, 1, 1);
+                source = audioContext.createMediaStreamSource(stream);
+                source.connect(scriptProcessor);
+                scriptProcessor.connect(audioContext.destination);
+
+                scriptProcessor.onaudioprocess = (event) => {
+                    if (!ws) {
+                        return;
+                    }
+
+                    const audioData = event.inputBuffer.getChannelData(0);
+                    const pcmS16Array = convertFloat32ToS16PCM(audioData);
+                    const pcmByteArray = new Uint8Array(pcmS16Array.buffer);
+                    const frame = Frame.create({
+                        audio: {
+                            audio: Array.from(pcmByteArray),
+                            sampleRate: SAMPLE_RATE,
+                            numChannels: NUM_CHANNELS,
+                            sampleWidth: SAMPLE_WIDTH,
+                        }
+                    });
+                    const encodedFrame = new Uint8Array(Frame.encode(frame).finish());
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.send(encodedFrame);
+                    }
+                };
+            }).catch((error) => console.error('Error accessing microphone:', error));
+        }
+
+        function stopAudio(closeWebsocket) {
+            playTime = 0;
+            isPlaying = false;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+
+            if (ws && closeWebsocket) {
+                ws.close();
+                ws = null;
+            }
+
+            if (scriptProcessor) {
+                scriptProcessor.disconnect();
+            }
+            if (source) {
+                source.disconnect();
+            }
+        }
+
+        function stopAudioBtnHandler() {
+            stopAudio(true);
+        }
+
+        startBtn.addEventListener('click', startAudioBtnHandler);
+        stopBtn.addEventListener('click', stopAudioBtnHandler);
+        startBtn.disabled = true;
+        stopBtn.disabled = true;
+    </script>
+</body>
+
+</html>

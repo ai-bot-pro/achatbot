@@ -14,7 +14,9 @@ load_dotenv(override=True)
 
 class LLMEnvInit:
     @staticmethod
-    def getEngine(tag, **kwargs) -> interface.ILlm | EngineClass:
+    def getEngine(tag, **kwargs) -> interface.ILlmGenerator | interface.ILlm | EngineClass:
+        if "llm_ctranslate2_generator" == tag:
+            from .ctranslate2.generator import Ctranslate2Generator
         if "llm_llamacpp" == tag:
             from . import llamacpp
         if "llm_llamacpp_generator" == tag:
@@ -102,6 +104,19 @@ class LLMEnvInit:
         engine = LLMEnvInit.getEngine(tag, **kwargs)
         logging.info(f"initLLMEngine: {tag}, {engine}")
         return engine
+
+    @staticmethod
+    def get_llm_ctranslate_generator_args() -> dict:
+        kwargs = dict(
+            model_args=dict(
+                model_path=os.getenv(
+                    "LLM_MODEL_NAME_OR_PATH", os.path.join(MODELS_DIR, "Qwen/Qwen2.5-0.5B")
+                ),
+                device=os.getenv("LLM_DEVICE", ""),
+            ),
+            gen_args=LLMEnvInit._get_llm_generate_args(),
+        )
+        return kwargs
 
     @staticmethod
     def get_llm_llamacpp_args() -> dict:
@@ -516,4 +531,5 @@ class LLMEnvInit:
         "llm_trtllm_runner_generator": get_llm_trtllm_runner_generator_args,
         "llm_fastdeploy_generator": get_llm_fastdeploy_args,
         "llm_fastdeploy_vision_ernie4v": get_llm_fastdeploy_args,
+        "llm_ctranslate2_generator": get_llm_ctranslate_generator_args,
     }

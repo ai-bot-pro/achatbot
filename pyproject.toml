@@ -31,6 +31,7 @@ keywords = [
     "image",
     "vision",
     "mcp",
+    "translate",
     "avatar",
 ]
 # https://pypi.org/classifiers/
@@ -60,7 +61,7 @@ classifiers = [
 ]
 dependencies = [
     "requests",
-    "apipeline>=0.2.1",
+    "apipeline>=0.2.4",
     "python-dotenv",
     "pydub",            # need install ffmpeg
     "pillow",
@@ -218,6 +219,7 @@ vllm = ["vllm==0.9.2"]
 transformers = ["transformers[torch]"]
 # --extra-index-url https://pypi.nvidia.com python3.10 and python3.12 | python3.11 unsupported
 trtllm = ["tensorrt-llm==0.17.0.post1"]
+ctranslate2 = ["ctranslate2"]
 
 # llm backend
 # --extra-index-url "https://flashinfer.ai/whl/cu124/torch2.5",

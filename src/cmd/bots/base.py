@@ -6,6 +6,7 @@ import uuid
 
 from apipeline.frames import CancelFrame
 from apipeline.pipeline.task import PipelineTask
+from apipeline.pipeline.runner import PipelineRunner
 
 from src.processors.omni.base import VisionVoiceProcessorBase
 from src.processors.voice.base import VoiceProcessorBase
@@ -67,6 +68,7 @@ class AIBot(IBot):
 
         self.task: PipelineTask | None = None
         self.session = Session(**SessionCtx(str(uuid.uuid4())).__dict__)
+        self.runner: PipelineRunner | None = None
 
         self._bot_config_list = self.args.bot_config_list
         self._bot_config = self.args.bot_config
@@ -101,12 +103,21 @@ class AIBot(IBot):
             # load model ckpt when bot start
             # when deploy need load model ckpt, then run serve
         - don't init processor; processor for each connect session
+        - load model engine here to share,
+        - if don't need share, init in processor, u can init a engine pool
         have fun :)
         """
         pass
 
     def run(self):
         asyncio.run(self.async_run())
+
+    def __del__(self):
+        self.cancel()
+
+    def cancel(self):
+        if self.runner:
+            self.runner.cancel()
 
     async def async_run(self):
         try:
@@ -222,7 +233,7 @@ class AIBot(IBot):
         return asr
 
     def get_asr_processor(
-        self, asr: interface.IAsr | EngineClass | None = None
+        self, asr_engine: interface.IAsr | EngineClass | None = None
     ) -> ASRProcessorBase:
         asr_processor: ASRProcessorBase | None = None
         if (
@@ -241,15 +252,40 @@ class AIBot(IBot):
             from src.processors.speech.asr.asr_processor import ASRProcessor
 
             if self._bot_config.asr and self._bot_config.asr.tag and self._bot_config.asr.args:
-                asr = asr or ASREnvInit.getEngine(
+                asr = asr_engine or ASREnvInit.getEngine(
                     self._bot_config.asr.tag, **self._bot_config.asr.args
                 )
             else:
                 logging.info("use default asr engine processor")
-                asr = asr or ASREnvInit.initASREngine()
+                asr = asr_engine or ASREnvInit.initASREngine()
                 self._bot_config.asr = ASRConfig(tag=asr.SELECTED_TAG, args=asr.get_args_dict())
             asr_processor = ASRProcessor(asr=asr, session=self.session)
         return asr_processor
+
+    def get_hf_tokenizer(self):
+        """
+        To disable this warning, you can either:
+           - Avoid using `tokenizers` before the fork if possible
+           - Explicitly set the environment variable TOKENIZERS_PARALLELISM=(true | false)
+        """
+        from transformers import AutoTokenizer
+
+        tokenizer = AutoTokenizer.from_pretrained(self._bot_config.translate_llm.model)
+        return tokenizer
+
+    def get_translate_llm_generator(self):
+        """
+        get local translate llm generator
+        """
+        assert self._bot_config.translate_llm, f"translate_llm must be provided {self._bot_config=}"
+        # load llm generator
+        tag = self._bot_config.translate_llm.tag
+        args = self._bot_config.translate_llm.args or {}
+        generator = LLMEnvInit.initLLMEngine(
+            tag=tag,
+            kwargs=args,
+        )
+        return generator
 
     def get_vision_llm_processor(
         self, llm_config: LLMConfig | None = None, llm_engine=None
@@ -676,7 +712,25 @@ class AIBot(IBot):
         # TODO: use openai reatime voice api
         pass
 
-    def get_tts_processor(self) -> TTSProcessorBase:
+    def get_tts(self) -> interface.ITts | EngineClass:
+        tts: interface.ITts | EngineClass | None = None
+        if (
+            self._bot_config.tts
+            and self._bot_config.tts.tag
+            and self._bot_config.tts.tag in ["elevenlabs_tts_processor", "cartesia_tts_processor"]
+        ):
+            pass
+        else:
+            if self._bot_config.tts and self._bot_config.tts.tag and self._bot_config.tts.args:
+                tts = TTSEnvInit.getEngine(self._bot_config.tts.tag, **self._bot_config.tts.args)
+            else:
+                logging.info("use default tts engine processor")
+                tts = TTSEnvInit.initttsEngine()
+        return tts
+
+    def get_tts_processor(
+        self, tts_engine: interface.ITts | EngineClass = None
+    ) -> TTSProcessorBase:
         tts_processor: TTSProcessorBase | None = None
         if self._bot_config.tts and self._bot_config.tts.tag and self._bot_config.tts.args:
             if self._bot_config.tts.tag == "elevenlabs_tts_processor":
@@ -693,10 +747,18 @@ class AIBot(IBot):
                 # use tts engine processor
                 from src.processors.speech.tts.tts_processor import TTSProcessor
 
-                tts = TTSEnvInit.getEngine(self._bot_config.tts.tag, **self._bot_config.tts.args)
-                self._bot_config.tts.tag = tts.SELECTED_TAG
-                self._bot_config.tts.args = tts.get_args_dict()
-                tts_processor = TTSProcessor(tts=tts, session=self.session)
+                tts_engine = tts_engine or TTSEnvInit.getEngine(
+                    self._bot_config.tts.tag, **self._bot_config.tts.args
+                )
+                self._bot_config.tts.tag = tts_engine.SELECTED_TAG
+                self._bot_config.tts.args = tts_engine.get_args_dict()
+                tts_processor = TTSProcessor(
+                    tts=tts_engine,
+                    session=self.session,
+                    aggregate_sentences=self._bot_config.tts.aggregate_sentences,
+                    push_text_frames=self._bot_config.tts.push_text_frames,
+                    remove_punctuation=self._bot_config.tts.remove_punctuation,
+                )
         else:
             # default tts engine processor
             from src.processors.speech.tts.tts_processor import TTSProcessor
@@ -705,9 +767,17 @@ class AIBot(IBot):
             tag = None
             if self._bot_config.tts and self._bot_config.tts.tag:
                 tag = self._bot_config.tts.tag
-            tts = TTSEnvInit.initTTSEngine(tag)
-            self._bot_config.tts = TTSConfig(tag=tts.SELECTED_TAG, args=tts.get_args_dict())
-            tts_processor = TTSProcessor(tts=tts, session=self.session)
+            tts_engine = tts_engine or TTSEnvInit.initTTSEngine(tag)
+            self._bot_config.tts = TTSConfig(
+                tag=tts_engine.SELECTED_TAG, args=tts_engine.get_args_dict()
+            )
+            tts_processor = TTSProcessor(
+                tts=tts_engine,
+                session=self.session,
+                aggregate_sentences=self._bot_config.tts.aggregate_sentences,
+                push_text_frames=self._bot_config.tts.push_text_frames,
+                remove_punctuation=self._bot_config.tts.remove_punctuation,
+            )
 
         return tts_processor
 

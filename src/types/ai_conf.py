@@ -86,9 +86,22 @@ class LLMConfig(BaseModel):
     args: Optional[dict] = None
 
 
+class TranslateLLMConfig(BaseModel):
+    init_prompt: Optional[str] = None
+    model: Optional[str] = None
+    src: Optional[str] = None
+    target: Optional[str] = None
+    streaming: Optional[bool] = False
+    tag: Optional[str] = None
+    args: Optional[dict] = None
+
+
 class TTSConfig(BaseModel):
     voice: Optional[str] = None
     language: Optional[str] = None
+    aggregate_sentences: Optional[bool] = True
+    push_text_frames: Optional[bool] = True
+    remove_punctuation: Optional[bool] = False
     tag: Optional[str] = None
     args: Optional[dict] = None
 
@@ -106,6 +119,7 @@ class AIConfig(BaseModel):
     avatar: Optional[AvatarConfig] = None
     mcp_servers: Optional[Dict[str, MCPServerConfig]] = None
     llm: Optional[LLMConfig] = None
+    translate_llm: Optional[TranslateLLMConfig] = None
     nlp_task_llm: Optional[LLMConfig] = None
     voice_llm: Optional[LLMConfig] = None
     vision_llm: Optional[LLMConfig] = None

@@ -47,8 +47,9 @@ class DailyInputTransportProcessor(AudioVADInputProcessor):
     async def stop(self):
         # Stop audio thread.
         if self._params.audio_in_enabled or self._params.vad_enabled:
-            self._audio_in_task.cancel()
-            await self._audio_in_task
+            if self._audio_in_task:
+                self._audio_in_task.cancel()
+                await self._audio_in_task
         # Leave the room.
         await self._client.leave()
         await self.cleanup()

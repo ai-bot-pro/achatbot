@@ -3,6 +3,11 @@
 - use protobuf to encode and decode data, 
 - use websocket protocol to send data.
 
+# bots:
+- voice live chat bot
+- asr live bot
+- asr translate tts bot
+
 # run demo
 1. run websocket server bot with 2 ways:
 - local start bot
@@ -12,6 +17,9 @@ python -m src.cmd.bots.main -f config/bots/websocket_server_bot.json
 
 # asr live bot
 python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_websocket_asr_live_bot.json
+
+# asr translate tts bot
+python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_websocket_asr_translate_tts_bot.json
 ```
 - config/bots/websocket_server_bot.json
 ```json
@@ -107,6 +115,75 @@ python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_w
   "config_list": []
 }
 ```
+- config/bots/fastapi_websocket_asr_translate_tts_bot.json
+```json
+{
+  "chat_bot_name": "FastapiWebsocketServerASRTranslateTTSBot",
+  "transport_type": "websocket",
+  "handle_sigint": false,
+  "services": {
+    "pipeline": "achatbot",
+    "vad": "silero",
+    "asr": "sense_voice",
+    "punctuation": "punc_ct_tranformer",
+    "translate_llm": "llm_llamacpp_generator",
+    "tts": "edge"
+  },
+  "config": {
+    "vad": {
+      "tag": "silero_vad_analyzer",
+      "args": {
+        "start_secs": 0.032,
+        "stop_secs": 0.32,
+        "confidence": 0.7,
+        "min_volume": 0.6,
+        "onnx": true
+      }
+    },
+    "asr": {
+      "tag": "sense_voice_asr",
+      "args": {
+        "language": "zn",
+        "model_name_or_path": "./models/FunAudioLLM/SenseVoiceSmall"
+      }
+    },
+    "punctuation": {
+      "tag": "punc_ct_tranformer_onnx_offline",
+      "args": {
+        "model": "./models/iic/punc_ct-transformer_zh-cn-common-vocab272727-pytorch"
+      }
+    },
+    "translate_llm": {
+      "init_prompt":"hi, welcome to speak with translation bot.",
+      "model": "./models/ByteDance-Seed/Seed-X-PPO-7B",
+      "src": "zh",
+      "target": "en",
+      "streaming": false,
+      "tag": "llm_llamacpp_generator",
+      "args": {
+        "save_chat_history": false,
+        "model_path": "./models/Seed-X-PPO-7B.Q2_K.gguf",
+        "model_type": "generate",
+        "llm_temperature": 0.0,
+        "llm_stop_ids": [2],
+        "llm_max_tokens": 2048
+      }
+    },
+    "tts": {
+      "aggregate_sentences": false,
+      "push_text_frames": true,
+      "remove_punctuation": false,
+      "tag": "tts_edge",
+      "args": {
+        "voice_name": "en-US-GuyNeural",
+        "language": "en",
+        "gender": "Male"
+      }
+    }
+  },
+  "config_list": []
+}
+```
 
 - http api start bot
 ```shell
@@ -125,6 +202,7 @@ cd ui/websocket && python -m http.server
 ```
 - access http://localhost:8000/simple-demo  to click `Start Audio` to chat with Voice bot
 - access http://localhost:8000/asr_live  to click `Start Audio` to transcript with ASR Live bot
+- access http://localhost:8000/translation  to click `Start Audio` to speech translation with Translation bot
 
 
 > [!NOTE]

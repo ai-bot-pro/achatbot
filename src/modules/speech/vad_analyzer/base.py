@@ -64,9 +64,23 @@ class BaseVADAnalyzer(IVADAnalyzer, EngineClass):
 
         num_required_bytes = self._vad_frames_num_bytes
         if len(self._vad_buffer) < num_required_bytes:
-            # padding to num_required_bytes
-            padding_size = num_required_bytes - len(self._vad_buffer)
-            self._vad_buffer += b"\x00" * padding_size
+            # Starting / Speaking / Stopping / Quiet(no active)
+            return VADStateAudioRawFrame(
+                audio=b"",  # empty buffer, maybe ignore last _vad_buffer
+                sample_rate=self._args.sample_rate,
+                num_channels=self._args.num_channels,
+                sample_width=self._args.sample_width,
+                state=self._vad_state,
+                speech_id=self._speech_id,
+                is_final=self._is_final,
+                start_at_s=self._start_at_s,
+                cur_at_s=self._cur_at_s,
+                end_at_s=self._end_at_s,
+            )
+            # NOTE: padding to num_required_bytes, add some noice, bug!
+            # padding_size = num_required_bytes - len(self._vad_buffer)
+            # self._vad_buffer += b"\x00" * padding_size
+
         audio_bytes = self._vad_buffer[:num_required_bytes]
         self._vad_buffer = self._vad_buffer[num_required_bytes:]
 

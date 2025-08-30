@@ -11,11 +11,15 @@ from src.types.frames.data_frames import (
     AudioRawFrame,
     ImageRawFrame,
     ASRLiveTranscriptionFrame,
+    TranscriptionFrame,
 )
 
 
 class TranscriptionFrameSerializer(ProtobufFrameSerializer):
-    SERIALIZABLE_TYPES = {ASRLiveTranscriptionFrame: "asr_live_transcription"}
+    SERIALIZABLE_TYPES = {
+        ASRLiveTranscriptionFrame: "asr_live_transcription",
+        TranscriptionFrame: "transcription",
+    }
     SERIALIZABLE_FIELDS = {v: k for k, v in SERIALIZABLE_TYPES.items()}
 
     def serialize(self, frame: Frame) -> str | bytes | None:
@@ -115,6 +119,15 @@ if __name__ == "__main__":
             is_final=True,
             start_at_s=round(0.999111, 6),
             cur_at_s=round(2.933, 3),
+            end_at_s=round(10.711, 3),
+        ),
+        TranscriptionFrame(
+            text="one two three four five six seven eight nine zero",
+            user_id="uid",
+            timestamp="2025-08-28T04:48:58.428+00:00",
+            language=Language("en"),
+            speech_id=110,
+            start_at_s=round(0.999111, 6),
             end_at_s=round(10.711, 3),
         ),
     ]

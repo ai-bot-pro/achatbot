@@ -94,7 +94,6 @@ class AudioVADInputProcessor(InputProcessor):
             try:
                 frame: AudioRawFrame = await asyncio.wait_for(self._audio_in_queue.get(), timeout=1)
 
-                audio_passthrough = True
 
                 previous_vad_state = vad_state
                 # Check VAD and push event if necessary. We just care about
@@ -102,17 +101,16 @@ class AudioVADInputProcessor(InputProcessor):
                 if self._params.vad_enabled:
                     vad_state_frame = await self._handle_vad(frame.audio, vad_state)
                     vad_state = vad_state_frame.state
-                    audio_passthrough = self._params.vad_audio_passthrough
 
                 if self._params.turn_analyzer:
                     await self._run_turn_analyzer(frame, vad_state, previous_vad_state)
 
                 # Push audio downstream if passthrough.
-                if audio_passthrough:
-                    if self._params.vad_enabled:
-                        await self.push_frame(vad_state_frame)
-                    else:
-                        await self.queue_frame(frame)
+                if self._params.vad_enabled and self._params.vad_audio_passthrough :
+                    if len(vad_state_frame.audio) > 0:
+                        await self.queue_frame(vad_state_frame)
+                else:
+                    await self.queue_frame(frame)
             except asyncio.TimeoutError:
                 continue
             except asyncio.CancelledError:
@@ -219,7 +217,7 @@ class AudioVADInputProcessor(InputProcessor):
                 await self._stop_interruption()
 
         if push_frame:
-            await self.push_frame(frame)
+            await self.queue_frame(frame)
 
     #
     # Process frame
