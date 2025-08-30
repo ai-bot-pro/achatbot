@@ -158,7 +158,7 @@ IMAGE_GPU=L4 LLM_TAG=llm_vllm_generator \
     modal serve src/fastapi_ws_translate_bot_serve.py
 
 
-modal volume put config ./config/bots/fastapi_websocket_asr_translate_vllm_sglang_bot.json /bots/ -f
+modal volume put config ./config/bots/fastapi_websocket_asr_translate_sglang_bot.json /bots/ -f
 
 IMAGE_GPU=L4 LLM_TAG=llm_sglang_generator \
     ACHATBOT_VERSION=0.0.24 \
@@ -167,4 +167,5 @@ IMAGE_GPU=L4 LLM_TAG=llm_sglang_generator \
     
 # cold start fastapi websocket server
 curl -v -XGET "https://weedge--fastapi-ws-translate-bot-srv-app-dev.modal.run/health"
+
 """
