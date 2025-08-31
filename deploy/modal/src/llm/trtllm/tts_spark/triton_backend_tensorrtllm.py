@@ -31,6 +31,7 @@ trtllm_image = (
         "tensorrt-llm==0.17.0.post1",
         # "pynvml<12",  # avoid breaking change to pynvml version API for tensorrt_llm
         # "tensorrt==10.8.0.43",
+        "cuda-python==12.9.1",
         pre=True,
         extra_index_url="https://pypi.nvidia.com",
     )

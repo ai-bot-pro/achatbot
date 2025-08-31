@@ -247,6 +247,11 @@ class ILlmGenerator(ABC):
         """return token ids async generator"""
         raise NotImplementedError("must be implemented in the child class")
 
+    @abstractmethod
+    def close(self):
+        """close generator"""
+        raise NotImplementedError("must be implemented in the child class")
+
 
 class ILlm(ABC):
     @abstractmethod

@@ -83,6 +83,9 @@ class FastdeployGenerator(BaseLLM, ILlmGenerator):
             return
         logging.info(f"FastDeploy LLM engine initialized!")
 
+    def close(self):
+        logging.info(f"{self.__class__.__name__} close")
+
     async def generate(self, session: Session, **kwargs):
         """
         Generate new tokens using the LLM model.

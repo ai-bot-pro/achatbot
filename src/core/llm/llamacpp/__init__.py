@@ -135,6 +135,7 @@ class LLamacppLLM(BaseLLM, ILlm):
 
     def close(self):
         self.model.close()
+        logging.info(f"{self.__class__.__name__} close")
 
     def encode(self, text: str | bytes):
         return self.model.tokenize(text.encode() if isinstance(text, str) else text)

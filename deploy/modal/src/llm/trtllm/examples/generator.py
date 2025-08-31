@@ -18,29 +18,33 @@ app_name = "qwen2.5-0.5B"
 
 app = modal.App("trtllm-generator")
 
+GIT_TAG_OR_HASH = "0.18.0"
+
 trtllm_image = (
     # https://nvidia.github.io/TensorRT-LLM/release-notes.html
     # https://catalog.ngc.nvidia.com/orgs/nvidia/teams/tensorrt-llm/containers/release/tags
+    # https://modal.com/docs/examples/trtllm_latency
     modal.Image.from_registry(
-        "nvcr.io/nvidia/tensorrt-llm/release:0.21.0",
-        add_python="3.12",
+        "nvidia/cuda:12.8.1-devel-ubuntu22.04",
+        add_python="3.12",  # TRT-LLM requires Python 3.12
     )
-    # .apt_install(
-    #    "git", "git-lfs", "openmpi-bin", "libopenmpi-dev", "wget"
-    # )  # OpenMPI for distributed communication
-    # .pip_install(
-    #    "tensorrt-llm==0.21.0",
-    #    # "pynvml<12",  # avoid breaking change to pynvml version API for tensorrt_llm
-    #    # "tensorrt==10.8.0.43",
-    #    pre=True,
-    #    extra_index_url="https://pypi.nvidia.com",
-    # )
-    .env({"TORCH_CUDA_ARCH_LIST": "8.0 8.9 9.0"})
+    .entrypoint([])  # remove verbose logging by base image on entry
+    .apt_install("openmpi-bin", "libopenmpi-dev", "git", "git-lfs", "wget")
+    .pip_install(
+        f"tensorrt-llm=={GIT_TAG_OR_HASH}",
+        "pynvml<12",  # avoid breaking change to pynvml version API
+        "flashinfer-python==0.2.5",
+        "cuda-python==12.9.1",
+        pre=True,
+        extra_index_url="https://pypi.nvidia.com",
+    )
+    .env({"TORCH_CUDA_ARCH_LIST": "8.0 8.9 9.0 9.0a"})
 )
 
 achatbot_trtllm_image = trtllm_image.pip_install(
-    "achatbot==0.0.23",
-    extra_index_url="https://pypi.org/simple/",
+    "achatbot==0.0.24.post33",
+    # extra_index_url="https://pypi.org/simple/",
+    extra_index_url="https://test.pypi.org/simple/",
 ).env(
     {
         "TLLM_LLMAPI_BUILD_CACHE": "1",
@@ -99,6 +103,8 @@ def run_sync():
     for output in outputs:
         print(output)
 
+    llm.shutdown()
+
 
 @app.function(
     gpu=os.getenv("IMAGE_GPU", "L4"),
@@ -135,6 +141,8 @@ async def run_async_stream():
         generator = llm.generate_async(prompt, sampling_params, streaming=True)
         async for output in generator:
             print(output)
+
+    llm.shutdown()
 
 
 @app.function(
@@ -192,6 +200,8 @@ async def run_async_batch_stream():
     ]
     await asyncio.gather(*tasks)
 
+    llm.shutdown()
+
 
 @app.function(
     gpu=os.getenv("IMAGE_GPU", "L4"),
@@ -206,7 +216,10 @@ async def run_async_batch_stream():
     scaledown_window=1200,
     max_containers=100,
 )
-def runner_stream():
+def runner_stream(
+    app_name: str = "qwen2.5-0.5B",
+    trt_dtype: str = "bfloat16",
+):
     """
     https://github.com/NVIDIA/TensorRT-LLM/blob/main/examples/run.py#L548
     """
@@ -248,7 +261,7 @@ def runner_stream():
     # load tensorrt engine
     # https://nvidia.github.io/TensorRT-LLM/python-api/tensorrt_llm.runtime.html#tensorrt_llm.runtime.ModelRunner.from_dir
     engine = ModelRunner.from_dir(
-        engine_dir=os.path.join(TRT_MODEL_DIR, "qwen2.5-0.5B", "trt_engines_bfloat16"),
+        engine_dir=os.path.join(TRT_MODEL_DIR, app_name, f"trt_engines_{trt_dtype}"),
         rank=tensorrt_llm.mpi_rank(),  # this will need to be adjusted to use multiple GPUs
         max_output_len=100,
         debug_mode=True,
@@ -310,7 +323,10 @@ def runner_stream():
     scaledown_window=1200,
     max_containers=100,
 )
-def runner_batch_stream():
+def runner_batch_stream(
+    app_name: str = "qwen2.5-0.5B",
+    trt_dtype: str = "bfloat16",
+):
     """
     https://github.com/NVIDIA/TensorRT-LLM/blob/main/examples/run.py#L548
     """
@@ -503,7 +519,7 @@ def runner_batch_stream():
     # load tensorrt engine
     # https://nvidia.github.io/TensorRT-LLM/python-api/tensorrt_llm.runtime.html#tensorrt_llm.runtime.ModelRunner.from_dir
     engine = ModelRunner.from_dir(
-        engine_dir=os.path.join(TRT_MODEL_DIR, "qwen2.5-0.5B", "trt_engines_bfloat16"),
+        engine_dir=os.path.join(TRT_MODEL_DIR, app_name, f"trt_engines_{trt_dtype}"),
         rank=tensorrt_llm.mpi_rank(),  # this will need to be adjusted to use multiple GPUs
         max_output_len=100,
         debug_mode=False,
@@ -583,6 +599,8 @@ async def run_achatbot_generator():
     import time
     import subprocess
 
+    from transformers import AutoTokenizer, GenerationConfig
+
     subprocess.run("nvidia-smi --version", shell=True)
     subprocess.run("nvcc --version", shell=True)
     from achatbot.core.llm.tensorrt_llm.generator import (
@@ -593,7 +611,9 @@ async def run_achatbot_generator():
     )
     from achatbot.common.types import SessionCtx
     from achatbot.common.session import Session
-    from transformers import AutoTokenizer, GenerationConfig
+    from achatbot.common.logger import Logger
+
+    Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
 
     model = os.path.join(HF_MODEL_DIR, MODEL_ID)
     generator = TrtLLMGenerator(
@@ -637,6 +657,8 @@ async def run_achatbot_generator():
         print(session.ctx.client_id, gen_texts)
     # asyncio.run(run())
 
+    generator.close()
+
 
 @app.function(
     gpu=os.getenv("IMAGE_GPU", "L4"),
@@ -651,11 +673,16 @@ async def run_achatbot_generator():
     scaledown_window=1200,
     max_containers=100,
 )
-async def run_achatbot_runner_generator():
+async def run_achatbot_runner_generator(
+    app_name: str = "qwen2.5-0.5B",
+    trt_dtype: str = "bfloat16",
+):
     import uuid
     import os
     import asyncio
     import time
+
+    from transformers import AutoTokenizer, GenerationConfig
 
     from achatbot.core.llm.tensorrt_llm.generator import (
         TrtLLMRunnerGenerator,
@@ -665,10 +692,13 @@ async def run_achatbot_runner_generator():
     )
     from achatbot.common.types import SessionCtx
     from achatbot.common.session import Session
-    from transformers import AutoTokenizer, GenerationConfig
+    from achatbot.common.logger import Logger
+
+    Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
+
 
     model = os.path.join(HF_MODEL_DIR, MODEL_ID)
-    engine_dir = os.path.join(TRT_MODEL_DIR, "qwen2.5-0.5B", "trt_engines_bfloat16")
+    engine_dir = os.path.join(TRT_MODEL_DIR, app_name, f"trt_engines_{trt_dtype}")
     generator = TrtLLMRunnerGenerator(
         **TensorRTLLMRunnerEngineArgs(
             serv_args=TensorRTLLMRunnerArgs(engine_dir=engine_dir).__dict__
@@ -713,6 +743,8 @@ async def run_achatbot_runner_generator():
         print(session.ctx.client_id, gen_texts)
     # asyncio.run(run())
 
+    generator.close()
+
 
 """
 # llmapi (LLM load hf model, convert to tensorrt, build tensorrt engine, load tensorrt engine)
@@ -721,11 +753,23 @@ modal run src/llm/trtllm/examples/generator.py::run_async_stream (stream | singl
 modal run src/llm/trtllm/examples/generator.py::run_async_batch_stream (stream | batch prompts async processing | latency+throughput) (multiple prompts/request or one prompt/request)
 
 # runner (load tensorrt engine to run generate)
-modal run src/llm/trtllm/examples/generator.py::runner_stream
-modal run src/llm/trtllm/examples/generator.py::runner_batch_stream
+modal run src/llm/trtllm/examples/compile_model.py \
+    --app-name "qwen2.5-0.5B" \
+    --hf-repo-dir "Qwen/Qwen2.5-0.5B" \
+    --trt-dtype "bfloat16" \
+    --convert-other-args "" \
+    --compile-other-args "--max_batch_size 16 --max_num_tokens 32768"
+modal run src/llm/trtllm/examples/generator.py::runner_stream \
+    --app-name "qwen2.5-0.5B" \
+    --trt-dtype "bfloat16"
+modal run src/llm/trtllm/examples/generator.py::runner_batch_stream \
+    --app-name "qwen2.5-0.5B" \
+    --trt-dtype "bfloat16"
 
 # achatbot
 modal run src/llm/trtllm/examples/generator.py::run_achatbot_generator
-modal run src/llm/trtllm/examples/generator.py::run_achatbot_runner_generator
+modal run src/llm/trtllm/examples/generator.py::run_achatbot_runner_generator \
+    --app-name "qwen2.5-0.5B" \
+    --trt-dtype "bfloat16"
 
 """

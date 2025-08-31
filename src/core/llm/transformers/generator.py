@@ -85,6 +85,9 @@ class TransformersGenerator(TransformersBaseLLM, ILlmGenerator):
             streamer=streamer,
         )
 
+    def close(self):
+        logging.info(f"{self.__class__.__name__} close")
+
     # @torch.no_grad()
     @torch.inference_mode()
     async def generate(self, session: Session, **kwargs):

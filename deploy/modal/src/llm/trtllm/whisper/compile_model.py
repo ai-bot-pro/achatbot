@@ -25,6 +25,7 @@ trtllm_image = (
     .pip_install(
         f"tensorrt-llm=={GIT_TAG_OR_HASH}",
         # "pynvml<12",  # avoid breaking change to pynvml version API for tensorrt_llm
+        "cuda-python==12.9.1",
         pre=True,
         extra_index_url="https://pypi.nvidia.com",
     )
@@ -139,6 +140,7 @@ def trtllm_build(
     print(cmd)
     subprocess.run(cmd.strip().split(" "), cwd="/", check=True)
 
+    trt_model_vol.commit()
 
 """
 # NOTE: 

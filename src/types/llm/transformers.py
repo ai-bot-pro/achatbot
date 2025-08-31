@@ -129,3 +129,8 @@ class TransformersImageLMArgs(TransformersLMArgs):
 
     def to_dict(self) -> dict:
         return super().to_dict()
+
+
+if __name__ == "__main__":
+    args = TransformersLMArgs()
+    print(args.to_dict().items())

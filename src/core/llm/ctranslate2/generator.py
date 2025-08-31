@@ -51,6 +51,9 @@ class Ctranslate2Generator(BaseLLM, ILlmGenerator):
             tensor_parallel=self.serv_args.tensor_parallel,
         )
 
+    def close(self):
+        logging.info(f"{self.__class__.__name__} close")
+
     async def generate(self, session: Session, **kwargs):
         assert session.ctx.state["tokens"] is not None
         assert isinstance(session.ctx.state["tokens"], list)
