@@ -91,7 +91,7 @@ class DailyBot(DailyRoomBot):
         transport.add_event_handler("on_participant_left", self.on_participant_left)
         transport.add_event_handler("on_call_state_updated", self.on_call_state_updated)
 
-        await PipelineRunner().run(self.task)
+        await PipelineRunner(handle_sigint=self.args.handle_sigint).run(self.task)
 
     async def on_first_participant_say_hi(self, transport: DailyTransport, participant):
         self.session.set_client_id(participant["id"])

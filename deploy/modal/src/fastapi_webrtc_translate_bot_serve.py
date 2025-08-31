@@ -3,6 +3,8 @@ import os
 
 achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.24")
 LLM_TAG = os.getenv("LLM_TAG", "llm_ctranslate2_generator")
+# fastapi_webrtc_bots | fastapi_webrtc_single_bot server
+SERVER_TAG = os.getenv("SERVER_TAG", "fastapi_webrtc_bots")
 img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
     modal.Image.from_registry(
@@ -15,6 +17,7 @@ img = (
         [
             "achatbot["
             "fastapi_bot_server,"
+            "livekit,livekit-api,daily,agora,"
             "silero_vad_analyzer,"
             "sense_voice_asr,deepgram_asr_processor,"
             "tts_edge,"
@@ -24,6 +27,13 @@ img = (
         extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
     )
     .pip_install("onnxruntime", "funasr_onnx")
+    .env(
+        {
+            "ACHATBOT_PKG": "1",
+            "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
+            "ACHATBOT_TASK_TYPE": "asyncio",
+        }
+    )
 )
 
 if LLM_TAG == "llm_ctranslate2_generator":
@@ -37,6 +47,7 @@ if LLM_TAG == "llm_vllm_generator":
         "transformers==4.51.3",
     ).env(
         {
+            # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#gpu-feature-list
             "TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.9 9.0 10.0",
             "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
             "VLLM_USE_V1": os.getenv("VLLM_USE_V1", "1"),
@@ -55,6 +66,7 @@ if LLM_TAG == "llm_sglang_generator":
         .apt_install("libnuma-dev")
         .env(
             {
+                # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#gpu-feature-list
                 "TORCH_CUDA_ARCH_LIST": "7.5 8.0 8.6 8.9 9.0 10.0",
             }
         )
@@ -62,26 +74,24 @@ if LLM_TAG == "llm_sglang_generator":
 
 
 # img = img.pip_install(
-#    f"achatbot==0.0.24.post26",
+#    f"achatbot==0.0.24.post29",
 #    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
 # )
 
 img = img.env(
     {
-        "ACHATBOT_PKG": "1",
-        "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
+        "SERVER_TAG": SERVER_TAG,
         "CONFIG_FILE": os.getenv(
             "CONFIG_FILE",
-            "/root/.achatbot/config/bots/fastapi_websocket_asr_translate_tts_bot.json",
+            "/root/.achatbot/config/bots/fastapi_webrtc_asr_translate_ctranslate2_tts_bot.json",
+            # "/root/.achatbot/config/bots/fastapi_webrtc_asr_translate_vllm_tts_bot.json",
+            # "/root/.achatbot/config/bots/fastapi_webrtc_asr_translate_sglang_tts_bot.json",
         ),
-        # "TQDM_DISABLE": "1",
-        # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#gpu-feature-list
     }
 )
 
-
 # ----------------------- app -------------------------------
-app = modal.App("fastapi_ws_translate_bot")
+app = modal.App("fastapi_webrtc_translate_bot")
 
 HF_MODEL_DIR = "/root/.achatbot/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
@@ -91,8 +101,6 @@ TORCH_CACHE_DIR = "/root/.cache/torch"
 torch_cache_vol = modal.Volume.from_name("torch_cache", create_if_missing=True)
 CONFIG_DIR = "/root/.achatbot/config"
 config_vol = modal.Volume.from_name("config", create_if_missing=True)
-VLLM_CACHE_DIR = "/root/.cache/vllm"
-vllm_cache_vol = modal.Volume.from_name("vllm-cache", create_if_missing=True)
 
 
 # 128 MiB of memory and 0.125 CPU cores by default container runtime
@@ -105,7 +113,6 @@ vllm_cache_vol = modal.Volume.from_name("vllm-cache", create_if_missing=True)
         ASSETS_DIR: assets_dir,
         TORCH_CACHE_DIR: torch_cache_vol,
         CONFIG_DIR: config_vol,
-        VLLM_CACHE_DIR: vllm_cache_vol,
     },
     cpu=2.0,
     timeout=1200,  # default 300s
@@ -134,38 +141,66 @@ class Srv:
 
     @modal.asgi_app()
     def app(self):
-        from achatbot.cmd.websocket.server.fastapi_ws_bot_serve import app as fastapi_app
+        SERVER_TAG = os.getenv("SERVER_TAG", "fastapi_webrtc_bots")
+        if SERVER_TAG == "fastapi_webrtc_single_bot":
+            from achatbot.cmd.http.server.fastapi_room_bot_serve import app as fastapi_app
+
+            print("run fastapi_room_bot_serve")
+        else:
+            from achatbot.cmd.http.server.fastapi_daily_bot_serve import app as fastapi_app
+
+            print("run fastapi_daily_bot_serve")
 
         return fastapi_app
 
 
 """
-modal volume create config
-
-modal volume put config ./config/bots/fastapi_websocket_asr_translate_tts_bot.json /bots/ -f
+# 1. run webrtc room http bots server
 
 IMAGE_GPU=L4 LLM_TAG=llm_ctranslate2_generator \
     ACHATBOT_VERSION=0.0.24 \
-    CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate_tts_bot.json \
-    modal serve src/fastapi_ws_translate_bot_serve.py
-
-
-modal volume put config ./config/bots/fastapi_websocket_asr_translate_vllm_tts_bot.json /bots/ -f
+    modal serve src/fastapi_webrtc_translate_bot_serve.py
 
 IMAGE_GPU=L4 LLM_TAG=llm_vllm_generator \
     ACHATBOT_VERSION=0.0.24 \
-    CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate_vllm_tts_bot.json \
-    modal serve src/fastapi_ws_translate_bot_serve.py
-
-
-modal volume put config ./config/bots/fastapi_websocket_asr_translate_sglang_bot.json /bots/ -f
+    modal serve src/fastapi_webrtc_translate_bot_serve.py
 
 IMAGE_GPU=L4 LLM_TAG=llm_sglang_generator \
     ACHATBOT_VERSION=0.0.24 \
-    CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate_sglang_tts_bot.json \
-    modal serve src/fastapi_ws_translate_bot_serve.py
-    
-# cold start fastapi websocket server
-curl -v -XGET "https://weedge--fastapi-ws-translate-bot-srv-app-dev.modal.run/health"
+    modal serve src/fastapi_webrtc_translate_bot_serve.py
 
+
+
+# 2. run webrtc room http signal bot server
+
+modal volume create config
+
+modal volume put config ./config/bots/fastapi_webrtc_asr_translate_ctranslate2_tts_bot.json /bots/ -f
+
+IMAGE_GPU=L4 SERVER_TAG=fastapi_webrtc_single_bot \
+    LLM_TAG=llm_ctranslate2_generator \
+    ACHATBOT_VERSION=0.0.24 \
+    CONFIG_FILE=/root/.achatbot/config/bots/fastapi_webrtc_asr_translate_ctranslate2_tts_bot.json \
+    modal serve src/fastapi_webrtc_translate_bot_serve.py
+
+
+modal volume put config ./config/bots/fastapi_webrtc_asr_translate_vllm_tts_bot.json /bots/ -f
+
+IMAGE_GPU=L4 SERVER_TAG=fastapi_webrtc_single_bot \
+    LLM_TAG=llm_vllm_generator \
+    ACHATBOT_VERSION=0.0.24 \
+    CONFIG_FILE=/root/.achatbot/config/bots/fastapi_webrtc_asr_translate_vllm_tts_bot.json \
+    modal serve src/fastapi_webrtc_translate_bot_serve.py
+
+
+modal volume put config ./config/bots/fastapi_webrtc_asr_translate_sglang_bot.json /bots/ -f
+
+IMAGE_GPU=L4 SERVER_TAG=fastapi_webrtc_single_bot \
+    LLM_TAG=llm_sglang_generator \
+    ACHATBOT_VERSION=0.0.24 \
+    CONFIG_FILE=/root/.achatbot/config/bots/fastapi_webrtc_asr_translate_sglang_tts_bot.json \
+    modal serve src/fastapi_webrtc_translate_bot_serve.py
+    
+# cold start fastapi webrtc http server
+curl -v -XGET "https://weedge--fastapi-ws-translate-bot-srv-app-dev.modal.run/health"
 """

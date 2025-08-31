@@ -70,14 +70,14 @@ class AgoraChannel(EngineClass, IRoomManager):
 
         try:
             res = TokenPaser.is_expired(token)
-            if res is False:
+            if res is True:
                 return False
+
+            room = await self.get_room(room_name)
+            if not room:
+                return False
+
+            return True
         except Exception as e:
             logging.error(f"check_valid_room error: {e}")
             return False
-
-        room = await self.get_room(room_name)
-        if not room:
-            return False
-
-        return True

@@ -3,6 +3,7 @@ import logging
 import asyncio
 import sys
 import uuid
+import signal
 
 from apipeline.frames import CancelFrame
 from apipeline.pipeline.task import PipelineTask
@@ -119,6 +120,7 @@ class AIBot(IBot):
         if self.runner:
             self.runner.cancel()
 
+
     async def async_run(self):
         try:
             await self.arun()
@@ -134,6 +136,13 @@ class AIBot(IBot):
                 await self.task.queue_frame(CancelFrame())
         except Exception as e:
             logging.error(f"run error: {e}", exc_info=True)
+        finally:
+            if self.args.handle_sigint is True:
+                loop = asyncio.get_running_loop()
+                loop.remove_signal_handler(signal.SIGINT)
+                loop.remove_signal_handler(signal.SIGTERM)
+            self.cancel()
+            logging.info(f"{__name__} task run is Done!")
 
     async def arun(self):
         pass
