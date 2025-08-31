@@ -641,7 +641,8 @@ async def run_achatbot_generator():
         session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
         tokens = tokenizer(case["prompt"])
         session.ctx.state["token_ids"] = tokens["input_ids"]
-        gen_kwargs = {**generation_config, **case["kwargs"], **tokens}
+        # gen_kwargs = {**generation_config, **case["kwargs"], **tokens}
+        gen_kwargs = {**case["kwargs"]}
         print("gen_kwargs:", gen_kwargs)
         first = True
         start_time = time.perf_counter()
@@ -695,7 +696,6 @@ async def run_achatbot_runner_generator(
     from achatbot.common.logger import Logger
 
     Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
-
 
     model = os.path.join(HF_MODEL_DIR, MODEL_ID)
     engine_dir = os.path.join(TRT_MODEL_DIR, app_name, f"trt_engines_{trt_dtype}")

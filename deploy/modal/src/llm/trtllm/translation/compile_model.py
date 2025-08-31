@@ -104,13 +104,6 @@ modal run src/llm/trtllm/translation/compile_model.py \
     --convert-other-args "" \
     --compile-other-args "--max_batch_size 16 --max_num_tokens 16384"
 
-modal run src/llm/trtllm/translation/compile_model.py \
-    --app-name "seed-x" \
-    --hf-repo-dir "ByteDance-Seed/Seed-X-PPO-7B" \
-    --trt-dtype "bfloat16" \
-    --convert-other-args "" \
-    --compile-other-args "--max_batch_size 16 --max_num_tokens 16384"
-
 """
 
 

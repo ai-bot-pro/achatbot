@@ -43,7 +43,7 @@ img = (
 )
 
 img = img.pip_install(
-    "achatbot==0.0.24.post35",
+    "achatbot==0.0.24.post36",
     # extra_index_url="https://pypi.org/simple/",
     extra_index_url="https://test.pypi.org/simple/",
 ).env(
@@ -100,7 +100,10 @@ async def run_achatbot_generator():
     Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
 
     generator = TrtLLMGenerator(
-        **TensorRTLLMEngineArgs(serv_args=LlmArgs(model=model_path).to_dict()).__dict__,
+        **TensorRTLLMEngineArgs(
+            serv_args=LlmArgs(model=model_path).to_dict(),
+            gen_args=LMGenerateArgs(lm_gen_stops=None).__dict__,
+        ).__dict__,
     )
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     generation_config = {}
@@ -113,12 +116,12 @@ async def run_achatbot_generator():
         # without CoT
         {
             "prompt": "Translate the following English sentence into Chinese:\nMay the force be with you <zh>",
-            "kwargs": {"max_new_tokens": 30, "stop_ids": [2], "stop_tokens": None},
+            "kwargs": {"max_new_tokens": 30, "stop_ids": [2]},
         },
         # with CoT
         {
             "prompt": "Translate the following English sentence into Chinese and explain it in detail:\nMay the force be with you <zh>",
-            "kwargs": {"max_new_tokens": 512, "stop_ids": [2], "stop_tokens": None},
+            "kwargs": {"max_new_tokens": 512, "stop_ids": [2]},
         },
     ]
 
@@ -128,9 +131,9 @@ async def run_achatbot_generator():
         session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
         session.ctx.state["token_ids"] = tokenizer.encode("hello, my name is")
         tokens = tokenizer(case["prompt"])
-        session.ctx.state["token_ids"] = tokens["input_ids"]
+        session.ctx.state["token_ids"] = tokens.pop("input_ids")
         # gen_kwargs = {**generation_config, **case["kwargs"], **tokens}
-        gen_kwargs = {**case["kwargs"], **tokens}
+        gen_kwargs = case["kwargs"]
         print("gen_kwargs:", gen_kwargs)
         first = True
         start_time = time.perf_counter()
