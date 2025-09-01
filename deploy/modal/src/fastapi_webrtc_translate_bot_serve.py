@@ -73,7 +73,7 @@ if LLM_TAG == "llm_sglang_generator":
     )
 
 if LLM_TAG in ["llm_trtllm_generator", "llm_trtllm_runner_generator"]:
-    GIT_TAG_OR_HASH = os.getenv("GIT_TAG_OR_HASH", "0.18.0")
+    GIT_TAG_OR_HASH = os.getenv("GIT_TAG_OR_HASH", "0.18.0")  # 0.18.0 don't support 10.0a+
     img = (
         img.entrypoint([])  # remove verbose logging by base image on entry
         .apt_install("openmpi-bin", "libopenmpi-dev")
@@ -88,10 +88,10 @@ if LLM_TAG in ["llm_trtllm_generator", "llm_trtllm_runner_generator"]:
         .env({"TORCH_CUDA_ARCH_LIST": "8.0 8.9 9.0 9.0a 10.0"})
     )
 
-img = img.pip_install(
-    f"achatbot==0.0.24.post36",
-    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
-)
+# img = img.pip_install(
+#    f"achatbot==0.0.24.post1",
+#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+# )
 
 img = img.env(
     {
@@ -102,6 +102,7 @@ img = img.env(
             # "/root/.achatbot/config/bots/fastapi_webrtc_asr_translate_vllm_tts_bot.json",
             # "/root/.achatbot/config/bots/fastapi_webrtc_asr_translate_sglang_tts_bot.json",
             # "/root/.achatbot/config/bots/fastapi_webrtc_asr_translate_trtllm_tts_bot.json",
+            # "/root/.achatbot/config/bots/fastapi_webrtc_asr_translate_trtllm_runner_tts_bot.json",
         ),
     }
 )
@@ -118,6 +119,11 @@ torch_cache_vol = modal.Volume.from_name("torch_cache", create_if_missing=True)
 CONFIG_DIR = "/root/.achatbot/config"
 config_vol = modal.Volume.from_name("config", create_if_missing=True)
 
+TRT_MODEL_CACHE_DIR = "/tmp/.cache/tensorrt_llm/llmapi/"
+trt_model_cache_vol = modal.Volume.from_name("triton_trtllm_cache_models", create_if_missing=True)
+TRT_MODEL_DIR = "/root/.achatbot/trt_models"
+trt_model_vol = modal.Volume.from_name("triton_trtllm_models", create_if_missing=True)
+
 
 # 128 MiB of memory and 0.125 CPU cores by default container runtime
 @app.cls(
@@ -129,6 +135,8 @@ config_vol = modal.Volume.from_name("config", create_if_missing=True)
         ASSETS_DIR: assets_dir,
         TORCH_CACHE_DIR: torch_cache_vol,
         CONFIG_DIR: config_vol,
+        TRT_MODEL_CACHE_DIR: trt_model_cache_vol,
+        TRT_MODEL_DIR: trt_model_vol,
     },
     cpu=2.0,
     timeout=1200,  # default 300s
@@ -186,10 +194,10 @@ IMAGE_GPU=L4 LLM_TAG=llm_sglang_generator \
     modal serve src/fastapi_webrtc_translate_bot_serve.py
 
 IMAGE_GPU=L4 LLM_TAG=llm_trtllm_generator \
-    ACHATBOT_VERSION=0.0.24 \
+    ACHATBOT_VERSION=0.0.24.post1 \
     modal serve src/fastapi_webrtc_translate_bot_serve.py
 IMAGE_GPU=L4 LLM_TAG=llm_trtllm_runner_generator \
-    ACHATBOT_VERSION=0.0.24 \
+    ACHATBOT_VERSION=0.0.24.post1 \
     modal serve src/fastapi_webrtc_translate_bot_serve.py
 
 
@@ -216,7 +224,7 @@ IMAGE_GPU=L4 SERVER_TAG=fastapi_webrtc_single_bot \
     modal serve src/fastapi_webrtc_translate_bot_serve.py
 
 
-modal volume put config ./config/bots/fastapi_webrtc_asr_translate_sglang_bot.json /bots/ -f
+modal volume put config ./config/bots/fastapi_webrtc_asr_translate_sglang_tts_bot.json /bots/ -f
 
 IMAGE_GPU=L4 SERVER_TAG=fastapi_webrtc_single_bot \
     LLM_TAG=llm_sglang_generator \
@@ -224,14 +232,23 @@ IMAGE_GPU=L4 SERVER_TAG=fastapi_webrtc_single_bot \
     CONFIG_FILE=/root/.achatbot/config/bots/fastapi_webrtc_asr_translate_sglang_tts_bot.json \
     modal serve src/fastapi_webrtc_translate_bot_serve.py
 
-modal volume put config ./config/bots/fastapi_webrtc_asr_translate_trtllm_bot.json /bots/ -f
+modal volume put config ./config/bots/fastapi_webrtc_asr_translate_trtllm_tts_bot.json /bots/ -f
+modal volume put config ./config/bots/fastapi_webrtc_asr_translate_trtllm_runner_tts_bot.json /bots/ -f
 
 IMAGE_GPU=L4 SERVER_TAG=fastapi_webrtc_single_bot \
     LLM_TAG=llm_trtllm_generator \
-    ACHATBOT_VERSION=0.0.24 \
+    ACHATBOT_VERSION=0.0.24.post1 \
     CONFIG_FILE=/root/.achatbot/config/bots/fastapi_webrtc_asr_translate_trtllm_tts_bot.json \
+    modal serve src/fastapi_webrtc_translate_bot_serve.py
+IMAGE_GPU=L4 SERVER_TAG=fastapi_webrtc_single_bot \
+    LLM_TAG=llm_trtllm_runner_generator \
+    ACHATBOT_VERSION=0.0.24.post1 \
+    CONFIG_FILE=/root/.achatbot/config/bots/fastapi_webrtc_asr_translate_trtllm_runner_tts_bot.json \
     modal serve src/fastapi_webrtc_translate_bot_serve.py
     
 # cold start fastapi webrtc http server
 curl -v -XGET "https://weedge--fastapi-ws-translate-bot-srv-app-dev.modal.run/health"
+curl -XPOST "https://weedge--fastapi-webrtc-translate-bot-srv-app-dev.modal.run/bot_join/chat-room/AgoraASRTranslateTTSBot"
+curl -XPOST "https://weedge--fastapi-webrtc-translate-bot-srv-app-dev.modal.run/bot_join/chat-room/DailyASRTranslateTTSBot"
+curl -XPOST "https://weedge--fastapi-webrtc-translate-bot-srv-app-dev.modal.run/bot_join/chat-room/LivekitASRTranslateTTSBot"
 """

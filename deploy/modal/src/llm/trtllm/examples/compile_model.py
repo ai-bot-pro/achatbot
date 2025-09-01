@@ -51,7 +51,7 @@ def trtllm_build(
     convert_script_url: str = CONVERSION_SCRIPT_URL,
     convert_other_args: str = "",
     compile_other_args: str = "",
-) -> str:
+) -> None:
     import subprocess
 
     cmd = f"pip show tensorrt".split(" ")

@@ -43,9 +43,8 @@ img = (
 )
 
 img = img.pip_install(
-    "achatbot==0.0.24.post36",
-    # extra_index_url="https://pypi.org/simple/",
-    extra_index_url="https://test.pypi.org/simple/",
+    "achatbot==0.0.24.post1",
+    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
 ).env(
     {
         "TLLM_LLMAPI_BUILD_CACHE": "1",
@@ -86,6 +85,7 @@ with img.imports():
 )
 async def run_achatbot_generator():
     from transformers import AutoTokenizer, GenerationConfig
+    from tensorrt_llm.llmapi import KvCacheConfig
 
     from achatbot.core.llm.tensorrt_llm.generator import (
         TrtLLMGenerator,
@@ -101,7 +101,11 @@ async def run_achatbot_generator():
 
     generator = TrtLLMGenerator(
         **TensorRTLLMEngineArgs(
-            serv_args=LlmArgs(model=model_path).to_dict(),
+            serv_args=LlmArgs(
+                model=model_path,
+                # kv_cache_config=KvCacheConfig(free_gpu_memory_fraction=0.7),
+                kv_cache_config={"free_gpu_memory_fraction": 0.7},
+            ).to_dict(),
             gen_args=LMGenerateArgs(lm_gen_stops=None).__dict__,
         ).__dict__,
     )
@@ -129,7 +133,6 @@ async def run_achatbot_generator():
     # session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
     for case in prompt_cases:
         session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
-        session.ctx.state["token_ids"] = tokenizer.encode("hello, my name is")
         tokens = tokenizer(case["prompt"])
         session.ctx.state["token_ids"] = tokens.pop("input_ids")
         # gen_kwargs = {**generation_config, **case["kwargs"], **tokens}
@@ -212,7 +215,6 @@ async def run_achatbot_runner_generator(
     # session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
     for case in prompt_cases:
         session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
-        session.ctx.state["token_ids"] = tokenizer.encode("hello, my name is")
         tokens = tokenizer(case["prompt"])
         session.ctx.state["token_ids"] = tokens["input_ids"]
         # gen_kwargs = {**generation_config, **case["kwargs"], **tokens}

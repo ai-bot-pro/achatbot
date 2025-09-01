@@ -37,7 +37,8 @@ if LLM_TAG == "llm_vllm_generator":
         "transformers==4.51.3",
     ).env(
         {
-            "TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.9 9.0 10.0",
+            # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#gpu-feature-list
+            "TORCH_CUDA_ARCH_LIST": "8.0 8.6 8.9 9.0 9.0a 10.0",
             "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
             "VLLM_USE_V1": os.getenv("VLLM_USE_V1", "1"),
             "VLLM_WORKER_MULTIPROC_METHOD": "spawn",
@@ -55,16 +56,33 @@ if LLM_TAG == "llm_sglang_generator":
         .apt_install("libnuma-dev")
         .env(
             {
-                "TORCH_CUDA_ARCH_LIST": "7.5 8.0 8.6 8.9 9.0 10.0",
+                # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#gpu-feature-list
+                "TORCH_CUDA_ARCH_LIST": "7.5 8.0 8.6 8.9 9.0 9.0a 10.0",
             }
         )
     )
 
+if LLM_TAG in ["llm_trtllm_generator", "llm_trtllm_runner_generator"]:
+    GIT_TAG_OR_HASH = os.getenv("GIT_TAG_OR_HASH", "0.18.0")  # 0.18.0 don't support 10.0a+
+    img = (
+        img.entrypoint([])  # remove verbose logging by base image on entry
+        .apt_install("openmpi-bin", "libopenmpi-dev")
+        .pip_install(
+            f"tensorrt-llm=={GIT_TAG_OR_HASH}",
+            "pynvml<12",  # avoid breaking change to pynvml version API
+            "flashinfer-python==0.2.5",
+            "cuda-python==12.9.1",
+            pre=True,
+            extra_index_url="https://pypi.nvidia.com",
+        )
+        # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#gpu-feature-list
+        .env({"TORCH_CUDA_ARCH_LIST": "8.0 8.9 9.0 9.0a 10.0"})
+    )
 
-# img = img.pip_install(
-#    f"achatbot==0.0.24.post26",
-#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
-# )
+img = img.pip_install(
+    f"achatbot==0.0.24.post41",
+    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+)
 
 img = img.env(
     {
@@ -72,7 +90,11 @@ img = img.env(
         "LOG_LEVEL": os.getenv("LOG_LEVEL", "info"),
         "CONFIG_FILE": os.getenv(
             "CONFIG_FILE",
-            "/root/.achatbot/config/bots/fastapi_websocket_asr_translate_tts_bot.json",
+            "/root/.achatbot/config/bots/fastapi_websocket_asr_translate_ctranslate2_tts_bot.json",
+            # "/root/.achatbot/config/bots/fastapi_websocket_asr_translate_vllm_tts_bot.json",
+            # "/root/.achatbot/config/bots/fastapi_websocket_asr_translate_sglang_tts_bot.json",
+            # "/root/.achatbot/config/bots/fastapi_websocket_asr_translate_trtllm_tts_bot.json",
+            # "/root/.achatbot/config/bots/fastapi_websocket_asr_translate_trtllm_runner_tts_bot.json",
         ),
         # "TQDM_DISABLE": "1",
         # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#gpu-feature-list
@@ -142,11 +164,11 @@ class Srv:
 """
 modal volume create config
 
-modal volume put config ./config/bots/fastapi_websocket_asr_translate_tts_bot.json /bots/ -f
+modal volume put config ./config/bots/fastapi_websocket_asr_translate_ctranslate2_tts_bot.json /bots/ -f
 
 IMAGE_GPU=L4 LLM_TAG=llm_ctranslate2_generator \
     ACHATBOT_VERSION=0.0.24 \
-    CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate_tts_bot.json \
+    CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate_ctranslate2_tts_bot.json \
     modal serve src/fastapi_ws_translate_bot_serve.py
 
 
@@ -164,8 +186,29 @@ IMAGE_GPU=L4 LLM_TAG=llm_sglang_generator \
     ACHATBOT_VERSION=0.0.24 \
     CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate_sglang_tts_bot.json \
     modal serve src/fastapi_ws_translate_bot_serve.py
+
+
+modal volume put config ./config/bots/fastapi_websocket_asr_translate_trtllm_tts_bot.json /bots/ -f
+
+IMAGE_GPU=L4 LLM_TAG=llm_trtllm_generator \
+    ACHATBOT_VERSION=0.0.24.post1 \
+    CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate_trtllm_tts_bot.json \
+    modal serve src/fastapi_ws_translate_bot_serve.py
+
+modal volume put config ./config/bots/fastapi_websocket_asr_translate_trtllm_runner_tts_bot.json /bots/ -f
+
+IMAGE_GPU=L4 LLM_TAG=llm_trtllm_runner_generator \
+    ACHATBOT_VERSION=0.0.24.post1 \
+    CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate_trtllm_runner_tts_bot.json \
+    modal serve src/fastapi_ws_translate_bot_serve.py
     
 # cold start fastapi websocket server
 curl -v -XGET "https://weedge--fastapi-ws-translate-bot-srv-app-dev.modal.run/health"
+
+# run websocket ui
+cd ui/websocket && python -m http.server
+# - access http://localhost:8000/translation   
+# - change url to wss://weedge--fastapi-ws-translate-bot-srv-app-dev.modal.run
+# - click `Start Audio` to speech translation with Translation bot
 
 """

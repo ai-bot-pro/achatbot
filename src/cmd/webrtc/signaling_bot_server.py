@@ -13,13 +13,14 @@ import uvicorn
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from src.cmd.bots.base import AIBot
 from src.services.webrtc_peer_connection import SmallWebRTCConnection, IceServer
 from src.cmd.bots.bot_loader import BotLoader
 from src.common.types import CONFIG_DIR
 from src.cmd.bots.base_small_webrtc import SmallWebrtcAIBot
-
+from src.cmd.http.server.help import APIResponse
 
 # Load environment variables
 load_dotenv(override=True)
@@ -72,6 +73,11 @@ app.add_middleware(
     allow_methods=["*"],  # 允许所有HTTP方法
     allow_headers=["*"],  # 允许所有HTTP头部
 )
+
+
+@app.get("/health")
+async def health():
+    return JSONResponse(APIResponse().model_dump())
 
 
 @app.post("/api/offer")
