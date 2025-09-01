@@ -9,6 +9,8 @@ from typing import Dict
 from fastapi import FastAPI, WebSocket
 from dotenv import load_dotenv
 from fastapi.websockets import WebSocketState
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from src.common.utils.thread_safe import ThreadSafeDict
 from src.cmd.bots.base import AIBot
@@ -17,7 +19,7 @@ from src.cmd.bots.base_fastapi_websocket_server import AIFastapiWebsocketBot
 from src.common.types import CONFIG_DIR
 from src.common.const import *
 from src.common.logger import Logger
-from src.cmd.http.server.fastapi_daily_bot_serve import ngrok_proxy
+from src.cmd.http.server.help import APIResponse, ngrok_proxy
 
 
 load_dotenv(override=True)
@@ -56,6 +58,19 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 允许所有来源，生产环境中应该限制为特定域名
+    allow_credentials=True,  # 允许携带凭证
+    allow_methods=["*"],  # 允许所有HTTP方法
+    allow_headers=["*"],  # 允许所有HTTP头部
+)
+
+
+@app.get("/health")
+async def health():
+    return JSONResponse(APIResponse().model_dump())
 
 
 @app.websocket("/")

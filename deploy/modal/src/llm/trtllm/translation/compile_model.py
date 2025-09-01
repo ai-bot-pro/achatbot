@@ -3,36 +3,34 @@ import modal
 
 app = modal.App("trtllm-compile")
 
+GIT_TAG_OR_HASH = "0.18.0"
+CONVERSION_SCRIPT_URL = f"https://raw.githubusercontent.com/NVIDIA/TensorRT-LLM/v{GIT_TAG_OR_HASH}/examples/llama/convert_checkpoint.py"
+
 trtllm_image = (
-    # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
+    # https://nvidia.github.io/TensorRT-LLM/release-notes.html
+    # https://catalog.ngc.nvidia.com/orgs/nvidia/teams/tensorrt-llm/containers/release/tags
+    # https://modal.com/docs/examples/trtllm_latency
     modal.Image.from_registry(
-        "nvidia/cuda:12.8.0-devel-ubuntu22.04",
-        add_python="3.10",
+        "nvidia/cuda:12.8.1-devel-ubuntu22.04",
+        add_python="3.12",  # TRT-LLM requires Python 3.12
     )
     .entrypoint([])  # remove verbose logging by base image on entry
-    .apt_install(
-        "git", "git-lfs", "openmpi-bin", "libopenmpi-dev", "wget"
-    )  # OpenMPI for distributed communication
+    .apt_install("openmpi-bin", "libopenmpi-dev", "git", "git-lfs", "wget")
     .pip_install(
-        "tensorrt-llm==0.17.0.post1",
-        # "pynvml<12",  # avoid breaking change to pynvml version API for tensorrt_llm
-        # "tensorrt==10.8.0.43",
+        f"tensorrt-llm=={GIT_TAG_OR_HASH}",
+        "pynvml<12",  # avoid breaking change to pynvml version API
+        "flashinfer-python==0.2.5",
         "cuda-python==12.9.1",
         pre=True,
         extra_index_url="https://pypi.nvidia.com",
     )
-    .env({})
+    # .env({"TORCH_CUDA_ARCH_LIST": "8.0 8.9 9.0 9.0a"})
 )
-
 
 HF_MODEL_DIR = "/root/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
 TRT_MODEL_DIR = "/root/trt_models"
 trt_model_vol = modal.Volume.from_name("triton_trtllm_models", create_if_missing=True)
-
-
-GIT_TAG_OR_HASH = "v0.17.0"
-CONVERSION_SCRIPT_URL = f"https://raw.githubusercontent.com/NVIDIA/TensorRT-LLM/{GIT_TAG_OR_HASH}/examples/qwen/convert_checkpoint.py"
 
 
 @app.function(
@@ -53,7 +51,7 @@ def trtllm_build(
     convert_script_url: str = CONVERSION_SCRIPT_URL,
     convert_other_args: str = "",
     compile_other_args: str = "",
-) -> str:
+) -> None:
     import subprocess
 
     cmd = f"pip show tensorrt".split(" ")
@@ -94,28 +92,18 @@ def trtllm_build(
 
     trt_model_vol.commit()
 
+
 """
-modal run src/llm/trtllm/tts_spark/compile_model.py \
-    --app-name "qwen2.5-0.5B" \
-    --hf-repo-dir "Qwen/Qwen2.5-0.5B" \
-    --trt-dtype "bfloat16" \
-    --convert-other-args "" \
-    --compile-other-args "--max_batch_size 16 --max_num_tokens 32768"
+# - https://github.com/NVIDIA/TensorRT-LLM/blob/v0.18.0/examples/mixtral/README.md
+# - https://github.com/NVIDIA/TensorRT-LLM/blob/v0.18.0/examples/quantization/README.md
 
-modal run src/llm/trtllm/tts_spark/compile_model.py \
-    --app-name "tts-spark" \
-    --hf-repo-dir "SparkAudio/Spark-TTS-0.5B/LLM" \
+modal run src/llm/trtllm/translation/compile_model.py \
+    --app-name "seed-x" \
+    --hf-repo-dir "ByteDance-Seed/Seed-X-PPO-7B" \
     --trt-dtype "bfloat16" \
     --convert-other-args "" \
-    --compile-other-args "--max_batch_size 16 --max_num_tokens 32768"
+    --compile-other-args "--max_batch_size 16 --max_num_tokens 16384"
 
-modal run src/llm/trtllm/tts_spark/compile_model.py \
-    --app-name "tts-spark" \
-    --hf-repo-dir "SparkAudio/Spark-TTS-0.5B/LLM" \
-    --trt-dtype "bfloat16" \
-    --convert-script-url "https://raw.githubusercontent.com/SparkAudio/Spark-TTS/refs/heads/main/runtime/triton_trtllm/scripts/convert_checkpoint.py" \
-    --convert-other-args "" \
-    --compile-other-args "--max_batch_size 16 --max_num_tokens 32768"
 """
 
 

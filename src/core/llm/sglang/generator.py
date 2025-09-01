@@ -40,6 +40,9 @@ class SGlangGenerator(BaseLLM, ILlmGenerator):
         assert threading.current_thread() == threading.main_thread()
         self.engine = Engine(**self.serv_args.__dict__)
 
+    def close(self):
+        logging.info(f"{self.__class__.__name__} close")
+
     async def generate(self, session: Session, **kwargs):
         assert session.ctx.state["token_ids"] is not None
         assert isinstance(session.ctx.state["token_ids"], list)

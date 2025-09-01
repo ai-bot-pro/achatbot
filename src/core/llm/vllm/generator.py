@@ -36,6 +36,9 @@ class VllmGenerator(BaseLLM, ILlmGenerator):
         )
         self.engine = AsyncLLMEngine.from_engine_args(self.serv_args)
 
+    def close(self):
+        logging.info(f"{self.__class__.__name__} close")
+
     async def generate(self, session: Session, **kwargs):
         """
         Generate new tokens using the LLM model.

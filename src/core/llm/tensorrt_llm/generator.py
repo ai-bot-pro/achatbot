@@ -12,7 +12,12 @@ try:
         LlmArgs,
     )
     from tensorrt_llm import LLM, SamplingParams, mpi_rank
-    from tensorrt_llm.bindings.executor import KvCacheConfig
+
+    # NOTE: use config from tensorrt_llm.llmapi to import for TensorRT-LLM update
+    # performance-tuning-guide with some configs params to set
+    # https://github.com/NVIDIA/TensorRT-LLM/blob/v0.18.0/docs/source/performance/performance-tuning-guide/useful-build-time-flags.md
+    from tensorrt_llm.llmapi import KvCacheConfig
+
     from tensorrt_llm.runtime import ModelRunner, SamplingConfig
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
@@ -38,19 +43,28 @@ class TrtLLMGenerator(BaseLLM, ILlmGenerator):
         self.gen_args = LMGenerateArgs(**self.args.gen_args)
         # https://github.com/NVIDIA/TensorRT-LLM/blob/v0.17.0/tensorrt_llm/llmapi/llm_utils.py#L368
         self.serv_args = LlmArgs.from_kwargs(**self.args.serv_args)
-        logging.info(
+        logging.debug(
             f"before server args: {self.serv_args.to_dict()} | default generate args: {self.gen_args.__dict__}"
         )
-        # https://github.com/NVIDIA/TensorRT-LLM/blob/main/tensorrt_llm/llmapi/llm_args.py#L520
-        kv_cache_config = KvCacheConfig()
-        for key, value in self.serv_args.kv_cache_config.items():
-            if hasattr(KvCacheConfig, key):
-                setattr(kv_cache_config, key, value)
-        self.serv_args.kv_cache_config = kv_cache_config
-        logging.info(f"after server args: {self.serv_args.to_dict()}")
+
+        if "kv_cache_config" in self.args.serv_args and isinstance(
+            self.args.serv_args["kv_cache_config"], dict
+        ):
+            tmp_kv_cache_conf = KvCacheConfig()
+            for key, value in self.args.serv_args["kv_cache_config"].items():
+                if hasattr(KvCacheConfig, key):
+                    setattr(tmp_kv_cache_conf, key, value)
+            self.serv_args.kv_cache_config = tmp_kv_cache_conf
+        logging.info(
+            f"server args: {self.serv_args.to_dict()} | default generate args: {self.gen_args.__dict__}"
+        )
         # https://nvidia.github.io/TensorRT-LLM/_modules/tensorrt_llm/llmapi/llm.html#LLM.__init__
         # Load HF model, convert to TensorRT, build TensorRT engine, load TensorRT engine
         self.engine = LLM(**self.serv_args.to_dict())
+
+    def close(self):
+        self.engine.shutdown()
+        logging.info(f"{self.__class__.__name__} close")
 
     async def generate(self, session: Session, **kwargs):
         """
@@ -62,21 +76,29 @@ class TrtLLMGenerator(BaseLLM, ILlmGenerator):
 
         # https://github.com/NVIDIA/TensorRT-LLM/blob/v0.17.0/tensorrt_llm/sampling_params.py
         sampling_params = SamplingParams(
+            end_id=("end_id" in kwargs and kwargs.pop("end_id")) or self.gen_args.lm_gen_end_id,
+            pad_id=("pad_id" in kwargs and kwargs.pop("pad_id")) or self.gen_args.lm_gen_pad_id,
             n=1,
-            seed=kwargs.get("seed") or self.gen_args.lm_gen_seed,
-            max_tokens=kwargs.get("max_new_tokens") or self.gen_args.lm_gen_max_new_tokens,
-            temperature=kwargs.get("temperature") or self.gen_args.lm_gen_temperature,
-            top_p=kwargs.get("top_p") or self.gen_args.lm_gen_top_p,
-            top_k=kwargs.get("top_k") or self.gen_args.lm_gen_top_k,
+            seed=("seed" in kwargs and kwargs.pop("seed")) or self.gen_args.lm_gen_seed,
+            max_tokens=("max_new_tokens" in kwargs and kwargs.pop("max_new_tokens"))
+            or self.gen_args.lm_gen_max_new_tokens,
+            temperature=("temperature" in kwargs and kwargs.pop("temperature"))
+            or self.gen_args.lm_gen_temperature,
+            top_p=("top_p" in kwargs and kwargs.pop("top_p")) or self.gen_args.lm_gen_top_p,
+            top_k=("top_k" in kwargs and kwargs.pop("top_k")) or self.gen_args.lm_gen_top_k,
             # min_p need version > 0.17.0
-            # min_p=kwargs.get("min_p") or self.gen_args.lm_gen_min_p,
+            # min_p=kwargs.pop("min_p") or self.gen_args.lm_gen_min_p,
             # Penalizers,
-            repetition_penalty=kwargs.get("repetition_penalty")
+            repetition_penalty=("repetition_penalty" in kwargs and kwargs.pop("repetition_penalty"))
             or self.gen_args.lm_gen_repetition_penalty,
-            min_tokens=kwargs.get("min_new_tokens") or self.gen_args.lm_gen_min_new_tokens,
-            stop_token_ids=kwargs.get("stop_ids") or self.gen_args.lm_gen_stop_ids,
-            stop=kwargs.get("stop_tokens") or self.gen_args.lm_gen_stops,
+            min_tokens=("min_new_tokens" in kwargs and kwargs.pop("min_new_tokens"))
+            or self.gen_args.lm_gen_min_new_tokens,
+            stop_token_ids=("stop_ids" in kwargs and kwargs.pop("stop_ids"))
+            or self.gen_args.lm_gen_stop_ids,
+            stop=("stop_tokens" in kwargs and kwargs.pop("stop_tokens"))
+            or self.gen_args.lm_gen_stops,
             detokenize=False,
+            **kwargs,
         )
         # https://nvidia.github.io/TensorRT-LLM/_modules/tensorrt_llm/llmapi/llm.html#LLM.generate_async
         generator = self.engine.generate_async(
@@ -111,6 +133,9 @@ class TrtLLMRunnerGenerator(BaseLLM, ILlmGenerator):
         # load tensorrt engine
         # https://nvidia.github.io/TensorRT-LLM/python-api/tensorrt_llm.runtime.html#tensorrt_llm.runtime.ModelRunner.from_dir
         self.engine = ModelRunner.from_dir(**self.serv_args.__dict__)
+
+    def close(self):
+        logging.info(f"{self.__class__.__name__} close")
 
     async def generate(self, session: Session, **kwargs):
         """

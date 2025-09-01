@@ -70,6 +70,7 @@ class AIBot(IBot):
         self.task: PipelineTask | None = None
         self.session = Session(**SessionCtx(str(uuid.uuid4())).__dict__)
         self.runner: PipelineRunner | None = None
+        self.generator: interface.ILlmGenerator = None
 
         self._bot_config_list = self.args.bot_config_list
         self._bot_config = self.args.bot_config
@@ -119,7 +120,8 @@ class AIBot(IBot):
     def cancel(self):
         if self.runner:
             self.runner.cancel()
-
+        if self.generator:
+            self.generator.close()
 
     async def async_run(self):
         try:
