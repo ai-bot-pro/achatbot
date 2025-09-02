@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from string import Template
 
 from transformers import AutoTokenizer
 from apipeline.frames.sys_frames import Frame
@@ -13,6 +14,12 @@ from src.types.speech.language import TRANSLATE_LANGUAGE
 from src.types.frames import TranslationStreamingFrame, TranslationFrame
 from src.processors.session_processor import SessionProcessor
 from src.common.session import Session, SessionCtx
+
+# use string template to replace placeholders, maybe use jinja2 like tokenizer chat_template with tpl logic
+PROMPT_TPL_MAP = {
+    "seed-x": "Translate the following $SRC_LANGUAGE sentence into $TARGET_LANGUAGE:\n$TEXT <$TARGET>",
+    "hunyuan-mt": "<|startoftext|>Translate the following segment into $TARGET_LANGUAGE, without additional explanation.\n\n$TEXT<|extra_0|>",
+}
 
 
 class LLMTranslateProcessor(SessionProcessor):
@@ -28,6 +35,7 @@ class LLMTranslateProcessor(SessionProcessor):
         src: str = "en",
         target: str = "zh",
         streaming: bool = False,
+        prompt_tpl: str = "seed-x",
         **kwargs,
     ):
         super().__init__(session, **kwargs)
@@ -35,6 +43,7 @@ class LLMTranslateProcessor(SessionProcessor):
         self.tokenizer = tokenizer
         assert generator is not None, "generator must be provided"
         self.generator = generator
+        assert prompt_tpl in PROMPT_TPL_MAP, f"prompt_tpl {prompt_tpl} not supported"
 
         if src not in TRANSLATE_LANGUAGE:
             raise Exception(f"src language {src} not supported")
@@ -46,15 +55,8 @@ class LLMTranslateProcessor(SessionProcessor):
         self._streaming = streaming
 
         self._translate_frame = TextFrame
-        self._translate_prompt = f"Translate the following {TRANSLATE_LANGUAGE[src]} sentence into {TRANSLATE_LANGUAGE[target]}:\n"
-        logging.info(f"translate prompt: {self._translate_prompt} | streaming: {self._streaming}")
-
-    @property
-    def translate_prompt(self, prompt: str):
-        return self._translate_prompt
-
-    def set_translate_prompt(self, prompt: str):
-        self._translate_prompt = prompt
+        self._translate_tpl = Template(PROMPT_TPL_MAP[prompt_tpl])
+        logging.info(f"use {prompt_tpl} translate prompt with streaming: {self._streaming}")
 
     def set_translate_frame(self, frame_type=TextFrame):
         if not issubclass(frame_type, TextFrame):
@@ -74,9 +76,13 @@ class LLMTranslateProcessor(SessionProcessor):
         await self.handle_translate_frame(frame)
 
     async def handle_translate_frame(self, frame: TextFrame):
-        prompt = (
-            self._translate_prompt + frame.text + f" <{self._target}>"
-        )  # need blank space at the end
+        prompt = self._translate_tpl.substitute(
+            SRC=self._src,
+            TARGET=self._target,
+            SRC_LANGUAGE=TRANSLATE_LANGUAGE[self._src],
+            TARGET_LANGUAGE=TRANSLATE_LANGUAGE[self._target],
+            TEXT=frame.text,
+        )
         token_ids = self.tokenizer.encode(prompt)
         self.session.ctx.state["token_ids"] = token_ids
         if "ctranslate2" in self.generator.SELECTED_TAG:
