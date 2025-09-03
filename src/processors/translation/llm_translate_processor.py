@@ -19,6 +19,7 @@ from src.common.session import Session, SessionCtx
 PROMPT_TPL_MAP = {
     "seed-x": "Translate the following $SRC_LANGUAGE sentence into $TARGET_LANGUAGE:\n$TEXT <$TARGET>",
     "hunyuan-mt": "<|startoftext|>Translate the following segment into $TARGET_LANGUAGE, without additional explanation.\n\n$TEXT<|extra_0|>",
+    "hunyuan-mt-zh": "<|startoftext|>把下面的文本翻译成$TARGET_LANGUAGE，不要额外解释。\n\n$TEXT<|extra_0|>",
 }
 
 
@@ -43,6 +44,7 @@ class LLMTranslateProcessor(SessionProcessor):
         self.tokenizer = tokenizer
         assert generator is not None, "generator must be provided"
         self.generator = generator
+        prompt_tpl = prompt_tpl or "seed-x"
         assert prompt_tpl in PROMPT_TPL_MAP, f"prompt_tpl {prompt_tpl} not supported"
 
         if src not in TRANSLATE_LANGUAGE:
@@ -83,6 +85,7 @@ class LLMTranslateProcessor(SessionProcessor):
             TARGET_LANGUAGE=TRANSLATE_LANGUAGE[self._target],
             TEXT=frame.text,
         )
+        logging.info(f"{prompt=}")
         token_ids = self.tokenizer.encode(prompt)
         self.session.ctx.state["token_ids"] = token_ids
         if "ctranslate2" in self.generator.SELECTED_TAG:

@@ -1,11 +1,15 @@
 import argparse
 import logging
 import threading
+import uuid
+import asyncio
+import time
 
 try:
     from sglang import Engine
     from src.types.llm.sglang import SGLangEngineArgs, ServerArgs, LMGenerateArgs
     from sglang.srt.managers.io_struct import GenerateReqInput
+    from transformers import AutoTokenizer
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error("you need to `pip install achatbot[sglang]`")
@@ -14,13 +18,14 @@ except ModuleNotFoundError as e:
 from src.common.interface import ILlmGenerator
 from src.core.llm.base import BaseLLM
 from src.common.session import Session
+from src.common.types import SessionCtx
 
 
 class SGlangGenerator(BaseLLM, ILlmGenerator):
     """
     token_ids -> llm generate stream -> token_ids
     use sglang llm engine frontend asyncio api to generate token_ids
-    https://docs.sglang.ai/backend/offline_engine_api.html
+    https://docs.sglang.ai/basic_usage/offline_engine_api.html
     todo: maybe use sglang llm engine backend runtime method to generate token_ids
     """
 
@@ -40,8 +45,39 @@ class SGlangGenerator(BaseLLM, ILlmGenerator):
         assert threading.current_thread() == threading.main_thread()
         self.engine = Engine(**self.serv_args.__dict__)
 
+        self.warmup()
+
+    def warmup(self):
+        if self.args.warmup_steps <= 0 or not self.args.warmup_prompt:
+            logging.info("no warmup!")
+            return
+
+        import nest_asyncio
+
+        nest_asyncio.apply()
+
+        tokenizer = AutoTokenizer.from_pretrained(self.serv_args.model_path)
+        session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
+
+        async def run():
+            for step in range(self.args.warmup_steps):
+                session.ctx.state["token_ids"] = tokenizer.encode(self.args.warmup_prompt)
+                start_time = time.perf_counter()
+                first = True
+                ttft = 0
+                async for token_id in self.generate(session, max_new_tokens=64):
+                    if first:
+                        ttft = time.perf_counter() - start_time
+                        first = False
+                logging.info(
+                    f"{step=} generate TTFT time: {ttft:.3f} s | total time: {time.perf_counter() - start_time:.3f} s"
+                )
+
+        asyncio.run(run())
+
     def close(self):
         logging.info(f"{self.__class__.__name__} close")
+        self.engine.shutdown()
 
     async def generate(self, session: Session, **kwargs):
         assert session.ctx.state["token_ids"] is not None
@@ -86,12 +122,6 @@ python -m src.core.llm.sglang.generator --model-path ./models/Qwen/Qwen2.5-0.5B
 python -m src.core.llm.sglang.generator --model-path ./models/Qwen/Qwen2.5-0.5B-Instruct
 """
 if __name__ == "__main__":
-    from src.common.types import SessionCtx
-    import uuid
-    import asyncio
-    import time
-    from transformers import AutoTokenizer
-
     parser = argparse.ArgumentParser()
     ServerArgs.add_cli_args(parser)
     args = parser.parse_args()

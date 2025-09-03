@@ -36,7 +36,7 @@ img = (
 )
 
 img = img.pip_install(
-    "achatbot==0.0.24.post21",
+    "achatbot==0.0.24.post2",
     extra_index_url="https://test.pypi.org/simple/",
 )
 
@@ -309,12 +309,14 @@ async def run_achatbot_processor(**kwargs):
     src = kwargs.pop("src", "en")
     target = kwargs.pop("target", "zh")
     streaming = kwargs.pop("streaming", False)
+    prompt_tpl = kwargs.pop("prompt_tpl", "seed-x")
     tl_processor = LLMTranslateProcessor(
         tokenizer=tokenizer,
         generator=generator,
         src=src,
         target=target,
         streaming=streaming,
+        prompt_tpl=prompt_tpl,
     )
 
     task = PipelineTask(

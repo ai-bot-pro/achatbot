@@ -70,6 +70,7 @@ dependencies = [
     "pyloudnorm",
     "pydantic",
     "numpy>=1.22.0",
+    "nest_asyncio",
 ]
 
 [project.urls]

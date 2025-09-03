@@ -8,6 +8,8 @@ import signal
 from apipeline.frames import CancelFrame
 from apipeline.pipeline.task import PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
+from dotenv import load_dotenv
+import nest_asyncio
 
 from src.processors.omni.base import VisionVoiceProcessorBase
 from src.processors.voice.base import VoiceProcessorBase
@@ -42,8 +44,8 @@ from src.common.session import Session
 from src.common.types import SessionCtx
 from src.common.logger import Logger
 
-from dotenv import load_dotenv
 
+nest_asyncio.apply()
 
 load_dotenv(override=True)
 

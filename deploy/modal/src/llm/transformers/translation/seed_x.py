@@ -136,8 +136,6 @@ def tokenize(gpu_prop):
 
 def generate(gpu_prop):
     # Load model
-    model_name = os.getenv("LLM_MODEL")
-    MODEL_PATH = os.path.join(HF_MODEL_DIR, model_name)
     tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, use_fast=True, legacy=False)
     tokenizer.add_special_tokens({"pad_token": "</s>"})
     model = AutoModelForCausalLM.from_pretrained(

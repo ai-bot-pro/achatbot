@@ -3,6 +3,8 @@ import os
 
 achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.24")
 LLM_TAG = os.getenv("LLM_TAG", "llm_ctranslate2_generator")
+vllm_version = os.getenv("VLLM_VERSION", "0.8.0")
+transformers_version = os.getenv("TRANSFORMERS_VERSION", "4.51.3")
 img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
     modal.Image.from_registry(
@@ -33,8 +35,8 @@ if LLM_TAG == "llm_ctranslate2_generator":
     )
 if LLM_TAG == "llm_vllm_generator":
     img = img.pip_install(
-        "vllm==0.8.0",
-        "transformers==4.51.3",
+        f"vllm=={vllm_version}",
+        f"transformers=={transformers_version}",
     ).env(
         {
             # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#gpu-feature-list
@@ -54,6 +56,7 @@ if LLM_TAG == "llm_sglang_generator":
             extra_index_url="https://flashinfer.ai/whl/cu126/torch2.6/",
         )
         .apt_install("libnuma-dev")
+        .pip_install(f"transformers==4.56.0")
         .env(
             {
                 # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#gpu-feature-list
@@ -79,10 +82,18 @@ if LLM_TAG in ["llm_trtllm_generator", "llm_trtllm_runner_generator"]:
         .env({"TORCH_CUDA_ARCH_LIST": "8.0 8.9 9.0 9.0a 10.0"})
     )
 
-img = img.pip_install(
-    f"achatbot==0.0.24.post41",
-    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
-)
+if LLM_TAG == "llm_transformers_generator":
+    img = (
+        img.pip_install("accelerate", "torch==2.6.0", "transformers==4.56.0")
+        # https://github.com/Dao-AILab/flash-attention/releases/tag/v2.7.4.post1
+        .pip_install("flash-attn==2.7.4.post1", extra_options="--no-build-isolation")
+        .pip_install("compressed-tensors==0.11.0")
+    )
+
+#img = img.pip_install(
+#   f"achatbot==0.0.24.post51",
+#   extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
+#)
 
 img = img.env(
     {
@@ -91,6 +102,7 @@ img = img.env(
         "CONFIG_FILE": os.getenv(
             "CONFIG_FILE",
             "/root/.achatbot/config/bots/fastapi_websocket_asr_translate_ctranslate2_tts_bot.json",
+            # "/root/.achatbot/config/bots/fastapi_websocket_asr_translate_transformers_tts_bot.json"
             # "/root/.achatbot/config/bots/fastapi_websocket_asr_translate_vllm_tts_bot.json",
             # "/root/.achatbot/config/bots/fastapi_websocket_asr_translate_sglang_tts_bot.json",
             # "/root/.achatbot/config/bots/fastapi_websocket_asr_translate_trtllm_tts_bot.json",
@@ -164,6 +176,15 @@ class Srv:
 """
 modal volume create config
 
+# - Seed-X
+
+modal volume put config ./config/bots/fastapi_websocket_asr_translate_transformers_tts_bot.json /bots/ -f
+
+IMAGE_GPU=L4 LLM_TAG=llm_transformers_generator \
+    ACHATBOT_VERSION=0.0.24.post2 \
+    CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate_transformers_tts_bot.json \
+    modal serve src/fastapi_ws_translate_bot_serve.py
+
 modal volume put config ./config/bots/fastapi_websocket_asr_translate_ctranslate2_tts_bot.json /bots/ -f
 
 IMAGE_GPU=L4 LLM_TAG=llm_ctranslate2_generator \
@@ -180,7 +201,7 @@ IMAGE_GPU=L4 LLM_TAG=llm_vllm_generator \
     modal serve src/fastapi_ws_translate_bot_serve.py
 
 
-modal volume put config ./config/bots/fastapi_websocket_asr_translate_sglang_bot.json /bots/ -f
+modal volume put config ./config/bots/fastapi_websocket_asr_translate_sglang_tts_bot.json /bots/ -f
 
 IMAGE_GPU=L4 LLM_TAG=llm_sglang_generator \
     ACHATBOT_VERSION=0.0.24 \
@@ -202,6 +223,34 @@ IMAGE_GPU=L4 LLM_TAG=llm_trtllm_runner_generator \
     CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate_trtllm_runner_tts_bot.json \
     modal serve src/fastapi_ws_translate_bot_serve.py
     
+
+
+# - Hunyuan-MT
+
+modal volume put config ./config/bots/fastapi_websocket_asr_translate-hunyuan-mt_transformers_tts_bot.json /bots/ -f
+
+IMAGE_GPU=L4 LLM_TAG=llm_transformers_generator \
+    ACHATBOT_VERSION=0.0.24.post2 \
+    CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate-hunyuan-mt_transformers_tts_bot.json \
+    modal serve src/fastapi_ws_translate_bot_serve.py
+
+
+modal volume put config ./config/bots/fastapi_websocket_asr_translate-hunyuan-mt_vllm_tts_bot.json /bots/ -f
+
+IMAGE_GPU=L4 LLM_TAG=llm_vllm_generator \
+    ACHATBOT_VERSION=0.0.24.post2 VLLM_VERSION=0.10.0 TRANSFORMERS_VERSION=4.56.0\
+    CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate-hunyuan-mt_vllm_tts_bot.json \
+    modal serve src/fastapi_ws_translate_bot_serve.py
+
+
+modal volume put config ./config/bots/fastapi_websocket_asr_translate-hunyuan-mt_sglang_tts_bot.json /bots/ -f
+
+IMAGE_GPU=L4 LLM_TAG=llm_sglang_generator \
+    ACHATBOT_VERSION=0.0.24.post2 \
+    CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate-hunyuan-mt_sglang_tts_bot.json \
+    modal serve src/fastapi_ws_translate_bot_serve.py
+
+
 # cold start fastapi websocket server
 curl -v -XGET "https://weedge--fastapi-ws-translate-bot-srv-app-dev.modal.run/health"
 

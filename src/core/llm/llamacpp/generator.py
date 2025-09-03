@@ -69,6 +69,12 @@ MODEL=./models/Seed-X-PPO-7B.Q2_K.gguf \
     PROMPT="Translate the following English sentence into Chinese: I love programming. <zh>" \
     STOP_ID=2 \
     python -m src.core.llm.llamacpp.generator 
+
+MODEL=./models/Hunyuan-MT-7B.Q2_K.gguf \
+    TOKENIZER_PATH=./models/tencent/Hunyuan-MT-7B \
+    PROMPT="<|startoftext|>Translate the following segment into Chinese, without additional explanation.\n\nIt’s on the house.<|extra_0|>" \
+    STOP_ID=127960 \
+    python -m src.core.llm.llamacpp.generator 
 """
 if __name__ == "__main__":
     import uuid
@@ -86,7 +92,10 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
 
     model_path = os.getenv("MODEL", "./models/qwen2.5-0.5b-instruct-q8_0.gguf")
-    generator = LlamacppGenerator(**LLamcppLLMArgs(model_path=model_path).__dict__)
+    chat_format = os.getenv("CHAT_FORMAT", None)
+    generator = LlamacppGenerator(
+        **LLamcppLLMArgs(model_path=model_path, chat_format=chat_format).__dict__
+    )
 
     prompt = os.getenv("PROMPT", "hello, my name is")
     stop_id = int(os.getenv("STOP_ID", "13"))
