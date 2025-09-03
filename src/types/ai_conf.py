@@ -92,6 +92,7 @@ class TranslateLLMConfig(BaseModel):
     src: Optional[str] = None
     target: Optional[str] = None
     streaming: Optional[bool] = False
+    prompt_tpl: Optional[str] = None
     tag: Optional[str] = None
     args: Optional[dict] = None
 

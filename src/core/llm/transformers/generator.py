@@ -4,7 +4,7 @@ from threading import Thread
 
 try:
     import torch
-    from transformers import AutoTokenizer, AutoModelForCausalLM, GenerationConfig
+    from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, GenerationConfig
 
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
@@ -28,6 +28,7 @@ class TransformersGenerator(TransformersBaseLLM, ILlmGenerator):
     TAG = "llm_transformers_generator"
 
     def __init__(self, **args):
+        config = args.pop("config", None)
         self.args = TransformersLMArgs(**args)
         self.args.lm_device = self.args.lm_device or get_device()
         logging.info("TransformersLMArgs: %s", self.args)
@@ -35,20 +36,22 @@ class TransformersGenerator(TransformersBaseLLM, ILlmGenerator):
         if self.args.lm_device_map:
             self._model = AutoModelForCausalLM.from_pretrained(
                 self.args.lm_model_name_or_path,
-                torch_dtype=self.args.lm_torch_dtype,
+                dtype=self.args.lm_torch_dtype,
                 attn_implementation=self.args.lm_attn_impl,
                 #!NOTE: https://github.com/huggingface/transformers/issues/20896
                 # device_map for multi cpu/gpu with accelerate
                 device_map=self.args.lm_device_map,
                 trust_remote_code=True,
+                config=config,
             ).eval()
         else:
             self._model = (
                 AutoModelForCausalLM.from_pretrained(
                     self.args.lm_model_name_or_path,
-                    torch_dtype=self.args.lm_torch_dtype,
+                    dtype=self.args.lm_torch_dtype,
                     attn_implementation=self.args.lm_attn_impl,
                     trust_remote_code=True,
+                    config=config,
                 )
                 .eval()
                 .to(self.args.lm_device)
@@ -62,16 +65,19 @@ class TransformersGenerator(TransformersBaseLLM, ILlmGenerator):
             return
 
         self.tokenizer = AutoTokenizer.from_pretrained(self.args.lm_model_name_or_path)
-        model_inputs = self.tokenizer([self.args.warmup_prompt], return_tensors="pt").to(
+        tokens = self.tokenizer([self.args.warmup_prompt], return_tensors="pt").to(
             self.args.lm_device
         )
+        input_ids = tokens["input_ids"]
+        attention_mask = tokens["attention_mask"]
 
         streamer = TokenStreamer(skip_prompt=True)
         warmup_gen_kwargs = dict(
-            **model_inputs,
+            input_ids=input_ids,
+            attention_mask=attention_mask,
             streamer=streamer,
             min_new_tokens=0,
-            max_new_tokens=3,
+            max_new_tokens=64,
             top_k=self.args.lm_gen_top_k,
             top_p=self.args.lm_gen_top_p,
             do_sample=self.args.lm_gen_do_sample,

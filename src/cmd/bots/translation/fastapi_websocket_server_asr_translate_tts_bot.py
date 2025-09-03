@@ -94,6 +94,7 @@ class FastapiWebsocketServerASRTranslateTTSBot(AIFastapiWebsocketBot):
                 src=self._bot_config.translate_llm.src,
                 target=self._bot_config.translate_llm.target,
                 streaming=self._bot_config.translate_llm.streaming,
+                prompt_tpl=self._bot_config.translate_llm.prompt_tpl,
             )
 
         self.tts_processor: TTSProcessor = self.get_tts_processor(tts_engine=self.tts_engine)
