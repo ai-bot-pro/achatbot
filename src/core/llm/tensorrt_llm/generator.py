@@ -34,6 +34,7 @@ class TrtLLMGenerator(BaseLLM, ILlmGenerator):
     token_ids -> llm generate stream -> token_ids
     use trtllm engine frontend asyncio api to generate token_ids
     https://nvidia.github.io/TensorRT-LLM/_modules/tensorrt_llm/llmapi/llm.html#LLM.generate_async
+    version:  < 0.19.0 , just use trtllm engine include runner
     """
 
     TAG = "llm_trtllm_generator"
@@ -225,3 +226,53 @@ if __name__ == "__main__":
             print(token_id, gen_text)
 
     asyncio.run(run())
+
+
+class TrtLLMPyTorchGenerator(TrtLLMGenerator):
+    """
+    version:  >= 0.19.0 , use pytorch engine with inferflash backend
+    """
+
+    TAG = "llm_trtllm_pytorch_generator"
+
+    def __init__(self, **kwargs):
+        from tensorrt_llm.llmapi.llm_args import TorchLlmArgs, LoadFormat
+
+        self.args = TensorRTLLMEngineArgs(**kwargs)
+        self.gen_args = LMGenerateArgs(**self.args.gen_args)
+        # https://github.com/NVIDIA/TensorRT-LLM/blob/v0.17.0/tensorrt_llm/llmapi/llm_utils.py#L368
+        self.serv_args = TorchLlmArgs.from_kwargs(**self.args.serv_args)
+        logging.debug(
+            f"before server args: {self.serv_args.to_dict()} | default generate args: {self.gen_args.__dict__}"
+        )
+
+        if "kv_cache_config" in self.args.serv_args and isinstance(
+            self.args.serv_args["kv_cache_config"], dict
+        ):
+            tmp_kv_cache_conf = KvCacheConfig()
+            for key, value in self.args.serv_args["kv_cache_config"].items():
+                if hasattr(KvCacheConfig, key):
+                    setattr(tmp_kv_cache_conf, key, value)
+            self.serv_args.kv_cache_config = tmp_kv_cache_conf
+
+        args = self.serv_args.to_dict()
+        args["load_format"] = self.cover_load_format(args["load_format"])
+        logging.info(
+            f"server args: {args} | default generate args: {self.gen_args.__dict__}"
+        )
+
+        # https://nvidia.github.io/TensorRT-LLM/_modules/tensorrt_llm/llmapi/llm.html#LLM.__init__
+        # Load HF model, convert to TensorRT, build TensorRT engine, load TensorRT engine
+        self.engine = LLM(**args)
+
+    def cover_load_format(self, v):
+        from tensorrt_llm.llmapi.llm_args import LoadFormat
+
+        load_format = "AUTO"
+        if isinstance(v, int):
+            return LoadFormat(v)
+        elif isinstance(v, str):
+            load_format = v.upper()
+            if load_format not in LoadFormat.__members__:
+                raise ValueError(f"Invalid LoadFormat: {v}")
+        return LoadFormat[load_format]
