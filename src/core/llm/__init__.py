@@ -29,6 +29,8 @@ class LLMEnvInit:
             from .tensorrt_llm.generator import TrtLLMGenerator
         if "llm_trtllm_runner_generator" == tag:
             from .tensorrt_llm.generator import TrtLLMRunnerGenerator
+        if "llm_trtllm_pytorch_generator" == tag:
+            from .tensorrt_llm.generator import TrtLLMGenerator
         if "llm_sglang_generator" == tag:
             from .sglang.generator import SGlangGenerator
         if "llm_fastdeploy_generator" == tag:
@@ -529,6 +531,7 @@ class LLMEnvInit:
         "llm_sglang_generator": get_llm_sglang_generator_args,
         "llm_trtllm_generator": get_llm_trtllm_generator_args,
         "llm_trtllm_runner_generator": get_llm_trtllm_runner_generator_args,
+        "llm_trtllm_pytorch_generator": get_llm_trtllm_generator_args,
         "llm_fastdeploy_generator": get_llm_fastdeploy_args,
         "llm_fastdeploy_vision_ernie4v": get_llm_fastdeploy_args,
         "llm_ctranslate2_generator": get_llm_ctranslate_generator_args,

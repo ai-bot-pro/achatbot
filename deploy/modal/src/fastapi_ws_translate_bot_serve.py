@@ -90,10 +90,10 @@ if LLM_TAG == "llm_transformers_generator":
         .pip_install("compressed-tensors==0.11.0")
     )
 
-#img = img.pip_install(
+# img = img.pip_install(
 #   f"achatbot==0.0.24.post51",
 #   extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
-#)
+# )
 
 img = img.env(
     {
@@ -216,7 +216,15 @@ IMAGE_GPU=L4 LLM_TAG=llm_trtllm_generator \
     CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate_trtllm_tts_bot.json \
     modal serve src/fastapi_ws_translate_bot_serve.py
 
+
 modal volume put config ./config/bots/fastapi_websocket_asr_translate_trtllm_runner_tts_bot.json /bots/ -f
+
+modal run src/llm/trtllm/translation/compile_model.py \
+    --app-name "seed-x" \
+    --hf-repo-dir "ByteDance-Seed/Seed-X-PPO-7B" \
+    --trt-dtype "bfloat16" \
+    --convert-other-args "" \
+    --compile-other-args "--max_batch_size 16 --max_num_tokens 32768"
 
 IMAGE_GPU=L4 LLM_TAG=llm_trtllm_runner_generator \
     ACHATBOT_VERSION=0.0.24.post1 \
@@ -238,7 +246,7 @@ IMAGE_GPU=L4 LLM_TAG=llm_transformers_generator \
 modal volume put config ./config/bots/fastapi_websocket_asr_translate-hunyuan-mt_vllm_tts_bot.json /bots/ -f
 
 IMAGE_GPU=L4 LLM_TAG=llm_vllm_generator \
-    ACHATBOT_VERSION=0.0.24.post2 VLLM_VERSION=0.10.0 TRANSFORMERS_VERSION=4.56.0\
+    ACHATBOT_VERSION=0.0.24.post2 VLLM_VERSION=0.10.0 TRANSFORMERS_VERSION=4.56.0 \
     CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate-hunyuan-mt_vllm_tts_bot.json \
     modal serve src/fastapi_ws_translate_bot_serve.py
 
