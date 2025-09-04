@@ -30,7 +30,7 @@ class LLMEnvInit:
         if "llm_trtllm_runner_generator" == tag:
             from .tensorrt_llm.generator import TrtLLMRunnerGenerator
         if "llm_trtllm_pytorch_generator" == tag:
-            from .tensorrt_llm.generator import TrtLLMGenerator
+            from .tensorrt_llm.generator import TrtLLMPyTorchGenerator
         if "llm_sglang_generator" == tag:
             from .sglang.generator import SGlangGenerator
         if "llm_fastdeploy_generator" == tag:
