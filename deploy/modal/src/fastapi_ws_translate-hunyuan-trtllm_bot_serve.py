@@ -2,7 +2,7 @@ import modal
 import os
 
 
-ACHATBOT_VERSION = os.getenv("ACHATBOT_VERSION", "0.0.24.post4")
+ACHATBOT_VERSION = os.getenv("ACHATBOT_VERSION", "0.0.24.post5")
 IMAGE_GPU = os.getenv("IMAGE_GPU", "L4")
 img = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
@@ -77,10 +77,11 @@ img = (
         }
     )
 )
-img = img.pip_install(
-    f"achatbot==0.0.24.post56",
-    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
-)
+
+# img = img.pip_install(
+#    f"achatbot==0.0.24.post56",
+#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
+# )
 
 
 HF_MODEL_DIR = "/root/.achatbot/models"
@@ -148,18 +149,18 @@ modal volume create config
 
 modal volume put config ./config/bots/fastapi_websocket_asr_translate_trtllm-pytorch-hunyuan-mt_tts_bot.json /bots/ -f
 
-IMAGE_GPU=L4 ACHATBOT_VERSION=0.0.24.post4 \
+IMAGE_GPU=L4 ACHATBOT_VERSION=0.0.24.post5 \
     CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_asr_translate_trtllm-pytorch-hunyuan-mt_tts_bot.json \
     modal serve src/fastapi_ws_translate-hunyuan-trtllm_bot_serve.py
 
 
 # cold start fastapi websocket server
-curl -v -XGET "https://weedge--fastapi-ws-translate-bot-srv-app-dev.modal.run/health"
+curl -v -XGET "https://weedge--fastapi-ws-translate-hunyuan-mt-bot-srv-app-dev.modal.run/health"
 
 # run websocket ui
 cd ui/websocket && python -m http.server
 # - access http://localhost:8000/translation   
-# - change url to wss://weedge--fastapi-ws-translate-bot-srv-app-dev.modal.run
+# - change url to wss://weedge--fastapi-ws-translate-hunyuan-mt-bot-srv-app-dev.modal.run
 # - click `Start Audio` to speech translation with Translation bot
 
 """
