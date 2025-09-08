@@ -364,3 +364,8 @@ class AnimationAudioRawFrame(AudioRawFrame):
         return (
             f"{super_str} animation_json: {self.animation_json} avatar_status: {self.avatar_status}"
         )
+
+
+@dataclass
+class TextAuestionsAudioRawFrame(AudioRawFrame, TextFrame):
+    """text questions with audio frame"""

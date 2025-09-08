@@ -87,6 +87,8 @@ class LLMEnvInit:
             from .transformers import manual_vision_ernie4v
         elif "llm_transformers_manual_vision_skyworkr1v" in tag:
             from .transformers import manual_vision_skyworkr1v
+        elif "llm_transformers_manual_voice_step2" in tag:
+            from .transformers import manual_voice_step2
         elif "llm_transformers_manual" == tag:
             from .transformers import manual
         elif "llm_transformers_pipeline" == tag:
@@ -524,6 +526,7 @@ class LLMEnvInit:
         "llm_transformers_manual_qwen2_5omni_vision_voice": get_qwen2_5omni_transformers_args,
         "llm_transformers_manual_qwen2_5omni_text_voice": get_qwen2_5omni_transformers_args,
         "llm_transformers_manual_qwen2_5omni_audio_voice": get_qwen2_5omni_transformers_args,
+        "llm_transformers_manual_voice_step2": get_llm_transformers_args,
         "llm_transformers_generator": get_llm_transformers_args,
         "llm_llamacpp_generator": get_llm_llamacpp_generator_args,
         "llm_vllm_generator": get_llm_vllm_generator_args,

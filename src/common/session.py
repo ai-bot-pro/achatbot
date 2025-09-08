@@ -9,6 +9,10 @@ class Session:
         # just for local history,@todo: use kv store history like mem0
         self.chat_history = []
 
+    def reset(self):
+        self.chat_round = 0
+        self.chat_history = []
+
     def __getstate__(self):
         return {
             "config": self.config,

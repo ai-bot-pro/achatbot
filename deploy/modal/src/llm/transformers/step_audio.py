@@ -31,7 +31,11 @@ img = (
         "diffusers",
         "hyperpyyaml",
     )
-    .run_commands("git clone https://github.com/weedge/Step-Audio2.git")
+    .run_commands(
+        "git clone https://github.com/weedge/Step-Audio2.git -b torch_compile"
+        " && cd /Step-Audio2"
+        " && git checkout d340cd7b8318cb04ff231e5cf1adbe112e5097b1"
+    )
     .env(
         {
             "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
@@ -65,6 +69,8 @@ with img.imports():
     os.makedirs(f"{ASSETS_DIR}/StepAudio2", exist_ok=True)
 
     CHUNK_SIZE = 25
+
+    # torch.set_float32_matmul_precision("high")
 
 
 def print_model_params(model: torch.nn.Module, extra_info="", f=None):
@@ -301,6 +307,7 @@ def test_base(gpu_prop, **kwargs):
 def instruct_asr_test(model, token2wav):
     messages = [
         {"role": "system", "content": "请记录下你所听到的语音内容。"},
+        # {"role": "system", "content": "Please record the audio content you hear."},
         {
             "role": "human",
             "content": [
@@ -387,6 +394,61 @@ def instruct_s2st_test(model, token2wav):
         f.write(audio)
 
 
+# multi turn tqta
+def instruct_multi_turn_tqta_test(model, token2wav):
+    history = [{"role": "system", "content": "You are a helpful assistant."}]
+    for round_idx, input_text in enumerate(
+        [
+            "听说荡口古镇从下个月开始取消门票了，你知道这事吗。",
+            "新闻说九月十九号就免费开放了。好像整个古镇都升级改造了，现在变成开放式街区了。",
+        ]
+    ):
+        print("round: ", round_idx)
+        history.append({"role": "human", "content": [{"type": "text", "text": input_text}]})
+        history.append({"role": "assistant", "content": None})
+        tokens, text, _ = model(history, max_new_tokens=256, temperature=0.5, do_sample=True)
+        print(text)
+        history.pop(-1)
+        history.append({"role": "assistant", "content": text})
+
+
+# multi turn tqaa
+def instruct_multi_turn_tqaa_test(model, token2wav):
+    history = [{"role": "system", "content": "You are a helpful assistant."}]
+    for round_idx, input_text in enumerate(
+        [
+            "听说荡口古镇从下个月开始取消门票了，你知道这事吗。",
+            "新闻说九月十九号就免费开放了。好像整个古镇都升级改造了，现在变成开放式街区了。",
+        ]
+    ):
+        print("round: ", round_idx)
+        history.append({"role": "human", "content": [{"type": "text", "text": input_text}]})
+        history.append(
+            {
+                "role": "assistant",
+                "content": "<tts_start>",
+                "eot": False,
+            },  # Insert <tts_start> for speech response
+        )
+        tokens, text, audio = model(history, max_new_tokens=256, temperature=0.5, do_sample=True)
+        print(tokens, model.llm_tokenizer.decode(tokens))
+        print(text)
+        audio = [x for x in audio if x < 6561]  # remove audio padding
+        audio = token2wav(audio, prompt_wav="/Step-Audio2/assets/default_female.wav")
+        with open(f"{ASSETS_DIR}/StepAudio2/output-round-tqaa-{round_idx}.wav", "wb") as f:
+            f.write(audio)
+        history.pop(-1)
+        history.append(
+            {
+                "role": "assistant",
+                "content": [
+                    {"type": "text", "text": "<tts_start>"},
+                    {"type": "token", "token": tokens},
+                ],
+            }
+        )
+
+
 # multi turn aqta
 def instruct_multi_turn_aqta_test(model, token2wav):
     history = [{"role": "system", "content": "You are a helpful assistant."}]
@@ -424,10 +486,11 @@ def instruct_multi_turn_aqaa_test(model, token2wav):
             },  # Insert <tts_start> for speech response
         )
         tokens, text, audio = model(history, max_new_tokens=2048, temperature=0.7, do_sample=True)
+        print(tokens, model.llm_tokenizer.decode(tokens))
         print(text)
         audio = [x for x in audio if x < 6561]  # remove audio padding
         audio = token2wav(audio, prompt_wav="/Step-Audio2/assets/default_female.wav")
-        with open(f"output-round-{round_idx}.wav", "wb") as f:
+        with open(f"{ASSETS_DIR}/StepAudio2/output-round-aqaa-{round_idx}.wav", "wb") as f:
             f.write(audio)
         history.pop(-1)
         history.append(
@@ -573,6 +636,38 @@ def instruct_mmau_test(model, token2wav):
     print(text)
 
 
+# Audio understanding
+def instruct_mmau_audio_answer_test(model, token2wav):
+    messages = [
+        {
+            "role": "system",
+            "content": "You are an expert in audio analysis, please analyze the audio content and answer the questions accurately. \nPlease communicate with me via voice.\n",
+        },
+        {
+            "role": "human",
+            "content": [
+                {"type": "audio", "audio": "/Step-Audio2/assets/mmau_test.wav"},
+                {
+                    "type": "text",
+                    "text": f"Which of the following best describes the male vocal in the audio? Please choose the answer from the following options: [Soft and melodic, Aggressive and talking, High-pitched and singing, Whispering].",
+                },
+            ],
+        },
+        {
+            "role": "assistant",
+            "content": "<tts_start>",
+            "eot": False,
+        },  # Insert <tts_start> for speech response
+    ]
+    tokens, text, audio = model(messages, max_tokens=2048, temperature=0.7, do_sample=True)
+    print(text)
+    # print(tokens)
+    audio = [x for x in audio if x < 6561]  # remove audio padding
+    audio = token2wav(audio, prompt_wav="/Step-Audio2/assets/default_female.wav")
+    with open(f"{ASSETS_DIR}/StepAudio2/output-mmau.wav", "wb") as f:
+        f.write(audio)
+
+
 def test_instruct(gpu_prop, **kwargs):
     model = StepAudio2(MODEL_PATH)
     token2wav = Token2wav(f"{MODEL_PATH}/token2wav")
@@ -588,11 +683,17 @@ def test_instruct(gpu_prop, **kwargs):
 # ASR (not live asr)
 def stream_asr_test(model, token2wav=None):
     messages = [
-        "请记录下你所听到的语音内容。",
+        {"role": "system", "content": "请记录下你所听到的语音内容。"},
         {
-            "type": "audio",
-            "audio": "/Step-Audio2/assets/give_me_a_brief_introduction_to_the_great_wall.wav",
+            "role": "human",
+            "content": [
+                {
+                    "type": "audio",
+                    "audio": "/Step-Audio2/assets/give_me_a_brief_introduction_to_the_great_wall.wav",
+                }
+            ],
         },
+        {"role": "assistant", "content": None},
     ]
     eos_token_id = model.llm_tokenizer.convert_tokens_to_ids("<|endoftext|>")
     token_iter = model(
@@ -605,9 +706,22 @@ def stream_asr_test(model, token2wav=None):
     output_text_tokens = []
     output_audio_tokens = []
     output_text = ""
+    is_tag = False
     for token_id in token_iter:
         token = model.llm_tokenizer.decode(token_id)
         print(token_id, token)
+
+        if token_id == 27:
+            is_tag = True
+            continue
+        if token_id == 29:
+            is_tag = False
+            continue
+        if is_tag:
+            continue
+        if token_id in [model.eos_token_id, eos_token_id]:
+            break
+
         if token_id < 151688:
             output_text_tokens.append(token_id)
         if token_id > 151695:
@@ -619,9 +733,13 @@ def stream_asr_test(model, token2wav=None):
 # TTS（support: en,zh,ja)
 def stream_tts_test(model, token2wav):
     messages = [
-        "以自然的语速读出下面的文字。\n",
-        # "Read this paragraph at a natural pace.\n",
-        "你好呀，我是你的AI助手，很高兴认识你！<tts_start>",
+        {"role": "system", "content": "以自然的语速读出下面的文字。\n"},
+        {"role": "human", "content": "你好呀，我是你的AI助手，很高兴认识你！"},
+        {
+            "role": "assistant",
+            "content": "<tts_start>",
+            "eot": False,
+        },  # Insert <tts_start> for speech response
     ]
     token_iter = model(messages, max_tokens=2048, temperature=0.7, do_sample=True)
     output_text_tokens = []
@@ -630,11 +748,10 @@ def stream_tts_test(model, token2wav):
 
     # stream audio
     buffer = []
-    prompt_wav = "/Step-Audio2/assets/default_female.wav"
+    prompt_wav = "/Step-Audio2/assets/default_male.wav"
     token2wav.set_stream_cache(prompt_wav)
     output_stream = Path(f"{ASSETS_DIR}/StepAudio2/output-chunks-stream-tts.pcm")
     output_stream.unlink(missing_ok=True)
-
     for token_id in token_iter:
         token = model.llm_tokenizer.decode(token_id)
         print(token_id, token)
@@ -718,7 +835,7 @@ def generate_stream(gpu_prop, **kwargs):
             else:
                 return value
 
-    class StepAudio2Stream(StepAudio2Base):
+    class StepAudio2Stream(StepAudio2):
         def __call__(self, messages: list, **kwargs):
             messages, mels = self.apply_chat_template(messages)
             print(messages)
@@ -810,11 +927,14 @@ IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct -
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_audio_caption_test
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_s2tt_test
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_s2st_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_multi_turn_tqta_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_multi_turn_tqaa_test
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_multi_turn_aqta_test
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_multi_turn_aqaa_test
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_tool_call_test
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_paralinguistic_test
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_mmau_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_mmau_audio_answer_test
 
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task generate_stream --test-func stream_asr_test
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task generate_stream --test-func stream_tts_test
