@@ -149,7 +149,7 @@ class StepAudio2Stream(StepAudio2StreamBase):
                     if item["type"] == "text":
                         results.append(f"{item['text']}")
                     elif item["type"] == "audio":
-                        audio = content["audio"]
+                        audio = item["audio"]
                         if isinstance(audio, (BinaryIO, str, os.PathLike)):
                             audio = load_audio(audio)
                         elif isinstance(audio, numpy.ndarray):

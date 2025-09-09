@@ -11,31 +11,31 @@ class Session:
         self.chat_history = ChatHistory(size=chat_history_size)
 
     def init_chat_message(self, init_chat_message: dict):
-        self.chat_history.init(init_chat_message)
+        self._chat_history.init(init_chat_message)
 
     def reset(self):
         self.chat_round = 0
-        self.chat_history.clear()
+        self._chat_history.clear()
 
     def __getstate__(self):
         return {
             "config": self.config,
             "chat_round": self.chat_round,
-            "chat_history": self.chat_history,
+            "chat_history": self._chat_history,
             "ctx": self.ctx,
         }
 
     def __setstate__(self, state):
         self.config = state["config"]
         self.chat_round = state["chat_round"]
-        self.chat_history = state["chat_history"]
+        self._chat_history = state["chat_history"]
         self.ctx = state["ctx"]
 
     def __repr__(self) -> str:
         session = {
             "config": self.config,
             "chat_round": self.chat_round,
-            "chat_history": self.chat_history,
+            "chat_history": self._chat_history,
             "ctx": self.ctx,
         }
         return f"{session=}"

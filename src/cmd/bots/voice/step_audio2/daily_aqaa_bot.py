@@ -79,8 +79,9 @@ class DailyStepAudio2AQAABot(DailyRoomBot):
                     self._voice_processor,
                     FrameLogger(include_frame_types=[TextFrame, AudioRawFrame]),
                     AudioSaveProcessor(prefix_name="bot_speak"),
-                    FrameLogger(include_frame_types=[AudioRawFrame, BotSpeakingFrame]),
-                    transport.output_processor(),
+                    # FrameLogger(include_frame_types=[BotSpeakingFrame]),
+                    FrameLogger(include_frame_types=[AudioRawFrame]),
+                    transport.output_processor(),  # BotSpeakingFrame
                 ]
             ),
             params=PipelineParams(

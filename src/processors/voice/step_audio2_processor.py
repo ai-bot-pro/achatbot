@@ -365,7 +365,7 @@ class StepText2TextChatProcessor(StepAudio2BaseProcessor):
             {"role": "human", "content": [{"type": "text", "text": user_input}]}
         )
         self._session.chat_history.append({"role": "assistant", "content": None})
-        self._session.ctx.state["messages"] = self._session.chat_history
+        self._session.ctx.state["messages"] = self._session.chat_history.to_list()
         token_iter = self._audio_llm.generate(
             self._session, max_new_tokens=2048, temperature=0.7, do_sample=True
         )
@@ -397,7 +397,7 @@ class StepAudio2TextChatProcessor(StepAudio2BaseProcessor):
             {"role": "human", "content": [{"type": "audio", "audio": audio}]}
         )
         self._session.chat_history.append({"role": "assistant", "content": None})
-        self._session.ctx.state["messages"] = self._session.chat_history
+        self._session.ctx.state["messages"] = self._session.chat_history.to_list()
         token_iter = self._audio_llm.generate(
             self._session, max_new_tokens=2048, temperature=0.7, do_sample=True
         )
@@ -428,7 +428,7 @@ class StepText2TextAudioChatProcessor(StepAudio2BaseProcessor):
                 "eot": False,
             },  # Insert <tts_start> for speech response
         )
-        self._session.ctx.state["messages"] = self._session.chat_history
+        self._session.ctx.state["messages"] = self._session.chat_history.to_list()
         token_iter = self._audio_llm.generate(
             self._session, max_new_tokens=2048, temperature=0.7, do_sample=True
         )
@@ -476,7 +476,7 @@ class StepAudio2TextAudioChatProcessor(StepAudio2BaseProcessor):
                 "eot": False,
             },  # Insert <tts_start> for speech response
         )
-        self._session.ctx.state["messages"] = self._session.chat_history
+        self._session.ctx.state["messages"] = self._session.chat_history.to_list()
         token_iter = self._audio_llm.generate(
             self._session, max_new_tokens=2048, temperature=0.7, do_sample=True
         )
