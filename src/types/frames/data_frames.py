@@ -367,5 +367,5 @@ class AnimationAudioRawFrame(AudioRawFrame):
 
 
 @dataclass
-class TextAuestionsAudioRawFrame(AudioRawFrame, TextFrame):
+class TextQuestionsAudioRawFrame(AudioRawFrame, TextFrame):
     """text questions with audio frame"""

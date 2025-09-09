@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import logging
 from typing import AsyncGenerator
 
@@ -21,11 +22,10 @@ except ModuleNotFoundError as e:
 from src.common.interface import ILlm
 from src.common.types import ASSETS_DIR
 from src.processors.voice.base import VoiceProcessorBase
-from src.types.llm.lmgen import *
 from src.common.session import Session
 from src.common.types import SessionCtx
 from src.common.utils.audio_utils import bytes2TorchTensorWith16
-from src.types.frames import *
+from src.types.frames import TextQuestionsAudioRawFrame, PathAudioRawFrame
 
 
 class StepAudio2BaseProcessor(VoiceProcessorBase):
@@ -36,36 +36,47 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
 
     def __init__(
         self,
-        model_path: str,
         *,
         init_system_prompt: str = "",
         text_stream_out: bool = False,
+        prompt_wav: str = "",
+        warmup_cn: int = 1,
+        chat_history_size: int | None = None,
         session: Session | None = None,
-        auido_llm: ILlm | None = None,
+        audio_llm: ILlm | None = None,
+        token2wav: Token2wav | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
-        assert auido_llm is not None, "auido_llm is None"
+        assert audio_llm is not None, "audio_llm is None"
 
         from src.core.llm.transformers.manual_voice_step2 import TransformersManualVoiceStep2
 
-        assert isinstance(auido_llm, TransformersManualVoiceStep2), (
-            "auido_llm is not TransformersManualVoiceStep2"
+        assert isinstance(audio_llm, TransformersManualVoiceStep2), (
+            "audio_llm is not TransformersManualVoiceStep2"
         )
 
-        self._audio_llm = auido_llm
-        self._token2wav = Token2wav(model_path)
+        self._audio_llm = audio_llm
+        token2wav_path = os.path.join(audio_llm.args.lm_model_name_or_path, "token2wav")
+        self._token2wav = Token2wav(token2wav_path)
         if torch.cuda.is_available():
             self._token2wav.flow.scatter_cuda_graph(True)
 
-        self._prompt_wav = kwargs.get("prompt_wav", f"{ASSETS_DIR}/default_male.wav")
+        self._prompt_wav = prompt_wav or os.path.join(ASSETS_DIR, "default_female.wav")
         self._token2wav.set_stream_cache(self._prompt_wav)
+        if warmup_cn > 0:
+            for i in range(warmup_cn):
+                start = time.time()
+                self._token2wav.warmup(self._prompt_wav)
+                logging.info(f"Token2wav warmup {i=} done in {time.time() - start:.3f}s")
 
         self._system_prompt = init_system_prompt or self.SYS_PROMPT
         self._text_stream_out = text_stream_out
 
-        self._session = session or Session(**SessionCtx(str(uuid.uuid4())).__dict__)
-        self._session.chat_history = [{"role": "system", "content": self._system_prompt}]
+        self._session = session or Session(
+            chat_history_size=chat_history_size, **SessionCtx(str(uuid.uuid4())).__dict__
+        )
+        self._session.chat_history.init({"role": "system", "content": self._system_prompt})
 
     def reset(self):
         self._token2wav.cache = {}
@@ -73,7 +84,6 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
 
     async def start(self, frame: StartFrame):
         await super().start(frame)
-
         logging.info("start done")
 
     async def stop(self, frame: EndFrame):
@@ -351,17 +361,17 @@ class StepText2TextChatProcessor(StepAudio2BaseProcessor):
     async def run_text(self, frame: TextFrame) -> AsyncGenerator[Frame, None]:
         user_input = frame.text.strip()
 
-        self._session.history.append(
+        self._session.chat_history.append(
             {"role": "human", "content": [{"type": "text", "text": user_input}]}
         )
-        self._session.history.append({"role": "assistant", "content": None})
-        self._session.ctx.state["messages"] = self._session.history
+        self._session.chat_history.append({"role": "assistant", "content": None})
+        self._session.ctx.state["messages"] = self._session.chat_history
         token_iter = self._audio_llm.generate(
             self._session, max_new_tokens=2048, temperature=0.7, do_sample=True
         )
         out_text = await self.process_out_text(token_iter)
-        self._session.history.pop(-1)
-        self._session.history.append({"role": "assistant", "content": out_text})
+        self._session.chat_history.pop(-1)
+        self._session.chat_history.append({"role": "assistant", "content": out_text})
 
 
 # Chat: multi turn AQTA
@@ -383,17 +393,17 @@ class StepAudio2TextChatProcessor(StepAudio2BaseProcessor):
             yield ErrorFrame("No audio tokens extracted")
             return
 
-        self._session.history.append(
+        self._session.chat_history.append(
             {"role": "human", "content": [{"type": "audio", "audio": audio}]}
         )
-        self._session.history.append({"role": "assistant", "content": None})
-        self._session.ctx.state["messages"] = self._session.history
+        self._session.chat_history.append({"role": "assistant", "content": None})
+        self._session.ctx.state["messages"] = self._session.chat_history
         token_iter = self._audio_llm.generate(
             self._session, max_new_tokens=2048, temperature=0.7, do_sample=True
         )
         out_text = await self.process_out_text(token_iter)
-        self._session.history.pop(-1)
-        self._session.history.append({"role": "assistant", "content": out_text})
+        self._session.chat_history.pop(-1)
+        self._session.chat_history.append({"role": "assistant", "content": out_text})
 
 
 # Chat: multi turn TQAA
@@ -408,25 +418,25 @@ class StepText2TextAudioChatProcessor(StepAudio2BaseProcessor):
     async def run_text(self, frame: TextFrame) -> AsyncGenerator[Frame, None]:
         user_input = frame.text.strip()
 
-        self._session.history.append(
+        self._session.chat_history.append(
             {"role": "human", "content": [{"type": "text", "text": user_input}]}
         )
-        self._session.history.append(
+        self._session.chat_history.append(
             {
                 "role": "assistant",
                 "content": "<tts_start>",
                 "eot": False,
             },  # Insert <tts_start> for speech response
         )
-        self._session.ctx.state["messages"] = self._session.history
+        self._session.ctx.state["messages"] = self._session.chat_history
         token_iter = self._audio_llm.generate(
             self._session, max_new_tokens=2048, temperature=0.7, do_sample=True
         )
 
         output_tokens, _ = await self.process_out_audio_text(token_iter, is_out_text=True)
 
-        self._session.history.pop(-1)
-        self._session.history.append(
+        self._session.chat_history.pop(-1)
+        self._session.chat_history.append(
             {
                 "role": "assistant",
                 "content": [
@@ -456,25 +466,25 @@ class StepAudio2TextAudioChatProcessor(StepAudio2BaseProcessor):
             yield ErrorFrame("No audio tokens extracted")
             return
 
-        self._session.history.append(
+        self._session.chat_history.append(
             {"role": "human", "content": [{"type": "audio", "audio": audio}]}
         )
-        self._session.history.append(
+        self._session.chat_history.append(
             {
                 "role": "assistant",
                 "content": "<tts_start>",
                 "eot": False,
             },  # Insert <tts_start> for speech response
         )
-        self._session.ctx.state["messages"] = self._session.history
+        self._session.ctx.state["messages"] = self._session.chat_history
         token_iter = self._audio_llm.generate(
             self._session, max_new_tokens=2048, temperature=0.7, do_sample=True
         )
 
         output_tokens, _ = await self.process_out_audio_text(token_iter, is_out_text=True)
 
-        self._session.history.pop(-1)
-        self._session.history.append(
+        self._session.chat_history.pop(-1)
+        self._session.chat_history.append(
             {
                 "role": "assistant",
                 "content": [
@@ -495,7 +505,7 @@ class StepAudioText2TextProcessor(StepAudio2BaseProcessor):
     - A1T1->T2 (Audio Understanding with Text Query)
     """
 
-    async def run_voice(self, frame: TextAuestionsAudioRawFrame) -> AsyncGenerator[Frame, None]:
+    async def run_voice(self, frame: TextQuestionsAudioRawFrame) -> AsyncGenerator[Frame, None]:
         audio = bytes2TorchTensorWith16(frame.audio)
 
         if len(audio) == 0:
@@ -530,7 +540,7 @@ class StepAudioText2TextAudioProcessor(StepAudio2BaseProcessor):
     - A1T1->T2A2 (Audio Understanding with Text Query)
     """
 
-    async def run_voice(self, frame: TextAuestionsAudioRawFrame) -> AsyncGenerator[Frame, None]:
+    async def run_voice(self, frame: TextQuestionsAudioRawFrame) -> AsyncGenerator[Frame, None]:
         audio = bytes2TorchTensorWith16(frame.audio)
 
         if len(audio) == 0:
