@@ -369,3 +369,13 @@ class AnimationAudioRawFrame(AudioRawFrame):
 @dataclass
 class TextQuestionsAudioRawFrame(AudioRawFrame, TextFrame):
     """text questions with audio frame"""
+
+
+@dataclass
+class LLMGenedTokensFrame(Frame):
+    """llm gened tokens frame"""
+
+    token_ids: list[int] = field(default_factory=list)
+
+    def __str__(self):
+        return f"{self.name}(token_ids: {self.token_ids})"

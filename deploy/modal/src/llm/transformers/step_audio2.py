@@ -914,30 +914,30 @@ def generate_stream(gpu_prop, **kwargs):
 modal run src/download_models.py --repo-ids "stepfun-ai/Step-Audio-2-mini"
 modal run src/download_models.py --repo-ids "stepfun-ai/Step-Audio-2-mini-Base"
 
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task dump_model
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_base --test-func asr_test
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_base --test-func audio_caption_test
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_base --test-func tts_test
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_base --test-func s2st_test
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_base --test-func t2st_test
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_base --test-func multi_turn_aqta_test
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_base --test-func multi_turn_aqaa_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task dump_model
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_base --test-func asr_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_base --test-func audio_caption_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_base --test-func tts_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_base --test-func s2st_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_base --test-func t2st_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_base --test-func multi_turn_aqta_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_base --test-func multi_turn_aqaa_test
 
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_asr_test
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_audio_caption_test
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_s2tt_test
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_s2st_test
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_multi_turn_tqta_test
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_multi_turn_tqaa_test
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_multi_turn_aqta_test
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_multi_turn_aqaa_test
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_tool_call_test
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_paralinguistic_test
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_mmau_test
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task test_instruct --test-func instruct_mmau_audio_answer_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_instruct --test-func instruct_asr_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_instruct --test-func instruct_audio_caption_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_instruct --test-func instruct_s2tt_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_instruct --test-func instruct_s2st_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_instruct --test-func instruct_multi_turn_tqta_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_instruct --test-func instruct_multi_turn_tqaa_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_instruct --test-func instruct_multi_turn_aqta_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_instruct --test-func instruct_multi_turn_aqaa_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_instruct --test-func instruct_tool_call_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_instruct --test-func instruct_paralinguistic_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_instruct --test-func instruct_mmau_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_instruct --test-func instruct_mmau_audio_answer_test
 
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task generate_stream --test-func stream_asr_test
-IMAGE_GPU=L4 modal run src/llm/transformers/step_audio.py --task generate_stream --test-func stream_tts_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task generate_stream --test-func stream_asr_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task generate_stream --test-func stream_tts_test
 """
 
 

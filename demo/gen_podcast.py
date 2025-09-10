@@ -64,6 +64,7 @@ def run(
         save_dir=save_dir,
     )
     for data in data_list:
+        print(data)
         source = data[0]
         extraction: podcast.Podcast = data[1]
         audio_output_file = data[2]

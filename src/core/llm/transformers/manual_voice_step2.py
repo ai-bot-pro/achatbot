@@ -15,6 +15,7 @@ class TransformersManualVoiceStep2(TransformersBaseLLM):
     """
 
     TAG = "llm_transformers_manual_voice_step2"
+    RATE = 24000
 
     def __init__(self, **args):
         self.args = TransformersLMArgs(**args)
@@ -43,15 +44,15 @@ class TransformersManualVoiceStep2(TransformersBaseLLM):
             {"role": "human", "content": self.args.warmup_prompt},
             {"role": "assistant", "content": None},
         ]
-        token_iter = self._audio_llm(
-            messages,
-            max_new_tokens=256,
-            temperature=0.1,
-            do_sample=True,
-            eos_token_id=self.eos_token_id,
-        )
-        first = True
         for step in range(self.args.warmup_steps):
+            token_iter = self._audio_llm(
+                messages,
+                max_new_tokens=256,
+                temperature=0.1,
+                do_sample=True,
+                eos_token_id=self.eos_token_id,
+            )
+            first = True
             start = time.time()
             for _ in token_iter:
                 if first:

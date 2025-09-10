@@ -1,7 +1,10 @@
 import os
 import sys
 import time
+import queue
+import asyncio
 import logging
+import threading
 from typing import AsyncGenerator
 
 import uuid
@@ -25,7 +28,7 @@ from src.processors.voice.base import VoiceProcessorBase
 from src.common.session import Session
 from src.common.types import SessionCtx
 from src.common.utils.audio_utils import bytes2TorchTensorWith16
-from src.types.frames import TextQuestionsAudioRawFrame, PathAudioRawFrame
+from src.types.frames import TextQuestionsAudioRawFrame, PathAudioRawFrame, LLMGenedTokensFrame
 
 
 class StepAudio2BaseProcessor(VoiceProcessorBase):
@@ -42,6 +45,7 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         prompt_wav: str = "",
         warmup_cn: int = 1,
         chat_history_size: int | None = None,
+        no_stream_sleep_time: float = 0.5,
         session: Session | None = None,
         audio_llm: ILlm | None = None,
         token2wav: Token2wav | None = None,
@@ -78,27 +82,74 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         )
         self._session.chat_history.init({"role": "system", "content": self._system_prompt})
 
+        # for async generate to yield
+        self._queue = queue.Queue()
+        self._input_queue = queue.Queue()
+        self._generate_thread = None
+        self._sleep_time = no_stream_sleep_time
+
     def reset(self):
         self._token2wav.cache = {}
         self._session.reset()
 
+    def _generate(self):
+        while True:
+            try:
+                session = self._input_queue.get()
+                if session is None:
+                    self._queue.put(None)  # Signal the end of the stream
+                    break  # Signal to stop the thread
+                token_iter = self._audio_llm.generate(session)
+                self.put_out_audio_text(token_iter, is_out_text=True)
+                self._queue.put(None)  # Signal the end of the stream
+            except Exception as e:
+                logging.error(f"Exception generate: {e}", exc_info=True)
+                self._queue.put(None)  # Signal the end of the stream
+                break
+
     async def start(self, frame: StartFrame):
         await super().start(frame)
+        self._generate_thread = threading.Thread(target=self._generate)
+        self._generate_thread.start()
         logging.info("start done")
 
     async def stop(self, frame: EndFrame):
         await super().stop(frame)
+        self._input_queue.put(None)  # Signal the thread to stop
+        self._generate_thread.join()  # Wait for the thread to finish
         logging.info("stop done")
 
     async def cancel(self, frame: CancelFrame):
         await super().cancel(frame)
+        self._input_queue.put(None)  # Signal the thread to stop
+        self._generate_thread.join()  # Wait for the thread to finish
         logging.info("cancel done")
+
+    async def gen(self, is_push_frame: bool = False) -> AsyncGenerator[Frame, None]:
+        while True:
+            try:
+                item = self._queue.get_nowait()
+                if item is None:
+                    break  # End of the stream
+                logging.debug(f"generate data: {item}")
+                if is_push_frame is True:
+                    await self.push_frame(item)
+                    yield None
+                else:
+                    yield item
+            except queue.Empty:
+                # yield asysncio.sleep to allow other tasks to run, e.g.: sink task (write audio)
+                await asyncio.sleep(self._sleep_time)
+                continue
+
+    def send_input(self, session: Session):
+        self._input_queue.put(session)
 
     @property
     def stream_info(self) -> dict:
         """Return dict out stream info"""
         return {
-            "sample_rate": 24000,
+            "sample_rate": self._audio_llm.RATE,
             "channels": 1,
         }
 
@@ -123,25 +174,34 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
             },  # Insert <tts_start> for speech response
         ]
         self._session.ctx.state["messages"] = messages
-        token_iter = self._audio_llm.generate(
-            self._session, max_new_tokens=2048, temperature=0.7, do_sample=True
-        )
-        await self.process_out_audio_text(token_iter, is_out_text)
+        self.send_input(self._session)
+        async for item in self.gen(is_push_frame=True):
+            pass
 
-    async def process_out_audio_text(self, token_iter, is_out_text: bool = True):
+    def put_out_audio_text(self, token_iter, is_out_text: bool = True):
         output_tokens = []
         output_audio_tokens = []
         out_text_tokens = []
+        is_tag = False
         buffer = []
         for token_id in token_iter:
             if token_id in self._audio_llm.eos_token_id:
                 break
             output_tokens.append(token_id)
             if token_id < 151688:  # text
+                if token_id == 27:  # <
+                    is_tag = True
+                    continue
+                if token_id == 29:  # >
+                    is_tag = False
+                    continue
+                if is_tag:  # <***>
+                    continue
                 out_text_tokens.append(token_id)
                 if is_out_text is True and self._text_stream_out is True:
                     out_text = self._audio_llm.llm_tokenizer.decode(token_id)
-                    await self.queue_frame(TextFrame(text=out_text))
+                    frame = TextFrame(text=out_text)
+                    self._queue.put(frame)
             if token_id > 151695:  # audio
                 audio_token_id = token_id - 151696
                 if audio_token_id < 6561:  # remove audio padding
@@ -153,61 +213,32 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
                             prompt_wav=self._prompt_wav,
                             last_chunk=False,
                         )
-                        await self.queue_frame(
-                            AudioRawFrame(
-                                audio=out_bytes,
-                                sample_rate=24000,
-                                num_channels=1,
-                            )
+                        frame = AudioRawFrame(
+                            audio=out_bytes,
+                            sample_rate=self._audio_llm.RATE,
+                            num_channels=1,
                         )
+                        self._queue.put(frame)
                         buffer = buffer[self.CHUNK_SIZE :]
         if len(buffer) > 0:
             out_bytes = self._token2wav.stream(buffer, prompt_wav=self._prompt_wav, last_chunk=True)
-            await self.queue_frame(
-                AudioRawFrame(
-                    audio=out_bytes,
-                    sample_rate=24000,
-                    num_channels=1,
-                )
+            frame = AudioRawFrame(
+                audio=out_bytes,
+                sample_rate=24000,
+                num_channels=1,
             )
+            self._queue.put(frame)
 
         out_text = ""
         if len(out_text_tokens) > 0 and is_out_text is True:
             out_text = self._audio_llm.llm_tokenizer.decode(out_text_tokens)
             if self._text_stream_out is False:
-                await self.queue_frame(TextFrame(text=out_text))
+                frame = TextFrame(text=out_text)
+                self._queue.put(frame)
+
+        self._queue.put(LLMGenedTokensFrame(token_ids=output_tokens))
 
         return output_tokens, out_text
-
-    async def process_out_text(self, token_iter):
-        out_text_tokens = []
-        is_tag = False
-        for token_id in token_iter:
-            if token_id >= 151688:
-                continue
-            if token_id == 27:  # <
-                is_tag = True
-                continue
-            if token_id == 29:  # >
-                is_tag = False
-                continue
-            if is_tag:
-                continue
-            if token_id in self._audio_llm.eos_token_id:
-                break
-            # text
-            out_text_tokens.append(token_id)
-            if self._text_stream_out is True:
-                out_text = self._audio_llm.llm_tokenizer.decode(token_id)
-                await self.queue_frame(TextFrame(text=out_text))
-
-        out_text = ""
-        if len(out_text_tokens) > 0:
-            out_text = self._audio_llm.llm_tokenizer.decode(out_text_tokens)
-            if self._text_stream_out is False:
-                await self.queue_frame(TextFrame(text=out_text))
-
-        return out_text
 
 
 # --------------------------------------------------------------------------------
@@ -243,10 +274,9 @@ class StepAudio2TextProcessor(StepAudio2BaseProcessor):
             {"role": "assistant", "content": None},
         ]
         self._session.ctx.state["messages"] = messages
-        token_iter = self._audio_llm.generate(
-            self._session, max_new_tokens=2048, temperature=0.7, do_sample=True
-        )
-        await self.process_out_text(token_iter)
+        self.send_input(self._session)
+        async for item in self.gen():
+            yield item
 
 
 class StepASRProcessor(StepAudio2TextProcessor):
@@ -278,6 +308,7 @@ class StepTTSProcessor(StepText2AudioProcessor):
         await self.say(
             user_input, is_out_text=False, system_prompt="以自然的语速读出下面的文字。\n"
         )
+        yield None
 
 
 # --------------------------------------------------------------------------------
@@ -297,6 +328,7 @@ class StepT2STProcessor(StepText2TextAudioProcessor):
         await self.say(
             user_input, is_out_text=True, system_prompt="请将下面的文本翻译成英文，并用语音播报。\n"
         )
+        yield None
 
 
 # --------------------------------------------------------------------------------
@@ -332,10 +364,9 @@ class StepAudio2TextAudioProcessor(StepAudio2BaseProcessor):
             },  # Insert <tts_start> for speech response
         ]
         self._session.ctx.state["messages"] = messages
-        token_iter = self._audio_llm.generate(
-            self._session, max_new_tokens=2048, temperature=0.7, do_sample=True
-        )
-        await self.process_out_audio_text(token_iter, is_out_text=True)
+        self.send_input(self._session)
+        async for item in self.gen():
+            yield item
 
 
 class StepS2STProcessor(StepAudio2TextAudioProcessor):
@@ -366,10 +397,12 @@ class StepText2TextChatProcessor(StepAudio2BaseProcessor):
         )
         self._session.chat_history.append({"role": "assistant", "content": None})
         self._session.ctx.state["messages"] = self._session.chat_history.to_list()
-        token_iter = self._audio_llm.generate(
-            self._session, max_new_tokens=2048, temperature=0.7, do_sample=True
-        )
-        out_text = await self.process_out_text(token_iter)
+        self.send_input(self._session)
+        out_text = ""
+        async for item in self.gen():
+            if isinstance(item, TextFrame):
+                out_text += item.text
+            yield item
         self._session.chat_history.pop(-1)
         self._session.chat_history.append({"role": "assistant", "content": out_text})
 
@@ -398,10 +431,12 @@ class StepAudio2TextChatProcessor(StepAudio2BaseProcessor):
         )
         self._session.chat_history.append({"role": "assistant", "content": None})
         self._session.ctx.state["messages"] = self._session.chat_history.to_list()
-        token_iter = self._audio_llm.generate(
-            self._session, max_new_tokens=2048, temperature=0.7, do_sample=True
-        )
-        out_text = await self.process_out_text(token_iter)
+        self.send_input(self._session)
+        out_text = ""
+        async for item in self.gen():
+            if isinstance(item, TextFrame):
+                out_text += item.text
+            yield item
         self._session.chat_history.pop(-1)
         self._session.chat_history.append({"role": "assistant", "content": out_text})
 
@@ -429,11 +464,13 @@ class StepText2TextAudioChatProcessor(StepAudio2BaseProcessor):
             },  # Insert <tts_start> for speech response
         )
         self._session.ctx.state["messages"] = self._session.chat_history.to_list()
-        token_iter = self._audio_llm.generate(
-            self._session, max_new_tokens=2048, temperature=0.7, do_sample=True
-        )
-
-        output_tokens, _ = await self.process_out_audio_text(token_iter, is_out_text=True)
+        self.send_input(self._session)
+        output_tokens = []
+        async for item in self.gen():
+            if isinstance(item, LLMGenedTokensFrame):
+                output_tokens = item.token_ids
+                break
+            yield item
 
         self._session.chat_history.pop(-1)
         self._session.chat_history.append(
@@ -477,11 +514,13 @@ class StepAudio2TextAudioChatProcessor(StepAudio2BaseProcessor):
             },  # Insert <tts_start> for speech response
         )
         self._session.ctx.state["messages"] = self._session.chat_history.to_list()
-        token_iter = self._audio_llm.generate(
-            self._session, max_new_tokens=2048, temperature=0.7, do_sample=True
-        )
-
-        output_tokens, _ = await self.process_out_audio_text(token_iter, is_out_text=True)
+        self.send_input(self._session)
+        output_tokens = []
+        async for item in self.gen():
+            if isinstance(item, LLMGenedTokensFrame):
+                output_tokens = item.token_ids
+                break
+            yield item
 
         self._session.chat_history.pop(-1)
         self._session.chat_history.append(
@@ -524,10 +563,9 @@ class StepAudioText2TextProcessor(StepAudio2BaseProcessor):
             {"role": "assistant", "content": None},
         ]
         self._session.ctx.state["messages"] = messages
-        token_iter = self._audio_llm.generate(
-            self._session, max_new_tokens=2048, temperature=0.7, do_sample=True
-        )
-        await self.process_out_text(token_iter)
+        self.send_input(self._session)
+        async for item in self.gen():
+            yield item
 
 
 # ----------------------------------------------------------------------------------
@@ -563,10 +601,9 @@ class StepAudioText2TextAudioProcessor(StepAudio2BaseProcessor):
             },  # Insert <tts_start> for speech response
         ]
         self._session.ctx.state["messages"] = messages
-        token_iter = self._audio_llm.generate(
-            self._session, max_new_tokens=2048, temperature=0.7, do_sample=True
-        )
-        await self.process_out_audio_text(token_iter, is_out_text=True)
+        self.send_input(self._session)
+        async for item in self.gen():
+            yield item
 
 
 # audio understanding with text query

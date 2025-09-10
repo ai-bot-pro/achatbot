@@ -34,13 +34,10 @@ def get_step_audio2_processor(
             module = importlib.import_module("src.processors.voice.step_audio2_processor")
         processor_class = getattr(module, llm_conf.processor)
         return processor_class(
-            init_system_prompt=llm_conf.init_system_prompt,
-            text_stream_out=llm_conf.text_stream_out,
-            prompt_wav=llm_conf.prompt_wav,
-            warmup_cn=llm_conf.warmup_cn,
             session=session,
             token2wav=token2wav,
             audio_llm=audio_llm or get_step_audio2_llm(bot_config),
+            **llm_conf.args,
         )
     except (ImportError, AttributeError) as e:
         raise ValueError(f"cannot import {llm_conf.processor}: {str(e)}")

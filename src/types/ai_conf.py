@@ -82,11 +82,6 @@ class LLMConfig(BaseModel):
     language: Optional[str] = None
     messages: Optional[List[dict]] = None
     tools: Optional[List[dict]] = None
-    init_system_prompt: str = ""
-    prompt_wav: str = ""
-    warmup_cn: int = 0
-    chat_history_size: Optional[int] = None
-    text_stream_out: bool = False
     # is_use_tools_description: Optional[bool] = False
     tag: Optional[str] = None
     args: Optional[dict] = None
