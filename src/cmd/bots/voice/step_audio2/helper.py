@@ -27,7 +27,7 @@ def get_step_audio2_processor(
 ) -> StepAudio2BaseProcessor:
     llm_conf = bot_config.voice_llm or bot_config.llm
     if not llm_conf:
-        raise ValueError("llm confk is None")
+        raise ValueError("llm conf is None")
     try:
         if bool(os.getenv("ACHATBOT_PKG", "")):
             module = importlib.import_module("achatbot.processors.voice.step_audio2_processor")
