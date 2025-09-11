@@ -19,6 +19,7 @@ try:
         sys.path.insert(1, os.path.join(cur_dir, "../../../deps/StepAudio2"))
 
     from deps.StepAudio2.token2wav import Token2wav
+    from transformers import GenerationConfig
 except ModuleNotFoundError as e:
     raise Exception(f"Missing module: {e}")
 
@@ -46,6 +47,7 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         warmup_cn: int = 1,
         chat_history_size: int | None = None,
         no_stream_sleep_time: float = 0.5,
+        chunk_size: int = 0,
         session: Session | None = None,
         audio_llm: ILlm | None = None,
         token2wav: Token2wav | None = None,
@@ -62,7 +64,7 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
 
         self._audio_llm = audio_llm
         token2wav_path = os.path.join(audio_llm.args.lm_model_name_or_path, "token2wav")
-        self._token2wav = Token2wav(token2wav_path)
+        self._token2wav = token2wav or Token2wav(token2wav_path)
         if torch.cuda.is_available():
             self._token2wav.flow.scatter_cuda_graph(True)
 
@@ -76,6 +78,7 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
 
         self._system_prompt = init_system_prompt or self.SYS_PROMPT
         self._text_stream_out = text_stream_out
+        self._chunk_size = chunk_size or self.CHUNK_SIZE
 
         self._session = session or Session(
             chat_history_size=chat_history_size, **SessionCtx(str(uuid.uuid4())).__dict__
@@ -88,6 +91,10 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         self._generate_thread = None
         self._sleep_time = no_stream_sleep_time
 
+    @property
+    def chat_history(self):
+        return self._session.chat_history
+
     def reset(self):
         self._token2wav.cache = {}
         self._session.reset()
@@ -95,11 +102,12 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
     def _generate(self):
         while True:
             try:
-                session = self._input_queue.get()
-                if session is None:
+                item = self._input_queue.get()
+                if item is None:
                     self._queue.put(None)  # Signal the end of the stream
                     break  # Signal to stop the thread
-                token_iter = self._audio_llm.generate(session)
+                session, kwargs = item
+                token_iter = self._audio_llm.generate(session, **kwargs)
                 self.put_out_audio_text(token_iter, is_out_text=True)
                 self._queue.put(None)  # Signal the end of the stream
             except Exception as e:
@@ -130,8 +138,9 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
             try:
                 item = self._queue.get_nowait()
                 if item is None:
+                    logging.info(f"generate done")
                     break  # End of the stream
-                logging.debug(f"generate data: {item}")
+                logging.info(f"generate data: {item}")
                 if is_push_frame is True:
                     await self.push_frame(item)
                     yield None
@@ -140,10 +149,11 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
             except queue.Empty:
                 # yield asysncio.sleep to allow other tasks to run, e.g.: sink task (write audio)
                 await asyncio.sleep(self._sleep_time)
+                # logging.info(f"queue empty sleep {self._sleep_time}")
                 continue
 
-    def send_input(self, session: Session):
-        self._input_queue.put(session)
+    def send_input(self, session: Session, **kwargs):
+        self._input_queue.put((session, kwargs))
 
     @property
     def stream_info(self) -> dict:
@@ -156,9 +166,24 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
     async def say(
         self,
         text: str,
-        is_out_text: bool = True,
         system_prompt: str = "以自然的语速读出下面的文字。\n",
-    ) -> None:
+        **kwargs,
+    ):
+        async for item in self.generator_say(
+            text,
+            system_prompt=system_prompt,
+            is_push_frame=True,
+            **kwargs,
+        ):
+            pass
+
+    async def generator_say(
+        self,
+        text: str,
+        system_prompt: str = "以自然的语速读出下面的文字。\n",
+        is_push_frame: str = True,
+        **kwargs,
+    ) -> AsyncGenerator[Frame, None]:
         """
         support: en,zh,ja
         """
@@ -174,9 +199,9 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
             },  # Insert <tts_start> for speech response
         ]
         self._session.ctx.state["messages"] = messages
-        self.send_input(self._session)
-        async for item in self.gen(is_push_frame=True):
-            pass
+        self.send_input(self._session, **kwargs)
+        async for item in self.gen(is_push_frame=is_push_frame):
+            yield item
 
     def put_out_audio_text(self, token_iter, is_out_text: bool = True):
         output_tokens = []
@@ -184,9 +209,9 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         out_text_tokens = []
         is_tag = False
         buffer = []
+        unicode_token_id = []
         for token_id in token_iter:
-            if token_id in self._audio_llm.eos_token_id:
-                break
+            # print(f"{token_id=} {self._audio_llm.llm_tokenizer.decode(token_id)=}")
             output_tokens.append(token_id)
             if token_id < 151688:  # text
                 if token_id == 27:  # <
@@ -199,17 +224,21 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
                     continue
                 out_text_tokens.append(token_id)
                 if is_out_text is True and self._text_stream_out is True:
-                    out_text = self._audio_llm.llm_tokenizer.decode(token_id)
-                    frame = TextFrame(text=out_text)
-                    self._queue.put(frame)
+                    out_text = self._audio_llm.llm_tokenizer.decode(unicode_token_id + [token_id])
+                    if out_text.strip() == "�":
+                        unicode_token_id.append(token_id)
+                    else:
+                        unicode_token_id = []
+                        frame = TextFrame(text=out_text)
+                        self._queue.put(frame)
             if token_id > 151695:  # audio
                 audio_token_id = token_id - 151696
                 if audio_token_id < 6561:  # remove audio padding
                     output_audio_tokens.append(audio_token_id)
                     buffer.append(audio_token_id)
-                    if len(buffer) >= self.CHUNK_SIZE + self._token2wav.flow.pre_lookahead_len:
+                    if len(buffer) >= self._chunk_size + self._token2wav.flow.pre_lookahead_len:
                         out_bytes = self._token2wav.stream(
-                            buffer[: self.CHUNK_SIZE + self._token2wav.flow.pre_lookahead_len],
+                            buffer[: self._chunk_size + self._token2wav.flow.pre_lookahead_len],
                             prompt_wav=self._prompt_wav,
                             last_chunk=False,
                         )
@@ -219,12 +248,13 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
                             num_channels=1,
                         )
                         self._queue.put(frame)
-                        buffer = buffer[self.CHUNK_SIZE :]
+                        buffer = buffer[self._chunk_size :]
         if len(buffer) > 0:
+            logging.info(f"last chunk size: {len(buffer)}")
             out_bytes = self._token2wav.stream(buffer, prompt_wav=self._prompt_wav, last_chunk=True)
             frame = AudioRawFrame(
                 audio=out_bytes,
-                sample_rate=24000,
+                sample_rate=self._audio_llm.RATE,
                 num_channels=1,
             )
             self._queue.put(frame)
@@ -305,10 +335,10 @@ class StepText2AudioProcessor(StepAudio2BaseProcessor):
 class StepTTSProcessor(StepText2AudioProcessor):
     async def run_text(self, frame: TextFrame) -> AsyncGenerator[Frame, None]:
         user_input = frame.text.strip()
-        await self.say(
-            user_input, is_out_text=False, system_prompt="以自然的语速读出下面的文字。\n"
-        )
-        yield None
+        async for item in self.generator_say(
+            user_input, system_prompt="以自然的语速读出下面的文字。\n"
+        ):
+            yield item
 
 
 # --------------------------------------------------------------------------------
@@ -325,10 +355,10 @@ class StepText2TextAudioProcessor(StepAudio2BaseProcessor):
 class StepT2STProcessor(StepText2TextAudioProcessor):
     async def run_text(self, frame: TextFrame) -> AsyncGenerator[Frame, None]:
         user_input = frame.text.strip()
-        await self.say(
-            user_input, is_out_text=True, system_prompt="请将下面的文本翻译成英文，并用语音播报。\n"
-        )
-        yield None
+        async for item in await self.generator_say(
+            user_input, system_prompt="请将下面的文本翻译成英文，并用语音播报。\n"
+        ):
+            yield item
 
 
 # --------------------------------------------------------------------------------
@@ -469,7 +499,6 @@ class StepText2TextAudioChatProcessor(StepAudio2BaseProcessor):
         async for item in self.gen():
             if isinstance(item, LLMGenedTokensFrame):
                 output_tokens = item.token_ids
-                break
             yield item
 
         self._session.chat_history.pop(-1)
@@ -519,7 +548,6 @@ class StepAudio2TextAudioChatProcessor(StepAudio2BaseProcessor):
         async for item in self.gen():
             if isinstance(item, LLMGenedTokensFrame):
                 output_tokens = item.token_ids
-                break
             yield item
 
         self._session.chat_history.pop(-1)
@@ -609,3 +637,69 @@ class StepAudioText2TextAudioProcessor(StepAudio2BaseProcessor):
 # audio understanding with text query
 class StepMMAUProcessor(StepAudioText2TextAudioProcessor):
     SYS_PROMPT = "You are an expert in audio analysis, please analyze the audio content and answer the questions accurately."
+
+
+"""
+python -m src.processors.voice.step_audio2_processor
+"""
+if __name__ == "__main__":
+    from apipeline.frames import AudioRawFrame, StartFrame, EndFrame, CancelFrame
+
+    from src.common.logger import Logger
+    from src.types.frames import PathAudioRawFrame
+    from src.cmd.bots.voice.step_audio2.helper import (
+        get_step_audio2_llm,
+        get_step_audio2_processor,
+    )
+    from src.types.ai_conf import AIConfig, LLMConfig
+
+    Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
+
+    async def run_aqaa():
+        processor = get_step_audio2_processor(
+            AIConfig(
+                voice_llm=LLMConfig(
+                    processor="StepAudio2TextAudioChatProcessor",
+                    args={
+                        "init_system_prompt": "",
+                        "prompt_wav": "./assets/default_male.wav",
+                        "warmup_cn": 2,
+                        "chat_history_size": None,
+                        "text_stream_out": False,
+                        "no_stream_sleep_time": 0.5,
+                        "lm_model_name_or_path": MODEL_PATH,
+                    },
+                )
+            ),
+        )
+        await processor.start(StartFrame())
+        for round_idx, audio_path in enumerate(
+            [
+                "./deps/StepAudio2/assets/multi-turn-round1-听说荡口古镇从下个月开始取消门票了，你知道这事吗。.wav",
+                "./deps/StepAudio2/assets/multi-turn-round2-新闻说九月十九号就免费开放了。好像整个古镇都升级改造了，现在变成开放式街区了。.wav",
+            ]
+        ):
+            print("round: ", round_idx)
+            frame_iter = processor.run_voice(
+                PathAudioRawFrame(
+                    path=audio_path,
+                    audio=b"",
+                )
+            )
+            audio = b""
+            async for frame in frame_iter:
+                if isinstance(frame, AudioRawFrame):
+                    audio += frame.audio
+                print(f"{round_idx=} gen_frame-->", frame)
+            print(f"{round_idx=} {processor._session.chat_history=}")
+            wav_path = Path(
+                f"{ASSETS_DIR}/StepAudio2/output-processor-chunks-stream-{round_idx}.wav"
+            )
+            with wave.open(str(wav_path), "wb") as wf:
+                wf.setnchannels(1)
+                wf.setsampwidth(2)
+                wf.setframerate(24000)
+                wf.writeframes(audio)
+        await processor.stop(EndFrame())
+
+    asyncio.run(run_aqaa())

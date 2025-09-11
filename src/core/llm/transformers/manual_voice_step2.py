@@ -18,7 +18,9 @@ class TransformersManualVoiceStep2(TransformersBaseLLM):
     RATE = 24000
 
     def __init__(self, **args):
-        self.args = TransformersLMArgs(**args)
+        self.args = TransformersLMArgs()
+        self.args.update(**args)
+        logging.info(f"args: {self.args}")
         self._audio_llm = StepAudio2Stream(model_path=self.args.lm_model_name_or_path)
         self.eos_token_id = [
             self._audio_llm.eos_token_id,
@@ -47,7 +49,7 @@ class TransformersManualVoiceStep2(TransformersBaseLLM):
         for step in range(self.args.warmup_steps):
             token_iter = self._audio_llm(
                 messages,
-                max_new_tokens=256,
+                max_new_tokens=128,
                 temperature=0.1,
                 do_sample=True,
                 eos_token_id=self.eos_token_id,
@@ -63,8 +65,22 @@ class TransformersManualVoiceStep2(TransformersBaseLLM):
 
     @torch.inference_mode()
     def generate(self, session: Session, **kwargs):
+        kwargs["max_new_tokens"] = kwargs.get("max_new_tokens", self.args.lm_gen_max_new_tokens)
+        kwargs["top_k"] = kwargs.get("top_k", self.args.lm_gen_top_k)
+        kwargs["top_p"] = kwargs.get("top_p", self.args.lm_gen_top_p)
+        kwargs["do_sample"] = (
+            True if kwargs.get("temperature", self.args.lm_gen_temperature) > 0.0 else False
+        )
+        kwargs["temperature"] = kwargs.get("temperature", self.args.lm_gen_temperature)
+        kwargs["repetition_penalty"] = kwargs.get(
+            "repetition_penalty", self.args.lm_gen_repetition_penalty
+        )
+        kwargs["min_new_tokens"] = kwargs.get("min_new_tokens", self.args.lm_gen_min_new_tokens)
+        stop_ids = kwargs.pop("stop_ids", self.args.lm_gen_stop_ids)
         for token_id in self._audio_llm(
             messages=session.ctx.state["messages"],
             **kwargs,
         ):
             yield token_id
+            if token_id in stop_ids:
+                break

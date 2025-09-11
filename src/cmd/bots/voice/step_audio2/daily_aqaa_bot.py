@@ -13,7 +13,7 @@ from src.cmd.bots.base_daily import DailyRoomBot
 from src.common.types import DailyParams
 from src.transports.daily import DailyTransport
 from src.cmd.bots import register_ai_room_bots
-from src.types.frames import *
+from src.types.frames import PathAudioRawFrame, LLMGenedTokensFrame, BotSpeakingFrame
 from .helper import get_step_audio2_processor, get_step_audio2_llm
 
 
@@ -77,7 +77,9 @@ class DailyStepAudio2AQAABot(DailyRoomBot):
                     AudioSaveProcessor(prefix_name="user_audio_aggr"),
                     FrameLogger(include_frame_types=[PathAudioRawFrame]),
                     self._voice_processor,
-                    FrameLogger(include_frame_types=[TextFrame, AudioRawFrame]),
+                    FrameLogger(
+                        include_frame_types=[TextFrame, AudioRawFrame, LLMGenedTokensFrame]
+                    ),
                     AudioSaveProcessor(prefix_name="bot_speak"),
                     # FrameLogger(include_frame_types=[BotSpeakingFrame]),
                     FrameLogger(include_frame_types=[AudioRawFrame]),
@@ -101,4 +103,11 @@ class DailyStepAudio2AQAABot(DailyRoomBot):
         await PipelineRunner().run(self.task)
 
     async def on_first_participant_say_hi(self, transport: DailyTransport, participant):
-        await self._voice_processor.say("你好。欢迎语音聊天!")
+        await self._voice_processor.say(
+            "你好。我是一名助手，欢迎语音聊天!",
+            temperature=0.1,
+            max_new_tokens=1024,
+            top_k=20,
+            top_p=0.95,
+            repetition_penalty=1.1,
+        )

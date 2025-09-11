@@ -5,7 +5,7 @@ from src.common.interface import ILlm
 from src.common.session import Session
 from src.types.ai_conf import AIConfig, LLMConfig
 from src.common.types import MODELS_DIR
-from src.processors.voice.step_audio2_processor import Token2wav
+from src.processors.voice.step_audio2_processor import Token2wav, StepAudio2BaseProcessor
 
 
 def get_step_audio2_llm(bot_config: AIConfig):
@@ -13,9 +13,10 @@ def get_step_audio2_llm(bot_config: AIConfig):
 
     llm = bot_config.llm or bot_config.voice_llm
     lm_model_name_or_path = os.path.join(MODELS_DIR, "stepfun-ai/Step-Audio-2-mini")
-    if llm.args and llm.args.get("lm_model_name_or_path"):
-        lm_model_name_or_path = llm.args.get("lm_model_name_or_path")
-    return TransformersManualVoiceStep2(lm_model_name_or_path=lm_model_name_or_path)
+    args = llm.args if llm.args else {}
+    if args.get("lm_model_name_or_path", None) is None:
+        args["lm_model_name_or_path"] = lm_model_name_or_path
+    return TransformersManualVoiceStep2(**args)
 
 
 def get_step_audio2_processor(
@@ -23,7 +24,7 @@ def get_step_audio2_processor(
     session: Session | None = None,
     token2wav: Token2wav | None = None,
     audio_llm: ILlm | None = None,
-):
+) -> StepAudio2BaseProcessor:
     llm_conf = bot_config.voice_llm or bot_config.llm
     if not llm_conf:
         raise ValueError("llm confk is None")
@@ -51,8 +52,21 @@ if __name__ == "__main__":
     get_step_audio2_processor(
         AIConfig(
             voice_llm=LLMConfig(
-                processor="StepAudioText2TextProcessor",
-                args={"lm_model_name_or_path": "stepfun-ai/Step-Audio-2-mini"},
+                processor="StepAudio2TextAudioChatProcessor",
+                args={
+                    "init_system_prompt": "",
+                    "prompt_wav": "/root/.achatbot/assets/default_male.wav",
+                    "warmup_cn": 2,
+                    "chat_history_size": None,
+                    "text_stream_out": False,
+                    "no_stream_sleep_time": 0.5,
+                    "lm_model_name_or_path": "stepfun-ai/Step-Audio-2-mini",
+                    "lm_gen_max_new_tokens": 64,
+                    "lm_gen_temperature": 0.1,
+                    "lm_gen_top_k": 20,
+                    "lm_gen_top_p": 0.95,
+                    "repetition_penalty": 1.1,
+                },
             )
         ),
     )

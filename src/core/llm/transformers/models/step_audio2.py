@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 from threading import Thread
 from typing import BinaryIO
 
@@ -68,6 +69,7 @@ class StepAudio2StreamBase(StepAudio2Base):
 
     def __call__(self, messages: list, **kwargs):
         messages, mels = self.apply_chat_template(messages)
+        logging.debug(f"messages: {messages}")
 
         # Tokenize prompts
         prompt_ids = []
@@ -94,12 +96,13 @@ class StepAudio2StreamBase(StepAudio2Base):
             mel_lengths = mel_lengths.cuda()
 
         generation_config = dict(
-            max_new_tokens=2048,
+            # max_new_tokens=256,
             pad_token_id=self.llm_tokenizer.pad_token_id,
             eos_token_id=self.eos_token_id,
         )
         generation_config.update(kwargs)
         generation_config = GenerationConfig(**generation_config)
+        logging.debug(f"generation_config: {generation_config}")
 
         streamer = TokenStreamer(skip_prompt=True)
 
