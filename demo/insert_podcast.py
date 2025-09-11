@@ -203,13 +203,11 @@ def insert_podcast_to_d1(
         podcast.audio_size,
     ]
     # ====================
-    # 新增的SQL打印代码
-    debug_sql = sql.replace("?", "{}").format(
-        *[f"'{p}'" if isinstance(p, str) else str(p) for p in sql_params]
-    )
-    print(f"Debug SQL: {debug_sql}")
-    # ====================  
-
+    # debug_sql = sql.replace("?", "{}").format(
+    #    *[f"'{p}'" if isinstance(p, str) else str(p) for p in sql_params]
+    # )
+    # print(f"Debug SQL: {debug_sql}")
+    # ====================
 
     res = d1_table_query(db_id, sql, sql_params)
     if res["success"] is True:
@@ -229,7 +227,7 @@ def update_podcast_cover_to_d1(
     now = datetime.now()
     formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
     db_id = os.getenv("PODCAST_D1_DB_ID")
-    sql = "update podcast_test set cover_img_url=?, update_time=? where pid=?;"
+    sql = "update podcast set cover_img_url=?, update_time=? where pid=?;"
     sql_params = [
         cover_img_url,
         formatted_time,
