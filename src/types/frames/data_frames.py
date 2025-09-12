@@ -379,3 +379,15 @@ class LLMGenedTokensFrame(Frame):
 
     def __str__(self):
         return f"{self.name}(token_ids: {self.token_ids})"
+
+
+@dataclass
+class FunctionCallFrame(Frame):
+    """llm gened tokens frame"""
+
+    function_name: str = ""
+    tool_call_id: str = ""
+    arguments: dict = field(default_factory=dict)
+
+    def __str__(self):
+        return f"{self.name}(function_name: {self.function_name}, tool_call_id: {self.tool_call_id}, arguments: {self.arguments})"

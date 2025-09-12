@@ -81,6 +81,6 @@ class TransformersManualVoiceStep2(TransformersBaseLLM):
             messages=session.ctx.state["messages"],
             **kwargs,
         ):
-            yield token_id
             if token_id in stop_ids:
                 break
+            yield token_id

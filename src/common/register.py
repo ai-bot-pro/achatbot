@@ -19,7 +19,7 @@ class Register:
         """Decorator to register a function or class."""
 
         def add(key, value):
-            self[key] = value
+            self._dict[key] = value
             return value
 
         if callable(target):
@@ -46,3 +46,25 @@ class Register:
 
     def dict(self):
         return self._dict
+
+
+"""
+python -m src.common.register
+"""
+
+if __name__ == "__main__":
+    functions = Register("llm_function_calling")
+
+    @functions.register("test")
+    def test():
+        print("test")
+
+    @functions.register
+    def test1():
+        print("test")
+
+    @functions.register
+    def test2():
+        print("test")
+
+    print(functions.items())

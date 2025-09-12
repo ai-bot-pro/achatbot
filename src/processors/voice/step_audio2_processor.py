@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import json
 import queue
 import asyncio
 import logging
@@ -29,7 +30,16 @@ from src.processors.voice.base import VoiceProcessorBase
 from src.common.session import Session
 from src.common.types import SessionCtx
 from src.common.utils.audio_utils import bytes2TorchTensorWith16
-from src.types.frames import TextQuestionsAudioRawFrame, PathAudioRawFrame, LLMGenedTokensFrame
+from src.types.frames import (
+    TextQuestionsAudioRawFrame,
+    PathAudioRawFrame,
+    LLMGenedTokensFrame,
+    FunctionCallFrame,
+)
+import src.modules.functions.search.api
+import src.modules.functions.weather.api
+from src.modules.functions.function import FunctionManager
+from .helper import extract_function_info
 
 
 class StepAudio2BaseProcessor(VoiceProcessorBase):
@@ -51,6 +61,8 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         session: Session | None = None,
         audio_llm: ILlm | None = None,
         token2wav: Token2wav | None = None,
+        is_speaking: bool = True,
+        tools: list = [],
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -63,18 +75,20 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         )
 
         self._audio_llm = audio_llm
-        token2wav_path = os.path.join(audio_llm.args.lm_model_name_or_path, "token2wav")
-        self._token2wav = token2wav or Token2wav(token2wav_path)
-        if torch.cuda.is_available():
-            self._token2wav.flow.scatter_cuda_graph(True)
+        self._is_speaking = is_speaking
+        if is_speaking is True:
+            token2wav_path = os.path.join(audio_llm.args.lm_model_name_or_path, "token2wav")
+            self._token2wav = token2wav or Token2wav(token2wav_path)
+            if torch.cuda.is_available():
+                self._token2wav.flow.scatter_cuda_graph(True)
 
-        self._prompt_wav = prompt_wav or os.path.join(ASSETS_DIR, "default_female.wav")
-        self._token2wav.set_stream_cache(self._prompt_wav)
-        if warmup_cn > 0:
-            for i in range(warmup_cn):
-                start = time.time()
-                self._token2wav.warmup(self._prompt_wav)
-                logging.info(f"Token2wav warmup {i=} done in {time.time() - start:.3f}s")
+            self._prompt_wav = prompt_wav or os.path.join(ASSETS_DIR, "default_female.wav")
+            self._token2wav.set_stream_cache(self._prompt_wav)
+            if warmup_cn > 0:
+                for i in range(warmup_cn):
+                    start = time.time()
+                    self._token2wav.warmup(self._prompt_wav)
+                    logging.info(f"Token2wav warmup {i=} done in {time.time() - start:.3f}s")
 
         self._system_prompt = init_system_prompt or self.SYS_PROMPT
         self._text_stream_out = text_stream_out
@@ -84,6 +98,12 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
             chat_history_size=chat_history_size, **SessionCtx(str(uuid.uuid4())).__dict__
         )
         self._session.chat_history.init({"role": "system", "content": self._system_prompt})
+        tool_calls = FunctionManager.get_tool_calls_by_names(tools)
+        if len(tool_calls) > 0:
+            tool_json_schemas = json.dumps(tool_calls)
+            self._session.chat_history.init_tools(
+                {"role": "tool_json_schemas", "content": tool_json_schemas}
+            )
 
         # for async generate to yield
         self._queue = queue.Queue()
@@ -96,7 +116,8 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         return self._session.chat_history
 
     def reset(self):
-        self._token2wav.cache = {}
+        if is_speaking is True:
+            self._token2wav.cache = {}
         self._session.reset()
 
     def _generate(self):
@@ -204,16 +225,28 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
             yield item
 
     def put_out_audio_text(self, token_iter, is_out_text: bool = True):
-        output_tokens = []
-        output_audio_tokens = []
-        out_text_tokens = []
+        output_token_ids = []
+        output_audio_token_ids = []
+        out_text_token_ids = []
+        is_tool = False
+        tool_calls_token_ids = []
         is_tag = False
         buffer = []
         unicode_token_id = []
         for token_id in token_iter:
-            # print(f"{token_id=} {self._audio_llm.llm_tokenizer.decode(token_id)=}")
-            output_tokens.append(token_id)
+            print(f"{token_id=} {self._audio_llm.llm_tokenizer.decode(token_id)=}")
+            output_token_ids.append(token_id)
             if token_id < 151688:  # text
+                if token_id == 151657:  # <tool_call>
+                    is_tool = True
+                    continue
+                if token_id == 151658:  # </tool_call>
+                    is_tool = False
+                    continue
+                if is_tool:
+                    tool_calls_token_ids.append(token_id)
+                    continue
+
                 if token_id == 27:  # <
                     is_tag = True
                     continue
@@ -222,19 +255,20 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
                     continue
                 if is_tag:  # <***>
                     continue
-                out_text_tokens.append(token_id)
+
+                out_text_token_ids.append(token_id)
                 if is_out_text is True and self._text_stream_out is True:
                     out_text = self._audio_llm.llm_tokenizer.decode(unicode_token_id + [token_id])
-                    if out_text.strip() == "�":
+                    if "�" in out_text:
                         unicode_token_id.append(token_id)
                     else:
                         unicode_token_id = []
                         frame = TextFrame(text=out_text)
                         self._queue.put(frame)
-            if token_id > 151695:  # audio
+            if token_id > 151695 and self._is_speaking is True:  # audio
                 audio_token_id = token_id - 151696
                 if audio_token_id < 6561:  # remove audio padding
-                    output_audio_tokens.append(audio_token_id)
+                    output_audio_token_ids.append(audio_token_id)
                     buffer.append(audio_token_id)
                     if len(buffer) >= self._chunk_size + self._token2wav.flow.pre_lookahead_len:
                         out_bytes = self._token2wav.stream(
@@ -249,7 +283,7 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
                         )
                         self._queue.put(frame)
                         buffer = buffer[self._chunk_size :]
-        if len(buffer) > 0:
+        if len(buffer) > 0 and self._is_speaking is True:
             logging.info(f"last chunk size: {len(buffer)}")
             out_bytes = self._token2wav.stream(buffer, prompt_wav=self._prompt_wav, last_chunk=True)
             frame = AudioRawFrame(
@@ -260,15 +294,21 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
             self._queue.put(frame)
 
         out_text = ""
-        if len(out_text_tokens) > 0 and is_out_text is True:
-            out_text = self._audio_llm.llm_tokenizer.decode(out_text_tokens)
+        if len(out_text_token_ids) > 0 and is_out_text is True:
+            out_text = self._audio_llm.llm_tokenizer.decode(out_text_token_ids)
             if self._text_stream_out is False:
                 frame = TextFrame(text=out_text)
                 self._queue.put(frame)
 
-        self._queue.put(LLMGenedTokensFrame(token_ids=output_tokens))
+        self._queue.put(LLMGenedTokensFrame(token_ids=output_token_ids))
 
-        return output_tokens, out_text
+        if len(tool_calls_token_ids) > 0:
+            tool_calls_token = self._audio_llm.llm_tokenizer.decode(tool_calls_token_ids)
+            # print(f"{tool_calls_token=}")
+            function_name, function_args = extract_function_info(tool_calls_token)
+            self._queue.put(FunctionCallFrame(function_name=function_name, arguments=function_args))
+
+        return output_token_ids, out_text
 
 
 # --------------------------------------------------------------------------------
@@ -355,8 +395,10 @@ class StepText2TextAudioProcessor(StepAudio2BaseProcessor):
 class StepT2STProcessor(StepText2TextAudioProcessor):
     async def run_text(self, frame: TextFrame) -> AsyncGenerator[Frame, None]:
         user_input = frame.text.strip()
-        async for item in await self.generator_say(
-            user_input, system_prompt="请将下面的文本翻译成英文，并用语音播报。\n"
+        async for item in self.generator_say(
+            user_input,
+            system_prompt="请将下面的文本翻译成英文，并用语音播报。\n",
+            is_push_frame=False,
         ):
             yield item
 
@@ -400,7 +442,7 @@ class StepAudio2TextAudioProcessor(StepAudio2BaseProcessor):
 
 
 class StepS2STProcessor(StepAudio2TextAudioProcessor):
-    SYS_PROMPT = "请仔细聆听这段语音，然后将其内容翻译成中文并用语音播报。"
+    SYS_PROMPT = "请仔细聆听这段语音，然后将其内容翻译成英文并用语音播报。"
 
 
 class StepParalingusticInformationUnderstandingProcessor(StepAudio2TextAudioProcessor):
@@ -495,22 +537,21 @@ class StepText2TextAudioChatProcessor(StepAudio2BaseProcessor):
         )
         self._session.ctx.state["messages"] = self._session.chat_history.to_list()
         self.send_input(self._session)
-        output_tokens = []
+        output_token_ids = []
         async for item in self.gen():
             if isinstance(item, LLMGenedTokensFrame):
-                output_tokens = item.token_ids
+                output_token_ids = item.token_ids
+                self._session.chat_history.pop(-1)
+                self._session.chat_history.append(
+                    {
+                        "role": "assistant",
+                        "content": [
+                            {"type": "text", "text": "<tts_start>"},
+                            {"type": "token", "token": output_token_ids},
+                        ],
+                    }
+                )
             yield item
-
-        self._session.chat_history.pop(-1)
-        self._session.chat_history.append(
-            {
-                "role": "assistant",
-                "content": [
-                    {"type": "text", "text": "<tts_start>"},
-                    {"type": "token", "token": output_tokens},
-                ],
-            }
-        )
 
 
 # Chat: multi turn AQAA
@@ -544,22 +585,46 @@ class StepAudio2TextAudioChatProcessor(StepAudio2BaseProcessor):
         )
         self._session.ctx.state["messages"] = self._session.chat_history.to_list()
         self.send_input(self._session)
-        output_tokens = []
+        output_token_ids = []
         async for item in self.gen():
             if isinstance(item, LLMGenedTokensFrame):
-                output_tokens = item.token_ids
+                output_token_ids = item.token_ids
+                self._session.chat_history.pop(-1)
+                self._session.chat_history.append(
+                    {
+                        "role": "assistant",
+                        "content": [
+                            {"type": "text", "text": "<tts_start>"},
+                            {"type": "token", "token": output_token_ids},
+                        ],
+                    }
+                )
+            if isinstance(item, FunctionCallFrame):  # send input for function call
+                func_res = FunctionManager.execute(
+                    item.function_name, self._session, **item.arguments
+                )
+                self._session.chat_history.append(
+                    {
+                        "role": "input",
+                        "content": [
+                            {"type": "text", "text": func_res},
+                            {
+                                "type": "text",
+                                "text": "\n\n\n请用口语化形式总结检索结果，简短地回答用户的问题。",
+                            },
+                        ],
+                    }
+                )
+                self._session.chat_history.append(
+                    {
+                        "role": "assistant",
+                        "content": "<tts_start>",
+                        "eot": False,
+                    },  # Insert <tts_start> for speech response
+                )
+                self._session.ctx.state["messages"] = self._session.chat_history.to_list()
+                self.send_input(self._session)
             yield item
-
-        self._session.chat_history.pop(-1)
-        self._session.chat_history.append(
-            {
-                "role": "assistant",
-                "content": [
-                    {"type": "text", "text": "<tts_start>"},
-                    {"type": "token", "token": output_tokens},
-                ],
-            }
-        )
 
 
 # ----------------------------------------------------------------------------------
@@ -667,7 +732,7 @@ if __name__ == "__main__":
                         "chat_history_size": None,
                         "text_stream_out": False,
                         "no_stream_sleep_time": 0.5,
-                        "lm_model_name_or_path": MODEL_PATH,
+                        "lm_model_name_or_path": "./models/stepfun-ai/Step-Audio-2-mini",
                     },
                 )
             ),

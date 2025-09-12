@@ -54,6 +54,8 @@ class StepAudio2StreamBase(StepAudio2Base):
                     elif isinstance(audio, numpy.ndarray):
                         audio = torch.from_numpy(audio, dtype=torch.float32)
                     assert isinstance(audio, torch.Tensor), f"Unsupported audio type: {type(audio)}"
+                    if len(audio.shape) > 1:  # [1, size]
+                        audio = audio.squeeze(0)  # [size]
                     for i in range(0, audio.shape[0], 16000 * 25):
                         mel = log_mel_spectrogram(
                             audio[i : i + 16000 * 25], n_mels=128, padding=479
@@ -124,9 +126,9 @@ class StepAudio2StreamBase(StepAudio2Base):
             else generation_config.eos_token_id
         )
         for token_id in streamer:
-            yield token_id
             if token_id in stop_ids:
                 break
+            yield token_id
 
 
 class StepAudio2Stream(StepAudio2StreamBase):
@@ -160,6 +162,8 @@ class StepAudio2Stream(StepAudio2StreamBase):
                         assert isinstance(audio, torch.Tensor), (
                             f"Unsupported audio type: {type(audio)}"
                         )
+                        if len(audio.shape) > 1:  # [1, size]
+                            audio = audio.squeeze(0)  # [size]
                         for i in range(0, audio.shape[0], 16000 * 25):
                             mel = log_mel_spectrogram(
                                 audio[i : i + 16000 * 25], n_mels=128, padding=479

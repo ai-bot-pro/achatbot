@@ -74,8 +74,8 @@ class DailyStepAudio2AQAABot(DailyRoomBot):
                     transport.input_processor(),
                     UserAudioResponseAggregator(),
                     FrameLogger(include_frame_types=[AudioRawFrame]),
-                    AudioSaveProcessor(prefix_name="user_audio_aggr"),
-                    FrameLogger(include_frame_types=[PathAudioRawFrame]),
+                    # AudioSaveProcessor(prefix_name="user_audio_aggr"),
+                    # FrameLogger(include_frame_types=[PathAudioRawFrame]),
                     self._voice_processor,
                     FrameLogger(
                         include_frame_types=[TextFrame, AudioRawFrame, LLMGenedTokensFrame]
