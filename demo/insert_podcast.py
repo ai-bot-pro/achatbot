@@ -126,6 +126,7 @@ def get_podcast(
                         raise  # 如果达到最大重试次数，抛出异常
 
         gen_img_prompt = f"podcast cover image which content is about {en_title}"
+        print(f"{gen_img_prompt}")
         img_file = save_gen_image(gen_img_prompt, uuid.uuid4().hex)
         cover_img_url = r2_upload("podcast", img_file)
 
@@ -201,11 +202,20 @@ def insert_podcast_to_d1(
         formatted_time,
         podcast.audio_size,
     ]
+    # ====================
+    # debug_sql = sql.replace("?", "{}").format(
+    #    *[f"'{p}'" if isinstance(p, str) else str(p) for p in sql_params]
+    # )
+    # print(f"Debug SQL: {debug_sql}")
+    # ====================
+
     res = d1_table_query(db_id, sql, sql_params)
     if res["success"] is True:
         logging.info(
             f"insert podcast success, url: https://podcast-997.pages.dev/podcast/{podcast.pid}"
         )
+    else:
+        logging.error(f"insert podcast failed, res: {res}")
     return res["success"]
 
 
@@ -224,6 +234,7 @@ def update_podcast_cover_to_d1(
         pid,
     ]
     res = d1_table_query(db_id, sql, sql_params)
+    print(res)
     return res["success"]
 
 

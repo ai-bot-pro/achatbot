@@ -1,13 +1,21 @@
 from .types import SessionCtx
+from .chat_history import ChatHistory
 
 
 class Session:
     def __init__(self, **args) -> None:
+        chat_history_size = args.pop("chat_history_size", None)
         self.ctx = SessionCtx(**args)
         self.config = {}
         self.chat_round = 0
-        # just for local history,@todo: use kv store history like mem0
-        self.chat_history = []
+        self.chat_history = ChatHistory(size=chat_history_size)
+
+    def init_chat_message(self, init_chat_message: dict):
+        self.chat_history.init(init_chat_message)
+
+    def reset(self):
+        self.chat_round = 0
+        self.chat_history.clear()
 
     def __getstate__(self):
         return {
@@ -24,14 +32,13 @@ class Session:
         self.ctx = state["ctx"]
 
     def __repr__(self) -> str:
-        d = {
+        session = {
             "config": self.config,
             "chat_round": self.chat_round,
             "chat_history": self.chat_history,
             "ctx": self.ctx,
         }
-        s = f"session: {d}"
-        return s
+        return f"{session=}"
 
     def set_client_id(self, client_id):
         self.ctx.client_id = client_id
@@ -78,3 +85,70 @@ class Session:
             self.ctx.llm.close()
         if hasattr(self.ctx.tts, "close"):
             self.ctx.tts.close()
+
+
+""""
+python -m src.common.session
+"""
+
+
+def test_chat_history():
+    chat_history_size = 3
+    session = Session(
+        chat_history_size=chat_history_size,
+        client_id="test_client",
+        asr=None,
+        llm=None,
+        tts=None,
+        vad=None,
+        waker=None,
+        buffering_strategy=None,
+        on_session_start=None,
+        on_session_end=None,
+    )
+    print("init", session)
+
+    for i in range(10):
+        session.chat_history.append({"role": "user", "content": f"Hello {i}"})
+        session.chat_history.append(
+            {"role": "assistant", "content": f"Hi, how can I help you {i}?"}
+        )
+        session.increment_chat_round()
+        print(f"{i=} chat", session)
+        if i < chat_history_size:
+            assert len(session.chat_history.to_list()) == (i + 1) * 2
+        else:
+            assert len(session.chat_history.to_list()) == chat_history_size * 2
+
+    session.reset()
+    print("reset", session)
+    assert len(session.chat_history.to_list()) == 0
+
+    print(f"\ntest_chat_history pass\n\n")
+
+
+def test_pickle():
+    import pickle
+
+    chat_history_size = 3
+    session = Session(
+        chat_history_size=chat_history_size,
+        **SessionCtx(client_id="test_client").__dict__,
+    )
+    print("init", session)
+
+    pickle_data = pickle.dumps(session)
+    print("session dump", pickle_data)
+
+    load_session = pickle.loads(pickle_data)
+    print("session load", load_session)
+    assert str(session) == str(load_session)
+    print(f"\ntest_pickle pass\n\n")
+
+
+"""
+python -m src.common.session
+"""
+if __name__ == "__main__":
+    test_pickle()
+    test_chat_history()

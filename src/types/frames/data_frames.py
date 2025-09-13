@@ -364,3 +364,30 @@ class AnimationAudioRawFrame(AudioRawFrame):
         return (
             f"{super_str} animation_json: {self.animation_json} avatar_status: {self.avatar_status}"
         )
+
+
+@dataclass
+class TextQuestionsAudioRawFrame(AudioRawFrame, TextFrame):
+    """text questions with audio frame"""
+
+
+@dataclass
+class LLMGenedTokensFrame(Frame):
+    """llm gened tokens frame"""
+
+    token_ids: list[int] = field(default_factory=list)
+
+    def __str__(self):
+        return f"{self.name}(token_ids: {self.token_ids})"
+
+
+@dataclass
+class FunctionCallFrame(Frame):
+    """llm gened tokens frame"""
+
+    function_name: str = ""
+    tool_call_id: str = ""
+    arguments: dict = field(default_factory=dict)
+
+    def __str__(self):
+        return f"{self.name}(function_name: {self.function_name}, tool_call_id: {self.tool_call_id}, arguments: {self.arguments})"

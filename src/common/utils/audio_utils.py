@@ -45,7 +45,7 @@ def bytes2TorchTensorWith16(frames: bytes | bytearray):
     if waveform_tensor.ndim == 1:
         # float_data= float_data.reshape(1, -1)
         waveform_tensor = waveform_tensor.reshape(1, -1)
-    return waveform_tensor
+    return waveform_tensor  # (1, size(time))
 
 
 def npArray2bytes(np_arr: np.ndarray) -> bytearray:

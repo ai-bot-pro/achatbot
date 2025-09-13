@@ -78,6 +78,7 @@ class AIBot(IBot):
         self._bot_config = self.args.bot_config
         self._handle_sigint = self.args.handle_sigint
 
+
     def init_bot_config(self):
         try:
             logging.debug(f"args.bot_config: {self.args.bot_config}")

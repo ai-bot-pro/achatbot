@@ -167,6 +167,10 @@ def import_bots(bot_name: str = "DummyBot"):
         from .translation import daily_asr_translate_tts_bot
 
         return True
+    if "DailyStepAudio2AQAABot" in bot_name:
+        from .voice.step_audio2 import daily_aqaa_bot
+
+        return True
     if "LivekitBot" in bot_name:
         from . import livekit_bot
 

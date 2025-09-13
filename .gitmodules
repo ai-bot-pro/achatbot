@@ -78,3 +78,6 @@
 [submodule "deps/HiggsAudio"]
 	path = deps/HiggsAudio
 	url = https://github.com/weedge/higgs-audio.git
+[submodule "deps/StepAudio2"]
+	path = deps/StepAudio2
+	url = https://github.com/weedge/Step-Audio2.git

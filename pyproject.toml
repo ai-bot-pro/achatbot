@@ -10,13 +10,30 @@
 # pip-compile --all-extras pyproject.toml
 
 [build-system]
-requires = ["setuptools>=61.0", "setuptools-scm>=8.0"]
+requires = ["setuptools>=61.2", "setuptools-scm>=8.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# By default, include-package-data is true in pyproject.toml, so you do
+# NOT have to specify this line. Either remove this or ensure it's not 
+# set to false.
+include-package-data = true
+
+# if use library, need add achatbot dir in pypi_build/app dir, change import codes
+[tool.setuptools.packages.find]
+# !NOTE: packages find .py file, other file don't to exclude
+# All the following settings are optional:
+where = ["pypi_build/app"]
+#include = ["deps*", "src*"]
+#exclude = ["ui*","docs*"]
+
+[tool.setuptools_scm]
+local_scheme = "no-local-version"
 
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.24.post5"
+version = "0.0.25"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -797,22 +814,12 @@ remote_grpc_tts_server = ["achatbot[grpc,speech_tts]"]
 test = ["sentence_transformers~=3.0.0", "pytest~=8.3.2", "pytest-mock~=3.14.0"]
 
 
-# if use library, need add achatbot dir in pypi_build/app dir, change import codes
-[tool.setuptools.packages.find]
-# !NOTE: packages find .py file, other file don't to exclude
-# All the following settings are optional:
-where = ["pypi_build/app"]
-#include = ["deps", "src", "tests"]
-exclude = []
-
-
 [tool.pytest.ini_options]
 pythonpath = ["tests"]
 #include = ["tests"]
 
-[tool.setuptools_scm]
-local_scheme = "no-local-version"
 
+#------------------- linter -------------------------
 
 # https://docs.astral.sh/ruff/configuration/
 [tool.ruff]

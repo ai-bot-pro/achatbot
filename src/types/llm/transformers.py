@@ -131,6 +131,21 @@ class TransformersImageLMArgs(TransformersLMArgs):
         return super().to_dict()
 
 
+"""
+python -m src.types.llm.transformers
+"""
 if __name__ == "__main__":
     args = TransformersLMArgs()
     print(args.to_dict().items())
+
+    unset_args = args.update(
+        **{
+            "lm_model_name_or_path": "HuggingFaceTB/SmolLM-360M",
+            "lm_model_name_or_path1": "HuggingFaceTB/SmolLM-360M-Instruct",
+            "lm_gen_repetition_penalty": 1.011,
+        }
+    )
+    assert args.lm_model_name_or_path == "HuggingFaceTB/SmolLM-360M"
+    assert args.lm_gen_repetition_penalty == 1.011
+    print("TransformersLMArgs", args)
+    print(f"{unset_args=}")

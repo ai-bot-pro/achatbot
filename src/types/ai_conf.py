@@ -29,80 +29,7 @@ DEFAULT_LLM_MODEL = os.getenv("LLM_OPENAI_MODEL", TOGETHER_LLM_MODEL)
 DEFAULT_LLM_LANG = "zh"
 
 
-class StreamConfig(BaseModel):
-    tag: Optional[str] = "daily_room_stream"
-    args: Optional[dict] = None
-
-
-class VADConfig(BaseModel):
-    tag: Optional[str] = None
-    args: Optional[dict] = None
-
-
-class TurnConfig(BaseModel):
-    tag: Optional[str] = None
-    args: Optional[dict] = None
-
-
-class VisionDetectorConfig(BaseModel):
-    tag: Optional[str] = None
-    args: Optional[dict] = None
-
-
-class VisionOCRConfig(BaseModel):
-    trigger_texts: Optional[List[str]] = None
-    tag: Optional[str] = None
-    args: Optional[dict] = None
-
-
-class ImageGenConfig(BaseModel):
-    tag: Optional[str] = None
-    args: Optional[dict] = None
-
-
-class ASRConfig(BaseModel):
-    tag: Optional[str] = None
-    args: Optional[dict] = None
-
-
-class PuncConfig(BaseModel):
-    tag: Optional[str] = None
-    args: Optional[dict] = None
-
-
-class AvatarConfig(BaseModel):
-    tag: Optional[str] = None
-    args: Optional[dict] = None
-
-
-class LLMConfig(BaseModel):
-    base_url: Optional[str] = None
-    model: Optional[str] = None
-    language: Optional[str] = None
-    messages: Optional[List[dict]] = None
-    tools: Optional[List[dict]] = None
-    # is_use_tools_description: Optional[bool] = False
-    tag: Optional[str] = None
-    args: Optional[dict] = None
-
-
-class TranslateLLMConfig(BaseModel):
-    init_prompt: Optional[str] = None
-    model: Optional[str] = None
-    src: Optional[str] = None
-    target: Optional[str] = None
-    streaming: Optional[bool] = False
-    prompt_tpl: Optional[str] = None
-    tag: Optional[str] = None
-    args: Optional[dict] = None
-
-
-class TTSConfig(BaseModel):
-    voice: Optional[str] = None
-    language: Optional[str] = None
-    aggregate_sentences: Optional[bool] = True
-    push_text_frames: Optional[bool] = True
-    remove_punctuation: Optional[bool] = False
+class BaseConfig(BaseModel):
     tag: Optional[str] = None
     args: Optional[dict] = None
 
@@ -110,6 +37,70 @@ class TTSConfig(BaseModel):
 class MCPServerConfig(BaseModel):
     transport: Optional[str] = "stdio"
     parameters: Optional[Dict[str, Any]] = None
+
+
+class StreamConfig(BaseModel):
+    tag: Optional[str] = "daily_room_stream"
+
+
+class VADConfig(BaseConfig):
+    pass
+
+
+class TurnConfig(BaseConfig):
+    pass
+
+
+class VisionDetectorConfig(BaseConfig):
+    pass
+
+
+class VisionOCRConfig(BaseConfig):
+    trigger_texts: Optional[List[str]] = None
+
+
+class ImageGenConfig(BaseConfig):
+    pass
+
+
+class ASRConfig(BaseConfig):
+    pass
+
+
+class PuncConfig(BaseConfig):
+    pass
+
+
+class AvatarConfig(BaseConfig):
+    pass
+
+
+class LLMConfig(BaseConfig):
+    init_prompt: Optional[str] = None
+    processor: Optional[str] = None
+    base_url: Optional[str] = None
+    model: Optional[str] = None
+    language: Optional[str] = None
+    messages: Optional[List[dict]] = None
+    tools: Optional[List[dict]] = None
+    # is_use_tools_description: Optional[bool] = False
+
+
+class TranslateLLMConfig(BaseConfig):
+    init_prompt: Optional[str] = None
+    model: Optional[str] = None
+    src: Optional[str] = None
+    target: Optional[str] = None
+    streaming: Optional[bool] = False
+    prompt_tpl: Optional[str] = None
+
+
+class TTSConfig(BaseConfig):
+    voice: Optional[str] = None
+    language: Optional[str] = None
+    aggregate_sentences: Optional[bool] = True
+    push_text_frames: Optional[bool] = True
+    remove_punctuation: Optional[bool] = False
 
 
 class AIConfig(BaseModel):

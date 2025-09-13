@@ -67,7 +67,15 @@ async def gen_podcast_tts_audios(
     podcast_index, role_index = (0, 0)
     pre_role = ""
     pre_cn, cur_cn = (0, 0)
+    title = ""
+    description = ""
     for extraction in data_models:
+        if title == "" and extraction.description:
+            title = extraction.title
+            print(f"title:{title}\n")
+        if description == "" and extraction.roles:
+            description = extraction.description
+            print(f"description:{description}\n")
         if not extraction.roles:
             continue
         p_save_dir = os.path.join(save_dir, str(podcast_index))
@@ -111,6 +119,7 @@ async def gen_podcast_tts_audios(
             role_index += 1
             await edge_tts_conversion(role.content, output_file, voice)
 
+    # print(extraction)
     return extraction
 
 
