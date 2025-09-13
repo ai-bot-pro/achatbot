@@ -47,7 +47,7 @@ img = (
 )
 
 img = img.pip_install(
-    f"achatbot==0.0.25.dev56",
+    f"achatbot==0.0.25.57",
     extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
 )
 
@@ -1322,7 +1322,7 @@ async def achatbot_step_audio2_t2st(processor_name: str):
             voice_llm=LLMConfig(
                 processor="StepT2STProcessor",
                 args={
-                    "init_system_prompt": "你的名字叫做小跃，是由阶跃星辰公司训练出来的语音大模型。\n你具备调用工具解决问题的能力，你需要根据用户的需求和上下文情景，自主选择是否调用系统提供的工具来协助用户。\n你情感细腻，观察能力强，擅长分析用户的内容，并作出善解人意的回复，说话的过程中时刻注意用户的感受，富有同理心，提供多样的情绪价值。\n今天是2025年8月28日，星期五",
+                    "init_system_prompt": "",
                     "prompt_wav": "/root/.achatbot/assets/default_male.wav",
                     "warmup_cn": 2,
                     "chat_history_size": None,

@@ -19,7 +19,7 @@ class Register:
         """Decorator to register a function or class."""
 
         def add(key, value):
-            self._dict[key] = value
+            self[key] = value
             return value
 
         if callable(target):

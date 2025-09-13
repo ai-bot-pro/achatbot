@@ -52,7 +52,7 @@ img = (
 )
 
 img = img.pip_install(
-    f"achatbot==0.0.25.dev49",
+    f"achatbot==0.0.25.dev57",
     extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
 )
 
@@ -137,11 +137,16 @@ IMAGE_GPU=L4 SERVER_TAG=fastapi_webrtc_bots \
 modal volume create config
 
 modal volume put config ./config/bots/daily_step_audio2_aqaa_bot.json /bots/ -f
+modal volume put config ./config/bots/daily_step_audio2_aqaa_tools_bot.json /bots/ -f
 
 # run container with gpu
 IMAGE_GPU=L4 SERVER_TAG=fastapi_webrtc_single_bot \
     ACHATBOT_VERSION=0.0.25 \
     CONFIG_FILE=/root/.achatbot/config/bots/daily_step_audio2_aqaa_bot.json \
+    modal serve src/fastapi_webrtc_step2_voice_bot_serve.py
+IMAGE_GPU=L4 SERVER_TAG=fastapi_webrtc_single_bot \
+    ACHATBOT_VERSION=0.0.25 \
+    CONFIG_FILE=/root/.achatbot/config/bots/daily_step_audio2_aqaa_tools_bot.json \
     modal serve src/fastapi_webrtc_step2_voice_bot_serve.py
 
 # cold start fastapi webrtc http server
