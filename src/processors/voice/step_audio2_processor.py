@@ -20,7 +20,6 @@ try:
         sys.path.insert(1, os.path.join(cur_dir, "../../../deps/StepAudio2"))
 
     from deps.StepAudio2.token2wav import Token2wav
-    from transformers import GenerationConfig
 except ModuleNotFoundError as e:
     raise Exception(f"Missing module: {e}")
 
@@ -111,6 +110,7 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         self._input_queue = queue.Queue()
         self._generate_thread = None
 
+        self._sleep_time = no_stream_sleep_time
         self._verbose = verbose
 
     @property
@@ -328,6 +328,10 @@ class StepAudio2TextProcessor(StepAudio2BaseProcessor):
         - S2TT: 请仔细聆听这段语音，然后将其内容翻译成中文。
     """
 
+    def __init__(self, **kwargs):
+        kwargs["is_speaking"] = False
+        super().__init__(**kwargs)
+
     async def run_voice(self, frame: AudioRawFrame) -> AsyncGenerator[Frame, None]:
         if isinstance(frame, PathAudioRawFrame):
             audio = frame.path
@@ -464,6 +468,10 @@ class StepText2TextChatProcessor(StepAudio2BaseProcessor):
         - TQTA: "You are a helpful assistant."
     """
 
+    def __init__(self, **kwargs):
+        kwargs["is_speaking"] = False
+        super().__init__(**kwargs)
+
     async def run_text(self, frame: TextFrame) -> AsyncGenerator[Frame, None]:
         user_input = frame.text.strip()
 
@@ -490,6 +498,10 @@ class StepAudio2TextChatProcessor(StepAudio2BaseProcessor):
     - system prompt example:
         - AQTA: "You are a helpful assistant."
     """
+
+    def __init__(self, **kwargs):
+        kwargs["is_speaking"] = False
+        super().__init__(**kwargs)
 
     async def run_voice(self, frame: AudioRawFrame) -> AsyncGenerator[Frame, None]:
         if isinstance(frame, PathAudioRawFrame):
@@ -561,7 +573,7 @@ class StepText2TextAudioChatProcessor(StepAudio2BaseProcessor):
 class StepAudio2TextAudioChatProcessor(StepAudio2BaseProcessor):
     """
     Audio -> audio_LLM -> audio and text
-    - A1-T2A2 (Text Query and Audio Answer)
+    - A1-T2A2 (Audio Query and Audio+text Answer)
     - system prompt example:
         - AQAA: "You are a helpful assistant."
     """
@@ -640,6 +652,10 @@ class StepAudioText2TextProcessor(StepAudio2BaseProcessor):
     - A1T1->T2 (Audio Understanding with Text Query)
     """
 
+    def __init__(self, **kwargs):
+        kwargs["is_speaking"] = False
+        super().__init__(**kwargs)
+
     async def run_voice(self, frame: TextQuestionsAudioRawFrame) -> AsyncGenerator[Frame, None]:
         audio = bytes2TorchTensorWith16(frame.audio)
 
@@ -670,7 +686,7 @@ class StepAudioText2TextProcessor(StepAudio2BaseProcessor):
 # A1T1->T2A2
 class StepAudioText2TextAudioProcessor(StepAudio2BaseProcessor):
     """
-    audio+text -> audio_LLM -> text
+    audio+text -> audio_LLM -> audio+text
     - A1T1->T2A2 (Audio Understanding with Text Query)
     """
 
@@ -727,20 +743,18 @@ if __name__ == "__main__":
 
     async def run_aqaa():
         processor = get_step_audio2_processor(
-            AIConfig(
-                voice_llm=LLMConfig(
-                    processor="StepAudio2TextAudioChatProcessor",
-                    args={
-                        "init_system_prompt": "",
-                        "prompt_wav": "./assets/default_male.wav",
-                        "warmup_cn": 2,
-                        "chat_history_size": None,
-                        "text_stream_out": False,
-                        "no_stream_sleep_time": 0.5,
-                        "lm_model_name_or_path": "./models/stepfun-ai/Step-Audio-2-mini",
-                    },
-                )
-            ),
+            LLMConfig(
+                processor="StepAudio2TextAudioChatProcessor",
+                args={
+                    "init_system_prompt": "",
+                    "prompt_wav": "./assets/default_male.wav",
+                    "warmup_cn": 2,
+                    "chat_history_size": None,
+                    "text_stream_out": False,
+                    "no_stream_sleep_time": 0.5,
+                    "lm_model_name_or_path": "./models/stepfun-ai/Step-Audio-2-mini",
+                },
+            )
         )
         await processor.start(StartFrame())
         for round_idx, audio_path in enumerate(

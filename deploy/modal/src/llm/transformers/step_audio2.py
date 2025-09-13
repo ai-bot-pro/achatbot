@@ -47,8 +47,8 @@ img = (
 )
 
 img = img.pip_install(
-    f"achatbot==0.0.25.57",
-    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
+    f"achatbot==0.0.25",
+    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
 )
 
 
@@ -1267,25 +1267,23 @@ async def achatbot_step_audio2_say():
     from achatbot.types.ai_conf import AIConfig, LLMConfig
 
     processor = get_step_audio2_processor(
-        AIConfig(
-            voice_llm=LLMConfig(
-                processor="StepAudio2TextAudioChatProcessor",
-                args={
-                    "init_system_prompt": "",
-                    "prompt_wav": "/root/.achatbot/assets/default_male.wav",
-                    "warmup_cn": 2,
-                    "chat_history_size": None,
-                    "text_stream_out": False,
-                    "no_stream_sleep_time": 0.5,
-                    "lm_model_name_or_path": MODEL_PATH,
-                    "lm_gen_max_new_tokens": 64,
-                    "lm_gen_temperature": 0.1,
-                    "lm_gen_top_k": 20,
-                    "lm_gen_top_p": 0.95,
-                    "lm_gen_repetition_penalty": 1.1,
-                },
-            )
-        ),
+        LLMConfig(
+            processor="StepAudio2TextAudioChatProcessor",
+            args={
+                "init_system_prompt": "",
+                "prompt_wav": "/root/.achatbot/assets/default_male.wav",
+                "warmup_cn": 2,
+                "chat_history_size": None,
+                "text_stream_out": False,
+                "no_stream_sleep_time": 0.5,
+                "lm_model_name_or_path": MODEL_PATH,
+                "lm_gen_max_new_tokens": 64,
+                "lm_gen_temperature": 0.1,
+                "lm_gen_top_k": 20,
+                "lm_gen_top_p": 0.95,
+                "lm_gen_repetition_penalty": 1.1,
+            },
+        )
     )
     await processor.start(StartFrame())
 
@@ -1318,25 +1316,23 @@ async def achatbot_step_audio2_t2st(processor_name: str):
     from achatbot.types.ai_conf import AIConfig, LLMConfig
 
     processor = get_step_audio2_processor(
-        AIConfig(
-            voice_llm=LLMConfig(
-                processor="StepT2STProcessor",
-                args={
-                    "init_system_prompt": "",
-                    "prompt_wav": "/root/.achatbot/assets/default_male.wav",
-                    "warmup_cn": 2,
-                    "chat_history_size": None,
-                    "text_stream_out": False,
-                    "no_stream_sleep_time": 0.5,
-                    "lm_model_name_or_path": MODEL_PATH,
-                    "lm_gen_max_new_tokens": 64,
-                    "lm_gen_temperature": 0.1,
-                    "lm_gen_top_k": 20,
-                    "lm_gen_top_p": 0.95,
-                    "lm_gen_repetition_penalty": 1.1,
-                },
-            )
-        ),
+        LLMConfig(
+            processor="StepT2STProcessor",
+            args={
+                "init_system_prompt": "",
+                "prompt_wav": "/root/.achatbot/assets/default_male.wav",
+                "warmup_cn": 2,
+                "chat_history_size": None,
+                "text_stream_out": False,
+                "no_stream_sleep_time": 0.5,
+                "lm_model_name_or_path": MODEL_PATH,
+                "lm_gen_max_new_tokens": 64,
+                "lm_gen_temperature": 0.1,
+                "lm_gen_top_k": 20,
+                "lm_gen_top_p": 0.95,
+                "lm_gen_repetition_penalty": 1.1,
+            },
+        )
     )
     await processor.start(StartFrame())
 
@@ -1367,26 +1363,24 @@ async def achatbot_step_audio2_audio2text(processor_name):
     from achatbot.types.ai_conf import AIConfig, LLMConfig
 
     processor = get_step_audio2_processor(
-        AIConfig(
-            voice_llm=LLMConfig(
-                processor=processor_name,
-                args={
-                    "init_system_prompt": "",
-                    # "prompt_wav": "/root/.achatbot/assets/default_male.wav",
-                    "warmup_cn": 2,
-                    "chat_history_size": None,
-                    "text_stream_out": False,
-                    "no_stream_sleep_time": 0.5,
-                    "lm_model_name_or_path": MODEL_PATH,
-                    "lm_gen_max_new_tokens": 1024,
-                    "lm_gen_temperature": 0.1,
-                    "lm_gen_top_k": 20,
-                    "lm_gen_top_p": 0.9,
-                    "lm_gen_repetition_penalty": 1.1,
-                    "is_speaking": False,
-                },
-            )
-        ),
+        LLMConfig(
+            processor=processor_name,
+            args={
+                "init_system_prompt": "",
+                # "prompt_wav": "/root/.achatbot/assets/default_male.wav",
+                "warmup_cn": 2,
+                "chat_history_size": None,
+                "text_stream_out": False,
+                "no_stream_sleep_time": 0.5,
+                "lm_model_name_or_path": MODEL_PATH,
+                "lm_gen_max_new_tokens": 1024,
+                "lm_gen_temperature": 0.1,
+                "lm_gen_top_k": 20,
+                "lm_gen_top_p": 0.9,
+                "lm_gen_repetition_penalty": 1.1,
+                "is_speaking": False,
+            },
+        )
     )
     await processor.start(StartFrame())
     for round_idx, audio_path in enumerate(
@@ -1433,26 +1427,24 @@ async def achatbot_step_audio2_s2st(processor_name):
 
     processor_name = "StepS2STProcessor"
     processor = get_step_audio2_processor(
-        AIConfig(
-            voice_llm=LLMConfig(
-                processor=processor_name,
-                args={
-                    "init_system_prompt": "请仔细聆听这段语音，然后将其内容翻译成中文并用语音播报。",
-                    # "init_system_prompt": "请仔细聆听这段语音，然后将其内容翻译成英文并用语音播报。",
-                    "prompt_wav": "/root/.achatbot/assets/default_male.wav",
-                    "warmup_cn": 2,
-                    "chat_history_size": None,
-                    "text_stream_out": False,
-                    "no_stream_sleep_time": 0.5,
-                    "lm_model_name_or_path": MODEL_PATH,
-                    "lm_gen_max_new_tokens": 1024,
-                    "lm_gen_temperature": 0.7,
-                    "lm_gen_top_k": 20,
-                    "lm_gen_top_p": 0.9,
-                    "lm_gen_repetition_penalty": 1.1,
-                },
-            )
-        ),
+        LLMConfig(
+            processor=processor_name,
+            args={
+                "init_system_prompt": "请仔细聆听这段语音，然后将其内容翻译成中文并用语音播报。",
+                # "init_system_prompt": "请仔细聆听这段语音，然后将其内容翻译成英文并用语音播报。",
+                "prompt_wav": "/root/.achatbot/assets/default_male.wav",
+                "warmup_cn": 2,
+                "chat_history_size": None,
+                "text_stream_out": False,
+                "no_stream_sleep_time": 0.5,
+                "lm_model_name_or_path": MODEL_PATH,
+                "lm_gen_max_new_tokens": 1024,
+                "lm_gen_temperature": 0.7,
+                "lm_gen_top_k": 20,
+                "lm_gen_top_p": 0.9,
+                "lm_gen_repetition_penalty": 1.1,
+            },
+        )
     )
     await processor.start(StartFrame())
     for round_idx, audio_path in enumerate(
@@ -1499,25 +1491,23 @@ async def achatbot_step_audio2_aqaa(processor_name):
 
     processor_name = "StepAudio2TextAudioChatProcessor"
     processor = get_step_audio2_processor(
-        AIConfig(
-            voice_llm=LLMConfig(
-                processor=processor_name,
-                args={
-                    "init_system_prompt": "",
-                    "prompt_wav": "/root/.achatbot/assets/default_male.wav",
-                    "warmup_cn": 2,
-                    "chat_history_size": None,
-                    "text_stream_out": False,
-                    "no_stream_sleep_time": 0.5,
-                    "lm_model_name_or_path": MODEL_PATH,
-                    "lm_gen_max_new_tokens": 1024,
-                    "lm_gen_temperature": 0.7,
-                    "lm_gen_top_k": 20,
-                    "lm_gen_top_p": 0.9,
-                    "lm_gen_repetition_penalty": 1.1,
-                },
-            )
-        ),
+        LLMConfig(
+            processor=processor_name,
+            args={
+                "init_system_prompt": "",
+                "prompt_wav": "/root/.achatbot/assets/default_male.wav",
+                "warmup_cn": 2,
+                "chat_history_size": None,
+                "text_stream_out": False,
+                "no_stream_sleep_time": 0.5,
+                "lm_model_name_or_path": MODEL_PATH,
+                "lm_gen_max_new_tokens": 1024,
+                "lm_gen_temperature": 0.7,
+                "lm_gen_top_k": 20,
+                "lm_gen_top_p": 0.9,
+                "lm_gen_repetition_penalty": 1.1,
+            },
+        )
     )
     await processor.start(StartFrame())
     for round_idx, audio_path in enumerate(
@@ -1556,33 +1546,31 @@ async def achatbot_step_audio2_aqaa_tools(processor_name):
     from achatbot.types.frames import PathAudioRawFrame, FunctionCallFrame
 
     from achatbot.cmd.bots.voice.step_audio2.helper import (
-        get_step_audio2_llm,
         get_step_audio2_processor,
     )
     from achatbot.types.ai_conf import AIConfig, LLMConfig
 
     processor_name = "StepAudio2TextAudioChatProcessor"
     processor = get_step_audio2_processor(
-        AIConfig(
-            voice_llm=LLMConfig(
-                processor=processor_name,
-                args={
-                    "init_system_prompt": "你的名字叫做小跃，是由阶跃星辰公司训练出来的语音大模型。\n你具备调用工具解决问题的能力，你需要根据用户的需求和上下文情景，自主选择是否调用系统提供的工具来协助用户。\n你情感细腻，观察能力强，擅长分析用户的内容，并作出善解人意的回复，说话的过程中时刻注意用户的感受，富有同理心，提供多样的情绪价值。\n今天是2025年9月12日，星期五",
-                    "prompt_wav": "/root/.achatbot/assets/default_male.wav",
-                    "warmup_cn": 2,
-                    "chat_history_size": None,
-                    "text_stream_out": False,
-                    "no_stream_sleep_time": 0.5,
-                    # "tools": ["web_search","get_weather"],
-                    "tools": ["web_search"],
-                    "lm_model_name_or_path": MODEL_PATH,
-                    "lm_gen_max_new_tokens": 1024,
-                    "lm_gen_temperature": 0.7,
-                    "lm_gen_top_k": 20,
-                    "lm_gen_top_p": 0.9,
-                    "lm_gen_repetition_penalty": 1.1,
-                },
-            )
+        LLMConfig(
+            processor=processor_name,
+            args={
+                "init_system_prompt": "你的名字叫做小跃，是由阶跃星辰公司训练出来的语音大模型。\n你具备调用工具解决问题的能力，你需要根据用户的需求和上下文情景，自主选择是否调用系统提供的工具来协助用户。\n你情感细腻，观察能力强，擅长分析用户的内容，并作出善解人意的回复，说话的过程中时刻注意用户的感受，富有同理心，提供多样的情绪价值。\n今天是2025年9月12日，星期五",
+                "prompt_wav": "/root/.achatbot/assets/default_male.wav",
+                "warmup_cn": 2,
+                "chat_history_size": None,
+                "text_stream_out": False,
+                "no_stream_sleep_time": 0.5,
+                # "tools": ["web_search","get_weather"],
+                "tools": ["web_search"],
+                "lm_model_name_or_path": MODEL_PATH,
+                "lm_gen_max_new_tokens": 1024,
+                "lm_gen_temperature": 0.7,
+                "lm_gen_top_k": 20,
+                "lm_gen_top_p": 0.9,
+                "lm_gen_repetition_penalty": 1.1,
+                "verbose": True,
+            },
         ),
     )
     print(f"{processor.chat_history=}")

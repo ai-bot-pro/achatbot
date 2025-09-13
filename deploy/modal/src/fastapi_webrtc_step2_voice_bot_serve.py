@@ -3,7 +3,7 @@ import os
 import modal
 
 
-achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.24")
+achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.25")
 app = modal.App("step-audio2-voice-bot")
 # fastapi_webrtc_bots | fastapi_webrtc_single_bot server
 SERVER_TAG = os.getenv("SERVER_TAG", "fastapi_webrtc_bots")
@@ -51,10 +51,10 @@ img = (
     )
 )
 
-img = img.pip_install(
-    f"achatbot==0.0.25.dev57",
-    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
-)
+# img = img.pip_install(
+#    f"achatbot==0.0.25.dev57",
+#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
+# )
 
 
 HF_MODEL_DIR = "/root/.achatbot/models"

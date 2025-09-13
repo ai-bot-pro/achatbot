@@ -51,7 +51,7 @@ class DailyStepAudio2AQAABot(DailyRoomBot):
 
         # src/processors/voice/step_audio2_processor.py
         self._voice_processor = get_step_audio2_processor(
-            bot_config=self.bot_config(),
+            bot_config=self._bot_config.voice_llm,
             session=self.session,
             audio_llm=self.audio_llm,
         )
