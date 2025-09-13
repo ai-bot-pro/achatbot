@@ -1261,7 +1261,6 @@ async def achatbot_step_audio2_say():
     from achatbot.types.frames import PathAudioRawFrame
 
     from achatbot.cmd.bots.voice.step_audio2.helper import (
-        get_step_audio2_llm,
         get_step_audio2_processor,
     )
     from achatbot.types.ai_conf import AIConfig, LLMConfig
@@ -1310,7 +1309,6 @@ async def achatbot_step_audio2_t2st(processor_name: str):
     from achatbot.types.frames import PathAudioRawFrame
 
     from achatbot.cmd.bots.voice.step_audio2.helper import (
-        get_step_audio2_llm,
         get_step_audio2_processor,
     )
     from achatbot.types.ai_conf import AIConfig, LLMConfig
@@ -1357,7 +1355,6 @@ async def achatbot_step_audio2_audio2text(processor_name):
     from achatbot.types.frames import PathAudioRawFrame
 
     from achatbot.cmd.bots.voice.step_audio2.helper import (
-        get_step_audio2_llm,
         get_step_audio2_processor,
     )
     from achatbot.types.ai_conf import AIConfig, LLMConfig
@@ -1420,7 +1417,6 @@ async def achatbot_step_audio2_s2st(processor_name):
     from achatbot.types.frames import PathAudioRawFrame
 
     from achatbot.cmd.bots.voice.step_audio2.helper import (
-        get_step_audio2_llm,
         get_step_audio2_processor,
     )
     from achatbot.types.ai_conf import AIConfig, LLMConfig
@@ -1484,7 +1480,6 @@ async def achatbot_step_audio2_aqaa(processor_name):
     from achatbot.types.frames import PathAudioRawFrame
 
     from achatbot.cmd.bots.voice.step_audio2.helper import (
-        get_step_audio2_llm,
         get_step_audio2_processor,
     )
     from achatbot.types.ai_conf import AIConfig, LLMConfig

@@ -337,10 +337,16 @@ def import_websocket_bots(bot_name: str = "DummyBot"):
 
 
 def import_fastapi_websocket_bots(bot_name: str = "DummyBot"):
+    if "FastapiWebsocketServerStepAudio2STSTBot" in bot_name:
+        from .voice.step_audio2 import fastapi_websocket_stst_bot
+
+        return True
+
     if "FastapiWebsocketServerASRTranslateTTSBot" in bot_name:
         from .translation import fastapi_websocket_server_asr_translate_tts_bot
 
         return True
+
     if "FastapiWebsocketServerBot" in bot_name:
         from . import fastapi_websocket_server_bot
 
