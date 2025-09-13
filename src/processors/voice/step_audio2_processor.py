@@ -63,6 +63,7 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         token2wav: Token2wav | None = None,
         is_speaking: bool = True,
         tools: list = [],
+        verbose: bool = False,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -109,14 +110,15 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         self._queue = queue.Queue()
         self._input_queue = queue.Queue()
         self._generate_thread = None
-        self._sleep_time = no_stream_sleep_time
+
+        self._verbose = verbose
 
     @property
     def chat_history(self):
         return self._session.chat_history
 
     def reset(self):
-        if is_speaking is True:
+        if self._is_speaking is True:
             self._token2wav.cache = {}
         self._session.reset()
 
@@ -234,7 +236,8 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         buffer = []
         unicode_token_id = []
         for token_id in token_iter:
-            print(f"{token_id=} {self._audio_llm.llm_tokenizer.decode(token_id)=}")
+            if self._verbose is True:
+                print(f"{token_id=} {self._audio_llm.llm_tokenizer.decode(token_id)=}")
             output_token_ids.append(token_id)
             if token_id < 151688:  # text
                 if token_id == 151657:  # <tool_call>
@@ -708,12 +711,14 @@ class StepMMAUProcessor(StepAudioText2TextAudioProcessor):
 python -m src.processors.voice.step_audio2_processor
 """
 if __name__ == "__main__":
+    from pathlib import Path
+
+    import wave
     from apipeline.frames import AudioRawFrame, StartFrame, EndFrame, CancelFrame
 
     from src.common.logger import Logger
     from src.types.frames import PathAudioRawFrame
     from src.cmd.bots.voice.step_audio2.helper import (
-        get_step_audio2_llm,
         get_step_audio2_processor,
     )
     from src.types.ai_conf import AIConfig, LLMConfig
