@@ -1,4 +1,5 @@
 import logging
+import copy
 
 from dotenv import load_dotenv
 from apipeline.pipeline.pipeline import Pipeline
@@ -9,7 +10,14 @@ from apipeline.processors.logger import FrameLogger
 from fastapi import WebSocket
 
 from src.cmd.bots.base_fastapi_websocket_server import AIFastapiWebsocketBot
-from src.types.frames.data_frames import TextFrame, AudioRawFrame
+from src.processors.speech.audio_save_processor import AudioSaveProcessor
+from src.processors.aggregators.user_audio_response import UserAudioResponseAggregator
+from src.types.frames.data_frames import (
+    TextFrame,
+    AudioRawFrame,
+    PathAudioRawFrame,
+    LLMGenedTokensFrame,
+)
 from src.cmd.bots import register_ai_fastapi_ws_bots
 from src.types.network.fastapi_websocket import FastapiWebsocketServerParams
 from src.transports.fastapi_websocket_server import FastapiWebsocketTransport
@@ -22,12 +30,12 @@ from .helper import get_step_audio2_processor, get_step_audio2_llm
 load_dotenv(override=True)
 
 """
-TOKENIZERS_PARALLELISM=false python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/step_audio2/fastapi_webrtc_step_audio2_stst_bot.json
+TOKENIZERS_PARALLELISM=false python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/step_audio2/fastapi_webrtc_step_audio2_s2st_bot.json
 """
 
 
 @register_ai_fastapi_ws_bots.register
-class FastapiWebsocketServerStepAudio2STSTBot(AIFastapiWebsocketBot):
+class FastapiWebsocketServerStepAudio2S2STBot(AIFastapiWebsocketBot):
     """
     fastapi websocket input/output server bot with step2_audio(translate task)
     """
@@ -38,10 +46,12 @@ class FastapiWebsocketServerStepAudio2STSTBot(AIFastapiWebsocketBot):
 
         self.vad_analyzer = None
         self.audio_llm = None
+        self.asr_punc_engine = None
 
     def load(self):
         self.vad_analyzer = self.get_vad_analyzer()
-        self.audio_llm = get_step_audio2_llm(self._bot_config.voice_llm)
+        llm_conf = self._bot_config.voice_llm or self._bot_config.asr
+        self.audio_llm = get_step_audio2_llm(llm_conf)
 
         # load punctuation engine
         if self._bot_config.punctuation:
@@ -64,17 +74,20 @@ class FastapiWebsocketServerStepAudio2STSTBot(AIFastapiWebsocketBot):
             vad_audio_passthrough=True,
             serializer=TranscriptionFrameSerializer(),
         )
-        # src/processors/voice/step_audio2_processor.py
-        self._voice_processor = get_step_audio2_processor(
-            self._bot_config.voice_llm,
-            session=self.session,
-            audio_llm=self.audio_llm,
-            processor_class_name="StepS2STProcessor",
-        )
-        if hasattr(self._voice_processor, "stream_info"):
-            stream_info = self._voice_processor.stream_info
-            self.params.audio_out_sample_rate = stream_info["sample_rate"]
-            self.params.audio_out_channels = stream_info["channels"]
+
+        self._voice_processor = None
+        if self._bot_config.voice_llm:
+            # src/processors/voice/step_audio2_processor.py
+            self._voice_processor = get_step_audio2_processor(
+                self._bot_config.voice_llm,
+                session=copy.deepcopy(self.session),
+                audio_llm=self.audio_llm,
+                processor_class_name="StepS2STProcessor",
+            )
+            if hasattr(self._voice_processor, "stream_info"):
+                stream_info = self._voice_processor.stream_info
+                self.params.audio_out_sample_rate = stream_info["sample_rate"]
+                self.params.audio_out_channels = stream_info["channels"]
         logging.info(f"params: {self.params}")
         transport = FastapiWebsocketTransport(
             websocket=self._websocket,
@@ -86,7 +99,7 @@ class FastapiWebsocketServerStepAudio2STSTBot(AIFastapiWebsocketBot):
             # src/processors/voice/step_audio2_processor.py
             asr_processor = get_step_audio2_processor(
                 self._bot_config.asr,
-                session=self.session,
+                session=copy.deepcopy(self.session),
                 audio_llm=self.audio_llm,
                 processor_class_name="StepASRProcessor",
             )
@@ -99,7 +112,6 @@ class FastapiWebsocketServerStepAudio2STSTBot(AIFastapiWebsocketBot):
 
             asr_processors = [
                 asr_processor,
-                FrameLogger(include_frame_types=[TextFrame]),
                 punc_processor,
                 FrameLogger(include_frame_types=[TextFrame]),
                 transport.output_processor(),
@@ -107,16 +119,23 @@ class FastapiWebsocketServerStepAudio2STSTBot(AIFastapiWebsocketBot):
             asr_processors = [p for p in asr_processors if p is not None]
             logging.info(f"{asr_processors=}")
 
-        stst_processors = [
-            self._voice_processor,
-            FrameLogger(include_frame_types=[TextFrame, AudioRawFrame]),
-            transport.output_processor(),
-        ]
-        stst_processors = [p for p in stst_processors if p is not None]
-        logging.info(f"{stst_processors=}")
+        stst_processors = []
+        if self._voice_processor:
+            stst_processors = [
+                self._voice_processor,
+                FrameLogger(include_frame_types=[TextFrame, AudioRawFrame, LLMGenedTokensFrame]),
+                AudioSaveProcessor(prefix_name="bot_speak"),
+                transport.output_processor(),
+            ]
+            stst_processors = [p for p in stst_processors if p is not None]
+            logging.info(f"{stst_processors=}")
 
         processors = [
             transport.input_processor(),
+            UserAudioResponseAggregator(),
+            FrameLogger(include_frame_types=[AudioRawFrame]),
+            AudioSaveProcessor(prefix_name="user_speak"),
+            FrameLogger(include_frame_types=[PathAudioRawFrame]),
             ParallelPipeline(
                 asr_processors,
                 stst_processors,
@@ -149,5 +168,12 @@ class FastapiWebsocketServerStepAudio2STSTBot(AIFastapiWebsocketBot):
         self.session.set_client_id(client_id=f"{websocket.client.host}:{websocket.client.port}")
 
         llm_conf = self._bot_config.voice_llm or self._bot_config.llm
-        if llm_conf and llm_conf.init_prompt:
-            await self._voice_processor.say(llm_conf.init_prompt)
+        if llm_conf and llm_conf.init_prompt and self._voice_processor:
+            await self._voice_processor.say(
+                llm_conf.init_prompt,
+                temperature=0.1,
+                max_new_tokens=1024,
+                top_k=20,
+                top_p=0.95,
+                repetition_penalty=1.1,
+            )

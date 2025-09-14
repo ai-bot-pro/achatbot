@@ -23,6 +23,7 @@ try:
 except ModuleNotFoundError as e:
     raise Exception(f"Missing module: {e}")
 
+from src.common.utils.time import time_now_iso8601
 from src.common.interface import ILlm
 from src.common.types import ASSETS_DIR
 from src.processors.voice.base import VoiceProcessorBase
@@ -30,10 +31,13 @@ from src.common.session import Session
 from src.common.types import SessionCtx
 from src.common.utils.audio_utils import bytes2TorchTensorWith16
 from src.types.frames import (
+    Language,
     TextQuestionsAudioRawFrame,
     PathAudioRawFrame,
     LLMGenedTokensFrame,
     FunctionCallFrame,
+    TranscriptionFrame,
+    VADStateAudioRawFrame,
 )
 import src.modules.functions.search.api
 import src.modules.functions.weather.api
@@ -80,6 +84,7 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
             token2wav_path = os.path.join(audio_llm.args.lm_model_name_or_path, "token2wav")
             self._token2wav = token2wav or Token2wav(token2wav_path)
             if torch.cuda.is_available():
+                logging.info(f"move token2wav to cuda and scatter_cuda_graph")
                 self._token2wav.flow.scatter_cuda_graph(True)
 
             self._prompt_wav = prompt_wav or os.path.join(ASSETS_DIR, "default_female.wav")
@@ -330,6 +335,7 @@ class StepAudio2TextProcessor(StepAudio2BaseProcessor):
 
     def __init__(self, **kwargs):
         kwargs["is_speaking"] = False
+        self.language = kwargs.pop("language", None)
         super().__init__(**kwargs)
 
     async def run_voice(self, frame: AudioRawFrame) -> AsyncGenerator[Frame, None]:
@@ -353,7 +359,19 @@ class StepAudio2TextProcessor(StepAudio2BaseProcessor):
         self._session.ctx.state["messages"] = messages
         self.send_input(self._session)
         async for item in self.gen():
-            yield item
+            if isinstance(frame, VADStateAudioRawFrame) and isinstance(item, TextFrame):
+                language = Language(self.language) if self.language else None
+                yield TranscriptionFrame(
+                    text=item.text,
+                    user_id=self._session.ctx.client_id,
+                    timestamp=time_now_iso8601(),
+                    language=language,
+                    speech_id=frame.speech_id,
+                    start_at_s=frame.start_at_s,
+                    end_at_s=frame.end_at_s,
+                )
+            else:
+                yield item
 
 
 class StepASRProcessor(StepAudio2TextProcessor):

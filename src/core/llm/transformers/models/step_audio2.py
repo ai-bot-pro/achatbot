@@ -32,6 +32,10 @@ except ModuleNotFoundError as e:
 
 
 class StepAudio2StreamBase(StepAudio2Base):
+    def __init__(self, model_path: str, verbose: bool = False):
+        super().__init__(model_path)
+        self._verbose = verbose
+
     def apply_chat_template(self, messages: list):
         """
         add np.ndarray/torch.Tensor audio msg support
@@ -71,7 +75,10 @@ class StepAudio2StreamBase(StepAudio2Base):
 
     def __call__(self, messages: list, **kwargs):
         messages, mels = self.apply_chat_template(messages)
-        logging.debug(f"messages: {messages}")
+        if self._verbose:
+            print(f"messages: {messages}")
+            if len(mels) > 0:
+                print(f"{len(mels)=} {mels[0].shape=}")
 
         # Tokenize prompts
         prompt_ids = []

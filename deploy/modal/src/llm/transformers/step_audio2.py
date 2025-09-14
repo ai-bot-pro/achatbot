@@ -47,7 +47,7 @@ img = (
 )
 
 img = img.pip_install(
-    f"achatbot==0.0.25",
+    f"achatbot==0.0.25.post1",
     extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
 )
 
@@ -1439,6 +1439,7 @@ async def achatbot_step_audio2_s2st(processor_name):
                 "lm_gen_top_k": 20,
                 "lm_gen_top_p": 0.9,
                 "lm_gen_repetition_penalty": 1.1,
+                "verbose": True,
             },
         )
     )
