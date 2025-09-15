@@ -18,10 +18,10 @@ except ModuleNotFoundError as e:
 from src.common.random import set_all_random_seed
 from src.common.interface import ILlm
 from src.common.session import Session
-from src.core.llm.vllm.base import VllmBase
+from src.core.llm.vllm.base import VllmEngineBase
 
 
-class VllmVisionSkyworkr1v(VllmBase):
+class VllmVisionSkyworkr1v(VllmEngineBase):
     """ """
 
     TAG = "llm_vllm_vision_skyworkr1v"

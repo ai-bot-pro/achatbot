@@ -1,6 +1,7 @@
 import os
 import base64
 import json
+import time
 import re
 import io
 import wave
@@ -45,6 +46,8 @@ vllm_cache_vol = modal.Volume.from_name("vllm-cache", create_if_missing=True)
 ASSETS_DIR = "/root/.achatbot/assets"
 assets_vol = modal.Volume.from_name("assets", create_if_missing=True)
 
+LOCAL_MODEL_PATH = os.getenv("LOCAL_MODEL_PATH", "../../models/stepfun-ai/Step-Audio-2-mini")
+
 
 def load_audio(file_path, target_rate=16000, max_length=None):
     """
@@ -68,9 +71,17 @@ def load_audio(file_path, target_rate=16000, max_length=None):
 class StepAudio2:
     audio_token_re = re.compile(r"<audio_(\d+)>")
 
-    def __init__(self, api_url, model_name):
+    def __init__(self, api_url, model_name, tokenizer_path: str = None):
         self.api_url = api_url
         self.model_name = model_name
+
+        from transformers import AutoTokenizer
+
+        self.llm_tokenizer = None
+        if tokenizer_path:
+            self.llm_tokenizer = AutoTokenizer.from_pretrained(
+                tokenizer_path, trust_remote_code=True, padding_side="right"
+            )
 
     def __call__(self, messages, **kwargs):
         return next(self.stream(messages, **kwargs, stream=False))
@@ -105,10 +116,17 @@ class StepAudio2:
                 text = line.get("tts_content", {}).get("tts_text", None)
                 text = text if text else line["content"]
                 audio = line.get("tts_content", {}).get("tts_audio", None)
-                audio = (
+                audio_id = (
                     [int(i) for i in StepAudio2.audio_token_re.findall(audio)] if audio else None
                 )
-                yield line, text, audio
+
+                token_ids = None
+                if text and self.llm_tokenizer:
+                    token_ids = self.llm_tokenizer.encode(text)
+                elif audio and self.llm_tokenizer:
+                    token_ids = self.llm_tokenizer.encode(audio)
+
+                yield (line, text, audio_id, token_ids)
 
     def process_content_item(self, item):
         if item["type"] == "audio":
@@ -209,6 +227,53 @@ def serve():
     subprocess.Popen(cmd)
 
 
+def test_request(model: StepAudio2, token2wav):
+    # Text-to-speech conversation
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "human", "content": "Give me a brief introduction to the Great Wall."},
+        {
+            "role": "assistant",
+            "content": "<tts_start>",
+            "eot": False,
+        },  # Insert <tts_start> for speech response
+    ]
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {
+            "role": "human",
+            "content": [
+                {
+                    "type": "audio",
+                    "audio": "../../deps/StepAudio2/assets/give_me_a_brief_introduction_to_the_great_wall.wav",
+                }
+            ],
+        },
+        {
+            "role": "assistant",
+            "content": "<tts_start>",
+            "eot": False,
+        },  # Insert <tts_start> for speech response
+    ]
+    payload = {}
+    payload["messages"] = model.apply_chat_template(messages)
+    payload["model"] = model.model_name
+    payload["stream"] = True
+    if (payload["messages"][-1].get("role", None) == "assistant") and (
+        payload["messages"][-1].get("content", None) is None
+    ):
+        payload["messages"].pop(-1)
+        payload["continue_final_message"] = False
+        payload["add_generation_prompt"] = True
+    elif payload["messages"][-1].get("eot", True):
+        payload["continue_final_message"] = False
+        payload["add_generation_prompt"] = True
+    else:
+        payload["continue_final_message"] = True
+        payload["add_generation_prompt"] = False
+    print(payload)
+
+
 def test_text2text(model, token2wav=None):
     # Text-to-text conversation
     sampling_params = {
@@ -225,14 +290,63 @@ def test_text2text(model, token2wav=None):
         {"role": "human", "content": "Give me a brief introduction to the Great Wall."},
         {"role": "assistant", "content": None},
     ]
-    response, text, _ = model(messages, **sampling_params)
+    response, text, _, token_ids = model(messages, **sampling_params)
     print(text)
+    print(f"{token_ids=}")
 
 
-def test_text2speech(model, token2wav):
-    # Text-to-speech conversation
+def test_text2text_stream(model: StepAudio2, token2wav=None):
+    # Text-to-text conversation
+    sampling_params = {
+        "max_tokens": 1024,
+        "temperature": 0.7,
+        "top_p": 0.9,
+        "frequency_penalty": 0,
+        "repetition_penalty": 1.05,
+        "skip_special_tokens": False,
+        "parallel_tool_calls": False,
+        "logprobs": True,
+    }
     messages = [
         {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "human", "content": "Give me a brief introduction to the Great Wall."},
+        {"role": "assistant", "content": None},
+    ]
+    stream_iter = model.stream(messages, stream=True, **sampling_params)
+    for response, text, _, token_ids in stream_iter:
+        print(f"{response=} {text=} {token_ids=}")
+
+
+def test_text2speech_stream(model: StepAudio2, token2wav):
+    # Text-to-speech conversation
+    messages = [
+        {"role": "system", "content": "以自然的语速读出下面的文字。\n"},
+        {"role": "human", "content": "Give me a brief introduction to the Great Wall."},
+        {
+            "role": "assistant",
+            "content": "<tts_start>",
+            "eot": False,
+        },  # Insert <tts_start> for speech response
+    ]
+    sampling_params = {
+        "max_tokens": 1024,
+        "temperature": 0.7,
+        "top_p": 0.9,
+        "frequency_penalty": 0,
+        "repetition_penalty": 1.05,
+        "skip_special_tokens": False,
+        "parallel_tool_calls": False,
+        "return_token_ids": True,
+    }
+    stream_iter = model.stream(messages, stream=True, **sampling_params)
+    for response, text, audio, token_id in stream_iter:
+        print(f"{response=} {text=} {audio=} {token_id=}")
+
+
+def test_text2speech(model: StepAudio2, token2wav):
+    # Text-to-speech conversation
+    messages = [
+        {"role": "system", "content": "以自然的语速读出下面的文字。\n"},
         {"role": "human", "content": "Give me a brief introduction to the Great Wall."},
         {
             "role": "assistant",
@@ -249,9 +363,10 @@ def test_text2speech(model, token2wav):
         "skip_special_tokens": False,
         "parallel_tool_calls": False,
     }
-    response, text, audio = model(messages, **sampling_params)
+    response, text, audio, token_ids = model(messages, **sampling_params)
     print(text)
     print(audio)
+    print(f"{token_ids=}")
     audio = token2wav(audio, prompt_wav="../../deps/StepAudio2/assets/default_male.wav")
     with open("../../records/output-male.wav", "wb") as f:
         f.write(audio)
@@ -281,11 +396,12 @@ def test_speech2text(model, token2wav):
         },
         {"role": "assistant", "content": None},
     ]
-    response, text, _ = model(messages, **sampling_params)
+    response, text, _, token_ids = model(messages, **sampling_params)
     print(text)
+    print(f"{token_ids=}")
 
 
-def test_speech2speech(model, token2wav):
+def test_speech2speech(model: StepAudio2, token2wav):
     # Speech-to-text conversation
     sampling_params = {
         "max_tokens": 1024,
@@ -313,9 +429,10 @@ def test_speech2speech(model, token2wav):
             "eot": False,
         },  # Insert <tts_start> for speech response
     ]
-    response, text, audio = model(messages, **sampling_params)
+    response, text, audio, token_ids = model(messages, **sampling_params)
     print(text)
     print(audio)
+    print(f"{token_ids=}")
     audio = token2wav(audio, prompt_wav="../../deps/StepAudio2/assets/default_female.wav")
     with open("../../records/output-female.wav", "wb") as f:
         f.write(audio)
@@ -352,6 +469,29 @@ def test_all_concurrent(model, token2wav):
         thread.join()
 
     print("All concurrent tests have finished.")
+
+
+def test_tokenizer(model, token2wav):
+    """
+    huggingface-cli download stepfun-ai/Step-Audio-2-mini --include "*.json" --local-dir ./models/stepfun-ai/Step-Audio-2-mini
+
+    - map vocabulary to token is fast
+    """
+    from transformers import AutoTokenizer
+
+    llm_tokenizer = AutoTokenizer.from_pretrained(
+        LOCAL_MODEL_PATH,
+        trust_remote_code=True,
+        padding_side="right",
+        use_fast=True,
+    )
+    start = time.time()
+    tokens = "Give <audio_1466><audio_2112><audio_168><audio_2834> me"
+    token_ids = llm_tokenizer.encode(tokens)
+    print(f"{time.time() - start=}")
+    print(token_ids)
+    decoded_tokens = llm_tokenizer.decode(token_ids)
+    assert decoded_tokens == tokens
 
 
 token2wav_image = (
@@ -405,6 +545,10 @@ ACHATBOT_PKG=1 IMAGE_GPU=L40s modal run src/llm/vllm/step_audio2.py --test test_
 ACHATBOT_PKG=1 IMAGE_GPU=L40s modal run src/llm/vllm/step_audio2.py --test test_speech2text
 ACHATBOT_PKG=1 IMAGE_GPU=L40s modal run src/llm/vllm/step_audio2.py --test test_speech2speech
 
+# - run serve and test streaming
+ACHATBOT_PKG=1 IMAGE_GPU=L40s modal run src/llm/vllm/step_audio2.py --test test_text2text_stream
+ACHATBOT_PKG=1 IMAGE_GPU=L40s modal run src/llm/vllm/step_audio2.py --test test_text2speech_stream
+
 # audio-llm use Vllm serving on GPU(one container), token2wav run local cpu test, concurrent test (Overhead bound test)
 MAX_CONTAINER_COUNT=1 CONCURRENT_MAX_INPUTS=1 ACHATBOT_PKG=1 IMAGE_GPU=L40s modal run src/llm/vllm/step_audio2.py --test test_all_concurrent
 MAX_CONTAINER_COUNT=1 CONCURRENT_MAX_INPUTS=2 ACHATBOT_PKG=1 IMAGE_GPU=L40s modal run src/llm/vllm/step_audio2.py --test test_all_concurrent
@@ -421,13 +565,19 @@ def main(test: str = "test_all"):
     print(f"VLLM serving at {serve_url}")
 
     # cold start vllm serve
-    subprocess.run(f"curl -v -XGET '{serve_url}/health'", shell=True)
-    print("VLLM health check passed")
+    if test not in ["test_request", "test_tokenizer"]:
+        subprocess.run(f"curl -v -XGET '{serve_url}/health'", shell=True)
+        print("VLLM health check passed")
 
     token2wav = None
-    model = StepAudio2(f"{serve_url}/v1/chat/completions", "step-audio-2-mini")
-    if test not in ["test_text2text"]:
-        token2wav = Token2wav("../../models/stepfun-ai/Step-Audio-2-mini/token2wav")
+    # https://platform.openai.com/docs/api-reference/chat/create
+    model = StepAudio2(
+        f"{serve_url}/v1/chat/completions",
+        "step-audio-2-mini",
+        tokenizer_path=LOCAL_MODEL_PATH,
+    )
+    if test not in ["test_text2text", "test_request"]:
+        token2wav = Token2wav(f"{LOCAL_MODEL_PATH}/token2wav")
     test_map = {
         "test_all": test_all,
         "test_text2text": test_text2text,
@@ -435,6 +585,10 @@ def main(test: str = "test_all"):
         "test_speech2text": test_speech2text,
         "test_speech2speech": test_speech2speech,
         "test_all_concurrent": test_all_concurrent,
+        "test_request": test_request,
+        "test_tokenizer": test_tokenizer,
+        "test_text2text_stream": test_text2text_stream,
+        "test_text2speech_stream": test_text2speech_stream,
     }
     if test in test_map:
         test_map[test](model, token2wav)

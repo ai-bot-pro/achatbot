@@ -7,8 +7,16 @@ from src.types.ai_conf import AIConfig, LLMConfig, BaseConfig
 from src.common.types import MODELS_DIR
 from src.processors.voice.step_audio2_processor import Token2wav, StepAudio2BaseProcessor
 
+from src.core.llm import LLMEnvInit
+
 
 def get_step_audio2_llm(llm_config: BaseConfig):
+    tag = llm_config.tag if llm_config.tag else "llm_transformers_manual_voice_step2"
+    LLMEnvInit.initLLMEngine(tag, llm_config.args)
+    return get_step_audio2_transformers_llm(llm_config)
+
+
+def get_step_audio2_transformers_llm(llm_config: BaseConfig):
     from src.core.llm.transformers.manual_voice_step2 import TransformersManualVoiceStep2
 
     lm_model_name_or_path = os.path.join(MODELS_DIR, "stepfun-ai/Step-Audio-2-mini")
@@ -16,6 +24,12 @@ def get_step_audio2_llm(llm_config: BaseConfig):
     if args.get("lm_model_name_or_path", None) is None:
         args["lm_model_name_or_path"] = lm_model_name_or_path
     return TransformersManualVoiceStep2(**args)
+
+
+def get_step_audio2_vllm_client_llm(llm_config: BaseConfig):
+    from src.core.llm.vllm.step_audio2 import VllmClientStepAudio2
+
+    return VllmClientStepAudio2(**llm_config.args)
 
 
 def get_step_audio2_processor(

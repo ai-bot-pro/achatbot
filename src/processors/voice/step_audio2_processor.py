@@ -73,9 +73,10 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         assert audio_llm is not None, "audio_llm is None"
 
         from src.core.llm.transformers.manual_voice_step2 import TransformersManualVoiceStep2
+        from src.core.llm.vllm.step_audio2 import VllmClientStepAudio2
 
-        assert isinstance(audio_llm, TransformersManualVoiceStep2), (
-            "audio_llm is not TransformersManualVoiceStep2"
+        assert isinstance(audio_llm, (VllmClientStepAudio2, TransformersManualVoiceStep2)), (
+            "audio_llm is not TransformersManualVoiceStep2 or VllmClientStepAudio2"
         )
 
         self._audio_llm = audio_llm
