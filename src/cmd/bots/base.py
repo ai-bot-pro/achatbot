@@ -77,7 +77,7 @@ class AIBot(IBot):
         self._bot_config_list = self.args.bot_config_list
         self._bot_config = self.args.bot_config
         self._handle_sigint = self.args.handle_sigint
-
+        self._save_audio = self.args.save_audio
 
     def init_bot_config(self):
         try:

@@ -59,6 +59,10 @@ class TransformersLMArgs(LMGenerateArgs):
         default=2,
         metadata={"help": "The number of steps to run the warmup prompt. Default is 2."},
     )
+    verbose: bool = field(
+        default=False,
+        metadata={"help": "Whether to print verbose output. Default is False."},
+    )
     init_chat_role: str = field(
         default="system",
         metadata={"help": "Initial role for setting up the chat context. Default is 'system'."},

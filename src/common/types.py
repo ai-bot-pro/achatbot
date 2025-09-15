@@ -617,3 +617,4 @@ class BotRunArgs:
     websocket_server_host: str = "localhost"
     websocket_server_port: int = 8765
     handle_sigint: bool = True
+    save_audio: bool = False

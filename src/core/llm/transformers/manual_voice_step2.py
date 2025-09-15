@@ -21,7 +21,9 @@ class TransformersManualVoiceStep2(TransformersBaseLLM):
         self.args = TransformersLMArgs()
         self.args.update(**args)
         logging.info(f"args: {self.args}")
-        self._audio_llm = StepAudio2Stream(model_path=self.args.lm_model_name_or_path)
+        self._audio_llm = StepAudio2Stream(
+            model_path=self.args.lm_model_name_or_path, verbose=self.args.verbose
+        )
         self.eos_token_id = [
             self._audio_llm.eos_token_id,
             self._audio_llm.llm_tokenizer.convert_tokens_to_ids("<|endoftext|>"),

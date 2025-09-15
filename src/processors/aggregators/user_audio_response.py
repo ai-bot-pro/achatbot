@@ -16,6 +16,7 @@ class AudioResponseAggregator(FrameProcessor):
         end_frame: Type[Frame],
         accumulator_frame: Type[AudioRawFrame],
         interim_accumulator_frame: Type[AudioRawFrame] | None = None,
+        audio_buffer_maxlen: int = 10,  # vad stop_secs 0.32
     ):
         super().__init__()
 
@@ -24,20 +25,25 @@ class AudioResponseAggregator(FrameProcessor):
         self._accumulator_frame = accumulator_frame
         self._interim_accumulator_frame = interim_accumulator_frame
 
-        # ring buffer save latest 10 frames
-        self._audio_buffer = collections.deque(maxlen=10)
+        # ring buffer save latest no actival frames
+        self._audio_buffer_maxlen = audio_buffer_maxlen
+        if audio_buffer_maxlen > 0:
+            self._audio_buffer = collections.deque(maxlen=audio_buffer_maxlen)
 
         # Reset our accumulator state.
         self._reset()
 
     def _reset(self):
+        # Reset the aggregation. Reset it before pushing it down,
+        # otherwise if the tasks gets cancelled we won't be able to clear things up.
         self._aggregation = bytearray()
         self._aggregating = False
         self._seen_start_frame = False
         self._seen_end_frame = False
         self._seen_interim_results = False
         self._cur_audio_frame = None
-        self._audio_buffer.clear()
+        if self._audio_buffer_maxlen > 0:
+            self._audio_buffer.clear()
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
@@ -49,8 +55,9 @@ class AudioResponseAggregator(FrameProcessor):
             self._seen_start_frame = True
             self._seen_end_frame = False
             self._seen_interim_results = False
-            for buff_frame in self._audio_buffer:
-                self._aggregation.extend(buff_frame.audio)
+            if self._audio_buffer_maxlen > 0:
+                for buff_frame in self._audio_buffer:
+                    self._aggregation.extend(buff_frame.audio)
             await self.push_frame(frame, direction)
         elif isinstance(frame, self._end_frame):
             self._seen_end_frame = True
@@ -72,8 +79,9 @@ class AudioResponseAggregator(FrameProcessor):
                 # end frame and we were still aggregating, it means we should
                 # send the aggregation.
                 send_aggregation = self._seen_end_frame
-            else:
-                # save frame to ringbuffer
+
+            # save frame to ringbuffer, :) nice~
+            if self._audio_buffer_maxlen > 0:
                 self._audio_buffer.append(frame)
 
             # We just got our final result, so let's reset interim results.
@@ -90,10 +98,6 @@ class AudioResponseAggregator(FrameProcessor):
         if len(self._aggregation) > 0:
             frame = self._cur_audio_frame
             frame.audio = bytes(self._aggregation)
-
-            # Reset the aggregation. Reset it before pushing it down,
-            # otherwise if the tasks gets cancelled we won't be able to clear things up.
-            self._aggregation = bytearray()
 
             await self.push_frame(frame)
 

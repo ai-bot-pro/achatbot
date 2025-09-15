@@ -123,6 +123,7 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
       - [x] llm_transformers_manual_vita_text llm_transformers_manual_vita_audio_asr llm_transformers_manual_vita_tts llm_transformers_manual_vita_text_voice llm_transformers_manual_vita_voice
       - [x] llm_transformers_manual_phi4_vision_speech,llm_transformers_manual_phi4_audio_asr,llm_transformers_manual_phi4_audio_translation,llm_transformers_manual_phi4_vision,llm_transformers_manual_phi4_audio_chat
       - [x] llm_transformers_manual_vision_speech_gemma3n,llm_transformers_manual_vision_gemma3n,llm_transformers_manual_gemma3n_audio_asr,llm_transformers_manual_gemma3n_audio_translation
+      - [x] llm_transformers_manual_voice_step2
   - remote api llm: personal-ai(like openai api, other ai provider)
   
 - AI modules:

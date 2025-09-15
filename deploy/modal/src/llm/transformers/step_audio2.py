@@ -47,7 +47,7 @@ img = (
 )
 
 img = img.pip_install(
-    f"achatbot==0.0.25",
+    f"achatbot==0.0.25.post1",
     extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
 )
 
@@ -1261,7 +1261,6 @@ async def achatbot_step_audio2_say():
     from achatbot.types.frames import PathAudioRawFrame
 
     from achatbot.cmd.bots.voice.step_audio2.helper import (
-        get_step_audio2_llm,
         get_step_audio2_processor,
     )
     from achatbot.types.ai_conf import AIConfig, LLMConfig
@@ -1310,7 +1309,6 @@ async def achatbot_step_audio2_t2st(processor_name: str):
     from achatbot.types.frames import PathAudioRawFrame
 
     from achatbot.cmd.bots.voice.step_audio2.helper import (
-        get_step_audio2_llm,
         get_step_audio2_processor,
     )
     from achatbot.types.ai_conf import AIConfig, LLMConfig
@@ -1357,7 +1355,6 @@ async def achatbot_step_audio2_audio2text(processor_name):
     from achatbot.types.frames import PathAudioRawFrame
 
     from achatbot.cmd.bots.voice.step_audio2.helper import (
-        get_step_audio2_llm,
         get_step_audio2_processor,
     )
     from achatbot.types.ai_conf import AIConfig, LLMConfig
@@ -1420,7 +1417,6 @@ async def achatbot_step_audio2_s2st(processor_name):
     from achatbot.types.frames import PathAudioRawFrame
 
     from achatbot.cmd.bots.voice.step_audio2.helper import (
-        get_step_audio2_llm,
         get_step_audio2_processor,
     )
     from achatbot.types.ai_conf import AIConfig, LLMConfig
@@ -1443,6 +1439,7 @@ async def achatbot_step_audio2_s2st(processor_name):
                 "lm_gen_top_k": 20,
                 "lm_gen_top_p": 0.9,
                 "lm_gen_repetition_penalty": 1.1,
+                "verbose": True,
             },
         )
     )
@@ -1484,7 +1481,6 @@ async def achatbot_step_audio2_aqaa(processor_name):
     from achatbot.types.frames import PathAudioRawFrame
 
     from achatbot.cmd.bots.voice.step_audio2.helper import (
-        get_step_audio2_llm,
         get_step_audio2_processor,
     )
     from achatbot.types.ai_conf import AIConfig, LLMConfig
