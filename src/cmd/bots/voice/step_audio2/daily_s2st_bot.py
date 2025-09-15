@@ -28,7 +28,7 @@ from .helper import get_step_audio2_processor, get_step_audio2_llm
 load_dotenv(override=True)
 
 """
-TOKENIZERS_PARALLELISM=false python -m src.cmd.bots.main -f config/bots/daily_s2st_bot.json
+TOKENIZERS_PARALLELISM=false python -m src.cmd.bots.main -f config/bots/daily_step_audio2_s2st_bot.json
 """
 
 
