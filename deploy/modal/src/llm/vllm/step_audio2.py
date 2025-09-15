@@ -428,4 +428,15 @@ def main(test: str = "test_all"):
     model = StepAudio2(f"{serve_url}/v1/chat/completions", "step-audio-2-mini")
     if test not in ["test_text2text"]:
         token2wav = Token2wav("../../models/stepfun-ai/Step-Audio-2-mini/token2wav")
-    globals()[f"{test}"](model, token2wav)
+    test_map = {
+        "test_all": test_all,
+        "test_text2text": test_text2text,
+        "test_text2speech": test_text2speech,
+        "test_speech2text": test_speech2text,
+        "test_speech2speech": test_speech2speech,
+        "test_all_concurrent": test_all_concurrent,
+    }
+    if test in test_map:
+        test_map[test](model, token2wav)
+    else:
+        raise ValueError(f"Unknown test: {test}")
