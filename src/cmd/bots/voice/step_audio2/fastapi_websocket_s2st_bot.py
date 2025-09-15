@@ -10,7 +10,7 @@ from apipeline.processors.logger import FrameLogger
 from fastapi import WebSocket
 
 from src.cmd.bots.base_fastapi_websocket_server import AIFastapiWebsocketBot
-from src.processors.speech.audio_save_processor import AudioSaveProcessor
+from src.processors.speech.audio_save_processor import AudioSaveProcessor, SaveAllAudioProcessor
 from src.processors.aggregators.user_audio_response import UserAudioResponseAggregator
 from src.types.frames.data_frames import (
     TextFrame,
@@ -30,7 +30,7 @@ from .helper import get_step_audio2_processor, get_step_audio2_llm
 load_dotenv(override=True)
 
 """
-TOKENIZERS_PARALLELISM=false python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/step_audio2/fastapi_webrtc_step_audio2_s2st_bot.json
+TOKENIZERS_PARALLELISM=false python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_websocket_step_audio2_s2st_bot.json
 """
 
 
@@ -51,7 +51,8 @@ class FastapiWebsocketServerStepAudio2S2STBot(AIFastapiWebsocketBot):
     def load(self):
         self.vad_analyzer = self.get_vad_analyzer()
         llm_conf = self._bot_config.voice_llm or self._bot_config.asr
-        self.audio_llm = get_step_audio2_llm(llm_conf)
+        if llm_conf:
+            self.audio_llm = get_step_audio2_llm(llm_conf)
 
         # load punctuation engine
         if self._bot_config.punctuation:
@@ -63,7 +64,6 @@ class FastapiWebsocketServerStepAudio2S2STBot(AIFastapiWebsocketBot):
         if self._websocket is None:
             return
         assert self.vad_analyzer is not None
-        assert self.audio_llm is not None
 
         self.params = FastapiWebsocketServerParams(
             audio_in_enabled=True,
@@ -76,7 +76,7 @@ class FastapiWebsocketServerStepAudio2S2STBot(AIFastapiWebsocketBot):
         )
 
         self._voice_processor = None
-        if self._bot_config.voice_llm:
+        if self._bot_config.voice_llm and self.audio_llm:
             # src/processors/voice/step_audio2_processor.py
             self._voice_processor = get_step_audio2_processor(
                 self._bot_config.voice_llm,
@@ -121,21 +121,42 @@ class FastapiWebsocketServerStepAudio2S2STBot(AIFastapiWebsocketBot):
 
         stst_processors = []
         if self._voice_processor:
+            save_bot_audio_processor = (
+                AudioSaveProcessor(prefix_name="bot_speak", pass_raw_audio=True)
+                if self._save_audio
+                else None
+            )
             stst_processors = [
                 self._voice_processor,
                 FrameLogger(include_frame_types=[TextFrame, AudioRawFrame, LLMGenedTokensFrame]),
-                AudioSaveProcessor(prefix_name="bot_speak"),
+                save_bot_audio_processor,
                 transport.output_processor(),
             ]
             stst_processors = [p for p in stst_processors if p is not None]
             logging.info(f"{stst_processors=}")
 
+        save_all_records_processor = (
+            SaveAllAudioProcessor(
+                prefix_name="fastapi_ws_s2st_bot",
+                sample_rate=self.params.audio_in_sample_rate,
+                channels=self.params.audio_in_channels,
+                sample_width=self.params.audio_in_sample_width,
+            )
+            if self._save_audio
+            else None
+        )
+        save_speaker_audio_processor = (
+            AudioSaveProcessor(prefix_name="user_speak", pass_raw_audio=True)
+            if self._save_audio
+            else None
+        )
         processors = [
             transport.input_processor(),
+            save_all_records_processor,
             UserAudioResponseAggregator(),
             FrameLogger(include_frame_types=[AudioRawFrame]),
-            AudioSaveProcessor(prefix_name="user_speak"),
-            FrameLogger(include_frame_types=[PathAudioRawFrame]),
+            save_speaker_audio_processor,
+            FrameLogger(include_frame_types=[AudioRawFrame]),
             ParallelPipeline(
                 asr_processors,
                 stst_processors,

@@ -112,9 +112,11 @@ class SaveAllAudioProcessor(FrameProcessor):
         if isinstance(frame, EndFrame):
             logging.info(f"{self.name} end")
             await self.save()
+            self.audio_bytes = b""
         if isinstance(frame, CancelFrame):
             logging.info(f"{self.name} cancelled")
             await self.save()
+            self.audio_bytes = b""
 
     async def save(self) -> str:
         if len(self.audio_bytes) == 0:

@@ -21,8 +21,9 @@ class BotInfo(BaseModel):
     services: dict = {}
     websocket_server_host: str = "localhost"
     websocket_server_port: int = 8765
-    transport_type: str = "room"  # room(daily,livekit), websocket(websocket,fastapi_websocket)
+    transport_type: str = "room"  # room(daily,livekit), websocket
     handle_sigint: bool = True
+    save_audio: bool = False
 
 
 def import_bots(bot_name: str = "DummyBot"):
@@ -169,6 +170,10 @@ def import_bots(bot_name: str = "DummyBot"):
         return True
     if "DailyStepAudio2AQAABot" in bot_name:
         from .voice.step_audio2 import daily_aqaa_bot
+
+        return True
+    if "DailyStepAudio2S2STBot" in bot_name:
+        from .voice.step_audio2 import daily_s2st_bot
 
         return True
     if "LivekitBot" in bot_name:

@@ -107,9 +107,9 @@ class AudioVADInputProcessor(InputProcessor):
                 # Push audio downstream if passthrough.
                 if self._params.vad_enabled and self._params.vad_audio_passthrough:
                     if len(vad_state_frame.audio) > 0:
-                        await self.queue_frame(vad_state_frame)
+                        await self.push_frame(vad_state_frame)
                 else:
-                    await self.queue_frame(frame)
+                    await self.push_frame(frame)
             except asyncio.TimeoutError:
                 continue
             except asyncio.CancelledError:
@@ -222,7 +222,7 @@ class AudioVADInputProcessor(InputProcessor):
                 await self._stop_interruption()
 
         if push_frame:
-            await self.queue_frame(frame)
+            await self.push_frame(frame)
 
     #
     # Process frame

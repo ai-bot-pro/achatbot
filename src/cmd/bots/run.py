@@ -11,7 +11,13 @@ from src.common.session import Session
 from src.common.connector import ConnectorInit
 from src.common.interface import IBot, IConnector, IRoomManager
 from src.common.types import GeneralRoomInfo, BotRunArgs, SessionCtx
-from src.cmd.bots import BotInfo, import_bots, import_websocket_bots, register_ai_room_bots
+from src.cmd.bots import (
+    BotInfo,
+    import_bots,
+    import_websocket_bots,
+    import_fastapi_websocket_bots,
+    register_ai_room_bots,
+)
 
 
 class EngineClassInfo(BaseModel):
@@ -82,6 +88,7 @@ class BotTaskRunner:
             bot_config_list=bot_info.config_list,
             services=bot_info.services,
             handle_sigint=bot_info.handle_sigint,
+            save_audio=bot_info.save_audio,
         ).__dict__
         self._bot_obj: IBot = register_ai_room_bots[bot_info.chat_bot_name](**kwargs)
         logging.info(f"bot {bot_info.chat_bot_name} loading")
@@ -107,6 +114,7 @@ class BotTaskRunner:
             websocket_server_port=bot_info.websocket_server_port,
             websocket_server_host=bot_info.websocket_server_host,
             handle_sigint=bot_info.handle_sigint,
+            save_audio=bot_info.save_audio,
         ).__dict__
         self._bot_obj: IBot = register_ai_room_bots[bot_info.chat_bot_name](**kwargs)
         self._bot_obj.load()

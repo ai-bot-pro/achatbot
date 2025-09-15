@@ -85,6 +85,7 @@ class BotLoader:
             room_name=bot_info.room_name,
             room_url=bot_info.room_url,
             token=bot_info.token,
+            save_audio=bot_info.save_audio,
         )
 
         async with BotLoader.lock:
