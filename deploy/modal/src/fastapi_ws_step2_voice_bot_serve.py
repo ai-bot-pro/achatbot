@@ -3,7 +3,7 @@ import os
 import modal
 
 
-achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.25.post1")
+achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.25.post2")
 app = modal.App("step-audio2-voice-bot")
 IMAGE_GPU = os.getenv("IMAGE_GPU", "L4")
 img = (
@@ -48,10 +48,10 @@ img = (
     )
 )
 
-img = img.pip_install(
-    f"achatbot==0.0.25.dev74",
-    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
-)
+# img = img.pip_install(
+#    f"achatbot==0.0.25.dev74",
+#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
+# )
 
 
 HF_MODEL_DIR = "/root/.achatbot/models"
@@ -118,7 +118,7 @@ modal volume create config
 modal volume put config ./config/bots/fastapi_websocket_step_audio2_s2st_bot.json /bots/ -f
 
 # run container with gpu
-IMAGE_GPU=L4 ACHATBOT_VERSION=0.0.25.post1 \
+IMAGE_GPU=L4 ACHATBOT_VERSION=0.0.25.post2 \
     CONFIG_FILE=/root/.achatbot/config/bots/fastapi_websocket_step_audio2_s2st_bot.json \
     modal serve src/fastapi_ws_step2_voice_bot_serve.py
 
