@@ -204,9 +204,9 @@ def serve():
         "--trust-remote-code",
     ]
 
-    cmd = " ".join(cmd)
-    print(cmd)
-    subprocess.Popen(cmd, shell=True)
+    # Refactored to avoid shell=True for better security
+    print(" ".join(cmd))
+    subprocess.Popen(cmd)
 
 
 def test_text2text(model, token2wav=None):
