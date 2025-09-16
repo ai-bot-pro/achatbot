@@ -1,6 +1,7 @@
 import os
 import importlib
 
+from src.common.factory import EngineClass
 from src.common.interface import ILlm
 from src.common.session import Session
 from src.types.ai_conf import AIConfig, LLMConfig, BaseConfig
@@ -10,10 +11,11 @@ from src.processors.voice.step_audio2_processor import Token2wav, StepAudio2Base
 from src.core.llm import LLMEnvInit
 
 
-def get_step_audio2_llm(llm_config: BaseConfig):
+def get_step_audio2_llm(
+    llm_config: BaseConfig,
+) -> ILlm | EngineClass:
     tag = llm_config.tag if llm_config.tag else "llm_transformers_manual_voice_step2"
-    LLMEnvInit.initLLMEngine(tag, llm_config.args)
-    return get_step_audio2_transformers_llm(llm_config)
+    return LLMEnvInit.initLLMEngine(tag, llm_config.args)
 
 
 def get_step_audio2_transformers_llm(llm_config: BaseConfig):

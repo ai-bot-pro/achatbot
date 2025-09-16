@@ -18,6 +18,7 @@ except ModuleNotFoundError as e:
 from src.common.random import set_all_random_seed
 from src.common.interface import ILlm
 from src.common.session import Session
+from src.common.types import SessionCtx
 from src.core.llm.vllm.base import VllmEngineBase
 
 
@@ -25,6 +26,23 @@ class VllmVisionSkyworkr1v(VllmEngineBase):
     """ """
 
     TAG = "llm_vllm_vision_skyworkr1v"
+
+    async def warmup(self):
+        if self.args.warmup_steps <= 0:
+            return
+        session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
+
+        dummy_pil_image = Image.new("RGB", (100, 100), color="white")
+        session.ctx.state["prompt"] = [
+            {"type": "image", "image": dummy_pil_image},
+            {"type": "text", "text": self.args.warmup_prompt},
+        ]
+        for i in range(self.args.warmup_steps):
+            logging.info(f"{i} warmup start")
+            async for result_text in self.async_generate(
+                session, thinking=self.gen_args.lm_gen_thinking
+            ):
+                pass
 
     async def async_generate(self, session: Session, **kwargs):
         """

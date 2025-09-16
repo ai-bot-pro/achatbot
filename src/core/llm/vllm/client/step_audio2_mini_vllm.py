@@ -43,6 +43,11 @@ class StepAudio2MiniVLLMClient:
         return next(self.stream(messages, **kwargs, stream=False))
 
     def stream(self, messages, stream=True, **kwargs):
+        """
+        kwargs: class ChatCompletionRequest(OpenAIBaseModel):
+        # Ordered by official OpenAI API documentation
+        # https://platform.openai.com/docs/api-reference/chat/create
+        """
         headers = {"Content-Type": "application/json"}
         payload = kwargs
         payload["messages"] = self.apply_chat_template(messages)

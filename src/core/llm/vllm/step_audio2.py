@@ -5,17 +5,15 @@ from dataclasses import dataclass, field
 import numpy as np
 from typing import AsyncGenerator, Iterator
 
-
 from src.common.session import Session
 from src.common.interface import ILlm
 from src.common.chat_history import ChatHistory
 from src.core.llm.base import BaseLLM
 from src.common.logger import Logger
 from src.common.utils import task
-from src.common.types import SessionCtx
 from src.types.llm.sampling import LMGenerateArgs
 from .client.step_audio2_mini_vllm import StepAudio2MiniVLLMClient
-from .base import VLlmBase
+from . import VLlmBase
 
 
 @dataclass
@@ -46,6 +44,15 @@ class VllmStepAudio2Args:
     )
     gen_args: dict = field(default_factory=lambda: LMGenerateArgs().__dict__)
 
+    def update(self, **kwargs):
+        unused_kwargs = dict()
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+            else:
+                unused_kwargs[key] = value
+        return unused_kwargs
+
 
 class VllmClientStepAudio2(VLlmBase):
     TAG = "llm_vllm_client_step_audio2"
@@ -53,8 +60,11 @@ class VllmClientStepAudio2(VLlmBase):
 
     def __init__(self, **kwargs) -> None:
         super().__init__()
-        self.args = VllmStepAudio2Args(**kwargs)
-        self.gen_args = self.args.gen_args
+        self.args = VllmStepAudio2Args()
+        self.args.update(**kwargs)
+        self.gen_args = LMGenerateArgs()
+        self.gen_args.update(**self.args.gen_args)
+        logging.info(f"{self.args=} {self.gen_args=}")
 
         self.client = StepAudio2MiniVLLMClient(
             self.args.api_url,
@@ -62,11 +72,13 @@ class VllmClientStepAudio2(VLlmBase):
             tokenizer_path=self.args.tokenizer_path,
         )
 
+        self.warmup()
+
     @property
     def llm_tokenizer(self):
         return self.client.llm_tokenizer
 
-    async def warmup(self):
+    def warmup(self):
         if self.args.warmup_steps <= 0:
             return
         messages = [
@@ -98,9 +110,27 @@ class VllmClientStepAudio2(VLlmBase):
     def generate(self, session: Session, **kwargs) -> Iterator[str | dict | np.ndarray]:
         messages = session.ctx.state.get("messages", [])
         stop_ids = kwargs.pop("stop_ids", self.args.lm_gen_stop_ids)
+        max_completion_tokens = kwargs.get("max_completion_tokens") or kwargs.pop(
+            "max_new_tokens", self.gen_args.lm_gen_max_new_tokens
+        )
+        temperature = kwargs.pop("temperature", self.gen_args.lm_gen_temperature)
+        top_p = kwargs.pop("top_p", self.gen_args.lm_gen_top_p)
+        top_k = kwargs.pop("top_k", self.gen_args.lm_gen_top_k)
+        min_p = kwargs.pop("min_p", self.gen_args.lm_gen_min_p)
+        repetition_penalty = kwargs.pop(
+            "repetition_penalty", self.gen_args.lm_gen_repetition_penalty
+        )
         stream_iter = self.client.stream(
             messages,
             stream=True,
+            max_completion_tokens=max_completion_tokens,
+            skip_special_tokens=False,
+            parallel_tool_calls=False,
+            temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
+            min_p=min_p,
+            repetition_penalty=repetition_penalty,
             **kwargs,
         )
         stop = False

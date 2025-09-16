@@ -19,82 +19,14 @@ except ModuleNotFoundError as e:
     raise Exception(f"Missing module: {e}")
 
 from src.common.session import Session
-from src.common.interface import ILlm
 from src.common.chat_history import ChatHistory
-from src.core.llm.base import BaseLLM
 from src.common.logger import Logger
 from src.common.utils import task
 from src.common.types import SessionCtx
+from . import VLlmBase
 
 
 Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
-
-
-class VLlmBase(BaseLLM, ILlm):
-    def set_system_prompt(self, **kwargs):
-        pass
-
-    async def warmup(self):
-        if self.args.warmup_steps <= 0:
-            return
-
-    def generate(self, session: Session, **kwargs) -> Iterator[str | dict | np.ndarray]:
-        pass
-
-    async def async_generate(
-        self, session, **kwargs
-    ) -> AsyncGenerator[str | dict | np.ndarray, None]:
-        pass
-
-    async def async_chat_completion(self, session, **kwargs) -> AsyncGenerator[str, None]:
-        if self.args.lm_stream is False:
-            res = ""
-            async for text in self.async_generate(session, **kwargs):
-                res += text
-            yield res
-        else:
-            res = ""
-            async for text in self.async_generate(session, **kwargs):
-                if text is None:
-                    yield None
-                    continue
-                res += text
-                pos = self._have_special_char(res)
-                if pos > -1:
-                    yield res[: pos + 1]
-                    res = res[pos + 1 :]
-                else:
-                    yield None
-            if len(res) > 0:
-                yield res
-
-    def chat_completion(self, session: Session, **kwargs):
-        if self.args.lm_stream is False:
-            res = ""
-            for text in self.generate(session, **kwargs):
-                res += text
-            yield res
-        else:
-            res = ""
-            for text in self.generate(session, **kwargs):
-                if text is None:
-                    yield None
-                    continue
-                res += text
-                pos = self._have_special_char(res)
-                if pos > -1:
-                    yield res[: pos + 1]
-                    res = res[pos + 1 :]
-                else:
-                    yield None
-            if len(res) > 0:
-                yield res
-
-    def count_tokens(self, text: str | bytes) -> int:
-        """
-        use sentencepiece tokenizer to count tokens
-        """
-        return len(self.tokenizer.tokenize(text)) if self.tokenizer else 0
 
 
 class VllmEngineBase(VLlmBase):
@@ -122,22 +54,6 @@ class VllmEngineBase(VLlmBase):
         # subclass to init
         self.init()
 
-    async def warmup(self):
-        if self.args.warmup_steps <= 0:
-            return
-        session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
-
-        dummy_pil_image = Image.new("RGB", (100, 100), color="white")
-        session.ctx.state["prompt"] = [
-            {"type": "image", "image": dummy_pil_image},
-            {"type": "text", "text": self.args.warmup_prompt},
-        ]
-        for i in range(self.args.warmup_steps):
-            logging.info(f"{i} warmup start")
-            async for result_text in self.async_generate(
-                session, thinking=self.gen_args.lm_gen_thinking
-            ):
-                pass
 
     def init(self):
         pass
