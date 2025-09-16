@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass, field
 from typing import Any, List
 
@@ -372,22 +373,31 @@ class TextQuestionsAudioRawFrame(AudioRawFrame, TextFrame):
 
 
 @dataclass
+class FunctionCallFrame(Frame):
+    """llm gened tokens frame"""
+
+    tool_call_id: str = ""
+    function_name: str = ""
+    arguments: str = ""
+    index: int = 0
+    type: str = "function"
+
+    def __str__(self):
+        return f"{self.name}(function_name: {self.function_name}, tool_call_id: {self.tool_call_id}, arguments: {self.arguments} index: {self.index} type: {self.type})"
+
+    @property
+    def arguments_dict(self):
+        return json.loads(self.arguments)
+
+
+@dataclass
 class LLMGenedTokensFrame(Frame):
     """llm gened tokens frame"""
 
     token_ids: list[int] = field(default_factory=list)
+    text_tokens: list[str] = field(default_factory=list)
+    audio_tokens: list[str] = field(default_factory=list)
+    tool_calls: list[FunctionCallFrame] = field(default_factory=list)
 
     def __str__(self):
-        return f"{self.name}(token_ids: {self.token_ids})"
-
-
-@dataclass
-class FunctionCallFrame(Frame):
-    """llm gened tokens frame"""
-
-    function_name: str = ""
-    tool_call_id: str = ""
-    arguments: dict = field(default_factory=dict)
-
-    def __str__(self):
-        return f"{self.name}(function_name: {self.function_name}, tool_call_id: {self.tool_call_id}, arguments: {self.arguments})"
+        return f"{self.name}(token_ids: {self.token_ids} text_tokens: {self.text_tokens} audio_tokens: {self.audio_tokens} tool_calls: {self.tool_calls})"

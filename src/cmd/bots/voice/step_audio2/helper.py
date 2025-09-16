@@ -5,10 +5,20 @@ from src.common.factory import EngineClass
 from src.common.interface import ILlm
 from src.common.session import Session
 from src.types.ai_conf import AIConfig, LLMConfig, BaseConfig
-from src.common.types import MODELS_DIR
+from src.common.types import MODELS_DIR, ASSETS_DIR
 from src.processors.voice.step_audio2_processor import Token2wav, StepAudio2BaseProcessor
 
 from src.core.llm import LLMEnvInit
+
+
+def get_token2wav(llm_config: BaseConfig):
+    lm_model_name_or_path = llm_config.args.get(
+        "lm_model_name_or_path", os.path.join(MODELS_DIR, "stepfun-ai/Step-Audio-2-mini")
+    )
+    warmup_cn = llm_config.args.get("warmup_cn", 2)
+    prompt_wav = llm_config.args.get("prompt_wav", os.path.join(ASSETS_DIR, "default_female.wav"))
+    token2wav_path = os.path.join(lm_model_name_or_path, "token2wav")
+    return Token2wav(token2wav_path, warmup_cn=warmup_cn, prompt_wav=prompt_wav)
 
 
 def get_step_audio2_llm(

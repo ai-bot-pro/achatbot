@@ -23,6 +23,7 @@ class SearchBaseApi(EngineClass, interface.IFunction):
                     "type": "object",
                     "properties": {"query": {"type": "string", "description": "web search query"}},
                     "required": ["query"],
+                    # "additionalProperties": False,
                 },
             },
         }

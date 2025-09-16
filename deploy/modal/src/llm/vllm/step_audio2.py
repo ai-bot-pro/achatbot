@@ -175,7 +175,7 @@ class StepAudio2:
     gpu=IMAGE_GPU,
     max_containers=MAX_CONTAINER_COUNT,
     # how long should we stay up with no requests?
-    scaledown_window=15 * MINUTES,
+    scaledown_window=30 * MINUTES,
     volumes={
         HF_MODEL_DIR: hf_model_vol,
         ASSETS_DIR: assets_vol,

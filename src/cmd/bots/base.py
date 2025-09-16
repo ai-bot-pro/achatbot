@@ -122,7 +122,7 @@ class AIBot(IBot):
 
     def cancel(self):
         if self.runner:
-            self.runner.cancel()
+            asyncio.create_task(self.runner.cancel())
         if self.generator:
             self.generator.close()
 

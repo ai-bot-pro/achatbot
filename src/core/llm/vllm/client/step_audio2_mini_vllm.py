@@ -127,6 +127,7 @@ class StepAudio2MiniVLLMClient:
 
     def apply_chat_template(self, messages):
         out = []
+        # print(f"{messages=}")
         for m in messages:
             if m["role"] == "human" and isinstance(m["content"], list):
                 out.append(

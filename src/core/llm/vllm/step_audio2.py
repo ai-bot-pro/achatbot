@@ -26,9 +26,9 @@ class VllmStepAudio2Args:
         default="step-audio-2-mini",
         metadata={"help": "vllm register model name. Default is 'step-audio-2-mini'."},
     )
-    tokenizer_path: str = field(
+    lm_model_name_or_path: str = field(
         default=None,
-        metadata={"help": "vllm llm tokenizer path for text tokenization. Default is None."},
+        metadata={"help": "The pretrained language model to use. Default is None."},
     )
     warmup_prompt: str = field(
         default="Repeat the word 'weedge niu bi'.",
@@ -69,7 +69,7 @@ class VllmClientStepAudio2(VLlmBase):
         self.client = StepAudio2MiniVLLMClient(
             self.args.api_url,
             self.args.model_name,
-            tokenizer_path=self.args.tokenizer_path,
+            tokenizer_path=self.args.lm_model_name_or_path,
         )
 
         self.warmup()
@@ -109,7 +109,7 @@ class VllmClientStepAudio2(VLlmBase):
 
     def generate(self, session: Session, **kwargs) -> Iterator[str | dict | np.ndarray]:
         messages = session.ctx.state.get("messages", [])
-        stop_ids = kwargs.pop("stop_ids", self.args.lm_gen_stop_ids)
+        stop_ids = kwargs.pop("stop_ids", self.gen_args.lm_gen_stop_ids)
         max_completion_tokens = kwargs.get("max_completion_tokens") or kwargs.pop(
             "max_new_tokens", self.gen_args.lm_gen_max_new_tokens
         )
@@ -134,9 +134,18 @@ class VllmClientStepAudio2(VLlmBase):
             **kwargs,
         )
         stop = False
+
+        tool_calls = []
         for response, text, audio, token_ids in stream_iter:
             if self.args.verbose is True:
                 print(f"{response=} {text=} {audio=} {token_ids=}")
+            if len(response.get("tool_calls", [])) > 0:
+                if len(tool_calls) == 0:
+                    tool_calls = response.get("tool_calls")
+                else:
+                    tool_calls[0]["function"]["arguments"] = response["tool_calls"][0]["function"][
+                        "arguments"
+                    ]
             if token_ids is None:
                 continue
             for token_id in token_ids:
@@ -146,3 +155,4 @@ class VllmClientStepAudio2(VLlmBase):
                 yield token_id
             if stop:
                 break
+        yield {"tool_calls": tool_calls}
