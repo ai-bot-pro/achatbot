@@ -69,6 +69,7 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         is_speaking: bool = True,
         tools: list = [],
         verbose: bool = False,
+        set_last_chunk: bool = True,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -109,6 +110,7 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
 
         self._sleep_time = no_stream_sleep_time
         self._verbose = verbose
+        self._set_last_chunk = set_last_chunk
 
     @property
     def chat_history(self):
@@ -129,9 +131,12 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
                 session, kwargs = item
                 if self._tools:
                     kwargs["tools"] = self._tools
+                if self._verbose:
+                    print(f"{session=} {kwargs=}")
                 token_iter = self._audio_llm.generate(session, **kwargs)
-                self.put_out_audio_text(token_iter, is_out_text=True)
-                self._queue.put(None)  # Signal the end of the stream
+                _, _, is_tool_call = self.put_out_audio_text(token_iter, is_out_text=True)
+                if is_tool_call is False:  # no tool call, end round generate
+                    self._queue.put(None)  # Signal the end of the stream
             except Exception as e:
                 logging.error(f"Exception generate: {e}", exc_info=True)
                 self._queue.put(None)  # Signal the end of the stream
@@ -234,7 +239,8 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         is_tag = False
         buffer = []
         unicode_token_id = []
-        tool_calls: List[FunctionCallFrame] = []
+        tool_calls: List[FunctionCallFrame] = []  # for v1/chat/completions api
+
         for token_id in token_iter:
             if isinstance(token_id, dict) and "tool_calls" in token_id:
                 for tool_call in token_id["tool_calls"]:
@@ -300,7 +306,9 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
                         buffer = buffer[self._chunk_size :]
         if len(buffer) > 0 and self._is_speaking is True:
             logging.info(f"last chunk size: {len(buffer)}")
-            out_bytes = self._token2wav.stream(buffer, prompt_wav=self._prompt_wav, last_chunk=True)
+            out_bytes = self._token2wav.stream(
+                buffer, prompt_wav=self._prompt_wav, last_chunk=self._set_last_chunk
+            )
             frame = AudioRawFrame(
                 audio=out_bytes,
                 sample_rate=self._audio_llm.RATE,
@@ -321,6 +329,22 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
             else []
         )
 
+        is_tool_call = False
+        if len(tool_calls_token_ids) > 0:
+            tool_calls_token = self._audio_llm.llm_tokenizer.decode(tool_calls_token_ids)
+            # print(f"{tool_calls_token=}")
+            function_name, function_args = extract_function_info(tool_calls_token)
+            self._queue.put(FunctionCallFrame(function_name=function_name, arguments=function_args))
+            is_tool_call = True
+        if len(tool_calls) > 0:
+            for tool_call in tool_calls:
+                self._queue.put(
+                    FunctionCallFrame(
+                        function_name=tool_call.function_name, arguments=tool_call.arguments
+                    )
+                )
+            is_tool_call = True
+
         self._queue.put(
             LLMGenedTokensFrame(
                 token_ids=output_token_ids,
@@ -330,20 +354,7 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
             )
         )
 
-        if len(tool_calls_token_ids) > 0:
-            tool_calls_token = self._audio_llm.llm_tokenizer.decode(tool_calls_token_ids)
-            # print(f"{tool_calls_token=}")
-            function_name, function_args = extract_function_info(tool_calls_token)
-            self._queue.put(FunctionCallFrame(function_name=function_name, arguments=function_args))
-        if len(tool_calls) > 0:
-            for tool_call in tool_calls:
-                self._queue.put(
-                    FunctionCallFrame(
-                        function_name=tool_call.function_name, arguments=tool_call.arguments
-                    )
-                )
-
-        return output_token_ids, out_text
+        return output_token_ids, out_text, is_tool_call
 
 
 # --------------------------------------------------------------------------------
@@ -597,20 +608,68 @@ class StepText2TextAudioChatProcessor(StepAudio2BaseProcessor):
         )
         self._session.ctx.state["messages"] = self._session.chat_history.to_list()
         self.send_input(self._session)
-        output_token_ids = []
         async for item in self.gen():
             if isinstance(item, LLMGenedTokensFrame):
-                output_token_ids = item.token_ids
                 self._session.chat_history.pop(-1)
+                if isinstance(self._audio_llm, TransformersManualVoiceStep2):
+                    self._session.chat_history.append(
+                        {
+                            "role": "assistant",
+                            "content": [
+                                {"type": "text", "text": "<tts_start>"},
+                                {"type": "token", "token": item.token_ids},
+                            ],
+                        }
+                    )
+                if isinstance(self._audio_llm, VllmClientStepAudio2):
+                    history_item = {
+                        "role": "assistant",
+                        "tts_content": {
+                            "tts_text": item.text_tokens,
+                            "tts_audio": item.audio_tokens,
+                        },
+                    }
+                    if len(item.tool_calls) > 0:
+                        history_item["tool_calls"] = []
+                        for tool_call in item.tool_calls:
+                            history_item["tool_calls"].append(
+                                {
+                                    "id": tool_call.tool_call_id,
+                                    "type": tool_call.type,
+                                    "index": tool_call.index,
+                                    "function": {
+                                        "name": tool_call.function_name,
+                                        "arguments": tool_call.arguments,
+                                    },
+                                }
+                            )
+                    self._session.chat_history.append(history_item)
+            if isinstance(item, FunctionCallFrame):  # send input for function call
+                func_res = FunctionManager.execute(
+                    item.function_name, self._session, **item.arguments_dict
+                )
+                history_item = {
+                    "role": "input",
+                    "content": [
+                        {"type": "text", "text": func_res},
+                        {
+                            "type": "text",
+                            "text": "\n\n\n请用口语化形式总结检索结果，简短地回答用户的问题。",
+                        },
+                    ],
+                }
+                if isinstance(self._audio_llm, VllmClientStepAudio2):
+                    history_item["tool_call_id"] = item.tool_call_id
+                self._session.chat_history.append(history_item)
                 self._session.chat_history.append(
                     {
                         "role": "assistant",
-                        "content": [
-                            {"type": "text", "text": "<tts_start>"},
-                            {"type": "token", "token": output_token_ids},
-                        ],
-                    }
+                        "content": "<tts_start>",
+                        "eot": False,
+                    },  # Insert <tts_start> for speech response
                 )
+                self._session.ctx.state["messages"] = self._session.chat_history.to_list()
+                self.send_input(self._session)
             yield item
 
 

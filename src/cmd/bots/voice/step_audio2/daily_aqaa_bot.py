@@ -71,19 +71,24 @@ class DailyStepAudio2AQAABot(DailyRoomBot):
             self.params,
         )
 
+        user_audio_save_processor=None
+        bot_speak_audio_save_processor=None
+        if self._save_audio:
+            user_audio_save_processor = AudioSaveProcessor(prefix_name="user_audio_aggr",pass_raw_audio=True)
+            bot_speak_audio_save_processor = AudioSaveProcessor(prefix_name="bot_speak",pass_raw_audio=True)
+
         self.task = PipelineTask(
             Pipeline(
                 [
                     transport.input_processor(),
                     UserAudioResponseAggregator(),
+                    user_audio_save_processor,
                     FrameLogger(include_frame_types=[AudioRawFrame]),
-                    # AudioSaveProcessor(prefix_name="user_audio_aggr"),
-                    # FrameLogger(include_frame_types=[PathAudioRawFrame]),
                     self._voice_processor,
                     FrameLogger(
                         include_frame_types=[TextFrame, AudioRawFrame, LLMGenedTokensFrame]
                     ),
-                    AudioSaveProcessor(prefix_name="bot_speak"),
+                    bot_speak_audio_save_processor,
                     # FrameLogger(include_frame_types=[BotSpeakingFrame]),
                     FrameLogger(include_frame_types=[AudioRawFrame]),
                     transport.output_processor(),  # BotSpeakingFrame
