@@ -342,6 +342,10 @@ def import_websocket_bots(bot_name: str = "DummyBot"):
 
 
 def import_fastapi_websocket_bots(bot_name: str = "DummyBot"):
+    if "DummyBot" in bot_name:
+        from . import dummy_bot
+
+        return True
     if "FastapiWebsocketServerStepAudio2S2STBot" in bot_name:
         from .voice.step_audio2 import fastapi_websocket_s2st_bot
 

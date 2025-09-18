@@ -24,7 +24,7 @@ from src.transports.fastapi_websocket_server import FastapiWebsocketTransport
 from src.processors.punctuation_processor import PunctuationProcessor
 from src.modules.punctuation import PuncEnvInit
 from src.serializers.transcription_protobuf import TranscriptionFrameSerializer
-from .helper import get_step_audio2_processor, get_step_audio2_llm
+from .helper import get_step_audio2_processor, get_step_audio2_llm, get_token2wav
 
 
 load_dotenv(override=True)
@@ -45,20 +45,23 @@ class FastapiWebsocketServerStepAudio2S2STBot(AIFastapiWebsocketBot):
         self.init_bot_config()
 
         self.vad_analyzer = None
-        self.audio_llm = None
         self.asr_punc_engine = None
+        self.audio_llm = None
+        self.token2wav = None
 
     def load(self):
         self.vad_analyzer = self.get_vad_analyzer()
-        llm_conf = self._bot_config.voice_llm or self._bot_config.asr
-        if llm_conf:
-            self.audio_llm = get_step_audio2_llm(llm_conf)
 
         # load punctuation engine
         if self._bot_config.punctuation:
             tag = self._bot_config.punctuation.tag
             args = self._bot_config.punctuation.args or {}
             self.asr_punc_engine = PuncEnvInit.initEngine(tag, **args)
+
+        llm_conf = self._bot_config.voice_llm or self._bot_config.asr
+        if llm_conf:
+            self.audio_llm = get_step_audio2_llm(llm_conf)
+            # self.token2wav = get_token2wav(llm_conf)
 
     async def arun(self):
         if self._websocket is None:
@@ -81,6 +84,7 @@ class FastapiWebsocketServerStepAudio2S2STBot(AIFastapiWebsocketBot):
             self._voice_processor = get_step_audio2_processor(
                 self._bot_config.voice_llm,
                 session=copy.deepcopy(self.session),
+                token2wav=self.token2wav,
                 audio_llm=self.audio_llm,
                 processor_class_name="StepS2STProcessor",
             )

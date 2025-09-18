@@ -25,6 +25,8 @@ class LLMEnvInit:
             from .vllm.generator import VllmGenerator
         if "llm_vllm_vision_skyworkr1v" == tag:
             from .vllm.vision_skyworkr1v import VllmVisionSkyworkr1v
+        if "llm_vllm_client_step_audio2" == tag:
+            from .vllm.step_audio2 import VllmClientStepAudio2
         if "llm_trtllm_generator" == tag:
             from .tensorrt_llm.generator import TrtLLMGenerator
         if "llm_trtllm_runner_generator" == tag:
@@ -275,6 +277,21 @@ class LLMEnvInit:
                     )
                 ),  # diff verl(rlfh inference)
             ),
+            gen_args=LLMEnvInit._get_llm_generate_args(),
+        )
+        return kwargs
+
+    @staticmethod
+    def get_llm_vllm_client_args() -> dict:
+        kwargs = dict(
+            api_url=os.getenv("API_URL", "http://127.0.0.1:8000/v1/chat/completions"),
+            model_name=os.getenv("LLM_MODEL_NAME", "step-audio-2-mini"),
+            tokenizer_path=os.getenv(
+                "LLM_TOKENIZER_PATH", os.path.join(MODELS_DIR, "stepfun-ai/Step-Audio-2-mini")
+            ),
+            warmup_prompt=os.getenv("LLM_WARMUP_PROMPT", ""),
+            warmup_steps=int(os.getenv("LLM_WARMUP_STEPS", "1")),
+            verbose=bool(os.getenv("LLM_VERBOSE", "")),
             gen_args=LLMEnvInit._get_llm_generate_args(),
         )
         return kwargs
@@ -531,6 +548,7 @@ class LLMEnvInit:
         "llm_llamacpp_generator": get_llm_llamacpp_generator_args,
         "llm_vllm_generator": get_llm_vllm_generator_args,
         "llm_vllm_vision_skyworkr1v": get_llm_vllm_generator_args,
+        "llm_vllm_client_step_audio2": get_llm_vllm_client_args,
         "llm_sglang_generator": get_llm_sglang_generator_args,
         "llm_trtllm_generator": get_llm_trtllm_generator_args,
         "llm_trtllm_runner_generator": get_llm_trtllm_runner_generator_args,

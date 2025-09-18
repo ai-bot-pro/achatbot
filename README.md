@@ -622,7 +622,7 @@ ACHATBOT_PKG=1 TTS_TAG=tts_cosy_voice2 \
 ## vision (CV)
 - stream-ocr (realtime-object-detection)
 
-## more
+## more	
 - Embodied Intelligence: Robots that touch the world, perceive and move
 </details>
 

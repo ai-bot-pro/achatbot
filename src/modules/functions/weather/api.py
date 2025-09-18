@@ -32,6 +32,7 @@ class WeatherBaseApi(EngineClass, interface.IFunction):
                         },
                     },
                     "required": ["longitude", "latitude"],
+                    # "additionalProperties": False,
                 },
             },
         }

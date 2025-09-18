@@ -38,7 +38,10 @@ class Session:
             "chat_history": self.chat_history,
             "ctx": self.ctx,
         }
-        return f"{session=}"
+        return f"{session}"
+
+    def set_chat_history_size(self, chat_history_size: int | None):
+        self.chat_history.set_size(chat_history_size)
 
     def set_client_id(self, client_id):
         self.ctx.client_id = client_id

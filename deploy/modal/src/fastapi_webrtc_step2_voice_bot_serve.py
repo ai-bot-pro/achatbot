@@ -52,8 +52,8 @@ img = (
 )
 
 # img = img.pip_install(
-#    f"achatbot==0.0.25.dev60",
-#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
+#   f"achatbot==0.0.25.dev114",
+#   extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
 # )
 
 
@@ -154,6 +154,50 @@ curl -v -XGET "https://weedge--step-audio2-voice-bot-srv-app-dev.modal.run/healt
 
 # run bot
 curl -XPOST "https://weedge--step-audio2-voice-bot-srv-app-dev.modal.run/bot_join/chat-room/DailyStepAudio2AQAABot"
+
+
+"""
+
+"""
+# 0. download models and assets
+modal run src/download_models.py --repo-ids "stepfun-ai/Step-Audio-2-mini"
+modal run src/download_assets.py --asset-urls "https://raw.githubusercontent.com/stepfun-ai/Step-Audio2/refs/heads/main/assets/default_male.wav"
+modal run src/download_assets.py --asset-urls "https://raw.githubusercontent.com/stepfun-ai/Step-Audio2/refs/heads/main/assets/default_female.wav"
+
+
+# 1. run step-audio2 vllm docker server
+IMAGE_GPU=L4 modal serve src/llm/vllm/step_audio2.py
+# cold start step-audio2 vllm docker server
+curl -v -XGET "https://weedge--vllm-step-audio2-serve-dev.modal.run/health"
+
+# 2. run webrtc room http signal bot server with vllm cli
+
+modal volume create config
+
+modal volume put config ./config/bots/daily_step_audio2_vllm_cli_aqaa_bot.json /bots/ -f
+modal volume put config ./config/bots/daily_step_audio2_vllm_cli_aqaa_tools_bot.json /bots/ -f 
+modal volume put config ./config/bots/daily_step_audio2_vllm_cli_s2st_bot.json /bots/ -f 
+
+# run container with gpu
+IMAGE_GPU=T4 SERVER_TAG=fastapi_webrtc_single_bot \
+    ACHATBOT_VERSION=0.0.25.post3 \
+    CONFIG_FILE=/root/.achatbot/config/bots/daily_step_audio2_vllm_cli_aqaa_bot.json \
+    modal serve src/fastapi_webrtc_step2_voice_bot_serve.py
+IMAGE_GPU=T4 SERVER_TAG=fastapi_webrtc_single_bot \
+    ACHATBOT_VERSION=0.0.25.post3 \
+    CONFIG_FILE=/root/.achatbot/config/bots/daily_step_audio2_vllm_cli_aqaa_tools_bot.json \
+    modal serve src/fastapi_webrtc_step2_voice_bot_serve.py
+IMAGE_GPU=T4 SERVER_TAG=fastapi_webrtc_single_bot \
+    ACHATBOT_VERSION=0.0.25.post3 \
+    CONFIG_FILE=/root/.achatbot/config/bots/daily_step_audio2_vllm_cli_s2st_bot.json \
+    modal serve src/fastapi_webrtc_step2_voice_bot_serve.py
+
+# cold start fastapi webrtc http server
+curl -v -XGET "https://weedge--step-audio2-voice-bot-srv-app-dev.modal.run/health"
+
+# run bot
+curl -XPOST "https://weedge--step-audio2-voice-bot-srv-app-dev.modal.run/bot_join/chat-room/DailyStepAudio2AQAABot"
+curl -XPOST "https://weedge--step-audio2-voice-bot-srv-app-dev.modal.run/bot_join/chat-room/DailyStepAudio2S2STBot"
 
 
 """
