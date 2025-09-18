@@ -185,8 +185,7 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
                     yield item
             except queue.Empty:
                 # yield asysncio.sleep to allow other tasks to run, e.g.: sink task (write audio)
-                if self._sleep_time > 0:
-                    await asyncio.sleep(self._sleep_time)
+                await asyncio.sleep(self._sleep_time)
                 # logging.info(f"queue empty sleep {self._sleep_time}")
                 continue
 
