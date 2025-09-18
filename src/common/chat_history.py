@@ -17,6 +17,9 @@ class ChatHistory:
         # since a each new step we add an prompt and assitant answer
         self.buffer = []
 
+    def set_size(self, size: int | None):
+        self.size = size
+
     def clear(self):
         self.buffer.clear()
 
@@ -69,4 +72,28 @@ class ChatHistory:
 
     def __repr__(self) -> str:
         chat_history = self.__getstate__()
-        return f"{chat_history=}"
+        return f"{chat_history}"
+
+
+"""
+python src/common/chat_history.py
+"""
+if __name__ == "__main__":
+    chat_history = ChatHistory(size=2)
+    print(chat_history)
+    chat_history.append({"role": "user", "content": "Hello 0"})
+    chat_history.append({"role": "assistant", "content": "Hi, how can I help you 0?"})
+    print(chat_history)
+    chat_history.append({"role": "user", "content": "Hello 1"})
+    chat_history.append({"role": "assistant", "content": "Hi, how can I help you 1?"})
+    print(chat_history)
+    chat_history.pop(-1)
+    chat_history.append({"role": "assistant", "content": "Hi, how can I help you 1.1?"})
+
+    chat_history.append({"role": "user", "content": "Hello 2"})
+    chat_history.append({"role": "assistant", "content": "Hi, how can I help you 2?"})
+    print(chat_history)
+
+    chat_history.append({"role": "user", "content": "Hello 3"})
+    chat_history.append({"role": "assistant", "content": "Hi, how can I help you 3?"})
+    print(chat_history)

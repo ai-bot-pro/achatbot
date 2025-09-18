@@ -15,10 +15,11 @@ def get_token2wav(llm_config: BaseConfig):
     lm_model_name_or_path = llm_config.args.get(
         "lm_model_name_or_path", os.path.join(MODELS_DIR, "stepfun-ai/Step-Audio-2-mini")
     )
-    warmup_cn = llm_config.args.get("warmup_cn", 2)
-    prompt_wav = llm_config.args.get("prompt_wav", os.path.join(ASSETS_DIR, "default_female.wav"))
     token2wav_path = os.path.join(lm_model_name_or_path, "token2wav")
-    return Token2wav(token2wav_path, warmup_cn=warmup_cn, prompt_wav=prompt_wav)
+    return Token2wav(
+        token2wav_path,
+        **llm_config.args,
+    )
 
 
 def get_step_audio2_llm(
@@ -59,6 +60,7 @@ def get_step_audio2_processor(
         else:
             module = importlib.import_module("src.processors.voice.step_audio2_processor")
         processor_class = getattr(module, processor_class_name)
+        session.set_chat_history_size(llm_config.args.get("chat_history_size", None))
         return processor_class(
             session=session,
             token2wav=token2wav,

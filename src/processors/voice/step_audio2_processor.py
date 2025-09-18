@@ -85,7 +85,11 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
             token2wav_path = os.path.join(audio_llm.args.lm_model_name_or_path, "token2wav")
             self._prompt_wav = prompt_wav or os.path.join(ASSETS_DIR, "default_female.wav")
             self._token2wav = token2wav or Token2wav(
-                token2wav_path, warmup_cn=warmup_cn, prompt_wav=self._prompt_wav
+                token2wav_path,
+                prompt_wav=self._prompt_wav,
+                warmup_cn=warmup_cn,
+                verbose=verbose,
+                **kwargs,
             )
 
         self._system_prompt = init_system_prompt or self.SYS_PROMPT
@@ -111,6 +115,7 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         self._sleep_time = no_stream_sleep_time
         self._verbose = verbose
         self._set_last_chunk = set_last_chunk
+        self._is_push_frame = kwargs.get("is_push_frame", False)
 
     @property
     def chat_history(self):
@@ -137,6 +142,11 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
                 _, _, is_tool_call = self.put_out_audio_text(token_iter, is_out_text=True)
                 if is_tool_call is False:  # no tool call, end round generate
                     self._queue.put(None)  # Signal the end of the stream
+                # reset token2wav stream cache
+                if self._is_speaking is True:
+                    start = time.time()
+                    self._token2wav.set_stream_cache(self._prompt_wav)
+                    print(f"token2wav.set_stream_cache cost: {time.time() - start}")
             except Exception as e:
                 logging.error(f"Exception generate: {e}", exc_info=True)
                 self._queue.put(None)  # Signal the end of the stream
@@ -168,14 +178,15 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
                     logging.info(f"generate done")
                     break  # End of the stream
                 # logging.info(f"generate data: {item}")
-                if is_push_frame is True:
+                if is_push_frame is True or self._is_push_frame is True:
                     await self.push_frame(item)
                     yield None
                 else:
                     yield item
             except queue.Empty:
                 # yield asysncio.sleep to allow other tasks to run, e.g.: sink task (write audio)
-                await asyncio.sleep(self._sleep_time)
+                if self._sleep_time > 0:
+                    await asyncio.sleep(self._sleep_time)
                 # logging.info(f"queue empty sleep {self._sleep_time}")
                 continue
 
@@ -544,6 +555,7 @@ class StepText2TextChatProcessor(StepAudio2BaseProcessor):
             yield item
         self._session.chat_history.pop(-1)
         self._session.chat_history.append({"role": "assistant", "content": out_text})
+        self._session.increment_chat_round()
 
 
 # Chat: multi turn AQTA
@@ -582,6 +594,7 @@ class StepAudio2TextChatProcessor(StepAudio2BaseProcessor):
             yield item
         self._session.chat_history.pop(-1)
         self._session.chat_history.append({"role": "assistant", "content": out_text})
+        self._session.increment_chat_round()
 
 
 # Chat: multi turn TQAA
@@ -604,7 +617,7 @@ class StepText2TextAudioChatProcessor(StepAudio2BaseProcessor):
                 "role": "assistant",
                 "content": "<tts_start>",
                 "eot": False,
-            },  # Insert <tts_start> for speech response
+            }  # Insert <tts_start> for speech response
         )
         self._session.ctx.state["messages"] = self._session.chat_history.to_list()
         self.send_input(self._session)
@@ -645,8 +658,11 @@ class StepText2TextAudioChatProcessor(StepAudio2BaseProcessor):
                             )
                     self._session.chat_history.append(history_item)
             if isinstance(item, FunctionCallFrame):  # send input for function call
-                func_res = FunctionManager.execute(
-                    item.function_name, self._session, **item.arguments_dict
+                func_res = await asyncio.to_thread(
+                    FunctionManager.execute,
+                    item.function_name,
+                    self._session,
+                    **item.arguments_dict,
                 )
                 history_item = {
                     "role": "input",
@@ -671,6 +687,7 @@ class StepText2TextAudioChatProcessor(StepAudio2BaseProcessor):
                 self._session.ctx.state["messages"] = self._session.chat_history.to_list()
                 self.send_input(self._session)
             yield item
+        self._session.increment_chat_round()
 
 
 # Chat: multi turn AQAA
@@ -741,8 +758,11 @@ class StepAudio2TextAudioChatProcessor(StepAudio2BaseProcessor):
                             )
                     self._session.chat_history.append(history_item)
             if isinstance(item, FunctionCallFrame):  # send input for function call
-                func_res = FunctionManager.execute(
-                    item.function_name, self._session, **item.arguments_dict
+                func_res = await asyncio.to_thread(
+                    FunctionManager.execute,
+                    item.function_name,
+                    self._session,
+                    **item.arguments_dict,
                 )
                 history_item = {
                     "role": "input",
@@ -767,6 +787,7 @@ class StepAudio2TextAudioChatProcessor(StepAudio2BaseProcessor):
                 self._session.ctx.state["messages"] = self._session.chat_history.to_list()
                 self.send_input(self._session)
             yield item
+        self._session.increment_chat_round()
 
 
 # ----------------------------------------------------------------------------------

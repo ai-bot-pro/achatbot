@@ -90,7 +90,7 @@ class SessionCtx:
             d["state"]["tts_chunk_len"] = len(self.state["tts_chunk"])
             d["state"].pop("tts_chunk")
 
-        res = f"session ctx: {d}"
+        res = f"{d}"
         return res
 
     def __getstate__(self):

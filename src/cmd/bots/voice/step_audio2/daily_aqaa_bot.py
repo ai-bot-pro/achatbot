@@ -71,11 +71,15 @@ class DailyStepAudio2AQAABot(DailyRoomBot):
             self.params,
         )
 
-        user_audio_save_processor=None
-        bot_speak_audio_save_processor=None
+        user_audio_save_processor = None
+        bot_speak_audio_save_processor = None
         if self._save_audio:
-            user_audio_save_processor = AudioSaveProcessor(prefix_name="user_audio_aggr",pass_raw_audio=True)
-            bot_speak_audio_save_processor = AudioSaveProcessor(prefix_name="bot_speak",pass_raw_audio=True)
+            user_audio_save_processor = AudioSaveProcessor(
+                prefix_name="user_audio_aggr", pass_raw_audio=True
+            )
+            bot_speak_audio_save_processor = AudioSaveProcessor(
+                prefix_name="bot_speak", pass_raw_audio=True
+            )
 
         self.task = PipelineTask(
             Pipeline(
@@ -90,7 +94,6 @@ class DailyStepAudio2AQAABot(DailyRoomBot):
                     ),
                     bot_speak_audio_save_processor,
                     # FrameLogger(include_frame_types=[BotSpeakingFrame]),
-                    FrameLogger(include_frame_types=[AudioRawFrame]),
                     transport.output_processor(),  # BotSpeakingFrame
                 ]
             ),
@@ -112,8 +115,8 @@ class DailyStepAudio2AQAABot(DailyRoomBot):
 
     async def on_first_participant_say_hi(self, transport: DailyTransport, participant):
         await self._voice_processor.say(
-            "你好。我是一名助手，欢迎语音聊天!",
-            temperature=0.1,
+            "你好，我是一名助手，欢迎语音聊天!",
+            temperature=0.7,
             max_new_tokens=1024,
             top_k=20,
             top_p=0.95,
