@@ -6,7 +6,6 @@ import time
 from typing import List
 
 import typer
-from PIL import Image
 from dotenv import load_dotenv
 import requests
 
