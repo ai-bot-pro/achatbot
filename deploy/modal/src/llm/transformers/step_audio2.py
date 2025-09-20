@@ -48,7 +48,7 @@ img = (
 )
 
 img = img.pip_install(
-    f"achatbot==0.0.25.dev120",
+    f"achatbot==0.0.25.dev122",
     extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
 )
 
@@ -185,6 +185,8 @@ def tokenize(gpu_prop, **kwargs):
             },
             {"role": "assistant", "content": None},
         ]
+
+    print(model.llm_tokenizer, model.eos_token_id)
 
     res, mels = model.apply_chat_template(messages)
     print(res)
@@ -1789,6 +1791,7 @@ async def achatbot_step_audio2_aqaa_think(processor_name):
                 "lm_gen_top_k": 20,
                 "lm_gen_top_p": 0.9,
                 "lm_gen_repetition_penalty": 1.1,
+                "lm_gen_stop_ids": [151665],
                 "verbose": True,
             },
         ),
@@ -1845,12 +1848,14 @@ async def achatbot_step_audio2_processor(gpu_prop, **kwargs):
 
 
 """
-modal run src/download_models.py --repo-ids "stepfun-ai/Step-Audio-2-mini"
 modal run src/download_models.py --repo-ids "stepfun-ai/Step-Audio-2-mini-Base"
+modal run src/download_models.py --repo-ids "stepfun-ai/Step-Audio-2-mini"
+modal run src/download_models.py --repo-ids "stepfun-ai/Step-Audio-2-mini-Think"
 
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task dump_model
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task tokenize
 LLM_MODEL=stepfun-ai/Step-Audio-2-mini-Base IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task tokenize
+LLM_MODEL=stepfun-ai/Step-Audio-2-mini-Think IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task tokenize
 
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_base --test-func asr_test
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_base --test-func audio_caption_test
@@ -1889,6 +1894,7 @@ IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task achatbot_step_
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task achatbot_step_audio2_processor --test-func=achatbot_step_audio2_aqaa
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task achatbot_step_audio2_processor --test-func=achatbot_step_audio2_aqaa_tools
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task achatbot_step_audio2_processor --test-func=achatbot_step_audio2_aqaa_think
+IMAGE_GPU=L4 LLM_MODEL=stepfun-ai/Step-Audio-2-mini-Think modal run src/llm/transformers/step_audio2.py --task achatbot_step_audio2_processor --test-func=achatbot_step_audio2_aqaa_think
 """
 
 

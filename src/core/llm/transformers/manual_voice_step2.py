@@ -25,9 +25,8 @@ class TransformersManualVoiceStep2(TransformersBaseLLM):
             model_path=self.args.lm_model_name_or_path, verbose=self.args.verbose
         )
         self.eos_token_id = [
-            self._audio_llm.eos_token_id,
-            self._audio_llm.llm_tokenizer.convert_tokens_to_ids("<|endoftext|>"),
-        ]
+            self._audio_llm.eos_token_id
+        ] + self._audio_llm.llm_tokenizer.convert_tokens_to_ids(["<|endoftext|>", "<|EOT|>"])
         self.warmup()
 
     @property
@@ -81,6 +80,7 @@ class TransformersManualVoiceStep2(TransformersBaseLLM):
         stop_ids = kwargs.pop("stop_ids", self.args.lm_gen_stop_ids)
         for token_id in self._audio_llm(
             messages=session.ctx.state["messages"],
+            eos_token_id=self.eos_token_id,
             **kwargs,
         ):
             if token_id in stop_ids:
