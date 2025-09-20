@@ -15,7 +15,9 @@ from dotenv import load_dotenv
 from demo.aws.upload import r2_upload
 from demo.cloudflare.rest_api import d1_table_query
 from demo.image_compression import compress_img
-from demo.together_ai import save_gen_image
+
+# from demo.together_ai import save_gen_image
+from demo.siliconflow_api import save_gen_image
 from demo.audio_length import get_audio_length
 
 

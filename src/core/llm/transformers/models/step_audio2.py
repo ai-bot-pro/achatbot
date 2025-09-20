@@ -122,6 +122,7 @@ class StepAudio2StreamBase(StepAudio2Base):
             attention_mask=attention_mask,
             generation_config=generation_config,
             streamer=streamer,
+            tokenizer=self.llm_tokenizer,
         )
 
         thread = Thread(target=self.llm.generate, kwargs=generation_kwargs)

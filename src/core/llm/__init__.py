@@ -27,6 +27,8 @@ class LLMEnvInit:
             from .vllm.vision_skyworkr1v import VllmVisionSkyworkr1v
         if "llm_vllm_client_step_audio2" == tag:
             from .vllm.step_audio2 import VllmClientStepAudio2
+        if "llm_vllm_client_step_audio2_mock" == tag:
+            from .vllm.step_audio2 import MockVllmClientStepAudio2
         if "llm_trtllm_generator" == tag:
             from .tensorrt_llm.generator import TrtLLMGenerator
         if "llm_trtllm_runner_generator" == tag:

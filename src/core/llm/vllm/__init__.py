@@ -6,6 +6,7 @@ from src.common.session import Session
 from src.common.interface import ILlm
 from src.core.llm.base import BaseLLM
 
+
 class VLlmBase(BaseLLM, ILlm):
     def set_system_prompt(self, **kwargs):
         pass
