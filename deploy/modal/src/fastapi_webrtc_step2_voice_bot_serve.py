@@ -52,7 +52,7 @@ img = (
 )
 
 img = img.pip_install(
-    f"achatbot==0.0.25.dev122",
+    f"achatbot==0.0.25.dev124",
     extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
 )
 
@@ -172,7 +172,8 @@ modal run src/download_assets.py --asset-urls "https://raw.githubusercontent.com
 
 
 # 1. run step-audio2 vllm docker server
-IMAGE_GPU=L4 modal serve src/llm/vllm/step_audio2.py
+IMAGE_GPU=L40s modal serve src/llm/vllm/step_audio2.py
+LLM_MODEL=stepfun-ai/Step-Audio-2-mini-Think IMAGE_GPU=L40s modal serve src/llm/vllm/step_audio2.py
 # cold start step-audio2 vllm docker server
 curl -v -XGET "https://weedge--vllm-step-audio2-serve-dev.modal.run/health"
 

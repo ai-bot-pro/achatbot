@@ -143,10 +143,23 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
                 session, kwargs = item
                 if self._tools:
                     kwargs["tools"] = self._tools
+
+                if (
+                    session.ctx.state.get("messages")
+                    and len(session.ctx.state.get("messages")) > 1
+                    and "<think>" in session.ctx.state.get("messages")[-1]["content"]
+                ):
+                    is_think = True
+                else:
+                    is_think = False
+
                 if self._verbose:
-                    print(f"{session=} {kwargs=}")
+                    print(f"{session=} {kwargs=} {is_think=}")
+
                 token_iter = self._audio_llm.generate(session, **kwargs)
-                _, _, is_tool_call, is_think = self.put_out_audio_text(token_iter, is_out_text=True)
+                _, _, is_tool_call = self.put_out_audio_text(
+                    token_iter, is_out_text=True, is_think=is_think
+                )
                 if (
                     is_tool_call is False and is_think is False
                 ):  # no tool call, no think end round generate
@@ -253,7 +266,7 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         async for item in self.gen(is_push_frame=is_push_frame):
             yield item
 
-    def put_out_audio_text(self, token_iter, is_out_text: bool = True):
+    def put_out_audio_text(self, token_iter, is_out_text: bool = True, is_think: bool = False):
         output_token_ids = []
         output_audio_token_ids = []
         out_text_token_ids = []
@@ -342,15 +355,14 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
             self._queue.put(frame)
 
         out_text = ""
-        is_think = False
         if len(out_text_token_ids) > 0 and is_out_text is True:
             out_text = self._audio_llm.llm_tokenizer.decode(out_text_token_ids)
-            if "</think>" in out_text:
-                is_think = True
+            if "</think>" not in out_text and is_think:  # think mod out text include </think>
+                out_text += "</think>"
             if self._is_reasoning_think and is_think:
                 self._queue.put(ReasoningThinkTextFrame(text=out_text))
             if self._text_stream_out is False:
-                frame = TextFrame(text=out_text)  # include  </think>
+                frame = TextFrame(text=out_text)
                 self._queue.put(frame)
 
         out_audio = (
@@ -384,7 +396,7 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
             )
         )
 
-        return output_token_ids, out_text, is_tool_call, is_think
+        return output_token_ids, out_text, is_tool_call
 
 
 # --------------------------------------------------------------------------------
@@ -1003,7 +1015,7 @@ class StepMockAQAAProcessor(StepAudio2TextAudioChatProcessor):
     def __init__(self, token2wav=None, **kwargs):
         super().__init__(token2wav=token2wav, **kwargs)
 
-    def put_out_audio_text(self, token_iter, is_out_text: bool = True):
+    def put_out_audio_text(self, token_iter, is_out_text: bool = True, is_think: bool = False):
         wav_files = glob.glob(os.path.join(RECORDS_DIR, "bot_speak*.wav"))
 
         wav_files.sort(key=os.path.getmtime)
@@ -1031,7 +1043,7 @@ class StepMockAQAAProcessor(StepAudio2TextAudioChatProcessor):
 
         self._queue.put(LLMGenedTokensFrame())
 
-        return [], "", False, False
+        return [], "", False
 
 
 """
