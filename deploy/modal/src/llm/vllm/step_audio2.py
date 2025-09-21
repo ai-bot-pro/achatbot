@@ -486,7 +486,7 @@ def test_speech2speech_think(model: StepAudio2, token2wav):
 def test_speech2speech_think_stream(model: StepAudio2, token2wav):
     # Speech-to-text conversation
     sampling_params = {
-        "max_tokens": 1024,
+        "max_tokens": 10240,
         "temperature": 0.7,
         "top_p": 0.9,
         "frequency_penalty": 0,
@@ -526,7 +526,11 @@ def test_speech2speech_think_stream(model: StepAudio2, token2wav):
     # }
     stream_iter = model.stream(messages, stream=True, **sampling_params)
     for response, text, audio, token_id in stream_iter:
-        print(f"{response=} {text=} {audio=} {token_id=}")
+        if token_id:
+            print(f"{response=} {text=} {audio=} {token_id=}")
+        else:
+            print(f"{response=} {text=} {audio=} {token_id=}")
+            break
 
 
 def test_all(model, token2wav):
@@ -699,13 +703,16 @@ def main(test: str = "test_all"):
         raise ValueError(f"Unknown test: {test}")
 
 
+"""
+ACHATBOT_PKG=1 LLM_MODEL_NAME=step-audio-2-mini-think python src/llm/vllm/step_audio2.py
+"""
 if __name__ == "__main__":
     from achatbot.processors.voice.step_audio2_processor import Token2wav
     from achatbot.core.llm.vllm.client.step_audio2_mini_vllm import StepAudio2MiniVLLMClient
 
     model = StepAudio2MiniVLLMClient(
         # f"{serve_url}/v1/chat/completions",
-        f"https://weedge--vllm-step-audio2-serve-dev.modal.run/v1/chat/completions",
+        f"https://weege009--vllm-step-audio2-serve-dev.modal.run/v1/chat/completions",
         os.getenv("LLM_MODEL_NAME", "step-audio-2-mini"),
         tokenizer_path=LOCAL_MODEL_PATH,
     )
