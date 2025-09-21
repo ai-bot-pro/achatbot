@@ -18,9 +18,11 @@ vllm_image = (
         "stepfun2025/vllm:step-audio-2-v20250909",
         add_python="3.12",
     )
-    .pip_install("requests", "torchaudio")
+    .pip_install("requests", "torchaudio", "numpy")
     .env(
         {
+            "LLM_MODEL": os.getenv("LLM_MODEL", "stepfun-ai/Step-Audio-2-mini"),
+            "LLM_MODEL_NAME": os.getenv("LLM_MODEL_NAME", "step-audio-2-mini"),  # mini, mini-think
             "VLLM_USE_V1": "1",
             "VLLM_WORKER_MULTIPROC_METHOD": "spawn",
             "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
@@ -188,10 +190,12 @@ class StepAudio2:
 def serve():
     import subprocess
 
+    MODEL_ID = os.getenv("LLM_MODEL", "stepfun-ai/Step-Audio-2-mini")
     model_path = os.path.join(
         HF_MODEL_DIR,
-        "stepfun-ai/Step-Audio-2-mini",
+        MODEL_ID,
     )
+    MODEL_NAME = os.getenv("LLM_MODEL_NAME", "step-audio-2-mini")
     # subprocess.run(f"vllm serve -h", shell=True)
     subprocess.run(f"which vllm", shell=True)
     subprocess.run(f"vllm --version", shell=True)
@@ -201,7 +205,7 @@ def serve():
         model_path,
         "--uvicorn-log-level=info",
         "--served-model-name",
-        "step-audio-2-mini",
+        MODEL_NAME,
         "--port",
         str(VLLM_PORT),
         "--max-model-len",
@@ -438,12 +442,104 @@ def test_speech2speech(model: StepAudio2, token2wav):
         f.write(audio)
 
 
+def test_speech2speech_think(model: StepAudio2, token2wav):
+    # Speech-to-text conversation
+    sampling_params = {
+        "max_tokens": 1024,
+        "temperature": 0.7,
+        "top_p": 0.9,
+        "frequency_penalty": 0,
+        "repetition_penalty": 1.05,
+        "skip_special_tokens": False,
+        "parallel_tool_calls": False,
+        "stop": ["</think>"],
+    }
+    messages = [
+        {
+            "role": "system",
+            "content": "你的名字叫小跃，你是由阶跃星辰(StepFun)公司训练出来的语音大模型，你能听见用户的声音特征并在思维过程中描述出来，请激活深度思考模式，通过逐步分析、逻辑推理来解决用户的问题。",
+        },
+        {
+            "role": "human",
+            "content": [
+                {
+                    "type": "audio",
+                    "audio": "../../deps/StepAudio2/assets/give_me_a_brief_introduction_to_the_great_wall.wav",
+                }
+            ],
+        },
+        {"role": "assistant", "content": "<think>", "eot": False},
+    ]
+    _, think_content, _, _ = model(messages, **sampling_params)
+    print("<think>" + think_content + "</think>")
+    messages[-1]["content"] += think_content + "</think>" + "\n\n<tts_start>"
+    response, text, audio, _ = model(
+        messages, max_tokens=2048, temperature=0.7, repetition_penalty=1.05
+    )
+    print(text)
+    print(audio)
+    audio = token2wav(audio, prompt_wav="../../deps/StepAudio2/assets/default_female.wav")
+    with open("../../records/output-female-think.wav", "wb") as f:
+        f.write(audio)
+
+
+def test_speech2speech_think_stream(model: StepAudio2, token2wav):
+    # Speech-to-text conversation
+    sampling_params = {
+        "max_tokens": 10240,
+        "temperature": 0.7,
+        "top_p": 0.9,
+        "frequency_penalty": 0,
+        "repetition_penalty": 1.05,
+        "skip_special_tokens": False,
+        "parallel_tool_calls": False,
+        "stop": ["</think>"],
+    }
+    messages = [
+        {
+            "role": "system",
+            "content": "你的名字叫小跃，你是由阶跃星辰(StepFun)公司训练出来的语音大模型，你能听见用户的声音特征并在思维过程中描述出来，请激活深度思考模式，通过逐步分析、逻辑推理来解决用户的问题。",
+        },
+        {
+            "role": "human",
+            "content": [
+                {
+                    "type": "audio",
+                    "audio": "../../deps/StepAudio2/assets/give_me_a_brief_introduction_to_the_great_wall.wav",
+                }
+            ],
+        },
+        {"role": "assistant", "content": "<think>", "eot": False},
+    ]
+    _, think_content, _, _ = model(messages, **sampling_params)
+    print("<think>" + think_content + "</think>")
+    messages[-1]["content"] += think_content + "</think>" + "\n\n<tts_start>"
+    # sampling_params = {
+    #    "max_tokens": 1024,
+    #    "temperature": 0.7,
+    #    "top_p": 0.9,
+    #    "frequency_penalty": 0,
+    #    "repetition_penalty": 1.05,
+    #    "skip_special_tokens": False,
+    #    "parallel_tool_calls": False,
+    #    "return_token_ids": True,
+    # }
+    stream_iter = model.stream(messages, stream=True, **sampling_params)
+    for response, text, audio, token_id in stream_iter:
+        if token_id:
+            print(f"{response=} {text=} {audio=} {token_id=}")
+        else:
+            print(f"{response=} {text=} {audio=} {token_id=}")
+            break
+
+
 def test_all(model, token2wav):
     """sequential test"""
     test_text2text(model, token2wav)
     test_text2speech(model, token2wav)
     test_speech2text(model, token2wav)
     test_speech2speech(model, token2wav)
+    test_speech2speech_think(model, token2wav)
 
 
 def test_all_concurrent(model, token2wav):
@@ -454,6 +550,7 @@ def test_all_concurrent(model, token2wav):
         test_text2speech,
         test_speech2text,
         test_speech2speech,
+        test_speech2speech_think,
     ]
 
     threads = []
@@ -530,6 +627,7 @@ def run_step_audio2_speaking():
 # - run serve and local run cli test
 IMAGE_GPU=L4 modal serve src/llm/vllm/step_audio2.py
 IMAGE_GPU=L40s modal serve src/llm/vllm/step_audio2.py
+LLM_MODEL_NAME=step-audio-2-mini-think LLM_MODEL=stepfun-ai/Step-Audio-2-mini-Think IMAGE_GPU=L40s modal serve src/llm/vllm/step_audio2.py
 # cold start vllm serve
 curl -v -XGET "https://weedge--vllm-step-audio2-serve-dev.modal.run/health"
 
@@ -544,10 +642,14 @@ ACHATBOT_PKG=1 IMAGE_GPU=L40s modal run src/llm/vllm/step_audio2.py --test test_
 ACHATBOT_PKG=1 IMAGE_GPU=L40s modal run src/llm/vllm/step_audio2.py --test test_text2speech
 ACHATBOT_PKG=1 IMAGE_GPU=L40s modal run src/llm/vllm/step_audio2.py --test test_speech2text
 ACHATBOT_PKG=1 IMAGE_GPU=L40s modal run src/llm/vllm/step_audio2.py --test test_speech2speech
+LLM_MODEL=stepfun-ai/Step-Audio-2-mini-Think ACHATBOT_PKG=1 IMAGE_GPU=L40s modal run src/llm/vllm/step_audio2.py --test test_speech2speech_think
 
 # - run serve and test streaming
 ACHATBOT_PKG=1 IMAGE_GPU=L40s modal run src/llm/vllm/step_audio2.py --test test_text2text_stream
 ACHATBOT_PKG=1 IMAGE_GPU=L40s modal run src/llm/vllm/step_audio2.py --test test_text2speech_stream
+LLM_MODEL=stepfun-ai/Step-Audio-2-mini-Think ACHATBOT_PKG=1 IMAGE_GPU=L40s modal run src/llm/vllm/step_audio2.py --test test_speech2speech_think_stream
+LLM_MODEL_NAME=step-audio-2-mini-think LLM_MODEL=stepfun-ai/Step-Audio-2-mini-Think ACHATBOT_PKG=1 IMAGE_GPU=L40s modal run src/llm/vllm/step_audio2.py --test test_speech2speech_think_stream
+
 
 # audio-llm use Vllm serving on GPU(one container), token2wav run local cpu test, concurrent test (Overhead bound test)
 MAX_CONTAINER_COUNT=1 CONCURRENT_MAX_INPUTS=1 ACHATBOT_PKG=1 IMAGE_GPU=L40s modal run src/llm/vllm/step_audio2.py --test test_all_concurrent
@@ -560,22 +662,25 @@ MAX_CONTAINER_COUNT=1 CONCURRENT_MAX_INPUTS=4 ACHATBOT_PKG=1 IMAGE_GPU=L40s moda
 def main(test: str = "test_all"):
     import subprocess
     from achatbot.processors.voice.step_audio2_processor import Token2wav
+    from achatbot.core.llm.vllm.client.step_audio2_mini_vllm import StepAudio2MiniVLLMClient
 
     serve_url = serve.get_web_url()
-    print(f"VLLM serving at {serve_url}")
+    print(f"VLLM serving at {serve_url}/v1/chat/completions")
 
     # cold start vllm serve
     if test not in ["test_request", "test_tokenizer"]:
         subprocess.run(f"curl -v -XGET '{serve_url}/health'", shell=True)
         print("VLLM health check passed")
 
-    token2wav = None
     # https://platform.openai.com/docs/api-reference/chat/create
-    model = StepAudio2(
+    # model = StepAudio2(
+    model = StepAudio2MiniVLLMClient(
         f"{serve_url}/v1/chat/completions",
-        "step-audio-2-mini",
+        os.getenv("LLM_MODEL_NAME", "step-audio-2-mini"),
         tokenizer_path=LOCAL_MODEL_PATH,
     )
+
+    token2wav = None
     if test not in ["test_text2text", "test_request"]:
         token2wav = Token2wav(f"{LOCAL_MODEL_PATH}/token2wav")
     test_map = {
@@ -584,13 +689,32 @@ def main(test: str = "test_all"):
         "test_text2speech": test_text2speech,
         "test_speech2text": test_speech2text,
         "test_speech2speech": test_speech2speech,
+        "test_speech2speech_think": test_speech2speech_think,
         "test_all_concurrent": test_all_concurrent,
         "test_request": test_request,
         "test_tokenizer": test_tokenizer,
         "test_text2text_stream": test_text2text_stream,
         "test_text2speech_stream": test_text2speech_stream,
+        "test_speech2speech_think_stream": test_speech2speech_think_stream,
     }
     if test in test_map:
         test_map[test](model, token2wav)
     else:
         raise ValueError(f"Unknown test: {test}")
+
+
+"""
+ACHATBOT_PKG=1 LLM_MODEL_NAME=step-audio-2-mini-think python src/llm/vllm/step_audio2.py
+"""
+if __name__ == "__main__":
+    from achatbot.processors.voice.step_audio2_processor import Token2wav
+    from achatbot.core.llm.vllm.client.step_audio2_mini_vllm import StepAudio2MiniVLLMClient
+
+    model = StepAudio2MiniVLLMClient(
+        # f"{serve_url}/v1/chat/completions",
+        f"https://weege009--vllm-step-audio2-serve-dev.modal.run/v1/chat/completions",
+        os.getenv("LLM_MODEL_NAME", "step-audio-2-mini"),
+        tokenizer_path=LOCAL_MODEL_PATH,
+    )
+    token2wav = Token2wav(f"{LOCAL_MODEL_PATH}/token2wav")
+    test_speech2speech_think_stream(model=model, token2wav=token2wav)

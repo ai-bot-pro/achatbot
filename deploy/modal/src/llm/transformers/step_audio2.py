@@ -33,10 +33,11 @@ img = (
         "hyperpyyaml",
     )
     .run_commands(
-        "git clone https://github.com/weedge/Step-Audio2.git -b torch_compile"
+        "git clone https://github.com/weedge/Step-Audio2.git -b main"
         " && cd /Step-Audio2"
-        " && git checkout d340cd7b8318cb04ff231e5cf1adbe112e5097b1"
+        " && git checkout dac9ac36b157a80a64f3163452be26c6e41a76ac"
     )
+    .pip_install("ffmpeg")
     .env(
         {
             "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
@@ -47,8 +48,8 @@ img = (
 )
 
 img = img.pip_install(
-    f"achatbot==0.0.25.post1",
-    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+    f"achatbot==0.0.25.dev122",
+    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
 )
 
 
@@ -98,7 +99,7 @@ def print_model_params(model: torch.nn.Module, extra_info="", f=None):
 @app.function(
     gpu=IMAGE_GPU,
     cpu=2.0,
-    retries=1,
+    retries=0,
     image=img,
     secrets=[modal.Secret.from_name("achatbot")],
     volumes={
@@ -184,6 +185,8 @@ def tokenize(gpu_prop, **kwargs):
             },
             {"role": "assistant", "content": None},
         ]
+
+    print(model.llm_tokenizer, model.eos_token_id)
 
     res, mels = model.apply_chat_template(messages)
     print(res)
@@ -741,6 +744,49 @@ def instruct_mmau_audio_answer_test(model, token2wav):
         f.write(audio)
 
 
+def instruct_think_test(model, token2wav):
+    history = [
+        {
+            "role": "system",
+            "content": "你的名字叫小跃，你是由阶跃星辰(StepFun)公司训练出来的语音大模型，你能听见用户的声音特征并在思维过程中描述出来，请激活深度思考模式，通过逐步分析、逻辑推理来解决用户的问题。",
+        }
+    ]
+    for round_idx, inp_audio in enumerate(
+        [
+            "/Step-Audio2/assets/multi-turn-round1-听说荡口古镇从下个月开始取消门票了，你知道这事吗。.wav",
+            "/Step-Audio2/assets/multi-turn-round2-新闻说九月十九号就免费开放了。好像整个古镇都升级改造了，现在变成开放式街区了。.wav",
+        ]
+    ):
+        print("round: ", round_idx)
+        history.append({"role": "human", "content": [{"type": "audio", "audio": inp_audio}]})
+        # get think content, stop when "</think>" appears
+        history.append({"role": "assistant", "content": "\n<think>\n", "eot": False})
+        _, think_content, _ = model(
+            history, max_new_tokens=2048, temperature=0.7, do_sample=True, stop_strings=["</think>"]
+        )
+        print("<think>" + think_content + ">")
+        # get audio response
+        history[-1]["content"] += think_content + ">\n\n<tts_start>"
+        print(round_idx, history)
+        tokens, text, audio = model(history, max_new_tokens=2048, temperature=0.7, do_sample=True)
+        print(text)
+        audio = [x for x in audio if x < 6561]  # remove audio padding
+        audio = token2wav(audio, prompt_wav="/Step-Audio2/assets/default_female.wav")
+        with open(f"{ASSETS_DIR}/StepAudio2/output-round-{round_idx}-think.wav", "wb") as f:
+            f.write(audio)
+        # remove think content from history
+        history.pop(-1)
+        history.append(
+            {
+                "role": "assistant",
+                "content": [
+                    {"type": "text", "text": "<tts_start>"},
+                    {"type": "token", "token": tokens},
+                ],
+            }
+        )
+
+
 def test_instruct(gpu_prop, **kwargs):
     model = StepAudio2(MODEL_PATH)
     token2wav = Token2wav(f"{MODEL_PATH}/token2wav")
@@ -957,6 +1003,116 @@ def stream_aqaa_test(model, token2wav):
                 ],
             }
         )
+
+
+def stream_think_test(model, token2wav):
+    history = [
+        {
+            "role": "system",
+            "content": "你的名字叫小跃，你是由阶跃星辰(StepFun)公司训练出来的语音大模型，你能听见用户的声音特征并在思维过程中描述出来，请激活深度思考模式，通过逐步分析、逻辑推理来解决用户的问题。",
+        }
+    ]
+    for round_idx, inp_audio in enumerate(
+        [
+            "/Step-Audio2/assets/multi-turn-round1-听说荡口古镇从下个月开始取消门票了，你知道这事吗。.wav",
+            "/Step-Audio2/assets/multi-turn-round2-新闻说九月十九号就免费开放了。好像整个古镇都升级改造了，现在变成开放式街区了。.wav",
+            "/Step-Audio2/assets/give_me_a_brief_introduction_to_the_great_wall.wav",
+        ]
+    ):
+        print("round: ", round_idx)
+        history.append({"role": "human", "content": [{"type": "audio", "audio": inp_audio}]})
+        # get think content, stop when "</think>" appears
+        history.append({"role": "assistant", "content": "\n<think>\n", "eot": False})
+        for i in range(2):  # think and speak
+            if i > 0:
+                print(round_idx, history)
+            token_iter = model(
+                history,
+                max_new_tokens=2048,
+                temperature=0.7,
+                do_sample=True,
+                stop_strings=["</think>"] if i == 0 else None,
+            )
+            output_text_token_ids = []
+            output_audio_token_ids = []
+            output_token = ""
+            output_token_ids = []
+
+            # stream audio
+            buffer = []
+            prompt_wav = "/Step-Audio2/assets/default_male.wav"
+            token2wav.set_stream_cache(prompt_wav)
+            output_stream = Path(
+                f"{ASSETS_DIR}/StepAudio2/output-aqaa-think-{round_idx}-chunks-stream.pcm"
+            )
+            output_stream.unlink(missing_ok=True)
+            for token_id in token_iter:
+                output_token_ids.append(token_id)
+                token = model.llm_tokenizer.decode(token_id)
+                print(token_id, token)
+                output_token += token
+
+                if token_id < 151688:  # text
+                    output_text_token_ids.append(token_id)
+                if token_id > 151695:  # audio
+                    audio_token_id = token_id - 151696
+                    if audio_token_id < 6561:  # remove audio padding
+                        output_audio_token_ids.append(audio_token_id)
+                        buffer.append(audio_token_id)
+                        if len(buffer) >= CHUNK_SIZE + token2wav.flow.pre_lookahead_len:
+                            start = time.time()
+                            output = token2wav.stream(
+                                buffer[: CHUNK_SIZE + token2wav.flow.pre_lookahead_len],
+                                prompt_wav=prompt_wav,
+                                last_chunk=False,
+                            )
+                            print(len(buffer), len(output), output[:50], time.time() - start)
+                            with open(output_stream, "ab") as f:
+                                f.write(output)
+                            buffer = buffer[CHUNK_SIZE:]
+
+            if len(buffer) > 0:
+                start = time.time()
+                output = token2wav.stream(buffer, prompt_wav=prompt_wav, last_chunk=True)
+                print("last_chunk", len(buffer), len(output), output[:50], time.time() - start)
+                with open(output_stream, "ab") as f:
+                    f.write(output)
+
+            if os.path.isfile(output_stream):
+                with open(output_stream, "rb") as f:
+                    pcm = f.read()
+                wav_path = output_stream.with_suffix(".wav")
+                with wave.open(str(wav_path), "wb") as wf:
+                    wf.setnchannels(1)
+                    wf.setsampwidth(2)
+                    wf.setframerate(24000)
+                    wf.writeframes(pcm)
+
+                print(output_token)
+                audio = token2wav(
+                    output_audio_token_ids, prompt_wav="/Step-Audio2/assets/default_male.wav"
+                )
+                with open(
+                    f"{ASSETS_DIR}/StepAudio2/output-stream-aqaa-think-{round_idx}.wav", "wb"
+                ) as f:
+                    f.write(audio)
+
+            if i == 0:
+                think_content = model.llm_tokenizer.decode(output_text_token_ids)
+                print(think_content)
+
+                history[-1]["content"] += think_content + "<tts_start>"
+            else:
+                history.pop(-1)
+                history.append(
+                    {
+                        "role": "assistant",
+                        "content": [
+                            {"type": "text", "text": "<tts_start>"},
+                            {"type": "token", "token": output_token_ids},
+                        ],
+                    }
+                )
 
 
 def extract_function_info(tool_calls_token: str) -> tuple:
@@ -1227,6 +1383,7 @@ def generate_stream(gpu_prop, **kwargs):
                 attention_mask=attention_mask,
                 generation_config=generation_config,
                 streamer=streamer,
+                tokenizer=self.llm_tokenizer,
             )
 
             thread = Thread(target=self.llm.generate, kwargs=generation_kwargs)
@@ -1606,6 +1763,80 @@ async def achatbot_step_audio2_aqaa_tools(processor_name):
     await processor.stop(EndFrame())
 
 
+async def achatbot_step_audio2_aqaa_think(processor_name):
+    from apipeline.frames import AudioRawFrame, StartFrame, EndFrame, CancelFrame
+    from achatbot.types.frames import PathAudioRawFrame, FunctionCallFrame, ReasoningThinkTextFrame
+
+    from achatbot.cmd.bots.voice.step_audio2.helper import (
+        get_step_audio2_processor,
+    )
+    from achatbot.types.ai_conf import AIConfig, LLMConfig
+
+    processor_name = "StepAudio2TextAudioThinkChatProcessor"
+    processor = get_step_audio2_processor(
+        LLMConfig(
+            processor=processor_name,
+            args={
+                "init_system_prompt": "你的名字叫小跃，你是由阶跃星辰(StepFun)公司训练出来的语音大模型，你能听见用户的声音特征并在思维过程中描述出来，请激活深度思考模式，通过逐步分析、逻辑推理来解决用户的问题。",
+                "prompt_wav": "/root/.achatbot/assets/default_male.wav",
+                "warmup_cn": 2,
+                "chat_history_size": None,
+                "text_stream_out": False,
+                "no_stream_sleep_time": 0.5,
+                "is_reasoning_think": True,
+                # "tools": ["web_search"],
+                "lm_model_name_or_path": MODEL_PATH,
+                "lm_gen_max_new_tokens": 10240,
+                "lm_gen_temperature": 0.7,
+                "lm_gen_top_k": 20,
+                "lm_gen_top_p": 0.9,
+                "lm_gen_repetition_penalty": 1.1,
+                "lm_gen_stop_ids": [151665],
+                "verbose": True,
+            },
+        ),
+    )
+    print(f"{processor.chat_history=}")
+    await processor.start(StartFrame())
+    for round_idx, audio_path in enumerate(
+        [
+            # "/Step-Audio2/assets/帮我查一下今天上证指数的开盘价是多少.wav",
+            # "/Step-Audio2/assets/multi-turn-round1-听说荡口古镇从下个月开始取消门票了，你知道这事吗。.wav",
+            # "/Step-Audio2/assets/multi-turn-round2-新闻说九月十九号就免费开放了。好像整个古镇都升级改造了，现在变成开放式街区了。.wav",
+            "/Step-Audio2/assets/give_me_a_brief_introduction_to_the_great_wall.wav",
+        ]
+    ):
+        print("round: ", round_idx)
+        frame_iter = processor.run_voice(
+            PathAudioRawFrame(
+                path=audio_path,
+                audio=b"",
+            )
+        )
+        audio = b""
+        tool_cn = 0
+        think_cn = 0
+        async for frame in frame_iter:
+            if isinstance(frame, AudioRawFrame):
+                audio += frame.audio
+            if isinstance(frame, FunctionCallFrame):
+                tool_cn += 1
+            if isinstance(frame, ReasoningThinkTextFrame):
+                think_cn += 1
+            print(f"{round_idx=} gen_frame-->{str(frame)}")
+        print(f"{round_idx=} {think_cn=} {processor.chat_history=}")
+        if len(audio) > 0:
+            wav_path = Path(
+                f"{ASSETS_DIR}/StepAudio2/output-{processor_name}-think-chunks-stream-{round_idx}.wav"
+            )
+            with wave.open(str(wav_path), "wb") as wf:
+                wf.setnchannels(1)
+                wf.setsampwidth(2)
+                wf.setframerate(24000)
+                wf.writeframes(audio)
+    await processor.stop(EndFrame())
+
+
 async def achatbot_step_audio2_processor(gpu_prop, **kwargs):
     from achatbot.common.logger import Logger
 
@@ -1617,12 +1848,14 @@ async def achatbot_step_audio2_processor(gpu_prop, **kwargs):
 
 
 """
-modal run src/download_models.py --repo-ids "stepfun-ai/Step-Audio-2-mini"
 modal run src/download_models.py --repo-ids "stepfun-ai/Step-Audio-2-mini-Base"
+modal run src/download_models.py --repo-ids "stepfun-ai/Step-Audio-2-mini"
+modal run src/download_models.py --repo-ids "stepfun-ai/Step-Audio-2-mini-Think"
 
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task dump_model
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task tokenize
 LLM_MODEL=stepfun-ai/Step-Audio-2-mini-Base IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task tokenize
+LLM_MODEL=stepfun-ai/Step-Audio-2-mini-Think IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task tokenize
 
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_base --test-func asr_test
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_base --test-func audio_caption_test
@@ -1644,11 +1877,13 @@ IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_instruct 
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_instruct --test-func instruct_paralinguistic_test
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_instruct --test-func instruct_mmau_test
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_instruct --test-func instruct_mmau_audio_answer_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task test_instruct --test-func instruct_think_test
 
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task generate_stream --test-func stream_asr_test
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task generate_stream --test-func stream_tts_test
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task generate_stream --test-func stream_aqaa_test 
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task generate_stream --test-func stream_aqaa_tools_test
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task generate_stream --test-func stream_think_test
 
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task achatbot_step_audio2_processor --test-func=achatbot_step_audio2_audio2text --processor-name=StepASRProcessor
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task achatbot_step_audio2_processor --test-func=achatbot_step_audio2_audio2text --processor-name=StepAudioCaptionProcessor
@@ -1658,6 +1893,8 @@ IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task achatbot_step_
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task achatbot_step_audio2_processor --test-func=achatbot_step_audio2_s2st
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task achatbot_step_audio2_processor --test-func=achatbot_step_audio2_aqaa
 IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task achatbot_step_audio2_processor --test-func=achatbot_step_audio2_aqaa_tools
+IMAGE_GPU=L4 modal run src/llm/transformers/step_audio2.py --task achatbot_step_audio2_processor --test-func=achatbot_step_audio2_aqaa_think
+IMAGE_GPU=L4 LLM_MODEL=stepfun-ai/Step-Audio-2-mini-Think modal run src/llm/transformers/step_audio2.py --task achatbot_step_audio2_processor --test-func=achatbot_step_audio2_aqaa_think
 """
 
 

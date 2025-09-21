@@ -374,7 +374,7 @@ class TextQuestionsAudioRawFrame(AudioRawFrame, TextFrame):
 
 @dataclass
 class FunctionCallFrame(Frame):
-    """llm gened tokens frame"""
+    """llm gened function call frame"""
 
     tool_call_id: str = ""
     function_name: str = ""
@@ -388,6 +388,16 @@ class FunctionCallFrame(Frame):
     @property
     def arguments_dict(self):
         return json.loads(self.arguments)
+
+
+@dataclass
+class ReasoningThinkTextFrame(Frame):
+    """llm gen completed reasoning think text tokens frame"""
+
+    text: str = ""
+
+    def __str__(self):
+        return f"{self.name}(text: {self.text})"
 
 
 @dataclass

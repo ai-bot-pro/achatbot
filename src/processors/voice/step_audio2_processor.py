@@ -1,3 +1,4 @@
+import glob
 import os
 import sys
 import time
@@ -25,7 +26,7 @@ except ModuleNotFoundError as e:
 
 from src.common.utils.time import time_now_iso8601
 from src.common.interface import ILlm
-from src.common.types import ASSETS_DIR
+from src.common.types import ASSETS_DIR, RECORDS_DIR
 from src.processors.voice.base import VoiceProcessorBase
 from src.common.session import Session
 from src.common.types import SessionCtx
@@ -36,6 +37,7 @@ from src.types.frames import (
     PathAudioRawFrame,
     LLMGenedTokensFrame,
     FunctionCallFrame,
+    ReasoningThinkTextFrame,
     TranscriptionFrame,
     VADStateAudioRawFrame,
 )
@@ -70,6 +72,7 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         tools: list = [],
         verbose: bool = False,
         set_last_chunk: bool = True,
+        is_reasoning_think: bool = False,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -96,9 +99,8 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         self._text_stream_out = text_stream_out
         self._chunk_size = chunk_size or self.CHUNK_SIZE
 
-        self._session = session or Session(
-            chat_history_size=chat_history_size, **SessionCtx(str(uuid.uuid4())).__dict__
-        )
+        self._session = session or Session(**SessionCtx(str(uuid.uuid4())).__dict__)
+        self._session.set_chat_history_size(chat_history_size)
         self._session.chat_history.init({"role": "system", "content": self._system_prompt})
         self._tools = FunctionManager.get_tool_calls_by_names(tools)
         if len(self._tools) > 0 and isinstance(self._audio_llm, TransformersManualVoiceStep2):
@@ -111,11 +113,16 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         self._queue = queue.Queue()
         self._input_queue = queue.Queue()
         self._generate_thread = None
+        self._generate_over = False
 
         self._sleep_time = no_stream_sleep_time
         self._verbose = verbose
         self._set_last_chunk = set_last_chunk
-        self._is_push_frame = kwargs.get("is_push_frame", False)
+        # self._is_push_frame = kwargs.get("is_push_frame", False)
+        self._is_push_frame = False  # close this param, just debug
+
+        # think
+        self._is_reasoning_think = is_reasoning_think
 
     @property
     def chat_history(self):
@@ -136,14 +143,30 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
                 session, kwargs = item
                 if self._tools:
                     kwargs["tools"] = self._tools
+
+                if (
+                    session.ctx.state.get("messages")
+                    and len(session.ctx.state.get("messages")) > 1
+                    and "<think>" in session.ctx.state.get("messages")[-1]["content"]
+                ):
+                    is_think = True
+                else:
+                    is_think = False
+
                 if self._verbose:
-                    print(f"{session=} {kwargs=}")
+                    print(f"{session=} {kwargs=} {is_think=}")
+
                 token_iter = self._audio_llm.generate(session, **kwargs)
-                _, _, is_tool_call = self.put_out_audio_text(token_iter, is_out_text=True)
-                if is_tool_call is False:  # no tool call, end round generate
+                _, _, is_tool_call = self.put_out_audio_text(
+                    token_iter, is_out_text=True, is_think=is_think
+                )
+                if (
+                    is_tool_call is False and is_think is False
+                ):  # no tool call, no think end round generate
                     self._queue.put(None)  # Signal the end of the stream
+
                 # reset token2wav stream cache
-                if self._is_speaking is True:
+                if self._is_speaking is True and is_think is False:
                     start = time.time()
                     self._token2wav.set_stream_cache(self._prompt_wav)
                     print(f"token2wav.set_stream_cache cost: {time.time() - start}")
@@ -155,18 +178,21 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
     async def start(self, frame: StartFrame):
         await super().start(frame)
         self._generate_thread = threading.Thread(target=self._generate)
+        self._generate_thread.daemon = True
         self._generate_thread.start()
         logging.info("start done")
 
     async def stop(self, frame: EndFrame):
         await super().stop(frame)
         self._input_queue.put(None)  # Signal the thread to stop
+        self._generate_over = True
         self._generate_thread.join()  # Wait for the thread to finish
         logging.info("stop done")
 
     async def cancel(self, frame: CancelFrame):
         await super().cancel(frame)
         self._input_queue.put(None)  # Signal the thread to stop
+        self._generate_over = True
         self._generate_thread.join()  # Wait for the thread to finish
         logging.info("cancel done")
 
@@ -240,7 +266,7 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         async for item in self.gen(is_push_frame=is_push_frame):
             yield item
 
-    def put_out_audio_text(self, token_iter, is_out_text: bool = True):
+    def put_out_audio_text(self, token_iter, is_out_text: bool = True, is_think: bool = False):
         output_token_ids = []
         output_audio_token_ids = []
         out_text_token_ids = []
@@ -252,6 +278,8 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         tool_calls: List[FunctionCallFrame] = []  # for v1/chat/completions api
 
         for token_id in token_iter:
+            if self._generate_over is True:
+                break
             if isinstance(token_id, dict) and "tool_calls" in token_id:
                 for tool_call in token_id["tool_calls"]:
                     tool_calls.append(
@@ -329,6 +357,10 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
         out_text = ""
         if len(out_text_token_ids) > 0 and is_out_text is True:
             out_text = self._audio_llm.llm_tokenizer.decode(out_text_token_ids)
+            if "</think>" not in out_text and is_think:  # think mod out text include </think>
+                out_text += "</think>"
+            if self._is_reasoning_think and is_think:
+                self._queue.put(ReasoningThinkTextFrame(text=out_text))
             if self._text_stream_out is False:
                 frame = TextFrame(text=out_text)
                 self._queue.put(frame)
@@ -789,6 +821,115 @@ class StepAudio2TextAudioChatProcessor(StepAudio2BaseProcessor):
         self._session.increment_chat_round()
 
 
+# Chat: multi turn AQAA with reasoning think
+class StepAudio2TextAudioThinkChatProcessor(StepAudio2BaseProcessor):
+    SYS_PROMPT = "你的名字叫小跃，你是由阶跃星辰(StepFun)公司训练出来的语音大模型，你能听见用户的声音特征并在思维过程中描述出来，请激活深度思考模式，通过逐步分析、逻辑推理来解决用户的问题。"
+
+    async def run_voice(self, frame: AudioRawFrame) -> AsyncGenerator[Frame, None]:
+        if isinstance(frame, PathAudioRawFrame):
+            audio = frame.path
+        else:
+            audio = bytes2TorchTensorWith16(frame.audio)
+
+        if audio is None or len(audio) == 0:
+            yield ErrorFrame("No audio tokens extracted")
+            return
+
+        self._session.chat_history.append(
+            {"role": "human", "content": [{"type": "audio", "audio": audio}]}
+        )
+        self._session.chat_history.append(
+            {"role": "assistant", "content": "\n<think>\n", "eot": False}
+        )
+        self._session.ctx.state["messages"] = self._session.chat_history.to_list()
+        # get think content, stop when "</think>" appears
+        # if use hf transformers, stop_strings need text tokenizer
+        if isinstance(self._audio_llm, TransformersManualVoiceStep2):
+            self.send_input(self._session, stop_strings=["</think>"])
+        elif isinstance(self._audio_llm, VllmClientStepAudio2):
+            self.send_input(self._session, stop=["</think>"])
+        else:
+            raise Exception("Unsupported LLM engine type")
+        async for item in self.gen():
+            if isinstance(item, LLMGenedTokensFrame):
+                self._session.chat_history.pop(-1)
+                if isinstance(self._audio_llm, TransformersManualVoiceStep2):
+                    self._session.chat_history.append(
+                        {
+                            "role": "assistant",
+                            "content": [
+                                {"type": "text", "text": "<tts_start>"},
+                                {"type": "token", "token": item.token_ids},
+                            ],
+                        }
+                    )
+                if isinstance(self._audio_llm, VllmClientStepAudio2):
+                    history_item = {
+                        "role": "assistant",
+                        "tts_content": {
+                            "tts_text": item.text_tokens,
+                            "tts_audio": item.audio_tokens,
+                        },
+                    }
+                    if len(item.tool_calls) > 0:
+                        history_item["tool_calls"] = []
+                        for tool_call in item.tool_calls:
+                            history_item["tool_calls"].append(
+                                {
+                                    "id": tool_call.tool_call_id,
+                                    "type": tool_call.type,
+                                    "index": tool_call.index,
+                                    "function": {
+                                        "name": tool_call.function_name,
+                                        "arguments": tool_call.arguments,
+                                    },
+                                }
+                            )
+                    self._session.chat_history.append(history_item)
+            if isinstance(item, FunctionCallFrame):  # send input for function call
+                func_res = await asyncio.to_thread(
+                    FunctionManager.execute,
+                    item.function_name,
+                    self._session,
+                    **item.arguments_dict,
+                )
+                history_item = {
+                    "role": "input",
+                    "content": [
+                        {"type": "text", "text": func_res},
+                        {
+                            "type": "text",
+                            "text": "\n\n\n请用口语化形式总结检索结果，简短地回答用户的问题。",
+                        },
+                    ],
+                }
+                if isinstance(self._audio_llm, VllmClientStepAudio2):
+                    history_item["tool_call_id"] = item.tool_call_id
+                self._session.chat_history.append(history_item)
+                self._session.chat_history.append(
+                    {
+                        "role": "assistant",
+                        "content": "<tts_start>",
+                        "eot": False,
+                    },  # Insert <tts_start> for speech response
+                )
+                self._session.ctx.state["messages"] = self._session.chat_history.to_list()
+                self.send_input(self._session)
+            if isinstance(item, ReasoningThinkTextFrame):  # send input for reasoning think result
+                self._session.chat_history.pop(-1)
+                self._session.chat_history.append(
+                    {
+                        "role": "assistant",
+                        "content": f"\n<think>\n{item.text}\n<tts_start>",
+                        "eot": False,
+                    }
+                )
+                self._session.ctx.state["messages"] = self._session.chat_history.to_list()
+                self.send_input(self._session)
+            yield item
+        self._session.increment_chat_round()
+
+
 # ----------------------------------------------------------------------------------
 
 
@@ -868,6 +1009,41 @@ class StepAudioText2TextAudioProcessor(StepAudio2BaseProcessor):
 # audio understanding with text query
 class StepMMAUProcessor(StepAudioText2TextAudioProcessor):
     SYS_PROMPT = "You are an expert in audio analysis, please analyze the audio content and answer the questions accurately."
+
+
+class StepMockAQAAProcessor(StepAudio2TextAudioChatProcessor):
+    def __init__(self, token2wav=None, **kwargs):
+        super().__init__(token2wav=token2wav, **kwargs)
+
+    def put_out_audio_text(self, token_iter, is_out_text: bool = True, is_think: bool = False):
+        wav_files = glob.glob(os.path.join(RECORDS_DIR, "bot_speak*.wav"))
+
+        wav_files.sort(key=os.path.getmtime)
+
+        for wav_file in wav_files:
+            if self._generate_over is True:
+                break
+            try:
+                with open(wav_file, "rb") as f:
+                    self._token2wav.stream(
+                        self._token2wav.WARMUP_TOKENS[
+                            : self._token2wav.CHUNK_SIZE + self._token2wav.flow.pre_lookahead_len
+                        ],
+                        prompt_wav=self._prompt_wav,
+                    )
+
+                    frame = AudioRawFrame(
+                        audio=f.read(),
+                        sample_rate=self._audio_llm.RATE,
+                        num_channels=1,
+                    )
+                    self._queue.put(frame)
+            except Exception as e:
+                print(f"Error reading {wav_file}: {str(e)}")
+
+        self._queue.put(LLMGenedTokensFrame())
+
+        return [], "", False
 
 
 """

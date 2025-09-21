@@ -60,7 +60,6 @@ def get_step_audio2_processor(
         else:
             module = importlib.import_module("src.processors.voice.step_audio2_processor")
         processor_class = getattr(module, processor_class_name)
-        session.set_chat_history_size(llm_config.args.get("chat_history_size", None))
         return processor_class(
             session=session,
             token2wav=token2wav,

@@ -7,7 +7,7 @@ from src.common.chat_history import ChatHistory
 
 
 class BaseLLM(EngineClass):
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__()
         self.session_chat_history: Dict[str, ChatHistory] = {}
 
