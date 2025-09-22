@@ -72,7 +72,7 @@ class StepAudio2MiniVLLMClient:
                     continue
                 line = line.decode("utf-8")[6:] if stream else line.decode("utf-8")
                 if line == "[DONE]":
-                    continue
+                    break
                 line = json.loads(line)["choices"][0]["delta" if stream else "message"]
                 text = line.get("tts_content", {}).get("tts_text", None)
                 text = text if text else line["content"]

@@ -144,11 +144,9 @@ class StepAudio2BaseProcessor(VoiceProcessorBase):
                 if self._tools:
                     kwargs["tools"] = self._tools
 
-                if (
-                    session.ctx.state.get("messages")
-                    and len(session.ctx.state.get("messages")) > 1
-                    and "<think>" in session.ctx.state.get("messages")[-1]["content"]
-                ):
+                if kwargs.get("stop") and "</think>" in kwargs.get("stop"):
+                    is_think = True
+                elif kwargs.get("stop_strings") and "</think>" in kwargs.get("stop_strings"):
                     is_think = True
                 else:
                     is_think = False
