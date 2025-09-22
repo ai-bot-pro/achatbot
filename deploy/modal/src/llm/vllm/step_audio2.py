@@ -109,6 +109,7 @@ class StepAudio2:
         with requests.post(self.api_url, headers=headers, json=payload, stream=stream) as response:
             response.raise_for_status()
             for line in response.iter_lines():
+                print(line)
                 if line == b"":
                     continue
                 line = line.decode("utf-8")[6:] if stream else line.decode("utf-8")
@@ -486,7 +487,7 @@ def test_speech2speech_think(model: StepAudio2, token2wav):
 def test_speech2speech_think_stream(model: StepAudio2, token2wav):
     # Speech-to-text conversation
     sampling_params = {
-        "max_tokens": 10240,
+        "max_tokens": 1024,
         "temperature": 0.7,
         "top_p": 0.9,
         "frequency_penalty": 0,
@@ -524,13 +525,30 @@ def test_speech2speech_think_stream(model: StepAudio2, token2wav):
     #    "parallel_tool_calls": False,
     #    "return_token_ids": True,
     # }
+    print(messages)
     stream_iter = model.stream(messages, stream=True, **sampling_params)
+    audio_tokens = []
+    texts = ""
+    repeat_cn = 0
     for response, text, audio, token_id in stream_iter:
         if token_id:
+            repeat_cn = 0
             print(f"{response=} {text=} {audio=} {token_id=}")
-        else:
+        elif response["role"] is None:
             print(f"{response=} {text=} {audio=} {token_id=}")
-            break
+            repeat_cn += 1
+            if repeat_cn > 10:
+                break
+        if audio:
+            audio_tokens += audio
+        if text:
+            texts += text
+    print(texts)
+    audio_bytes = token2wav(
+        audio_tokens, prompt_wav="../../deps/StepAudio2/assets/default_female.wav"
+    )
+    with open("../../records/output-female-think-stream.wav", "wb") as f:
+        f.write(audio_bytes)
 
 
 def test_all(model, token2wav):

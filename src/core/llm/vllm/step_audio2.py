@@ -134,6 +134,11 @@ class VllmClientStepAudio2(VLlmBase):
             **kwargs,
         )
         stop = False
+        non_repeat_cn = 0
+
+        # FIXME: if repetition_penalty is not work, a hack for repeat token to stop gen,
+        pre_token_id = 0
+        token_repeat_cn = 0
 
         tool_calls = []
         for response, text, audio, token_ids in stream_iter:
@@ -147,8 +152,21 @@ class VllmClientStepAudio2(VLlmBase):
                         "arguments"
                     ]
             if token_ids is None:
+                if response.get("role", None) is None:
+                    non_repeat_cn += 1
+                    if non_repeat_cn > 10:
+                        break
                 continue
+            non_repeat_cn = 0
             for token_id in token_ids:
+                if token_id == pre_token_id:
+                    token_repeat_cn += 1
+                    if token_repeat_cn > 20:
+                        stop = True
+                        break
+                else:
+                    token_repeat_cn = 0
+                pre_token_id = token_id
                 if token_id in stop_ids:
                     stop = True
                     break
