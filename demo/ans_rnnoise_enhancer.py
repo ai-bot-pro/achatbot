@@ -47,7 +47,7 @@ def file_test_16k():
     - 16K to 48K end save 16k denoise not good
     - need 16k to 48k resample first
     """
-    denoiser = RNNoise(sample_rate=16000)
+    denoiser = RNNoise(sample_rate=48000)
     raw_path = "./records/speech_with_noise16k.wav"
     in_path = "./records/speech_with_noise16k_48k.wav"
     resample_file(raw_path, in_path)
