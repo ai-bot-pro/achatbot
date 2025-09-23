@@ -33,14 +33,15 @@ class DailyAudioNoiseFilterBot(DailyRoomBot):
 
         self.vad_analyzer = None
         self.audio_noise_filter = None
+        self.se_args = {}
 
     def load(self):
         self.vad_analyzer = self.get_vad_analyzer()
 
         # SE engine
         se_config = self.bot_config().se
-        args = {} if se_config.args is None else se_config.args
-        self.audio_noise_filter = SpeechEnhancerEnvInit.initEngine(se_config.tag, **args)
+        self.se_args = {} if se_config.args is None else se_config.args
+        self.audio_noise_filter = SpeechEnhancerEnvInit.initEngine(se_config.tag, **self.se_args)
         self.audio_noise_filter.warmup(self.session)
 
     async def arun(self):
@@ -63,7 +64,9 @@ class DailyAudioNoiseFilterBot(DailyRoomBot):
             self.params,
         )
 
-        audio_noise_filter = AudioNoiseFilter(se=self.audio_noise_filter, session=self.session)
+        audio_noise_filter = AudioNoiseFilter(
+            se=self.audio_noise_filter, session=self.session, **self.se_args
+        )
         user_audio_save_processor = None
         if self._save_audio:
             user_audio_save_processor = AudioSaveProcessor(
@@ -75,9 +78,9 @@ class DailyAudioNoiseFilterBot(DailyRoomBot):
                 [
                     transport.input_processor(),
                     audio_noise_filter,
-                    UserAudioResponseAggregator(),
-                    user_audio_save_processor,
-                    FrameLogger(include_frame_types=[AudioRawFrame]),
+                    # UserAudioResponseAggregator(),
+                    # user_audio_save_processor,
+                    # FrameLogger(include_frame_types=[AudioRawFrame]),
                     transport.output_processor(),  # BotSpeakingFrame
                 ]
             ),
@@ -88,9 +91,7 @@ class DailyAudioNoiseFilterBot(DailyRoomBot):
             ),
         )
 
-        transport.add_event_handler(
-            "on_first_participant_joined", self.on_first_participant_joined
-        )
+        transport.add_event_handler("on_first_participant_joined", self.on_first_participant_joined)
         transport.add_event_handler("on_participant_left", self.on_participant_left)
         transport.add_event_handler("on_call_state_updated", self.on_call_state_updated)
 
