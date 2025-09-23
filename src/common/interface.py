@@ -192,6 +192,9 @@ class ISpeechEnhancer(ABC):
     def warmup(self, session, **kwargs):
         raise NotImplementedError("must be implemented in the child class")
 
+    def reset(self):
+        raise NotImplementedError("must be implemented in the child class")
+
 
 class IAsr(ABC):
     @abstractmethod

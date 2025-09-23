@@ -77,5 +77,10 @@ class RNNoiseSpeechEnhancer(EngineClass, ISpeechEnhancer):
                 orig_freq=self.SAMPLE_RATE,
                 new_freq=sample_rate,
             )
+        if is_last is True:
+            self.denoiser.reset()
 
         return out_pcm
+
+    def reset(self):
+        self.denoiser.reset()

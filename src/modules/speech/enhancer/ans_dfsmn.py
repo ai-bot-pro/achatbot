@@ -59,7 +59,7 @@ class DFSMNSpeechEnhancer(EngineClass, ISpeechEnhancer):
         logging.info(f"{self.TAG} warmup cost: {time.time() - start} s")
 
     def enhance(self, session: Session, **kwargs):
-        sample_rate = session.ctx.state.get("sample_rate")
+        sample_rate = kwargs.get("sample_rate") or session.ctx.sampling_rate
         assert sample_rate, "sample_rate is None or 0"
         audio_chunk = session.ctx.state.get("audio_chunk", b"")
         # is_last = session.ctx.state.get("is_last", False)
@@ -81,3 +81,6 @@ class DFSMNSpeechEnhancer(EngineClass, ISpeechEnhancer):
                 new_freq=sample_rate,
             )
         return out_pcm
+
+    def reset(self):
+        pass

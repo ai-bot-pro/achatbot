@@ -176,6 +176,10 @@ def import_bots(bot_name: str = "DummyBot"):
         from .voice.step_audio2 import daily_s2st_bot
 
         return True
+    if "DailyAudioNoiseFilterBot" in bot_name:
+        from .SE import daily_noise_filter_bot
+
+        return True
     if "LivekitBot" in bot_name:
         from . import livekit_bot
 
