@@ -88,8 +88,8 @@ def offline():
 
 
 """
-python demo/funasr/paraformer_asr.py offline
-python demo/funasr/paraformer_asr.py online
+python demo/modelscope/paraformer_asr.py offline
+python demo/modelscope/paraformer_asr.py online
 """
 if __name__ == "__main__":
     app()

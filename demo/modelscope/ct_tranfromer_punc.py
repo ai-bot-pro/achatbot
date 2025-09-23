@@ -1,4 +1,4 @@
-from funasr import AutoModel
+from modelscope import AutoModel
 import typer
 
 app = typer.Typer()
@@ -41,8 +41,8 @@ def offline():
 
 
 """
-python demo/funasr/ct_tranfromer_punc.py offline
-python demo/funasr/ct_tranfromer_punc.py online
+python demo/modelscope/ct_tranfromer_punc.py offline
+python demo/modelscope/ct_tranfromer_punc.py online
 """
 if __name__ == "__main__":
     app()

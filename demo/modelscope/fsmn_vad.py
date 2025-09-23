@@ -49,8 +49,8 @@ def offline():
 
 
 """
-python demo/funasr/fsmn_vad.py offline
-python demo/funasr/fsmn_vad.py online
+python demo/modelscope/fsmn_vad.py offline
+python demo/modelscope/fsmn_vad.py online
 """
 if __name__ == "__main__":
     app()

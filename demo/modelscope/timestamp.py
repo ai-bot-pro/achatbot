@@ -10,7 +10,7 @@ def offline():
     """
     - https://modelscope.cn/models/iic/speech_timestamp_prediction-v1-16k-offline
     """
-    from funasr import AutoModel
+    from modelscope import AutoModel
 
     model = AutoModel(model="fa-zh", model_revision="v2.0.4")
     with open("./fa_zh_model.txt", "w") as f:
@@ -38,7 +38,7 @@ def offline():
 """
 https://modelscope.cn/models/iic/speech_timestamp_prediction-v1-16k-offline/summary
 
-python -m demo.funasr.timestamp
+python -m demo.modelscope.timestamp
 """
 if __name__ == "__main__":
     app()

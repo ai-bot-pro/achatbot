@@ -176,6 +176,23 @@ class ITurnAnalyzer(ABC):
         pass
 
 
+class ISpeechEnhancer(ABC):
+    @abstractmethod
+    def enhance(self, session, **kwargs) -> bytes:
+        """
+        session
+            - session.ctx.state["audio_chunk"] bytes
+            - session.ctx.state["sample_rate"] int
+            - session.ctx.state["is_last"] bool
+        return
+        - bytes
+        """
+        raise NotImplementedError("must be implemented in the child class")
+
+    def warmup(self, session, **kwargs):
+        raise NotImplementedError("must be implemented in the child class")
+
+
 class IAsr(ABC):
     @abstractmethod
     def transcribe_stream_sync(self, session) -> Generator[str, None, None]:
