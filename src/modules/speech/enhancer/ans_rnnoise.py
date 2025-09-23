@@ -10,7 +10,7 @@ from src.common.factory import EngineClass
 from src.common.interface import ISpeechEnhancer
 
 
-class RNNoiseSpeechEnhencer(EngineClass, ISpeechEnhancer):
+class RNNoiseSpeechEnhancer(EngineClass, ISpeechEnhancer):
     """
     realtime ANS
     - ⭐️ https://jmvalin.ca/demo/rnnoise/
