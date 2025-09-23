@@ -47,6 +47,10 @@ class VADConfig(BaseConfig):
     pass
 
 
+class SEConfig(BaseConfig):
+    pass
+
+
 class TurnConfig(BaseConfig):
     pass
 
@@ -105,6 +109,7 @@ class TTSConfig(BaseConfig):
 
 class AIConfig(BaseModel):
     vad: Optional[VADConfig] = None
+    se: Optional[SEConfig] = None
     turn: Optional[TurnConfig] = None
     asr: Optional[ASRConfig] = None
     punctuation: Optional[PuncConfig] = None

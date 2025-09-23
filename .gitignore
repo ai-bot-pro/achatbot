@@ -153,6 +153,7 @@ cython_debug/
 
 .DS_Store
 models/*
+checkpoints/*
 records/*
 audios/*
 videos/*
@@ -164,6 +165,7 @@ main-dev.py
 tmp.*
 *.wav
 *.mp3
+*.pcm
 *.mp4
 *.flv
 *.vtt

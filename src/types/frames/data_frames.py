@@ -132,7 +132,7 @@ class ASRLiveTranscriptionFrame(TextFrame):
     end_at_s: float = 0.0
 
     def __str__(self):
-        return f"{self.name}(user: {self.user_id}, text: {self.text}, timestamp: {self.timestamp}, language: {self.language}, len(timestamps): {len(self.timestamps)} speech_id: {self.speech_id} is_final: {self.is_final}) speech_id: {self.speech_id} start_at_s: {self.start_at_s} cur_at_s: {self.cur_at_s} end_at_s: {self.end_at_s}"
+        return f"{self.name}(user: {self.user_id}, text: {self.text}, timestamp: {self.timestamp}, language: {self.language}, len(timestamps): {len(self.timestamps)} speech_id: {self.speech_id} is_final: {self.is_final} speech_id: {self.speech_id} start_at_s: {self.start_at_s} cur_at_s: {self.cur_at_s} end_at_s: {self.end_at_s})"
 
 
 @dataclass
@@ -266,7 +266,7 @@ class VADStateAudioRawFrame(AudioRawFrame):
     end_at_s: float = 0.0  # end time point from record start
 
     def __str__(self):
-        return f"{super().__str__()} state: {self.state} speech_id: {self.speech_id} is_final: {self.is_final}) speech_id: {self.speech_id} start_at_s: {self.start_at_s} cur_at_s: {self.cur_at_s} end_at_s: {self.end_at_s}"
+        return f"{super().__str__()} (state: {self.state} speech_id: {self.speech_id} is_final: {self.is_final} speech_id: {self.speech_id} start_at_s: {self.start_at_s} cur_at_s: {self.cur_at_s} end_at_s: {self.end_at_s})"
 
 
 @dataclass

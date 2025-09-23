@@ -130,6 +130,8 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
   - functions:
     - [x] search: search,search1,serper
     - [x] weather: openweathermap
+  - punctuation: 
+    - [x]  punc_ct_tranformerm, punc_ct_tranformer_offline, punc_ct_tranformer_onnx, punc_ct_tranformer_onnx_offline
   - speech:
     - [x] asr: 
       - [x] whisper_asr, whisper_timestamped_asr, whisper_faster_asr, whisper_transformers_asr, whisper_mlx_asr
@@ -141,6 +143,11 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
       - [x] vita_asr (sensevoice-small)
       - [x] phi4_asr (conformer)
       - [x] gemma3n_asr (matformer)
+    - [x] asr_live:
+      - [x] asr_streaming_sensevoice
+    - [x] speech enhancement:
+      - [x] enhancer_ans_rnnoise
+      - [x] enhancer_ans_dfsmn
     - [x] audio_stream: daily_room_audio_stream(in/out), pyaudio_stream(in/out)
     - [x] detector: porcupine_wakeword,pyannote_vad,webrtc_vad,silero_vad,webrtc_silero_vad,fsmn_vad
     - [x] player: stream_player
@@ -166,6 +173,8 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
     - [x] vad_analyzer: 
       - [x] daily_webrtc_vad_analyzer
       - [x] silero_vad_analyzer
+    - [x] turn_analyzer
+      - [x] v2_smart_turn_analyzer
   - vision
     - [x] OCR(*Optical Character Recognition*):
       - [ ] [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)

@@ -95,7 +95,9 @@ class BotTaskRunner:
         self._bot_obj.load()
         logging.info(f"bot {bot_info.chat_bot_name} load done")
 
-        logging.info(f"bot {bot_info.chat_bot_name} starting with pid {self._pid}")
+        logging.info(
+            f"bot {bot_info.chat_bot_name} starting with is_background: {self.run_bot_info.is_background}"
+        )
         if self.run_bot_info.is_background is True:
             self._pid = await self.task_mgr.run_task(
                 self._bot_obj.run, bot_info.chat_bot_name, bot_info.room_name
