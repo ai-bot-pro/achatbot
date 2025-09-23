@@ -15,7 +15,7 @@ from src.common.interface import ISpeechEnhancer
 from src.common.types import MODELS_DIR
 
 
-class DFSMNSpeechEnhencer(EngineClass, ISpeechEnhancer):
+class DFSMNSpeechEnhancer(EngineClass, ISpeechEnhancer):
     """
     pytorch realtime
     - https://modelscope.cn/models/iic/speech_dfsmn_ans_psm_48k_causal
