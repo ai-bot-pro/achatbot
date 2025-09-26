@@ -329,7 +329,7 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
         thinker_top_k: int = 40,
         thinker_top_p: float = 0.8,
         thinker_temperature: float = 0.9,
-        thinker_eos_token_ids=[151644, 151645],  # Define EOS tokens
+        thinker_eos_token_ids=[151643, 151645],  # Define EOS tokens
         thinker_repetition_penalty: float = 1.05,
         thinker_output_hidden_states=False,
         thinker_stop_strings_per_step=[],
@@ -785,7 +785,7 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
         thinker_top_p: float = 0.8,
         thinker_temperature: float = 0.9,
         thinker_repetition_penalty: float = 1.05,
-        thinker_eos_token_ids=[151644, 151645],
+        thinker_eos_token_ids=[151643, 151645],
         thinker_stop_strings_per_step=[],
         tokenizer=None,
         return_audio=True,
@@ -863,7 +863,7 @@ class Qwen2_5OmniForConditionalGenerationStreaming(Qwen2_5OmniForConditionalGene
         thinker_top_p: float = 0.8,
         thinker_temperature: float = 0.9,
         thinker_repetition_penalty: float = 1.05,
-        thinker_eos_token_ids=[151644, 151645],
+        thinker_eos_token_ids=[151643, 151645],
         thinker_stop_strings_per_step=[],
         tokenizer=None,
         return_audio=True,
