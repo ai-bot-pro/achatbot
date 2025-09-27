@@ -84,6 +84,7 @@ with omni_img.imports():
         Qwen3OmniMoeProcessor,
         TextIteratorStreamer,
         Qwen3OmniMoeConfig,
+        Qwen3OmniMoeCode2Wav,
         AutoConfig,
         AutoProcessor,
         AutoTokenizer,
@@ -233,10 +234,42 @@ with omni_img.imports():
         print(model)
         print(f"{extra_info} {model_million_params} M parameters")
 
+    class Qwen3OmniMoeCode2WavNew(Qwen3OmniMoeCode2Wav):
+        def chunked_decode(self, codes, chunk_size=300, left_context_size=25):
+            wavs = []
+            start_index = 0
+            while start_index < codes.shape[-1]:
+                end_index = min(start_index + chunk_size, codes.shape[-1])
+                context_size = (
+                    left_context_size if start_index - left_context_size > 0 else start_index
+                )
+                codes_chunk = codes[..., start_index - context_size : end_index]
+                wav_chunk = self(codes_chunk)
+                wavs.append(wav_chunk[..., context_size * self.total_upsample :])
+                print(
+                    f"{self.total_upsample=} {start_index=} {end_index=} {context_size=} {codes_chunk.shape=} {wav_chunk.shape=}"
+                )
+                start_index = end_index
+            return torch.cat(wavs, dim=-1)
+
+        def chunked_decode_stream(self, codes, chunk_size=300, left_context_size=25):
+            start_index = 0
+            while start_index < codes.shape[-1]:
+                end_index = min(start_index + chunk_size, codes.shape[-1])
+                context_size = (
+                    left_context_size if start_index - left_context_size > 0 else start_index
+                )
+                codes_chunk = codes[..., start_index - context_size : end_index]
+                wav_chunk = self(codes_chunk)
+                yield wav_chunk[..., context_size * self.total_upsample :]
+                start_index = end_index
+
     class Qwen3OmniMoeForConditionalGenerationNew(Qwen3OmniMoeForConditionalGeneration):
         def __init__(self, config: Qwen3OmniMoeConfig):
             super().__init__(config)
             # print(config)
+            if hasattr(self, "code2wav"):
+                self.code2wav = Qwen3OmniMoeCode2WavNew(config.code2wav_config)
 
         @torch.no_grad()
         def thinker_generate_chunk(
@@ -321,6 +354,9 @@ with omni_img.imports():
                 start_time = perf_counter()
                 outputs = self.thinker.generate(**model_inputs)
                 times.append(perf_counter() - start_time)
+
+                # past_key_values = outputs.past_key_values
+                # print(f"{past_key_values=}")
 
                 # Extract newly generated token IDs *for this step*
                 # `outputs.sequences` contains the input_ids for this step + new tokens generated in this step
@@ -544,6 +580,7 @@ with omni_img.imports():
                 .to(self.code2wav.device)
             )
             print("talker_codes", talker_codes.tolist(), talker_codes.shape)  # [1,1+15,num_hidden]
+            torch.save(talker_codes, f"{ASSETS_DIR}/talker_codes.pt")
 
             chunk_size = token2wav_kwargs.get("chunk_size", 300)
             left_context_size = token2wav_kwargs.get("left_context_size", 25)
@@ -850,142 +887,6 @@ with omni_img.imports():
             )  # [1,1,T]
             return thinker_result, talker_wavs
 
-            # 2. Prepare talker input
-            thinker_embed = torch.cat(
-                [hidden_states[0] for hidden_states in thinker_result.hidden_states], dim=1
-            ).to(self.talker.device)  # [1 t d]
-            thinker_hidden = torch.cat(
-                [
-                    hidden_states[self.config.talker_config.accept_hidden_layer]
-                    for hidden_states in thinker_result.hidden_states
-                ],
-                dim=1,
-            ).to(self.talker.device)  # [1 t d]
-            im_start_indexes = torch.cat(
-                (
-                    torch.nonzero(input_ids[0] == self.config.im_start_token_id).squeeze(),
-                    torch.tensor(
-                        [thinker_result.sequences.shape[-1]],
-                        device=input_ids.device,
-                        dtype=input_ids.dtype,
-                    ),
-                ),
-                dim=-1,
-            ).to(
-                self.talker.device
-            )  # Shape [n_starts + 1]; Take batch 0 since batched inference is not supported here.
-            multimodal_mask = (
-                (thinker_result.sequences == self.config.thinker_config.audio_token_id) |
-                (thinker_result.sequences == self.config.thinker_config.image_token_id) |
-                (thinker_result.sequences == self.config.thinker_config.video_token_id)
-            ).to(self.talker.device)  # [1 t] # fmt: skip
-
-            talker_special_tokens = torch.tensor(
-                [
-                    [
-                        self.config.tts_bos_token_id,
-                        self.config.tts_eos_token_id,
-                        self.config.tts_pad_token_id,
-                    ]
-                ],
-                device=self.thinker.device,
-                dtype=input_ids.dtype,
-            )
-            tts_bos_embed, tts_eos_embed, tts_pad_embed = (
-                self.talker.text_projection(
-                    self.thinker.get_input_embeddings()(talker_special_tokens)
-                )
-                .to(self.talker.device)
-                .chunk(3, dim=1)
-            )  # 3 * [1 1 d]
-
-            talker_input_embeds = []  # [1 t d]
-            talker_input_ids = []
-            # For every chatml parts
-            for i in range(len(im_start_indexes) - 1):
-                im_start_index = im_start_indexes[i]
-                segment_end_index = im_start_indexes[i + 1]
-                role_token = input_ids[0][im_start_index + 1]
-                # Talker should ignore thinker system prompt
-                if role_token == self.config.system_token_id:
-                    continue
-                # Talker takes word embeddings for tokens and hidden state from `accept_hidden_layer` for multimodal inputs
-                elif role_token == self.config.user_token_id:
-                    talker_user_part = self._get_talker_user_parts(
-                        im_start_index,
-                        segment_end_index,
-                        multimodal_mask,
-                        thinker_hidden,
-                        thinker_embed,
-                    )
-                    talker_input_embeds.append(talker_user_part)
-                    talker_input_ids.append(
-                        thinker_result.sequences[:, im_start_index:segment_end_index]
-                    )
-                # Take assistant output (for now)
-                elif (
-                    role_token == self.config.assistant_token_id and i == len(im_start_indexes) - 2
-                ):
-                    talker_assistant_embeds, talker_assistant_ids, trailing_text_hidden = (
-                        self._get_talker_assistant_parts(
-                            im_start_index,
-                            segment_end_index,
-                            speaker_id,
-                            thinker_embed,
-                            tts_pad_embed,
-                            tts_bos_embed,
-                            tts_eos_embed,
-                        )
-                    )
-                    talker_input_embeds.append(talker_assistant_embeds)
-                    talker_input_ids.append(talker_assistant_ids)
-                # History assistant output (ignore for now)
-                elif (
-                    role_token == self.config.assistant_token_id and i != len(im_start_indexes) - 2
-                ):
-                    continue
-                else:
-                    raise AssertionError(
-                        "Expect role id after <|im_start|> (assistant, user, system)"
-                    )
-            talker_input_embed = torch.cat(
-                [embed.to(self.talker.device) for embed in talker_input_embeds], dim=1
-            )
-            talker_input_id = torch.cat(
-                [embed.to(self.talker.device) for embed in talker_input_ids], dim=1
-            )
-
-            print(f"{talker_input_embed=}", talker_input_embed.shape)
-            print(f"{trailing_text_hidden=}", trailing_text_hidden.shape)
-            print(f"{tts_pad_embed=}", tts_pad_embed.shape)
-            print(f"{talker_input_id=}", talker_input_id.shape)
-            print(f"{talker_kwargs=}")
-            talker_result = self.talker.generate(
-                inputs_embeds=talker_input_embed,
-                trailing_text_hidden=trailing_text_hidden,
-                tts_pad_embed=tts_pad_embed,
-                talker_input_ids=talker_input_id,  # Not use input_ids to prevent repetation penalty out of bound
-                **talker_kwargs,
-            )
-            # print(len(talker_result.hidden_states))
-            # for hid in talker_result.hidden_states:
-            #    print(len(hid), hid[-1])
-
-            talker_codes = (
-                torch.stack(
-                    [hid[-1] for hid in talker_result.hidden_states if hid[-1] is not None], dim=1
-                )
-                .transpose(1, 2)
-                .to(self.code2wav.device)
-            )
-            print("talker_codes", talker_codes.tolist(), talker_codes.shape)  # [1,1+15,num_hidden]
-            talker_wavs = self.code2wav.chunked_decode(
-                talker_codes, chunk_size=300, left_context_size=25
-            )
-            print("talker_wavs", talker_wavs, talker_wavs.shape)
-
-            return thinker_result, talker_wavs.float()
-
     model: Qwen3OmniMoeForConditionalGenerationNew = None
     processor: Qwen3OmniMoeProcessor = None
 
@@ -1062,6 +963,53 @@ def tokenizer(**kwargs):
         # [104198, 107076, 100338, 111477,  31935,  64559, 104800, 111411,   9370, 42140,  53772,  35243,  71304, 105483, 102064, 104949,   3837,  35946, 99882,  31935,  64559,  99320,  56007,  63488,   7751,   1773, 104139, 109944, 100364, 103929, 101037,  11319, 151645]
     )
     print(text)
+
+
+def code2wav(**kwargs):
+    gpu_prop = torch.cuda.get_device_properties("cuda")
+    model = Qwen3OmniMoeForConditionalGenerationNew.from_pretrained(
+        MODEL_PATH,
+        dtype="auto",
+        attn_implementation="flash_attention_2" if gpu_prop.major > 8 else None,
+        device_map="auto",
+    )
+    model = model.eval()
+
+    talker_codes = torch.load(f"{ASSETS_DIR}/talker_codes.pt")
+    print(talker_codes, talker_codes.shape)  # [1,1+15,num_hidden]
+    chunk_size = kwargs.get("chunk_size", 300)
+    left_context_size = kwargs.get("left_context_size", 25)
+    # left_context_size = kwargs.get("left_context_size", 1)
+    size = talker_codes.shape[-1]
+    start = 0
+    audio_bytes = b""
+    while start < size:
+        end = start + 10
+        #end = start + 1
+        talker_codes_chunk = talker_codes[..., start:end]
+        start_time = perf_counter()
+        talker_wavs = model.code2wav.chunked_decode(
+            talker_codes_chunk, chunk_size=chunk_size, left_context_size=left_context_size
+        )
+        print("talker_wavs", talker_wavs, talker_wavs.shape)
+        print(f"chunk {start}:{end} cost {perf_counter() - start_time} s")
+        audio = talker_wavs.float()  # BFloat16 -> Float
+        audio_chunk_bytes = (
+            np.array(audio.reshape(-1).detach().cpu().numpy() * 32767).astype(np.int16).tobytes()
+        )
+        audio_bytes += audio_chunk_bytes
+        # with wave.open(f"{ASSETS_DIR}/code2wav_{start}.wav", "wb") as f:
+        #    f.setnchannels(1)
+        #    f.setsampwidth(2)
+        #    f.setframerate(24000)
+        #    f.writeframes(audio_chunk_bytes)
+
+        start = end
+    with wave.open(f"{ASSETS_DIR}/code2wav.wav", "wb") as f:
+        f.setnchannels(1)
+        f.setsampwidth(2)
+        f.setframerate(24000)
+        f.writeframes(audio_bytes)
 
 
 def asr(**kwargs):
@@ -1759,6 +1707,8 @@ IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen3_omni.py --task image_au
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen3_omni.py --task audio_interaction_scene_stream (speech chat)
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen3_omni.py --task video_interaction_scene_stream (video include audio chat)
 
+IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen3_omni.py --task code2wav
+
 > [!TIP]:
 > - 生成音频中未对特殊字符进行处理（omni统一到一起直接生成音频的弊端, 也许可以在隐藏层解决, 系统提示词限制貌似不起作用(提示不含特殊字符）, 比如：
     *   **优点**：这款饮料是专门为运动后设计的。它的核心成分是电解质，标签上明确写着“电解质≥200mg”，这能有效补充运动时因大量出汗流失的钠、钾等矿物质，帮助维持体液平衡，防止抽筋。同时，它也含有维生素E和维生素B6，有助于能量代谢。它还是0糖0卡的，不用担心额外的热量。
@@ -1771,6 +1721,7 @@ def main(task: str = "tokenizer"):
     tasks = {
         "tokenizer": tokenizer,
         "dump_model": dump_model,
+        "code2wav": code2wav,
         "asr": asr,
         "text2text": text2text,
         "text2speech": text2speech,
