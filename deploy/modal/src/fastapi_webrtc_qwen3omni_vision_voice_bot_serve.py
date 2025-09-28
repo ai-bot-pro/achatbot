@@ -1,7 +1,7 @@
 import modal
 import os
 
-achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.26")
+achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.26.post1")
 # fastapi_webrtc_bots | fastapi_webrtc_single_bot server
 SERVER_TAG = os.getenv("SERVER_TAG", "fastapi_webrtc_bots")
 IMAGE_GPU = os.getenv("IMAGE_GPU", "A100-80GB")
@@ -49,10 +49,10 @@ img = (
     )
 )
 
-img = img.pip_install(
-    f"achatbot==0.0.26.dev20",
-    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
-)
+# img = img.pip_install(
+#    f"achatbot==0.0.26.dev20",
+#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
+# )
 
 # ----------------------- app -------------------------------
 app = modal.App("qwen3omni_bot")
