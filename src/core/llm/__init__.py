@@ -12,6 +12,47 @@ from src.common.factory import EngineClass, EngineFactory
 load_dotenv(override=True)
 
 
+class MockILlm(EngineClass, interface.ILlm):
+    TAG = "llm_mock"
+
+    def __init__(self, **kwargs):
+        pass
+
+    def generate(self, session):
+        logging.info("MockILlm generate called")
+        yield "This is a mock response."
+
+    async def async_generate(self, session, **kwargs):
+        logging.info("MockILlm async_generate called")
+        yield "This is a mock response."
+
+    def model_name(self):
+        return "MockILlm"
+
+    def chat_completion(self, session):
+        logging.info("MockILlm chat_completion called")
+        yield "This is a mock chat completion."
+
+    async def async_chat_completion(self, session, **kwargs):
+        logging.info("MockILlm async_chat_completion called")
+        yield "This is a mock chat completion."
+
+    def count_tokens(self, text: str) -> int:
+        return len(text.split())
+
+
+class MockILlmGenerator(EngineClass, interface.ILlmGenerator):
+    def __init__(self, **kwargs):
+        pass
+
+    async def generate(self, session, **kwargs):
+        logging.info("MockILlmGenerator generate called")
+        yield "This is a mock response."
+
+    def close(self):
+        pass
+
+
 class LLMEnvInit:
     @staticmethod
     def getEngine(tag, **kwargs) -> interface.ILlmGenerator | interface.ILlm | EngineClass:
@@ -79,6 +120,8 @@ class LLMEnvInit:
             from .transformers import manual_vision_voice_minicpmo
         elif "llm_transformers_manual_qwen2_5omni" in tag:
             from .transformers import manual_vision_voice_qwen
+        elif "llm_transformers_manual_qwen3omni" in tag:
+            from .transformers import manual_vision_voice_qwen3
         elif "llm_transformers_manual_phi4" in tag:
             from .transformers import manual_vision_speech_phi
         elif "llm_transformers_manual_vision_mimo" in tag:
@@ -440,6 +483,44 @@ class LLMEnvInit:
         return kwargs
 
     @staticmethod
+    def get_qwen3omni_transformers_args() -> dict:
+        from src.types.llm.transformers import TransformersLMArgs
+        from src.types.omni.qwen3_vision_voice import (
+            Qwen3OmniCode2WavArgs,
+            Qwen3TransformersVisionVoiceLMArgs,
+        )
+
+        kwargs = Qwen3TransformersVisionVoiceLMArgs(
+            lm_model_name_or_path=os.getenv(
+                "LLM_MODEL_NAME_OR_PATH", os.path.join(MODELS_DIR, "Qwen/Qwen3-Omni-30B-A3B-Instruct")
+            ),
+            lm_attn_impl=os.getenv("LLM_ATTN_IMPL", None),
+            lm_device=os.getenv("LLM_DEVICE", None),
+            lm_device_map=os.getenv("LLM_DEVICE_MAP", None),
+            lm_torch_dtype=os.getenv("LLM_TORCH_DTYPE", "auto"),
+            lm_stream=bool(os.getenv("LLM_STREAM", "1")),
+            init_chat_prompt=os.getenv("LLM_INIT_CHAT_PROMPT", ""),
+            chat_history_size=int(os.getenv("LLM_CHAT_HISTORY_SIZE", "10")),  # cache 10 round
+            model_type=os.getenv("LLM_MODEL_TYPE", "chat_completion"),
+            warmup_steps=int(os.getenv("LLM_WARMUP_STEPS", "1")),
+            **LLMEnvInit._get_llm_generate_args(),
+            thinker_args=TransformersLMArgs(
+                **LLMEnvInit._get_llm_generate_args(prefix="THINKER_"),
+            ).__dict__,
+            talker_args=TransformersLMArgs(
+                **LLMEnvInit._get_llm_generate_args(prefix="TALKER_"),
+            ).__dict__,
+            speaker=os.getenv("SPEAKER", "Chelsie"),
+            disable_talker=bool(os.getenv("DISABLE_TALKER", "")),
+            code2wav_args=Qwen3OmniCode2WavArgs(
+                chunk_size=int(os.getenv("CODE2WAV_CHUNK_SIZE", "50")),
+                left_context_size=int(os.getenv("CODE2WAV_LEFT_CONTEXT_SIZE", "25")),
+            ).__dict__,
+        ).__dict__
+
+        return kwargs
+
+    @staticmethod
     def get_kimi_audio_transformers_args() -> dict:
         from src.types.omni.kimi_voice import (
             KimiAudioTransformersVoiceLMArgs,
@@ -545,6 +626,8 @@ class LLMEnvInit:
         "llm_transformers_manual_qwen2_5omni_vision_voice": get_qwen2_5omni_transformers_args,
         "llm_transformers_manual_qwen2_5omni_text_voice": get_qwen2_5omni_transformers_args,
         "llm_transformers_manual_qwen2_5omni_audio_voice": get_qwen2_5omni_transformers_args,
+        "llm_transformers_manual_qwen3omni": get_qwen3omni_transformers_args,
+        "llm_transformers_manual_qwen3omni_vision_voice": get_qwen2_5omni_transformers_args,
         "llm_transformers_manual_voice_step2": get_llm_transformers_args,
         "llm_transformers_generator": get_llm_transformers_args,
         "llm_llamacpp_generator": get_llm_llamacpp_generator_args,

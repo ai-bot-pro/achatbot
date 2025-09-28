@@ -33,7 +33,7 @@ local_scheme = "no-local-version"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.26"
+version = "0.0.26.post1"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -118,9 +118,9 @@ opencv = ["opencv-python~=4.10.0.84"]
 librosa = ["librosa~=0.10.2.post1"]
 soundfile = ["soundfile~=0.12.1"]
 torch_vision_audio = [
-    "torch==2.7.1",
-    "torchvision==0.22.1",
-    "torchaudio==2.7.1",
+    "torch",
+    "torchvision",
+    "torchaudio",
 ]
 # https://github.com/modelcontextprotocol
 # https://github.com/modelcontextprotocol/python-sdk
@@ -394,10 +394,7 @@ llm_transformers_manual_vision_voice_qwen = [
     # https://github.com/huggingface/transformers/releases/tag/v4.51.3-Qwen2.5-Omni-preview
     #"git+https://github.com/huggingface/transformers@v4.51.3-Qwen2.5-Omni-preview",
     #"transformers==4.52.0",
-    "achatbot[accelerate,librosa,soundfile]",
-    "torch~=2.6.0",
-    "torchaudio~=2.6.0",
-    "torchvision~=0.21.0",
+    "achatbot[accelerate,librosa,soundfile,torch_vision_audio]",
     "numpy==1.26.2",
     "qwen-omni-utils[decord]",
     # code2wav
