@@ -14,7 +14,7 @@ from src.common.factory import EngineClass
 from src.common.interface import ILlm
 from src.common.session import Session
 from src.common.types import CHANNELS, RATE, SessionCtx
-from src.types.frames.data_frames import Frame, VisionImageVoiceRawFrame, PathAudioRawFrame
+from src.types.frames.data_frames import Frame, VisionImageVoiceRawFrame
 from src.processors.ai_processor import AsyncAIProcessor
 
 
@@ -30,9 +30,9 @@ class VisionVoiceProcessorBase(AsyncAIProcessor):
         self,
         llm: ILlm | EngineClass | None = None,
         session: Session | None = None,
-        no_stream_sleep_time: float = 0.5,
         **kwargs,
     ):
+        no_stream_sleep_time = kwargs.pop("no_stream_sleep_time", 0.5)
         super().__init__(**kwargs)
         assert llm is not None, "llm is required"
         self._llm = llm

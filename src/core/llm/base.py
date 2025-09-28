@@ -4,12 +4,13 @@ from typing import Dict
 from src.common.interface import ILlm
 from src.common.factory import EngineClass
 from src.common.chat_history import ChatHistory
+from src.common.utils.thread_safe import ThreadSafeDict
 
 
 class BaseLLM(EngineClass):
     def __init__(self, **kwargs):
         super().__init__()
-        self.session_chat_history: Dict[str, ChatHistory] = {}
+        self.session_chat_history: Dict[str, ChatHistory] = ThreadSafeDict()
 
     def get_session_chat_history(self, session_id: str) -> list:
         history = self.session_chat_history.get(session_id)

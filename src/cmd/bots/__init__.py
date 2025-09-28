@@ -272,6 +272,10 @@ def import_bots(bot_name: str = "DummyBot"):
         from .translation import livekit_asr_translate_tts_bot
 
         return True
+    if "LivekitQwen3OmniVisionVoiceBot" in bot_name:
+        from .omni import livekit_qwen3omni_vision_voice_bot
+
+        return True
     # if "LivekitMoshiVoiceBot" in bot_name:
     #    from .voice import livekit_moshi_bot
 

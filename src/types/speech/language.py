@@ -70,6 +70,7 @@ class Language(StrEnum):
 TO_LLM_LANGUAGE = {
     "bg": "Bulgarian",
     "ca": "Catalan",
+    "": "Chinese simplified(简体中文)",
     "zh": "Chinese simplified(简体中文)",
     "zh-CN": "Chinese simplified(简体中文)",
     "zh-TW": "Chinese traditional(繁体中文)",
@@ -248,5 +249,5 @@ TRANSLATE_LANGUAGE = {
     "tr": "Turkish",
     "uk": "Ukrainian",
     "vi": "Vietnamese",
-    "zh": "Chinese"
+    "zh": "Chinese",
 }

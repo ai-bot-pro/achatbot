@@ -58,12 +58,13 @@ TORCH_CACHE_DIR = "/root/.cache/torch"
 torch_cache_vol = modal.Volume.from_name("torch_cache", create_if_missing=True)
 
 USER_SYSTEM_PROMPT = "You are Qwen-Omni, a smart voice assistant created by Alibaba Qwen."
+SYSTEM_PROMPT = f"{USER_SYSTEM_PROMPT} You are a virtual voice assistant with no gender or age.\nYou are communicating with the user.\nIn user messages, “I/me/my/we/our” refer to the user and “you/your” refer to the assistant. In your replies, address the user as “you/your” and yourself as “I/me/my”; never mirror the user’s pronouns—always shift perspective. Keep original pronouns only in direct quotes; if a reference is unclear, ask a brief clarifying question.\nInteract with users using short(no more than 50 words), brief, straightforward language, maintaining a natural tone.\nNever use formal phrasing, mechanical expressions, bullet points, overly structured language. \nYour output must consist only of the spoken content you want the user to hear. \nDo not include any descriptions of actions, emotions, sounds, or voice changes. \nDo not use asterisks, brackets, parentheses, or any other symbols to indicate tone or actions. \nYou must answer users' audio or text questions, do not directly describe the video content. \nYou should communicate in the same language strictly as the user unless they request otherwise.\nWhen you are uncertain (e.g., you can't see/hear clearly, don't understand, or the user makes a comment rather than asking a question), use appropriate questions to guide the user to continue the conversation.\nKeep replies concise and conversational, as if talking face-to-face."
 SYSTEM_MESSAGE = {
     "role": "system",
     "content": [
         {
             "type": "text",
-            "text": f"{USER_SYSTEM_PROMPT} You are a virtual voice assistant with no gender or age.\nYou are communicating with the user.\nIn user messages, “I/me/my/we/our” refer to the user and “you/your” refer to the assistant. In your replies, address the user as “you/your” and yourself as “I/me/my”; never mirror the user’s pronouns—always shift perspective. Keep original pronouns only in direct quotes; if a reference is unclear, ask a brief clarifying question.\nInteract with users using short(no more than 50 words), brief, straightforward language, maintaining a natural tone.\nNever use formal phrasing, mechanical expressions, bullet points, overly structured language. \nYour output must consist only of the spoken content you want the user to hear. \nDo not include any descriptions of actions, emotions, sounds, or voice changes. \nDo not use asterisks, brackets, parentheses, or any other symbols to indicate tone or actions. \nYou must answer users' audio or text questions, do not directly describe the video content. \nYou should communicate in the same language strictly as the user unless they request otherwise.\nWhen you are uncertain (e.g., you can't see/hear clearly, don't understand, or the user makes a comment rather than asking a question), use appropriate questions to guide the user to continue the conversation.\nKeep replies concise and conversational, as if talking face-to-face.",
+            "text": SYSTEM_PROMPT,
         }
     ],
 }
@@ -190,6 +191,7 @@ with omni_img.imports():
         )
         processor = processor or Qwen3OmniMoeProcessor.from_pretrained(MODEL_PATH, use_fast=True)
         text = processor.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
+        print(text)
         audios, images, videos = process_mm_info(messages, use_audio_in_video=use_audio_in_video)
         inputs = processor(
             text=text,
@@ -201,15 +203,20 @@ with omni_img.imports():
             use_audio_in_video=use_audio_in_video,
         )
         inputs = inputs.to(model.device).to(model.dtype)
-        print(f"{inputs=}")
+        # print(f"{inputs=}")
         gen_iter = model.generate_stream(
             inputs,
             use_audio_in_video=use_audio_in_video,
             thinker_max_tokens_per_step=thinker_max_tokens_per_step,
             thinker_max_new_tokens=8192,
-            thinker_temperature=0.0,
+            thinker_temperature=0.95,
+            thinker_top_k=10,
+            thinker_top_p=0.95,
+            thinker_repetition_penalty=1.1,
             speaker="Ethan",
             return_audio=return_audio,
+            tokenizer=processor.tokenizer,
+            thinker_stop_strings_per_step=[",", ".", "，", "。"],
         )
         for item in gen_iter:
             thinker_ids = item.get("thinker_ids")
@@ -352,6 +359,7 @@ with omni_img.imports():
                     model_inputs["tokenizer"] = tokenizer
 
                 start_time = perf_counter()
+                # print(model_inputs)
                 outputs = self.thinker.generate(**model_inputs)
                 times.append(perf_counter() - start_time)
 
@@ -562,6 +570,8 @@ with omni_img.imports():
             print(f"{tts_pad_embed=}", tts_pad_embed.shape)
             print(f"{talker_input_id=}", talker_input_id.shape)
             talker_result = self.talker.generate(
+                attention_mask=torch.ones(talker_input_id.shape, device=talker_input_id.device),
+                pad_token_id=2150,
                 inputs_embeds=talker_input_embed,
                 trailing_text_hidden=trailing_text_hidden,
                 tts_pad_embed=tts_pad_embed,
@@ -985,7 +995,7 @@ def code2wav(**kwargs):
     audio_bytes = b""
     while start < size:
         end = start + 10
-        #end = start + 1
+        # end = start + 1
         talker_codes_chunk = talker_codes[..., start:end]
         start_time = perf_counter()
         talker_wavs = model.code2wav.chunked_decode(
@@ -1006,6 +1016,47 @@ def code2wav(**kwargs):
 
         start = end
     with wave.open(f"{ASSETS_DIR}/code2wav.wav", "wb") as f:
+        f.setnchannels(1)
+        f.setsampwidth(2)
+        f.setframerate(24000)
+        f.writeframes(audio_bytes)
+
+
+def code2wav_stream(**kwargs):
+    gpu_prop = torch.cuda.get_device_properties("cuda")
+    model = Qwen3OmniMoeForConditionalGenerationNew.from_pretrained(
+        MODEL_PATH,
+        dtype="auto",
+        attn_implementation="flash_attention_2" if gpu_prop.major > 8 else None,
+        device_map="auto",
+    )
+    model = model.eval()
+
+    talker_codes = torch.load(f"{ASSETS_DIR}/talker_codes.pt")
+    print(talker_codes, talker_codes.shape)  # [1,1+15,num_hidden]
+    chunk_size = kwargs.get("chunk_size", 50)
+    left_context_size = kwargs.get("left_context_size", 25)
+    # left_context_size = kwargs.get("left_context_size", 1)
+    audio_bytes = b""
+    talker_wavs_iter = model.code2wav.chunked_decode_stream(
+        talker_codes, chunk_size=chunk_size, left_context_size=left_context_size
+    )
+    start_time = perf_counter()
+    for talker_wavs in talker_wavs_iter:
+        print(f"{chunk_size=}  cost {perf_counter() - start_time} s")
+        print("talker_wavs", talker_wavs, talker_wavs.shape)
+        audio = talker_wavs.float()  # BFloat16 -> Float
+        audio_chunk_bytes = (
+            np.array(audio.reshape(-1).detach().cpu().numpy() * 32767).astype(np.int16).tobytes()
+        )
+        audio_bytes += audio_chunk_bytes
+        # with wave.open(f"{ASSETS_DIR}/code2wav_{start}.wav", "wb") as f:
+        #    f.setnchannels(1)
+        #    f.setsampwidth(2)
+        #    f.setframerate(24000)
+        #    f.writeframes(audio_chunk_bytes)
+
+    with wave.open(f"{ASSETS_DIR}/code2wav_stream.wav", "wb") as f:
         f.setnchannels(1)
         f.setsampwidth(2)
         f.setframerate(24000)
@@ -1502,6 +1553,76 @@ def video_information_extracting():
         torch.cuda.empty_cache()
 
 
+def image_text_interaction(**kwargs):
+    messages = [
+        SYSTEM_MESSAGE,
+        {
+            "role": "user",
+            "content": [
+                {"type": "image", "image": os.path.join(ASSETS_DIR, "03-Confusing-Pictures.jpg")},
+                {"type": "text", "text": "请描述一下图片中的内容"},
+            ],
+        },
+    ]
+
+    response, audio = run_model(
+        messages=messages,
+        return_audio=True,
+        use_audio_in_video=False,
+    )
+    print(response)
+    if audio is not None:
+        audio_bytes = audio.tobytes()
+        with wave.open(f"{ASSETS_DIR}/qwen3omni_image_text_interaction.wav", "wb") as f:
+            f.setnchannels(1)
+            f.setsampwidth(2)
+            f.setframerate(24000)
+            f.writeframes(audio_bytes)
+
+
+def image_text_interaction_stream(**kwargs):
+    messages = [
+        SYSTEM_MESSAGE,
+        # {"role": "system", "content": "you are a helpful assistant."},
+        {
+            "role": "user",
+            "content": [
+                {"type": "image", "image": os.path.join(ASSETS_DIR, "03-Confusing-Pictures.jpg")},
+                {"type": "text", "text": "请描述一下图片中的内容"},
+            ],
+        },
+    ]
+
+    gen_iter = run_model_stream(
+        messages=messages,
+        return_audio=True,
+        use_audio_in_video=False,
+        thinker_max_tokens_per_step=15,
+    )
+    text = ""
+    audio = b""
+    for i, item in enumerate(gen_iter):
+        print(item.get("text"))
+        text += item.get("text")
+        if item.get("audio_wav") is not None:
+            audio_bytes = item.get("audio_wav").tobytes()
+            audio += audio_bytes
+            with wave.open(
+                f"{ASSETS_DIR}/qwen3omni_image_text_interaction_stream_{i}.wav", "wb"
+            ) as f:
+                f.setnchannels(1)
+                f.setsampwidth(2)
+                f.setframerate(24000)
+                f.writeframes(audio_bytes)
+
+    print(text)
+    with wave.open(f"{ASSETS_DIR}/qwen3omni_image_text_interaction_stream.wav", "wb") as f:
+        f.setnchannels(1)
+        f.setsampwidth(2)
+        f.setframerate(24000)
+        f.writeframes(audio)
+
+
 def image_audio_interaction(**kwargs):
     messages = [
         {
@@ -1683,6 +1804,91 @@ def batch_requests():
     print(texts)
 
 
+def achatbot_generate():
+    import torchaudio
+    import soundfile as sf
+    from achatbot.core.llm.transformers.manual_vision_voice_qwen3 import (
+        TransformersManualQwen3OmniLLM,
+    )
+    from achatbot.common.session import Session, SessionCtx
+    from achatbot.core.llm import LLMEnvInit
+    from achatbot.common.logger import Logger
+
+    Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
+
+    session = Session(**SessionCtx("test_client_id", 16000, 2).__dict__)
+    args = LLMEnvInit.get_qwen3omni_transformers_args()
+    args["lm_model_name_or_path"] = "/root/.achatbot/models/Qwen/Qwen3-Omni-30B-A3B-Instruct"
+    args["init_chat_prompt"] = SYSTEM_PROMPT
+    args["verbose"] = True
+    args["speaker"] = "Ethan"
+    args["lm_attn_impl"] = "flash_attention_2"
+    args["warmup_steps"] = 0
+    args["warmup_prompt"] = "你叫什么名字？"
+    args["thinker_args"]["lm_gen_temperature"] = 0.0
+    args["code2wav_args"]["chunk_size"] = 50
+    args["code2wav_args"]["left_context_size"] = 25
+    llm = TransformersManualQwen3OmniLLM(**args)
+
+    print("----start generate stream----")
+
+    session.ctx.state["prompt"] = [
+        {"type": "image", "image": os.path.join(ASSETS_DIR, "03-Confusing-Pictures.jpg")},
+        # {"type": "audio", "audio": ""},
+        # {"type": "video", "video": ""},
+        {"type": "text", "text": "请描述一下图片中的内容"},
+    ]
+    kwargs = {
+        "use_audio_in_video": False,
+        "thinker_top_k": 10,
+        "thinker_top_p": 0.9,
+        "thinker_temperature": 0.95,
+        "thinker_repetition_penalty": 1.1,
+        "thinker_min_new_tokens": 1,
+        "thinker_max_tokens_per_step": 15,
+        "thinker_stop_strings_per_step": [",", ".", "，", "。"],
+        "thinker_max_new_tokens": 150,
+        "thinker_eos_token_ids": [
+            151643,
+            151645,
+        ],
+        "thinker_pad_token_id": 151643,
+    }
+    chunk_stream = llm.generate(session, **kwargs)
+    gen_text = ""
+    gen_all_text = ""
+    audios = []
+    times = []
+    start_time = time.perf_counter()
+    for i, chunk in enumerate(chunk_stream):
+        times.append(time.perf_counter() - start_time)
+        print(chunk)
+        text = chunk["text"] if "text" in chunk else ""
+        if gen_text != text:
+            gen_text = text
+            gen_all_text += gen_text
+        if "audio_wav" in chunk:
+            wav = chunk["audio_wav"]
+            print(text, wav.shape)
+            audios.append(wav.squeeze().cpu().numpy())
+            # save_audio_path = os.path.join(ASSETS_DIR, f"achatbot_generate_stream-{i}-{text}.wav")
+            # torchaudio.save(save_audio_path, wav, sample_rate=24000)
+            # print(f"Audio saved to {save_audio_path}")
+        else:
+            print(text)
+        start_time = time.perf_counter()
+
+    print(f"gen all text: {gen_all_text}")
+    if len(audios) > 0:
+        save_audio_path = os.path.join(ASSETS_DIR, f"achatbot_generate_stream.wav")
+        sf.write(save_audio_path, np.concatenate(audios), samplerate=24000)
+        print(f"All Audio saved to {save_audio_path}")
+        info = sf.info(save_audio_path, verbose=True)
+        print(
+            f"thinker->talker->code2wav chunk streaming first chunk time: {times[0]} s | wav duration: {info.duration} s | cost: {sum(times)} s | RTF: {sum(times) / info.duration}"
+        )
+
+
 """
 modal run src/llm/transformers/qwen3_omni.py --task tokenizer
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen3_omni.py --task dump_model
@@ -1695,6 +1901,7 @@ IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen3_omni.py --task audio_in
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen3_omni.py --task video_interaction
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen3_omni.py --task video_interaction_scene (video include audio chat)
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen3_omni.py --task video_information_extracting
+IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen3_omni.py --task image_text_interaction
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen3_omni.py --task image_audio_interaction
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen3_omni.py --task audio_function_call
 IMAGE_GPU=B200 modal run src/llm/transformers/qwen3_omni.py --task text_image_video_audio_interaction
@@ -1703,11 +1910,15 @@ IMAGE_GPU=B200 modal run src/llm/transformers/qwen3_omni.py --task batch_request
 # think chunk stream
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen3_omni.py --task text2text_stream
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen3_omni.py --task text2speech_stream
+IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen3_omni.py --task image_text_interaction_stream
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen3_omni.py --task image_audio_interaction_stream
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen3_omni.py --task audio_interaction_scene_stream (speech chat)
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen3_omni.py --task video_interaction_scene_stream (video include audio chat)
 
 IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen3_omni.py --task code2wav
+IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen3_omni.py --task code2wav_stream
+
+ACHATBOT_VERSION=0.0.26.post1 IMAGE_GPU=A100-80GB modal run src/llm/transformers/qwen3_omni.py --task achatbot_generate
 
 > [!TIP]:
 > - 生成音频中未对特殊字符进行处理（omni统一到一起直接生成音频的弊端, 也许可以在隐藏层解决, 系统提示词限制貌似不起作用(提示不含特殊字符）, 比如：
@@ -1722,6 +1933,7 @@ def main(task: str = "tokenizer"):
         "tokenizer": tokenizer,
         "dump_model": dump_model,
         "code2wav": code2wav,
+        "code2wav_stream": code2wav_stream,
         "asr": asr,
         "text2text": text2text,
         "text2speech": text2speech,
@@ -1732,15 +1944,18 @@ def main(task: str = "tokenizer"):
         "video_interaction": video_interaction,
         "video_interaction_scene": video_interaction_scene,
         "video_information_extracting": video_information_extracting,
+        "image_text_interaction": image_text_interaction,
         "image_audio_interaction": image_audio_interaction,
         "audio_function_call": audio_function_call,
         "text_image_video_audio_interaction": text_image_video_audio_interaction,
         "batch_requests": batch_requests,
         "text2text_stream": text2text_stream,
         "text2speech_stream": text2speech_stream,
+        "image_text_interaction_stream": image_text_interaction_stream,
         "image_audio_interaction_stream": image_audio_interaction_stream,
         "audio_interaction_scene_stream": audio_interaction_scene_stream,
         "video_interaction_scene_stream": video_interaction_scene_stream,
+        "achatbot_generate": achatbot_generate,
     }
     if task not in tasks:
         raise ValueError(f"task {task} not found")

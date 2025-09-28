@@ -1,62 +1,66 @@
 import logging
-from threading import Thread
 from time import perf_counter
 import time
 import traceback
-from typing import Generator, Optional
+from threading import Thread
+from typing import Dict
 from functools import lru_cache
 
 import numpy as np
-import torch
-
 
 try:
+    import torch
+
     from qwen_omni_utils import process_mm_info
     from transformers import (
         AutoConfig,
-        AutoProcessor,
         TextIteratorStreamer,
+        Qwen3OmniMoeProcessor,
     )
-    from src.thirdparty.qwen2_code2wav.engine import Code2WavEngine
-    from src.thirdparty.qwen2_code2wav import Code2WavEngineConfig, Code2WavGenerationConfig
-    from src.core.llm.transformers.models.qwen2_5_omni import (
-        Qwen2_5OmniForConditionalGenerationStreaming,
+    from src.core.llm.transformers.models.qwen3_omni import (
+        Qwen3OmniMoeForConditionalGenerationStreaming,
     )
+
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        "In order to use Qwen2.5Omni, you need to `pip install achatbot[llm_transformers_manual_vision_voice_qwen]`"
+        "In order to use Qwen3Omni, you need to `pip install achatbot[llm_transformers_manual_vision_voice_qwen]`"
     )
     raise Exception(f"Missing module: {e}")
 
 
 from src.common.utils.thread_safe import ThreadSafeDict
 from src.common.utils.helper import get_device
-from src.core.llm.transformers.streamer import TokenStreamer
 from src.common.random import set_all_random_seed
-from src.common.chat_history import ChatHistory
 from src.common.session import Session
-from src.types.omni.qwen2_vision_voice import Qwen2_5TransformersVisionVoiceLMArgs
+from src.types.omni.qwen3_vision_voice import (
+    Qwen3TransformersVisionVoiceLMArgs,
+    Qwen3OmniCode2WavArgs,
+)
 from src.types.llm.transformers import TransformersLMArgs
+from src.types.speech.language import TO_LLM_LANGUAGE
+from src.common.chat_history import ChatHistory
 from .base import TransformersBaseLLM
 
 
-class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
-    TAG = "llm_transformers_manual_qwen2_5omni"
+class TransformersManualQwen3OmniLLM(TransformersBaseLLM):
+    """
+    vision/speech to text+speech voice chat
+    """
 
-    # NOTE: if want to generate speech, need use this system prompt to generate speech
-    SPEECH_SYS_PROMPT = "You are Qwen, a virtual human developed by the Qwen Team, Alibaba Group, capable of perceiving auditory and visual inputs, as well as generating text and speech."
+    TAG = "llm_transformers_manual_qwen3omni"
+
     # Voice settings
-    SPEAKER_LIST = ["Chelsie", "Ethan"]
-    DEFAULT_SPEAKER = "Chelsie"
     RATE = 24000
+    SPEAKER_LIST = ["Chelsie", "Ethan"]
 
     def __init__(self, **args) -> None:
-        self.args = Qwen2_5TransformersVisionVoiceLMArgs(**args)
+        self.args = Qwen3TransformersVisionVoiceLMArgs()
+        self.args.update(**args)
         self.args.lm_device = self.args.lm_device or get_device()
         self.thinker_args = TransformersLMArgs(**self.args.thinker_args)
         self.talker_args = TransformersLMArgs(**self.args.talker_args)
-        self.code2wav_args = Code2WavEngineConfig(**self.args.code2wav_args)
+        self.code2wav_args = Qwen3OmniCode2WavArgs(**self.args.code2wav_args)
         logging.info(f"Model args: {args}")
         logging.info(f"Model thinker_args: {self.thinker_args}")
         logging.info(f"Model talker_args: {self.talker_args}")
@@ -67,10 +71,10 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
             config.enable_audio_output = False
 
         if self.args.lm_device_map:
-            self._model: Qwen2_5OmniForConditionalGenerationStreaming = (
-                Qwen2_5OmniForConditionalGenerationStreaming.from_pretrained(
+            self._model: Qwen3OmniMoeForConditionalGenerationStreaming = (
+                Qwen3OmniMoeForConditionalGenerationStreaming.from_pretrained(
                     self.args.lm_model_name_or_path,
-                    torch_dtype=self.args.lm_torch_dtype,
+                    dtype=self.args.lm_torch_dtype,
                     #!NOTE: https://github.com/huggingface/transformers/issues/20896
                     # device_map for multi cpu/gpu with accelerate
                     device_map=self.args.lm_device_map,
@@ -80,10 +84,10 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
                 ).eval()
             )
         else:
-            self._model: Qwen2_5OmniForConditionalGenerationStreaming = (
-                Qwen2_5OmniForConditionalGenerationStreaming.from_pretrained(
+            self._model: Qwen3OmniMoeForConditionalGenerationStreaming = (
+                Qwen3OmniMoeForConditionalGenerationStreaming.from_pretrained(
                     self.args.lm_model_name_or_path,
-                    torch_dtype=self.args.lm_torch_dtype,
+                    dtype=self.args.lm_torch_dtype,
                     attn_implementation=self.args.lm_attn_impl,
                     trust_remote_code=True,
                     config=config,
@@ -92,53 +96,14 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
                 .to(self.args.lm_device)
             )
 
-        # The default range for the number of visual tokens per image in the model is 4-16384.
-        # You can set min_pixels and max_pixels according to your needs, such as a
-        # token count range of 256-1280, to balance speed and memory usage.
-        self._tokenizer = AutoProcessor.from_pretrained(
+        self._tokenizer = Qwen3OmniMoeProcessor.from_pretrained(
             self.args.lm_model_name_or_path,
-            min_pixels=256 * 28 * 28,
-            max_pixels=1280 * 28 * 28,
-            trust_remote_code=True,
+            use_fast=True,
         )
 
-        # use sliding window code2wav
-        self.code2wav_engine: Code2WavEngine = None
-        if self.args.is_use_sliding_window_code2wav is True:
-            self.code2wav_engine = Code2WavEngine(**self.args.code2wav_args)
-            if hasattr(self._model, "token2wav"):
-                logging.info("use Code2WavEngine, delete _model.token2wav")
-                del self._model.token2wav
-                torch.cuda.empty_cache()
-
-        self.chat_history_dict = ThreadSafeDict()
+        self.session_chat_history: Dict[str, ChatHistory] = ThreadSafeDict()
 
         self.warmup()
-
-    def chat_history(self, session: Session, **kwargs) -> ChatHistory:
-        session_id = session.ctx.client_id
-        if not self.chat_history_dict.get(session_id):
-            chat_history = ChatHistory(
-                kwargs.get("chat_history_size", None) or self.args.chat_history_size
-            )
-            init_chat_role = kwargs.get("init_chat_role", None) or self.args.init_chat_role
-            init_chat_prompt = (
-                kwargs.get("init_chat_prompt", self.args.init_chat_prompt) or self.SPEECH_SYS_PROMPT
-            )
-            if init_chat_role:
-                sys_msg = {
-                    "role": init_chat_role,
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": init_chat_prompt,
-                        }
-                    ],
-                }
-                chat_history.init(sys_msg)
-            self.chat_history_dict.set(session_id, chat_history)
-
-        return self.chat_history_dict.get(session_id)
 
     def warmup(self):
         if self.args.warmup_steps <= 0:
@@ -153,7 +118,7 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
                 "content": [
                     {
                         "type": "text",
-                        "text": self.args.init_chat_prompt or self.SPEECH_SYS_PROMPT,
+                        "text": self.args.init_chat_prompt or self.CHAT_SYS_PROMPT,
                     }
                 ],
             },
@@ -168,7 +133,8 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
         text = self._tokenizer.apply_chat_template(
             dummy_msgs, tokenize=False, add_generation_prompt=True
         )
-        logging.info(f"Warmup text: {text}")
+        if self.args.verbose:
+            print(f"Warmup prompt token: {text}")
         audios, images, videos = process_mm_info(dummy_msgs, use_audio_in_video=False)
         inputs = self._tokenizer(
             text=text,
@@ -208,31 +174,21 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
                 talker_repetition_penalty=self.talker_args.lm_gen_repetition_penalty,
                 talker_min_new_tokens=self.talker_args.lm_gen_min_new_tokens,
                 talker_max_new_tokens=self.talker_args.lm_gen_max_new_tokens,
-                talker_eos_token_ids=self.args.talker_eos_token_ids,
-                code2wav_num_steps=self.code2wav_args.num_steps,
-                code2wav_guidance_scale=self.code2wav_args.guidance_scale,
-                code2wav_sway_coefficient=self.code2wav_args.sway_coefficient,
-                code2wav_chunk_stream_func=self.code2wav_sliding_window_chunk_stream
-                if self.args.is_use_sliding_window_code2wav
-                else None,
+                token2wav_kwargs=self.code2wav_args.__dict__,
+                skip_token_ids=self.skip_token_ids(),
             )
             times = []
             start_time = time.perf_counter()
+            text = ""
             for i, chunk in enumerate(streamer):
                 times.append(time.perf_counter() - start_time)
-                text = self._tokenizer.decode(chunk["thinker_ids"][0], skip_special_tokens=True)
+                if "thinker_ids" in chunk:
+                    text = self._tokenizer.decode(chunk["thinker_ids"][0], skip_special_tokens=True)
+                    logging.info(f"{i} chunk: {text} , warmup time: {times[i]} s")
                 if "talker_wav" in chunk:
                     logging.info(
                         f"{i} chunk: {text} | {chunk['talker_wav'].shape} , warmup time: {times[i]} s"
                     )
-                else:
-                    logging.info(f"{i} chunk: {text} , warmup time: {times[i]} s")
-                # if (
-                #    self.args.is_use_sliding_window_code2wav
-                #    and self.code2wav_args.enable_torch_compile is True
-                # ):
-                #    logging.info(f"torch.compile code2wav warmup finish")
-                #    break
                 start_time = time.perf_counter()
             if len(times) > 0:
                 logging.info(
@@ -258,58 +214,6 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
             token_ids.extend(token_id)
         return token_ids
 
-    def code2wav_sliding_window_chunk_stream(
-        self,
-        talker_streamer: TokenStreamer,
-        speaker: str = DEFAULT_SPEAKER,
-        talker_eos_token_ids: list[int] = [8292, 8294],
-        **kwargs,
-    ) -> Generator[torch.Tensor, None, None]:
-        """
-        code2wav sliding window streaming
-        """
-        talker_eos_token_ids = talker_eos_token_ids or self.args.talker_eos_token_ids
-        prev_generated = None
-        progress = 0
-        finished = False
-        code2wav_times = []
-        talker_generate_codes = []
-        times = []
-        start_time = perf_counter()
-        for token_id in talker_streamer:
-            times.append(perf_counter() - start_time)
-            start_time = perf_counter()
-            if token_id in talker_eos_token_ids:
-                finished = True
-            talker_generate_codes.append(token_id)
-            prev_generated, wav = self.code2wav_engine.step_generate_waveform(
-                talker_generate_codes,
-                voice_type=speaker,
-                prev_generated=prev_generated,
-                progress=progress,
-                finished=finished,
-                gen_args=Code2WavGenerationConfig(
-                    num_steps=kwargs.get("code2wav_num_steps") or self.code2wav_args.num_steps,
-                    guidance_scale=kwargs.get("code2wav_guidance_scale")
-                    or self.code2wav_args.guidance_scale,
-                    sway_coefficient=kwargs.get("code2wav_sway_coefficient")
-                    or self.code2wav_args.sway_coefficient,
-                ),
-            )
-            if wav is not None:
-                progress += 1
-                code2wav_times.append(perf_counter() - start_time)
-                yield wav.detach()  # (T,)
-
-            start_time = perf_counter()
-
-        logging.info(
-            f"talker generate first token cost time: {times[0]} s, {len(times)} tokens cost time: {sum(times)} s"
-        )
-        logging.info(
-            f"code2wav sliding window streaming first chunk time: {code2wav_times[0]} s | cost: {sum(code2wav_times)} s"
-        )
-
     def get_prompt(self, session: Session) -> list:
         prompt = []
         if isinstance(session.ctx.state["prompt"], list):
@@ -321,10 +225,10 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
         """
         - prompt:
         [
-            {"type": "text", "text": str},
             {"type": "image", "image": url / path / base64 / nparray},
             {"type": "video", "video": url / path / base64 / nparray},
             {"type": "audio", "audio": url / path / base64 / nparray},
+            {"type": "text", "text": str},
         ]
 
         - return Generator[dict, None, None]:
@@ -338,10 +242,9 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
 
         prompt = self.get_prompt(session)
 
-        message = {"role": "user", "content": prompt}
-        session_chat_history = self.chat_history(session, **kwargs)
-        session_chat_history.append(message)
-        messages = session_chat_history.to_list()
+        message = {"role": self.args.user_role, "content": prompt}
+        self.add_chat_history(session, message)
+        messages = self.get_session_chat_history(session.ctx.client_id)
         logging.debug(f"messages: {messages}")
 
         text = self._tokenizer.apply_chat_template(
@@ -350,7 +253,8 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
         audios, images, videos = process_mm_info(
             messages, use_audio_in_video=kwargs.get("use_audio_in_video", False)
         )
-        logging.debug(text)
+        if self.args.verbose:
+            print(f"prompt token: {text}")
         {
             logging.debug(f"audios[{i}]: {item.shape}") for i, item in enumerate(audios)
         } if audios else logging.debug(audios)
@@ -375,10 +279,6 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
             logging.debug(f"{k}: {v.shape}")
 
         return_audio = kwargs.get("return_audio", self._model.has_talker)
-        thinker_all_talker_stream = kwargs.get(
-            "thinker_all_talker_stream",
-            self._model.has_talker and self.args.thinker_all_talker_stream,
-        )
         gen_assistant_text = ""
         try:
             if not return_audio:  # text / vision(image/video) / audio / text + image -> text
@@ -401,14 +301,7 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
                     gen_assistant_text += item["text"]
                     yield item
             else:  # text / vision(image/video) / audio / text + image -> text + audio
-                gen_stream_func = self._model.generate_stream
-                if (
-                    thinker_all_talker_stream is True
-                ):  # text / vision(image/video) / audio / text + image -> all text + chunk audio
-                    logging.info("use thinker_all_talker_stream to generate")
-                    gen_stream_func = self._model.thinker_all_talker_stream
-
-                stream = gen_stream_func(
+                stream = self._model.generate_stream(
                     inputs,
                     use_audio_in_video=kwargs.get("use_audio_in_video", False),
                     thinker_max_tokens_per_step=kwargs.get("thinker_max_tokens_per_step", None)
@@ -440,47 +333,36 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
                     or self.talker_args.lm_gen_min_new_tokens,
                     talker_max_new_tokens=kwargs.get("talker_max_new_tokens", None)
                     or self.talker_args.lm_gen_max_new_tokens,
-                    talker_eos_token_ids=kwargs.get("talker_eos_token_ids", None)
-                    or self.args.talker_eos_token_ids,
-                    talker_skip_thinker_token_ids=kwargs.get("talker_skip_thinker_token_ids", None)
-                    or self.args.talker_skip_thinker_token_ids
-                    or self.skip_token_ids(),
-                    code2wav_num_steps=kwargs.get("code2wav_num_steps", None)
-                    or self.code2wav_args.num_steps,
-                    code2wav_guidance_scale=kwargs.get("code2wav_guidance_scale", None)
-                    or self.code2wav_args.guidance_scale,
-                    code2wav_sway_coefficient=kwargs.get("code2wav_sway_coefficient", None)
-                    or self.code2wav_args.sway_coefficient,
-                    code2wav_chunk_stream_func=self.code2wav_sliding_window_chunk_stream
-                    if self.args.is_use_sliding_window_code2wav
-                    else None,
-                    mask_embedding=kwargs.get("mask_embedding", None) or self.args.mask_embedding,
+                    token2wav_kwargs=kwargs.get("token2wav_kwargs", None)
+                    or self.code2wav_args.__dict__,
+                    skip_token_ids=self.skip_token_ids(),
                 )
 
                 gen_text = ""
                 for chunk in stream:
-                    text = self._tokenizer.decode(chunk["thinker_ids"][0], skip_special_tokens=True)
-                    if gen_text != text:
-                        gen_text = text
-                        gen_assistant_text += text
-
-                    if "talker_wav" not in chunk:
+                    if "thinker_ids" in chunk:
+                        text = self._tokenizer.decode(
+                            chunk["thinker_ids"][0], skip_special_tokens=True
+                        )
+                        if gen_text != text:
+                            gen_text = text
+                            gen_assistant_text += text
                         yield {"text": text}
-                    else:
+
+                    if "talker_wav" in chunk:
                         # audio_bytes = (
                         #    (chunk["talker_wav"].float().detach().cpu().numpy() * 32768)
                         #    .astype(np.int16)
                         #    .tobytes()
                         # )
-                        yield {"text": text, "audio_wav": chunk["talker_wav"]}
+                        yield {"audio_wav": chunk["talker_wav"]}
         except Exception as e:
             tb_str = traceback.format_exc()
             logging.error(f"Exception: {e}; traceback: {tb_str}")
 
-        session_chat_history.append(
-            {"role": "assistant", "content": [{"text": gen_assistant_text}]}
+        self.add_chat_history(
+            session, {"role": "assistant", "content": [{"text": gen_assistant_text}]}
         )
-        self.chat_history_dict.set(session.ctx.client_id, session_chat_history)
 
     @torch.no_grad()
     def thinker_stream(
@@ -528,118 +410,21 @@ class TransformersManualQwen2_5OmniLLM(TransformersBaseLLM):
         )
 
 
-class TransformersManualAudioQwen2_5OmniLLM(TransformersManualQwen2_5OmniLLM):
-    """
-    audio understanding
-
-    - speech -> text
-    """
-
-    # https://github.com/QwenLM/Qwen2.5-Omni/issues/79
-    TAG = [
-        "llm_transformers_manual_qwen2_5omni_audio_asr",
-        "llm_transformers_manual_qwen2_5omni_audio_translation",
-        "llm_transformers_manual_qwen2_5omni_audio_classification",
-    ]
-
-    def __init__(self, **args) -> None:
-        args["disable_talker"] = True
-        args["init_chat_prompt"] = args.get(
-            "init_chat_prompt", "You are a speech recognition model"
-        )
-        if self.SELECTED_TAG == "llm_transformers_manual_qwen2_5omni_audio_asr":
-            args["init_chat_prompt"] = "You are a speech recognition model"
-        if self.SELECTED_TAG == "llm_transformers_manual_qwen2_5omni_audio_translation":
-            args["init_chat_prompt"] = "You are a speech translation model"
-        if self.SELECTED_TAG == "llm_transformers_manual_qwen2_5omni_audio_classification":
-            args["init_chat_prompt"] = "You are a voice classification model."
-
-        super().__init__(**args)
-
-    @torch.inference_mode()
-    def generate(self, session: Session, **kwargs):
-        for item in super().generate(session, **kwargs):
-            text = item.pop("text", "")
-            if text == "":
-                continue
-            yield text
-
-
-class TransformersManualVisionQwen2_5OmniLLM(TransformersManualQwen2_5OmniLLM):
-    """
-    vision only, vision understanding
-
-    - vision -> text
-    """
-
-    TAG = "llm_transformers_manual_qwen2_5omni_vision"
-
-    def __init__(self, **args) -> None:
-        args["disable_talker"] = True
-        args["init_chat_prompt"] = args.get("init_chat_prompt", "You are a helpful assistant.")
-        super().__init__(**args)
-
-    @torch.inference_mode()
-    def generate(self, session: Session, **kwargs):
-        for item in super().generate(session, **kwargs):
-            yield item["text"]
-
-
-class TransformersManualInstructSpeechQwen2_5OmniLLM(TransformersManualQwen2_5OmniLLM):
-    """
-    text --> thinker lm -> gen hidden stats --> talker lm -> vq codes --> flow -> mel --> bigvgan -> speech
-    """
-
-    TAG = "llm_transformers_manual_qwen2_5omni_speech"
-
-    def __init__(self, **args) -> None:
-        args["disable_talker"] = False
-        super().__init__(**args)
-
-    @torch.inference_mode()
-    def generate(self, session: Session, **kwargs):
-        for item in super().generate(session, **kwargs):
-            audio_wav = item.pop("audio_wav", None)
-            yield audio_wav
-
-
-class TransformersManualVisionVoiceQwen2_5OmniLLM(TransformersManualQwen2_5OmniLLM):
+class TransformersManualVisionVoiceQwen3OmniLLM(TransformersManualQwen3OmniLLM):
     """
     vision + speech to speech voice chat
 
     - vision + speech -> text + speech
     """
 
-    TAG = "llm_transformers_manual_qwen2_5omni_vision_voice"
+    TAG = "llm_transformers_manual_qwen3omni_vision_voice"
+    USER_SYSTEM_PROMPT = "You are Qwen-Omni, a smart voice assistant created by Alibaba Qwen."
+    CHAT_SYS_PROMPT = f"{USER_SYSTEM_PROMPT} You are a virtual voice assistant with no gender or age.\nYou are communicating with the user.\nIn user messages, “I/me/my/we/our” refer to the user and “you/your” refer to the assistant. In your replies, address the user as “you/your” and yourself as “I/me/my”; never mirror the user’s pronouns—always shift perspective. Keep original pronouns only in direct quotes; if a reference is unclear, ask a brief clarifying question.\nInteract with users using short(no more than 50 words), brief, straightforward language, maintaining a natural tone.\nNever use formal phrasing, mechanical expressions, bullet points, overly structured language. \nYour output must consist only of the spoken content you want the user to hear. \nDo not include any descriptions of actions, emotions, sounds, or voice changes. \nDo not use asterisks, brackets, parentheses, or any other symbols to indicate tone or actions. \nYou must answer users' audio or text questions, do not directly describe the video content. \nYou should communicate in the same language strictly as the user unless they request otherwise.\nWhen you are uncertain (e.g., you can't see/hear clearly, don't understand, or the user makes a comment rather than asking a question), use appropriate questions to guide the user to continue the conversation.\nKeep replies concise and conversational, as if talking face-to-face."
 
     def __init__(self, **args) -> None:
         args["disable_talker"] = False
-        super().__init__(**args)
-
-
-class TransformersManualTextVoiceQwen2_5OmniLLM(TransformersManualQwen2_5OmniLLM):
-    """
-    text to speech voice chat
-
-    - text -> text + speech
-    """
-
-    TAG = "llm_transformers_manual_qwen2_5omni_text_voice"
-
-    def __init__(self, **args) -> None:
-        args["disable_talker"] = False
-        super().__init__(**args)
-
-
-class TransformersManualVoiceQwen2_5OmniLLM(TransformersManualQwen2_5OmniLLM):
-    """
-    speech to speech voice chat
-
-    - speech -> text + speech
-    """
-
-    TAG = "llm_transformers_manual_qwen2_5omni_audio_voice"
-
-    def __init__(self, **args) -> None:
-        args["disable_talker"] = False
+        language = "English"
+        if args.get("lm_language_code", "") in TO_LLM_LANGUAGE:
+            language = TO_LLM_LANGUAGE[args.get("lm_language_code", "")]
+        self.CHAT_SYS_PROMPT += f"\nPlease reply to my message in {language}."
         super().__init__(**args)

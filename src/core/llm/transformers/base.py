@@ -15,8 +15,12 @@ from src.types.llm.transformers import TransformersLMArgs
 
 
 class TransformersBaseLLM(BaseLLM, ILlm):
+    CHAT_SYS_PROMPT = "you are a helpful assistant."
+
     def __init__(self, **args) -> None:
         from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
+
+        super().__init__(**args)
 
         self.args = TransformersLMArgs(**args)
 
@@ -56,21 +60,33 @@ class TransformersBaseLLM(BaseLLM, ILlm):
 
         self.warmup()
 
-    @property
-    def chat_history(self) -> ChatHistory:
-        return self._chat_history if self._chat_history else ChatHistory()
+    def chat_history(self, session: Session, **kwargs) -> ChatHistory:
+        session_id = session.ctx.client_id
+        if not self.session_chat_history.get(session_id):
+            chat_history = ChatHistory(
+                kwargs.get("chat_history_size", None) or self.args.chat_history_size
+            )
+            init_chat_role = kwargs.get("init_chat_role", None) or self.args.init_chat_role
+            init_chat_prompt = (
+                kwargs.get("init_chat_prompt", self.args.init_chat_prompt) or self.CHAT_SYS_PROMPT
+            )
+            if init_chat_role:
+                sys_msg = {
+                    "role": init_chat_role,
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": init_chat_prompt,
+                        }
+                    ],
+                }
+                chat_history.init(sys_msg)
+            self.session_chat_history.set(session_id, chat_history)
 
-    def add_chat_history(self, session: Session, message: list):
-        if session.ctx.client_id not in self.session_chat_history:
-            chat_history = ChatHistory(self.args.chat_history_size)
-            if self.args.init_chat_role and self.args.init_chat_prompt:
-                chat_history.init(
-                    {
-                        "role": self.args.init_chat_role,
-                        "content": [{"type": "text", "text": self.args.init_chat_prompt}],
-                    }
-                )
-            self.session_chat_history[session.ctx.client_id] = chat_history
+        return self.session_chat_history.get(session_id)
+
+    def add_chat_history(self, session: Session, message: dict):
+        self.chat_history(session)
         self.session_chat_history[session.ctx.client_id].append(message)
 
     def set_system_prompt(self, **kwargs):
