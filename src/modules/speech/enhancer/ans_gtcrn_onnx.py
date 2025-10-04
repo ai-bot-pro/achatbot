@@ -137,6 +137,7 @@ class GTCRNSpeechEnhancer(EngineClass, ISpeechEnhancer):
             win_length=512,
             window=np.hanning(512) ** 0.5,
         )
+        out_pcm_bytes = b""
         if len(out_pcm) > 0:
             out_pcm_bytes = resample_numpy2bytes(
                 out_pcm,
