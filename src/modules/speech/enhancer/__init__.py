@@ -17,6 +17,8 @@ class SpeechEnhancerEnvInit:
             from . import ans_dfsmn
         elif "enhancer_ans_rnnoise" == tag:
             from . import ans_rnnoise
+        elif "enhancer_ans_gtcrn_onnx" == tag:
+            from . import ans_gtcrn_onnx
 
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         return engine

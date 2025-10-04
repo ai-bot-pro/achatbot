@@ -57,4 +57,7 @@ SPEECH_ENHANCER_TAG=enhancer_ans_rnnoise python -m src.modules.speech.enhancer
 
 # pytorch dfsmn (good but slow)
 SPEECH_ENHANCER_TAG=enhancer_ans_dfsmn python -m src.modules.speech.enhancer
+
+# onnx gtcrn (need PT with scene datasets)
+SPEECH_ENHANCER_TAG=enhancer_ans_gtcrn_onnx python -m src.modules.speech.enhancer
 """

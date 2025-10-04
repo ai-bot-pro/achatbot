@@ -4,6 +4,7 @@ import wave
 from typing import Optional
 import os
 import asyncio
+import uuid
 
 import modal
 
@@ -89,7 +90,7 @@ with omni_img.imports():
     import numpy as np
 
     import torch
-    from vllm import LLM, SamplingParams
+    from vllm import LLM, SamplingParams, AsyncLLMEngine, AsyncEngineArgs
     from transformers import Qwen3OmniMoeProcessor
     from qwen_omni_utils import process_mm_info
 
@@ -132,6 +133,51 @@ with omni_img.imports():
         print(outputs)
         response = outputs[0].outputs[0].text
         return response, None
+
+    async def run_model_stream(
+        messages: list,
+        return_audio: bool,
+        use_audio_in_video: bool,
+    ):
+        global model, processor
+        serv_args = AsyncEngineArgs(
+            model=MODEL_PATH,
+            trust_remote_code=True,
+            gpu_memory_utilization=0.95,
+            tensor_parallel_size=torch.cuda.device_count(),
+            limit_mm_per_prompt={"image": 1, "video": 3, "audio": 3},
+            max_num_seqs=1,
+            max_model_len=32768,
+            seed=1234,
+        )
+        print(serv_args)
+        model = AsyncLLMEngine.from_engine_args(serv_args)
+        processor = processor or Qwen3OmniMoeProcessor.from_pretrained(MODEL_PATH, use_fast=True)
+
+        text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        audios, images, videos = process_mm_info(messages, use_audio_in_video=use_audio_in_video)
+        inputs = {
+            "prompt": text,
+            "multi_modal_data": {},
+            "mm_processor_kwargs": {"use_audio_in_video": use_audio_in_video},
+        }
+        if images is not None:
+            inputs["multi_modal_data"]["image"] = images
+        if videos is not None:
+            inputs["multi_modal_data"]["video"] = videos
+        if audios is not None:
+            inputs["multi_modal_data"]["audio"] = audios
+
+        sampling_params = SamplingParams(temperature=1e-2, top_p=0.1, top_k=1, max_tokens=8192)
+
+        iterator = model.generate(
+            inputs,
+            sampling_params=sampling_params,
+            request_id=str(uuid.uuid4().hex),
+        )
+        async for part in iterator:
+            print(part)
+            yield part
 
     def print_model_params(model: torch.nn.Module, extra_info=""):
         # print the number of parameters in the model
@@ -193,6 +239,54 @@ def asr(**kwargs):
     )
 
     print(response)
+
+
+def text2text(**kwargs):
+    messages = [
+        # SYSTEM_MESSAGE,
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "你是谁？"},
+            ],
+        },
+    ]
+
+    response, audio = run_model(
+        messages=messages,
+        return_audio=True,
+        use_audio_in_video=False,
+    )
+
+    print(response)
+    if audio is not None:
+        audio_bytes = audio.tobytes()
+        with wave.open(f"{ASSETS_DIR}/vllm_qwen3omni_text2speech.wav", "wb") as f:
+            f.setnchannels(1)
+            f.setsampwidth(2)
+            f.setframerate(24000)
+            f.writeframes(audio_bytes)
+
+
+async def text2text_stream(**kwargs):
+    messages = [
+        # SYSTEM_MESSAGE,
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "你是谁？"},
+            ],
+        },
+    ]
+
+    iter_stream = run_model_stream(
+        messages=messages,
+        return_audio=True,
+        use_audio_in_video=False,
+    )
+    async for part in iter_stream:
+        if part.outputs:
+            print(part.outputs[0].text)
 
 
 def speech_translation(**kwargs):
@@ -601,6 +695,8 @@ def batch_requests():
 
 """
 IMAGE_GPU=A100-80GB modal run src/llm/vllm/qwen3_omni_fork.py --task asr
+IMAGE_GPU=A100-80GB modal run src/llm/vllm/qwen3_omni_fork.py --task text2text
+IMAGE_GPU=A100-80GB modal run src/llm/vllm/qwen3_omni_fork.py --task text2text_stream
 IMAGE_GPU=A100-80GB modal run src/llm/vllm/qwen3_omni_fork.py --task speech_translation
 IMAGE_GPU=A100-80GB modal run src/llm/vllm/qwen3_omni_fork.py --task image_question
 IMAGE_GPU=A100-80GB modal run src/llm/vllm/qwen3_omni_fork.py --task audio_interaction
@@ -624,6 +720,8 @@ IMAGE_GPU=B200 modal run src/llm/vllm/qwen3_omni_fork.py --task batch_requests
 def main(task: str = "tokenizer"):
     tasks = {
         "asr": asr,
+        "text2text": text2text,
+        "text2text_stream": text2text_stream,
         "speech_translation": speech_translation,
         "image_question": image_question,
         "audio_interaction": audio_interaction,
