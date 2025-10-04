@@ -276,6 +276,10 @@ def import_bots(bot_name: str = "DummyBot"):
         from .omni import livekit_qwen3omni_vision_voice_bot
 
         return True
+    if "LivekitAudioNoiseFilterBot" in bot_name:
+        from .SE import livekit_noise_filter_bot
+
+        return True
     # if "LivekitMoshiVoiceBot" in bot_name:
     #    from .voice import livekit_moshi_bot
 
