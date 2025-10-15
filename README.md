@@ -1,3 +1,5 @@
+<img width="1050" height="289" alt="image" src="https://github.com/user-attachments/assets/163aaf65-2080-4aea-91e2-fb0e248a6ee9" />
+
 # achatbot
 [![PyPI](https://img.shields.io/pypi/v/achatbot)](https://pypi.org/project/achatbot/)
 
