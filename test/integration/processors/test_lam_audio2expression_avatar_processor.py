@@ -225,7 +225,6 @@ class TestLamAudio2ExpressionFastApiWebsocketProcessor(TestLamAudio2ExpressionBa
         params = FastapiWebsocketServerParams(
             audio_in_enabled=False,
             audio_out_enabled=True,
-            # audio_frame_size=6400,  # output 200ms with 16K hz 1 channel 2 sample_width
             serializer=self.serializer,  # audio_expression frame serializer
         )
 

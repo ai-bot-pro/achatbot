@@ -27,13 +27,10 @@ class VADAnalyzerEnvInit:
     def get_silero_vad_analyzer_args() -> dict:
         return {**VADAnalyzerEnvInit.get_vad_analyzer_args(), **VADEnvInit.get_silero_vad_args()}
 
-    @staticmethod
-    def get_daily_webrtc_vad_analyzer_args() -> dict:
-        return VADAnalyzerEnvInit.get_vad_analyzer_args()
-
     map_config_func = {
         "silero_vad_analyzer": get_silero_vad_analyzer_args,
-        "daily_webrtc_vad_analyzer": get_daily_webrtc_vad_analyzer_args,
+        "daily_webrtc_vad_analyzer": get_vad_analyzer_args,
+        "ten_vad_analyzer": get_vad_analyzer_args,
     }
 
     @staticmethod
@@ -42,6 +39,8 @@ class VADAnalyzerEnvInit:
             from . import daily_webrtc
         elif "silero_vad_analyzer" in tag:
             from . import silero
+        elif "ten_vad_analyzer" in tag:
+            from . import ten
 
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         return engine
@@ -51,8 +50,7 @@ class VADAnalyzerEnvInit:
         tag: str | None = None, kwargs: dict | None = None
     ) -> interface.IVADAnalyzer | EngineClass:
         # vad Analyzer
-        # daily_webrtc_vad_analyzer for english, chinese vad don't ok~ :)
-        # tag = tag or os.getenv('VAD_ANALYZER_TAG', "daily_webrtc_vad_analyzer")
+        # daily_webrtc_vad_analyzer for english, chinese vad don't ok~
         tag = tag or os.getenv("VAD_ANALYZER_TAG", "silero_vad_analyzer")
         kwargs = kwargs or VADAnalyzerEnvInit.map_config_func[tag]()
         engine = VADAnalyzerEnvInit.getEngine(tag, **kwargs)

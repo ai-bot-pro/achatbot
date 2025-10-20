@@ -15,6 +15,11 @@ class WebsocketServerOutputProcessor(AudioCameraOutputProcessor):
         super().__init__(params, **kwargs)
 
         self._params = params
+        self.audio_frame_size = (
+            self._params.audio_out_channels
+            * self._params.audio_out_sample_width
+            * (self._params.audio_out_sample_rate * self._params.audio_out_frame_ms // 1000)
+        )
 
         self._websocket: websockets.WebSocketServerProtocol | None = None
 
@@ -31,9 +36,9 @@ class WebsocketServerOutputProcessor(AudioCameraOutputProcessor):
             return
 
         self._websocket_audio_buffer += frames
-        while len(self._websocket_audio_buffer) >= self._params.audio_frame_size:
+        while len(self._websocket_audio_buffer) >= self.audio_frame_size:
             frame = AudioRawFrame(
-                audio=self._websocket_audio_buffer[: self._params.audio_frame_size],
+                audio=self._websocket_audio_buffer[: self.audio_frame_size],
                 sample_rate=self._params.audio_out_sample_rate,
                 num_channels=self._params.audio_out_channels,
             )
@@ -56,6 +61,4 @@ class WebsocketServerOutputProcessor(AudioCameraOutputProcessor):
             if proto:
                 await self._websocket.send(proto)
 
-            self._websocket_audio_buffer = self._websocket_audio_buffer[
-                self._params.audio_frame_size :
-            ]
+            self._websocket_audio_buffer = self._websocket_audio_buffer[self.audio_frame_size :]

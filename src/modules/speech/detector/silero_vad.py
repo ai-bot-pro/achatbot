@@ -150,7 +150,7 @@ class SileroVAD(BaseVAD):
         if len(audio_chunk) != self.map_rate_num_samples[self.args.sample_rate]:
             if self.args.is_pad_tensor is False:
                 raise Exception(
-                    f"len(audio_chunk):{len(audio_chunk)} dont't pad to {self.map_rate_num_samples[self.args.sample_rate]} return False"
+                    f"{len(audio_chunk)=} {type(audio_chunk)=} dont't pad to {self.map_rate_num_samples[self.args.sample_rate]} return False"
                 )
             # logging.debug( f"len(audio_chunk):{len(audio_chunk)} pad to {self.map_rate_num_samples[self.args.sample_rate]} ")
             audio_chunk = torch.nn.functional.pad(

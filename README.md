@@ -177,6 +177,7 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
     - [x] vad_analyzer: 
       - [x] daily_webrtc_vad_analyzer
       - [x] silero_vad_analyzer
+      - [x] ten_vad_analyzer
     - [x] turn_analyzer
       - [x] v2_smart_turn_analyzer
   - vision
