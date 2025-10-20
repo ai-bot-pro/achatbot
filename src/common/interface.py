@@ -130,6 +130,11 @@ class IVADAnalyzer(ABC):
         """reset vad stats and model stats"""
         raise NotImplementedError("must be implemented in the child class")
 
+    @abstractmethod
+    def num_frames_required(self) -> int:
+        """required audio frames num to analyze"""
+        raise NotImplementedError("must be implemented in the child class")
+
 
 class ITurnAnalyzer(ABC):
     """Abstract base class for analyzing user end of turn.

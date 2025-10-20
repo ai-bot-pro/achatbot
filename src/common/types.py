@@ -497,6 +497,7 @@ class AudioParams(BaseModel):
     audio_in_sample_rate: int = RATE
     audio_in_channels: int = CHANNELS
     audio_in_sample_width: int = SAMPLE_WIDTH
+    audio_in_buffer_secs: int = 3  # audio in buffer seconds
 
 
 class AudioVADParams(AudioParams):

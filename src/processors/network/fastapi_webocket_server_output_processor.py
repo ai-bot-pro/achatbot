@@ -19,6 +19,11 @@ class FastapiWebsocketServerOutputProcessor(AudioCameraOutputProcessor):
 
         self._websocket = websocket
         self._params = params
+        self.audio_frame_size = (
+            self._params.audio_out_channels
+            * self._params.audio_out_sample_width
+            * (self._params.audio_out_sample_rate * self._params.audio_out_frame_ms // 1000)
+        )
         self._websocket_audio_buffer = bytes()
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
@@ -34,7 +39,7 @@ class FastapiWebsocketServerOutputProcessor(AudioCameraOutputProcessor):
         self._websocket_audio_buffer += frames
         while len(self._websocket_audio_buffer):
             frame = AudioRawFrame(
-                audio=self._websocket_audio_buffer[: self._params.audio_frame_size],
+                audio=self._websocket_audio_buffer[: self.audio_frame_size],
                 sample_rate=self._params.audio_out_sample_rate,
                 num_channels=self._params.audio_out_channels,
             )
@@ -55,9 +60,7 @@ class FastapiWebsocketServerOutputProcessor(AudioCameraOutputProcessor):
 
             await self.send_payload(frame)
 
-            self._websocket_audio_buffer = self._websocket_audio_buffer[
-                self._params.audio_frame_size :
-            ]
+            self._websocket_audio_buffer = self._websocket_audio_buffer[self.audio_frame_size :]
 
     async def write_animation_audio_frame(self, frame: AnimationAudioRawFrame):
         if self._params.add_wav_header and frame.audio:

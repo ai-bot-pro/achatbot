@@ -398,6 +398,11 @@ def import_fastapi_websocket_bots(bot_name: str = "DummyBot"):
 
         return True
 
+    if "FastapiWebsocketVADRBot" in bot_name:
+        from .vad import fastapi_websocket_vad_bot
+
+        return True
+
     return False
 
 

@@ -29,17 +29,17 @@ VIDEO_EXTENSIONS = {
 }
 
 
-def bytes2NpArrayWith16(frames: bytes | bytearray):
+def bytes2NpArrayWith16(data: bytes | bytearray):
     """Convert PCM buffer in s16le format to normalized NumPy array."""
     # Convert the buffer frames to a NumPy array
-    audio_array = np.frombuffer(frames, dtype=np.int16)
+    audio_array = np.frombuffer(data, dtype=np.int16)
     # Normalize the array to a [-1, 1] range
     float_data = audio_array.astype(np.float32) / INT16_MAX_ABS_VALUE
     return float_data
 
 
-def bytes2TorchTensorWith16(frames: bytes | bytearray):
-    float_data = bytes2NpArrayWith16(frames)
+def bytes2TorchTensorWith16(data: bytes | bytearray):
+    float_data = bytes2NpArrayWith16(data)
     waveform_tensor = torch.tensor(float_data, dtype=torch.float32)
     # don't Stereo, just Mono, reshape(1,-1) (1(channel),size(time))
     if waveform_tensor.ndim == 1:

@@ -73,7 +73,6 @@ class SmallWebRTCFastapiWebsocketAvatarEchoBot(AISmallWebRTCFastapiWebsocketBot)
             vad_audio_passthrough=True,
             transcription_enabled=False,
             add_wav_header=True,
-            audio_frame_size=6400,  # output 200ms with 16K hz 1 channel 2 sample_width
         )
         if (
             self._bot_config.avatar

@@ -1,3 +1,4 @@
+from collections import deque
 import logging
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
@@ -15,6 +16,7 @@ from apipeline.frames.data_frames import AudioRawFrame
 from apipeline.processors.frame_processor import FrameDirection
 from apipeline.processors.input_processor import InputProcessor
 
+from src.common.ringbuffer import RingBuffer
 from src.common.interface import IVADAnalyzer
 from src.common.types import AudioVADTurnParams, VADState
 from src.types.frames.control_frames import UserStartedSpeakingFrame, UserStoppedSpeakingFrame
@@ -34,8 +36,21 @@ class AudioVADInputProcessor(InputProcessor):
         super().__init__(name=name, loop=loop, **kwargs)
         self._params = params
         self._executor = ThreadPoolExecutor(max_workers=1)
+        self._bytes_buffer = RingBuffer(
+            self._params.audio_in_buffer_secs
+            * self._params.audio_in_sample_rate
+            * self._params.audio_in_channels
+            * self._params.audio_in_sample_width
+        )
 
         self._vad_analyzer: IVADAnalyzer | None = params.vad_analyzer
+        self._num_bytes_required = 0
+        if self._vad_analyzer:
+            self._num_bytes_required = (
+                self._vad_analyzer.num_frames_required()
+                * self._params.audio_in_channels
+                * self._params.audio_in_sample_width
+            )
 
     @property
     def vad_analyzer(self) -> IVADAnalyzer | None:
@@ -94,34 +109,40 @@ class AudioVADInputProcessor(InputProcessor):
             try:
                 frame: AudioRawFrame = await asyncio.wait_for(self._audio_in_queue.get(), timeout=1)
 
-                previous_vad_state = vad_state
-                # Check VAD and push event if necessary. We just care about
-                # changes from QUIET to SPEAKING and vice versa.
-                if self._params.vad_enabled:
-                    vad_state_frame, user_interuption_frame = await self._handle_vad(
-                        frame.audio, vad_state
-                    )
-                    vad_state = vad_state_frame.state
+                if self._num_bytes_required == 0:
+                    continue
 
-                if user_interuption_frame and isinstance(
-                    user_interuption_frame, UserStartedSpeakingFrame
-                ):  # start speak
-                    await self._handle_interruptions(user_interuption_frame, True)
+                self._bytes_buffer.extend_bytes(frame.audio)
+                while self._bytes_buffer.size() >= self._num_bytes_required:
+                    chunk_bytes = self._bytes_buffer.pop_bytes(self._num_bytes_required)
+                    previous_vad_state = vad_state
+                    # Check VAD and push event if necessary. We just care about
+                    # changes from QUIET to SPEAKING and vice versa.
+                    if self._params.vad_enabled:
+                        vad_state_frame, user_interuption_frame = await self._handle_vad(
+                            chunk_bytes, vad_state
+                        )
+                        vad_state = vad_state_frame.state
 
-                # Push audio downstream if passthrough.
-                if self._params.vad_enabled and self._params.vad_audio_passthrough:
-                    if len(vad_state_frame.audio) > 0:
-                        await self.push_frame(vad_state_frame)
-                else:
-                    await self.push_frame(frame)
+                    if user_interuption_frame and isinstance(
+                        user_interuption_frame, UserStartedSpeakingFrame
+                    ):  # start speak
+                        await self._handle_interruptions(user_interuption_frame, True)
 
-                if user_interuption_frame and isinstance(
-                    user_interuption_frame, UserStoppedSpeakingFrame
-                ):  # stop speak without turn analyzer
-                    await self._handle_interruptions(user_interuption_frame, True)
+                    # Push audio downstream if passthrough.
+                    if self._params.vad_enabled and self._params.vad_audio_passthrough:
+                        if len(vad_state_frame.audio) > 0:
+                            await self.push_frame(vad_state_frame)
+                    else:
+                        await self.push_frame(frame)
 
-                if self._params.turn_analyzer:  # stop speak with turn analyzer
-                    await self._run_turn_analyzer(frame, vad_state, previous_vad_state)
+                    if user_interuption_frame and isinstance(
+                        user_interuption_frame, UserStoppedSpeakingFrame
+                    ):  # stop speak without turn analyzer
+                        await self._handle_interruptions(user_interuption_frame, True)
+
+                    if self._params.turn_analyzer:  # stop speak with turn analyzer
+                        await self._run_turn_analyzer(frame, vad_state, previous_vad_state)
 
             except asyncio.TimeoutError:
                 continue

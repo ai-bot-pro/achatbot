@@ -16,7 +16,6 @@ class AudioResponseAggregator(FrameProcessor):
         end_frame: Type[Frame],
         accumulator_frame: Type[AudioRawFrame],
         interim_accumulator_frame: Type[AudioRawFrame] | None = None,
-        audio_buffer_maxlen: int = 10,  # vad stop_secs 0.32
     ):
         super().__init__()
 
@@ -24,11 +23,6 @@ class AudioResponseAggregator(FrameProcessor):
         self._end_frame = end_frame
         self._accumulator_frame = accumulator_frame
         self._interim_accumulator_frame = interim_accumulator_frame
-
-        # ring buffer save latest no actival frames
-        self._audio_buffer_maxlen = audio_buffer_maxlen
-        if audio_buffer_maxlen > 0:
-            self._audio_buffer = collections.deque(maxlen=audio_buffer_maxlen)
 
         # Reset our accumulator state.
         self._reset()
@@ -42,8 +36,6 @@ class AudioResponseAggregator(FrameProcessor):
         self._seen_end_frame = False
         self._seen_interim_results = False
         self._cur_audio_frame = None
-        if self._audio_buffer_maxlen > 0:
-            self._audio_buffer.clear()
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
@@ -55,9 +47,6 @@ class AudioResponseAggregator(FrameProcessor):
             self._seen_start_frame = True
             self._seen_end_frame = False
             self._seen_interim_results = False
-            if self._audio_buffer_maxlen > 0:
-                for buff_frame in self._audio_buffer:
-                    self._aggregation.extend(buff_frame.audio)
             await self.push_frame(frame, direction)
         elif isinstance(frame, self._end_frame):
             self._seen_end_frame = True
@@ -79,10 +68,6 @@ class AudioResponseAggregator(FrameProcessor):
                 # end frame and we were still aggregating, it means we should
                 # send the aggregation.
                 send_aggregation = self._seen_end_frame
-
-            # save frame to ringbuffer, :) nice~
-            if self._audio_buffer_maxlen > 0:
-                self._audio_buffer.append(frame)
 
             # We just got our final result, so let's reset interim results.
             self._seen_interim_results = False
