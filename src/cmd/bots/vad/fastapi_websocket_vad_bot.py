@@ -20,7 +20,7 @@ from src.transports.fastapi_websocket_server import FastapiWebsocketTransport
 load_dotenv(override=True)
 
 """
-TEN_VAD_LIB_PATH=~/project/ten-vad/lib/macOS/ten_vad.framework/ten_vad python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_websocket_ten_vad_bot.json
+TEN_VAD_LIB_PATH=<path_to_ten_vad_library> python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_websocket_ten_vad_bot.json
 """
 
 @register_ai_fastapi_ws_bots.register
