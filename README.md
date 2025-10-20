@@ -76,6 +76,7 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
       - [x] **[daily](https://github.com/ai-bot-pro/achatbot/blob/main/src/transports/daily.py)**: audio, video(image)
       - [x] **[livekit](https://github.com/ai-bot-pro/achatbot/blob/main/src/transports/livekit.py)**: audio, video(image)
       - [x] **[agora](https://github.com/ai-bot-pro/achatbot/blob/main/src/transports/agora.py)**: audio, video(image)
+      - [x] **[small_webrtc](https://github.com/ai-bot-pro/achatbot/blob/main/src/transports/small_webrtc.py)**: audio, video(image)
     - [x] [Websocket server](https://github.com/ai-bot-pro/achatbot/blob/main/src/transports/websocket_server.py)
   - ai processor: llm, tts, asr etc..
     - llm_processor:
@@ -85,13 +86,34 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
 
 - core module:
   - local llm: 
-    - [x] llama-cpp (support text,vision with function-call model)
+    - [x] llama-cpp (support text,vision with function-call model) 
+      - [x] llm_llamacpp_generator
+    - [x] fastdeploy:
+      - [x] llm_fastdeploy_vision_ernie4v
+      - [x] llm_fastdeploy_generator
+    - [x] tensorrt_llm:
+      - [x] llm_trtllm_generator
+      - [x] llm_trtllm_runner_generator
+    - [x] sglang:
+      - [x] llm_sglang_generator
+    - [x] vllm:
+      - [x] llm_vllm_generator
+      - [x] llm_vllm_vision_skyworkr1v
     - [x] transformers(manual, pipeline) (support text; vision,vision+image; speech,voice; vision+voice)
       - [x] llm_transformers_manual_vision_llama
       - [x] llm_transformers_manual_vision_molmo
       - [x] llm_transformers_manual_vision_qwen
       - [x] llm_transformers_manual_vision_deepseek
       - [x] llm_transformers_manual_vision_janus_flow
+      - [x] llm_transformers_manual_vision_janus
+      - [x] llm_transformers_manual_vision_smolvlm
+      - [x] llm_transformers_manual_vision_gemma
+      - [x] llm_transformers_manual_vision_fastvlm
+      - [x] llm_transformers_manual_vision_kimi
+      - [x] llm_transformers_manual_vision_mimo
+      - [x] llm_transformers_manual_vision_keye
+      - [x] llm_transformers_manual_vision_glm4v
+      - [x] llm_transformers_manual_vision_skyworkr1v
       - [x] llm_transformers_manual_image_janus_flow
       - [x] llm_transformers_manual_vision_janus
       - [x] llm_transformers_manual_image_janus
@@ -103,6 +125,8 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
       - [x] llm_transformers_manual_kimi_voice,llm_transformers_manual_kimi_audio_asr,llm_transformers_manual_kimi_text_voice
       - [x] llm_transformers_manual_vita_text llm_transformers_manual_vita_audio_asr llm_transformers_manual_vita_tts llm_transformers_manual_vita_text_voice llm_transformers_manual_vita_voice
       - [x] llm_transformers_manual_phi4_vision_speech,llm_transformers_manual_phi4_audio_asr,llm_transformers_manual_phi4_audio_translation,llm_transformers_manual_phi4_vision,llm_transformers_manual_phi4_audio_chat
+      - [x] llm_transformers_manual_vision_speech_gemma3n,llm_transformers_manual_vision_gemma3n,llm_transformers_manual_gemma3n_audio_asr,llm_transformers_manual_gemma3n_audio_translation
+      - [x] llm_transformers_manual_voice_step2, llm_vllm_client_step_audio2, llm_vllm_client_step_audio2_mock
       - [x] llm_transformers_manual_qwen3omni, llm_transformers_manual_qwen3omni_vision_voice
   - remote api llm: personal-ai(like openai api, other ai provider)
   
@@ -110,6 +134,8 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
   - functions:
     - [x] search: search,search1,serper
     - [x] weather: openweathermap
+  - punctuation: 
+    - [x]  punc_ct_tranformerm, punc_ct_tranformer_offline, punc_ct_tranformer_onnx, punc_ct_tranformer_onnx_offline
   - speech:
     - [x] asr: 
       - [x] whisper_asr, whisper_timestamped_asr, whisper_faster_asr, whisper_transformers_asr, whisper_mlx_asr
@@ -120,6 +146,12 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
       - [x] kimi_asr (whisper)
       - [x] vita_asr (sensevoice-small)
       - [x] phi4_asr (conformer)
+      - [x] gemma3n_asr (matformer)
+    - [x] asr_live:
+      - [x] asr_streaming_sensevoice
+    - [x] speech enhancement:
+      - [x] enhancer_ans_rnnoise
+      - [x] enhancer_ans_dfsmn
     - [x] audio_stream: daily_room_audio_stream(in/out), pyaudio_stream(in/out)
     - [x] detector: porcupine_wakeword,pyannote_vad,webrtc_vad,silero_vad,webrtc_silero_vad,fsmn_vad
     - [x] player: stream_player
@@ -145,6 +177,8 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
     - [x] vad_analyzer: 
       - [x] daily_webrtc_vad_analyzer
       - [x] silero_vad_analyzer
+    - [x] turn_analyzer
+      - [x] v2_smart_turn_analyzer
   - vision
     - [x] OCR(*Optical Character Recognition*):
       - [ ] [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)
@@ -187,7 +221,11 @@ deploy it to cloudflare page with vite, access https://vision-weedge.pages.dev/
 - [x] [nextjs-react-web-storytelling](https://github.com/ai-bot-pro/nextjs-react-web-storytelling) 
 deploy it to cloudflare page worker with nextjs, access https://storytelling.pages.dev/ 
 - [x] [websocket-demo](https://github.com/ai-bot-pro/achatbot/blob/main/ui/websocket/simple-demo): websocket audio chat bot demo
-
+- [x] [webrtc-demo](https://github.com/ai-bot-pro/achatbot/blob/main/ui/webrtc/simple-demo): webrtc audio chat bot demo
+- [x] [webrtc websocket voice avatar](https://github.com/ai-bot-pro/achatbot/tree/main/ui/webrtc_websocket):
+  - [x] [webrtc+websocket lam audio2expression avatar bot demo intro](https://github.com/ai-bot-pro/achatbot/tree/main/ui/webrtc_websocket/lam_audio2expression_avatar): native js logic, get audio to play and print expression from websocket pb avatar_data_frames Message
+  - [x] [lam_audio2expression_avatar_ts](https://github.com/ai-bot-pro/achatbot/tree/main/ui/webrtc_websocket/lam_audio2expression_avatar_ts_v2): **http signaling service** and use vite+ts+gaussian-splat-renderer-for-lam to play audio and render expression from websocket pb avatar_data_frames Message
+  - [x] [**lam_audio2expression_avatar_ts_v2**](https://github.com/ai-bot-pro/achatbot/tree/main/ui/webrtc_websocket/lam_audio2expression_avatar_ts_v2): **websocket signaling service** and use vite+ts+gaussian-splat-renderer-for-lam to play audio and render expression from websocket pb avatar_data_frames Message, access https://avatar-2lm.pages.dev/ 
 
 ## Server Deploy (CD)
 - [x] [deploy/modal](https://github.com/ai-bot-pro/achatbot/tree/main/deploy/modal)(KISS) 👍🏻 
@@ -203,6 +241,14 @@ deploy it to cloudflare page worker with nextjs, access https://storytelling.pag
 > [!NOTE]
 > `python --version` >=3.10 with [asyncio-task](https://docs.python.org/3.10/library/asyncio-task.html)
 > if install `achatbot[tts_openvoicev2]` need install melo-tts `pip install git+https://github.com/myshell-ai/MeloTTS.git`
+>
+> if some other nested loop code with achatbot lib, you need to add the following code: (PS: cmd/bots/base.py had done)
+>
+> ```python
+> import nest_asyncio
+> 
+> nest_asyncio.apply()
+> ```
 
 > [!TIP]
 > use [uv](https://github.com/astral-sh/uv) + pip to run, install the required dependencies fastly, e.g.:
@@ -228,6 +274,60 @@ bash scripts/pypi_achatbot.sh dev
 # optional-dependencies e.g.
 pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
 ```
+
+## run local lite avatar chat bot
+```shell
+# install dependencies (replace $version) (if use cpu(default) install lite_avatar)
+pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server,livekit,livekit-api,daily,agora,silero_vad_analyzer,sense_voice_asr,openai_llm_processor,google_llm_processor,litellm_processor,together_ai,tts_edge,lite_avatar]"
+# install dependencies (replace $version) (if use gpu(cuda) install lite_avatar_gpu)
+pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server,livekit,livekit-api,daily,agora,silero_vad_analyzer,sense_voice_asr,openai_llm_processor,google_llm_processor,litellm_processor,together_ai,tts_edge,lite_avatar_gpu]"
+# download model weights
+huggingface-cli download weege007/liteavatar --local-dir ./models/weege007/liteavatar
+huggingface-cli download FunAudioLLM/SenseVoiceSmall --local-dir ./models/FunAudioLLM/SenseVoiceSmall
+# run local lite-avatar chat bot
+python -m src.cmd.bots.main -f config/bots/daily_liteavatar_echo_bot.json
+python -m src.cmd.bots.main -f config/bots/daily_liteavatar_chat_bot.json
+```
+More details: https://github.com/ai-bot-pro/achatbot/pull/161
+
+## run local lam_audio2expression avatar chat bot
+```shell
+# install dependencies (replace $version) 
+pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server,silero_vad_analyzer,sense_voice_asr,openai_llm_processor,google_llm_processor,litellm_processor,together_ai,tts_edge,lam_audio2expression_avatar]"
+pip install spleeter==2.4.2
+pip install typing_extensions==4.14.0 aiortc==1.13.0 transformers==4.36.2 protobuf==5.29.4
+# download model weights
+wget https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LAM/LAM_audio2exp_streaming.tar -P ./models/LAM_audio2exp/
+tar -xzvf ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar -C ./models/LAM_audio2exp && rm ./models/LAM_audio2exp/LAM_audio2exp_streaming.tar
+git clone --depth 1 https://www.modelscope.cn/AI-ModelScope/wav2vec2-base-960h.git ./models/facebook/wav2vec2-base-960h
+huggingface-cli download FunAudioLLM/SenseVoiceSmall  --local-dir ./models/FunAudioLLM/SenseVoiceSmall
+# run http signaling service + webrtc + websocket local lam_audio2expression-avatar chat bot
+python -m src.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve -f config/bots/small_webrtc_fastapi_websocket_avatar_echo_bot.json
+python -m src.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve -f config/bots/small_webrtc_fastapi_websocket_avatar_chat_bot.json
+# run http signaling service + webrtc + websocket voice avatar agent web ui
+cd ui/webrtc_websocket/lam_audio2expression_avatar_ts && npm install && npm run dev
+# run websocket signaling service + webrtc + websocket local lam_audio2expression-avatar chat bot
+python -m src.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve_v2 -f config/bots/small_webrtc_fastapi_websocket_avatar_echo_bot.json
+python -m src.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve_v2 -f config/bots/small_webrtc_fastapi_websocket_avatar_chat_bot.json
+# run websocket signaling service + webrtc + websocket voice avatar agent web ui
+cd ui/webrtc_websocket/lam_audio2expression_avatar_ts_v2 && npm install && npm run dev
+```
+More details: https://github.com/ai-bot-pro/achatbot/pull/164 | online lam_audio2expression avatar: https://avatar-2lm.pages.dev/
+
+---
+HTTP signaling service +  webrtc + websocket transports I/O bridge:
+<img width="1151" alt="image" src="https://github.com/user-attachments/assets/59e9eace-b27f-4f4c-b314-ee5988988335" />
+Websocket signaling service +  webrtc + websocket transports I/O bridge:
+<img width="1167" alt="image" src="https://github.com/user-attachments/assets/3963ff54-77ff-4c2f-a41f-7f9e9029d041" />
+
+---
+Websocket signaling service +  websocket + webrtc-queue transports I/O bridge:
+<img width="1183" height="405" alt="image" src="https://github.com/user-attachments/assets/557056cf-07db-494b-a289-f363fc82ac0b" />
+
+---
+Local/Global Scheduler + webrtc-queue bots :
+<img width="1172" height="477" alt="image" src="https://github.com/user-attachments/assets/f1c074e6-220c-478f-9435-05b3a7d4d083" />
+
 
 #  Run chat bots
 ## :memo: Run chat bots with colab notebook
@@ -256,6 +356,8 @@ pip install "dist/achatbot-{$version}-py3-none-any.whl[fastapi_bot_server]"
 | [livekit_asr_kimi_voice_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/voice/livekit_asr_kimi_voice_bot.py)<br/>[livekit_kimi_voice_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/voice/livekit_kimi_voice_bot.py)<br/> | e.g.:<br /> livekit_room_audio_stream<br />kimi audio llm<br /> | <a href="https://github.com/weedge/doraemon-nb/blob/main/achatbot_kimi_audio.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | A100                                                         | e.g.:<br />livekit room in stream<br />-> Kimi-Audio<br />-> livekit  room out stream |
 | [livekit_asr_vita_voice_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/voice/livekit_asr_vita_voice_bot.py)<br/>[livekit_vita_voice_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/voice/livekit_vita_voice_bot.py)<br/> | e.g.:<br /> livekit_room_audio_stream<br />vita audio llm<br /> | <a href="https://github.com/weedge/doraemon-nb/blob/main/achatbot_vita_audio.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | L4/100                                                       | e.g.:<br />livekit room in stream<br />-> VITA-Audio<br />-> livekit  room out stream |
 | [daily_phi4_voice_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/voice/daily_phi4_voice_bot.py)<br/>[daily_phi4_vision_speech_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/omni/daily_phi4_vision_speech_bot.py)<br/> | e.g.:<br /> daily_room_audio_stream<br />phi4-multimodal llm<br /> | <a href="https://github.com/weedge/doraemon-nb/blob/main/achatbot_phi4_multimodal.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | L4/100                                                       | e.g.:<br />daily room in stream<br />-> phi4-multimodal<br />-> edge (tts)<br />-> daily  room out stream |
+| [daliy_multi_mcp_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/mcp/daily_multi_mcp_bot.py)<br />[livekit_multi_mcp_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/mcp/livekit_multi_mcp_bot.py)<br />[agora_multi_mcp_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/mcp/agora_multi_mcp_bot.py)<br /> | e.g.:<br />agora_channel_audio_stream \|daily_room_audio_stream \|livekit_room_audio_stream,<br />sense_voice_asr,<br />groq \|together api llm(text), <br />mcp <br />tts_edge | <a href="https://github.com/weedge/doraemon-nb/blob/main/achatbot_multiMCP_bot.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | CPU (free, 2 cores)                                          | e.g.:<br />agora \| daily \|livekit room in stream<br />-> silero (vad)<br />-> sense_voice (asr) <br />-> groq \|together  (llm) <br />-> mcp server tools<br />-> edge (tts)<br />-> daily \|livekit room out stream |
+| [daily_liteavatar_chat_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/avatar/daily_liteavatar_chat_bot.py)<br />[daily_liteavatar_echo_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/avatar/daily_liteavatar_echo_bot.py)<br />[livekit_musetalk_chat_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/avatar/livekit_musetalk_chat_bot.py)<br />[livekit_musetalk_echo_bot](https://github.com/ai-bot-pro/achatbot/blob/main/src/cmd/bots/avatar/livekit_musetalk_echo_bot.py)<br /> | e.g.:<br />agora_channel_audio_stream \|daily_room_audio_stream \|livekit_room_audio_stream,<br />sense_voice_asr,<br />groq \|together api llm(text), <br />tts_edge<br />avatar<br /> | achatbot_avatar_musetalk.ipynb:<br /><a href="https://github.com/weedge/doraemon-nb/blob/main/achatbot_avatar_musetalk.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> | CPU/T4/L4                                                    | e.g.:<br />agora \|daily \|livekit room in stream<br />-> silero (vad)<br />-> sense_voice (asr) <br />-> groq \|together  (llm) <br />-> edge (tts)<br />-> avatar <br />-> daily \|livekit room out stream |
 |                                                              |                                                              |                                                              |                                                              |                                                              |
 
 

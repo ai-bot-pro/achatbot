@@ -40,6 +40,7 @@ def compress_img(
     else:
         img = img.quantize(colors=256)
     save_path = save_name + ext
+    logging.info(f"Compressing image {img_path} to {save_path} with quality {quality}")
     img.save(save_path, optimize=True, quality=quality, subsampling=-1)
     return save_path
 
