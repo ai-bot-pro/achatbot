@@ -20,8 +20,8 @@ if __name__ == "__main__":
     assert len(sys.argv) > 1
     input_file = sys.argv[1]
     sr, data = Wavfile.read(input_file)
-    hop_size = 256  # 16 ms per frame for 16K hz sample rate
-    # hop_size = 128  # 8 ms per frame for 16K hz sample rate
+    # hop_size = 256  # 16 ms per frame for 16K hz sample rate
+    hop_size = 160  # 10 ms per frame for 16K hz sample rate
     threshold = 0.5
     ten_vad_instance = TenVad(hop_size, threshold, lib_path=lib_path)  # Create a TenVad instance
     num_frames = data.shape[0] // hop_size

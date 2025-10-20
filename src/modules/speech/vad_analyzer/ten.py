@@ -24,7 +24,7 @@ class TenVADAnalyzer(BaseVADAnalyzer):
 
     def num_frames_required(self) -> int:
         hop_size = 256  # 16 ms per frame for 16K hz sample rate
-        # hop_size = 128  # 8 ms per frame for 16K hz sample rate
+        # hop_size = 160  # 10 ms per frame for 16K hz sample rate
         return hop_size
 
     def reset(self):
