@@ -50,7 +50,7 @@ def download_ckpt(
             local_dir = os.path.join(HF_MODEL_DIR, repo_id)
         else:
             local_dir = os.path.join(HF_MODEL_DIR, local_dir)
-        print(f"{repo_id} model downloading, {ignore_patterns=}")
+        print(f"{repo_id} model downloading, {ignore_patterns=} {revision=}")
         snapshot_download(
             repo_id=repo_id,
             revision=revision,
