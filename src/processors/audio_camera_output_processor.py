@@ -182,11 +182,12 @@ class AudioCameraOutputProcessor(OutputProcessor):
             chunk = audio[i : i + self._audio_chunk_size]
             await self._audio_out_queue.put(chunk)
 
-            diff_time = time.time() - self._bot_speaking_frame_time
+            current_time = time.time()
+            diff_time = current_time - self._bot_speaking_frame_time
             if diff_time >= self._bot_speaking_frame_period:
                 await self.push_frame(BotSpeakingFrame(), FrameDirection.DOWNSTREAM)
                 await self.push_frame(BotSpeakingFrame(), FrameDirection.UPSTREAM)
-                self._bot_speaking_frame_time = time.time()
+                self._bot_speaking_frame_time = current_time
 
     async def write_raw_audio_frames(self, frames: bytes):
         """
