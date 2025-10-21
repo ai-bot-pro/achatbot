@@ -185,7 +185,6 @@ class AudioCameraOutputProcessor(OutputProcessor):
             current_time = time.time()
             diff_time = current_time - self._bot_speaking_frame_time
             if diff_time >= self._bot_speaking_frame_period:
-                await self.push_frame(BotSpeakingFrame(), FrameDirection.DOWNSTREAM)
                 await self.push_frame(BotSpeakingFrame(), FrameDirection.UPSTREAM)
                 self._bot_speaking_frame_time = current_time
 
