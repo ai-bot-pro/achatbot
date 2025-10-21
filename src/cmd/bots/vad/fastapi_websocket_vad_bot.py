@@ -16,12 +16,14 @@ from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.cmd.bots import register_ai_fastapi_ws_bots
 from src.types.network.fastapi_websocket import FastapiWebsocketServerParams
 from src.transports.fastapi_websocket_server import FastapiWebsocketTransport
+from src.types.frames import BotSpeakingFrame
 
 load_dotenv(override=True)
 
 """
 TEN_VAD_LIB_PATH=<path_to_ten_vad_library> python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_websocket_ten_vad_bot.json
 """
+
 
 @register_ai_fastapi_ws_bots.register
 class FastapiWebsocketVADRBot(AIFastapiWebsocketBot):
@@ -63,12 +65,16 @@ class FastapiWebsocketVADRBot(AIFastapiWebsocketBot):
         )
 
         in_audio_aggr = UserAudioResponseAggregator()
-        save_user_audio_processor = AudioSaveProcessor(prefix_name="user", pass_raw_audio=True)
+        save_user_audio_processor = None
+        if self._save_audio:
+            save_user_audio_processor = AudioSaveProcessor(prefix_name="user", pass_raw_audio=True)
+
         processors = [
+            FrameLogger(include_frame_types=[BotSpeakingFrame]),
             transport.input_processor(),
             in_audio_aggr,
             FrameLogger(include_frame_types=[AudioRawFrame]),
-            # save_user_audio_processor,
+            save_user_audio_processor,
             transport.output_processor(),
         ]
 

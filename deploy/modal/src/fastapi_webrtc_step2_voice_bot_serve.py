@@ -37,6 +37,7 @@ img = (
         "diffusers",
         "hyperpyyaml",
         "huggingface_hub",
+        "torchcodec",
     )
     .env(
         {
@@ -52,7 +53,7 @@ img = (
 )
 
 # img = img.pip_install(
-#    f"achatbot==0.0.25.dev127",
+#    f"achatbot==0.0.27",
 #    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
 # )
 

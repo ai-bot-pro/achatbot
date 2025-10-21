@@ -44,8 +44,6 @@ class AudioCameraOutputProcessor(OutputProcessor):
             int(self._params.audio_out_sample_rate / 100) * self._params.audio_out_channels * 2
         )
         self._audio_chunk_size = audio_bytes_10ms * self._params.audio_out_10ms_chunks
-        # Audio accumlation buffer for 16-bit samples to write out stream device
-        self._audio_out_buff = bytearray()
 
         # Indicates if the bot is currently speaking. This is useful when we
         # have an interruption since all the queued messages will be thrown
@@ -59,6 +57,10 @@ class AudioCameraOutputProcessor(OutputProcessor):
         # Camera queue and task
         self._camera_out_queue = None
         self._camera_out_task = None
+
+        # send bot speaking frame time
+        self._bot_speaking_frame_time = 0
+        self._bot_speaking_frame_period = kwargs.get("bot_speaking_frame_period", 0.2)  # seconds
 
     async def start(self, frame: StartFrame):
         await super().start(frame)
@@ -179,8 +181,12 @@ class AudioCameraOutputProcessor(OutputProcessor):
         for i in range(0, len(audio), self._audio_chunk_size):
             chunk = audio[i : i + self._audio_chunk_size]
             await self._audio_out_queue.put(chunk)
-            await self.push_frame(BotSpeakingFrame(), FrameDirection.UPSTREAM)
-        # self._audio_out_buff.clear()
+
+            current_time = time.time()
+            diff_time = current_time - self._bot_speaking_frame_time
+            if diff_time >= self._bot_speaking_frame_period:
+                await self.push_frame(BotSpeakingFrame(), FrameDirection.UPSTREAM)
+                self._bot_speaking_frame_time = current_time
 
     async def write_raw_audio_frames(self, frames: bytes):
         """
