@@ -173,7 +173,7 @@ async def stream_infer(**kwargs):
         for idx, a_match_image in enumerate(tqdm(matches_images, desc="image")):
             outputs = outputs.replace(a_match_image, f"![](images/" + str(idx) + ".jpg)\n")
 
-        for idx, a_match_other in enumerate(tqdm(mathes_other, desc="other")):
+        for idx, a_match_other in enumerate(tqdm(matches_other, desc="other")):
             outputs = (
                 outputs.replace(a_match_other, "")
                 .replace("\\coloneqq", ":=")
