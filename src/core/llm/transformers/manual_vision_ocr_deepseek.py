@@ -49,7 +49,7 @@ class TransformersManualVisionDeepSeekOCR(TransformersBaseLLM, IVisionOCR):
         # rec: <image>\nLocate <|ref|>xxxx<|/ref|> in the image.
 
         self.args = TransformersLMArgs(**args)
-        gpu_prop = torch.cuda.get_device_properties("cuda")
+        gpu_prop = torch.cuda.get_device_properties("cuda") if torch.cuda.is_available() else None
 
         if self.args.lm_device_map:
             self._model = AutoModel.from_pretrained(
