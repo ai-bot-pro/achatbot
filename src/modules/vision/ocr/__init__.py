@@ -1,6 +1,7 @@
 import logging
 import os
 
+from src.core.llm import LLMEnvInit
 from src.common import interface
 from src.common.factory import EngineClass, EngineFactory
 from src.common.types import MODELS_DIR
@@ -16,6 +17,10 @@ class VisionOCREnvInit:
     def getEngine(tag, **kwargs) -> interface.IVisionOCR | EngineClass:
         if "vision_transformers_got_ocr" in tag:
             from . import transformers_got
+        elif (
+            "llm_transformers_manual_vision_deepseek_ocr" in tag
+        ):  # modules/vision/ocr dep core/llm/transformers :)
+            from src.core.llm.transformers import manual_vision_ocr_deepseek
 
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         return engine
@@ -54,4 +59,5 @@ class VisionOCREnvInit:
     # TAG : config
     map_config_func = {
         "vision_transformers_got_ocr": get_transformers_got_ocr_args,
+        "llm_transformers_manual_vision_deepseek_ocr": LLMEnvInit.get_llm_transformers_args,
     }

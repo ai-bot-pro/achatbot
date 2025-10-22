@@ -48,7 +48,7 @@ class TestTransformersGOTOCR(unittest.TestCase):
         for image in image_cases:
             with self.subTest(image=image):
                 self.session.ctx.state["ocr_img"] = image
-                iter = self.engine.stream_infer(self.session)
+                iter = self.engine.generate(self.session)
 
                 generated_text = ""
                 times = []

@@ -57,7 +57,7 @@ class DailyOCRVisionBot(DailyRoomBot):
             [
                 transport.input_processor(),
                 self.asr_processor,
-                self.image_requester,
+                self.image_requester,  # send a request for video_source to capture a picture
                 self.ocr_processor,
                 self.tts_processor,
                 transport.output_processor(),

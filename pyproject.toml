@@ -33,7 +33,7 @@ local_scheme = "no-local-version"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.27.post0"
+version = "0.0.28"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -113,7 +113,7 @@ einops = ["einops~=0.8.0"]
 flash-attn = ["flash-attn==2.7.3"]
 tiktoken = ["tiktoken~=0.7.0"]
 verovio = ["verovio~=4.3.1"]
-accelerate = ["accelerate~=1.7.0"]
+accelerate = ["accelerate>=0.26.0"]
 opencv = ["opencv-python~=4.10.0.84"]
 librosa = ["librosa~=0.10.2.post1"]
 soundfile = ["soundfile~=0.12.1"]
@@ -203,7 +203,7 @@ speech_waker = ["achatbot[porcupine_wakeword]"]
 # vad module tag -> pkgs
 pyannote_vad = ["pyannote.audio~=3.2.0"]
 webrtcvad = ["webrtcvad~=2.0.10"]
-silero_vad = ["achatbot[torch_vision_audio]"]
+silero_vad = ["achatbot[torch_vision_audio]", "onnxruntime",]
 webrtc_silero_vad = ["achatbot[webrtcvad,silero_vad]"]
 speech_vad = ["achatbot[pyannote_vad,webrtcvad,silero_vad]"]
 
@@ -320,6 +320,14 @@ llm_transformers_manual_vision_glm4v = [
 llm_transformers_manual_vision_skyworkr1v = [
     "achatbot[llm_transformers_manual_vision]",
     "timm",
+]
+llm_transformers_manual_vision_deepseek_ocr = [
+    "achatbot[llm_transformers_manual_vision,einops,matplotlib,accelerate]",
+    "easydict",
+    "addict",
+    "torch==2.6.0",
+    "torchvision==0.21.0",
+    "torchaudio==2.6.0",
 ]
 
 # vision + audio -> text
@@ -441,7 +449,6 @@ llm_transformers_manual_voice_vita = [
     "WeTextProcessing",
     "inflect",
     "openai-whisper",
-    "onnxruntime",
     "modelscope",
     "word2number",
     "pyworld",
