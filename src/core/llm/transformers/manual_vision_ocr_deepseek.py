@@ -178,5 +178,6 @@ class TransformersManualVisionDeepSeekOCR(TransformersBaseLLM, IVisionOCR):
             start = perf_counter()
         if len(sentence) > 0:
             yield sentence + "."
-        logging.info(f"{generated_text=} TTFT: {times[0]:.4f}s total time: {sum(times):.4f}s")
+        if times:
+            logging.info(f"{generated_text=} TTFT: {times[0]:.4f}s total time: {sum(times):.4f}s")
         torch.cuda.empty_cache()
