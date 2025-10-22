@@ -363,7 +363,7 @@ async def achatbot_infer(**kwargs):
         frame = UserImageRawFrame(
             image=image_obj.tobytes(),
             size=image_obj.size,
-            format=image_obj.format,  # from frame bytes, no save format, need add a save format e.g.: JPEG,PNG,
+            format=image_obj.format or "PNG",  # from frame bytes, no save format, need add a save format e.g.: JPEG,PNG,
             mode=image_obj.mode,  # default: RGB
             user_id=session.ctx.client_id,
         )
