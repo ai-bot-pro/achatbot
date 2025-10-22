@@ -328,6 +328,8 @@ llm_transformers_manual_vision_deepseek_ocr = [
     "torch==2.6.0",
     "torchvision==0.21.0",
     "torchaudio==2.6.0",
+    "transformers==4.46.3",
+    "tokenizers==0.20.3",
 ]
 
 # vision + audio -> text

@@ -323,7 +323,6 @@ class ContainerRuntimeConfig:
                 extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
             )
             .pip_install("flash-attn==2.7.4.post1", extra_options="--no-build-isolation")
-            .pip_install("onnxruntime")
             .env(
                 {
                     "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
@@ -380,8 +379,8 @@ if SERVE_TYPE == "room_bot":
     )
 
 # img = img.pip_install(
-#    f"achatbot==0.0.21.post3",
-#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+#    f"achatbot==0.0.27.dev11",
+#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
 # )
 
 HF_MODEL_DIR = "/root/.achatbot/models"

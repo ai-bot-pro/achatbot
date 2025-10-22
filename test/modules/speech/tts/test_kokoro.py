@@ -72,7 +72,7 @@ class TestKOKORO(unittest.TestCase):
             output=True,
         )
 
-        self.test_set_voice()
+        # self.test_set_voice()
 
         self.session.ctx.state["tts_text"] = self.tts_text
         print(self.session.ctx)
