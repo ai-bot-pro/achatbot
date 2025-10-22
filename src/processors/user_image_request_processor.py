@@ -60,6 +60,8 @@ class UserImageTextRequestProcessor(UserImageBaseProcessor):
                     await self.push_frame(TextFrame(self._desc_img_prompt))
         elif isinstance(frame, UserImageRawFrame):
             await self.push_frame(frame)
+        else:
+            await self.push_frame(frame, direction)
 
 
 class UserImageOrTextRequestProcessor(UserImageBaseProcessor):

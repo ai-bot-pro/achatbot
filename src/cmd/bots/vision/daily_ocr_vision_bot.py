@@ -1,6 +1,8 @@
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.pipeline.task import PipelineTask
+from apipeline.processors.logger import FrameLogger
+from apipeline.frames import AudioRawFrame, TextFrame, StartFrame, ImageRawFrame
 
 from src.processors.user_image_request_processor import UserImageTextRequestProcessor
 from src.processors.vision.ocr_processor import OCRProcessor
@@ -8,6 +10,7 @@ from src.processors.speech.tts.tts_processor import TTSProcessor
 from src.common.types import DailyParams
 from src.cmd.bots.base_daily import DailyRoomBot
 from src.transports.daily import DailyTransport
+from src.types.frames import UserImageRequestFrame
 from .. import register_ai_room_bots
 
 
@@ -57,9 +60,18 @@ class DailyOCRVisionBot(DailyRoomBot):
             [
                 transport.input_processor(),
                 self.asr_processor,
+                FrameLogger(
+                    include_frame_types=[
+                        StartFrame,
+                        TextFrame,
+                        UserImageRequestFrame,
+                        ImageRawFrame,
+                    ]
+                ),
                 self.image_requester,  # send a request for video_source to capture a picture
                 self.ocr_processor,
                 self.tts_processor,
+                FrameLogger(include_frame_types=[StartFrame, AudioRawFrame]),
                 transport.output_processor(),
             ]
         )

@@ -63,6 +63,7 @@ class AudioCameraOutputProcessor(OutputProcessor):
         self._bot_speaking_frame_period = kwargs.get("bot_speaking_frame_period", 0.2)  # seconds
 
     async def start(self, frame: StartFrame):
+        logging.info(f"AudioCameraOutputProcessor starting")
         await super().start(frame)
         # Create media threads queues and task
         if self._params.camera_out_enabled:
@@ -70,9 +71,11 @@ class AudioCameraOutputProcessor(OutputProcessor):
             self._camera_out_task = self.get_event_loop().create_task(
                 self._camera_out_task_handler()
             )
+            logging.info(f"camera_out_task start")
         if self._params.audio_out_enabled:
             self._audio_out_queue = asyncio.Queue()
             self._audio_out_task = self.get_event_loop().create_task(self._audio_out_task_handler())
+            logging.info(f"audio_out_task start")
 
     async def stop(self, frame: EndFrame):
         await super().stop(frame)
@@ -198,7 +201,7 @@ class AudioCameraOutputProcessor(OutputProcessor):
         while True:
             try:
                 chunk = await asyncio.wait_for(self._audio_out_queue.get(), timeout=1)
-                await self.write_raw_audio_frames(chunk)
+                await self.write_raw_audio_frames(bytes(chunk))
                 self._audio_out_queue.task_done()
             except asyncio.TimeoutError:
                 continue
