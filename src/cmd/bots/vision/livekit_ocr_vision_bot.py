@@ -77,7 +77,7 @@ class LivekitOCRVisionBot(LivekitRoomBot):
                 transport.input_processor(),
                 asr_processor,
                 image_requester,
-                ocr_processor,
+                ocr_processor,  # send a request for video_source to capture a picture
                 tts_processor,
                 transport.output_processor(),
             ]

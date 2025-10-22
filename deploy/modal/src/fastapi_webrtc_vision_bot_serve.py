@@ -315,6 +315,21 @@ class ContainerRuntimeConfig:
                 }
             )
         ),
+        "deepseek_ocr": (
+            vision_bot_img.pip_install(
+                [
+                    f"achatbot[llm_transformers_manual_vision_deepseek_ocr]=={achatbot_version}",
+                ],
+                extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+            )
+            .pip_install("flash-attn==2.7.4.post1", extra_options="--no-build-isolation")
+            .env(
+                {
+                    "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+                    "LLM_MODEL_NAME_OR_PATH": f"/root/.achatbot/models/{os.getenv('LLM_MODEL_NAME_OR_PATH', 'deepseek-ai/DeepSeek-OCR')}",
+                }
+            )
+        ),
     }
 
     @staticmethod
@@ -364,8 +379,8 @@ if SERVE_TYPE == "room_bot":
     )
 
 # img = img.pip_install(
-#    f"achatbot==0.0.21.post3",
-#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+#    f"achatbot==0.0.27.dev11",
+#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
 # )
 
 HF_MODEL_DIR = "/root/.achatbot/models"
@@ -461,14 +476,24 @@ EXTRA_INDEX_URL=https://pypi.org/simple/ \
     modal serve src/fastapi_webrtc_vision_bot_serve.py
 
 
-# put config
+# vllm_skyworkr1v single room bot
 modal volume put config ./config/bots/daily_describe_vllm_skyworkr1v_vision_bot.json   /bots/ -f
-
-# run fastdeploy ernie4v bot to join room
 EXTRA_INDEX_URL=https://pypi.org/simple/ \
     SERVE_TYPE=room_bot \
     CONFIG_FILE=/root/.achatbot/config/bots/daily_describe_vllm_skyworkr1v_vision_bot.json \
     ACHATBOT_VERSION=0.0.21.post2 \
     IMAGE_NAME=vllm_skyworkr1v IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L40s:4 \
+    modal serve src/fastapi_webrtc_vision_bot_serve.py
+
+
+# deepseek single room bot
+modal run src/download_models.py --repo-ids "FunAudioLLM/SenseVoiceSmall"
+modal run src/download_models.py --repo-ids "deepseek-ai/DeepSeek-OCR" --revision "refs/pr/23"
+modal volume put config ./config/bots/daily_ocr_vision_bot.json /bots/ -f
+EXTRA_INDEX_URL=https://pypi.org/simple/ \
+    SERVE_TYPE=room_bot \
+    CONFIG_FILE=/root/.achatbot/config/bots/daily_ocr_vision_bot.json \
+    ACHATBOT_VERSION=0.0.28 \
+    IMAGE_NAME=deepseek_ocr IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 \
     modal serve src/fastapi_webrtc_vision_bot_serve.py
 """

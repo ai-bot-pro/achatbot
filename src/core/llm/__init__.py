@@ -134,6 +134,8 @@ class LLMEnvInit:
             from .transformers import manual_vision_ernie4v
         elif "llm_transformers_manual_vision_skyworkr1v" in tag:
             from .transformers import manual_vision_skyworkr1v
+        elif "llm_transformers_manual_vision_deepseek_ocr" in tag:
+            from .transformers import manual_vision_ocr_deepseek
         elif "llm_transformers_manual_voice_step2" in tag:
             from .transformers import manual_voice_step2
         elif "llm_transformers_manual" == tag:
@@ -599,6 +601,7 @@ class LLMEnvInit:
         "llm_transformers_manual_vision_glm4v": get_llm_transformers_args,
         "llm_transformers_manual_vision_ernie4v": get_llm_transformers_args,
         "llm_transformers_manual_vision_skyworkr1v": get_llm_transformers_args,
+        "llm_transformers_manual_vision_deepseek_ocr": get_llm_transformers_args,
         "llm_transformers_manual_vision_gemma3": get_llm_transformers_args,
         "llm_transformers_manual_vision_speech_gemma3n": get_llm_transformers_args,
         "llm_transformers_manual_vision_gemma3n": get_llm_transformers_args,

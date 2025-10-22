@@ -463,19 +463,11 @@ class IVisionDetector(ABC):
 
 class IVisionOCR(ABC):
     @abstractmethod
-    def generate(self, session) -> Iterator[str]:
+    def generate(self, session, **kwargs) -> Iterator[str | dict | np.ndarray]:
         """
         input: session.ctx.state["ocr_img"]
         detect object and generate text
         return iterator a sentence (str)
-        """
-        raise NotImplementedError("must be implemented in the child class")
-
-    def stream_infer(self, session) -> Iterator[str]:
-        """
-        input: session.ctx.state["ocr_img"]
-        detect object and generate text
-        return iterator next token (str)
         """
         raise NotImplementedError("must be implemented in the child class")
 

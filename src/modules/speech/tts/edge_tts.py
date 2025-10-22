@@ -43,11 +43,10 @@ class EdgeTTS(BaseTTS, ITts):
                 )
                 self.args.voice_name = random.choice(voices)["ShotName"]
                 self.voice_name = self.args.voice_name
-        logging.info(f"{self.TAG} voice: {self.voice_name}")
 
-        communicate: edge_tts.Communicate = edge_tts.Communicate(
-            text,
-            self.args.voice_name,
+        args = dict(
+            text=text,
+            voice=self.args.voice_name,
             rate=self.args.rate,
             volume=self.args.volume,
             pitch=self.args.pitch,
@@ -55,6 +54,8 @@ class EdgeTTS(BaseTTS, ITts):
             connect_timeout=self.args.connect_timeout,
             receive_timeout=self.args.receive_timeout,
         )
+        logging.info(f"{self.TAG} voice: {self.voice_name} args: {args}")
+        communicate: edge_tts.Communicate = edge_tts.Communicate(**args)
         self.submaker = edge_tts.SubMaker()
         # "outputFormat":"audio-24khz-48kbitrate-mono-mp3"
 

@@ -68,7 +68,7 @@ class AgoraOCRVisionBot(AgoraChannelBot):
             [
                 transport.input_processor(),
                 asr_processor,
-                image_requester,
+                image_requester,# send a request for video_source to capture a picture
                 ocr_processor,
                 tts_processor,
                 transport.output_processor(),
