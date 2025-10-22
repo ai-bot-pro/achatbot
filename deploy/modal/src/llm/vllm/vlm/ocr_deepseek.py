@@ -165,7 +165,7 @@ async def stream_infer(**kwargs):
         with open(f"{DEEPSEEK_ASSETS_DIR}/result_ori.mmd", "w", encoding="utf-8") as afile:
             afile.write(outputs)
 
-        matches_ref, matches_images, mathes_other = re_match(outputs)
+        matches_ref, matches_images, matches_other = re_match(outputs)
         # print(matches_ref)
         # save images with boxes
         result = process_image_with_refs(image_draw, matches_ref)
