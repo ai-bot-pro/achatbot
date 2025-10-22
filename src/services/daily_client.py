@@ -14,6 +14,7 @@ try:
     from daily import (
         CallClient,
         Daily,
+        VideoFrame,
         EventHandler,
         VirtualCameraDevice,
         VirtualMicrophoneDevice,
@@ -420,7 +421,7 @@ class DailyTransportClient(EventHandler):
     # Daily (CallClient callbacks)
     #
 
-    def _video_frame_received(self, participant_id, video_frame):
+    def _video_frame_received(self, participant_id, video_frame: VideoFrame):
         callback = self._video_renderers[participant_id]
         self._call_async_callback(
             callback,

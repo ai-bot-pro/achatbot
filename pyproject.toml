@@ -158,7 +158,7 @@ agora = [
     #"agora_python_server_sdk~=2.2.4",
     "achatbot[opencv]",
 ]
-daily = ["daily-python~=0.11.0"]
+daily = ["daily-python==0.11.0"]
 livekit = ["livekit~=0.17.5"]
 # http api sdk
 livekit-api = ["livekit-api~=0.7.1"]
@@ -515,7 +515,7 @@ codec_wavtokenizer = [
 
 # tts module tag -> pkgs
 tts_coqui = ["TTS~=0.22.0"]
-tts_edge = ["edge-tts>=7.2.0"]
+tts_edge = ["edge-tts==7.2.0"]
 tts_g = ["gTTS~=2.5.1"]
 tts_pyttsx3 = ["pyttsx3~=2.90"]
 tts_cosy_voice = [

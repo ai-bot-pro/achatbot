@@ -379,8 +379,8 @@ if SERVE_TYPE == "room_bot":
     )
 
 # img = img.pip_install(
-#    f"achatbot==0.0.27.dev11",
-#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
+#   f"achatbot==0.0.27.dev12",
+#   extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
 # )
 
 HF_MODEL_DIR = "/root/.achatbot/models"
