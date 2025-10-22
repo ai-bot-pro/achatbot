@@ -122,7 +122,7 @@ with vllm_image.imports():
 )
 async def run(func, **kwargs):
     os.makedirs(DEEPSEEK_ASSETS_DIR, exist_ok=True)
-    os.makedirs(f"{DEEPSEEK_ASSETS_DIR}/images", exist_ok=True)
+    os.makedirs(os.path.join(DEEPSEEK_ASSETS_DIR, "images"), exist_ok=True)
     subprocess.run("nvidia-smi --version", shell=True)
     subprocess.run("nvcc --version", shell=True)
     gpu_prop = None
