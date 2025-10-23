@@ -14,36 +14,35 @@ try:
     from src.thirdparty.deepseek_ocr.process.ngram_norepeat import NoRepeatNGramLogitsProcessor
     from src.thirdparty.deepseek_ocr.process.image_process import DeepseekOCRProcessor
     from src.thirdparty.deepseek_ocr.process import load_image
+    from src.thirdparty.deepseek_ocr.model import BASE_SIZE, IMAGE_SIZE, CROP_MODE, PROMPT
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error("you need to `pip install achatbot[vllm]`")
     raise Exception(f"Missing module: {e}")
 
 from src.common.random import set_all_random_seed
-from src.common.interface import ILlm
+from src.common.interface import ILlm, IVisionOCR
 from src.common.session import Session
 from src.common.types import SessionCtx
 from src.core.llm.vllm.base import VllmEngineBase
 
 
-class VllmDeepSeekOCR(VllmEngineBase):
+class VllmDeepSeekOCR(VllmEngineBase, IVisionOCR):
     """ """
 
-    TAG = "vllm_deepseek_ocr"
+    TAG = "llm_vllm_deepseek_ocr"
 
     def __init__(self, **kwargs) -> None:
-        self.base_size = kwargs.pop("ocr_base_size", 1024)
-        self.image_size = kwargs.pop("ocr_image_size", 640)
-        self.crop_mode = kwargs.pop("ocr_crop_mode", True)
+        self.base_size = kwargs.pop("ocr_base_size", BASE_SIZE)
+        self.image_size = kwargs.pop("ocr_image_size", IMAGE_SIZE)
+        self.crop_mode = kwargs.pop("ocr_crop_mode", CROP_MODE)
         # Tiny: base_size = 512, image_size = 512, crop_mode = False
         # Small: base_size = 640, image_size = 640, crop_mode = False
         # Base: base_size = 1024, image_size = 1024, crop_mode = False
         # Large: base_size = 1280, image_size = 1280, crop_mode = False
         # Gundam: base_size = 1024, image_size = 640, crop_mode = True # default
 
-        self.prompt = kwargs.pop(
-            "ocr_prompt", "<image>\n<|grounding|>Convert the document to markdown. "
-        )
+        self.prompt = kwargs.pop("ocr_prompt", PROMPT)
         # document: <image>\n<|grounding|>Convert the document to markdown.
         # other image: <image>\n<|grounding|>OCR this image.
         # without layouts: <image>\nFree OCR.
@@ -62,15 +61,10 @@ class VllmDeepSeekOCR(VllmEngineBase):
         session = Session(**SessionCtx(str(uuid.uuid4().hex)).__dict__)
 
         dummy_pil_image = Image.new("RGB", (100, 100), color="white")
-        session.ctx.state["prompt"] = [
-            {"type": "image", "image": dummy_pil_image},
-            {"type": "text", "text": self.args.warmup_prompt},
-        ]
+        session.ctx.state["ocr_img"] = dummy_pil_image
         for i in range(self.args.warmup_steps):
             logging.info(f"{i} warmup start")
-            async for result_text in self.async_generate(
-                session, thinking=self.gen_args.lm_gen_thinking
-            ):
+            async for result_text in self.async_generate(session):
                 pass
 
     def set_task_prompt(self, prompt: str):
