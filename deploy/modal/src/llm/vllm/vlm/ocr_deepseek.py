@@ -1,11 +1,12 @@
 import os
 import sys
 import time
+import uuid
 import asyncio
 import subprocess
 from pathlib import Path
 from threading import Thread
-
+from PIL import Image
 
 import modal
 
@@ -245,6 +246,50 @@ async def stream_infer(**kwargs):
             plt.close()
 
         result.save(f"{DEEPSEEK_ASSETS_DIR}/result_with_boxes.jpg")
+
+async def achatbot_stream_infer(**kwargs):
+    from achatbot.processors.vision.ocr_processor import OCRProcessor
+    from achatbot.modules.vision.ocr import VisionOCREnvInit
+    from achatbot.common.session import SessionCtx, Session
+    from achatbot.types.frames.data_frames import UserImageRawFrame
+    from achatbot.common.logger import Logger
+
+    Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
+
+    ocr = VisionOCREnvInit.initVisionOCREngine(
+        "llm_transformers_manual_vision_deepseek_ocr",
+        {
+            "lm_model_name_or_path": MODEL_PATH,
+            "lm_device": "cuda",
+            "ocr_base_size": 1024,
+            "ocr_image_size": 640,
+            "ocr_crop_mode": True,
+            "ocr_prompt": "<image>\n<|grounding|>Convert the document to markdown. ",
+        },
+    )
+    session = Session(**SessionCtx(str(uuid.uuid4())).__dict__)
+    processor = OCRProcessor(ocr=ocr, session=session)
+    image_files = [
+        Image.new("RGB", (640, 640), color="white"),
+        Image.open("/DeepSeek-OCR/assets/fig1.png"),
+        # use ORC detected Show pictures, detect again :)
+        Image.open("/DeepSeek-OCR/assets/show1.jpg"),
+        # Image.open("/DeepSeek-OCR/assets/show2.jpg"),
+        # Image.open("/DeepSeek-OCR/assets/show3.jpg"),
+        # Image.open("/DeepSeek-OCR/assets/show4.jpg"),
+    ]
+    for image_obj in image_files:
+        image_obj: Image.Image = image_obj
+        frame = UserImageRawFrame(
+            image=image_obj.tobytes(),
+            size=image_obj.size,
+            format=image_obj.format,  # from frame bytes, no save format, need add a save format e.g.: JPEG,PNG,
+            mode=image_obj.mode,  # default: RGB
+            user_id=session.ctx.client_id,
+        )
+        iter = processor.run_detect(frame)
+        async for textFrame in iter:
+            print(textFrame)
 
 
 """

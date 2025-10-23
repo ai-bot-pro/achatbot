@@ -28,7 +28,10 @@ from src.core.llm.vllm.base import VllmEngineBase
 
 
 class VllmDeepSeekOCR(VllmEngineBase, IVisionOCR):
-    """ """
+    """
+    deepseek ocr with vllm
+    - https://github.com/deepseek-ai/DeepSeek-OCR/tree/main/DeepSeek-OCR-master/DeepSeek-OCR-vllm
+    """
 
     TAG = "llm_vllm_deepseek_ocr"
 
@@ -104,6 +107,90 @@ class VllmDeepSeekOCR(VllmEngineBase, IVisionOCR):
 
         request = {"prompt": self.prompt}
         if image_features and "<image>" in self.prompt:
+            request = {"prompt": self.prompt, "multi_modal_data": {"image": image}}
+
+        generated_text = ""
+        start = perf_counter()
+        times = []
+        is_ref_det = False
+        sentence = ""
+        printed_length = 0
+        # TODO: extract detect image to storage with s3 (use callback)
+        request_id = str(uuid.uuid4().hex)
+        async for request_output in self.engine.generate(request, sampling_params, request_id):
+            if request_output.outputs is None or len(request_output.outputs) == 0:
+                continue
+            times.append(perf_counter() - start)
+
+            generated_text = request_output.outputs[0].text
+            new_text = generated_text[printed_length:]
+            printed_length = len(generated_text)
+
+            if "<|ref|>" in new_text:
+                is_ref_det = True
+
+            if "<|/det|>" in new_text:
+                is_ref_det = False
+                new_text = new_text.split("<|/det|>")[1]
+
+            if "<｜end▁of▁sentence｜>" in new_text:
+                if "<|/ref|>" not in new_text:
+                    new_text = new_text.split("<｜end▁of▁sentence｜>")[0]
+            if "<|end▁of▁sentence|>" in new_text:
+                if "<|/ref|>" not in new_text:
+                    new_text = new_text.split("<|end▁of▁sentence|>")[0]
+
+            if is_ref_det is False:
+                sentence += new_text
+                pos = self._have_special_char(sentence)
+                if pos > -1:
+                    yield sentence[: pos + 1]
+                    sentence = sentence[pos + 1 :]
+            start = perf_counter()
+        if len(sentence) > 0:
+            yield sentence + "."
+        if times:
+            logging.info(f"{generated_text=} TTFT: {times[0]:.4f}s total time: {sum(times):.4f}s")
+        torch.cuda.empty_cache()
+
+
+class VllmOfficeDeepSeekOCR(VllmDeepSeekOCR):
+    """
+    officially supported in upstream vLLM.
+    https://docs.vllm.ai/projects/recipes/en/latest/DeepSeek/DeepSeek-OCR.html
+    # Until v0.11.1 release, you need to install vLLM from nightly build
+    # pip install -U vllm --pre --extra-index-url https://wheels.vllm.ai/nightly
+    """
+
+    TAG = "llm_office_vllm_deepseek_ocr"
+
+    pass
+
+    async def async_generate(self, session: Session, **kwargs):
+        """
+        session.ctx.state["ocr_img"] PIL.Image.Image
+        """
+        seed = kwargs.get("seed", self.args.lm_gen_seed)
+        set_all_random_seed(seed)
+
+        ocr_img = session.ctx.state["ocr_img"]
+        image = load_image(ocr_img).convert("RGB")
+
+        logits_processors = [
+            NoRepeatNGramLogitsProcessor(
+                ngram_size=30, window_size=90, whitelist_token_ids={128821, 128822}
+            )
+        ]  # whitelist: <td>, </td>
+        sampling_params = SamplingParams(
+            temperature=0.0,
+            max_tokens=8192,
+            logits_processors=logits_processors,
+            skip_special_tokens=False,
+            # ignore_eos=False,
+        )
+
+        request = {"prompt": self.prompt}
+        if "<image>" in self.prompt:
             request = {"prompt": self.prompt, "multi_modal_data": {"image": image}}
 
         generated_text = ""
