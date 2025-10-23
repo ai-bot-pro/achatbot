@@ -212,7 +212,7 @@ async def stream_infer(**kwargs):
 
                     ax.scatter(p0[0], p0[1], s=5, color="k")
                     ax.scatter(p1[0], p1[1], s=5, color="k")
-                except:
+                except Exception:
                     pass
 
             for endpoint in endpoints:

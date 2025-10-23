@@ -11,7 +11,7 @@ try:
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        "In order to use Smol-VLM, you need to `pip install achatbot[llm_transformers_manual_vision_deepseek_ocr]`"
+        "In order to use Deepseek-OCR, you need to `pip install achatbot[llm_transformers_manual_vision_deepseek_ocr]`"
     )
     raise Exception(f"Missing module: {e}")
 

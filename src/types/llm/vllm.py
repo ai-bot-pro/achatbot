@@ -11,6 +11,7 @@ class VllmEngineArgs:
     vllm language model engine args
     """
 
+    # https://docs.vllm.ai/en/latest/api/vllm/engine/arg_utils.html#vllm.engine.arg_utils.AsyncEngineArgs
     serv_args: dict = field(default_factory=lambda: AsyncEngineArgs().__dict__)
     gen_args: dict = field(default_factory=lambda: LMGenerateArgs().__dict__)
 

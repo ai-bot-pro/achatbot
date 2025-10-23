@@ -41,7 +41,7 @@ class MockILlm(EngineClass, interface.ILlm):
         return len(text.split())
 
 
-class MockILlmGenerator(EngineClass, interface.ILlmGenerator):
+class MockILlmGenerator(EngineClass, interface.ILlmGenerator, interface.IVisionOCR):
     def __init__(self, **kwargs):
         pass
 
@@ -494,7 +494,8 @@ class LLMEnvInit:
 
         kwargs = Qwen3TransformersVisionVoiceLMArgs(
             lm_model_name_or_path=os.getenv(
-                "LLM_MODEL_NAME_OR_PATH", os.path.join(MODELS_DIR, "Qwen/Qwen3-Omni-30B-A3B-Instruct")
+                "LLM_MODEL_NAME_OR_PATH",
+                os.path.join(MODELS_DIR, "Qwen/Qwen3-Omni-30B-A3B-Instruct"),
             ),
             lm_attn_impl=os.getenv("LLM_ATTN_IMPL", None),
             lm_device=os.getenv("LLM_DEVICE", None),
