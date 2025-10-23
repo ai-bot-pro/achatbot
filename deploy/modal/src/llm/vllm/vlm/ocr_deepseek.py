@@ -67,10 +67,10 @@ if APP_NAME == "achatbot":
         extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
     )
 
-# img = img.pip_install(
-#    f"achatbot==0.0.25.dev122",
-#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
-# )
+vllm_image = vllm_image.pip_install(
+    f"achatbot==0.0.28.dev1",
+    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
+)
 
 
 HF_MODEL_DIR = "/root/.achatbot/models"
@@ -247,6 +247,7 @@ async def stream_infer(**kwargs):
 
         result.save(f"{DEEPSEEK_ASSETS_DIR}/result_with_boxes.jpg")
 
+
 async def achatbot_stream_infer(**kwargs):
     from achatbot.processors.vision.ocr_processor import OCRProcessor
     from achatbot.modules.vision.ocr import VisionOCREnvInit
@@ -256,8 +257,9 @@ async def achatbot_stream_infer(**kwargs):
 
     Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
 
+    ocr_tag = kwargs("ocr_tag", "llm_vllm_deepseek_ocr")
     ocr = VisionOCREnvInit.initVisionOCREngine(
-        "llm_transformers_manual_vision_deepseek_ocr",
+        ocr_tag,
         {
             "lm_model_name_or_path": MODEL_PATH,
             "lm_device": "cuda",
@@ -294,17 +296,21 @@ async def achatbot_stream_infer(**kwargs):
 
 """
 IMAGE_GPU=L40s modal run src/llm/vllm/vlm/ocr_deepseek.py --task stream_infer
+IMAGE_GPU=L40s modal run src/llm/vllm/vlm/ocr_deepseek.py --task achatbot_stream_infer
+IMAGE_GPU=L40s modal run src/llm/vllm/vlm/ocr_deepseek.py --task achatbot_stream_infer --ocr-tag llm_office_vllm_deepseek_ocr
 """
 
 
 @app.local_entrypoint()
-def main(task: str = "stream_infer"):
+def main(task: str = "stream_infer", ocr_tag: str = "llm_vllm_deepseek_ocr"):
     tasks = {
         "stream_infer": stream_infer,
+        "achatbot_stream_infer": achatbot_stream_infer,
     }
     if task not in tasks:
         raise ValueError(f"task {task} not found")
     print(f"running task {task}")
     run.remote(
         tasks[task],
+        ocr_tag=ocr_tag,
     )

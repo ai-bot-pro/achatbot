@@ -33,7 +33,7 @@ local_scheme = "no-local-version"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.28.post1"
+version = "0.0.28.dev1"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
