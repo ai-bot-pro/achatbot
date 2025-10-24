@@ -436,9 +436,9 @@ async def achatbot_stream_infer(**kwargs):
 
 """
 IMAGE_GPU=L40s modal run src/llm/vllm/vlm/ocr_deepseek.py --task stream_infer
-IMAGE_GPU=L40s OCR_TAG=llm_vllm_deepseek_ocr modal run src/llm/vllm/vlm/ocr_deepseek.py --task achatbot_stream_infer
-IMAGE_GPU=L40s OCR_TAG=llm_office_vllm_deepseek_ocr modal run src/llm/vllm/vlm/ocr_deepseek.py --task achatbot_stream_infer
 IMAGE_GPU=L40s OCR_TAG=llm_office_vllm_deepseek_ocr modal run src/llm/vllm/vlm/ocr_deepseek.py --task offline_infer
+APP_NAME=achatbot IMAGE_GPU=L40s OCR_TAG=llm_vllm_deepseek_ocr modal run src/llm/vllm/vlm/ocr_deepseek.py --task achatbot_stream_infer
+APP_NAME=achatbot IMAGE_GPU=L40s OCR_TAG=llm_office_vllm_deepseek_ocr modal run src/llm/vllm/vlm/ocr_deepseek.py --task achatbot_stream_infer
 """
 
 
