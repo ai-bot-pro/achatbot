@@ -74,7 +74,7 @@ if BACKEND == "flashinfer":
 
 if APP_NAME == "achatbot":
     vllm_image = vllm_image.pip_install(
-        f"achatbot==0.0.28.post1",
+        f"achatbot==0.0.28.post2",
         extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
     )
 
@@ -84,8 +84,8 @@ else:
     vllm_image = vllm_image.pip_install("transformers==4.47.1")
 
 # vllm_image = vllm_image.pip_install(
-#    f"achatbot==0.0.28.dev19",
-#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
+#   f"achatbot==0.0.28.post3",
+#   extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
 # )
 
 

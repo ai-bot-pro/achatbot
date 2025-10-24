@@ -16,9 +16,6 @@ try:
     from src.thirdparty.deepseek_ocr_vllm.process.image_process import DeepseekOCRProcessor
     from src.thirdparty.deepseek_ocr_vllm.process import load_image
     from src.thirdparty.deepseek_ocr_vllm.model import BASE_SIZE, IMAGE_SIZE, CROP_MODE, PROMPT
-    from src.thirdparty.deepseek_ocr_vllm.model.deepseek_ocr import (
-        DeepseekOCRForCausalLM,
-    )  # import to register
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error("you need to `pip install achatbot[vllm]`")
@@ -40,10 +37,15 @@ class VllmDeepSeekOCR(VllmEngineBase, IVisionOCR):
     TAG = "llm_vllm_deepseek_ocr"
 
     def __init__(self, **kwargs) -> None:
+        if self.TAG == "llm_vllm_deepseek_ocr":
+            from src.thirdparty.deepseek_ocr_vllm.model.deepseek_ocr import (
+                DeepseekOCRForCausalLM,
+            )  # import to register
+
         self.base_size = BASE_SIZE
         self.image_size = IMAGE_SIZE
         self.crop_mode = CROP_MODE
-        self.prompt = PROMPT
+        self.prompt = kwargs.pop("ocr_prompt", PROMPT)
 
         super().__init__(**kwargs)
 
@@ -155,11 +157,6 @@ class VllmOfficeDeepSeekOCR(VllmDeepSeekOCR):
     """
 
     TAG = "llm_office_vllm_deepseek_ocr"
-
-    def __init__(self, **kwargs) -> None:
-        self.prompt = "<image>\nFree OCR."
-
-        super().__init__(**kwargs)
 
     async def async_generate(self, session: Session, **kwargs):
         """

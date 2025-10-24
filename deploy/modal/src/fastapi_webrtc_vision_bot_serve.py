@@ -547,7 +547,7 @@ EXTRA_INDEX_URL=https://pypi.org/simple/ \
 EXTRA_INDEX_URL=https://pypi.org/simple/ \
     SERVE_TYPE=room_bot \
     CONFIG_FILE=/root/.achatbot/config/bots/daily_ocr_vllm_vision_bot.json \
-    ACHATBOT_VERSION=0.0.28.post1 \
+    ACHATBOT_VERSION=0.0.28.post2 \
     IMAGE_NAME=deepseek_ocr_office_vllm IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L40s \
     modal serve src/fastapi_webrtc_vision_bot_serve.py
 """
