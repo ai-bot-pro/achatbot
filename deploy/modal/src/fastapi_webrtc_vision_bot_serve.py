@@ -418,10 +418,10 @@ if SERVE_TYPE == "room_bot":
         }
     )
 
-img = img.pip_install(
-    f"achatbot==0.0.28.dev19",
-    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
-)
+# img = img.pip_install(
+#    f"achatbot==0.0.28.dev19",
+#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
+# )
 
 HF_MODEL_DIR = "/root/.achatbot/models"
 hf_model_vol = modal.Volume.from_name("models", create_if_missing=True)
