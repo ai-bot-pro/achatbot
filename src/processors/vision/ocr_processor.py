@@ -40,8 +40,8 @@ class OCRProcessor(AIProcessor):
         image = Image.frombytes(frame.mode, frame.size, frame.image)
         self._session.ctx.state["ocr_img"] = image
 
-        detect_iter = self._ocr.generate(self._session)
-        for item in detect_iter:
+        detect_iter = self._ocr.async_generate(self._session)
+        async for item in detect_iter:
             yield TextFrame(text=item)
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):

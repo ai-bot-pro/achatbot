@@ -26,9 +26,6 @@ from src.common.types import SessionCtx
 from . import VLlmBase
 
 
-Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
-
-
 class VllmEngineBase(VLlmBase):
     def __init__(self, **kwargs) -> None:
         super().__init__()
@@ -53,7 +50,6 @@ class VllmEngineBase(VLlmBase):
 
         # subclass to init
         self.init()
-
 
     def init(self):
         pass

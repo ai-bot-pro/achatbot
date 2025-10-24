@@ -330,6 +330,46 @@ class ContainerRuntimeConfig:
                 }
             )
         ),
+        "deepseek_ocr_vllm": (
+            vision_bot_img.pip_install(
+                [
+                    f"achatbot[llm_transformers_manual_vision_deepseek_ocr]=={achatbot_version}",
+                ],
+                extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+            )
+            .pip_install("flash-attn==2.7.4.post1", extra_options="--no-build-isolation")
+            .pip_install("vllm==v0.8.5", extra_index_url="https://download.pytorch.org/whl/cu126")
+            .pip_install("transformers==4.47.1")
+            .env(
+                {
+                    "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+                    "VLLM_USE_V1": "0",
+                    "TORCH_CUDA_ARCH_LIST": "8.0 8.9 9.0+PTX",
+                    "LLM_MODEL_NAME_OR_PATH": f"/root/.achatbot/models/{os.getenv('LLM_MODEL_NAME_OR_PATH', 'deepseek-ai/DeepSeek-OCR')}",
+                }
+            )
+        ),
+        "deepseek_ocr_office_vllm": (
+            vision_bot_img.pip_install(
+                [
+                    f"achatbot[llm_transformers_manual_vision_deepseek_ocr]=={achatbot_version}",
+                ],
+                extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
+            )
+            .pip_install("flash-attn==2.7.4.post1", extra_options="--no-build-isolation")
+            .run_commands(
+                "pip install -U vllm --pre --extra-index-url https://wheels.vllm.ai/nightly"
+            )
+            .pip_install("transformers==4.57.1")
+            .env(
+                {
+                    "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+                    "VLLM_USE_V1": "1",
+                    "TORCH_CUDA_ARCH_LIST": "8.0 8.9 9.0+PTX",
+                    "LLM_MODEL_NAME_OR_PATH": f"/root/.achatbot/models/{os.getenv('LLM_MODEL_NAME_OR_PATH', 'deepseek-ai/DeepSeek-OCR')}",
+                }
+            )
+        ),
     }
 
     @staticmethod
@@ -379,8 +419,8 @@ if SERVE_TYPE == "room_bot":
     )
 
 # img = img.pip_install(
-#   f"achatbot==0.0.27.dev12",
-#   extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
+#    f"achatbot==0.0.28.dev19",
+#    extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
 # )
 
 HF_MODEL_DIR = "/root/.achatbot/models"
@@ -495,5 +535,19 @@ EXTRA_INDEX_URL=https://pypi.org/simple/ \
     CONFIG_FILE=/root/.achatbot/config/bots/daily_ocr_vision_bot.json \
     ACHATBOT_VERSION=0.0.28 \
     IMAGE_NAME=deepseek_ocr IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L4 \
+    modal serve src/fastapi_webrtc_vision_bot_serve.py
+
+modal volume put config ./config/bots/daily_ocr_vllm_vision_bot.json /bots/ -f
+EXTRA_INDEX_URL=https://pypi.org/simple/ \
+    SERVE_TYPE=room_bot \
+    CONFIG_FILE=/root/.achatbot/config/bots/daily_ocr_vllm_vision_bot.json \
+    ACHATBOT_VERSION=0.0.28.post1 \
+    IMAGE_NAME=deepseek_ocr_vllm IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L40s \
+    modal serve src/fastapi_webrtc_vision_bot_serve.py
+EXTRA_INDEX_URL=https://pypi.org/simple/ \
+    SERVE_TYPE=room_bot \
+    CONFIG_FILE=/root/.achatbot/config/bots/daily_ocr_vllm_vision_bot.json \
+    ACHATBOT_VERSION=0.0.28.post1 \
+    IMAGE_NAME=deepseek_ocr_office_vllm IMAGE_CONCURRENT_CN=1 IMAGE_GPU=L40s \
     modal serve src/fastapi_webrtc_vision_bot_serve.py
 """

@@ -11,7 +11,7 @@ try:
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        "In order to use Smol-VLM, you need to `pip install achatbot[llm_transformers_manual_vision_deepseek_ocr]`"
+        "In order to use Deepseek-OCR, you need to `pip install achatbot[llm_transformers_manual_vision_deepseek_ocr]`"
     )
     raise Exception(f"Missing module: {e}")
 
@@ -122,7 +122,7 @@ class TransformersManualVisionDeepSeekOCR(TransformersBaseLLM, IVisionOCR):
         self.prompt = prompt
 
     @torch.inference_mode()
-    def generate(self, session: Session, **kwargs):
+    async def async_generate(self, session: Session, **kwargs):
         seed = kwargs.get("seed", self.args.lm_gen_seed)
         set_all_random_seed(seed)
 

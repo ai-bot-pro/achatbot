@@ -41,11 +41,15 @@ class MockILlm(EngineClass, interface.ILlm):
         return len(text.split())
 
 
-class MockILlmGenerator(EngineClass, interface.ILlmGenerator):
+class MockILlmGenerator(EngineClass, interface.ILlmGenerator, interface.IVisionOCR):
     def __init__(self, **kwargs):
         pass
 
     async def generate(self, session, **kwargs):
+        logging.info("MockILlmGenerator generate called")
+        yield "This is a mock response."
+
+    async def async_generate(self, session, **kwargs):
         logging.info("MockILlmGenerator generate called")
         yield "This is a mock response."
 
@@ -70,6 +74,10 @@ class LLMEnvInit:
             from .vllm.step_audio2 import VllmClientStepAudio2
         if "llm_vllm_client_step_audio2_mock" == tag:
             from .vllm.step_audio2 import MockVllmClientStepAudio2
+        if "llm_vllm_deepseek_ocr" == tag:
+            from .vllm.deepseek_ocr import VllmDeepSeekOCR
+        if "llm_office_vllm_deepseek_ocr" == tag:
+            from .vllm.deepseek_ocr import VllmDeepSeekOCR
         if "llm_trtllm_generator" == tag:
             from .tensorrt_llm.generator import TrtLLMGenerator
         if "llm_trtllm_runner_generator" == tag:
@@ -494,7 +502,8 @@ class LLMEnvInit:
 
         kwargs = Qwen3TransformersVisionVoiceLMArgs(
             lm_model_name_or_path=os.getenv(
-                "LLM_MODEL_NAME_OR_PATH", os.path.join(MODELS_DIR, "Qwen/Qwen3-Omni-30B-A3B-Instruct")
+                "LLM_MODEL_NAME_OR_PATH",
+                os.path.join(MODELS_DIR, "Qwen/Qwen3-Omni-30B-A3B-Instruct"),
             ),
             lm_attn_impl=os.getenv("LLM_ATTN_IMPL", None),
             lm_device=os.getenv("LLM_DEVICE", None),
@@ -637,6 +646,8 @@ class LLMEnvInit:
         "llm_vllm_generator": get_llm_vllm_generator_args,
         "llm_vllm_vision_skyworkr1v": get_llm_vllm_generator_args,
         "llm_vllm_client_step_audio2": get_llm_vllm_client_args,
+        "llm_vllm_deepseek_ocr": get_llm_vllm_generator_args,
+        "llm_office_vllm_deepseek_ocr": get_llm_vllm_generator_args,
         "llm_sglang_generator": get_llm_sglang_generator_args,
         "llm_trtllm_generator": get_llm_trtllm_generator_args,
         "llm_trtllm_runner_generator": get_llm_trtllm_runner_generator_args,

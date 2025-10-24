@@ -150,7 +150,7 @@ class TransformersGOTOCRLM(BaseLLM, IVisionOCR):
         for new_text in self._streamer:
             yield new_text
 
-    def generate(self, session: Session):
+    async def async_generate(self, session: Session):
         res = ""
         if self.args.lm_stream is False:
             for text in self.stream_infer(session):
