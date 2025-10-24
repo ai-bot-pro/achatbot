@@ -13,7 +13,7 @@ import modal
 OCR_TAG = os.getenv("OCR_TAG", "llm_vllm_deepseek_ocr")
 BACKEND = os.getenv("BACKEND", "")
 APP_NAME = os.getenv("APP_NAME", "")
-TP = os.getenv("TP", "1")
+TP = os.getenv("TP", "1")  # only one
 PROFILE_DIR = "/root/vllm_profile"
 
 app = modal.App("vllm-deepseek-ocr")
@@ -84,7 +84,7 @@ else:
     vllm_image = vllm_image.pip_install("transformers==4.47.1")
 
 vllm_image = vllm_image.pip_install(
-    f"achatbot==0.0.28.dev16",
+    f"achatbot==0.0.28.dev19",
     extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
 )
 
@@ -144,21 +144,131 @@ async def run(func, **kwargs):
         func(**kwargs)
 
 
+def offline_infer(**kwargs):
+    ocr_tag = os.getenv("OCR_TAG", "llm_vllm_deepseek_ocr")
+    assert ocr_tag == "llm_office_vllm_deepseek_ocr"
+    from vllm import LLM, SamplingParams
+    from vllm.model_executor.models.deepseek_ocr import NGramPerReqLogitsProcessor
+    from PIL import Image
+
+    # Create model instance
+    llm = LLM(
+        model=MODEL_PATH,
+        # block_size=256,
+        max_model_len=8192,
+        enforce_eager=False,
+        trust_remote_code=True,
+        tensor_parallel_size=1,
+        gpu_memory_utilization=0.75,
+        enable_prefix_caching=False,  # no chat case
+        mm_processor_cache_gb=0,
+        logits_processors=[NGramPerReqLogitsProcessor],
+    )
+
+    # Prepare batched input with your image file
+    prompt = "<image>\n<|grounding|>Convert the document to markdown."
+    # prompt = "<image>\nFree OCR."
+    image_files = [
+        Image.new("RGB", (640, 640), color="white"),
+        Image.open("/DeepSeek-OCR/assets/fig1.png").convert("RGB"),
+        # use ORC detected Show pictures, detect again :)
+        Image.open("/DeepSeek-OCR/assets/show1.jpg"),
+        # Image.open("/DeepSeek-OCR/assets/show2.jpg"),
+        # Image.open("/DeepSeek-OCR/assets/show3.jpg"),
+        # Image.open("/DeepSeek-OCR/assets/show4.jpg"),
+    ]
+    model_input = []
+    for image_obj in image_files:
+        model_input.append({"prompt": prompt, "multi_modal_data": {"image": image_obj}})
+
+    sampling_param = SamplingParams(
+        temperature=0.0,
+        max_tokens=1024,
+        # ngram logit processor args
+        extra_args=dict(
+            ngram_size=30,
+            window_size=90,
+            whitelist_token_ids={128821, 128822},  # whitelist: <td>, </td>
+        ),
+        skip_special_tokens=False,
+    )
+    # Generate output
+    model_outputs = llm.generate(model_input, sampling_param)
+
+    # Print output
+    for output in model_outputs:
+        print(output.outputs[0].text)
+        print("----" * 20)
+
+
+async def stream_generate(image=None, prompt=""):
+    from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
+
+    engine_args = AsyncEngineArgs(
+        model=MODEL_PATH,
+        hf_overrides={"architectures": ["DeepseekOCRForCausalLM"]},
+        block_size=256,
+        max_model_len=8192,
+        enforce_eager=False,
+        trust_remote_code=True,
+        tensor_parallel_size=1,
+        gpu_memory_utilization=0.75,
+    )
+    engine = AsyncLLMEngine.from_engine_args(engine_args)
+
+    logits_processors = [
+        NoRepeatNGramLogitsProcessor(
+            ngram_size=30, window_size=90, whitelist_token_ids={128821, 128822}
+        )
+    ]  # whitelist: <td>, </td>
+
+    sampling_params = SamplingParams(
+        temperature=0.0,
+        max_tokens=8192,
+        logits_processors=logits_processors,
+        skip_special_tokens=False,
+        # ignore_eos=False,
+    )
+
+    request_id = f"request-{int(time.time())}"
+
+    printed_length = 0
+
+    if image and "<image>" in prompt:
+        request = {"prompt": prompt, "multi_modal_data": {"image": image}}
+    elif prompt:
+        request = {"prompt": prompt}
+    else:
+        assert False, f"prompt is none!!!"
+    async for request_output in engine.generate(request, sampling_params, request_id):
+        if request_output.outputs:
+            full_text = request_output.outputs[0].text
+            new_text = full_text[printed_length:]
+            print(new_text, end="", flush=True)
+            printed_length = len(full_text)
+            final_output = full_text
+    print("\n")
+
+    return final_output
+
+
 async def stream_infer(**kwargs):
     sys.path.insert(0, "/DeepSeek-OCR/DeepSeek-OCR-master/DeepSeek-OCR-vllm")
     from process.image_process import DeepseekOCRProcessor
-    from run_dpsk_ocr_image import load_image, re_match, process_image_with_refs, stream_generate
+    from run_dpsk_ocr_image import load_image, re_match, process_image_with_refs
     import config
 
     config.OUTPUT_PATH = DEEPSEEK_ASSETS_DIR
 
     CROP_MODE = True
 
-    # image_path = "/DeepSeek-OCR/assets/fig1.png"
-    image_path = "/DeepSeek-OCR/assets/show1.jpg"
+    image_path = "/DeepSeek-OCR/assets/fig1.png"
+    # image_path = "/DeepSeek-OCR/assets/show1.jpg"
     image = load_image(image_path).convert("RGB")
 
     PROMPT = "<image>\n<|grounding|>Convert the document to markdown."
+    # PROMPT = "<image>\nFree OCR."
+
     if "<image>" in PROMPT:
         image_features = DeepseekOCRProcessor().tokenize_with_images(
             images=[image], bos=True, eos=True, cropping=CROP_MODE
@@ -270,14 +380,13 @@ async def achatbot_stream_infer(**kwargs):
     from achatbot.common.session import SessionCtx, Session
     from achatbot.types.frames.data_frames import UserImageRawFrame
     from achatbot.thirdparty.deepseek_ocr_vllm.model import BASE_SIZE, IMAGE_SIZE, CROP_MODE, PROMPT
-    from achatbot.thirdparty.deepseek_ocr_vllm.model.deepseek_ocr import DeepseekOCRForCausalLM
     from achatbot.common.logger import Logger
 
     Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
 
     serv_args = dict(
         model=MODEL_PATH,
-        block_size=256,
+        # block_size=256,
         max_model_len=8192,
         enforce_eager=False,
         trust_remote_code=True,
@@ -294,8 +403,9 @@ async def achatbot_stream_infer(**kwargs):
         serv_args["logits_processors"] = [NGramPerReqLogitsProcessor]
     else:
         from vllm.model_executor.models.registry import ModelRegistry
+        # from achatbot.thirdparty.deepseek_ocr_vllm.model.deepseek_ocr import DeepseekOCRForCausalLM
 
-        ModelRegistry.register_model("DeepseekOCRForCausalLM", DeepseekOCRForCausalLM)
+        # ModelRegistry.register_model("DeepseekOCRForCausalLM", DeepseekOCRForCausalLM)
         serv_args["hf_overrides"] = {"architectures": ["DeepseekOCRForCausalLM"]}
 
     ocr = VisionOCREnvInit.initVisionOCREngine(ocr_tag, {"serv_args": serv_args})
@@ -303,9 +413,9 @@ async def achatbot_stream_infer(**kwargs):
     processor = OCRProcessor(ocr=ocr, session=session)
     image_files = [
         Image.new("RGB", (640, 640), color="white"),
-        Image.open("/DeepSeek-OCR/assets/fig1.png"),
+        # Image.open("/DeepSeek-OCR/assets/fig1.png"),
         # use ORC detected Show pictures, detect again :)
-        Image.open("/DeepSeek-OCR/assets/show1.jpg"),
+        # Image.open("/DeepSeek-OCR/assets/show1.jpg"),
         # Image.open("/DeepSeek-OCR/assets/show2.jpg"),
         # Image.open("/DeepSeek-OCR/assets/show3.jpg"),
         # Image.open("/DeepSeek-OCR/assets/show4.jpg"),
@@ -328,6 +438,7 @@ async def achatbot_stream_infer(**kwargs):
 IMAGE_GPU=L40s modal run src/llm/vllm/vlm/ocr_deepseek.py --task stream_infer
 IMAGE_GPU=L40s OCR_TAG=llm_vllm_deepseek_ocr modal run src/llm/vllm/vlm/ocr_deepseek.py --task achatbot_stream_infer
 IMAGE_GPU=L40s OCR_TAG=llm_office_vllm_deepseek_ocr modal run src/llm/vllm/vlm/ocr_deepseek.py --task achatbot_stream_infer
+IMAGE_GPU=L40s OCR_TAG=llm_office_vllm_deepseek_ocr modal run src/llm/vllm/vlm/ocr_deepseek.py --task offline_infer
 """
 
 
@@ -335,6 +446,7 @@ IMAGE_GPU=L40s OCR_TAG=llm_office_vllm_deepseek_ocr modal run src/llm/vllm/vlm/o
 def main(task: str = "stream_infer"):
     tasks = {
         "stream_infer": stream_infer,
+        "offline_infer": offline_infer,
         "achatbot_stream_infer": achatbot_stream_infer,
     }
     if task not in tasks:

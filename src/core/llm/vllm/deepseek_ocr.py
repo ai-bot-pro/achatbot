@@ -16,6 +16,9 @@ try:
     from src.thirdparty.deepseek_ocr_vllm.process.image_process import DeepseekOCRProcessor
     from src.thirdparty.deepseek_ocr_vllm.process import load_image
     from src.thirdparty.deepseek_ocr_vllm.model import BASE_SIZE, IMAGE_SIZE, CROP_MODE, PROMPT
+    from src.thirdparty.deepseek_ocr_vllm.model.deepseek_ocr import (
+        DeepseekOCRForCausalLM,
+    )  # import to register
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error("you need to `pip install achatbot[vllm]`")
@@ -197,7 +200,6 @@ class VllmOfficeDeepSeekOCR(VllmDeepSeekOCR):
 
             generated_text = request_output.outputs[0].text
             new_text = generated_text[printed_length:]
-            print(new_text)
             printed_length = len(generated_text)
 
             if "<|ref|>" in new_text:

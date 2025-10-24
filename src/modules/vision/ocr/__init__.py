@@ -18,7 +18,7 @@ class VisionOCREnvInit:
         if "vision_transformers_got_ocr" in tag:
             from . import transformers_got
 
-        # modules/vision/ocr dep core/llm/transformers :)
+        # modules/vision/ocr dep core/llm
         if "llm_transformers_manual_vision_deepseek_ocr" in tag:
             from src.core.llm.transformers import manual_vision_ocr_deepseek
         if "llm_vllm_deepseek_ocr" == tag:
