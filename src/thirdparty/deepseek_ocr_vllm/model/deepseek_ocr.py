@@ -40,7 +40,6 @@ from vllm.transformers_utils.configs.deepseek_vl2 import (
     MlpProjectorConfig,
     VisionEncoderConfig,
 )
-from process.image_process import DeepseekOCRProcessor, count_tiles
 from vllm.transformers_utils.tokenizer import cached_tokenizer_from_config
 # from vllm.utils import is_list_of
 
@@ -57,14 +56,16 @@ from vllm.model_executor.models.utils import (
     maybe_prefix,
     merge_multimodal_embeddings,
 )
-
-from deepencoder.sam_vary_sdpa import build_sam_vit_b
-from deepencoder.clip_sdpa import build_clip_l
-from deepencoder.build_linear import MlpProjector
+from vllm.model_executor.models.registry import ModelRegistry
 from addict import Dict
 
+from src.thirdparty.deepseek_ocr_vllm.process.image_process import DeepseekOCRProcessor, count_tiles
+from src.thirdparty.deepseek_ocr_vllm.deepencoder.sam_vary_sdpa import build_sam_vit_b
+from src.thirdparty.deepseek_ocr_vllm.deepencoder.clip_sdpa import build_clip_l
+from src.thirdparty.deepseek_ocr_vllm.deepencoder.build_linear import MlpProjector
+
 # import time
-from . import IMAGE_SIZE, BASE_SIZE, CROP_MODE, VERBOSE, PROMPT
+from . import IMAGE_SIZE, BASE_SIZE, CROP_MODE, VERBOSE, PROMPT, MODEL_PATH, TOKENIZER
 
 # The image token id may be various
 _IMAGE_TOKEN = "<image>"
@@ -142,7 +143,12 @@ class DeepseekOCRProcessingInfo(BaseProcessingInfo):
         return ImageSize(width=640 * 2, height=640 * 2)
 
 
+# profiling (hard code, not good design)
+# https://github.com/vllm-project/vllm/blob/main/vllm/multimodal/profiling.py#L67
 class DeepseekOCRDummyInputsBuilder(BaseDummyInputsBuilder[DeepseekOCRProcessingInfo]):
+    # def __init__(self, info: _I) -> None:
+    #    super().__init__(info)
+
     def get_dummy_text(self, mm_counts: Mapping[str, int]) -> str:
         num_images = mm_counts.get("image", 0)
 
@@ -165,7 +171,8 @@ class DeepseekOCRDummyInputsBuilder(BaseDummyInputsBuilder[DeepseekOCRProcessing
 
         if "<image>" in PROMPT:
             return {
-                "image": DeepseekOCRProcessor().tokenize_with_images(
+                "image": DeepseekOCRProcessor(tokenizer=TOKENIZER).tokenize_with_images(
+                    conversation=PROMPT,
                     images=self._get_dummy_images(
                         width=max_image_size.width,
                         height=max_image_size.height,
@@ -280,7 +287,7 @@ class DeepseekOCRMultiModalProcessor(BaseMultiModalProcessor[DeepseekOCRProcessi
 @MULTIMODAL_REGISTRY.register_processor(
     DeepseekOCRMultiModalProcessor,
     info=DeepseekOCRProcessingInfo,
-    dummy_inputs=DeepseekOCRDummyInputsBuilder,
+    dummy_inputs=DeepseekOCRDummyInputsBuilder,  # not good design, maybe need config dummy input to profile, not hard code, just from a sub dataset
 )
 class DeepseekOCRForCausalLM(nn.Module, SupportsMultiModal, SupportsPP):
     hf_to_vllm_mapper = WeightsMapper(
@@ -601,3 +608,6 @@ class DeepseekOCRForCausalLM(nn.Module, SupportsMultiModal, SupportsPP):
         autoloaded_weights = loader.load_weights(processed_weights, mapper=self.hf_to_vllm_mapper)
 
         return autoloaded_weights
+
+
+ModelRegistry.register_model("DeepseekOCRForCausalLM", DeepseekOCRForCausalLM)

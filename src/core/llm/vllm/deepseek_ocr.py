@@ -11,10 +11,11 @@ import torch
 try:
     from transformers import AutoTokenizer
     from vllm import LLM, SamplingParams
-    from src.thirdparty.deepseek_ocr.process.ngram_norepeat import NoRepeatNGramLogitsProcessor
-    from src.thirdparty.deepseek_ocr.process.image_process import DeepseekOCRProcessor
-    from src.thirdparty.deepseek_ocr.process import load_image
-    from src.thirdparty.deepseek_ocr.model import BASE_SIZE, IMAGE_SIZE, CROP_MODE, PROMPT
+
+    from src.thirdparty.deepseek_ocr_vllm.process.ngram_norepeat import NoRepeatNGramLogitsProcessor
+    from src.thirdparty.deepseek_ocr_vllm.process.image_process import DeepseekOCRProcessor
+    from src.thirdparty.deepseek_ocr_vllm.process import load_image
+    from src.thirdparty.deepseek_ocr_vllm.model import BASE_SIZE, IMAGE_SIZE, CROP_MODE, PROMPT
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error("you need to `pip install achatbot[vllm]`")
@@ -36,22 +37,10 @@ class VllmDeepSeekOCR(VllmEngineBase, IVisionOCR):
     TAG = "llm_vllm_deepseek_ocr"
 
     def __init__(self, **kwargs) -> None:
-        self.base_size = kwargs.pop("ocr_base_size", BASE_SIZE)
-        self.image_size = kwargs.pop("ocr_image_size", IMAGE_SIZE)
-        self.crop_mode = kwargs.pop("ocr_crop_mode", CROP_MODE)
-        # Tiny: base_size = 512, image_size = 512, crop_mode = False
-        # Small: base_size = 640, image_size = 640, crop_mode = False
-        # Base: base_size = 1024, image_size = 1024, crop_mode = False
-        # Large: base_size = 1280, image_size = 1280, crop_mode = False
-        # Gundam: base_size = 1024, image_size = 640, crop_mode = True # default
-
-        self.prompt = kwargs.pop("ocr_prompt", PROMPT)
-        # document: <image>\n<|grounding|>Convert the document to markdown.
-        # other image: <image>\n<|grounding|>OCR this image.
-        # without layouts: <image>\nFree OCR.
-        # figures in document: <image>\nParse the figure.
-        # general: <image>\nDescribe this image in detail.
-        # rec: <image>\nLocate <|ref|>xxxx<|/ref|> in the image.
+        self.base_size = BASE_SIZE
+        self.image_size = IMAGE_SIZE
+        self.crop_mode = CROP_MODE
+        self.prompt = PROMPT
 
         super().__init__(**kwargs)
 
@@ -77,21 +66,21 @@ class VllmDeepSeekOCR(VllmEngineBase, IVisionOCR):
         """
         session.ctx.state["ocr_img"] PIL.Image.Image
         """
-        seed = kwargs.get("seed", self.args.lm_gen_seed)
-        set_all_random_seed(seed)
-
         ocr_img = session.ctx.state["ocr_img"]
         image = load_image(ocr_img).convert("RGB")
 
         # extract image features from  PIL.Image.Image
-        image_features = ""
+        image_features = None
         if "<image>" in self.prompt:
             image_features = DeepseekOCRProcessor(
                 tokenizer=self.tokenizer,
                 image_size=self.image_size,
                 base_size=self.base_size,
-            ).tokenize_with_images(images=[image], bos=True, eos=True, cropping=self.crop_mode)
+            ).tokenize_with_images(
+                self.prompt, images=[image], bos=True, eos=True, cropping=self.crop_mode
+            )
 
+        # for vLLM V0
         logits_processors = [
             NoRepeatNGramLogitsProcessor(
                 ngram_size=30, window_size=90, whitelist_token_ids={128821, 128822}
@@ -107,7 +96,7 @@ class VllmDeepSeekOCR(VllmEngineBase, IVisionOCR):
 
         request = {"prompt": self.prompt}
         if image_features and "<image>" in self.prompt:
-            request = {"prompt": self.prompt, "multi_modal_data": {"image": image}}
+            request = {"prompt": self.prompt, "multi_modal_data": {"image": image_features}}
 
         generated_text = ""
         start = perf_counter()
@@ -164,29 +153,29 @@ class VllmOfficeDeepSeekOCR(VllmDeepSeekOCR):
 
     TAG = "llm_office_vllm_deepseek_ocr"
 
-    pass
+    def __init__(self, **kwargs) -> None:
+        self.prompt = "<image>\nFree OCR."
+
+        super().__init__(**kwargs)
 
     async def async_generate(self, session: Session, **kwargs):
         """
         session.ctx.state["ocr_img"] PIL.Image.Image
         """
-        seed = kwargs.get("seed", self.args.lm_gen_seed)
-        set_all_random_seed(seed)
-
         ocr_img = session.ctx.state["ocr_img"]
         image = load_image(ocr_img).convert("RGB")
 
-        logits_processors = [
-            NoRepeatNGramLogitsProcessor(
-                ngram_size=30, window_size=90, whitelist_token_ids={128821, 128822}
-            )
-        ]  # whitelist: <td>, </td>
+        # NOTE: vLLM V1 does not support per request user provided logits processors.
         sampling_params = SamplingParams(
             temperature=0.0,
             max_tokens=8192,
-            logits_processors=logits_processors,
+            # ngram logit processor args
+            extra_args=dict(
+                ngram_size=30,
+                window_size=90,
+                whitelist_token_ids={128821, 128822},  # whitelist: <td>, </td>
+            ),
             skip_special_tokens=False,
-            # ignore_eos=False,
         )
 
         request = {"prompt": self.prompt}
@@ -208,6 +197,7 @@ class VllmOfficeDeepSeekOCR(VllmDeepSeekOCR):
 
             generated_text = request_output.outputs[0].text
             new_text = generated_text[printed_length:]
+            print(new_text)
             printed_length = len(generated_text)
 
             if "<|ref|>" in new_text:

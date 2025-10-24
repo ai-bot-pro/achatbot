@@ -10,6 +10,7 @@ from PIL import Image
 
 import modal
 
+OCR_TAG = os.getenv("OCR_TAG", "llm_vllm_deepseek_ocr")
 BACKEND = os.getenv("BACKEND", "")
 APP_NAME = os.getenv("APP_NAME", "")
 TP = os.getenv("TP", "1")
@@ -51,9 +52,19 @@ vllm_image = (
             "TP": TP,
             "VLLM_WORKER_MULTIPROC_METHOD": "spawn",
             "TORCH_CUDA_ARCH_LIST": "8.0 8.9 9.0+PTX",
+            "OCR_TAG": OCR_TAG,
         }
     )
 )
+
+if OCR_TAG == "llm_office_vllm_deepseek_ocr":
+    vllm_image = vllm_image.run_commands(
+        "pip install -U vllm --pre --extra-index-url https://wheels.vllm.ai/nightly"
+    ).env(
+        {
+            "VLLM_USE_V1": "1",
+        }
+    )
 
 if BACKEND == "flashinfer":
     vllm_image = vllm_image.pip_install(
@@ -67,8 +78,13 @@ if APP_NAME == "achatbot":
         extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://pypi.org/simple/"),
     )
 
+if OCR_TAG == "llm_office_vllm_deepseek_ocr":
+    vllm_image = vllm_image.pip_install("transformers==4.57.1")
+else:
+    vllm_image = vllm_image.pip_install("transformers==4.47.1")
+
 vllm_image = vllm_image.pip_install(
-    f"achatbot==0.0.28.dev1",
+    f"achatbot==0.0.28.dev16",
     extra_index_url=os.getenv("EXTRA_INDEX_URL", "https://test.pypi.org/simple/"),
 )
 
@@ -86,8 +102,6 @@ vllm_profile = modal.Volume.from_name("vllm_profile", create_if_missing=True)
 
 
 with vllm_image.imports():
-    sys.path.insert(0, "/DeepSeek-OCR/DeepSeek-OCR-master/DeepSeek-OCR-vllm")
-
     import torch
     from tqdm import tqdm
     from vllm import LLM, AsyncLLMEngine, AsyncEngineArgs, SamplingParams
@@ -95,13 +109,6 @@ with vllm_image.imports():
     MODEL_ID = os.getenv("LLM_MODEL", "deepseek-ai/DeepSeek-OCR")
     MODEL_PATH = os.path.join(HF_MODEL_DIR, MODEL_ID)
     DEEPSEEK_ASSETS_DIR = os.path.join(ASSETS_DIR, "DeepSeek-OCR-vllm")
-
-    import config
-
-    config.OUTPUT_PATH = DEEPSEEK_ASSETS_DIR
-
-    from process.image_process import DeepseekOCRProcessor
-    from run_dpsk_ocr_image import load_image, re_match, process_image_with_refs, stream_generate
 
     # torch.set_float32_matmul_precision("high")
 
@@ -138,9 +145,18 @@ async def run(func, **kwargs):
 
 
 async def stream_infer(**kwargs):
+    sys.path.insert(0, "/DeepSeek-OCR/DeepSeek-OCR-master/DeepSeek-OCR-vllm")
+    from process.image_process import DeepseekOCRProcessor
+    from run_dpsk_ocr_image import load_image, re_match, process_image_with_refs, stream_generate
+    import config
+
+    config.OUTPUT_PATH = DEEPSEEK_ASSETS_DIR
+
     CROP_MODE = True
 
-    image = load_image("/DeepSeek-OCR/assets/fig1.png").convert("RGB")
+    # image_path = "/DeepSeek-OCR/assets/fig1.png"
+    image_path = "/DeepSeek-OCR/assets/show1.jpg"
+    image = load_image(image_path).convert("RGB")
 
     PROMPT = "<image>\n<|grounding|>Convert the document to markdown."
     if "<image>" in PROMPT:
@@ -183,7 +199,7 @@ async def stream_infer(**kwargs):
 
         # if 'structural formula' in conversation[0]['content']:
         #     outputs = '<smiles>' + outputs + '</smiles>'
-        with open(f"{DEEPSEEK_ASSETS_DIR}/result.mmd", "w", encoding="utf-8") as afile:
+        with open(f"{DEEPSEEK_ASSETS_DIR}/result.md", "w", encoding="utf-8") as afile:
             afile.write(outputs)
 
         if "line_type" in outputs:
@@ -253,22 +269,36 @@ async def achatbot_stream_infer(**kwargs):
     from achatbot.modules.vision.ocr import VisionOCREnvInit
     from achatbot.common.session import SessionCtx, Session
     from achatbot.types.frames.data_frames import UserImageRawFrame
+    from achatbot.thirdparty.deepseek_ocr_vllm.model import BASE_SIZE, IMAGE_SIZE, CROP_MODE, PROMPT
+    from achatbot.thirdparty.deepseek_ocr_vllm.model.deepseek_ocr import DeepseekOCRForCausalLM
     from achatbot.common.logger import Logger
 
     Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
 
-    ocr_tag = kwargs("ocr_tag", "llm_vllm_deepseek_ocr")
-    ocr = VisionOCREnvInit.initVisionOCREngine(
-        ocr_tag,
-        {
-            "lm_model_name_or_path": MODEL_PATH,
-            "lm_device": "cuda",
-            "ocr_base_size": 1024,
-            "ocr_image_size": 640,
-            "ocr_crop_mode": True,
-            "ocr_prompt": "<image>\n<|grounding|>Convert the document to markdown. ",
-        },
+    serv_args = dict(
+        model=MODEL_PATH,
+        block_size=256,
+        max_model_len=8192,
+        enforce_eager=False,
+        trust_remote_code=True,
+        tensor_parallel_size=1,
+        gpu_memory_utilization=0.75,
+        enable_prefix_caching=False,  # no chat case
     )
+
+    ocr_tag = os.getenv("OCR_TAG", "llm_vllm_deepseek_ocr")
+    if ocr_tag == "llm_office_vllm_deepseek_ocr":
+        from vllm.model_executor.models.deepseek_ocr import NGramPerReqLogitsProcessor
+
+        serv_args["mm_processor_cache_gb"] = 0
+        serv_args["logits_processors"] = [NGramPerReqLogitsProcessor]
+    else:
+        from vllm.model_executor.models.registry import ModelRegistry
+
+        ModelRegistry.register_model("DeepseekOCRForCausalLM", DeepseekOCRForCausalLM)
+        serv_args["hf_overrides"] = {"architectures": ["DeepseekOCRForCausalLM"]}
+
+    ocr = VisionOCREnvInit.initVisionOCREngine(ocr_tag, {"serv_args": serv_args})
     session = Session(**SessionCtx(str(uuid.uuid4())).__dict__)
     processor = OCRProcessor(ocr=ocr, session=session)
     image_files = [
@@ -296,13 +326,13 @@ async def achatbot_stream_infer(**kwargs):
 
 """
 IMAGE_GPU=L40s modal run src/llm/vllm/vlm/ocr_deepseek.py --task stream_infer
-IMAGE_GPU=L40s modal run src/llm/vllm/vlm/ocr_deepseek.py --task achatbot_stream_infer
-IMAGE_GPU=L40s modal run src/llm/vllm/vlm/ocr_deepseek.py --task achatbot_stream_infer --ocr-tag llm_office_vllm_deepseek_ocr
+IMAGE_GPU=L40s OCR_TAG=llm_vllm_deepseek_ocr modal run src/llm/vllm/vlm/ocr_deepseek.py --task achatbot_stream_infer
+IMAGE_GPU=L40s OCR_TAG=llm_office_vllm_deepseek_ocr modal run src/llm/vllm/vlm/ocr_deepseek.py --task achatbot_stream_infer
 """
 
 
 @app.local_entrypoint()
-def main(task: str = "stream_infer", ocr_tag: str = "llm_vllm_deepseek_ocr"):
+def main(task: str = "stream_infer"):
     tasks = {
         "stream_infer": stream_infer,
         "achatbot_stream_infer": achatbot_stream_infer,
@@ -312,5 +342,4 @@ def main(task: str = "stream_infer", ocr_tag: str = "llm_vllm_deepseek_ocr"):
     print(f"running task {task}")
     run.remote(
         tasks[task],
-        ocr_tag=ocr_tag,
     )

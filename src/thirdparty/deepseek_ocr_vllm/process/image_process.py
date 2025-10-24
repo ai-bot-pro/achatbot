@@ -7,6 +7,8 @@ from PIL import Image, ImageOps
 from transformers import AutoProcessor, BatchFeature, LlamaTokenizerFast
 from transformers.processing_utils import ProcessorMixin
 
+from ..model import TOKENIZER
+
 MIN_CROPS = 2
 MAX_CROPS = 6  # max:9; If your GPU memory is small, it is recommended to set it to 6.
 
@@ -138,7 +140,7 @@ class DeepseekOCRProcessor(ProcessorMixin):
 
     def __init__(
         self,
-        tokenizer: LlamaTokenizerFast | None = None,
+        tokenizer: LlamaTokenizerFast | None = TOKENIZER,
         candidate_resolutions: Tuple[Tuple[int, int]] = [[1024, 1024]],
         patch_size: int = 16,
         downsample_ratio: int = 4,
@@ -300,7 +302,7 @@ class DeepseekOCRProcessor(ProcessorMixin):
             images_spatial_crop,
             num_image_tokens,
             _,
-        ) = images[0]
+        ) = images[0]# image_features from tokenize_with_images
 
         return {
             "input_ids": input_ids,

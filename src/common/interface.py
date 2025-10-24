@@ -463,7 +463,7 @@ class IVisionDetector(ABC):
 
 class IVisionOCR(ABC):
     @abstractmethod
-    def generate(self, session, **kwargs) -> Iterator[str | dict | np.ndarray]:
+    async def async_generate(self, session, **kwargs) -> Iterator[str | dict | np.ndarray]:
         """
         input: session.ctx.state["ocr_img"]
         detect object and generate text

@@ -17,10 +17,14 @@ class VisionOCREnvInit:
     def getEngine(tag, **kwargs) -> interface.IVisionOCR | EngineClass:
         if "vision_transformers_got_ocr" in tag:
             from . import transformers_got
-        elif (
-            "llm_transformers_manual_vision_deepseek_ocr" in tag
-        ):  # modules/vision/ocr dep core/llm/transformers :)
+
+        # modules/vision/ocr dep core/llm/transformers :)
+        if "llm_transformers_manual_vision_deepseek_ocr" in tag:
             from src.core.llm.transformers import manual_vision_ocr_deepseek
+        if "llm_vllm_deepseek_ocr" == tag:
+            from src.core.llm.vllm.deepseek_ocr import VllmDeepSeekOCR
+        if "llm_office_vllm_deepseek_ocr" == tag:
+            from src.core.llm.vllm.deepseek_ocr import VllmDeepSeekOCR
 
         engine = EngineFactory.get_engine_by_tag(EngineClass, tag, **kwargs)
         return engine
@@ -60,4 +64,6 @@ class VisionOCREnvInit:
     map_config_func = {
         "vision_transformers_got_ocr": get_transformers_got_ocr_args,
         "llm_transformers_manual_vision_deepseek_ocr": LLMEnvInit.get_llm_transformers_args,
+        "llm_vllm_deepseek_ocr": LLMEnvInit.get_llm_vllm_generator_args,
+        "llm_office_vllm_deepseek_ocr": LLMEnvInit.get_llm_vllm_generator_args,
     }

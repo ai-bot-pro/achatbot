@@ -49,6 +49,10 @@ class MockILlmGenerator(EngineClass, interface.ILlmGenerator, interface.IVisionO
         logging.info("MockILlmGenerator generate called")
         yield "This is a mock response."
 
+    async def async_generate(self, session, **kwargs):
+        logging.info("MockILlmGenerator generate called")
+        yield "This is a mock response."
+
     def close(self):
         pass
 
@@ -71,6 +75,8 @@ class LLMEnvInit:
         if "llm_vllm_client_step_audio2_mock" == tag:
             from .vllm.step_audio2 import MockVllmClientStepAudio2
         if "llm_vllm_deepseek_ocr" == tag:
+            from .vllm.deepseek_ocr import VllmDeepSeekOCR
+        if "llm_office_vllm_deepseek_ocr" == tag:
             from .vllm.deepseek_ocr import VllmDeepSeekOCR
         if "llm_trtllm_generator" == tag:
             from .tensorrt_llm.generator import TrtLLMGenerator
@@ -641,6 +647,7 @@ class LLMEnvInit:
         "llm_vllm_vision_skyworkr1v": get_llm_vllm_generator_args,
         "llm_vllm_client_step_audio2": get_llm_vllm_client_args,
         "llm_vllm_deepseek_ocr": get_llm_vllm_generator_args,
+        "llm_office_vllm_deepseek_ocr": get_llm_vllm_generator_args,
         "llm_sglang_generator": get_llm_sglang_generator_args,
         "llm_trtllm_generator": get_llm_trtllm_generator_args,
         "llm_trtllm_runner_generator": get_llm_trtllm_runner_generator_args,
