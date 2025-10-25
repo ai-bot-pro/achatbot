@@ -58,11 +58,13 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
     - [Run chat bots with colab notebook](https://github.com/ai-bot-pro/achatbot?tab=readme-ov-file#run-chat-bots-with-colab-notebook)  🏃
 
 - support transport connector: 
-  - [x] pipe(UNIX socket), 
-  - [x] grpc, 
-  - [x] queue (redis),
-  - [ ] websocket
+  - [x] pipe(UNIX socket)
   - [ ] TCP/IP socket
+  - [x] gRPC
+  - queue
+    - [x] redis
+    - [ ] zmq
+    - [ ] rocketmq
 
 - chat bot processors: 
   - aggreators(llm use, assistant message), 
@@ -72,12 +74,14 @@ achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect o
     - [ ] [autoagen](https://github.com/microsoft/autogen): multi Agents
   - realtime voice inference(RTVI),
   - transport: 
-    - webRTC: (daily,livekit KISS)
+    - WebRTC:
       - [x] **[daily](https://github.com/ai-bot-pro/achatbot/blob/main/src/transports/daily.py)**: audio, video(image)
       - [x] **[livekit](https://github.com/ai-bot-pro/achatbot/blob/main/src/transports/livekit.py)**: audio, video(image)
       - [x] **[agora](https://github.com/ai-bot-pro/achatbot/blob/main/src/transports/agora.py)**: audio, video(image)
       - [x] **[small_webrtc](https://github.com/ai-bot-pro/achatbot/blob/main/src/transports/small_webrtc.py)**: audio, video(image)
-    - [x] [Websocket server](https://github.com/ai-bot-pro/achatbot/blob/main/src/transports/websocket_server.py)
+    - WebSocket:
+      - [x] [Websocket server](https://github.com/ai-bot-pro/achatbot/blob/main/src/transports/websocket_server.py)
+      - [x] [fastapi Websocket server](https://github.com/ai-bot-pro/achatbot/blob/main/src/transports/fastapi_websocket_server.py)
   - ai processor: llm, tts, asr etc..
     - llm_processor:
       - [x] [openai](https://github.com/ai-bot-pro/achatbot/blob/main/test/integration/processors/test_openai_llm_processor.py)(use openai sdk)
