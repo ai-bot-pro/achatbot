@@ -359,10 +359,8 @@ class AIBot(IBot):
             elif "together" in llm.base_url:
                 # https://docs.together.ai/docs/chat-models
                 api_key = os.environ.get("TOGETHER_API_KEY")
-            else:
-                llm.base_url = TOGETHER_LLM_URL
-                llm.model = TOGETHER_LLM_MODEL
-                api_key = os.environ.get("TOGETHER_API_KEY")
+            elif "local" in llm.base_url or "127.0.0.1" in llm.base_url:
+                api_key = "ollama"
 
         llm_processor = OpenAILLMProcessor(
             model=llm.model,
