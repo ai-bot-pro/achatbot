@@ -3,6 +3,8 @@ import os
 
 achatbot_version = os.getenv("ACHATBOT_VERSION", "0.0.19")
 avatar_tag = os.getenv("AVATAR_TAG", "lite_avatar_gpu")
+# fastapi_webrtc_bots | fastapi_webrtc_single_bot server
+SERVER_TAG = os.getenv("SERVER_TAG", "fastapi_webrtc_single_bot")
 image = (
     # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
     modal.Image.from_registry(
@@ -84,7 +86,7 @@ if avatar_tag == "lam_audio2expression_avatar":
                 "TRANSPORT": os.getenv("TRANSPORT", "webrtc_websocket_v2"),
                 "CONFIG_FILE": os.getenv(
                     "CONFIG_FILE",
-                    "/root/.achatbot/config/bots/small_webrtc_fastapi_websocket_avatar_echo_bot.json",
+                    "/root/.achatbot/config/bots/small_webrtc_fastapi_websocket_avatar_chat_bot.json",
                 ),
             }
         )
@@ -162,6 +164,19 @@ class Srv:
 
             return fastapi_app
         else:
-            from achatbot.cmd.http.server.fastapi_daily_bot_serve import app as fastapi_app
+            SERVER_TAG = os.getenv("SERVER_TAG", "fastapi_webrtc_single_bot")
+            if SERVER_TAG == "fastapi_webrtc_single_bot":
+                from achatbot.cmd.http.server.fastapi_room_bot_serve import app as fastapi_app
 
-            return fastapi_app
+                print("run fastapi_room_bot_serve(single bot)")
+                return fastapi_app
+            else:
+                from achatbot.cmd.http.server.fastapi_daily_bot_serve import app as fastapi_app
+
+                print("run fastapi_daily_bot_serve(multi bots)")
+                return fastapi_app
+
+
+"""
+ACHATBOT_VERSION=0.0.19.post5 AVATAR_TAG=lam_audio2expression_avatar  IMAGE_CONCURRENT_CN=3  modal deploy src/fastapi_webrtc_avatar_bot_serve.py
+"""

@@ -1,13 +1,22 @@
+import os
+import sys
 import traceback
 import logging
 import threading
 import queue
 
-import grpc
+try:
+    import grpc
 
-from src.common.grpc.idl.connector_pb2 import ConnectStreamRequest
-from src.common.grpc.idl.connector_pb2_grpc import ConnectorStub
-from src.common.grpc.interceptors.authentication_client import add_authentication
+    cur_dir = os.path.dirname(__file__)
+    sys.path.insert(0, os.path.join(cur_dir, "../idl"))
+
+    from src.common.grpc.idl.connector_pb2 import ConnectStreamRequest
+    from src.common.grpc.idl.connector_pb2_grpc import ConnectorStub
+    from src.common.grpc.interceptors.authentication_client import add_authentication
+except ModuleNotFoundError as e:
+    logging.error("In order to use grpc, you need to `pip install achatbot[grpc]`.")
+    raise Exception(f"Missing module: {e}")
 
 
 class StreamClient:

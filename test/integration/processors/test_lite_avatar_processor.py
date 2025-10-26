@@ -70,7 +70,7 @@ class TestLiteAvatarProcessor(unittest.IsolatedAsyncioTestCase):
 
         cls.use_gpu = True if torch.cuda.is_available() else False
 
-        cls.sleep_to_end_time_s = int(os.getenv("SLEEP_TO_END_TIME_S", "20"))
+        cls.sleep_to_end_time_s = int(os.getenv("SLEEP_TO_END_TIME_S", "30"))
 
     @classmethod
     def tearDownClass(cls):
