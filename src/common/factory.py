@@ -2,8 +2,10 @@ from abc import ABCMeta
 import logging
 import inspect
 
+from src.common.interface import IPoolInstance
 
-class EngineClass(object):
+
+class EngineClass(IPoolInstance):
     # the same as ABC(Abstract Base Classe)
     __metaclass__ = ABCMeta
 
@@ -44,6 +46,12 @@ class EngineClass(object):
 
     def __str__(self):
         return f"TAG:{self.TAG} | {self.__class__.__name__}"
+
+    def reset(self):
+        pass
+
+    def release(self):
+        pass
 
 
 class EngineFactory:

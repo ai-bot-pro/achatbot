@@ -29,8 +29,7 @@ from src.core.llm import LLMEnvInit
 from src.modules.speech.tts import TTSEnvInit
 from src.modules.avatar import AvatarEnvInit
 from src.types.ai_conf import (
-    TOGETHER_LLM_MODEL,
-    TOGETHER_LLM_URL,
+    BaseConfig,
     ASRConfig,
     LLMConfig,
     TTSConfig,
@@ -43,6 +42,7 @@ from src.common.interface import IBot, IVisionDetector
 from src.common.session import Session
 from src.common.types import SessionCtx
 from src.common.logger import Logger
+from src.common.pool_engine import engine_pool, EngineProviderPool
 
 load_dotenv(override=True)
 
@@ -95,6 +95,26 @@ class AIBot(IBot):
         except Exception as e:
             raise Exception(f"Failed to parse bot configuration: {e}")
         logging.info(f"ai bot_config: {self._bot_config}")
+
+        @engine_pool.register
+        def get_vad_analyzer():
+            return self.get_vad_analyzer()
+
+        @engine_pool.register
+        def get_asr():
+            return self.get_asr()
+
+        @engine_pool.register
+        def get_translate_llm_generator():
+            return self.get_translate_llm_generator()
+
+        @engine_pool.register
+        def get_tts():
+            return self.get_tts()
+
+        @engine_pool.register
+        def get_avatar():
+            return self.get_avatar()
 
     def set_args(self, args):
         merge_args = {**self.args.__dict__, **args}
@@ -154,6 +174,24 @@ class AIBot(IBot):
     async def arun(self):
         pass
 
+    def get_pool(self, conf: BaseConfig, func_name: str) -> EngineProviderPool | None:
+        pool: EngineProviderPool = None
+        if conf and conf.pool_size:
+            pool = EngineProviderPool(
+                pool_size=conf.pool_size,
+                func_name=func_name,
+                init_worker_num=conf.pool_init__worker_num,
+            )
+
+        if pool and not pool.initialize():
+            logging.error(f"Failed to initialize pool func:{func_name} with conf:{conf}")
+            return None
+
+        return pool
+
+    def get_vad_analyzer_pool(self):
+        return self.get_pool(self._bot_config.vad, "get_vad_analyzer")
+
     def get_vad_analyzer(self) -> interface.IVADAnalyzer | EngineClass:
         vad_analyzer: interface.IVADAnalyzer | EngineClass = None
         if (
@@ -168,6 +206,9 @@ class AIBot(IBot):
         else:
             vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
         return vad_analyzer
+
+    def get_avatar_pool(self):
+        return self.get_pool(self._bot_config.avatar, "get_avatar")
 
     def get_avatar(self) -> EngineClass | None:
         avatar: EngineClass | None = None
@@ -231,6 +272,9 @@ class AIBot(IBot):
                 avatar = avatar or LiteAvatar()
             return LiteAvatarProcessor(avatar)
 
+    def get_asr_pool(self):
+        return self.get_pool(self._bot_config.asr, "get_asr")
+
     def get_asr(self) -> interface.IAsr | EngineClass | None:
         asr: interface.IAsr | EngineClass | None = None
         if (
@@ -288,6 +332,9 @@ class AIBot(IBot):
 
         tokenizer = AutoTokenizer.from_pretrained(self._bot_config.translate_llm.model)
         return tokenizer
+
+    def get_translate_llm_generator_pool(self):
+        return self.get_pool(self._bot_config.translate_llm, "get_translate_llm_generator")
 
     def get_translate_llm_generator(self):
         """
@@ -725,6 +772,9 @@ class AIBot(IBot):
     def get_openai_voice_processor(self, llm: LLMConfig | None = None) -> VoiceProcessorBase:
         # TODO: use openai reatime voice api
         pass
+
+    def get_tts_pool(self):
+        return self.get_pool(self._bot_config.tts, "get_tts")
 
     def get_tts(self) -> interface.ITts | EngineClass:
         tts: interface.ITts | EngineClass | None = None

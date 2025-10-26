@@ -4,15 +4,15 @@ from fastapi import WebSocket
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
+from apipeline.processors.logger import FrameLogger
 
 from src.cmd.bots.bridge.base import AISmallWebRTCFastapiWebsocketBot
-from src.modules.speech.vad_analyzer import VADAnalyzerEnvInit
 from src.cmd.bots import register_ai_fastapi_ws_bots
 from src.types.network.fastapi_websocket import AudioCameraParams, FastapiWebsocketServerParams
 from src.transports.fastapi_websocket_server import FastapiWebsocketTransport
 from src.services.webrtc_peer_connection import SmallWebRTCConnection
 from src.transports.small_webrtc import SmallWebRTCTransport
-from src.serializers.avatar_protobuf import AvatarProtobufFrameSerializer
+from src.serializers.avatar_protobuf import AvatarProtobufFrameSerializer, AnimationAudioRawFrame
 
 
 from dotenv import load_dotenv
@@ -33,8 +33,8 @@ class SmallWebRTCFastapiWebsocketAvatarEchoBot(AISmallWebRTCFastapiWebsocketBot)
         **args,
     ) -> None:
         super().__init__(webrtc_connection, websocket, **args)
-        self.vad_analyzer = None
-        self.avatar = None
+        self.vad_analyzer_pool = None
+        self.avatar_pool = None
 
     def set_fastapi_websocket(self, websocket: WebSocket):
         self._websocket = websocket
@@ -43,14 +43,23 @@ class SmallWebRTCFastapiWebsocketAvatarEchoBot(AISmallWebRTCFastapiWebsocketBot)
         self._webrtc_connection = webrtc_connection
 
     def load(self):
-        pass
+        self.vad_analyzer_pool = self.get_vad_analyzer_pool()
+        self.avatar_pool = self.get_avatar_pool()
 
     async def arun(self):
-        self.vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
-        self.avatar = self.get_avatar()
+        vad_analyzer = (
+            self.get_vad_analyzer()
+            if self.vad_analyzer_pool is None or self.vad_analyzer_pool.get() is None
+            else self.vad_analyzer_pool.get().get_instance()
+        )
+        avatar = (
+            self.get_avatar()
+            if self.avatar_pool is None or self.avatar_pool.get() is None
+            else self.avatar_pool.get().get_instance()
+        )
 
-        assert self.vad_analyzer is not None
-        assert self.avatar is not None
+        assert vad_analyzer is not None
+        assert avatar is not None
 
         rtc_transport = SmallWebRTCTransport(
             webrtc_connection=self._webrtc_connection,
@@ -58,7 +67,7 @@ class SmallWebRTCFastapiWebsocketAvatarEchoBot(AISmallWebRTCFastapiWebsocketBot)
                 audio_in_enabled=True,
                 audio_out_enabled=False,
                 vad_enabled=True,
-                vad_analyzer=self.vad_analyzer,
+                vad_analyzer=vad_analyzer,
                 vad_audio_passthrough=True,
                 transcription_enabled=False,
                 camera_in_enabled=True,
@@ -69,7 +78,7 @@ class SmallWebRTCFastapiWebsocketAvatarEchoBot(AISmallWebRTCFastapiWebsocketBot)
             audio_in_enabled=False,
             audio_out_enabled=True,
             vad_enabled=True,
-            vad_analyzer=self.vad_analyzer,
+            vad_analyzer=vad_analyzer,
             vad_audio_passthrough=True,
             transcription_enabled=False,
             add_wav_header=True,
@@ -87,12 +96,13 @@ class SmallWebRTCFastapiWebsocketAvatarEchoBot(AISmallWebRTCFastapiWebsocketBot)
             loop=asyncio.get_running_loop(),
         )
 
-        avatar_processor = self.get_avatar_processor(self.avatar)
+        avatar_processor = self.get_avatar_processor(avatar)
 
         pipe = Pipeline(
             [
                 rtc_transport.input_processor(),
                 avatar_processor,
+                # FrameLogger(include_frame_types=[AnimationAudioRawFrame]),
                 ws_transport.output_processor(),
             ],
         )

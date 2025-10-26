@@ -6,6 +6,20 @@ from src.types.speech.turn_analyzer import EndOfTurnState
 import numpy as np
 
 
+class IPoolInstance(ABC):
+    """池化对象的接口，需要实现 Reset 和 Release 方法。"""
+
+    @abstractmethod
+    def reset(self) -> None:
+        """重置对象状态，以便下次使用。"""
+        raise NotImplementedError("must be implemented in the child class")
+
+    @abstractmethod
+    def release(self) -> None:
+        """释放对象资源。"""
+        raise NotImplementedError("must be implemented in the child class")
+
+
 class IModel(ABC):
     @abstractmethod
     def load_model(self, **kwargs):
@@ -463,7 +477,9 @@ class IVisionDetector(ABC):
 
 class IVisionOCR(ABC):
     @abstractmethod
-    async def async_generate(self, session, **kwargs) -> AsyncGenerator[str | dict | np.ndarray, None]:
+    async def async_generate(
+        self, session, **kwargs
+    ) -> AsyncGenerator[str | dict | np.ndarray, None]:
         """
         input: session.ctx.state["ocr_img"]
         detect object and generate text

@@ -67,4 +67,8 @@ if __name__ == "__main__":
     def test2():
         print("test")
 
+    def test3():
+        print("test")
+
+    functions.register(test3)
     print(functions.items())
