@@ -41,6 +41,8 @@ image = (
             "GOOGLE_LLM_MODEL": "gemini-2.0-flash-lite",
             # tts module engine TAG,default tts_edge
             "TTS_TAG": "tts_edge",
+            "ACHATBOT_TASK_TYPE": "multiprocessing",  # use processing to run bot
+            "NEST_ASYNCIO": "0",  # close nest asyncio
         }
     )
 )
@@ -120,5 +122,10 @@ class Srv:
         return app
 
 
-if __name__ == "__main__":
-    pass
+"""
+EXTRA_INDEX_URL=https://pypi.org/simple/ ACHATBOT_VERSION=0.0.28.post4 modal serve -e achatbot src/fastapi_webrtc_audio_bot_serve.py
+EXTRA_INDEX_URL=https://pypi.org/simple/ ACHATBOT_VERSION=0.0.28.post4 modal deploy -e achatbot src/fastapi_webrtc_audio_bot_serve.py
+
+EXTRA_INDEX_URL=https://pypi.org/simple/ ACHATBOT_VERSION=0.0.28.post4 IMAGE_NAME=nasa modal serve src/fastapi_webrtc_audio_bot_serve.py
+EXTRA_INDEX_URL=https://pypi.org/simple/ ACHATBOT_VERSION=0.0.28.post4 IMAGE_NAME=travel modal serve src/fastapi_webrtc_audio_bot_serve.py
+"""

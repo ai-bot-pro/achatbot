@@ -5,6 +5,8 @@ from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.processors.frame_processor import FrameProcessor
+from apipeline.processors.logger import FrameLogger
+from apipeline.frames.data_frames import AudioRawFrame, TextFrame
 
 from src.processors.aggregators.vision_image_frame import VisionImageFrameAggregator
 from src.processors.user_image_request_processor import UserImageRequestProcessor
@@ -26,10 +28,14 @@ from src.processors.rtvi.rtvi_processor import (
 from src.common.types import DailyParams, DailyTranscriptionSettings
 from src.transports.daily import DailyTransport
 from src.types.ai_conf import AIConfig, LLMConfig
-from src.types.frames.data_frames import LLMMessagesFrame, TextFrame
+from src.types.frames.data_frames import LLMMessagesFrame
 from src.cmd.bots.base_daily import DailyRoomBot
 from src.cmd.bots import register_ai_room_bots
 
+"""
+# run server with multiprocessing to run bot
+NEST_ASYNCIO=0 ACHATBOT_TASK_TYPE=multiprocessing python -m src.cmd.http.server.fastapi_daily_bot_serve
+"""
 
 @register_ai_room_bots.register
 class DailyRTVIGeneralBot(DailyRoomBot):
@@ -229,6 +235,7 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         return True
 
     async def arun(self):
+        logging.info(f"DailyRTVIGeneralBot starting")
         vad_analyzer = self.get_vad_analyzer()
         self.daily_params.vad_analyzer = vad_analyzer
 
@@ -361,6 +368,7 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                         self.daily_params.vad_audio_passthrough = True
                         self.asr_processor = self.get_asr_processor()
                         processors.append(self.asr_processor)
+                        processors.append(FrameLogger(include_frame_types=[TextFrame]))
                         processors.append(rtvi)
                     case "llm":
                         if self._bot_config.llm:
@@ -373,11 +381,13 @@ class DailyRTVIGeneralBot(DailyRoomBot):
                                 processors.append(llm_user_ctx_aggr)
                         self.llm_processor = self.get_llm_processor()
                         processors.append(self.llm_processor)
+                        # processors.append(FrameLogger(include_frame_types=[TextFrame]))
                     case "tts":
                         self.tts_processor = self.get_tts_processor()
                         processors.append(self.tts_processor)
                         tts_text = RTVITTSTextProcessor()
                         processors.append(tts_text)
+                        processors.append(FrameLogger(include_frame_types=[AudioRawFrame]))
                         stream_info = self.tts_processor.get_stream_info()
                         self.daily_params.audio_out_sample_rate = stream_info["sample_rate"]
                         self.daily_params.audio_out_channels = stream_info["channels"]
@@ -410,7 +420,7 @@ class DailyRTVIGeneralBot(DailyRoomBot):
         self.transport.add_event_handler("on_participant_left", self.on_participant_left)
         self.transport.add_event_handler("on_call_state_updated", self.on_call_state_updated)
 
-        runner = PipelineRunner()
+        runner = PipelineRunner(handle_sigint=self.args.handle_sigint)
         await runner.run(self.task)
 
     async def on_first_participant_joined(self, transport: DailyTransport, participant):

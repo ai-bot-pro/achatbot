@@ -44,10 +44,12 @@ from src.common.session import Session
 from src.common.types import SessionCtx
 from src.common.logger import Logger
 
-
-nest_asyncio.apply()
-
 load_dotenv(override=True)
+
+use_nest_asyncio = os.getenv("NEST_ASYNCIO", "1") != "0"
+if use_nest_asyncio:
+    nest_asyncio.apply()
+
 
 Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
 
