@@ -47,16 +47,8 @@ class SmallWebRTCFastapiWebsocketAvatarEchoBot(AISmallWebRTCFastapiWebsocketBot)
         self.avatar_pool = self.get_avatar_pool()
 
     async def arun(self):
-        vad_analyzer = (
-            self.get_vad_analyzer()
-            if self.vad_analyzer_pool is None or self.vad_analyzer_pool.get() is None
-            else self.vad_analyzer_pool.get().get_instance()
-        )
-        avatar = (
-            self.get_avatar()
-            if self.avatar_pool is None or self.avatar_pool.get() is None
-            else self.avatar_pool.get().get_instance()
-        )
+        vad_analyzer_info, vad_analyzer = self.get_vad_analyzer_from_pool()
+        avatar_info, avatar = self.get_avatar_from_pool()
 
         assert vad_analyzer is not None
         assert avatar is not None
@@ -122,3 +114,9 @@ class SmallWebRTCFastapiWebsocketAvatarEchoBot(AISmallWebRTCFastapiWebsocketBot)
         rtc_transport.add_event_handler("on_app_message", self.on_rtc_app_message)
 
         await PipelineRunner(handle_sigint=self._handle_sigint).run(self.task)
+
+        # Ensure instances are returned to the pool
+        if self.vad_analyzer_pool and vad_analyzer_info:
+            self.vad_analyzer_pool.put(vad_analyzer_info)
+        if self.avatar_pool and avatar_info:
+            self.avatar_pool.put(avatar_info)

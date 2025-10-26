@@ -12,7 +12,6 @@ from src.common.register import Register
 
 # 用于存储创建引擎函数的全局字典 use engine factory to create with bot config
 # _new_func_map: Dict[str, callable] = {}
-engine_pool: Register = Register("engine_pool")
 
 
 class PoolInstanceInfo:
@@ -20,7 +19,6 @@ class PoolInstanceInfo:
 
     def __init__(self, instance: IPoolInstance):
         self.instance_id = None  # 由外部设置
-        self._in_use = threading.Lock()  # 使用 Lock 代替原子操作
         self._is_in_use = False
         self.last_used = time.time_ns()
         self.instance = instance
@@ -55,14 +53,15 @@ class PoolInstanceInfo:
 class EngineProviderPool:
     """engine provider pool (EngineClass)"""
 
-    def __init__(self, pool_size: int, func_name: str, init_worker_num: int | None = None):
+    def __init__(self, pool_size: int, new_func: callable, init_worker_num: int | None = None):
         if pool_size <= 0:
             pool_size = 1
+        if init_worker_num and init_worker_num > pool_size:
+            init_worker_num = pool_size
         self._pool_instances: queue.Queue[PoolInstanceInfo] = queue.Queue(maxsize=pool_size)
         self.pool_size = pool_size
         self.init_worker_num = init_worker_num or os.cpu_count()  # logic cpu count
-        self.func_name = func_name
-        self._new_func = engine_pool[func_name]
+        self._new_func = new_func
         self._stop_event = threading.Event()
         self._lock = threading.RLock()  # 用于保护共享计数器
 
@@ -72,16 +71,16 @@ class EngineProviderPool:
         self._total_active = 0
 
         if not self._new_func:
-            raise ValueError(f"No NewFunc registered for pool type {func_name}")
+            raise ValueError(f"No NewFunc registered for {new_func=}")
 
     def _create_new_instance_info(self) -> PoolInstanceInfo:
         """创建新的实例信息对象。"""
         try:
             instance = self._new_func()
             if not isinstance(instance, IPoolInstance):
-                raise TypeError(f"NewFunc for {self.func_name} did not return an IPoolInstance")
+                raise TypeError(f"NewFunc for {self._new_func} did not return an IPoolInstance")
         except Exception as e:
-            raise RuntimeError(f"Failed to create new instance for pool type {self.func_name}: {e}")
+            raise RuntimeError(f"Failed to create new instance for {self._new_func}: {e}")
 
         with self._lock:
             instance_id = self._total_created + 1
@@ -112,7 +111,7 @@ class EngineProviderPool:
                     instance_info = future.result()
                     try:
                         self._pool_instances.put_nowait(instance_info)
-                        logging.info(f"{self.func_name} Instance#{i} Initialized and put into pool")
+                        logging.info(f"{self._new_func} Instance#{i} Initialized and put into pool")
                         success_count += 1
                     except queue.Full:
                         # 如果队列满了，释放实例
@@ -130,11 +129,11 @@ class EngineProviderPool:
                     logging.warning(f"Initialization warning for instance#{i}: {e}")
 
         logging.info(
-            f"Pool initialized with {success_count}/{self.pool_size} {self.func_name} instances"
+            f"Pool initialized with {success_count}/{self.pool_size} {self._new_func} instances"
         )
 
         if init_errors and success_count == 0:
-            logging.error(f"Failed to initialize any {self.func_name} instances")
+            logging.error(f"Failed to initialize any {self._new_func} instances")
             return False
 
         return True
@@ -142,7 +141,7 @@ class EngineProviderPool:
     def get(self) -> Optional[PoolInstanceInfo]:
         """从池中获取一个实例。"""
         logging.info(
-            f"Attempting to get {self.func_name} instance from pool (available: {self._pool_instances.qsize()})"
+            f"Attempting to get {self._new_func} instance from pool (available: {self._pool_instances.qsize()})"
         )
 
         # 首先尝试从池中获取
@@ -153,7 +152,7 @@ class EngineProviderPool:
                     self._total_reused += 1
                     self._total_active += 1
                 logging.info(
-                    f"Got {self.func_name} instanceInfo# {instance_info.instance_id} from pool and marked as in-use (active: {self._total_active})"
+                    f"Got {self._new_func} instanceInfo# {instance_info.instance_id} from pool and marked as in-use (active: {self._total_active})"
                 )
                 return instance_info
             else:
@@ -185,7 +184,7 @@ class EngineProviderPool:
                         self._total_reused += 1
                         self._total_active += 1
                     logging.info(
-                        f"Got {self.func_name} instanceInfo# {instance_info.instance_id} from pool after waiting and marked as in-use (active: {self._total_active})"
+                        f"Got {self._new_func} instanceInfo# {instance_info.instance_id} from pool after waiting and marked as in-use (active: {self._total_active})"
                     )
                     return instance_info
                 else:
@@ -223,7 +222,7 @@ class EngineProviderPool:
             instance_info.instance.release()
             return
 
-        logging.info(f"Returning instance# {instance_info.instance_id} to pool({self.func_name})")
+        logging.info(f"Returning instance# {instance_info.instance_id} to pool({self._new_func})")
 
         if not instance_info.mark_available():
             logging.warning(
@@ -236,7 +235,7 @@ class EngineProviderPool:
             instance_info.instance.reset()
         except Exception as e:
             logging.warning(
-                f"Failed to reset instance# {instance_info.instance_id} to pool({self.func_name}) err: {e}"
+                f"Failed to reset instance# {instance_info.instance_id} to pool({self._new_func}) err: {e}"
             )
 
         try:
@@ -244,7 +243,7 @@ class EngineProviderPool:
             with self._lock:
                 self._total_active -= 1
             logging.info(
-                f"Instance# {instance_info.instance_id} marked as available (active: {self._total_active}) to pool({self.func_name})"
+                f"Instance# {instance_info.instance_id} marked as available (active: {self._total_active}) to pool({self._new_func})"
             )
         except queue.Full:
             logging.warning(f"Pool queue full, releasing instance# {instance_info.instance_id}")
@@ -301,8 +300,7 @@ if __name__ == "__main__":
             # 模拟释放资源操作
             self.data = None
 
-    # 1. 注册创建函数
-    @engine_pool.register
+    # 1. 创建函数
     def create_example_resource() -> IPoolInstance:
         """创建 ExamplePoolableResource 的工厂函数。"""
         # 这里可以使用一个静态计数器来模拟 ID 分配
@@ -312,7 +310,7 @@ if __name__ == "__main__":
         return ExamplePoolableResource(create_example_resource.counter)
 
     # 2. 创建并初始化池
-    pool = EngineProviderPool(pool_size=3, func_name="create_example_resource")
+    pool = EngineProviderPool(pool_size=3, new_func=create_example_resource)
     if not pool.initialize():
         logging.error("Failed to initialize pool")
         exit(1)

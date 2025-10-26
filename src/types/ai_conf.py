@@ -33,7 +33,7 @@ class BaseConfig(BaseModel):
     tag: Optional[str] = None
     args: Optional[dict] = None
     pool_size: Optional[int] = None
-    pool_init__worker_num: Optional[int] = None
+    pool_init_worker_num: Optional[int] = None
 
 
 class MCPServerConfig(BaseModel):
