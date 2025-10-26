@@ -40,8 +40,9 @@ class SmallWebRTCFastapiWebsocketAvatarChatBot(AISmallWebRTCFastapiWebsocketBot)
         **args,
     ) -> None:
         super().__init__(webrtc_connection, websocket, **args)
-        self.vad_analyzer = None
-        self.avatar = None
+        self.vad_analyzer_pool = None
+        self.asr_pool = None
+        self.avatar_pool = None
 
     def set_fastapi_websocket(self, websocket: WebSocket):
         self._websocket = websocket
@@ -50,15 +51,19 @@ class SmallWebRTCFastapiWebsocketAvatarChatBot(AISmallWebRTCFastapiWebsocketBot)
         self._webrtc_connection = webrtc_connection
 
     def load(self):
-        pass
+        self.vad_analyzer_pool = self.get_vad_analyzer_pool()
+        self.asr_pool = self.get_asr_pool()
+        self.avatar_pool = self.get_avatar_pool()
 
     async def arun(self):
-        self.vad_analyzer = VADAnalyzerEnvInit.initVADAnalyzerEngine()
-        self.avatar = self.get_avatar()
-        self.asr = self.get_asr()
-        assert self.vad_analyzer is not None
-        assert self.avatar is not None
-        assert self.asr is not None
+        # Correctly acquire instances
+        vad_analyzer_info, vad_analyzer = self.get_vad_analyzer_from_pool()
+        asr_info, asr = self.get_asr_from_pool()
+        avatar_info, avatar = self.get_avatar_from_pool()
+
+        assert vad_analyzer is not None
+        assert asr is not None
+        assert avatar is not None
 
         rtc_transport = SmallWebRTCTransport(
             webrtc_connection=self._webrtc_connection,
@@ -66,7 +71,7 @@ class SmallWebRTCFastapiWebsocketAvatarChatBot(AISmallWebRTCFastapiWebsocketBot)
                 audio_in_enabled=True,
                 audio_out_enabled=False,
                 vad_enabled=True,
-                vad_analyzer=self.vad_analyzer,
+                vad_analyzer=vad_analyzer,
                 vad_audio_passthrough=True,
                 transcription_enabled=False,
                 camera_in_enabled=True,
@@ -77,13 +82,13 @@ class SmallWebRTCFastapiWebsocketAvatarChatBot(AISmallWebRTCFastapiWebsocketBot)
             audio_in_enabled=False,
             audio_out_enabled=True,
             vad_enabled=True,
-            vad_analyzer=self.vad_analyzer,
+            vad_analyzer=vad_analyzer,
             vad_audio_passthrough=True,
             transcription_enabled=False,
             add_wav_header=True,
         )
 
-        asr_processor = self.get_asr_processor(self.asr)
+        asr_processor = self.get_asr_processor(asr)
 
         llm_processor: LLMProcessor = self.get_llm_processor()
         messages = []
@@ -97,7 +102,7 @@ class SmallWebRTCFastapiWebsocketAvatarChatBot(AISmallWebRTCFastapiWebsocketBot)
         ws_params.audio_out_sample_rate = stream_info["sample_rate"]
         ws_params.audio_out_channels = stream_info["channels"]
 
-        avatar_processor = self.get_avatar_processor(self.avatar)
+        avatar_processor = self.get_avatar_processor(avatar)
 
         if (
             self._bot_config.avatar
@@ -106,7 +111,7 @@ class SmallWebRTCFastapiWebsocketAvatarChatBot(AISmallWebRTCFastapiWebsocketBot)
         ):
             # audio_expression frame serializer
             ws_params.serializer = AvatarProtobufFrameSerializer()
-            self.avatar.args.speaker_audio_sample_rate = ws_params.audio_out_sample_rate
+            avatar.args.speaker_audio_sample_rate = ws_params.audio_out_sample_rate
         ws_transport = FastapiWebsocketTransport(
             websocket=self._websocket,
             params=ws_params,
@@ -140,6 +145,14 @@ class SmallWebRTCFastapiWebsocketAvatarChatBot(AISmallWebRTCFastapiWebsocketBot)
         rtc_transport.add_event_handler("on_app_message", self.on_rtc_app_message)
 
         await PipelineRunner(handle_sigint=self._handle_sigint).run(self.task)
+
+        # Ensure instances are returned to the pool
+        if self.vad_analyzer_pool and vad_analyzer_info:
+            self.vad_analyzer_pool.put(vad_analyzer_info)
+        if self.asr_pool and asr_info:
+            self.asr_pool.put(asr_info)
+        if self.avatar_pool and avatar_info:
+            self.avatar_pool.put(avatar_info)
 
     async def on_ws_client_connected(
         self,

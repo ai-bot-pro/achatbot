@@ -18,7 +18,7 @@ from deps.FreezeOmni.bin.inference import audioEncoderProcessor
 from deps.FreezeOmni.models.decoder.llm2tts import llm2TTS
 from deps.FreezeOmni.models.pipeline import inferencePipeline
 
-from src.common.pool import ClassObjectPool, OneClassObjectPool
+from src.common.pool_class import ClassObjectPool, OneClassObjectPool
 from src.processors.voice.base import VoiceProcessorBase
 from src.types.llm.lmgen import *
 from src.common.session import Session

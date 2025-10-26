@@ -32,6 +32,8 @@ DEFAULT_LLM_LANG = "zh"
 class BaseConfig(BaseModel):
     tag: Optional[str] = None
     args: Optional[dict] = None
+    pool_size: Optional[int] = None
+    pool_init_worker_num: Optional[int] = None
 
 
 class MCPServerConfig(BaseModel):
