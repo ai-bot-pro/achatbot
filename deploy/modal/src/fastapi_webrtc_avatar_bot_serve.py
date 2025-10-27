@@ -178,5 +178,5 @@ class Srv:
 
 
 """
-ACHATBOT_VERSION=0.0.19.post5 AVATAR_TAG=lam_audio2expression_avatar  IMAGE_CONCURRENT_CN=3  modal deploy src/fastapi_webrtc_avatar_bot_serve.py
+EXTRA_INDEX_URL=https://pypi.org/simple/ ACHATBOT_VERSION=0.0.29 AVATAR_TAG=lam_audio2expression_avatar  IMAGE_CONCURRENT_CN=3  modal serve src/fastapi_webrtc_avatar_bot_serve.py
 """
