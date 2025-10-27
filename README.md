@@ -319,7 +319,7 @@ python -m src.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve_v2 -f config/b
 # run websocket signaling service + webrtc + websocket voice avatar agent web ui
 cd ui/webrtc_websocket/lam_audio2expression_avatar_ts_v2 && npm install && npm run dev
 ```
-More details: https://github.com/ai-bot-pro/achatbot/pull/164 | online lam_audio2expression avatar: https://avatar-2lm.pages.dev/
+More details: https://github.com/ai-bot-pro/achatbot/pull/164 and https://github.com/ai-bot-pro/achatbot/pull/206 | online lam_audio2expression avatar: https://avatar-2lm.pages.dev/
 
 ---
 HTTP signaling service +  webrtc + websocket transports I/O bridge:
