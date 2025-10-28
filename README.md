@@ -5,7 +5,7 @@
 
 achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect object etc..
 
-- [achatbot-go](https://github.com/ai-bot-pro/achatbot-go) (main agent)
+- [achatbot-go](https://github.com/ai-bot-pro/achatbot-go) (main/sub agent)
 
 # Design
 ## apipeline design
