@@ -6,7 +6,11 @@
 achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect object etc..
 
 # Design
+## apipeline design
 - ⭐️ [pipeline design](https://github.com/ai-bot-pro/pipeline-py#design) ⭐️
+## achatbot design
+<img width="1259" height="754" alt="image" src="https://github.com/user-attachments/assets/5acf6922-7b58-45ca-8518-3a1e4849b076" />
+
 
 # Install
 > [!NOTE]
