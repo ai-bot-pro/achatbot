@@ -3,7 +3,7 @@
 <img width="742" height="626" alt="image" src="https://github.com/user-attachments/assets/8ec37a1e-0251-4ce1-8721-55de25a84733" />
 
 ### components
-<img width="1107" height="674" alt="image" src="https://github.com/user-attachments/assets/8ed7d4dc-a930-43aa-88d6-4c28d51ee204" />
+<img width="1305" height="781" alt="image" src="https://github.com/user-attachments/assets/9119f87c-8079-47e4-87d3-029b3298a5a2" />
 
 
 ### cmd (chat bot factory)
