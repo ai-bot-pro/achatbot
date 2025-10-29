@@ -19,4 +19,4 @@
 
 
 ### core/llm
-<img width="1003" height="296" alt="image" src="https://github.com/user-attachments/assets/755db838-0664-44e6-bb11-23878e85d2fe" />
+<img width="1164" height="342" alt="image" src="https://github.com/user-attachments/assets/ad0f4be9-85ef-48b3-929e-cca6085cf375" />
