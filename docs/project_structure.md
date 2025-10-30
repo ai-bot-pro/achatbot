@@ -24,7 +24,7 @@ achatbot 的结构主要分为5个各部分，其中一个components是公用组
 
 
 ### modules
-<img width="1104" height="855" alt="image" src="https://github.com/user-attachments/assets/04dd2bab-f652-4c63-b69a-e4b47fe9be2f" />
+<img width="1097" height="849" alt="image" src="https://github.com/user-attachments/assets/588d600e-3e42-4011-bf25-458e20ea42b9" />
 
 
 ### core/llm
