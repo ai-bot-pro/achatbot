@@ -16,7 +16,7 @@ achatbot 的结构主要分为5个各部分，其中一个components是公用组
 
 
 ### cmd (chat bot factory)
-<img width="1244" height="762" alt="image" src="https://github.com/user-attachments/assets/4c8c5f01-264d-44f4-a6d7-b454cdd5a5c6" />
+<img width="1238" height="753" alt="image" src="https://github.com/user-attachments/assets/ee6dc23a-a65f-400e-85e0-2dc02eb01d99" />
 
 
 ### processors
