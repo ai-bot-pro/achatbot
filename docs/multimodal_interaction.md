@@ -23,6 +23,9 @@
  (pipeline)
   <img width="1088" height="479" alt="image" src="https://github.com/user-attachments/assets/f8635a57-6820-49e5-aaaa-b8f192b870e3" />
 
+- tts text + speech 梅尔谱图 -> NAR DDPM+CFM -> 梅尔谱图 -> vocoder → 波形 (pipeline)
+  <img width="1336" height="510" alt="image" src="https://github.com/user-attachments/assets/2314a29e-e705-4e62-8d22-43a3296d1143" />
+
 
 
 
@@ -30,10 +33,6 @@
   ![pipe](https://github.com/user-attachments/assets/9970cf18-9bbc-4109-a3c5-e3e3c88086af)
   ![queue](https://github.com/user-attachments/assets/30f2e880-f16d-4b62-8668-61bb97c57b2b)
 
-
-- stream-tts (realtime-(clone)-speaker)
-  ![text-audio](https://github.com/user-attachments/assets/676230a0-0a99-475b-9ef5-6afc95f044d8)
-  ![audio-text text-audio](https://github.com/user-attachments/assets/cbcabf98-731e-4887-9f37-649ec81e37a0)
 
 
 ## vision (CV)
