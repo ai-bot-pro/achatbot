@@ -5,8 +5,10 @@
 
 ## audio (voice)
 
-- stream-stt (realtime-recorder)
-  ![audio-text](https://github.com/user-attachments/assets/44bcec7d-f0a1-47db-bd95-21feee43a361)
+### audio -> txt
+- stream-speech-understanding (realtime ASR )
+  <img width="1068" height="684" alt="image" src="https://github.com/user-attachments/assets/691675b4-a12f-455c-9cfe-cc9d2ef2cd9b" />
+
 
 - audio-llm (multimode-chat)
   ![pipe](https://github.com/user-attachments/assets/9970cf18-9bbc-4109-a3c5-e3e3c88086af)
