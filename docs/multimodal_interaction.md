@@ -15,10 +15,12 @@
 
 <img width="1389" height="509" alt="image" src="https://github.com/user-attachments/assets/cc046327-7243-4cb6-ad1b-ef5a9a764812" />
 
-- tts text tokenizer->text tokens + audio codec->vq code  -> AR LLM -> speech tokens → 梅尔谱图 → 波形 (pipeline)
+- tts text tokenizer->text tokens + audio codec encoder ->vq code -> AR LLM -> vq code → audio codec decoder → 波形
+ (pipeline)
   <img width="1101" height="417" alt="image" src="https://github.com/user-attachments/assets/c5db15fa-45b2-4074-bd44-bdaf4134735a" />
 
-- tts text/speech tokenizer -> text tokens + speech tokens -> AR LLM -> speech tokens → 梅尔谱图 → 波形 (pipeline)
+- tts text/speech tokenizer -> text tokens + speech tokens -> AR LLM -> speech tokens -> flow → 梅尔谱图 -> vocoder → 波形
+ (pipeline)
   <img width="1088" height="479" alt="image" src="https://github.com/user-attachments/assets/f8635a57-6820-49e5-aaaa-b8f192b870e3" />
 
 
