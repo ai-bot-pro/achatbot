@@ -30,8 +30,9 @@
 
 
 - audio-llm (multimode-chat)
-  ![pipe](https://github.com/user-attachments/assets/9970cf18-9bbc-4109-a3c5-e3e3c88086af)
-  ![queue](https://github.com/user-attachments/assets/30f2e880-f16d-4b62-8668-61bb97c57b2b)
+  <img width="1164" height="842" alt="image" src="https://github.com/user-attachments/assets/0dd3d7c4-fc40-486f-a5b2-1eac458a215c" />
+
+
 
 
 
