@@ -1,7 +1,7 @@
 # Multimodal Interaction
 ## text (generate/chat)
 
-<img width="1056" height="879" alt="image" src="https://github.com/user-attachments/assets/3c62c925-98dd-4f0f-afd0-8a757f45443e" />
+<img width="1059" height="885" alt="image" src="https://github.com/user-attachments/assets/56704c44-7385-4995-a1be-060a7ea16ae4" />
 
 
 
