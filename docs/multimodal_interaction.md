@@ -1,8 +1,8 @@
 # Multimodal Interaction
 ## text (generate/chat)
 
-<img width="1059" height="885" alt="image" src="https://github.com/user-attachments/assets/56704c44-7385-4995-a1be-060a7ea16ae4" />
 
+<img width="1003" height="841" alt="image" src="https://github.com/user-attachments/assets/f1a8aa00-0468-4309-9afc-6e4fd552c449" />
 
 
 ## audio (voice)
