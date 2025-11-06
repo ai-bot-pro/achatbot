@@ -44,6 +44,12 @@ MODEL=llama-3.1-70b-versatile \
 
 BASE_URL=https://api.together.xyz/v1 MODEL=meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo \
     python -m unittest test.integration.processors.test_openai_llm_processor.TestProcessor.test_run
+
+BASE_URL=http://127.0.0.1:11434/v1 MODEL=qwen3:0.6b \
+    python -m unittest test.integration.processors.test_openai_llm_processor.TestProcessor.test_run
+
+BASE_URL=https://open.bigmodel.cn/api/paas/v4 MODEL=glm-4.5-flash \
+    python -m unittest test.integration.processors.test_openai_llm_processor.TestProcessor.test_run
 """
 
 
@@ -130,6 +136,11 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
         elif "together" in base_url:
             # https://docs.together.ai/docs/chat-models
             api_key = os.environ.get("TOGETHER_API_KEY")
+        elif "bigmodel" in base_url:
+            # https://docs.bigmodel.cn/cn/guide/models/
+            api_key = os.environ.get("ZHIPU_API_KEY")
+        elif "local" in base_url or "127.0.0.1" in base_url:
+            api_key = "ollama"
         llm_processor = OpenAILLMProcessor(
             model=model,
             base_url=base_url,

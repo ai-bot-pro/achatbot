@@ -1,4 +1,5 @@
 import logging
+import time
 import uuid
 
 from dotenv import load_dotenv
@@ -7,7 +8,8 @@ from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.processors.logger import FrameLogger
-from apipeline.frames import AudioRawFrame, TextFrame
+from apipeline.frames import AudioRawFrame, TextFrame, Frame, CancelFrame, EndFrame
+from apipeline.processors.frame_processor import FrameDirection, FrameProcessor
 
 from src.common.session import Session, SessionCtx
 from src.serializers.transcription_protobuf import TranscriptionFrameSerializer
@@ -23,6 +25,28 @@ from src.processors.punctuation_processor import PunctuationProcessor
 from src.modules.punctuation import PuncEnvInit
 
 load_dotenv(override=True)
+
+
+class SaveASRText(FrameProcessor):
+    def __init__(self, *, is_save=True, name=None, loop=None, **kwargs):
+        super().__init__(name=name, loop=loop, **kwargs)
+        cur_time = time.strftime("%Y%m%d_%H%M%S", time.localtime())
+        self.save_file = f"asr_output_{cur_time}.txt"
+        self.asr_text = ""
+        self.is_save = is_save
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection):
+        await super().process_frame(frame, direction)
+        await self.push_frame(frame, direction)
+        if isinstance(frame, TextFrame):
+            self.asr_text += frame.text
+        if isinstance(frame, (CancelFrame, EndFrame)):
+            if not self.is_save:
+                return
+            # save asr text to file
+            with open(self.save_file, "w", encoding="utf-8") as f:
+                f.write(self.asr_text)
+            logging.info(f"ASR text saved to {self.save_file}")
 
 
 @register_ai_fastapi_ws_bots.register
@@ -98,6 +122,7 @@ class FastapiWebsocketStreamingASRBot(AIFastapiWebsocketBot):
             processors.append(punc_processor)
 
         processors.append(FrameLogger(include_frame_types=[TextFrame]))
+        processors.append(SaveASRText())
         processors.append(transport.output_processor())
 
         self.task = PipelineTask(
