@@ -1,6 +1,5 @@
 import os
 from typing import Optional
-import chromadb
 import dotenv
 from chromadb.api.client import Client as ClientCreator
 from chromadb.config import DEFAULT_TENANT, DEFAULT_DATABASE

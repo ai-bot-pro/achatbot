@@ -12,13 +12,14 @@ from apipeline.pipeline.runner import PipelineRunner
 from dotenv import load_dotenv
 import nest_asyncio
 
+from src.processors.context.memory import MemoryProcessor
 from src.processors.omni.base import VisionVoiceProcessorBase
 from src.processors.voice.base import VoiceProcessorBase
 from src.processors.image.base import ImageGenProcessor
 from src.processors.image import get_image_gen_processor
 from src.modules.vision.ocr import VisionOCREnvInit
 from src.modules.vision.detector import VisionDetectorEnvInit
-from src.processors.ai_processor import AIProcessor
+from src.processors.ai_processor import AIProcessor, FrameProcessor
 from src.processors.vision.vision_processor import MockVisionProcessor
 from src.processors.avatar.base import AvatarProcessorBase
 from src.processors.speech.asr.base import ASRProcessorBase
@@ -889,6 +890,18 @@ class AIBot(IBot):
         return get_image_gen_processor(
             self._bot_config.img_gen.tag, **self._bot_config.img_gen.args
         )
+
+    def get_memory_processor(self) -> MemoryProcessor:
+        if not self._bot_config.memory or not self._bot_config.memory.args:
+            raise Exception("need memory args params")
+
+        memory_processor = None
+        if self._bot_config.memory.processor == "Mem0MemoryProcessor":
+            from src.processors.context.memory.mem0 import Mem0MemoryProcessor
+
+            memory_processor = Mem0MemoryProcessor(**self._bot_config.memory.args)
+
+        return memory_processor
 
 
 class AIRoomBot(AIBot):

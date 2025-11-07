@@ -119,6 +119,9 @@ class AudioCameraOutputProcessor(OutputProcessor):
     #
 
     async def sink(self, frame: DataFrame):
+        # aysnc push frame to downstream like FunctionCallResultFrame
+        await self.queue_frame(frame)
+
         if isinstance(frame, TextFrame):  # text
             await self.send_text(frame)
         elif isinstance(frame, TransportMessageFrame):
@@ -131,19 +134,16 @@ class AudioCameraOutputProcessor(OutputProcessor):
         elif isinstance(frame, ImageRawFrame) or isinstance(frame, SpriteFrame):  # image
             await self._handle_image(frame)
         # !TODO: video
-        else:
-            # push other frame for downstream like FunctionCallResultFrame
-            await self.queue_frame(frame)
+
         self._sink_event.set()
 
     async def sink_control_frame(self, frame: ControlFrame):
+        await super().sink_control_frame(frame)
+
         if isinstance(frame, TTSStartedFrame):
             await self._bot_started_speaking()
-            await self.queue_frame(frame)
         elif isinstance(frame, TTSStoppedFrame):
             await self._bot_stopped_speaking()
-            await self.queue_frame(frame)
-        return await super().sink_control_frame(frame)
 
     async def _bot_started_speaking(self):
         logging.debug("Bot started speaking")

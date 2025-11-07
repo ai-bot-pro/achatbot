@@ -180,6 +180,10 @@ def import_bots(bot_name: str = "DummyBot"):
         from .SE import daily_noise_filter_bot
 
         return True
+    if "DailyMemBot" in bot_name:
+        from .mem import daily_mem_bot
+
+        return True
     if "LivekitBot" in bot_name:
         from . import livekit_bot
 
