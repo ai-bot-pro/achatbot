@@ -33,7 +33,7 @@ local_scheme = "no-local-version"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.29"
+version = "0.0.30"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -147,6 +147,9 @@ fastapi_bot_server = ["fastapi~=0.112.0", "uvicorn~=0.30.6"]
 
 # ngrok proxy
 ngrok_proxy = ["pyngrok~=7.2.0", "nest-asyncio~=1.6.0"]
+
+# mem
+mem0 = ["mem0ai==1.0.0"]
 
 
 # webRTC

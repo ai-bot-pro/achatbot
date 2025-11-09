@@ -27,6 +27,7 @@ if __name__ == "__main__":
 
     python -m src.cmd.bots.main -f config/bots/dummy_bot.json --task_type asyncio
     python -m src.cmd.bots.main -f config/bots/dummy_bot.json --task_type threading
+    python -m src.cmd.bots.main -f config/bots/dummy_bot.json --task_type multiprocessing
     """
     # NOTE: use multiprocessing need serializable object to pickle
     multiproc_method = os.getenv("ACHATBOT_WORKER_MULTIPROC_METHOD", "fork")
@@ -34,7 +35,12 @@ if __name__ == "__main__":
         multiprocessing.set_start_method("spawn")  # 'fork', 'spawn' or 'forkserver'
 
     parser = argparse.ArgumentParser(description="Chat Bot")
-    parser.add_argument("--task_type", type=str, default="asyncio", help="task type")
+    parser.add_argument(
+        "--task_type",
+        type=str,
+        default="asyncio",
+        help="task type: multiprocessing|threading|asyncio",
+    )
     parser.add_argument("--task_done_timeout", type=int, default=5, help="task done timeout s")
     parser.add_argument("-u", type=str, default="", help="Room URL")
     parser.add_argument("-t", type=str, default="", help="Token")

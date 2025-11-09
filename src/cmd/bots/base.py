@@ -12,13 +12,14 @@ from apipeline.pipeline.runner import PipelineRunner
 from dotenv import load_dotenv
 import nest_asyncio
 
+from src.processors.context.memory import MemoryProcessor
 from src.processors.omni.base import VisionVoiceProcessorBase
 from src.processors.voice.base import VoiceProcessorBase
 from src.processors.image.base import ImageGenProcessor
 from src.processors.image import get_image_gen_processor
 from src.modules.vision.ocr import VisionOCREnvInit
 from src.modules.vision.detector import VisionDetectorEnvInit
-from src.processors.ai_processor import AIProcessor
+from src.processors.ai_processor import AIProcessor, FrameProcessor
 from src.processors.vision.vision_processor import MockVisionProcessor
 from src.processors.avatar.base import AvatarProcessorBase
 from src.processors.speech.asr.base import ASRProcessorBase
@@ -889,6 +890,23 @@ class AIBot(IBot):
         return get_image_gen_processor(
             self._bot_config.img_gen.tag, **self._bot_config.img_gen.args
         )
+
+    def get_memory_processor(
+        self,
+        local_config: Optional[Dict[str, Any]] = None,
+    ) -> MemoryProcessor:
+        if not self._bot_config.memory or not self._bot_config.memory.processor:
+            raise ValueError("Memory processor configuration is missing or invalid.")
+
+        processor_type = self._bot_config.memory.processor
+        args = self._bot_config.memory.args or {}
+
+        if processor_type == "Mem0MemoryProcessor":
+            from src.processors.context.memory.mem0 import Mem0MemoryProcessor
+
+            return Mem0MemoryProcessor(local_config=local_config, **args)
+
+        raise NotImplementedError(f"Memory processor '{processor_type}' is not supported.")
 
 
 class AIRoomBot(AIBot):

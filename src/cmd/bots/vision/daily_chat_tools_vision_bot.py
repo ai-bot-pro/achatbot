@@ -185,7 +185,7 @@ class DailyChatToolsVisionBot(DailyRoomBot):
             self.llm_context.set_tools(self._bot_config.llm.tools)
         llm_user_ctx_aggr = OpenAIUserContextAggregator(self.llm_context)
         llm_assistant_ctx_aggr = OpenAIAssistantContextAggregator(llm_user_ctx_aggr)
-        llm_processor = self.get_openai_llm_processor()
+        llm_processor: LLMProcessor = self.get_llm_processor()
 
         # register function
         logging.info(f"register tool functions: {register_tool_funtions.items()}")

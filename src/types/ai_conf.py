@@ -81,6 +81,10 @@ class AvatarConfig(BaseConfig):
     pass
 
 
+class MemoryConfig(BaseConfig):
+    processor: Optional[str] = None
+
+
 class LLMConfig(BaseConfig):
     init_prompt: Optional[str] = None
     processor: Optional[str] = None
@@ -127,6 +131,7 @@ class AIConfig(BaseModel):
     vision_ocr: Optional[VisionOCRConfig] = None
     tts: Optional[TTSConfig] = None
     img_gen: Optional[ImageGenConfig] = None
+    memory: Optional[MemoryConfig] = None
     # TODO: @weedge
     # - use local pyaudio/cv2 streaming;
     # - use remote RTC livekit or agora streaming

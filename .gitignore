@@ -219,3 +219,7 @@ exp/
 
 # vibe coding
 .qoder/
+
+# db
+*.sqlite3
+*.duckdb
