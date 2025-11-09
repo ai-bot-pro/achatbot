@@ -25,7 +25,7 @@ class MemoryProcessor(AsyncFrameProcessor):
         self.agent_id = agent_id
 
     def set_run_id(self, run_id):
-        self.agent_id = run_id
+        self.run_id = run_id
 
     async def get_all_memeries(
         self,
