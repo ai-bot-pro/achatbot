@@ -153,7 +153,8 @@ class Mem0MemoryProcessor(MemoryProcessor):
             if isinstance(self.memory_client, Memory):
                 del params["output_format"]
             # Note: You can run this in background to avoid blocking the conversation
-            self.memory_client.add(**params)
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, self.memory_client.add, **params)
         except Exception as e:
             logging.error(f"Error storing messages in Mem0: {e}")
 
