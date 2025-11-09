@@ -92,7 +92,7 @@ class Mem0MemoryProcessor(MemoryProcessor):
             self.memory_client = Memory.from_config(local_config)
         else:
             # Use Mem0 cloud service with dashboard
-            api_key = api_key or api_key or os.getenv("MEM0_API_KEY")
+            api_key = api_key or os.getenv("MEM0_API_KEY")
             self.memory_client = MemoryClient(api_key=api_key, host=host)
 
         self.search_limit = params.search_limit
