@@ -53,7 +53,7 @@ class MemoryProcessor(AsyncFrameProcessor):
                 user_id=user_id, agent_id=agent_id, run_id=run_id, **kwargs
             )
 
-            if not memories or len(memories) == 0:
+            if not memories or not memories.get("results"):
                 logging.debug(
                     f"!!! No memories found for this user {user_id}, agent {agent_id}, run {run_id}"
                 )
@@ -62,8 +62,7 @@ class MemoryProcessor(AsyncFrameProcessor):
             # Create a personalized greeting based on memories
             memory_str = ""
             # Add some personalization based on memories (limit to 3 memories for brevity)
-            if len(memories) > 0:
-                for i, memory in enumerate(memories["results"][:3]):
+            for i, memory in enumerate(memories["results"][:3]):
                     memory_content = memory.get("memory", "")
                     # Keep memory references brief
                     if len(memory_content) > 100:
