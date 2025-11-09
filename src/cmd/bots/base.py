@@ -892,16 +892,17 @@ class AIBot(IBot):
         )
 
     def get_memory_processor(self) -> MemoryProcessor:
-        if not self._bot_config.memory or not self._bot_config.memory.args:
-            raise Exception("need memory args params")
+        if not self._bot_config.memory or not self._bot_config.memory.processor:
+            raise ValueError("Memory processor configuration is missing or invalid.")
 
-        memory_processor = None
-        if self._bot_config.memory.processor == "Mem0MemoryProcessor":
+        processor_type = self._bot_config.memory.processor
+        args = self._bot_config.memory.args or {}
+
+        if processor_type == "Mem0MemoryProcessor":
             from src.processors.context.memory.mem0 import Mem0MemoryProcessor
+            return Mem0MemoryProcessor(**args)
 
-            memory_processor = Mem0MemoryProcessor(**self._bot_config.memory.args)
-
-        return memory_processor
+        raise NotImplementedError(f"Memory processor '{processor_type}' is not supported.")
 
 
 class AIRoomBot(AIBot):
