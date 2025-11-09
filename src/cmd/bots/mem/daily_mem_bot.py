@@ -149,7 +149,7 @@ class DailyMemBot(DailyRoomBot):
                 }
             )
 
-        user_hi_text = "Please introduce yourself first." if is_cn else "请用中文介绍下自己。"
+        user_hi_text = "请用中文介绍下自己。" if is_cn else "Please introduce yourself first."
         self.llm_context.add_message(
             {
                 "role": "user",
