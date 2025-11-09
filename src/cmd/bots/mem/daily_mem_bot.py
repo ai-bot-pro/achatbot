@@ -138,9 +138,9 @@ class DailyMemBot(DailyRoomBot):
         memory_str = await self.memory_processor.get_initial_memories(user_id=user_id)
         if memory_str:
             assistant_greeting = (
-                f"Based on our previous conversations, I remember:\n{memory_str}"
+                f"基于我们之前的对话，我记得：\n{memory_str}"
                 if is_cn
-                else f"基于我们之前的对话，我记得：\n{memory_str}"
+                else f"Based on our previous conversations, I remember:\n{memory_str}"
             )
             self.llm_context.add_message(
                 {
