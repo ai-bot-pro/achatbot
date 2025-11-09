@@ -184,6 +184,10 @@ def import_bots(bot_name: str = "DummyBot"):
         from .mem import daily_mem_bot
 
         return True
+    if "DailyLangchainMemBot" in bot_name:
+        from .mem import daily_langchain_mem_bot
+
+        return True
     if "LivekitBot" in bot_name:
         from . import livekit_bot
 

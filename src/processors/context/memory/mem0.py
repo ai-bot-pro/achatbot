@@ -2,16 +2,12 @@
 use mem0(RAG) for LTM
 """
 
-import asyncio
-import functools
 import os
 import logging
-import uuid
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 from apipeline.processors.frame_processor import FrameDirection
-from apipeline.processors.async_frame_processor import AsyncFrameProcessor
 from apipeline.frames import Frame, ErrorFrame
 
 from src.processors.context.memory import MemoryProcessor
@@ -157,7 +153,7 @@ class Mem0MemoryProcessor(MemoryProcessor):
                     params[key] = getattr(self, key)
 
             if isinstance(self.memory_client, AsyncMemory):
-                del params["output_format"]
+                del params["async_mode"]
             # run this in background thread pool to avoid blocking the conversation
             await self.memory_client.add(messages=messages, **params)
         except Exception as e:
@@ -177,14 +173,13 @@ class Mem0MemoryProcessor(MemoryProcessor):
             logging.debug(f"Retrieving memories for query: {query}")
             if isinstance(self.memory_client, AsyncMemory):
                 params = {
-                    "query": query,
                     "user_id": self.user_id,
                     "agent_id": self.agent_id,
                     "run_id": self.run_id,
                     "limit": self.search_limit,
                 }
                 params = {k: v for k, v in params.items() if v is not None}
-                res = await self.memory_client.search(**params)
+                res = await self.memory_client.search(query=query, filters=None, **params)
                 memories = res.get("results", [])
 
             else:

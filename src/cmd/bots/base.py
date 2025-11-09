@@ -891,7 +891,10 @@ class AIBot(IBot):
             self._bot_config.img_gen.tag, **self._bot_config.img_gen.args
         )
 
-    def get_memory_processor(self) -> MemoryProcessor:
+    def get_memory_processor(
+        self,
+        local_config: Optional[Dict[str, Any]] = None,
+    ) -> MemoryProcessor:
         if not self._bot_config.memory or not self._bot_config.memory.processor:
             raise ValueError("Memory processor configuration is missing or invalid.")
 
@@ -900,7 +903,8 @@ class AIBot(IBot):
 
         if processor_type == "Mem0MemoryProcessor":
             from src.processors.context.memory.mem0 import Mem0MemoryProcessor
-            return Mem0MemoryProcessor(**args)
+
+            return Mem0MemoryProcessor(local_config=local_config, **args)
 
         raise NotImplementedError(f"Memory processor '{processor_type}' is not supported.")
 
