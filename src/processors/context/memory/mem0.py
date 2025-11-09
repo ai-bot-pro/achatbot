@@ -2,6 +2,7 @@
 use mem0(RAG) for LTM
 """
 
+import asyncio
 import os
 import logging
 import uuid
@@ -20,7 +21,7 @@ from src.processors.aggregators.openai_llm_context import (
 
 
 try:
-    from mem0 import Memory, MemoryClient
+    from mem0 import AsyncMemory, AsyncMemoryClient
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
@@ -89,11 +90,13 @@ class Mem0MemoryProcessor(MemoryProcessor):
 
         if local_config:
             # DIY with advance RAG(embd,ranker,vector db, graph db) locally, maybe use agentic RAG
-            self.memory_client = Memory.from_config(local_config)
+            self.memory_client = self._loop.run_until_complete(
+                AsyncMemory.from_config(local_config)
+            )
         else:
             # Use Mem0 cloud service with dashboard
             api_key = api_key or os.getenv("MEM0_API_KEY")
-            self.memory_client = MemoryClient(api_key=api_key, host=host)
+            self.memory_client = AsyncMemoryClient(api_key=api_key, host=host)
 
         self.search_limit = params.search_limit
         self.search_threshold = params.search_threshold
@@ -104,7 +107,7 @@ class Mem0MemoryProcessor(MemoryProcessor):
         self.last_query = None
         logging.info(f"Initialized Mem0MemoryService with {user_id=}, {agent_id=}, {run_id=}")
 
-    async def get_all_memeries(
+    async def get_all_memories(
         self,
         user_id: Optional[str] = None,
         agent_id: Optional[str] = None,
@@ -112,11 +115,11 @@ class Mem0MemoryProcessor(MemoryProcessor):
         **kwargs,
     ):
         if isinstance(
-            self.memory_client, Memory
+            self.memory_client, AsyncMemory
         ):  # DIY with advance RAG(embd,ranker,vector db, graph db) locally, maybe use agentic RAG
             filters = {"user_id": user_id, "agent_id": agent_id, "run_id": run_id}
             filters = {k: v for k, v in filters.items() if v is not None}
-            memories = self.memory_client.get_all(**filters)
+            memories = await self.memory_client.get_all(**filters)
             return memories
 
         # Use Mem0 cloud service with dashboard
@@ -129,10 +132,12 @@ class Mem0MemoryProcessor(MemoryProcessor):
         clauses = [{name: value} for name, value in id_pairs if value is not None]
         filters = {"AND": clauses} if clauses else {}
         # Get all memories for this user
-        memories = self.memory_client.get_all(filters=filters, version="v2", output_format="v1.1")
+        memories = await self.memory_client.get_all(
+            filters=filters, version="v2", output_format="v1.1"
+        )
         return memories
 
-    def _store_messages(self, messages: List[Dict[str, Any]]):
+    async def _store_messages(self, messages: List[Dict[str, Any]]):
         """Store messages in Mem0.
 
         Args:
@@ -146,19 +151,18 @@ class Mem0MemoryProcessor(MemoryProcessor):
                 "metadata": {"platform": "achatbot"},
                 "output_format": "v1.1",
             }
-            for id in ["user_id", "agent_id", "run_id"]:
-                if getattr(self, id):
-                    params[id] = getattr(self, id)
+            for key in ["user_id", "agent_id", "run_id"]:
+                if getattr(self, key):
+                    params[key] = getattr(self, key)
 
-            if isinstance(self.memory_client, Memory):
+            if isinstance(self.memory_client, AsyncMemory):
                 del params["output_format"]
-            # Note: You can run this in background to avoid blocking the conversation
-            loop = asyncio.get_running_loop()
-            await loop.run_in_executor(None, self.memory_client.add, **params)
+            # run this in background thread pool to avoid blocking the conversation
+            await self._loop.run_in_executor(None, self.memory_client.add, **params)
         except Exception as e:
             logging.error(f"Error storing messages in Mem0: {e}")
 
-    def _retrieve_memories(self, query: str) -> List[Dict[str, Any]]:
+    async def _retrieve_memories(self, query: str) -> List[Dict[str, Any]]:
         """Retrieve relevant memories from Mem0.
 
         Args:
@@ -169,7 +173,7 @@ class Mem0MemoryProcessor(MemoryProcessor):
         """
         try:
             logging.debug(f"Retrieving memories for query: {query}")
-            if isinstance(self.memory_client, Memory):
+            if isinstance(self.memory_client, AsyncMemory):
                 params = {
                     "query": query,
                     "user_id": self.user_id,
@@ -178,7 +182,7 @@ class Mem0MemoryProcessor(MemoryProcessor):
                     "limit": self.search_limit,
                 }
                 params = {k: v for k, v in params.items() if v is not None}
-                results = self.memory_client.search(**params)
+                results = await self.memory_client.search(**params)
             else:
                 id_pairs = [
                     ("user_id", self.user_id),
@@ -187,7 +191,7 @@ class Mem0MemoryProcessor(MemoryProcessor):
                 ]
                 clauses = [{name: value} for name, value in id_pairs if value is not None]
                 filters = {"OR": clauses} if clauses else {}
-                results = self.memory_client.search(
+                results = await self.memory_client.search(
                     query=query,
                     filters=filters,
                     version=self.api_version,
@@ -202,7 +206,7 @@ class Mem0MemoryProcessor(MemoryProcessor):
             logging.error(f"Error retrieving memories from Mem0: {e}")
             return []
 
-    def _enhance_context_with_memories(self, context: OpenAILLMContext, query: str):
+    async def _enhance_context_with_memories(self, context: OpenAILLMContext, query: str):
         """Enhance the LLM context with relevant memories.
 
         Args:
@@ -215,7 +219,7 @@ class Mem0MemoryProcessor(MemoryProcessor):
 
         self.last_query = query
 
-        memories = self._retrieve_memories(query)
+        memories = await self._retrieve_memories(query)
         if not memories:
             return
 
@@ -261,9 +265,9 @@ class Mem0MemoryProcessor(MemoryProcessor):
 
                 if latest_user_message:
                     # Enhance context with memories before passing it downstream
-                    self._enhance_context_with_memories(context, latest_user_message)
+                    await self._enhance_context_with_memories(context, latest_user_message)
                     # Store the conversation in Mem0. Only call this when user message is detected
-                    self._store_messages(context_messages)
+                    await self._store_messages(context_messages)
 
                 # If we received an LLMMessagesFrame, create a new one with the enhanced messages
                 if messages is not None:

@@ -1,6 +1,7 @@
 import logging
 import time
 import uuid
+import aiofiles
 
 from dotenv import load_dotenv
 from fastapi import WebSocket
@@ -44,9 +45,8 @@ class SaveASRText(FrameProcessor):
             if not self.is_save:
                 return
             # save asr text to file
-            with open(self.save_file, "w", encoding="utf-8") as f:
-                f.write(self.asr_text)
-            logging.info(f"ASR text saved to {self.save_file}")
+            async with aiofiles.open(self.save_file, "w", encoding="utf-8") as f:
+                await f.write(self.asr_text)
 
 
 @register_ai_fastapi_ws_bots.register

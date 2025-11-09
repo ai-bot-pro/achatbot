@@ -133,7 +133,7 @@ MOD=api python -m demo.langchain.mem.mem0
 """
 if __name__ == "__main__":
     mod = os.getenv("MOD", "local")
-    if mod == "" or mod == "api":
+    if mod == "api":
         remote_api_mem0()
     else:
         langchain_mem0()

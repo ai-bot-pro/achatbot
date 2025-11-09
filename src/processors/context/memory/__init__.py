@@ -27,7 +27,7 @@ class MemoryProcessor(AsyncFrameProcessor):
     def set_run_id(self, run_id):
         self.run_id = run_id
 
-    async def get_all_memeries(
+    async def get_all_memories(
         self,
         user_id: Optional[str] = None,
         agent_id: Optional[str] = None,
@@ -49,7 +49,7 @@ class MemoryProcessor(AsyncFrameProcessor):
             A personalized greeting based on user memories
         """
         try:
-            memories = await self.get_all_memeries(
+            memories = await self.get_all_memories(
                 user_id=user_id, agent_id=agent_id, run_id=run_id, **kwargs
             )
 
@@ -63,11 +63,11 @@ class MemoryProcessor(AsyncFrameProcessor):
             memory_str = ""
             # Add some personalization based on memories (limit to 3 memories for brevity)
             for i, memory in enumerate(memories["results"][:3]):
-                    memory_content = memory.get("memory", "")
-                    # Keep memory references brief
-                    if len(memory_content) > 100:
-                        memory_content = memory_content[:97] + "..."
-                    memory_str += f"{memory_content} "
+                memory_content = memory.get("memory", "")
+                # Keep memory references brief
+                if len(memory_content) > 100:
+                    memory_content = memory_content[:97] + "..."
+                memory_str += f"{memory_content} "
 
             logging.debug(
                 f"get {len(memories)} memories for this user {user_id}, agent {agent_id}, run {run_id}"
