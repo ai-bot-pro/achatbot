@@ -3,6 +3,7 @@ use mem0(RAG) for LTM
 """
 
 import asyncio
+import functools
 import os
 import logging
 import uuid
@@ -17,6 +18,7 @@ from src.processors.context.memory import MemoryProcessor
 from src.types.frames import LLMMessagesFrame
 from src.processors.aggregators.openai_llm_context import (
     OpenAILLMContext,
+    OpenAILLMContextFrame,
 )
 
 
@@ -25,7 +27,7 @@ try:
 except ModuleNotFoundError as e:
     logging.error(f"Exception: {e}")
     logging.error(
-        "In order to use Mem0, you need to `pip install mem0ai`. Also, set the environment variable MEM0_API_KEY."
+        "In order to use Mem0, you need to `pip install achatbot[mem0]`. Also, set the environment variable MEM0_API_KEY."
     )
     raise Exception(f"Missing module: {e}")
 
@@ -105,7 +107,7 @@ class Mem0MemoryProcessor(MemoryProcessor):
         self.add_as_system_message = params.add_as_system_message
         self.position = params.position
         self.last_query = None
-        logging.info(f"Initialized Mem0MemoryService with {user_id=}, {agent_id=}, {run_id=}")
+        logging.info(f"Initialized Mem0MemoryProcessor with {user_id=}, {agent_id=}, {run_id=}")
 
     async def get_all_memories(
         self,
@@ -147,9 +149,8 @@ class Mem0MemoryProcessor(MemoryProcessor):
             logging.debug(f"Storing {len(messages)} messages in Mem0")
             params = {
                 "async_mode": True,
-                "messages": messages,
                 "metadata": {"platform": "achatbot"},
-                "output_format": "v1.1",
+                # "output_format": "v1.1",
             }
             for key in ["user_id", "agent_id", "run_id"]:
                 if getattr(self, key):
@@ -158,7 +159,7 @@ class Mem0MemoryProcessor(MemoryProcessor):
             if isinstance(self.memory_client, AsyncMemory):
                 del params["output_format"]
             # run this in background thread pool to avoid blocking the conversation
-            await self._loop.run_in_executor(None, self.memory_client.add, **params)
+            await self.memory_client.add(messages=messages, **params)
         except Exception as e:
             logging.error(f"Error storing messages in Mem0: {e}")
 
@@ -172,6 +173,7 @@ class Mem0MemoryProcessor(MemoryProcessor):
             List of relevant memory dictionaries matching the query.
         """
         try:
+            memories = []
             logging.debug(f"Retrieving memories for query: {query}")
             if isinstance(self.memory_client, AsyncMemory):
                 params = {
@@ -182,7 +184,9 @@ class Mem0MemoryProcessor(MemoryProcessor):
                     "limit": self.search_limit,
                 }
                 params = {k: v for k, v in params.items() if v is not None}
-                results = await self.memory_client.search(**params)
+                res = await self.memory_client.search(**params)
+                memories = res.get("results", [])
+
             else:
                 id_pairs = [
                     ("user_id", self.user_id),
@@ -191,7 +195,7 @@ class Mem0MemoryProcessor(MemoryProcessor):
                 ]
                 clauses = [{name: value} for name, value in id_pairs if value is not None]
                 filters = {"OR": clauses} if clauses else {}
-                results = await self.memory_client.search(
+                res = await self.memory_client.search(
                     query=query,
                     filters=filters,
                     version=self.api_version,
@@ -199,9 +203,10 @@ class Mem0MemoryProcessor(MemoryProcessor):
                     threshold=self.search_threshold,
                     output_format="v1.1",
                 )
+                memories = res.get("results", [])
 
-            logging.debug(f"Retrieved {len(results)} memories from Mem0")
-            return results
+            logging.debug(f"Retrieved {len(memories)} memories from Mem0 {query} {filters}")
+            return memories
         except Exception as e:
             logging.error(f"Error retrieving memories from Mem0: {e}")
             return []
@@ -220,12 +225,13 @@ class Mem0MemoryProcessor(MemoryProcessor):
         self.last_query = query
 
         memories = await self._retrieve_memories(query)
+        logging.debug(f"Enhanced context with memories {memories}")
         if not memories:
             return
 
         # Format memories as a message
         memory_text = self.system_prompt
-        for i, memory in enumerate(memories["results"], 1):
+        for i, memory in enumerate(memories):
             memory_text += f"{i}. {memory.get('memory', '')}\n\n"
 
         # Add memories as a system message or user message based on configuration
@@ -234,7 +240,6 @@ class Mem0MemoryProcessor(MemoryProcessor):
         else:
             # Add as a user message that provides context
             context.add_message({"role": "user", "content": memory_text})
-        logging.info(f"Enhanced context with memories {memories}")
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         """Process incoming frames, intercept context frames for memory integration.
@@ -251,6 +256,8 @@ class Mem0MemoryProcessor(MemoryProcessor):
         if isinstance(frame, LLMMessagesFrame):
             messages = frame.messages
             context = OpenAILLMContext(messages=messages)
+        elif isinstance(frame, OpenAILLMContextFrame):
+            context = frame.context
 
         if context:
             try:

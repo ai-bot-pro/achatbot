@@ -6,13 +6,8 @@ from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.processors.logger import FrameLogger
 
-from src.processors.aggregators.llm_response import (
-    LLMAssistantResponseAggregator,
-    LLMUserResponseAggregator,
-)
 from src.processors.llm.base import LLMProcessor
 from src.processors.speech.tts.tts_processor import TTSProcessor
-from src.processors.context.memory.mem0 import Memory, MemoryClient
 from src.common.types import DailyParams
 from src.transports.daily import DailyTransport
 from src.cmd.bots.base_daily import DailyRoomBot
@@ -93,15 +88,13 @@ class DailyMemBot(DailyRoomBot):
                     llm_user_ctx_aggr,
                     self.memory_processor,
                     llm_processor,
-                    FrameLogger(include_frame_types=[TextFrame]),
                     tts_processor,
-                    FrameLogger(include_frame_types=[TextFrame]),
                     transport.output_processor(),
                     FrameLogger(
                         include_frame_types=[
                             LLMFullResponseStartFrame,
                             LLMFullResponseEndFrame,
-                            TextFrame,
+                            # TextFrame,
                         ]
                     ),
                     llm_assistant_ctx_aggr,
