@@ -113,6 +113,11 @@ class TTSConfig(BaseConfig):
     remove_punctuation: Optional[bool] = False
 
 
+class A2AConfig(BaseConfig):
+    language: Optional[str] = None
+    pass
+
+
 class AIConfig(BaseModel):
     vad: Optional[VADConfig] = None
     se: Optional[SEConfig] = None
@@ -120,6 +125,7 @@ class AIConfig(BaseModel):
     asr: Optional[ASRConfig] = None
     punctuation: Optional[PuncConfig] = None
     avatar: Optional[AvatarConfig] = None
+    a2a: Optional[A2AConfig] = None
     mcp_servers: Optional[Dict[str, MCPServerConfig]] = None
     llm: Optional[LLMConfig] = None
     translate_llm: Optional[TranslateLLMConfig] = None
