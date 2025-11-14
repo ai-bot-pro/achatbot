@@ -7,6 +7,9 @@ from apipeline.processors.async_frame_processor import FrameDirection
 from apipeline.frames import CancelFrame, StartFrame, EndFrame, Frame, TextFrame, ErrorFrame
 from a2a.utils.message import new_agent_text_message
 from google.adk.events.event import Event as ADKEvent
+from google.adk.artifacts import BaseArtifactService
+from google.adk.memory.in_memory_memory_service import BaseMemoryService
+from google.adk.sessions.in_memory_session_service import BaseSessionService
 
 from src.processors.session_processor import SessionProcessor
 from src.services.a2a_multiagent.adk_host_agent_manager import ADKHostAgentManager
@@ -24,16 +27,30 @@ class A2AConversationProcessor(SessionProcessor):
         self,
         app_name: str,
         api_key: str = "",
+        mode: str = "supervisor",  # supervisor or planer
+        system_prompt: str = "",
         http_timeout: float = 30.0,
         agent_urls: Optional[list[str]] = [],  # agent http url
         session: Session | None = None,
+        session_service: BaseSessionService | None = None,
+        memory_service: BaseMemoryService | None = None,
+        artifact_service: BaseArtifactService | None = None,
         **kwargs,
     ):
         super().__init__(session=session, **kwargs)
         self.http_client_wrapper = HTTPXClientWrapper()
         self.http_client_wrapper.start(timeout=http_timeout)
         http_client = self.http_client_wrapper()
-        self.manager = ADKHostAgentManager(http_client, app_name, api_key=api_key)
+        self.manager = ADKHostAgentManager(
+            http_client,
+            app_name,
+            api_key=api_key,
+            mode=mode,
+            system_prompt=system_prompt,
+            session_service=session_service,
+            memory_service=memory_service,
+            artifact_service=artifact_service,
+        )
         self.queue = asyncio.Queue()
         self.push_task: Optional[asyncio.Task] = None
         self.running = False

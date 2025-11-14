@@ -188,6 +188,10 @@ def import_bots(bot_name: str = "DummyBot"):
         from .mem import daily_langchain_mem_bot
 
         return True
+    if "DailyA2AConversationBot" in bot_name:
+        from .a2a import daily_a2a_conversation_bot
+
+        return True
     if "LivekitBot" in bot_name:
         from . import livekit_bot
 

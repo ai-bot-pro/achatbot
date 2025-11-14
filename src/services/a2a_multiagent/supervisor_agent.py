@@ -3,7 +3,6 @@ import uuid
 import logging
 
 from a2a.types import (
-    DataPart,
     Message,
     Part,
     Role,
@@ -16,7 +15,6 @@ from google.adk.agents.callback_context import CallbackContext
 from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.models.lite_llm import LiteLlm
 from google.adk.tools.tool_context import ToolContext
-from google.genai import types
 
 from src.services.a2a_multiagent import BaseHostAgent
 from . import convert_parts
@@ -52,7 +50,9 @@ class SupervisorAgent(BaseHostAgent):
 
     def root_instruction(self, context: ReadonlyContext) -> str:
         current_agent = self.check_state(context)
-        instruction = f"""You are an expert delegator that can delegate the user request to the
+        prompt = (
+            self.system_prompt
+            or f"""You are an expert delegator that can delegate the user request to the
 appropriate remote agents.
 
 Execution:
@@ -62,6 +62,9 @@ Be sure to include the remote agent name when you respond to the user.
 
 Please rely on tools to address the request, and don't make up the response. If you are not sure, please ask the user for more details.
 Focus on the most recent parts of the conversation primarily. It is not necessary to disclose which agent the information was obtained from.
+"""
+        )
+        instruction = f"""{prompt}
 
 Agents:
 {self.agents}

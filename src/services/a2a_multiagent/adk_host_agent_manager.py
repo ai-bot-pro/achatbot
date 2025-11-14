@@ -46,6 +46,7 @@ class ADKHostAgentManager:
         app_name: str,
         api_key: str = "",
         mode: str = "supervisor",  # supervisor or planer
+        system_prompt: str = "",
         session_service: BaseSessionService | None = None,
         memory_service: BaseMemoryService | None = None,
         artifact_service: BaseArtifactService | None = None,
@@ -60,11 +61,11 @@ class ADKHostAgentManager:
         if mode == "planer":
             from .planer_agent import PlanerAgent
 
-            self._host_agent = PlanerAgent([], http_client, self.task_callback)
+            self._host_agent = PlanerAgent([], http_client, system_prompt=system_prompt)
         else:
             from .supervisor_agent import SupervisorAgent
 
-            self._host_agent = SupervisorAgent([], http_client, self.task_callback)
+            self._host_agent = SupervisorAgent([], http_client, system_prompt=system_prompt)
 
         self.user_id = None
         self.app_name = app_name

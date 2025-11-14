@@ -13,9 +13,7 @@ from a2a.types import (
     TransportProtocol,
 )
 from google.adk import Agent
-from google.adk.agents.callback_context import CallbackContext
 from google.adk.agents.readonly_context import ReadonlyContext
-from google.adk.models.lite_llm import LiteLlm
 from google.adk.tools.tool_context import ToolContext
 from google.genai import types
 
@@ -40,9 +38,11 @@ class BaseHostAgent:
         task_callback: TaskUpdateCallback | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
         model: str = DEFAULT_LITELLM_MODEL,
+        system_prompt: str = "",
     ):
+        self.system_prompt = system_prompt
         self.model = model
-        self.task_callback = task_callback
+        self.task_callback = task_callback  # todo
         self.httpx_client = http_client
         self.timestamp_extension = TimestampExtension()
         config = ClientConfig(
