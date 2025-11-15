@@ -100,7 +100,10 @@ class A2AConversationProcessor(SessionProcessor):
 
     async def cancel(self, frame: CancelFrame):
         self.push_task.cancel()
-        await self.push_task
+        try:
+            await self.push_task
+        except asyncio.CancelledError:
+            logging.info(f"{self.name} push_task cancelled.")
         if self.http_client_wrapper:
             self.http_client_wrapper.stop()
             self.http_client_wrapper = None
