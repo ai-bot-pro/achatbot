@@ -114,6 +114,7 @@ class DailyA2AConversationBot(DailyRoomBot):
 
     async def on_first_participant_say_hi(self, transport: DailyTransport, participant):
         self.a2a_processor.set_user_id(participant["id"])
+        await self.a2a_processor.create_conversation()
         if self.daily_params.transcription_enabled:
             transport.capture_participant_transcription(participant["id"])
 

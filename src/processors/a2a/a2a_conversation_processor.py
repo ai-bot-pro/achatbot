@@ -1,3 +1,4 @@
+import uuid
 import asyncio
 import logging
 import threading
@@ -54,6 +55,7 @@ class A2AConversationProcessor(SessionProcessor):
         self.queue = asyncio.Queue()
         self.push_task: Optional[asyncio.Task] = None
         self.running = False
+        self.conversation = None
         for url in agent_urls:
             self.manager.register_agent(url)
 
@@ -64,8 +66,11 @@ class A2AConversationProcessor(SessionProcessor):
     def set_user_id(self, user_id: str):
         self.manager.set_user_id(user_id)
 
+    async def create_conversation(self):
+        self.conversation = await self.manager.create_conversation()
+
     async def start(self, frame: StartFrame):
-        self.manager.create_conversation()
+        await self.create_conversation()
         self.running = True
         self.push_task = self.get_event_loop().create_task(self._push_messages())
 
@@ -87,6 +92,9 @@ class A2AConversationProcessor(SessionProcessor):
     async def cancel(self, frame: CancelFrame):
         self.push_task.cancel()
         await self.push_task
+        if self.http_client_wrapper:
+            self.http_client_wrapper.stop()
+            self.http_client_wrapper = None
         logging.info(f"{self.name} Conversation cancelled")
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
@@ -131,10 +139,11 @@ class A2AConversationProcessor(SessionProcessor):
         try:
             message = new_agent_text_message(
                 text=text,
-                context_id=self.session.ctx.client_id,
-                task_id=self.session.ctx.task_id,
+                context_id=self.conversation.conversation_id,
+                task_id=str(uuid.uuid4()),
             )
             message = self.manager.sanitize_message(message)
+            # print("message-->", message)
             # Send the message in a separate thread to avoid blocking the event loop.
             t = threading.Thread(
                 target=lambda: self.manager.process_message_threadsafe(
@@ -150,6 +159,8 @@ class A2AConversationProcessor(SessionProcessor):
         while self.running:
             try:
                 event: ADKEvent = await asyncio.wait_for(self.queue.get(), timeout=1.0)
+                # print("event-->", event)
+                # Send the message in a separate thread to avoid blocking the event loop.
                 if event.id and event.partial is None:
                     await self.queue_frame(LLMFullResponseStartFrame())
                 if event.content and event.content.parts and event.partial:

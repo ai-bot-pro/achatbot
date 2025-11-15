@@ -1,3 +1,4 @@
+import logging
 import asyncio
 import base64
 import datetime
@@ -52,6 +53,7 @@ class ADKHostAgentManager:
         artifact_service: BaseArtifactService | None = None,
     ):
         self._conversations: list[Conversation] = []
+        self._tasks: list[Task] = []  # TODO for long-time run task
         self._events: dict[str, Event] = {}
         self._agents: list[AgentCard] = []
         self._session_service = session_service or InMemorySessionService()
@@ -90,12 +92,16 @@ class ADKHostAgentManager:
         self.user_id = user_id
 
     async def create_conversation(self) -> Conversation:
+        if self.user_id is None:
+            logging.warning("no user_id")
+            return
         session = await self._session_service.create_session(
             app_name=self.app_name, user_id=self.user_id
         )
         conversation_id = session.id
         c = Conversation(conversation_id=conversation_id, is_active=True)
         self._conversations.append(c)
+        print("create_conversation-->", c)
         return c
 
     def update_api_key(self, api_key: str):
@@ -105,6 +111,23 @@ class ADKHostAgentManager:
 
             # Reinitialize host with new API key
             self._initialize_host()
+
+    def sanitize_message(self, message: Message) -> Message:
+        if message.context_id:
+            conversation = self.get_conversation(message.context_id)
+            if not conversation:
+                return message
+            # Check if the last event in the conversation was tied to a task.
+            if conversation.messages:
+                task_id = conversation.messages[-1].task_id
+                if task_id and task_still_open(
+                    next(
+                        filter(lambda x: x and x.id == task_id, self._tasks),
+                        None,
+                    )
+                ):
+                    message.task_id = task_id
+        return message
 
     async def process_message(self, message: Message, queue: asyncio.Queue = None):
         user_id = self.user_id
@@ -123,7 +146,7 @@ class ADKHostAgentManager:
         session = await self._session_service.get_session(
             app_name=self.app_name, user_id=user_id, session_id=context_id
         )
-        # print(session)
+        print(session)
         task_id = message.task_id
         # Update state must happen in an event
         state_update = {
@@ -342,7 +365,7 @@ class ADKHostAgentManager:
                 else:
                     parts.append(Part(root=TextPart(text="Unknown content")))
         except Exception as e:
-            print("Couldn't convert to messages:", e)
+            logging.error(f"Couldn't convert to messages:{e}")
             parts.append(Part(root=DataPart(data=part.function_response.model_dump())))
         return parts
 

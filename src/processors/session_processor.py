@@ -24,3 +24,6 @@ class SessionProcessor(AsyncFrameProcessor):
 
     def set_user_id(self, user_id: str):
         pass
+
+    async def create_conversation(self):
+        pass
