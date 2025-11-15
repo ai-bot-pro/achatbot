@@ -67,10 +67,8 @@ class DailyA2AConversationBot(DailyRoomBot):
         )
 
         self.llm_context = OpenAILLMContext()
-        messages = []
         if self._bot_config.llm.messages:
-            messages = self._bot_config.llm.messages
-            self.llm_context.set_messages(messages)
+            self.llm_context.set_messages(self._bot_config.llm.messages)
         llm_user_ctx_aggr = OpenAIUserContextAggregator(self.llm_context)
         llm_assistant_ctx_aggr = OpenAIAssistantContextAggregator(llm_user_ctx_aggr)
 
