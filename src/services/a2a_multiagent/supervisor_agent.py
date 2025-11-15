@@ -110,7 +110,9 @@ Current agent: {current_agent["active_agent"]}
         )
         response = await client.send_message(request_message)
         if isinstance(response, Message):
-            return await convert_parts(response.parts, tool_context)
+            response = await convert_parts(response.parts, tool_context)
+            logging.info(f"send_message response:{response}")
+            return response
         task: Task = response
         # Assume completion unless a state returns that isn't complete
         state["session_active"] = task.status.state not in [
@@ -143,7 +145,7 @@ Current agent: {current_agent["active_agent"]}
                 if ts := self.timestamp_extension.get_timestamp(artifact):
                     response.append(f"[at {ts.astimezone().isoformat()}]")
                 response.extend(await convert_parts(artifact.parts, tool_context))
-        logging.info("send_message response-->", response)
+        logging.info(f"send_message response:{response}")
         return response
 
     def before_model_callback(self, callback_context: CallbackContext, llm_request):

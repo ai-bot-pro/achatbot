@@ -140,7 +140,7 @@ class A2AConversationProcessor(SessionProcessor):
             message = new_agent_text_message(
                 text=text,
                 context_id=self.conversation.conversation_id,
-                task_id=str(uuid.uuid4()),
+                # task_id=str(uuid.uuid4()),# new message no task_id
             )
             message = self.manager.sanitize_message(message)
             # print("message-->", message)

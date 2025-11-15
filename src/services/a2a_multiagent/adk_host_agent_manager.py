@@ -101,7 +101,6 @@ class ADKHostAgentManager:
         conversation_id = session.id
         c = Conversation(conversation_id=conversation_id, is_active=True)
         self._conversations.append(c)
-        print("create_conversation-->", c)
         return c
 
     def update_api_key(self, api_key: str):
@@ -146,7 +145,7 @@ class ADKHostAgentManager:
         session = await self._session_service.get_session(
             app_name=self.app_name, user_id=user_id, session_id=context_id
         )
-        print(session)
+        # print(session)
         task_id = message.task_id
         # Update state must happen in an event
         state_update = {
