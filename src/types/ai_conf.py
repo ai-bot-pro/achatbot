@@ -115,7 +115,6 @@ class TTSConfig(BaseConfig):
 
 class A2AConfig(BaseConfig):
     language: Optional[str] = None
-    pass
 
 
 class AIConfig(BaseModel):

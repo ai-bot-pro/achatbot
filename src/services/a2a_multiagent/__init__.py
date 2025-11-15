@@ -60,7 +60,14 @@ class BaseHostAgent:
         self.cards: dict[str, AgentCard] = {}
         self.agents: str = ""
         self.loop = loop or asyncio.get_running_loop()
-        self.loop.create_task(self.init_remote_agent_addresses(remote_agent_addresses))
+        init_task = self.loop.create_task(self.init_remote_agent_addresses(remote_agent_addresses))
+        init_task.add_done_callback(self._handle_init_exception)
+
+    def _handle_init_exception(self, task: asyncio.Task) -> None:
+        try:
+            task.result()
+        except Exception as e:
+            logging.error(f"Initialization task failed with exception: {e}", exc_info=True)
 
     async def init_remote_agent_addresses(self, remote_agent_addresses: list[str]):
         async with asyncio.TaskGroup() as task_group:

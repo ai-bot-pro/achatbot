@@ -31,7 +31,7 @@ from google.adk.sessions.in_memory_session_service import BaseSessionService, In
 from google.genai import types
 
 from .types import Conversation, Event
-from src.services.help.a2a.agent_card import get_agent_card
+from src.services.help.a2a.agent_card import get_agent_card, async_get_agent_card
 
 
 class ADKHostAgentManager:
@@ -48,6 +48,7 @@ class ADKHostAgentManager:
         api_key: str = "",
         mode: str = "supervisor",  # supervisor or planer
         system_prompt: str = "",
+        remote_agent_addresses: list[str] = [],
         session_service: BaseSessionService | None = None,
         memory_service: BaseMemoryService | None = None,
         artifact_service: BaseArtifactService | None = None,
@@ -63,11 +64,16 @@ class ADKHostAgentManager:
         if mode == "planer":
             from .planer_agent import PlanerAgent
 
-            self._host_agent = PlanerAgent([], http_client, system_prompt=system_prompt)
+            self._host_agent = PlanerAgent(
+                remote_agent_addresses, http_client, system_prompt=system_prompt
+            )
         else:
             from .supervisor_agent import SupervisorAgent
 
-            self._host_agent = SupervisorAgent([], http_client, system_prompt=system_prompt)
+            self._host_agent = SupervisorAgent(
+                remote_agent_addresses, http_client, system_prompt=system_prompt
+            )
+        self.httpx_client = http_client
 
         self.user_id = None
         self.app_name = app_name
@@ -189,7 +195,7 @@ class ADKHostAgentManager:
         response: Message | None = None
         if final_event:
             if final_event.actions.state_delta and "task_id" in final_event.actions.state_delta:
-                task_id = event.actions.state_delta["task_id"]
+                task_id = final_event.actions.state_delta["task_id"]
             final_event.content.role = "model"
             response = await self.adk_content_to_message(final_event.content, context_id, task_id)
             # self._memory_service.add_session_to_memory(session)
@@ -211,8 +217,8 @@ class ADKHostAgentManager:
             None,
         )
 
-    def register_agent(self, url):
-        agent_data = get_agent_card(url)
+    async def register_agent(self, url):
+        agent_data = await async_get_agent_card(url, self.httpx_client)
         if not agent_data.url:
             agent_data.url = url
         self._agents.append(agent_data)
@@ -279,7 +285,7 @@ class ADKHostAgentManager:
                 try:
                     data = json.loads(part.text)
                     parts.append(Part(root=DataPart(data=data)))
-                except:  # noqa: E722
+                except json.JSONDecodeError:
                     parts.append(Part(root=TextPart(text=part.text)))
             elif part.inline_data:
                 parts.append(

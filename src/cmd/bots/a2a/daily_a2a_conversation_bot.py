@@ -118,11 +118,7 @@ class DailyA2AConversationBot(DailyRoomBot):
         if self.daily_params.transcription_enabled:
             transport.capture_participant_transcription(participant["id"])
 
-        is_cn = (
-            self._bot_config.a2a
-            and self._bot_config.a2a.language
-            and self._bot_config.a2a.language == "zh"
-        )
+        is_cn = self._bot_config.a2a and self._bot_config.a2a.language == "zh"
 
         user_hi_text = "请用中文介绍下自己。" if is_cn else "Please introduce yourself first."
         self.llm_context.add_message(

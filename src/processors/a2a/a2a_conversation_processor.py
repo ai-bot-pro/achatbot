@@ -1,8 +1,10 @@
+import os
 import uuid
 import asyncio
 import logging
 import threading
-from typing import Optional
+from typing import List, Optional
+from concurrent.futures import ThreadPoolExecutor
 
 from apipeline.processors.async_frame_processor import FrameDirection
 from apipeline.frames import CancelFrame, StartFrame, EndFrame, Frame, TextFrame, ErrorFrame
@@ -32,6 +34,7 @@ class A2AConversationProcessor(SessionProcessor):
         system_prompt: str = "",
         http_timeout: float = 30.0,
         agent_urls: Optional[list[str]] = [],  # agent http url
+        max_workers: int = 0,
         session: Session | None = None,
         session_service: BaseSessionService | None = None,
         memory_service: BaseMemoryService | None = None,
@@ -47,6 +50,7 @@ class A2AConversationProcessor(SessionProcessor):
             app_name,
             api_key=api_key,
             mode=mode,
+            remote_agent_addresses=agent_urls,
             system_prompt=system_prompt,
             session_service=session_service,
             memory_service=memory_service,
@@ -56,8 +60,9 @@ class A2AConversationProcessor(SessionProcessor):
         self.push_task: Optional[asyncio.Task] = None
         self.running = False
         self.conversation = None
-        for url in agent_urls:
-            self.manager.register_agent(url)
+
+        max_workers = max_workers or os.cpu_count()
+        self.executor = ThreadPoolExecutor(max_workers=max_workers)
 
     @property
     def host_agent_manager(self):
@@ -69,10 +74,14 @@ class A2AConversationProcessor(SessionProcessor):
     async def create_conversation(self):
         self.conversation = await self.manager.create_conversation()
 
+    async def register_agents(self, urls: List[str]):
+        for url in urls:
+            await self.manager.register_agent(url)
+
     async def start(self, frame: StartFrame):
         await self.create_conversation()
         self.running = True
-        self.push_task = self.get_event_loop().create_task(self._push_messages())
+        self.push_task = self.get_event_loop().create_task(self._push_frames())
 
         if self.http_client_wrapper is None:
             self.http_client_wrapper = HTTPXClientWrapper()
@@ -95,6 +104,7 @@ class A2AConversationProcessor(SessionProcessor):
         if self.http_client_wrapper:
             self.http_client_wrapper.stop()
             self.http_client_wrapper = None
+        self.executor.shutdown(wait=True)
         logging.info(f"{self.name} Conversation cancelled")
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
@@ -145,17 +155,20 @@ class A2AConversationProcessor(SessionProcessor):
             message = self.manager.sanitize_message(message)
             # print("message-->", message)
             # Send the message in a separate thread to avoid blocking the event loop.
-            t = threading.Thread(
-                target=lambda: self.manager.process_message_threadsafe(
-                    message, self.get_event_loop(), self.queue
-                )
+            self.executor.submit(
+                self.manager.process_message_threadsafe, message, self.get_event_loop(), self.queue
             )
-            t.start()
+            # t = threading.Thread(
+            #    target=lambda: self.manager.process_message_threadsafe(
+            #        message, self.get_event_loop(), self.queue
+            #    )
+            # )
+            # t.start()
         except Exception as e:
             logging.error(f"Error processing: {str(e)}")
             await self.push_frame(ErrorFrame(f"Error processing: {str(e)}"))
 
-    async def _push_messages(self):
+    async def _push_frames(self):
         while self.running:
             try:
                 event: ADKEvent = await asyncio.wait_for(self.queue.get(), timeout=1.0)
@@ -176,10 +189,10 @@ class A2AConversationProcessor(SessionProcessor):
             except asyncio.TimeoutError:
                 continue
             except asyncio.CancelledError:
-                logging.info(f"{self.name} _push_messages cancelled")
+                logging.info(f"{self.name} _push_frames cancelled")
                 break
             except Exception as ex:
-                logging.exception(f"{self.name} Unexpected error in _push_messages: {ex}")
+                logging.exception(f"{self.name} Unexpected error in _push_frames: {ex}")
                 if self.get_event_loop().is_closed():
                     logging.warning(f"{self.name} event loop is closed")
                     break
