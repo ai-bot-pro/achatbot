@@ -67,12 +67,14 @@ class ADKHostAgentManager:
             self._host_agent = PlanerAgent(
                 remote_agent_addresses, http_client, system_prompt=system_prompt
             )
-        else:
+        elif mode == "supervisor":
             from .supervisor_agent import SupervisorAgent
 
             self._host_agent = SupervisorAgent(
                 remote_agent_addresses, http_client, system_prompt=system_prompt
             )
+        else:
+            raise ValueError(f"Unsupported agent mode: {mode}")
         self.httpx_client = http_client
 
         self.user_id = None
