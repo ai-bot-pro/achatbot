@@ -8,7 +8,7 @@ achatbot factory, create chat bots with vad,turn, asr, llm(tools)/mllm/audio-llm
 - [achatbot-go](https://github.com/ai-bot-pro/achatbot-go) (main/sub agent)
 
 # Features
-- support [Model Context Protocol(MCP)](https://modelcontextprotocol.io/docs/getting-started/intro) and [Agent2Agent (A2A) Protocol](https://a2a-protocol.org/latest/)
+- support [Model Context Protocol(MCP)](https://github.com/ai-bot-pro/achatbot/pull/153) and [Agent2Agent (A2A) Protocol](https://github.com/ai-bot-pro/achatbot/pull/208)
 - [features](https://github.com/ai-bot-pro/achatbot/blob/main/docs/features.md)
 
 # Design
