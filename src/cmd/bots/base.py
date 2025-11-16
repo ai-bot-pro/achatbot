@@ -45,6 +45,7 @@ from src.common.session import Session
 from src.common.types import SessionCtx
 from src.common.logger import Logger
 from src.common.pool_engine import EngineProviderPool, PoolInstanceInfo
+from src.processors.session_processor import SessionProcessor
 
 load_dotenv(override=True)
 
@@ -243,6 +244,16 @@ class AIBot(IBot):
                 avatar = LiteAvatar()
             avatar.load()
         return avatar
+
+    def get_a2a_processor(self) -> SessionProcessor:
+        processor: SessionProcessor | None = None
+        if self._bot_config.a2a and self._bot_config.a2a.args:
+            from src.processors.a2a.a2a_conversation_processor import A2AConversationProcessor
+
+            processor = A2AConversationProcessor(session=self.session, **self._bot_config.a2a.args)
+            return processor
+
+        raise ValueError("A2A processor is not configured. Please check your bot configuration.")
 
     def get_avatar_processor(self, avatar=None) -> AvatarProcessorBase:
         avatar_processor: AvatarProcessorBase | None = None
