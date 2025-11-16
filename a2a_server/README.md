@@ -17,14 +17,14 @@ adk web --port 8000
 ```
 
 # run agent server
-- agent don't use ai framework, just use a2a adk and llm `chat/completions` api
+- agent don't use ai framework, just use a2a-sdk and llm `chat/completions` api
 ```shell
 # run a2a agent server port :6666
 python -m a2a_server.cmd.mcp_github
 ```
 
 # run client
-- agent don't use ai framework, just use a2a adk, llm `chat/completions` api and use `A2AClient` or ClientFactory create a `Client` to `send_message`
+- agent don't use ai framework, just use a2a-sdk, llm `chat/completions` api and use `A2AClient` or ClientFactory create a `Client` to `send_message`
 ```shell
 python -m a2a_server.cmd.client --question "what's achatbot?"
 ```
