@@ -21,7 +21,6 @@ achatbot factory, create chat bots with vad,turn, asr, llm(tools)/mllm/audio-llm
 # Install
 > [!NOTE]
 > `python --version` >=3.10 with [asyncio-task](https://docs.python.org/3.10/library/asyncio-task.html)
-> if install `achatbot[tts_openvoicev2]` need install melo-tts `pip install git+https://github.com/myshell-ai/MeloTTS.git`
 >
 > if some other nested loop code with achatbot lib, you need to add the following code:
 >
