@@ -94,7 +94,7 @@ More details: https://github.com/ai-bot-pro/achatbot/pull/164 and https://github
 ---
 
 #  Run chat bots
-- :memo: Run chat bots with colab notebook
+- :memo: [Run chat bots with colab notebook](https://github.com/ai-bot-pro/achatbot/blob/main/docs/colab.md)
 
 
 
