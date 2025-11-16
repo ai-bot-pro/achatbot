@@ -1,4 +1,4 @@
-from src.services.a2a_multiagent import BaseHostAgent
+from src.services.a2a_multiagents import BaseHostAgent
 
 
 class PlanerAgent(BaseHostAgent):

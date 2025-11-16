@@ -60,6 +60,7 @@ class BaseHostAgent:
         self.cards: dict[str, AgentCard] = {}
         self.agents: str = ""
         self.loop = loop or asyncio.get_running_loop()
+        self.init_task_done = asyncio.Event()
         init_task = self.loop.create_task(self.init_remote_agent_addresses(remote_agent_addresses))
         init_task.add_done_callback(self._handle_init_exception)
 
@@ -76,6 +77,11 @@ class BaseHostAgent:
         # The task groups run in the background and complete.
         # Once completed the self.agents string is set and the remote
         # connections are established.
+        self.init_task_done.set()
+
+    async def wait_init(self):
+        await self.init_task_done.wait()
+        self.init_task_done.clear()
 
     async def retrieve_card(self, address: str):
         card_resolver = A2ACardResolver(self.httpx_client, address)

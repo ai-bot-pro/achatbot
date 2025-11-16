@@ -15,7 +15,7 @@ from google.adk.memory.in_memory_memory_service import BaseMemoryService
 from google.adk.sessions.in_memory_session_service import BaseSessionService
 
 from src.processors.session_processor import SessionProcessor
-from src.services.a2a_multiagent.adk_host_agent_manager import ADKHostAgentManager
+from src.services.a2a_multiagents.adk_host_agent_manager import ADKHostAgentManager
 from src.services.help.httpx import HTTPXClientWrapper
 from src.common.session import Session
 from src.types.frames import LLMMessagesFrame, LLMFullResponseStartFrame, LLMFullResponseEndFrame

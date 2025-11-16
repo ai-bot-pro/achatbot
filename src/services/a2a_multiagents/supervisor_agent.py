@@ -16,7 +16,7 @@ from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.models.lite_llm import LiteLlm
 from google.adk.tools.tool_context import ToolContext
 
-from src.services.a2a_multiagent import BaseHostAgent
+from src.services.a2a_multiagents import BaseHostAgent
 from . import convert_parts
 
 
@@ -62,6 +62,10 @@ Be sure to include the remote agent name when you respond to the user.
 
 Please rely on tools to address the request, and don't make up the response. If you are not sure, please ask the user for more details.
 Focus on the most recent parts of the conversation primarily. It is not necessary to disclose which agent the information was obtained from.
+
+Your output will be converted to audio, so please do not include special characters in your response.
+Respond to what the user says in a creative and helpful way. 
+Don't over-explain what you're doing. When making tool calls, respond with only short sentences.
 """
         )
         instruction = f"""{prompt}
@@ -152,3 +156,60 @@ Current agent: {current_agent["active_agent"]}
         state = callback_context.state
         if "session_active" not in state or not state["session_active"]:
             state["session_active"] = True
+
+
+"""
+LOG_LEVEL=debug python -m src.services.a2a_multiagents.supervisor_agent
+python -m src.services.a2a_multiagents.supervisor_agent
+"""
+if __name__ == "__main__":
+    import os
+    import asyncio
+    import uuid
+
+    from google.adk import Runner
+    from google.adk.artifacts import InMemoryArtifactService
+    from google.adk.memory.in_memory_memory_service import InMemoryMemoryService
+    from google.adk.sessions.in_memory_session_service import InMemorySessionService
+    from google.adk.agents.run_config import RunConfig, StreamingMode
+    from google.genai import types
+
+    from src.services.help.httpx import HTTPXClientWrapper
+    from src.common.logger import Logger
+
+    Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
+
+    async def arun():
+        http_client_wrapper = HTTPXClientWrapper()
+        http_client_wrapper.start(timeout=60)
+        host_agent = SupervisorAgent(
+            ["http://0.0.0.0:6666"], http_client_wrapper()
+        )  # github repo describe is long-time task
+        await host_agent.wait_init()  # sync init
+
+        agent = host_agent.create_agent()
+
+        session_service = InMemorySessionService()
+        app_name = "A2A_app"
+        user_id = "user1"
+        host_runner = Runner(
+            app_name=app_name,
+            agent=agent,
+            artifact_service=InMemoryArtifactService(),
+            session_service=session_service,
+            memory_service=InMemoryMemoryService(),
+        )
+        session = await session_service.create_session(app_name=app_name, user_id=user_id)
+        async for event in host_runner.run_async(
+            user_id=user_id,
+            session_id=session.id,
+            new_message=types.Content(
+                parts=[types.Part.from_text(text="what's a chatbot?")], role="user"
+            ),
+            run_config=RunConfig(streaming_mode=StreamingMode.SSE),
+        ):
+            print("event-->", event)
+
+        # await http_client_wrapper.stop()
+
+    asyncio.run(arun())
