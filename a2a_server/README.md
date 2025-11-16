@@ -1,13 +1,13 @@
 
 # init
-use adk to develop agent
+- use google-adk to develop agent
 ```shell
 pip install google-adk
 cd a2a_server/cmd
 adk create my_agent
 ```
 
-# dev
+## dev
 ```shell
 # local terminal
 adk run my_agent
