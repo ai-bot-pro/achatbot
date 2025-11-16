@@ -3,7 +3,7 @@
 # achatbot
 [![PyPI](https://img.shields.io/pypi/v/achatbot)](https://pypi.org/project/achatbot/)
 
-achatbot factory, create chat bots with llm(tools), asr, tts, vad, ocr, detect object etc..
+achatbot factory, create chat bots with vad,turn, asr, llm(tools)/mllm/audio-llm/omni-llm, tts, avatar, ocr, detect object etc..
 
 - [achatbot-go](https://github.com/ai-bot-pro/achatbot-go) (main/sub agent)
 
