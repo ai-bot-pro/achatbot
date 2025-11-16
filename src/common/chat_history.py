@@ -4,7 +4,6 @@ class ChatHistory:
     - if size is None, no limit
     - if size < 0, no history
 
-    !TODO: use kv store history like mem0. @weedge
     """
 
     def __init__(

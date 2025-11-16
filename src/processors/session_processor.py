@@ -21,3 +21,9 @@ class SessionProcessor(AsyncFrameProcessor):
 
     def get_ctx_state(self, key):
         return self.session.ctx.state.get(key)
+
+    def set_user_id(self, user_id: str):
+        pass
+
+    async def create_conversation(self):
+        pass

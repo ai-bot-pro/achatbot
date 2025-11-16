@@ -1,0 +1,23 @@
+[project]
+name = "A2A-Server"
+version = "0.1.0"
+description = "A2A server"
+readme = "README.md"
+authors = [{ name = "weedge", email = "weege007@gmail.com" }]
+requires-python = ">=3.11"
+dependencies = [
+    "a2a-sdk>=0.3.0",
+    "asyncclick>=8.1.8",
+    "colorama>=0.4.6",
+    "fastmcp>=2.3.4",
+    "google-genai",
+    "jinja2>=3.1.6",
+    "rich>=14.0.0",
+]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+a2a-native-client = "cmd.client.__main__:main"
+a2a-mcp-github-server = "cmd.mcp_github.__main__:main"
