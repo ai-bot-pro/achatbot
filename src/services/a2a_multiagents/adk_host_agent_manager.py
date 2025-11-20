@@ -26,12 +26,15 @@ from google.adk.events.event import Event as ADKEvent
 from google.adk.agents.run_config import RunConfig, StreamingMode
 from google.adk.events.event_actions import EventActions as ADKEventActions
 from google.adk.artifacts import BaseArtifactService, InMemoryArtifactService
-from google.adk.memory.in_memory_memory_service import BaseMemoryService, InMemoryMemoryService
-from google.adk.sessions.in_memory_session_service import BaseSessionService, InMemorySessionService
+from google.adk.sessions.base_session_service import BaseSessionService
+from google.adk.memory.base_memory_service import BaseMemoryService
+from google.adk.memory.in_memory_memory_service import InMemoryMemoryService
+from google.adk.sessions.in_memory_session_service import InMemorySessionService
 from google.genai import types
 
 from .types import Conversation, Event
 from src.services.help.a2a.agent_card import get_agent_card, async_get_agent_card
+from .planer_agent import BaseHostAgent
 
 
 class ADKHostAgentManager:
@@ -60,7 +63,7 @@ class ADKHostAgentManager:
         self._session_service = session_service or InMemorySessionService()
         self._memory_service = memory_service or InMemoryMemoryService()
         self._artifact_service = artifact_service or InMemoryArtifactService()
-        self._host_agent = None
+        self._host_agent: BaseHostAgent | None = None
         if mode == "planer":
             from .planer_agent import PlanerAgent
 
