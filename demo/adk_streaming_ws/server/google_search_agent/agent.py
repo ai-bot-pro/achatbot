@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-root_agent = Agent(
+agent = Agent(
     # A unique name for the agent.
     name="google_search_agent",
     # The Large Language Model (LLM) that agent will use.

@@ -56,6 +56,7 @@ class A2AConversationProcessor(SessionProcessor):
             memory_service=memory_service,
             artifact_service=artifact_service,
         )
+        self.manager.initialize_host()
         self.queue = asyncio.Queue()
         self.push_task: Optional[asyncio.Task] = None
         self.running = False

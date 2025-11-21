@@ -49,6 +49,7 @@ RECORDS_DIR = os.path.normpath(os.path.join(DIR_PATH, "records"))
 VIDEOS_DIR = os.path.normpath(os.path.join(DIR_PATH, "videos"))
 ASSETS_DIR = os.path.normpath(os.path.join(DIR_PATH, "assets"))
 RESOURCES_DIR = os.path.normpath(os.path.join(DIR_PATH, "resources"))  # np.ndarray features
+UI_DIR = os.path.normpath(os.path.join(DIR_PATH, "ui"))  # ui statics
 
 TEST_DIR = os.path.normpath(os.path.join(SRC_PATH, os.pardir, "test"))
 

@@ -34,7 +34,7 @@ from google.genai import types
 
 from .types import Conversation, Event
 from src.services.help.a2a.agent_card import get_agent_card, async_get_agent_card
-from .planer_agent import BaseHostAgent
+from .adk_planer_agent import ADKBaseHostAgent
 
 
 class ADKHostAgentManager:
@@ -63,30 +63,35 @@ class ADKHostAgentManager:
         self._session_service = session_service or InMemorySessionService()
         self._memory_service = memory_service or InMemoryMemoryService()
         self._artifact_service = artifact_service or InMemoryArtifactService()
-        self._host_agent: BaseHostAgent | None = None
-        if mode == "planer":
-            from .planer_agent import PlanerAgent
-
-            self._host_agent = PlanerAgent(
-                remote_agent_addresses, http_client, system_prompt=system_prompt
-            )
-        elif mode == "supervisor":
-            from .supervisor_agent import SupervisorAgent
-
-            self._host_agent = SupervisorAgent(
-                remote_agent_addresses, http_client, system_prompt=system_prompt
-            )
-        else:
-            raise ValueError(f"Unsupported agent mode: {mode}")
         self.httpx_client = http_client
+        self.mode = mode
+        self.system_prompt = system_prompt
+        self.remote_agent_addresses = remote_agent_addresses
+        self._host_agent: ADKBaseHostAgent | None = None
+        self._host_runner: Runner | None = None
 
         self.user_id = None
         self.app_name = app_name
         self.api_key = api_key or os.environ.get("GOOGLE_API_KEY", "")
 
-        self._initialize_host()
+    def init_host_agent(self):
+        if self.mode == "planer":
+            from .adk_planer_agent import PlanerAgent
 
-    def _initialize_host(self):
+            self._host_agent = PlanerAgent(
+                self.remote_agent_addresses, self.httpx_client, system_prompt=self.system_prompt
+            )
+        elif self.mode == "supervisor":
+            from .adk_supervisor_agent import SupervisorAgent
+
+            self._host_agent = SupervisorAgent(
+                self.remote_agent_addresses, self.httpx_client, system_prompt=self.system_prompt
+            )
+        else:
+            raise ValueError(f"Unsupported agent mode: {self.mode}")
+
+    def initialize_host(self):
+        self.init_host_agent()
         agent = self._host_agent.create_agent()
         self._host_runner = Runner(
             app_name=self.app_name,

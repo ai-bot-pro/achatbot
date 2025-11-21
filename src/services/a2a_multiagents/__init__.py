@@ -23,7 +23,7 @@ from .timestamp_ext import TimestampExtension
 DEFAULT_LITELLM_MODEL = os.getenv("ADK_MODEL", "gemini/gemini-2.5-flash")
 
 
-class BaseHostAgent:
+class ADKBaseHostAgent:
     """The base host agent.
 
     This is the agent responsible for choosing which remote agents
