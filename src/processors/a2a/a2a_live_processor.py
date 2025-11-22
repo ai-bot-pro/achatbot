@@ -1,4 +1,5 @@
 import os
+import uuid
 import asyncio
 import logging
 from typing import List, Optional
@@ -6,29 +7,31 @@ from concurrent.futures import ThreadPoolExecutor
 
 from apipeline.processors.async_frame_processor import FrameDirection
 from apipeline.frames import CancelFrame, StartFrame, EndFrame, Frame, TextFrame, ErrorFrame
-from a2a.utils.message import new_agent_text_message
-from google.adk.events.event import Event as ADKEvent
 from google.adk.artifacts import BaseArtifactService
 from google.adk.memory.base_memory_service import BaseMemoryService
 from google.adk.sessions.base_session_service import BaseSessionService
+from google.genai import types
 
 from src.processors.session_processor import SessionProcessor
-from src.services.a2a_multiagents.adk_host_agent_manager import ADKHostAgentManager
+from src.services.a2a_live.adk_host_agent_manager import ADKHostLiveAgentManager
 from src.services.help.httpx import HTTPXClientWrapper
 from src.common.session import Session
-from src.types.frames import LLMMessagesFrame, LLMFullResponseStartFrame, LLMFullResponseEndFrame
-from src.processors.aggregators.openai_llm_context import (
-    OpenAILLMContext,
-    OpenAILLMContextFrame,
+from src.common.utils.time import time_now_iso8601
+from src.types.frames import (
+    VisionImageVoiceRawFrame,
+    AudioRawFrame,
+    VisionImageRawFrame,
+    TranscriptionFrame,
 )
+from src.services.a2a_live.types import LiveMultiModalInputMessage, LiveMultiModalOutputMessage
 
 
-class A2AConversationProcessor(SessionProcessor):
+class A2ALiveProcessor(SessionProcessor):
     def __init__(
         self,
         app_name: str,
         api_key: str = "",
-        mode: str = "supervisor",  # supervisor or planer
+        mode: str = "supervisor",
         system_prompt: str = "",
         http_timeout: float = 30.0,
         agent_urls: Optional[list[str]] = [],  # agent http url
@@ -43,7 +46,7 @@ class A2AConversationProcessor(SessionProcessor):
         self.http_client_wrapper = HTTPXClientWrapper()
         self.http_client_wrapper.start(timeout=http_timeout)
         http_client = self.http_client_wrapper()
-        self.manager = ADKHostAgentManager(
+        self.manager = ADKHostLiveAgentManager(
             http_client,
             app_name,
             api_key=api_key,
@@ -55,13 +58,8 @@ class A2AConversationProcessor(SessionProcessor):
             artifact_service=artifact_service,
         )
         self.manager.initialize_host()
-        self.queue = asyncio.Queue()
         self.push_task: Optional[asyncio.Task] = None
-        self.running = False
         self.conversation = None
-
-        max_workers = max_workers or os.cpu_count()
-        self.executor = ThreadPoolExecutor(max_workers=max_workers)
 
     @property
     def host_agent_manager(self):
@@ -79,7 +77,6 @@ class A2AConversationProcessor(SessionProcessor):
 
     async def start(self, frame: StartFrame):
         await self.create_conversation()
-        self.running = True
         self.push_task = self.get_event_loop().create_task(self._push_frames())
 
         if self.http_client_wrapper is None:
@@ -90,7 +87,6 @@ class A2AConversationProcessor(SessionProcessor):
         logging.info(f"{self.name} Conversation started")
 
     async def stop(self, frame: EndFrame):
-        self.running = False
         if self.http_client_wrapper:
             self.http_client_wrapper.stop()
             self.http_client_wrapper = None
@@ -106,7 +102,6 @@ class A2AConversationProcessor(SessionProcessor):
         if self.http_client_wrapper:
             self.http_client_wrapper.stop()
             self.http_client_wrapper = None
-        self.executor.shutdown(wait=True)
         logging.info(f"{self.name} Conversation cancelled")
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
@@ -130,71 +125,74 @@ class A2AConversationProcessor(SessionProcessor):
         else:
             await self.queue_frame(frame, direction)
 
-        context = None
-        messages = None
-        if isinstance(frame, LLMMessagesFrame):
-            messages = frame.messages
-            context = OpenAILLMContext(messages=messages)
-        elif isinstance(frame, OpenAILLMContextFrame):
-            context = frame.context
-        if not context:
-            return
-        # Get the latest user message to use as a query for a2a agents
-        context_messages = context.get_messages()
-        for message in reversed(context_messages):
-            if message.get("role") == "user" and isinstance(message.get("content"), str):
-                query: str = message.get("content")
-                await self.send_message(query)
-                break
-
-    async def send_message(self, text: str):
-        try:
-            message = new_agent_text_message(
-                text=text,
-                context_id=self.conversation.conversation_id,
-                # task_id=str(uuid.uuid4()),# new message no task_id
+        if isinstance(frame, TextFrame):
+            self.manager.send_live_message(
+                LiveMultiModalInputMessage(
+                    context_id=self.conversation.conversation_id,
+                    message_id=str(uuid.uuid4()),
+                    kind="text",
+                    text_content=types.Content(role="user", parts=[types.Part(text=frame.text)]),
+                )
             )
-            message = self.manager.sanitize_message(message)
-            # print("message-->", message)
-            # Send the message in a separate thread to avoid blocking the event loop.
-            self.executor.submit(
-                self.manager.process_message_threadsafe, message, self.get_event_loop(), self.queue
+        elif isinstance(frame, AudioRawFrame):
+            self.manager.send_live_message(
+                LiveMultiModalInputMessage(
+                    context_id=self.conversation.conversation_id,
+                    message_id=str(uuid.uuid4()),
+                    kind="audio",
+                    audio_blob=types.Blob(
+                        data=frame.audio,
+                        mime_type=f"audio/pcm;rate={frame.sample_rate}",
+                    ),
+                )
             )
-            # t = threading.Thread(
-            #    target=lambda: self.manager.process_message_threadsafe(
-            #        message, self.get_event_loop(), self.queue
-            #    )
-            # )
-            # t.start()
-        except Exception as e:
-            logging.error(f"Error processing: {str(e)}")
-            await self.push_frame(ErrorFrame(f"Error processing: {str(e)}"))
+        elif isinstance(frame, VisionImageRawFrame):
+            self.manager.send_live_message(
+                LiveMultiModalInputMessage(
+                    context_id=self.conversation.conversation_id,
+                    message_id=str(uuid.uuid4()),
+                    kind="text_images",
+                    text_content=types.Content(role="user", parts=[types.Part(text=frame.text)]),
+                    image_blob_list=[
+                        types.Blob(
+                            data=frame.image,
+                            mime_type=f"image/{frame.format.lower()}",
+                        )
+                    ],
+                )
+            )
+        elif isinstance(frame, VisionImageVoiceRawFrame):
+            self.manager.send_live_message(
+                LiveMultiModalInputMessage(
+                    context_id=self.conversation.conversation_id,
+                    message_id=str(uuid.uuid4()),
+                    kind="audio_images",
+                    audio_blob=types.Blob(
+                        data=frame.audio.audio,
+                        mime_type=f"audio/pcm;rate={frame.audio.sample_rate}",
+                    ),
+                    image_blob_list=[
+                        types.Blob(
+                            data=img.image,
+                            mime_type=f"image/{img.format.lower()}",
+                        )
+                        for img in frame.images
+                    ],
+                )
+            )
 
     async def _push_frames(self):
-        while self.running:
-            try:
-                event: ADKEvent = await asyncio.wait_for(self.queue.get(), timeout=1.0)
-                # print("event-->", event)
-                # Send the message in a separate thread to avoid blocking the event loop.
-                if event.id and event.partial is None:
-                    await self.queue_frame(LLMFullResponseStartFrame())
-                if event.content and event.content.parts and event.partial:
-                    for part in event.content.parts:
-                        if part.text:
-                            await self.queue_frame(
-                                TextFrame(text=part.text), FrameDirection.DOWNSTREAM
-                            )
-                if event.content and event.content.parts and event.partial is False:
-                    await self.queue_frame(LLMFullResponseEndFrame())
-
-                self.queue.task_done()
-            except asyncio.TimeoutError:
-                continue
-            except asyncio.CancelledError:
-                logging.info(f"{self.name} _push_frames cancelled")
-                break
-            except Exception as ex:
-                logging.exception(f"{self.name} Unexpected error in _push_frames: {ex}")
-                if self.get_event_loop().is_closed():
-                    logging.warning(f"{self.name} event loop is closed")
-                    break
+        async for msg in self.manager.recieve_message():
+            if msg.kind == "transcription":
+                self.queue_frame(
+                    TranscriptionFrame(
+                        text=msg.text,
+                        user_id=self.session.ctx.client_id,
+                        timestamp=time_now_iso8601(),
+                    )
+                )
+            if msg.kind == "text":
+                self.queue_frame(TextFrame(text=msg.text))
+            if msg.kind == "audio":
+                rate = int(msg.audio_blob.mime_type.split("=")[1])
+                self.queue_frame(AudioRawFrame(audio=msg.audio_blob.data, sample_rate=rate))

@@ -245,13 +245,22 @@ class AIBot(IBot):
             avatar.load()
         return avatar
 
-    def get_a2a_processor(self) -> SessionProcessor:
+    def get_a2a_processor(self, tag: str | None = None) -> SessionProcessor:
         processor: SessionProcessor | None = None
-        if self._bot_config.a2a and self._bot_config.a2a.args:
-            from src.processors.a2a.a2a_conversation_processor import A2AConversationProcessor
+        if self._bot_config.a2a and self._bot_config.a2a.tag and self._bot_config.a2a.args:
+            tag = tag or self._bot_config.a2a.tag
+            if tag == "a2a_conversation_processor":
+                from src.processors.a2a.a2a_conversation_processor import A2AConversationProcessor
 
-            processor = A2AConversationProcessor(session=self.session, **self._bot_config.a2a.args)
-            return processor
+                processor = A2AConversationProcessor(
+                    session=self.session, **self._bot_config.a2a.args
+                )
+                return processor
+            if tag == "a2a_live_processor":
+                from src.processors.a2a.a2a_live_processor import A2ALiveProcessor
+
+                processor = A2ALiveProcessor(session=self.session, **self._bot_config.a2a.args)
+                return processor
 
         raise ValueError("A2A processor is not configured. Please check your bot configuration.")
 

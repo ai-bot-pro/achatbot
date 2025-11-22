@@ -20,10 +20,10 @@ from google.genai import types
 from .remote_agent_connection import RemoteAgentConnections, TaskUpdateCallback
 from .timestamp_ext import TimestampExtension
 
-DEFAULT_LITELLM_MODEL = os.getenv("ADK_LITELLM_MODEL", "gemini/gemini-2.5-flash")
+DEFAULT_LITELLM_MODEL = os.getenv("ADK_MODEL", "gemini/gemini-2.5-flash")
 
 
-class BaseHostAgent:
+class ADKBaseHostAgent:
     """The base host agent.
 
     This is the agent responsible for choosing which remote agents
@@ -109,10 +109,12 @@ class BaseHostAgent:
         return remote_agent_info
 
     def create_agent(self) -> Agent:
-        pass
+        """Create an agent that can be used to delegate tasks to remote agents."""
+        raise NotImplementedError
 
     def root_instruction(self, context: ReadonlyContext) -> str:
-        pass
+        """Return the root instruction for the agent."""
+        raise NotImplementedError
 
     def check_state(self, context: ReadonlyContext):
         state = context.state
