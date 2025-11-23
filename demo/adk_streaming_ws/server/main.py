@@ -43,8 +43,8 @@ app = FastAPI()
 
 # Mount static files
 LIVE_STATIC_DIR = Path(f"{UI_DIR}/websocket/live")
-app.mount("/css", StaticFiles(directory=os.path.join(LIVE_STATIC_DIR, "css")), name="css")
-app.mount("/js", StaticFiles(directory=os.path.join(LIVE_STATIC_DIR, "js")), name="js")
+app.mount("/live/css", StaticFiles(directory=os.path.join(LIVE_STATIC_DIR, "css")), name="css")
+app.mount("/live/js", StaticFiles(directory=os.path.join(LIVE_STATIC_DIR, "js")), name="js")
 
 # Define your session service
 session_service = InMemorySessionService()
