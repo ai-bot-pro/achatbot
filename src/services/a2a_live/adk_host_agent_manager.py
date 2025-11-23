@@ -38,6 +38,7 @@ class ADKHostLiveAgentManager(ADKHostAgentManager):
         session_service=None,
         memory_service=None,
         artifact_service=None,
+        voice_name: str = "Aoede",
     ):
         super().__init__(
             http_client,
@@ -52,6 +53,7 @@ class ADKHostLiveAgentManager(ADKHostAgentManager):
             memory_service,
             artifact_service,
         )
+        self._voice_name = voice_name
         self._live_request_queue = LiveRequestQueue()
         self._runner_config: RunConfig | None = None
 
@@ -90,12 +92,18 @@ class ADKHostLiveAgentManager(ADKHostAgentManager):
         if is_native_audio:
             # Native audio models require AUDIO response modality with audio transcription
             response_modalities = ["AUDIO"]
+            # voices: https://ai.google.dev/gemini-api/docs/speech-generation?hl=zh-cn#voices
+            voice_config = types.VoiceConfig(
+                prebuilt_voice_config=types.PrebuiltVoiceConfigDict(voice_name=self._voice_name)
+            )
+            speech_config = types.SpeechConfig(voice_config=voice_config)
             self._run_config = RunConfig(
                 streaming_mode=StreamingMode.BIDI,
                 response_modalities=response_modalities,
                 input_audio_transcription=types.AudioTranscriptionConfig(),
                 output_audio_transcription=types.AudioTranscriptionConfig(),
                 session_resumption=types.SessionResumptionConfig(),
+                speech_config=speech_config,
             )
             logging.debug(
                 f"Native audio model detected: {model_name}, using AUDIO response modality"

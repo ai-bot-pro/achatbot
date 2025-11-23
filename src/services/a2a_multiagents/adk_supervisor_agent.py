@@ -34,6 +34,7 @@ class ADKSupervisorAgent(ADKBaseHostAgent):
     """
 
     def create_agent(self) -> Agent:
+        tools = [] if len(self.remote_agent_connections) == 0 else [self.send_message]
         return Agent(
             model=LiteLlm(model=self.model),
             name=self.name or "supervisor_agent",
@@ -43,9 +44,7 @@ class ADKSupervisorAgent(ADKBaseHostAgent):
                 "This agent orchestrates the decomposition of the user request into"
                 " tasks that can be performed by the child agents."
             ),
-            tools=[
-                self.send_message,
-            ],
+            tools=tools,
         )
 
     def root_instruction(self, context: ReadonlyContext) -> str:

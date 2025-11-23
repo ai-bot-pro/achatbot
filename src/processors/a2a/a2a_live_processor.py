@@ -1,9 +1,7 @@
-import os
 import uuid
 import asyncio
 import logging
 from typing import List, Optional
-from concurrent.futures import ThreadPoolExecutor
 
 from apipeline.processors.async_frame_processor import FrameDirection
 from apipeline.frames import CancelFrame, StartFrame, EndFrame, Frame, TextFrame, ErrorFrame
@@ -31,6 +29,7 @@ class A2ALiveProcessor(SessionProcessor):
         self,
         app_name: str,
         host_agent_name: str = "",
+        voice_name: str = "",
         api_key: str = "",
         mode: str = "supervisor",
         model: str = "",
@@ -60,6 +59,7 @@ class A2ALiveProcessor(SessionProcessor):
             session_service=session_service,
             memory_service=memory_service,
             artifact_service=artifact_service,
+            voice_name=voice_name,
         )
         self.manager.initialize_host()
         self.push_task: Optional[asyncio.Task] = None
@@ -196,7 +196,6 @@ class A2ALiveProcessor(SessionProcessor):
             )
         else:
             await self.queue_frame(frame, direction)
-
 
     async def _push_frames(self):
         try:

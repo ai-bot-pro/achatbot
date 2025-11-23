@@ -21,6 +21,7 @@ from src.services.a2a_multiagents import ADKBaseHostAgent, convert_parts
 
 class ADKSupervisorLiveAgent(ADKBaseHostAgent):
     def create_agent(self) -> Agent:
+        tools = [] if len(self.remote_agent_connections) == 0 else [self.send_message]
         return Agent(
             model=self.model,
             name=self.name or "supervisor_live_agent",
@@ -30,9 +31,7 @@ class ADKSupervisorLiveAgent(ADKBaseHostAgent):
                 "This agent orchestrates the decomposition of the user request into"
                 " tasks that can be performed by the child agents."
             ),
-            tools=[
-                self.send_message,
-            ],
+            tools=tools,
         )
 
     def root_instruction(self, context: ReadonlyContext) -> str:
