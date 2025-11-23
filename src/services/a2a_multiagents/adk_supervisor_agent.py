@@ -1,7 +1,8 @@
-import base64
 import uuid
 import logging
+from pathlib import Path
 
+from jinja2 import Template
 from a2a.types import (
     Message,
     Part,
@@ -67,13 +68,14 @@ Respond to what the user says in a creative and helpful way.
 Don't over-explain what you're doing. When making tool calls, respond with only short sentences.
 """
         )
-        instruction = f"""{prompt}
 
-Agents:
-{self.agents}
-
-Current agent: {current_agent["active_agent"]}
-"""
+        instruction = prompt
+        dir_path = Path(__file__).parent
+        with Path(dir_path / "tpl" / "supervisor.jinja").open("r") as f:
+            instruction_template = Template(f.read())
+            instruction = instruction_template.render(
+                prompt=prompt, agents=self.agents, current_agent=current_agent["active_agent"]
+            )
         logging.debug(f"{instruction=}")
         return instruction
 
