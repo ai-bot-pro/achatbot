@@ -1,14 +1,17 @@
+import logging
 from typing import cast
 
+from fastapi import WebSocket
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
 from apipeline.frames import TextFrame
 
-from src.common.types import DailyParams
-from src.transports.daily import DailyTransport
-from src.cmd.bots.base_daily import DailyRoomBot
-from src.cmd.bots import register_ai_room_bots
+from src.cmd.bots.base_fastapi_websocket_server import AIFastapiWebsocketBot
+from src.types.network.fastapi_websocket import FastapiWebsocketServerParams
+from src.transports.fastapi_websocket_server import FastapiWebsocketTransport
+from src.serializers.transcription_protobuf import TranscriptionFrameSerializer
+from src.cmd.bots import register_ai_fastapi_ws_bots
 from src.processors.a2a.a2a_live_processor import A2ALiveProcessor
 
 from dotenv import load_dotenv
@@ -16,8 +19,8 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 
-@register_ai_room_bots.register
-class DailyA2ALiveBot(DailyRoomBot):
+@register_ai_fastapi_ws_bots.register
+class FastapiWebsocketA2ALiveBot(AIFastapiWebsocketBot):
     """
     use a2a live bot
     - no VAD
@@ -29,22 +32,23 @@ class DailyA2ALiveBot(DailyRoomBot):
         self.init_bot_config()
 
     async def arun(self):
-        self.daily_params = DailyParams(
+        if self._websocket is None:
+            return
+
+        serializer = TranscriptionFrameSerializer()
+        self.params = FastapiWebsocketServerParams(
             audio_in_enabled=True,
-            audio_out_enabled=True,
-            vad_enabled=False,
+            audio_out_enabled=False,
+            add_wav_header=True,
+            vad_enabled=True,
+            vad_analyzer=self.vad_analyzer,
             vad_audio_passthrough=True,
-            transcription_enabled=False,
-            audio_out_sample_rate=24000,
+            serializer=serializer,
         )
-
-        transport = DailyTransport(
-            self.args.room_url,
-            self.args.token,
-            self.args.bot_name,
-            self.daily_params,
+        transport = FastapiWebsocketTransport(
+            websocket=self._websocket,
+            params=self.params,
         )
-
         self.a2a_processor: A2ALiveProcessor = cast(
             A2ALiveProcessor,
             self.get_a2a_processor(tag="a2a_live_processor"),
@@ -65,21 +69,22 @@ class DailyA2ALiveBot(DailyRoomBot):
             ),
         )
 
-        transport.add_event_handlers(
-            "on_first_participant_joined",
-            [self.on_first_participant_joined, self.on_first_participant_say_hi],
-        )
-        transport.add_event_handler("on_participant_left", self.on_participant_left)
-        transport.add_event_handler("on_call_state_updated", self.on_call_state_updated)
+        transport.add_event_handler("on_client_connected", self.on_client_connected)
+        transport.add_event_handler("on_client_disconnected", self.on_client_disconnected)
 
         await PipelineRunner(handle_sigint=self._handle_sigint).run(self.task)
 
-    async def on_first_participant_say_hi(self, transport: DailyTransport, participant):
-        self.a2a_processor.set_user_id(participant["id"])
+    async def on_client_connected(
+        self,
+        transport: FastapiWebsocketTransport,
+        websocket: WebSocket,
+    ):
+        logging.info(f"on_client_connected client:{websocket.client}")
+        client_id = f"{websocket.client.host}:{websocket.client.port}"
+        self.session.set_client_id(client_id=client_id)
+        self.a2a_processor.set_user_id(client_id)
         await self.a2a_processor.create_conversation()
         await self.a2a_processor.create_push_task()
-        if self.daily_params.transcription_enabled:
-            transport.capture_participant_transcription(participant["id"])
 
         is_cn = self._bot_config.a2a and self._bot_config.a2a.language == "zh"
         user_hi_text = "请用中文介绍下自己。" if is_cn else "Please introduce yourself first."

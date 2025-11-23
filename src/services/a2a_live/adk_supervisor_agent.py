@@ -61,7 +61,6 @@ Don't over-explain what you're doing. When making tool calls, respond with only 
         dir_path = Path(__file__).parent
         with Path(dir_path / "tpl" / "supervisor.jinja").open("r") as f:
             instruction_template = Template(f.read())
-            print(f"{current_agent=}")
             instruction = instruction_template.render(
                 prompt=prompt, agents=self.agents, current_agent=current_agent["active_agent"]
             )

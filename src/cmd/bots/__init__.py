@@ -418,6 +418,10 @@ def import_fastapi_websocket_bots(bot_name: str = "DummyBot"):
         from .vad import fastapi_websocket_vad_bot
 
         return True
+    if "FastapiWebsocketA2ALiveBot" in bot_name:
+        from .a2a import fastapi_ws_a2a_live_bot
+
+        return True
 
     return False
 
