@@ -1,4 +1,5 @@
 import logging
+from typing import cast
 
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
@@ -15,6 +16,7 @@ from src.types.frames.control_frames import (
     UserStartedSpeakingFrame,
     UserStoppedSpeakingFrame,
 )
+from src.processors.a2a.a2a_live_processor import A2ALiveProcessor
 
 from dotenv import load_dotenv
 
@@ -25,7 +27,8 @@ load_dotenv(override=True)
 class DailyA2ALiveBot(DailyRoomBot):
     """
     use a2a live bot
-    - text/images/audio -> gemini live -> text/audio
+    - no VAD
+    - text/images/audio -> gemini live (BIDI) -> text/audio
     """
 
     def __init__(self, **args) -> None:
@@ -33,12 +36,10 @@ class DailyA2ALiveBot(DailyRoomBot):
         self.init_bot_config()
 
     async def arun(self):
-        # vad_analyzer = self.get_vad_analyzer()
         self.daily_params = DailyParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
             vad_enabled=False,
-            # vad_analyzer=vad_analyzer,
             vad_audio_passthrough=True,
             transcription_enabled=False,
             audio_out_sample_rate=24000,
@@ -51,22 +52,17 @@ class DailyA2ALiveBot(DailyRoomBot):
             self.daily_params,
         )
 
-        self.a2a_processor = self.get_a2a_processor(tag="a2a_live_processor")
+        self.a2a_processor: A2ALiveProcessor = cast(
+            A2ALiveProcessor,
+            self.get_a2a_processor(tag="a2a_live_processor"),
+        )
 
         self.task = PipelineTask(
             Pipeline(
                 [
                     transport.input_processor(),
-                    FrameLogger(
-                        include_frame_types=[UserStartedSpeakingFrame, UserStoppedSpeakingFrame]
-                    ),
                     self.a2a_processor,
                     transport.output_processor(),
-                    FrameLogger(
-                        include_frame_types=[
-                            # TextFrame,
-                        ]
-                    ),
                 ]
             ),
             params=PipelineParams(
@@ -88,6 +84,7 @@ class DailyA2ALiveBot(DailyRoomBot):
     async def on_first_participant_say_hi(self, transport: DailyTransport, participant):
         self.a2a_processor.set_user_id(participant["id"])
         await self.a2a_processor.create_conversation()
+        await self.a2a_processor.create_push_task()
         if self.daily_params.transcription_enabled:
             transport.capture_participant_transcription(participant["id"])
 

@@ -1,4 +1,6 @@
+import os
 import logging
+import uuid
 
 from a2a.types import (
     Message,
@@ -21,7 +23,7 @@ class ADKSupervisorLiveAgent(ADKBaseHostAgent):
     def create_agent(self) -> Agent:
         return Agent(
             model=self.model,
-            name="supervisor_live_agent",
+            name=self.name or "supervisor_live_agent",
             instruction=self.root_instruction,
             before_model_callback=self.before_model_callback,
             description=(
@@ -100,7 +102,7 @@ Current agent: {current_agent["active_agent"]}
         response = Message(
             role=Role.user,
             message_id=message_id,
-            parts=[Part(root=TextPart(text=os.getenv("MOCK_RESP")))],
+            parts=[Part(root=TextPart(text=os.getenv("MOCK_RESP", "")))],
         )
         if not os.getenv("MOCK_RESP"):
             response = await client.send_message(request_message)
@@ -155,9 +157,7 @@ python -m src.services.a2a_live.adk_supervisor_agent
 MOCK_RESP="achatbot factory, create chat bots with vad,turn, asr, llm(tools)/mllm/audio-llm/omni-llm, tts, avatar, ocr, detect object" python -m src.services.a2a_live.adk_supervisor_agent
 """
 if __name__ == "__main__":
-    import os
     import asyncio
-    import uuid
 
     from google.adk import Runner
     from google.adk.artifacts import InMemoryArtifactService

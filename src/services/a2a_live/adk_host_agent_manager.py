@@ -14,6 +14,7 @@ from a2a.types import Message, Role, Part, TextPart
 from src.services.a2a_live.types import LiveMultiModalInputMessage, LiveMultiModalOutputMessage
 from src.services.a2a_multiagents.adk_host_agent_manager import ADKHostAgentManager
 from src.services.a2a_multiagents.types import Conversation
+from src.services.a2a_multiagents import DEFAULT_MODEL
 
 
 class ADKHostLiveAgentManager(ADKHostAgentManager):
@@ -28,8 +29,10 @@ class ADKHostLiveAgentManager(ADKHostAgentManager):
         self,
         http_client,
         app_name,
+        host_agent_name: str = "",
         api_key="",
         mode="supervisor",
+        model=DEFAULT_MODEL,
         system_prompt="",
         remote_agent_addresses=...,
         session_service=None,
@@ -39,8 +42,10 @@ class ADKHostLiveAgentManager(ADKHostAgentManager):
         super().__init__(
             http_client,
             app_name,
+            host_agent_name,
             api_key,
             mode,
+            model,
             system_prompt,
             remote_agent_addresses,
             session_service,
@@ -55,7 +60,11 @@ class ADKHostLiveAgentManager(ADKHostAgentManager):
             from .adk_supervisor_agent import ADKSupervisorLiveAgent
 
             self._host_agent = ADKSupervisorLiveAgent(
-                self.remote_agent_addresses, self.httpx_client, system_prompt=self.system_prompt
+                self.remote_agent_addresses,
+                self.httpx_client,
+                model=self.model,
+                system_prompt=self.system_prompt,
+                name=self.host_agent_name,
             )
         else:
             raise ValueError(f"Unsupported agent mode: {self.mode}")
@@ -137,6 +146,8 @@ class ADKHostLiveAgentManager(ADKHostAgentManager):
                 self._live_request_queue.send_realtime(image_blob)
 
     async def recieve_message(self) -> AsyncGenerator[LiveMultiModalOutputMessage, None]:
+        if self._session is None:
+            return
         input_text = ""
         output_text = ""
         output_audio_chunk = bytes()
@@ -163,7 +174,7 @@ class ADKHostLiveAgentManager(ADKHostAgentManager):
                 # output conversation text message
                 response = Message(
                     message_id=str(uuid.uuid4()),
-                    role="model",
+                    role="agent",
                     parts=[
                         Part(root=TextPart(text=output_text)),
                     ],
@@ -179,7 +190,7 @@ class ADKHostLiveAgentManager(ADKHostAgentManager):
                 is_first_text = False
                 if not input_text:
                     is_first_text = True
-                event = LiveMultiModalOutputMessage(
+                msg = LiveMultiModalOutputMessage(
                     context_id=context_id,
                     kind="transcription",
                     is_first_text=is_first_text,
@@ -188,13 +199,13 @@ class ADKHostLiveAgentManager(ADKHostAgentManager):
                     ),
                 )
                 input_text += event.input_transcription.text
-                yield event
+                yield msg
             elif event.output_transcription and event.output_transcription.text:  # output text
                 # print(f"{event.output_transcription.text=}")
                 is_first_text = False
                 if not output_text:
                     is_first_text = True
-                event = LiveMultiModalOutputMessage(
+                msg = LiveMultiModalOutputMessage(
                     context_id=context_id,
                     kind="text",
                     is_first_text=is_first_text,
@@ -203,7 +214,7 @@ class ADKHostLiveAgentManager(ADKHostAgentManager):
                     ),
                 )
                 output_text += event.output_transcription.text
-                yield event
+                yield msg
             elif (
                 event.content
                 and event.content.parts
@@ -218,7 +229,7 @@ class ADKHostLiveAgentManager(ADKHostAgentManager):
                 is_first_audio_chunk = False
                 if not input_text:
                     is_first_text = True
-                event = LiveMultiModalOutputMessage(
+                msg = LiveMultiModalOutputMessage(
                     context_id=context_id,
                     kind="audio",
                     is_first_audio_chunk=is_first_audio_chunk,
@@ -228,4 +239,4 @@ class ADKHostLiveAgentManager(ADKHostAgentManager):
                     ),
                 )
                 output_audio_chunk += event.content.parts[0].inline_data.data
-                yield event
+                yield msg

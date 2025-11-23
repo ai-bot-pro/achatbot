@@ -36,7 +36,7 @@ class ADKSupervisorAgent(ADKBaseHostAgent):
     def create_agent(self) -> Agent:
         return Agent(
             model=LiteLlm(model=self.model),
-            name="supervisor_agent",
+            name=self.name or "supervisor_agent",
             instruction=self.root_instruction,
             before_model_callback=self.before_model_callback,
             description=(

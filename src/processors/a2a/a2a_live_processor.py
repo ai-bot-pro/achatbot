@@ -30,8 +30,10 @@ class A2ALiveProcessor(SessionProcessor):
     def __init__(
         self,
         app_name: str,
+        host_agent_name: str = "",
         api_key: str = "",
         mode: str = "supervisor",
+        model: str = "",
         system_prompt: str = "",
         http_timeout: float = 30.0,
         agent_urls: Optional[list[str]] = [],  # agent http url
@@ -49,10 +51,12 @@ class A2ALiveProcessor(SessionProcessor):
         self.manager = ADKHostLiveAgentManager(
             http_client,
             app_name,
+            host_agent_name=host_agent_name,
             api_key=api_key,
             mode=mode,
-            remote_agent_addresses=agent_urls,
+            model=model,
             system_prompt=system_prompt,
+            remote_agent_addresses=agent_urls,
             session_service=session_service,
             memory_service=memory_service,
             artifact_service=artifact_service,
@@ -75,9 +79,22 @@ class A2ALiveProcessor(SessionProcessor):
         for url in urls:
             await self.manager.register_agent(url)
 
+    async def create_push_task(self):
+        if self.push_task is not None:
+            self.push_task.cancel()
+            try:
+                await self.push_task
+            except asyncio.CancelledError:
+                logging.info(f"{self.name} push_task cancelled.")
+            self.push_task = None
+
+        if self.push_task is None:
+            self.push_task = self.get_event_loop().create_task(self._push_frames())
+            logging.info(f"{self.name} push_task created.")
+
     async def start(self, frame: StartFrame):
         await self.create_conversation()
-        self.push_task = self.get_event_loop().create_task(self._push_frames())
+        await self.create_push_task()
 
         if self.http_client_wrapper is None:
             self.http_client_wrapper = HTTPXClientWrapper()
@@ -88,7 +105,7 @@ class A2ALiveProcessor(SessionProcessor):
 
     async def stop(self, frame: EndFrame):
         if self.http_client_wrapper:
-            self.http_client_wrapper.stop()
+            await self.http_client_wrapper.stop()
             self.http_client_wrapper = None
 
         logging.info(f"{self.name} Conversation end")
@@ -100,7 +117,7 @@ class A2ALiveProcessor(SessionProcessor):
         except asyncio.CancelledError:
             logging.info(f"{self.name} push_task cancelled.")
         if self.http_client_wrapper:
-            self.http_client_wrapper.stop()
+            await self.http_client_wrapper.stop()
             self.http_client_wrapper = None
         logging.info(f"{self.name} Conversation cancelled")
 
@@ -122,11 +139,8 @@ class A2ALiveProcessor(SessionProcessor):
         elif isinstance(frame, CancelFrame):
             await self.cancel(frame)
             await self.push_frame(frame, direction)
-        else:
-            await self.queue_frame(frame, direction)
-
-        if isinstance(frame, TextFrame):
-            self.manager.send_live_message(
+        elif isinstance(frame, TextFrame):
+            await self.manager.send_live_message(
                 LiveMultiModalInputMessage(
                     context_id=self.conversation.conversation_id,
                     message_id=str(uuid.uuid4()),
@@ -135,7 +149,7 @@ class A2ALiveProcessor(SessionProcessor):
                 )
             )
         elif isinstance(frame, AudioRawFrame):
-            self.manager.send_live_message(
+            await self.manager.send_live_message(
                 LiveMultiModalInputMessage(
                     context_id=self.conversation.conversation_id,
                     message_id=str(uuid.uuid4()),
@@ -147,7 +161,7 @@ class A2ALiveProcessor(SessionProcessor):
                 )
             )
         elif isinstance(frame, VisionImageRawFrame):
-            self.manager.send_live_message(
+            await self.manager.send_live_message(
                 LiveMultiModalInputMessage(
                     context_id=self.conversation.conversation_id,
                     message_id=str(uuid.uuid4()),
@@ -162,7 +176,7 @@ class A2ALiveProcessor(SessionProcessor):
                 )
             )
         elif isinstance(frame, VisionImageVoiceRawFrame):
-            self.manager.send_live_message(
+            await self.manager.send_live_message(
                 LiveMultiModalInputMessage(
                     context_id=self.conversation.conversation_id,
                     message_id=str(uuid.uuid4()),
@@ -180,19 +194,32 @@ class A2ALiveProcessor(SessionProcessor):
                     ],
                 )
             )
+        else:
+            await self.queue_frame(frame, direction)
+
 
     async def _push_frames(self):
-        async for msg in self.manager.recieve_message():
-            if msg.kind == "transcription":
-                self.queue_frame(
-                    TranscriptionFrame(
-                        text=msg.text,
-                        user_id=self.session.ctx.client_id,
-                        timestamp=time_now_iso8601(),
+        try:
+            async for msg in self.manager.recieve_message():
+                if msg.kind == "transcription":
+                    await self.queue_frame(
+                        TranscriptionFrame(
+                            text=msg.text_content.parts[0].text,
+                            user_id=self.session.ctx.client_id,
+                            timestamp=time_now_iso8601(),
+                        )
                     )
-                )
-            if msg.kind == "text":
-                self.queue_frame(TextFrame(text=msg.text))
-            if msg.kind == "audio":
-                rate = int(msg.audio_blob.mime_type.split("=")[1])
-                self.queue_frame(AudioRawFrame(audio=msg.audio_blob.data, sample_rate=rate))
+                if msg.kind == "text":
+                    await self.queue_frame(TextFrame(text=msg.text_content.parts[0].text))
+                if msg.kind == "audio":
+                    rate = int(msg.audio_blob.mime_type.split("=")[1])
+                    await self.queue_frame(
+                        AudioRawFrame(audio=msg.audio_blob.data, sample_rate=rate)
+                    )
+                if (
+                    msg.kind == "images"
+                ):  # gemini live 2.5 no image , wait gemini live 3.0 (maybe gen image)
+                    # TODO: add image frame support
+                    pass
+        except Exception as e:
+            logging.exception(f"{self.name} Error in _push_frames: {e}")

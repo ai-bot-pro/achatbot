@@ -37,6 +37,7 @@ from google.genai import types
 from .types import Conversation, Event
 from src.services.help.a2a.agent_card import get_agent_card, async_get_agent_card
 from .adk_planer_agent import ADKBaseHostAgent
+from . import DEFAULT_MODEL
 
 
 class ADKHostAgentManager:
@@ -50,8 +51,10 @@ class ADKHostAgentManager:
         self,
         http_client: httpx.AsyncClient,
         app_name: str,
+        host_agent_name: str = "",
         api_key: str = "",
         mode: str = "supervisor",  # supervisor or planer
+        model: str = DEFAULT_MODEL,
         system_prompt: str = "",
         remote_agent_addresses: list[str] = [],
         session_service: BaseSessionService | None = None,
@@ -67,6 +70,8 @@ class ADKHostAgentManager:
         self._artifact_service = artifact_service or InMemoryArtifactService()
         self.httpx_client = http_client
         self.mode = mode
+        self.model = model
+        self.host_agent_name = host_agent_name
         self.system_prompt = system_prompt
         self.remote_agent_addresses = remote_agent_addresses
         self._host_agent: ADKBaseHostAgent | None = None
@@ -82,13 +87,21 @@ class ADKHostAgentManager:
             from .adk_planer_agent import ADKPlanerAgent
 
             self._host_agent = ADKPlanerAgent(
-                self.remote_agent_addresses, self.httpx_client, system_prompt=self.system_prompt
+                self.remote_agent_addresses,
+                self.httpx_client,
+                model=self.model,
+                system_prompt=self.system_prompt,
+                name=self.host_agent_name,
             )
         elif self.mode == "supervisor":
             from .adk_supervisor_agent import ADKSupervisorAgent
 
             self._host_agent = ADKSupervisorAgent(
-                self.remote_agent_addresses, self.httpx_client, system_prompt=self.system_prompt
+                self.remote_agent_addresses,
+                self.httpx_client,
+                model=self.model,
+                system_prompt=self.system_prompt,
+                name=self.host_agent_name,
             )
         else:
             raise ValueError(f"Unsupported agent mode: {self.mode}")
@@ -110,10 +123,10 @@ class ADKHostAgentManager:
     def set_user_id(self, user_id: str):
         self.user_id = user_id
 
-    async def create_conversation(self) -> Conversation:
+    async def create_conversation(self) -> Conversation | None:
         if self.user_id is None:
             logging.warning("no user_id")
-            return
+            return None
         self._session = await self._session_service.create_session(
             app_name=self.app_name, user_id=self.user_id
         )
@@ -216,6 +229,7 @@ class ADKHostAgentManager:
 
     def get_conversation(self, conversation_id: str | None) -> Conversation | None:
         if not conversation_id:
+            logging.warning("no conversation_id")
             return None
         return self._conversations.get(conversation_id)
 

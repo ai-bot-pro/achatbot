@@ -109,7 +109,9 @@ class AudioVADInputProcessor(InputProcessor):
             try:
                 frame: AudioRawFrame = await asyncio.wait_for(self._audio_in_queue.get(), timeout=1)
 
-                if self._num_bytes_required == 0:
+                if self._num_bytes_required == 0 and self._params.vad_audio_passthrough:
+                    # Note: no VAD, just push the frame downstream. e.g. use moshi/gemini live BIDI model
+                    await self.push_frame(frame)
                     continue
 
                 self._bytes_buffer.extend_bytes(frame.audio)

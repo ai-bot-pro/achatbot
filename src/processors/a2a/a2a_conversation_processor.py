@@ -92,7 +92,7 @@ class A2AConversationProcessor(SessionProcessor):
     async def stop(self, frame: EndFrame):
         self.running = False
         if self.http_client_wrapper:
-            self.http_client_wrapper.stop()
+            await self.http_client_wrapper.stop()
             self.http_client_wrapper = None
 
         logging.info(f"{self.name} Conversation end")
@@ -104,7 +104,7 @@ class A2AConversationProcessor(SessionProcessor):
         except asyncio.CancelledError:
             logging.info(f"{self.name} push_task cancelled.")
         if self.http_client_wrapper:
-            self.http_client_wrapper.stop()
+            await self.http_client_wrapper.stop()
             self.http_client_wrapper = None
         self.executor.shutdown(wait=True)
         logging.info(f"{self.name} Conversation cancelled")

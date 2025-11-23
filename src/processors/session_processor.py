@@ -23,7 +23,7 @@ class SessionProcessor(AsyncFrameProcessor):
         return self.session.ctx.state.get(key)
 
     def set_user_id(self, user_id: str):
-        pass
+        raise NotImplementedError
 
     async def create_conversation(self):
-        pass
+        raise NotImplementedError
