@@ -21,6 +21,7 @@ from src.types.frames import (
     ImageRawFrame,
     VisionImageRawFrame,
     TranscriptionFrame,
+    UserImageRawFrame,
 )
 from src.services.a2a_live.types import LiveMultiModalInputMessage
 from src.common.utils.img_utils import process_image_to_base64
@@ -168,7 +169,7 @@ class A2ALiveProcessor(SessionProcessor):
                     ),
                     image_blob_list=[
                         types.Blob(
-                            data=process_image_to_base64(frame),
+                            data=process_image_to_base64(img),
                             mime_type="image/jpeg",
                         )
                         for img in frame.images

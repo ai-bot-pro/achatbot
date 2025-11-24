@@ -202,7 +202,6 @@ def process_image_to_base64(image_input: str | Image.Image | ImageRawFrame, max_
     if max_width > 1920:
         MAX_WIDTH = 1920
 
-    # 加载图片 (可以是文件路径，也可以是已有的Image对象)
     if isinstance(image_input, str):
         img = Image.open(image_input)
     elif isinstance(image_input, Image.Image):
@@ -210,7 +209,7 @@ def process_image_to_base64(image_input: str | Image.Image | ImageRawFrame, max_
     elif isinstance(image_input, ImageRawFrame):
         img = Image.frombytes(image_input.mode, image_input.size, image_input.image)
     else:
-        raise TypeError("Unsupported image input type")
+        raise TypeError(f"Unsupported image input type {type(image_input)}")
 
     # 2. 获取原始尺寸
     video_width, video_height = img.size
