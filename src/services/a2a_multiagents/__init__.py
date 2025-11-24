@@ -20,10 +20,10 @@ from google.genai import types
 from .remote_agent_connection import RemoteAgentConnections, TaskUpdateCallback
 from .timestamp_ext import TimestampExtension
 
-DEFAULT_LITELLM_MODEL = os.getenv("ADK_LITELLM_MODEL", "gemini/gemini-2.5-flash")
+DEFAULT_MODEL = os.getenv("ADK_MODEL", "gemini/gemini-2.5-flash")
 
 
-class BaseHostAgent:
+class ADKBaseHostAgent:
     """The base host agent.
 
     This is the agent responsible for choosing which remote agents
@@ -37,11 +37,13 @@ class BaseHostAgent:
         http_client: httpx.AsyncClient,
         task_callback: TaskUpdateCallback | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
-        model: str = DEFAULT_LITELLM_MODEL,
+        model: str = DEFAULT_MODEL,
         system_prompt: str = "",
+        name: str = "",  # It should start with a letter (a-z, A-Z) or an underscore (_), and can only contain letters, digits (0-9), and underscores.
     ):
         self.system_prompt = system_prompt
-        self.model = model
+        self.name = name
+        self.model = model or DEFAULT_MODEL
         self.task_callback = task_callback  # todo
         self.httpx_client = http_client
         self.timestamp_extension = TimestampExtension()
@@ -109,10 +111,12 @@ class BaseHostAgent:
         return remote_agent_info
 
     def create_agent(self) -> Agent:
-        pass
+        """Create an agent that can be used to delegate tasks to remote agents."""
+        raise NotImplementedError
 
     def root_instruction(self, context: ReadonlyContext) -> str:
-        pass
+        """Return the root instruction for the agent."""
+        raise NotImplementedError
 
     def check_state(self, context: ReadonlyContext):
         state = context.state

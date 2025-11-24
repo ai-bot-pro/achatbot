@@ -1,8 +1,6 @@
 import os
-import uuid
 import asyncio
 import logging
-import threading
 from typing import List, Optional
 from concurrent.futures import ThreadPoolExecutor
 
@@ -11,8 +9,8 @@ from apipeline.frames import CancelFrame, StartFrame, EndFrame, Frame, TextFrame
 from a2a.utils.message import new_agent_text_message
 from google.adk.events.event import Event as ADKEvent
 from google.adk.artifacts import BaseArtifactService
-from google.adk.memory.in_memory_memory_service import BaseMemoryService
-from google.adk.sessions.in_memory_session_service import BaseSessionService
+from google.adk.memory.base_memory_service import BaseMemoryService
+from google.adk.sessions.base_session_service import BaseSessionService
 
 from src.processors.session_processor import SessionProcessor
 from src.services.a2a_multiagents.adk_host_agent_manager import ADKHostAgentManager
@@ -56,6 +54,7 @@ class A2AConversationProcessor(SessionProcessor):
             memory_service=memory_service,
             artifact_service=artifact_service,
         )
+        self.manager.initialize_host()
         self.queue = asyncio.Queue()
         self.push_task: Optional[asyncio.Task] = None
         self.running = False
@@ -93,7 +92,7 @@ class A2AConversationProcessor(SessionProcessor):
     async def stop(self, frame: EndFrame):
         self.running = False
         if self.http_client_wrapper:
-            self.http_client_wrapper.stop()
+            await self.http_client_wrapper.stop()
             self.http_client_wrapper = None
 
         logging.info(f"{self.name} Conversation end")
@@ -105,7 +104,7 @@ class A2AConversationProcessor(SessionProcessor):
         except asyncio.CancelledError:
             logging.info(f"{self.name} push_task cancelled.")
         if self.http_client_wrapper:
-            self.http_client_wrapper.stop()
+            await self.http_client_wrapper.stop()
             self.http_client_wrapper = None
         self.executor.shutdown(wait=True)
         logging.info(f"{self.name} Conversation cancelled")

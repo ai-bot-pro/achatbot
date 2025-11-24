@@ -845,3 +845,10 @@ ignore = ["F401", "F403", "F405", "F541", "E741"]
 # uv
 [tool.uv]
 no-build-isolation-package = ["flash-attn"]
+
+
+#-----------------basedpyright--------------
+# basedpyright more specification than ruff
+# https://docs.basedpyright.com/
+[tool.basedpyright]
+typeCheckingMode = "off"

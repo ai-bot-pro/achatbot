@@ -1,5 +1,5 @@
-from dataclasses import dataclass
-from typing import Any, Optional
+from dataclasses import dataclass, field
+from typing import Any, Optional, List
 
 from apipeline.frames.control_frames import ControlFrame
 
@@ -201,3 +201,11 @@ class AvatarArgsUpdateFrame(ControlFrame):
     """A control frame containing a request to update to Avatar args."""
 
     args: dict
+
+
+@dataclass
+class IntervalFrame(ControlFrame):
+    """window.setInterval."""
+
+    types: List[type] = field(default_factory=[])
+    interval_time_ms: int = 0

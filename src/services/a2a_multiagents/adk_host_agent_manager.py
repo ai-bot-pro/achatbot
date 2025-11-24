@@ -4,6 +4,7 @@ import base64
 import datetime
 import json
 import os
+from typing import Dict
 import uuid
 
 import httpx
@@ -26,17 +27,22 @@ from google.adk.events.event import Event as ADKEvent
 from google.adk.agents.run_config import RunConfig, StreamingMode
 from google.adk.events.event_actions import EventActions as ADKEventActions
 from google.adk.artifacts import BaseArtifactService, InMemoryArtifactService
-from google.adk.memory.in_memory_memory_service import BaseMemoryService, InMemoryMemoryService
-from google.adk.sessions.in_memory_session_service import BaseSessionService, InMemorySessionService
+from google.adk.sessions.base_session_service import BaseSessionService
+from google.adk.memory.base_memory_service import BaseMemoryService
+from google.adk.memory.in_memory_memory_service import InMemoryMemoryService
+from google.adk.sessions.in_memory_session_service import InMemorySessionService
+from google.adk.sessions import Session
 from google.genai import types
 
 from .types import Conversation, Event
 from src.services.help.a2a.agent_card import get_agent_card, async_get_agent_card
+from .adk_planer_agent import ADKBaseHostAgent
+from . import DEFAULT_MODEL
 
 
 class ADKHostAgentManager:
     """
-    An implementation of use adk host agent as the multi-agent manager.
+    An implementation of use adk host agent as the multi-agent manager per session.
     - planer_agent
     - supervisor_agent
     """
@@ -45,45 +51,63 @@ class ADKHostAgentManager:
         self,
         http_client: httpx.AsyncClient,
         app_name: str,
+        host_agent_name: str = "",
         api_key: str = "",
         mode: str = "supervisor",  # supervisor or planer
+        model: str = DEFAULT_MODEL,
         system_prompt: str = "",
         remote_agent_addresses: list[str] = [],
         session_service: BaseSessionService | None = None,
         memory_service: BaseMemoryService | None = None,
         artifact_service: BaseArtifactService | None = None,
     ):
-        self._conversations: list[Conversation] = []
+        self._conversations: Dict[str, Conversation] = {}
         self._tasks: list[Task] = []  # TODO for long-time run task
-        self._events: dict[str, Event] = {}
+        self._events: Dict[str, Event] = {}
         self._agents: list[AgentCard] = []
         self._session_service = session_service or InMemorySessionService()
         self._memory_service = memory_service or InMemoryMemoryService()
         self._artifact_service = artifact_service or InMemoryArtifactService()
-        self._host_agent = None
-        if mode == "planer":
-            from .planer_agent import PlanerAgent
-
-            self._host_agent = PlanerAgent(
-                remote_agent_addresses, http_client, system_prompt=system_prompt
-            )
-        elif mode == "supervisor":
-            from .supervisor_agent import SupervisorAgent
-
-            self._host_agent = SupervisorAgent(
-                remote_agent_addresses, http_client, system_prompt=system_prompt
-            )
-        else:
-            raise ValueError(f"Unsupported agent mode: {mode}")
         self.httpx_client = http_client
+        self.mode = mode
+        self.model = model
+        self.host_agent_name = host_agent_name
+        self.system_prompt = system_prompt
+        self.remote_agent_addresses = remote_agent_addresses
+        self._host_agent: ADKBaseHostAgent | None = None
+        self._host_runner: Runner | None = None
 
+        self._session = None
         self.user_id = None
         self.app_name = app_name
         self.api_key = api_key or os.environ.get("GOOGLE_API_KEY", "")
 
-        self._initialize_host()
+    def init_host_agent(self):
+        if self.mode == "planer":
+            from .adk_planer_agent import ADKPlanerAgent
 
-    def _initialize_host(self):
+            self._host_agent = ADKPlanerAgent(
+                self.remote_agent_addresses,
+                self.httpx_client,
+                model=self.model,
+                system_prompt=self.system_prompt,
+                name=self.host_agent_name,
+            )
+        elif self.mode == "supervisor":
+            from .adk_supervisor_agent import ADKSupervisorAgent
+
+            self._host_agent = ADKSupervisorAgent(
+                self.remote_agent_addresses,
+                self.httpx_client,
+                model=self.model,
+                system_prompt=self.system_prompt,
+                name=self.host_agent_name,
+            )
+        else:
+            raise ValueError(f"Unsupported agent mode: {self.mode}")
+
+    def initialize_host(self):
+        self.init_host_agent()
         agent = self._host_agent.create_agent()
         self._host_runner = Runner(
             app_name=self.app_name,
@@ -99,16 +123,16 @@ class ADKHostAgentManager:
     def set_user_id(self, user_id: str):
         self.user_id = user_id
 
-    async def create_conversation(self) -> Conversation:
+    async def create_conversation(self) -> Conversation | None:
         if self.user_id is None:
             logging.warning("no user_id")
-            return
-        session = await self._session_service.create_session(
+            return None
+        self._session = await self._session_service.create_session(
             app_name=self.app_name, user_id=self.user_id
         )
-        conversation_id = session.id
-        c = Conversation(conversation_id=conversation_id, is_active=True)
-        self._conversations.append(c)
+        # print("session",self._session)
+        c = Conversation(conversation_id=self._session.id, is_active=True)
+        self._conversations[self._session.id] = c
         return c
 
     def update_api_key(self, api_key: str):
@@ -117,7 +141,7 @@ class ADKHostAgentManager:
             self.api_key = api_key
 
             # Reinitialize host with new API key
-            self._initialize_host()
+            self.initialize_host()
 
     def sanitize_message(self, message: Message) -> Message:
         if message.context_id:
@@ -149,11 +173,6 @@ class ADKHostAgentManager:
                 timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
             )
         )
-        # Determine if a task is to be resumed.
-        session = await self._session_service.get_session(
-            app_name=self.app_name, user_id=user_id, session_id=context_id
-        )
-        # print(session)
         task_id = message.task_id
         # Update state must happen in an event
         state_update = {
@@ -169,7 +188,7 @@ class ADKHostAgentManager:
             actions=ADKEventActions(state_delta=state_update),
         )
         queue and await queue.put(event)
-        await self._session_service.append_event(session, event)
+        await self._session_service.append_event(self._session, event)
 
         msg = self.adk_content_from_message(message)
         # print("msg->", msg)
@@ -210,14 +229,9 @@ class ADKHostAgentManager:
 
     def get_conversation(self, conversation_id: str | None) -> Conversation | None:
         if not conversation_id:
+            logging.warning("no conversation_id")
             return None
-        return next(
-            filter(
-                lambda c: c and c.conversation_id == conversation_id,
-                self._conversations,
-            ),
-            None,
-        )
+        return self._conversations.get(conversation_id)
 
     async def register_agent(self, url):
         agent_data = await async_get_agent_card(url, self.httpx_client)
@@ -226,14 +240,14 @@ class ADKHostAgentManager:
         self._agents.append(agent_data)
         self._host_agent.register_agent_card(agent_data)
         # Now update the host agent definition
-        self._initialize_host()
+        self.initialize_host()
 
     @property
     def agents(self) -> list[AgentCard]:
         return self._agents
 
     @property
-    def conversations(self) -> list[Conversation]:
+    def conversations(self) -> Dict[str, Conversation]:
         return self._conversations
 
     @property

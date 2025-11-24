@@ -1,10 +1,12 @@
+import time
 from typing import Type
 from apipeline.pipeline.pipeline import FrameProcessor
 from apipeline.pipeline.task import FrameDirection
 from apipeline.frames.data_frames import Frame, TextFrame
 
 from src.types.frames.control_frames import UserImageRequestFrame
-from src.types.frames.data_frames import UserImageRawFrame
+from src.types.frames.data_frames import UserImageRawFrame, VADStateAudioRawFrame
+from src.common.types import VADState
 
 
 class UserImageBaseProcessor(FrameProcessor):
@@ -25,10 +27,41 @@ class UserImageBaseProcessor(FrameProcessor):
         self._participant_id = participant_id
 
 
+class UserVADImageRequestProcessor(UserImageBaseProcessor):
+    """
+    process:
+    - VADStateAudioRawFrame for push user image request frame to upstream
+    - all frames to downstream
+    """
+
+    def __init__(
+        self, states: list[VADState] = [VADState.SPEAKING], interval_time_ms: int | None = None
+    ):
+        super().__init__(request_frame_cls=VADStateAudioRawFrame)
+        self._states = states
+        self._interval_time_ms = interval_time_ms or 200
+        self._push_time = 0
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection):
+        await super().process_frame(frame, direction)
+
+        if (
+            self._participant_id
+            and isinstance(frame, VADStateAudioRawFrame)
+            and frame.state in self._states
+        ):
+            if time.time() - self._push_time >= self._interval_time_ms / 1000:
+                await self.push_frame(
+                    UserImageRequestFrame(self._participant_id), FrameDirection.UPSTREAM
+                )
+                self._push_time = time.time()
+        await self.push_frame(frame, direction)
+
+
 class UserImageRequestProcessor(UserImageBaseProcessor):
     """
     process:
-    - text frame for push user image request frame to upstream
+    - request frame for push user image request frame to upstream
     - all frames to downstream
     """
 

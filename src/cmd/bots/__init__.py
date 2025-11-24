@@ -192,6 +192,14 @@ def import_bots(bot_name: str = "DummyBot"):
         from .a2a import daily_a2a_conversation_bot
 
         return True
+    if "DailyA2ALiveBot" in bot_name:
+        from .a2a import daily_a2a_live_bot
+
+        return True
+    if "DailyVADA2ALiveBot" in bot_name:
+        from .a2a import daily_vad_a2a_live_bot
+
+        return True
     if "LivekitBot" in bot_name:
         from . import livekit_bot
 
@@ -412,6 +420,10 @@ def import_fastapi_websocket_bots(bot_name: str = "DummyBot"):
 
     if "FastapiWebsocketVADRBot" in bot_name:
         from .vad import fastapi_websocket_vad_bot
+
+        return True
+    if "FastapiWebsocketA2ALiveBot" in bot_name:
+        from .a2a import fastapi_ws_a2a_live_bot
 
         return True
 
