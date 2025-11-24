@@ -8,7 +8,7 @@ class LiveMultiModalInputMessage(BaseModel):
     context_id: Optional[str] = Field(default=None, description="The context ID for the message.")
     message_id: Optional[str] = Field(default=None, description="message ID")
     task_id: Optional[str] = Field(default=None, description="task ID for the message")
-    kind: Literal["text", "text_images", "audio", "audio_images"] = Field(
+    kind: Literal["text", "audio", "images", "text_images", "audio_images"] = Field(
         default="audio_images", description="the task kind of the input message"
     )
     text_content: Optional[types.Content] = Field(

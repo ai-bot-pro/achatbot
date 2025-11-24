@@ -1,6 +1,10 @@
+import io
 import base64
 from functools import lru_cache
+
 import numpy as np
+from PIL import Image
+from apipeline.frames import ImageRawFrame
 
 
 def image_bytes_to_base64_data_uri(img_bytes: bytes, format: str = "jpeg", encoding="utf-8"):
@@ -190,3 +194,51 @@ def nv12_to_rgb_optimized(
     rgb[..., 2] = np.clip(y + 1.732 * u, 0, 255)  # B
 
     return rgb
+
+
+def process_image_to_base64(image_input: str | Image.Image | ImageRawFrame, max_width: int = 640):
+    # 1. 设置常量
+    MAX_WIDTH = max_width
+    if max_width > 1920:
+        MAX_WIDTH = 1920
+
+    # 加载图片 (可以是文件路径，也可以是已有的Image对象)
+    if isinstance(image_input, str):
+        img = Image.open(image_input)
+    elif isinstance(image_input, Image.Image):
+        img = image_input
+    elif isinstance(image_input, ImageRawFrame):
+        img = Image.frombytes(image_input.mode, image_input.size, image_input.image)
+    else:
+        raise TypeError("Unsupported image input type")
+
+    # 2. 获取原始尺寸
+    video_width, video_height = img.size
+
+    # 3. 计算缩放比例
+    scale = min(1, MAX_WIDTH / video_width)
+    if scale < 1:
+        # 4. 调整大小
+        # 使用 LANCZOS 滤镜以获得较好的下采样质量
+        new_width = int(video_width * scale)
+        new_height = int(video_height * scale)
+        img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+    # 5. 转换为 JPEG 并压缩 (对应 JS: canvas.toDataURL('image/jpeg', 0.6))
+    buffer = io.BytesIO()
+    img.save(buffer, format="JPEG", quality=60)
+
+    # 6. 转为 Base64
+    # NOTE: Python 的 b64encode 不会像 JS 那样自动加上 "data:image/jpeg;base64," 前缀
+    base64_data = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+    return base64_data
+
+
+"""
+python -m src.common.utils.img_utils
+"""
+if __name__ == "__main__":
+    dummy_frame = np.zeros((1080, 1920, 3), dtype=np.uint8)
+    frame = ImageRawFrame(dummy_frame.tobytes(), (1920, 1080), "jpeg", "RGB")
+    print(process_image_to_base64(frame))

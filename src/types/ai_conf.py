@@ -115,6 +115,7 @@ class TTSConfig(BaseConfig):
 
 class A2AConfig(BaseConfig):
     language: Optional[str] = None
+    interval_time_ms: Optional[int] = None
 
 
 class AIConfig(BaseModel):

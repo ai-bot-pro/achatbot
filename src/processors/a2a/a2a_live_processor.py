@@ -4,7 +4,7 @@ import logging
 from typing import List, Optional
 
 from apipeline.processors.async_frame_processor import FrameDirection
-from apipeline.frames import CancelFrame, StartFrame, EndFrame, Frame, TextFrame, ErrorFrame
+from apipeline.frames import CancelFrame, StartFrame, EndFrame, Frame, TextFrame
 from google.adk.artifacts import BaseArtifactService
 from google.adk.memory.base_memory_service import BaseMemoryService
 from google.adk.sessions.base_session_service import BaseSessionService
@@ -18,10 +18,12 @@ from src.common.utils.time import time_now_iso8601
 from src.types.frames import (
     VisionImageVoiceRawFrame,
     AudioRawFrame,
+    ImageRawFrame,
     VisionImageRawFrame,
     TranscriptionFrame,
 )
-from src.services.a2a_live.types import LiveMultiModalInputMessage, LiveMultiModalOutputMessage
+from src.services.a2a_live.types import LiveMultiModalInputMessage
+from src.common.utils.img_utils import process_image_to_base64
 
 
 class A2ALiveProcessor(SessionProcessor):
@@ -139,6 +141,40 @@ class A2ALiveProcessor(SessionProcessor):
         elif isinstance(frame, CancelFrame):
             await self.cancel(frame)
             await self.push_frame(frame, direction)
+        elif isinstance(frame, VisionImageRawFrame):
+            await self.manager.send_live_message(
+                LiveMultiModalInputMessage(
+                    context_id=self.conversation.conversation_id,
+                    message_id=str(uuid.uuid4()),
+                    kind="text_images",
+                    text_content=types.Content(role="user", parts=[types.Part(text=frame.text)]),
+                    image_blob_list=[
+                        types.Blob(
+                            data=process_image_to_base64(frame),
+                            mime_type="image/jpeg",
+                        )
+                    ],
+                )
+            )
+        elif isinstance(frame, VisionImageVoiceRawFrame):
+            await self.manager.send_live_message(
+                LiveMultiModalInputMessage(
+                    context_id=self.conversation.conversation_id,
+                    message_id=str(uuid.uuid4()),
+                    kind="audio_images",
+                    audio_blob=types.Blob(
+                        data=frame.audio.audio,
+                        mime_type=f"audio/pcm;rate={frame.audio.sample_rate}",
+                    ),
+                    image_blob_list=[
+                        types.Blob(
+                            data=process_image_to_base64(frame),
+                            mime_type="image/jpeg",
+                        )
+                        for img in frame.images
+                    ],
+                )
+            )
         elif isinstance(frame, TextFrame):
             await self.manager.send_live_message(
                 LiveMultiModalInputMessage(
@@ -160,39 +196,19 @@ class A2ALiveProcessor(SessionProcessor):
                     ),
                 )
             )
-        elif isinstance(frame, VisionImageRawFrame):
+        elif isinstance(frame, ImageRawFrame):
             await self.manager.send_live_message(
                 LiveMultiModalInputMessage(
                     context_id=self.conversation.conversation_id,
                     message_id=str(uuid.uuid4()),
-                    kind="text_images",
-                    text_content=types.Content(role="user", parts=[types.Part(text=frame.text)]),
+                    kind="images",
                     image_blob_list=[
                         types.Blob(
-                            data=frame.image,
-                            mime_type=f"image/{frame.format.lower()}",
+                            data=process_image_to_base64(frame),
+                            mime_type="image/jpeg",
                         )
                     ],
-                )
-            )
-        elif isinstance(frame, VisionImageVoiceRawFrame):
-            await self.manager.send_live_message(
-                LiveMultiModalInputMessage(
-                    context_id=self.conversation.conversation_id,
-                    message_id=str(uuid.uuid4()),
-                    kind="audio_images",
-                    audio_blob=types.Blob(
-                        data=frame.audio.audio,
-                        mime_type=f"audio/pcm;rate={frame.audio.sample_rate}",
-                    ),
-                    image_blob_list=[
-                        types.Blob(
-                            data=img.image,
-                            mime_type=f"image/{img.format.lower()}",
-                        )
-                        for img in frame.images
-                    ],
-                )
+                ),
             )
         else:
             await self.queue_frame(frame, direction)

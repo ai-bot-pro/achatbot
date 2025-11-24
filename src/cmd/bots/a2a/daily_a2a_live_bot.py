@@ -3,13 +3,19 @@ from typing import cast
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
-from apipeline.frames import TextFrame
+from apipeline.frames import TextFrame, AudioRawFrame, ImageRawFrame
+from apipeline.processors.logger import FrameLogger
 
 from src.common.types import DailyParams
 from src.transports.daily import DailyTransport
 from src.cmd.bots.base_daily import DailyRoomBot
 from src.cmd.bots import register_ai_room_bots
 from src.processors.a2a.a2a_live_processor import A2ALiveProcessor
+from src.processors.aggregators.vision_image_audio_frame import VisionImageAudioFrameAggregator
+from src.processors.user_image_request_processor import UserImageRequestProcessor
+from src.types.frames import UserImageRequestFrame
+from src.types.frames.control_frames import IntervalFrame
+from src.processors.interval_processor import IntervalProcessor
 
 from dotenv import load_dotenv
 
@@ -50,14 +56,25 @@ class DailyA2ALiveBot(DailyRoomBot):
             self.get_a2a_processor(tag="a2a_live_processor"),
         )
 
-        self.task = PipelineTask(
-            Pipeline(
+        self.image_requester = UserImageRequestProcessor(request_frame_cls=IntervalFrame)
+        # image_audio_aggr = VisionImageAudioFrameAggregator()
+
+        pipeline = Pipeline([])
+        if self._bot_config.a2a and self._bot_config.a2a.interval_time_ms:
+            pipeline = Pipeline(
                 [
                     transport.input_processor(),
+                    IntervalProcessor(interval_time_ms=200),
+                    # FrameLogger(include_frame_types=[IntervalFrame,UserImageRequestFrame]),
+                    self.image_requester,
+                    # FrameLogger(include_frame_types=[ImageRawFrame]),
                     self.a2a_processor,
                     transport.output_processor(),
                 ]
-            ),
+            )
+
+        self.task = PipelineTask(
+            pipeline,
             params=PipelineParams(
                 allow_interruptions=False,
                 enable_metrics=True,
@@ -75,11 +92,12 @@ class DailyA2ALiveBot(DailyRoomBot):
         await PipelineRunner(handle_sigint=self._handle_sigint).run(self.task)
 
     async def on_first_participant_say_hi(self, transport: DailyTransport, participant):
+        transport.capture_participant_video(participant["id"], framerate=0)
+        self.image_requester.set_participant_id(participant["id"])
+
         self.a2a_processor.set_user_id(participant["id"])
         await self.a2a_processor.create_conversation()
         await self.a2a_processor.create_push_task()
-        if self.daily_params.transcription_enabled:
-            transport.capture_participant_transcription(participant["id"])
 
         is_cn = self._bot_config.a2a and self._bot_config.a2a.language == "zh"
         user_hi_text = "请用中文介绍下自己。" if is_cn else "Please introduce yourself first."
