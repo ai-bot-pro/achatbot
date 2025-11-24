@@ -38,12 +38,12 @@ class FastapiWebsocketA2ALiveBot(AIFastapiWebsocketBot):
         serializer = TranscriptionFrameSerializer()
         self.params = FastapiWebsocketServerParams(
             audio_in_enabled=True,
-            audio_out_enabled=False,
+            audio_out_enabled=True,
             add_wav_header=True,
-            vad_enabled=True,
-            vad_analyzer=self.vad_analyzer,
+            vad_enabled=False,
             vad_audio_passthrough=True,
             serializer=serializer,
+            audio_out_sample_rate=24000,
         )
         transport = FastapiWebsocketTransport(
             websocket=self._websocket,
