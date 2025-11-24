@@ -324,6 +324,23 @@ class UserVoiceRawFrame(UserAudioRawFrame):
 
 
 @dataclass
+class VisionImagesRawFrame(DataFrame):
+    """images  with an instruct text to ask for a description of it. Will be
+    shown by the transport if the transport's camera is enabled.
+
+    """
+
+    images: List[ImageRawFrame] = field(default_factory=list)
+
+    def __str__(self):
+        s = f"{self.name} images:"
+        for image in self.images:
+            s += f"{image}, "
+        s += ")"
+        return s
+
+
+@dataclass
 class VisionImageVoiceRawFrame(DataFrame):
     """An image + audio with an instruct text to ask for a description of it. Will be
     shown by the transport if the transport's camera is enabled.

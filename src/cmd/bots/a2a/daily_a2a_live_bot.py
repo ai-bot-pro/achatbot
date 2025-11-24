@@ -59,10 +59,16 @@ class DailyA2ALiveBot(DailyRoomBot):
         self.image_requester = UserImageRequestProcessor(request_frame_cls=IntervalFrame)
         # image_audio_aggr = VisionImageAudioFrameAggregator()
 
-        pipeline = Pipeline([])
+        pipeline = Pipeline(
+            [  # audio->text/audio BIDI
+                transport.input_processor(),
+                self.a2a_processor,
+                transport.output_processor(),
+            ]
+        )
         if self._bot_config.a2a and self._bot_config.a2a.interval_time_ms:
             pipeline = Pipeline(
-                [
+                [  # images/audio -> text/audio BIDI
                     transport.input_processor(),
                     IntervalProcessor(interval_time_ms=200),
                     # FrameLogger(include_frame_types=[IntervalFrame,UserImageRequestFrame]),
