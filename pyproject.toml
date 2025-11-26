@@ -33,7 +33,7 @@ local_scheme = "no-local-version"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.32"
+version = "0.0.32.post"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -80,7 +80,7 @@ classifiers = [
 ]
 dependencies = [
     "requests",
-    "apipeline>=0.2.7",
+    "apipeline>=0.2.8",
     "python-dotenv",
     "pydub",            # need install ffmpeg
     "pillow",

@@ -167,6 +167,14 @@ class ADKHostLiveAgentManager(ADKHostAgentManager):
             live_request_queue=self._live_request_queue,
             run_config=self._run_config,
         ):
+            if event.interrupted:
+                msg = LiveMultiModalOutputMessage(
+                    context_id=context_id,
+                    kind="interrupted",
+                    interrupted=True,
+                )
+                yield msg
+
             if event.turn_complete:
                 # input conversation text message
                 response = Message(
@@ -235,8 +243,8 @@ class ADKHostLiveAgentManager(ADKHostAgentManager):
                 #    f"audio: {event.content.parts[0].inline_data.mime_type} {len(event.content.parts[0].inline_data.data)=}"
                 # )
                 is_first_audio_chunk = False
-                if not input_text:
-                    is_first_text = True
+                if not output_audio_chunk:
+                    is_first_audio_chunk = True
                 msg = LiveMultiModalOutputMessage(
                     context_id=context_id,
                     kind="audio",

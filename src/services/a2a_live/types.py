@@ -29,7 +29,7 @@ class LiveMultiModalOutputMessage(BaseModel):
     context_id: Optional[str] = Field(default=None, description="The context ID for the message.")
     message_id: Optional[str] = Field(default=None, description="message ID")
     task_id: Optional[str] = Field(default=None, description="task ID for the message")
-    kind: Literal["transcription", "text", "audio", "images"] = Field(
+    kind: Literal["transcription", "text", "audio", "images", "interrupted"] = Field(
         default="text", description="the task kind of gen output"
     )
     is_first_text: bool = False
@@ -45,4 +45,9 @@ class LiveMultiModalOutputMessage(BaseModel):
     image_blob_list: Optional[List[types.Blob]] = Field(
         default=None,  # NOTE: gemini2.5 live don't gen image, mayge feature gen
         description="""Optional. image binary blob list when kind is images""",
+    )
+    interrupted: Optional[bool] = Field(
+        default=None,
+        description="""Flag indicating that LLM was interrupted when generating the content.
+    Usually it's due to user interruption during a bidi streaming.""",
     )

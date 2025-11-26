@@ -63,7 +63,7 @@ class FastapiWebsocketA2ALiveBot(AIFastapiWebsocketBot):
                 ]
             ),
             params=PipelineParams(
-                allow_interruptions=False,
+                allow_interruptions=True,
                 enable_metrics=True,
                 send_initial_empty_metrics=False,
             ),
