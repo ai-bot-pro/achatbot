@@ -12,6 +12,8 @@ from apipeline.frames import (
     TextFrame,
     StartInterruptionFrame,
     StopInterruptionFrame,
+    InterruptionFrame,
+    InterruptionTaskFrame,
 )
 from google.adk.artifacts import BaseArtifactService
 from google.adk.memory.base_memory_service import BaseMemoryService
@@ -227,8 +229,7 @@ class A2ALiveProcessor(SessionProcessor):
             async for msg in self.manager.recieve_message():
                 if self._allow_interruptions and msg.kind == "interrupted" and msg.interrupted:
                     logging.info(f"{self.name} Interrupting")
-                    await self.push_frame(StartInterruptionFrame(), FrameDirection.DOWNSTREAM)
-                    await self._handle_interruptions(StopInterruptionFrame())
+                    await self.push_frame(InterruptionFrame(), FrameDirection.DOWNSTREAM)
                     logging.info(f"{self.name} Interrupted")
                 if msg.kind == "transcription":
                     await self.queue_frame(

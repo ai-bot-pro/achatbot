@@ -5,7 +5,8 @@ from fastapi import WebSocket
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
-from apipeline.frames import TextFrame
+from apipeline.frames import TextFrame, InterruptionTaskFrame, InterruptionFrame
+from apipeline.processors.logger import FrameLogger
 
 from src.cmd.bots.base_fastapi_websocket_server import AIFastapiWebsocketBot
 from src.types.network.fastapi_websocket import FastapiWebsocketServerParams
@@ -58,6 +59,7 @@ class FastapiWebsocketA2ALiveBot(AIFastapiWebsocketBot):
             Pipeline(
                 [
                     transport.input_processor(),
+                    FrameLogger(include_frame_types=[InterruptionTaskFrame, InterruptionFrame]),
                     self.a2a_processor,
                     transport.output_processor(),
                 ]
