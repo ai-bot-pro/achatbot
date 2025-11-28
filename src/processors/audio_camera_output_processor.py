@@ -5,11 +5,17 @@ import time
 from typing import List
 
 from PIL import Image
-from apipeline.frames.sys_frames import SystemFrame, CancelFrame, StartInterruptionFrame
+from apipeline.frames.sys_frames import (
+    SystemFrame,
+    CancelFrame,
+    StartInterruptionFrame,
+    InterruptionFrame,
+)
 from apipeline.frames.control_frames import StartFrame, ControlFrame, EndFrame
 from apipeline.frames.data_frames import Frame, AudioRawFrame, DataFrame, ImageRawFrame, TextFrame
 from apipeline.processors.frame_processor import FrameDirection
 from apipeline.processors.output_processor import OutputProcessor
+from apipeline.utils.asyncio.task_manager import BaseTaskManager
 
 from src.common.types import AudioCameraParams
 from src.types.frames.control_frames import (
@@ -62,41 +68,44 @@ class AudioCameraOutputProcessor(OutputProcessor):
         self._bot_speaking_frame_time = 0
         self._bot_speaking_frame_period = kwargs.get("bot_speaking_frame_period", 0.2)  # seconds
 
+    async def setup(self, task_manager: BaseTaskManager):
+        await super().setup(task_manager)
+        self._create_task()
+
     async def start(self, frame: StartFrame):
         logging.info(f"AudioCameraOutputProcessor starting")
         await super().start(frame)
-        # Create media threads queues and task
-        if self._params.camera_out_enabled:
-            self._camera_out_queue = asyncio.Queue()
-            self._camera_out_task = self.get_event_loop().create_task(
-                self._camera_out_task_handler()
-            )
-            logging.info(f"camera_out_task start")
-        if self._params.audio_out_enabled:
-            self._audio_out_queue = asyncio.Queue()
-            self._audio_out_task = self.get_event_loop().create_task(self._audio_out_task_handler())
-            logging.info(f"audio_out_task start")
+        self._create_task()
 
     async def stop(self, frame: EndFrame):
         await super().stop(frame)
-        # Cancel and wait for the camera output task to finish.
-        if self._params.camera_out_enabled:
-            self._camera_out_task.cancel()
-            await self._camera_out_task
-        if self._params.audio_out_enabled:
-            self._audio_out_task.cancel()
-            await self._audio_out_task
+        await self._cancel_task()
         logging.info("stop audio_camera_output_processor Done")
 
     async def cancel(self, frame: CancelFrame):
         await super().cancel(frame)
-        if self._params.camera_out_enabled:
-            self._camera_out_task.cancel()
-            await self._camera_out_task
-        if self._params.audio_out_enabled:
-            self._audio_out_task.cancel()
-            await self._audio_out_task
+        await self._cancel_task()
         logging.info("Cancel audio_camera_output_processor Done")
+
+    def _create_task(self):
+        # Create media threads queues and task
+        if self._params.camera_out_enabled and self._camera_out_task is None:
+            self._camera_out_queue = asyncio.Queue()
+            self._camera_out_task = self.create_task(self._camera_out_task_handler())
+            logging.info(f"camera_out_task created")
+        if self._params.audio_out_enabled and self._audio_out_task is None:
+            self._audio_out_queue = asyncio.Queue()
+            self._audio_out_task = self.create_task(self._audio_out_task_handler())
+            logging.info(f"audio_out_task created")
+
+    async def _cancel_task(self):
+        # Cancel and wait for the camera output task to finish.
+        if self._params.camera_out_enabled and self._camera_out_task:
+            await self._task_manager.cancel_task(self._camera_out_task, timeout=1.0)
+            self._camera_out_task = None
+        if self._params.audio_out_enabled and self._audio_out_task:
+            await self._task_manager.cancel_task(self._audio_out_task, timeout=1.0)
+            self._audio_out_task = None
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
@@ -109,6 +118,9 @@ class AudioCameraOutputProcessor(OutputProcessor):
 
     async def _handle_interruptions(self, frame: Frame):
         await super()._handle_interruptions(frame)
+        if isinstance(frame, (StartInterruptionFrame, InterruptionFrame)):
+            await self._cancel_task()
+            self._create_task()
         if isinstance(frame, StartInterruptionFrame):
             # Let's send a bot stopped speaking if we have to.
             if self._bot_speaking:

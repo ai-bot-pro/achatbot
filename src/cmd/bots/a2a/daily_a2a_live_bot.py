@@ -3,7 +3,7 @@ from typing import cast
 from apipeline.pipeline.pipeline import Pipeline
 from apipeline.pipeline.task import PipelineParams, PipelineTask
 from apipeline.pipeline.runner import PipelineRunner
-from apipeline.frames import TextFrame, AudioRawFrame, ImageRawFrame
+from apipeline.frames import TextFrame, AudioRawFrame, ImageRawFrame, EndFrame
 from apipeline.processors.logger import FrameLogger
 
 from src.common.types import DailyParams
@@ -81,11 +81,7 @@ class DailyA2ALiveBot(DailyRoomBot):
 
         self.task = PipelineTask(
             pipeline,
-            params=PipelineParams(
-                allow_interruptions=False,
-                enable_metrics=True,
-                send_initial_empty_metrics=False,
-            ),
+            params=self._pipeline_params,
         )
 
         transport.add_event_handlers(

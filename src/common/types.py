@@ -616,6 +616,7 @@ class BotRunArgs:
     bot_name: str | None = None
     bot_config_list: list | None = None
     services: dict | None = None
+    pipeline: dict | None = None  # pipeline params
     websocket_server_host: str = "localhost"
     websocket_server_port: int = 8765
     handle_sigint: bool = True

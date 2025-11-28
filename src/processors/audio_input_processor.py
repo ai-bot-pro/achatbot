@@ -129,7 +129,7 @@ class AudioVADInputProcessor(InputProcessor):
                     if user_interuption_frame and isinstance(
                         user_interuption_frame, UserStartedSpeakingFrame
                     ):  # start speak
-                        await self._handle_interruptions(user_interuption_frame, True)
+                        await self.handle_interruptions(user_interuption_frame, True)
 
                     # Push audio downstream if passthrough.
                     if self._params.vad_enabled and self._params.vad_audio_passthrough:
@@ -141,7 +141,7 @@ class AudioVADInputProcessor(InputProcessor):
                     if user_interuption_frame and isinstance(
                         user_interuption_frame, UserStoppedSpeakingFrame
                     ):  # stop speak without turn analyzer
-                        await self._handle_interruptions(user_interuption_frame, True)
+                        await self.handle_interruptions(user_interuption_frame, True)
 
                     if self._params.turn_analyzer:  # stop speak with turn analyzer
                         await self._run_turn_analyzer(frame, vad_state, previous_vad_state)
@@ -211,7 +211,7 @@ class AudioVADInputProcessor(InputProcessor):
     async def _handle_end_of_turn_complete(self, state: EndOfTurnState):
         """Handle completion of end-of-turn analysis."""
         if state == EndOfTurnState.COMPLETE:
-            await self._handle_interruptions(UserStoppedSpeakingFrame(), True)
+            await self.handle_interruptions(UserStoppedSpeakingFrame(), True)
 
     async def _handle_end_of_turn(self):
         """Handle end-of-turn analysis and generate prediction results."""
@@ -232,7 +232,7 @@ class AudioVADInputProcessor(InputProcessor):
         if not self.interruptions_allowed:
             return
 
-        # use async frame processor _handle_interruptions
+        # use async frame processor handle_interruptions
         # (cancel old then create new)
         await super()._handle_interruptions(StartInterruptionFrame())
 
@@ -242,7 +242,7 @@ class AudioVADInputProcessor(InputProcessor):
 
         await self.push_frame(StopInterruptionFrame())
 
-    async def _handle_interruptions(self, frame: Frame, push_frame: bool):
+    async def handle_interruptions(self, frame: Frame, push_frame: bool):
         if self.interruptions_allowed:
             # Make sure we notify about interruptions quickly out-of-band
             if isinstance(frame, BotInterruptionFrame):
@@ -264,7 +264,7 @@ class AudioVADInputProcessor(InputProcessor):
 
     async def process_sys_frame(self, frame: Frame, direction: FrameDirection):
         if isinstance(frame, BotInterruptionFrame):
-            await self._handle_interruptions(frame, False)
+            await self.handle_interruptions(frame, False)
         elif isinstance(frame, StartInterruptionFrame):
             await self._start_interruption()
         elif isinstance(frame, StopInterruptionFrame):

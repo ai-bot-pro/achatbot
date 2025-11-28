@@ -94,11 +94,7 @@ class DailyA2AConversationBot(DailyRoomBot):
                     llm_assistant_ctx_aggr,
                 ]
             ),
-            params=PipelineParams(
-                allow_interruptions=False,
-                enable_metrics=True,
-                send_initial_empty_metrics=False,
-            ),
+            params=self._pipeline_params,
         )
 
         transport.add_event_handlers(

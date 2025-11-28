@@ -5,7 +5,7 @@ import logging
 from fastapi import WebSocket
 from fastapi.websockets import WebSocketState
 from apipeline.frames.data_frames import Frame, AudioRawFrame, TextFrame
-from apipeline.frames.sys_frames import StartInterruptionFrame
+from apipeline.frames.sys_frames import InterruptionFrame
 from apipeline.processors.frame_processor import FrameDirection
 
 from src.processors.audio_camera_output_processor import AudioCameraOutputProcessor
@@ -29,7 +29,7 @@ class FastapiWebsocketServerOutputProcessor(AudioCameraOutputProcessor):
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
 
-        if isinstance(frame, StartInterruptionFrame):
+        if isinstance(frame, InterruptionFrame):
             await self._write_frame(frame)
 
     async def send_text(self, frame: TextFrame):

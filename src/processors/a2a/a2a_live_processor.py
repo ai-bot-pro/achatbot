@@ -4,7 +4,17 @@ import logging
 from typing import List, Optional
 
 from apipeline.processors.async_frame_processor import FrameDirection
-from apipeline.frames import CancelFrame, StartFrame, EndFrame, Frame, TextFrame
+from apipeline.frames import (
+    CancelFrame,
+    StartFrame,
+    EndFrame,
+    Frame,
+    TextFrame,
+    StartInterruptionFrame,
+    StopInterruptionFrame,
+    InterruptionFrame,
+    InterruptionTaskFrame,
+)
 from google.adk.artifacts import BaseArtifactService
 from google.adk.memory.base_memory_service import BaseMemoryService
 from google.adk.sessions.base_session_service import BaseSessionService
@@ -217,6 +227,10 @@ class A2ALiveProcessor(SessionProcessor):
     async def _push_frames(self):
         try:
             async for msg in self.manager.recieve_message():
+                if self._allow_interruptions and msg.kind == "interrupted" and msg.interrupted:
+                    logging.info(f"{self.name} Interrupting")
+                    await self._handle_interruptions(InterruptionFrame())
+                    logging.info(f"{self.name} Interrupted")
                 if msg.kind == "transcription":
                     await self.queue_frame(
                         TranscriptionFrame(

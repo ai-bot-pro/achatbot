@@ -79,6 +79,7 @@ class BotLoader:
             bot_config=bot_info.config,
             bot_config_list=bot_info.config_list,
             services=bot_info.services,
+            pipeline=bot_info.pipeline,
             handle_sigint=bot_info.handle_sigint,
             websocket_server_host=bot_info.websocket_server_host,
             websocket_server_port=bot_info.websocket_server_port,
