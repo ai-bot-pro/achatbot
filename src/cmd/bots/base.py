@@ -7,7 +7,7 @@ import signal
 from typing import Dict, Type, Any, Optional
 
 from apipeline.frames import CancelFrame
-from apipeline.pipeline.task import PipelineTask
+from apipeline.pipeline.task import PipelineTask, PipelineParams
 from apipeline.pipeline.runner import PipelineRunner
 from dotenv import load_dotenv
 import nest_asyncio
@@ -80,9 +80,13 @@ class AIBot(IBot):
         self.generator: interface.ILlmGenerator = None
 
         self._bot_config_list = self.args.bot_config_list
-        self._bot_config = self.args.bot_config
+        self._bot_config: AIConfig | None = None
         self._handle_sigint = self.args.handle_sigint
         self._save_audio = self.args.save_audio
+
+        self._pipeline_params = PipelineParams()
+        if self.args.pipeline:
+            self._pipeline_params = PipelineParams(**self.args.pipeline)
 
         self.vad_analyzer_pool: EngineProviderPool = None
         self.asr_pool: EngineProviderPool = None

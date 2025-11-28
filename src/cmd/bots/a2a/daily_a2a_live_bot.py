@@ -81,11 +81,7 @@ class DailyA2ALiveBot(DailyRoomBot):
 
         self.task = PipelineTask(
             pipeline,
-            params=PipelineParams(
-                allow_interruptions=True,
-                enable_metrics=True,
-                send_initial_empty_metrics=False,
-            ),
+            params=self._pipeline_params,
         )
 
         transport.add_event_handlers(

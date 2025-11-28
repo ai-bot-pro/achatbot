@@ -12,7 +12,6 @@ from src.cmd.bots.base_daily import DailyRoomBot
 from src.cmd.bots import register_ai_room_bots
 from src.processors.a2a.a2a_live_processor import A2ALiveProcessor
 from src.processors.user_image_request_processor import UserVADImageRequestProcessor
-from src.types.frames import VADStateAudioRawFrame
 
 
 from dotenv import load_dotenv
@@ -84,11 +83,7 @@ class DailyVADA2ALiveBot(DailyRoomBot):
 
         self.task = PipelineTask(
             pipeline,
-            params=PipelineParams(
-                allow_interruptions=False,
-                enable_metrics=True,
-                send_initial_empty_metrics=False,
-            ),
+            params=self._pipeline_params,
         )
 
         transport.add_event_handlers(

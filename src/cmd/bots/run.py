@@ -87,6 +87,7 @@ class BotTaskRunner:
             bot_config=bot_info.config,
             bot_config_list=bot_info.config_list,
             services=bot_info.services,
+            pipeline=bot_info.pipeline,
             handle_sigint=bot_info.handle_sigint,
             save_audio=bot_info.save_audio,
         ).__dict__
@@ -113,6 +114,7 @@ class BotTaskRunner:
             bot_config=bot_info.config,
             bot_config_list=bot_info.config_list,
             services=bot_info.services,
+            pipeline=bot_info.pipeline,
             websocket_server_port=bot_info.websocket_server_port,
             websocket_server_host=bot_info.websocket_server_host,
             handle_sigint=bot_info.handle_sigint,

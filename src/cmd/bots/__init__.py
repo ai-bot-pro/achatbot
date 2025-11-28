@@ -19,6 +19,7 @@ class BotInfo(BaseModel):
     room_expire: int = ROOM_EXPIRE_TIME
     config_list: list = []
     services: dict = {}
+    pipeline: dict = {}  # pipeline params
     websocket_server_host: str = "localhost"
     websocket_server_port: int = 8765
     transport_type: str = "room"  # room(daily,livekit), websocket

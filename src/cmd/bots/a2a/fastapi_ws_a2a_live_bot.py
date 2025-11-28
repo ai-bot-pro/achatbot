@@ -64,11 +64,7 @@ class FastapiWebsocketA2ALiveBot(AIFastapiWebsocketBot):
                     transport.output_processor(),
                 ]
             ),
-            params=PipelineParams(
-                allow_interruptions=True,
-                enable_metrics=True,
-                send_initial_empty_metrics=False,
-            ),
+            params=self._pipeline_params,
         )
 
         transport.add_event_handler("on_client_connected", self.on_client_connected)
