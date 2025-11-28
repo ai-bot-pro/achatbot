@@ -80,7 +80,7 @@ class AsyncioTaskManager(TaskManager):
             try:
                 await coroutine
             except asyncio.CancelledError:
-                logging.trace(f"{name}: task cancelled")
+                logging.info(f"{name}: task cancelled")
                 # Re-raise the exception to ensure the task is cancelled.
                 raise
             except Exception as e:
@@ -92,7 +92,7 @@ class AsyncioTaskManager(TaskManager):
         task = self._loop.create_task(run_coroutine())
         task.set_name(name)
         self._add_task(task)
-        logging.trace(f"{name}: task created")
+        logging.info(f"{name}: task created")
         return task
 
     async def wait_for_task(self, task: asyncio.Task, timeout: Optional[float] = None):
@@ -117,7 +117,7 @@ class AsyncioTaskManager(TaskManager):
         except asyncio.TimeoutError:
             logging.warning(f"{name}: timed out waiting for task to finish")
         except asyncio.CancelledError:
-            logging.trace(f"{name}: unexpected task cancellation (maybe Ctrl-C?)")
+            logging.info(f"{name}: unexpected task cancelled!")
             raise
         except Exception as e:
             logging.exception(f"{name}: unexpected exception while stopping task: {e}")
@@ -166,4 +166,4 @@ class AsyncioTaskManager(TaskManager):
         try:
             del self._tasks[name]
         except KeyError as e:
-            logging.trace(f"{name}: unable to remove task (already removed?): {e}")
+            logging.warning(f"{name}: unable to remove task (already removed?): {e}")

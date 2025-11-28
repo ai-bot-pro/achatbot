@@ -1,6 +1,4 @@
 /*
-from: https://github.com/ai-bot-pro/pipeline-py/blob/main/apipeline/frames/data_frames.proto
-
   python -m grpc_tools.protoc \
     --proto_path=./ \
     --python_out=./protobufs \
@@ -35,10 +33,28 @@ message ImageRawFrame {
   string mode = 6;
 }
 
+message InterruptionFrame {
+  uint64 id = 1;
+  string name = 2;
+}
+
+message StartInterruptionFrame {
+  uint64 id = 1;
+  string name = 2;
+}
+
+message StopInterruptionFrame {
+  uint64 id = 1;
+  string name = 2;
+}
+
 message Frame {
   oneof frame {
     TextFrame text = 1;
     AudioRawFrame audio = 2;
     ImageRawFrame image = 3;
+    InterruptionFrame interruption = 100;
+    StartInterruptionFrame start_interruption = 101;
+    StopInterruptionFrame stop_interruption = 102;
   }
 }

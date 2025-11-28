@@ -229,7 +229,7 @@ class A2ALiveProcessor(SessionProcessor):
             async for msg in self.manager.recieve_message():
                 if self._allow_interruptions and msg.kind == "interrupted" and msg.interrupted:
                     logging.info(f"{self.name} Interrupting")
-                    await self.push_frame(InterruptionFrame(), FrameDirection.DOWNSTREAM)
+                    await self._handle_interruptions(InterruptionFrame())
                     logging.info(f"{self.name} Interrupted")
                 if msg.kind == "transcription":
                     await self.queue_frame(
