@@ -1,5 +1,6 @@
 import os
 import re
+import time
 import logging
 import asyncio
 from datetime import datetime
@@ -73,20 +74,34 @@ def run(
         logging.info(f"speakers:{speakers}")
         audio_content = podcast.content(extraction, "text")
         logging.info(f"audio_content:{audio_content}")
-        insert_podcast_to_d1(
-            audio_output_file,
-            extraction.title,
-            "weedge",
-            ",".join(speakers),
-            description=extraction.description,
-            audio_content=audio_content,
-            is_published=is_published,
-            category=category,
-            # source=get_source_type(source),
-            source=source,
-            # pid="",
-            language=language,
-        )
+        retries = 0
+        max_retries = 3
+        while retries < max_retries:
+            try:
+                insert_podcast_to_d1(
+                    audio_output_file,
+                    extraction.title,
+                    "weedge",
+                    ",".join(speakers),
+                    description=extraction.description,
+                    audio_content=audio_content,
+                    is_published=is_published,
+                    category=category,
+                    # source=get_source_type(source),
+                    source=source,
+                    # pid="",
+                    language=language,
+                )
+                break
+            except Exception as e:
+                retries += 1
+                logging.warning(
+                    f"insert_podcast_to_d1 failed, retrying ({retries}/{max_retries}): {e}"
+                )
+                time.sleep(1)
+                if retries == max_retries:
+                    logging.error("Max retries reached, insert_podcast_to_d1 failed.")
+                    raise
 
 
 r"""
