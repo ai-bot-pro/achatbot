@@ -67,6 +67,11 @@
         // Whether we should be playing audio.
         let isPlaying = false;
 
+        // List of scheduled audio sources to allow stopping them.
+        let scheduledAudioSources = [];
+        // Timestamp of the last interruption to discard pending audio
+        let lastInterruptionTime = 0;
+
         let startBtn = document.getElementById('startAudioBtn');
         let stopBtn = document.getElementById('stopAudioBtn');
 
@@ -134,6 +139,30 @@
                 displayTextMessage(parsedFrame.text);
                 return true;
             }
+            // 处理中断
+            if (parsedFrame?.interruption) {
+                console.log("收到中断消息:", parsedFrame.interruption);
+
+                // Stop all currently scheduled audio sources
+                scheduledAudioSources.forEach(source => {
+                    try {
+                        source.stop();
+                    } catch (e) {
+                        // Ignore errors if source is already stopped
+                    }
+                });
+                scheduledAudioSources = [];
+                lastInterruptionTime = Date.now();
+
+                // Reset play time to current time so new audio starts immediately
+                if (audioContext) {
+                    playTime = audioContext.currentTime;
+                }
+
+                // Display interruption message
+                displayTextMessage({ text: '[interruption]' });
+                return true;
+            }
 
             if (!parsedFrame?.audio) {
                 console.log(parsedFrame)
@@ -152,12 +181,28 @@
             const audioVector = Array.from(parsedFrame.audio.audio);
             const audioArray = new Uint8Array(audioVector);
 
+            const enqueueTime = Date.now();
+
             audioContext.decodeAudioData(audioArray.buffer, function (buffer) {
+                // Check if interruption happened since we started decoding
+                if (enqueueTime <= lastInterruptionTime) {
+                    return;
+                }
+
                 const source = new AudioBufferSourceNode(audioContext);
                 source.buffer = buffer;
                 source.start(playTime);
                 source.connect(audioContext.destination);
                 playTime = playTime + buffer.duration;
+
+                // Track the source
+                scheduledAudioSources.push(source);
+                source.onended = () => {
+                    const index = scheduledAudioSources.indexOf(source);
+                    if (index > -1) {
+                        scheduledAudioSources.splice(index, 1);
+                    }
+                };
             });
         }
 
