@@ -16,7 +16,6 @@ from . import model_dir, MODEL_VOL, comfyui_out_dir, COMFYUI_OUT_VOL, clear_comf
 # modal run src/download_models.py --repo-ids "Comfy-Org/flux1-schnell" --allow-patterns "flux1-schnell-fp8.safetensors"
 
 
-# https://docs.comfy.org/installation/manual_install#example-structure
 def link_comfyui_dir():
     # symlink the model to the right ComfyUI directory
     ckpt_path = f"{model_dir}/Comfy-Org/flux1-schnell/flux1-schnell-fp8.safetensors"
@@ -29,7 +28,7 @@ def link_comfyui_dir():
     clear_comfyui_output_dir()
 
 
-def change_workflow_conf(file_path: Path, **kwargs):
+def change_workflow_conf(file_path: Path, **kwargs) -> str:
     workflow_data = json.loads(file_path.read_text())
 
     # insert the prompt
@@ -56,4 +55,4 @@ def change_workflow_conf(file_path: Path, **kwargs):
     new_workflow_file = f"{client_id}.json"
     json.dump(workflow_data, Path(new_workflow_file).open("w", encoding="utf-8"))
 
-    return new_workflow_file, client_id
+    return client_id

@@ -40,6 +40,7 @@ class ComfyUIAPIImageGenProcessor(ImageGenProcessor):
         response = await self._aiohttp_session.post(
             self._api_url,
             json={
+                "model": self._model,
                 "prompt": prompt,
                 "width": self._width,
                 "height": self._height,

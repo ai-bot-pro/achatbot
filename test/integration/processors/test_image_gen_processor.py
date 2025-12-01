@@ -40,6 +40,10 @@ IMAGE_GEN_PROCESSOR=HFStableDiffusionImageGenProcessor \
 IMAGE_GEN_PROCESSOR=ComfyUIAPIImageGenProcessor \
     API_URL=https://weedge--server-comfyui-api-dev.modal.run \
     python -m unittest test.integration.processors.test_image_gen_processor.TestProcessor
+IMAGE_GEN_PROCESSOR=ComfyUIAPIImageGenProcessor \
+    API_URL=https://weedge--server-comfyui-api-dev.modal.run \
+    MODEL=image_z_image_turbo \
+    python -m unittest test.integration.processors.test_image_gen_processor.TestProcessor
 """
 
 
@@ -84,7 +88,7 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             kwargs["width"] = 1280
             kwargs["height"] = 720
             kwargs["steps"] = 6
-            kwargs["model"] = "flux1_schnell_fp8"
+            kwargs["model"] = os.getenv("MODEL", "flux1_schnell_fp8")
         if self.processor == "OpenAIImageGenProcessor":
             self.client_session = aiohttp.ClientSession()
             kwargs["aiohttp_session"] = self.client_session
