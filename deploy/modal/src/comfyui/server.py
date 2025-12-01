@@ -16,7 +16,7 @@ MODULE_NAME = os.getenv("MODULE_NAME", "app.flux1_schnell_fp8")
 APP_DIR = Path(__file__).parent / "app"
 WORKFLOW_CONFIG_DIR = Path(__file__).parent / "workflow_config"
 WORKFLOW_CONFIG_PATH = os.getenv(
-    "WORKFLOW_CONFIG_PATH", f"{WORKFLOW_CONFIG_DIR}/flux1-schnell-fp8_workflow_api.json"
+    "WORKFLOW_CONFIG_PATH", f"{WORKFLOW_CONFIG_DIR}/flux1_schnell_fp8.json"
 )
 CONFIG_NAME = WORKFLOW_CONFIG_PATH.split("/")[-1]
 # print(WORKFLOW_CONFIG_PATH, CONFIG_NAME)
@@ -131,24 +131,27 @@ class ComfyUI:
     def api(self, item: Dict):
         from fastapi import Response
 
+        # change workflow conf
         CONFIG_NAME = os.getenv("CONFIG_NAME")
-        workflow_data = json.loads((Path(__file__).parent / f"{CONFIG_NAME}").read_text())
-
-        # insert the prompt
-        workflow_data["6"]["inputs"]["text"] = item["prompt"]
-
-        # give the output image a unique id per client request
-        client_id = uuid.uuid4().hex
-        workflow_data["9"]["inputs"]["filename_prefix"] = client_id
-
-        # save this updated workflow to a new file
-        new_workflow_file = f"{client_id}.json"
-        json.dump(workflow_data, Path(new_workflow_file).open("w"))
+        file_path = Path(__file__).parent / f"{CONFIG_NAME}"
+        new_workflow_file = self.change_workflow_conf(file_path, item)
+        if new_workflow_file is None:
+            return Response("Failed to change workflow conf", status_code=500)
 
         # run inference on the currently running container
         img_bytes = self.infer.local(new_workflow_file)
 
         return Response(img_bytes, media_type="image/jpeg")
+
+    def change_workflow_conf(self, file_path: Path, item: Dict):
+        try:
+            MODULE_NAME = os.getenv("MODULE_NAME")
+            module = importlib.import_module(f"{MODULE_NAME}")
+            func = getattr(module, "change_workflow_conf")
+            return func(file_path, **item)
+        except Exception as e:
+            print(e)
+            return None
 
     def poll_server_health(self) -> Dict:
         import socket

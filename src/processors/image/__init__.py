@@ -6,6 +6,10 @@ def get_image_gen_processor(tag, **kwargs) -> ImageGenProcessor:
         from .hf_img_gen_processor import HFApiInferenceImageGenProcessor
 
         return HFApiInferenceImageGenProcessor(**kwargs)
+    if tag == "ComfyUIAPIImageGenProcessor":
+        from .comfyui_img_gen_processor import ComfyUIAPIImageGenProcessor
+
+        return ComfyUIAPIImageGenProcessor(**kwargs)
     if tag == "OpenAIImageGenProcessor":
         from .openai_img_gen_processor import OpenAIImageGenProcessor
 

@@ -18,7 +18,12 @@ def main(args: argparse.Namespace):
     url = (
         f"https://{args.modal_workspace}--server-comfyui-api{'-dev' if args.dev else ''}.modal.run/"
     )
-    data = json.dumps({"prompt": args.prompt}).encode("utf-8")
+    width = args.size.split("x")[0]
+    height = args.size.split("x")[1]
+    steps = args.steps
+    data = json.dumps(
+        {"prompt": args.prompt, "width": width, "height": height, "steps": steps}
+    ).encode("utf-8")
     print(f"Sending request to {url} with prompt: {args.prompt}")
     print("Waiting for response...")
     start_time = time.time()
@@ -28,7 +33,7 @@ def main(args: argparse.Namespace):
             assert response.status == 200, response.status
             elapsed = round(time.time() - start_time, 1)
             print(f"Image finished generating in {elapsed} seconds!")
-            filename = OUTPUT_DIR / f"{slugify(args.prompt)}.png"
+            filename = OUTPUT_DIR / f"{slugify(args.prompt)}{args.size}.png"
             filename.write_bytes(response.read())
             print(f"Saved to '{filename}'")
     except urllib.error.HTTPError as e:
@@ -53,6 +58,18 @@ def parse_args(arglist: list[str]) -> argparse.Namespace:
         help="Prompt for the image generation model.",
     )
     parser.add_argument(
+        "--size",
+        type=str,
+        required=False,
+        help="size (widthxheight) for the image generation model.",
+    )
+    parser.add_argument(
+        "--steps",
+        type=int,
+        required=False,
+        help="steps for the image generation model. The number of steps used in the denoising process.",
+    )
+    parser.add_argument(
         "--dev",
         action="store_true",
         help="use this flag when running the ComfyUI server in development mode with `modal serve`",
@@ -69,6 +86,10 @@ def slugify(s: str) -> str:
 python client.py --modal-workspace "weedge" --prompt "Spider-Man visits Yosemite, rendered by Blender, trending on artstation" --dev
 
 python client.py --modal-workspace $(modal profile current) --prompt "Surreal dreamscape with floating islands, upside-down waterfalls, and impossible geometric structures, all bathed in a soft, ethereal light" --dev
+
+python client.py --modal-workspace $(modal profile current) --prompt "Surreal dreamscape with floating islands, upside-down waterfalls, and impossible geometric structures, all bathed in a soft, ethereal light" --size 512x512 --dev
+
+python client.py --modal-workspace $(modal profile current) --prompt "Surreal dreamscape with floating islands, upside-down waterfalls, and impossible geometric structures, all bathed in a soft, ethereal light" --size 512x512 --steps 28 --dev
 """
 if __name__ == "__main__":
     args = parse_args(sys.argv)
