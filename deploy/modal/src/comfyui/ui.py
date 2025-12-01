@@ -32,11 +32,10 @@ image = (  # build up a Modal Image to run ComfyUI, step by step
 # https://huggingface.co/black-forest-labs/FLUX.1-schnell
 # https://huggingface.co/Comfy-Org/flux1-schnell/tree/main
 # modal run src/download_models.py --repo-ids "Comfy-Org/flux1-schnell" --allow-patterns "flux1-schnell-fp8.safetensors"
-model_dir = "/root/models"
-MODEL_VOL = modal.Volume.from_name("models", create_if_missing=True)
+from .app import model_dir, MODEL_VOL
 
-gen_img_dir = "/root/gen_img"
-GEN_IMG_VOL = modal.Volume.from_name("gen_img", create_if_missing=True)
+# gen_img_dir = "/root/gen_img"
+# GEN_IMG_VOL = modal.Volume.from_name("gen_img", create_if_missing=True)
 
 
 app = modal.App(name="comfyui", image=image)
