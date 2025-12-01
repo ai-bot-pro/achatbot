@@ -35,7 +35,7 @@ image = (  # build up a Modal Image to run ComfyUI, step by step
     # copy the ComfyUI workflow JSON to the container.
     .add_local_file(
         WORKFLOW_CONFIG_PATH,
-        f"/root/{MODEL_NAME}.json",
+        f"/root/{MODEL_NAME}_api.json",
         copy=True,
     )
     .env(
@@ -110,8 +110,25 @@ class ComfyUI:
 
         # runs the comfy run --workflow command as a subprocess
         workflow_path = f"{file_name}.json"
+        # workflow_path = Path(__file__).parent / f"{os.getenv("MODEL_NAME")}_api.json"
         cmd = f"comfy run --workflow {workflow_path} --wait --timeout 1200 --verbose"
-        subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print(cmd)
+        try:
+            result = subprocess.run(
+                cmd,
+                shell=True,
+                check=True,
+                capture_output=True,
+                text=True,  # Decode stdout/stderr as text
+            )
+            print("ComfyUI stdout:", result.stdout)
+            if result.stderr:
+                print("ComfyUI stderr:", result.stderr)
+        except subprocess.CalledProcessError as e:
+            print(f"ComfyUI command failed with exit code {e.returncode}")
+            print(f"ComfyUI stdout: {e.stdout}")
+            print(f"ComfyUI stderr: {e.stderr}")
+            raise  # Re-raise the exception after logging
 
         # returns the image as bytes
         for f in Path(comfyui_out_dir).iterdir():
@@ -131,7 +148,7 @@ class ComfyUI:
             return Response(f"Model name does not match, now use {MODEL_NAME}", status_code=400)
 
         # change workflow conf
-        file_path = Path(__file__).parent / f"{MODEL_NAME}.json"
+        file_path = Path(__file__).parent / f"{MODEL_NAME}_api.json"
         filename = self.change_workflow_conf(file_path, item)
         if filename is None:
             return Response("Failed to change workflow conf", status_code=500)
@@ -179,5 +196,6 @@ modal serve src/comfyui/server.py
 MODEL_NAME=flux1_schnell_fp8 IMAGE_GPU=L40S modal serve src/comfyui/server.py 
 
 # z-image turbo
+MODEL_NAME=image_z_image_turbo IMAGE_GPU=L4 modal serve src/comfyui/server.py 
 MODEL_NAME=image_z_image_turbo IMAGE_GPU=L40S modal serve src/comfyui/server.py 
 """

@@ -18,6 +18,7 @@ def main(args: argparse.Namespace):
     url = (
         f"https://{args.modal_workspace}--server-comfyui-api{'-dev' if args.dev else ''}.modal.run/"
     )
+    model = args.model
     if args.size:
         width = args.size.split("x")[0]
         height = args.size.split("x")[1]
@@ -26,7 +27,7 @@ def main(args: argparse.Namespace):
         height = 720
     steps = args.steps
     data = json.dumps(
-        {"prompt": args.prompt, "width": width, "height": height, "steps": steps}
+        {"prompt": args.prompt, "width": width, "height": height, "steps": steps, "model": model}
     ).encode("utf-8")
     print(f"Sending request to {url} with prompt: {args.prompt}")
     print("Waiting for response...")
@@ -55,6 +56,13 @@ def parse_args(arglist: list[str]) -> argparse.Namespace:
         type=str,
         required=True,
         help="Name of the Modal workspace with the deployed app. Run `modal profile current` to check.",
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="flux1_schnell_fp8",
+        required=True,
+        help="model name for the image generation model.",
     )
     parser.add_argument(
         "--prompt",
