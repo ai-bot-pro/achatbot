@@ -7,10 +7,8 @@ import subprocess
 
 import modal
 
-from . import model_dir, MODEL_VOL, comfyui_out_dir, COMFYUI_OUT_VOL
+from . import model_dir, MODEL_VOL, comfyui_out_dir, COMFYUI_OUT_VOL, clear_comfyui_output_dir
 
-
-logger = logging.getLogger(__name__)
 
 # https://github.com/black-forest-labs/flux
 # https://huggingface.co/black-forest-labs/FLUX.1-schnell
@@ -28,10 +26,7 @@ def link_comfyui_dir():
         check=True,
     )
 
-    # clear output file
-    subprocess.run(
-        f"rm -f {comfyui_out_dir}/_output_images_will_be_put_here", shell=True, check=True
-    )
+    clear_comfyui_output_dir()
 
 
 def change_workflow_conf(file_path: Path, **kwargs):
@@ -55,10 +50,10 @@ def change_workflow_conf(file_path: Path, **kwargs):
     if kwargs.get("steps"):
         workflow_data["31"]["inputs"]["steps"] = kwargs.get("steps")
 
-    print(f"{workflow_data=}")
+    # print(f"{workflow_data=}")
 
     # save this updated workflow to a new file
     new_workflow_file = f"{client_id}.json"
-    json.dump(workflow_data, Path(new_workflow_file).open("w"))
+    json.dump(workflow_data, Path(new_workflow_file).open("w", encoding="utf-8"))
 
-    return new_workflow_file
+    return new_workflow_file, client_id

@@ -9,6 +9,8 @@ import importlib
 import modal
 import modal.experimental
 
+from app import model_dir, MODEL_VOL, comfyui_out_dir, COMFYUI_OUT_VOL
+
 IMAGE_GPU = os.getenv("IMAGE_GPU", "L4")
 MAX_INPUTS = int(os.getenv("MAX_INPUTS", "2"))
 
@@ -53,18 +55,6 @@ image = (  # build up a Modal Image to run ComfyUI, step by step
 )
 
 
-# https://github.com/black-forest-labs/flux
-# https://huggingface.co/black-forest-labs/FLUX.1-schnell
-# https://huggingface.co/Comfy-Org/flux1-schnell/tree/main
-# modal run src/download_models.py --repo-ids "Comfy-Org/flux1-schnell" --allow-patterns "flux1-schnell-fp8.safetensors"
-model_dir = "/root/models"
-MODEL_VOL = modal.Volume.from_name("models", create_if_missing=True)
-
-# completed workflows write output images/video/audio to this directory
-comfyui_out_dir = "/root/comfy/ComfyUI/output"
-COMFYUI_OUT_VOL = modal.Volume.from_name("comfyui_output", create_if_missing=True)
-
-
 # https://docs.comfy.org/installation/manual_install#example-structure
 def link_comfyui_dir():
     try:
@@ -106,21 +96,13 @@ class ComfyUI:
         subprocess.run(cmd, shell=True, check=True)
 
     @modal.method()
-    def infer(self, workflow_path: str = "/root/workflow_api.json"):
+    def infer(self, workflow_path: str = "/root/workflow_api.json", file_prefix: str = ""):
         # sometimes the ComfyUI server stops responding (we think because of memory leaks), so this makes sure it's still up
         self.poll_server_health()
 
         # runs the comfy run --workflow command as a subprocess
         cmd = f"comfy run --workflow {workflow_path} --wait --timeout 1200 --verbose"
         subprocess.run(cmd, shell=True, check=True)
-
-        # looks up the name of the output image file based on the workflow
-        workflow = json.loads(Path(workflow_path).read_text())
-        file_prefix = [
-            node.get("inputs")
-            for node in workflow.values()
-            if node.get("class_type") == "SaveImage"
-        ][0]["filename_prefix"]
 
         # returns the image as bytes
         for f in Path(comfyui_out_dir).iterdir():
@@ -134,12 +116,12 @@ class ComfyUI:
         # change workflow conf
         CONFIG_NAME = os.getenv("CONFIG_NAME")
         file_path = Path(__file__).parent / f"{CONFIG_NAME}"
-        new_workflow_file = self.change_workflow_conf(file_path, item)
+        new_workflow_file, filename_prefix = self.change_workflow_conf(file_path, item)
         if new_workflow_file is None:
             return Response("Failed to change workflow conf", status_code=500)
 
         # run inference on the currently running container
-        img_bytes = self.infer.local(new_workflow_file)
+        img_bytes = self.infer.local(new_workflow_file, filename_prefix)
 
         return Response(img_bytes, media_type="image/jpeg")
 
@@ -148,12 +130,18 @@ class ComfyUI:
             MODULE_NAME = os.getenv("MODULE_NAME")
             module = importlib.import_module(f"{MODULE_NAME}")
             func = getattr(module, "change_workflow_conf")
-            return func(file_path, **item)
+            new_workflow_file, filename_prefix = func(file_path, **item)
+            return new_workflow_file, filename_prefix
+        except ImportError as e:
+            print(f"Import error in change_workflow_conf: {e}")
+            return None, ""
         except Exception as e:
-            print(e)
-            return None
+            print(
+                f"An unexpected error occurred in change_workflow_conf: {e}"
+            )
+            return None, ""
 
-    def poll_server_health(self) -> Dict:
+    def poll_server_health(self) -> None:
         import socket
         import urllib
 

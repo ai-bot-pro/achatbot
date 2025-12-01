@@ -8,6 +8,8 @@ from typing import Dict
 import modal
 import modal.experimental
 
+from app import model_dir, MODEL_VOL, comfyui_out_dir, COMFYUI_OUT_VOL, clear_comfyui_output_dir
+
 IMAGE_GPU = os.getenv("IMAGE_GPU", "L4")
 
 image = (  # build up a Modal Image to run ComfyUI, step by step
@@ -27,15 +29,7 @@ image = (  # build up a Modal Image to run ComfyUI, step by step
     )
 )
 
-
-# https://github.com/black-forest-labs/flux
-# https://huggingface.co/black-forest-labs/FLUX.1-schnell
-# https://huggingface.co/Comfy-Org/flux1-schnell/tree/main
-# modal run src/download_models.py --repo-ids "Comfy-Org/flux1-schnell" --allow-patterns "flux1-schnell-fp8.safetensors"
-from .app import model_dir, MODEL_VOL
-
-# gen_img_dir = "/root/gen_img"
-# GEN_IMG_VOL = modal.Volume.from_name("gen_img", create_if_missing=True)
+image = image.run_function(clear_comfyui_output_dir)
 
 
 app = modal.App(name="comfyui", image=image)
@@ -46,7 +40,7 @@ app = modal.App(name="comfyui", image=image)
     gpu=IMAGE_GPU,
     volumes={
         model_dir: MODEL_VOL,
-        gen_img_dir: GEN_IMG_VOL,
+        comfyui_out_dir: COMFYUI_OUT_VOL,
     },
 )
 @modal.concurrent(

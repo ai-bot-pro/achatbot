@@ -1,5 +1,5 @@
 # comfyui
-depoly comfyui to modal
+deploy comfyui to modal
 
 ## Download Models(ckpt)
 - Download models from huggingface
@@ -34,6 +34,6 @@ IMAGE_GPU=L40S modal serve src/comfyui/server.py
 python deploy/modal/src/comfyui/client.py --modal-workspace "weedge" --prompt "Spider-Man visits Yosemite, rendered by Blender, trending on artstation" --dev
 
 python deploy/modal/src/comfyui/client.py --modal-workspace $(modal profile current) --prompt "Surreal dreamscape with floating islands, upside-down waterfalls, and impossible geometric structures, all bathed in a soft, ethereal light" --dev
-
-python client.py --modal-workspace $(modal profile current) --prompt "Surreal dreamscape with floating islands, upside-down waterfalls, and impossible geometric structures, all bathed in a soft, ethereal light" --size 512x512 --dev
+python deploy/modal/src/comfyui/client.py --modal-workspace $(modal profile current) --prompt "Surreal dreamscape with floating islands, upside-down waterfalls, and impossible geometric structures, all bathed in a soft, ethereal light" --size 512x512 --dev
+python deploy/modal/src/comfyui/client.py --modal-workspace $(modal profile current) --prompt "Surreal dreamscape with floating islands, upside-down waterfalls, and impossible geometric structures, all bathed in a soft, ethereal light" --size 512x512 --steps 4 --dev
 ```

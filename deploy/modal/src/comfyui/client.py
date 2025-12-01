@@ -18,8 +18,12 @@ def main(args: argparse.Namespace):
     url = (
         f"https://{args.modal_workspace}--server-comfyui-api{'-dev' if args.dev else ''}.modal.run/"
     )
-    width = args.size.split("x")[0]
-    height = args.size.split("x")[1]
+    if args.size:
+        width = args.size.split("x")[0]
+        height = args.size.split("x")[1]
+    else:
+        width = 1280
+        height = 720
     steps = args.steps
     data = json.dumps(
         {"prompt": args.prompt, "width": width, "height": height, "steps": steps}
@@ -33,7 +37,8 @@ def main(args: argparse.Namespace):
             assert response.status == 200, response.status
             elapsed = round(time.time() - start_time, 1)
             print(f"Image finished generating in {elapsed} seconds!")
-            filename = OUTPUT_DIR / f"{slugify(args.prompt)}{args.size}.png"
+            size_suffix = args.size if args.size else ""
+            filename = OUTPUT_DIR / f"{slugify(args.prompt)}{size_suffix}.png"
             filename.write_bytes(response.read())
             print(f"Saved to '{filename}'")
     except urllib.error.HTTPError as e:
