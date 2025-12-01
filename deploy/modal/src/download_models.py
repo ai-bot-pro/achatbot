@@ -41,6 +41,7 @@ def download_ckpt(
     revision: str = None,
     local_dir: str = None,
     ignore_patterns: list = ["*.pt", "*.bin"],
+    allow_patterns: str = "*",
 ):
     # https://huggingface.co/docs/huggingface_hub/guides/download
     from huggingface_hub import snapshot_download
@@ -50,12 +51,12 @@ def download_ckpt(
             local_dir = os.path.join(HF_MODEL_DIR, repo_id)
         else:
             local_dir = os.path.join(HF_MODEL_DIR, local_dir)
-        print(f"{repo_id} model downloading, {ignore_patterns=} {revision=}")
+        print(f"{repo_id} model downloading, {ignore_patterns=} {revision=} {allow_patterns=}")
         snapshot_download(
             repo_id=repo_id,
             revision=revision,
             repo_type="model",
-            allow_patterns="*",
+            allow_patterns=allow_patterns,
             ignore_patterns=ignore_patterns,  # using safetensors
             local_dir=local_dir,
             max_workers=20,
@@ -186,6 +187,8 @@ modal run src/download_models.py --repo-ids "Qwen/Qwen2.5-0.5B"
 
 modal run src/download_models.py --repo-ids "FunAudioLLM/SenseVoiceSmall"
 
+modal run src/download_models.py --repo-ids "Comfy-Org/flux1-schnell" --allow-patterns "flux1-schnell-fp8.safetensors"
+
 SECRET_NAME=achatbot modal run src/download_models.py --repo-ids "google/gemma-3-1b-it,google/gemma-3-4b-it,google/gemma-3-12b-it,google/gemma-3-27b-it"
 
 modal run src/download_models.py::download_ckpts --ckpt-urls "https://openaipublic.azureedge.net/main/whisper/models/e5b1a55b89c1367dacf97e3e19bfd829a01529dbfdeefa8caeb59b3f1b81dadb/large-v3.pt"
@@ -199,6 +202,18 @@ modal run src/download_models.py::download_modelscope_models --repo-ids "iic/pun
 
 
 @app.local_entrypoint()
-def main(repo_ids: str, revision: str = None, local_dir: str = None, ignore_patterns: str = ""):
+def main(
+    repo_ids: str,
+    revision: str = None,
+    local_dir: str = None,
+    ignore_patterns: str = "",
+    allow_patterns: str = "*",
+):
     ignore_patterns = ignore_patterns.split("|") if len(ignore_patterns) > 0 else None
-    download_ckpt.remote(repo_ids, revision, local_dir, ignore_patterns=ignore_patterns)
+    download_ckpt.remote(
+        repo_ids,
+        revision,
+        local_dir,
+        ignore_patterns=ignore_patterns,
+        allow_patterns=allow_patterns,
+    )

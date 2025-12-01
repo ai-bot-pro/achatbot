@@ -36,6 +36,14 @@ IMAGE_GEN_PROCESSOR=TogetherImageGenProcessor \
 
 IMAGE_GEN_PROCESSOR=HFStableDiffusionImageGenProcessor \
     python -m unittest test.integration.processors.test_image_gen_processor.TestProcessor
+
+IMAGE_GEN_PROCESSOR=ComfyUIAPIImageGenProcessor \
+    API_URL=https://weedge--server-comfyui-api-dev.modal.run \
+    python -m unittest test.integration.processors.test_image_gen_processor.TestProcessor
+IMAGE_GEN_PROCESSOR=ComfyUIAPIImageGenProcessor \
+    API_URL=https://weedge--server-comfyui-api-dev.modal.run \
+    MODEL=image_z_image_turbo \
+    python -m unittest test.integration.processors.test_image_gen_processor.TestProcessor
 """
 
 
@@ -74,6 +82,13 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
             kwargs["height"] = 1024
             kwargs["steps"] = 28
             kwargs["model"] = "stabilityai/stable-diffusion-3.5-large"
+        if self.processor == "ComfyUIAPIImageGenProcessor":
+            self.client_session = aiohttp.ClientSession()
+            kwargs["aiohttp_session"] = self.client_session
+            kwargs["width"] = 1280
+            kwargs["height"] = 720
+            kwargs["steps"] = 6
+            kwargs["model"] = os.getenv("MODEL", "flux1_schnell_fp8")
         if self.processor == "OpenAIImageGenProcessor":
             self.client_session = aiohttp.ClientSession()
             kwargs["aiohttp_session"] = self.client_session
@@ -95,33 +110,6 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
 
         return get_image_gen_processor(self.processor, **kwargs)
 
-    def get_image_gen_processor(self):
-        if self.processor == "HFApiInferenceImageGenProcessor":
-            from src.processors.image.hf_img_gen_processor import HFApiInferenceImageGenProcessor
-
-            self.client_session = aiohttp.ClientSession()
-            return HFApiInferenceImageGenProcessor(
-                aiohttp_session=self.client_session,
-                model="stabilityai/stable-diffusion-3.5-large",
-            )
-        if self.processor == "OpenAIImageGenProcessor":
-            from src.processors.image.openai_img_gen_processor import OpenAIImageGenProcessor
-
-            self.client_session = aiohttp.ClientSession()
-            return OpenAIImageGenProcessor(
-                image_size="1024x1024",
-                aiohttp_session=self.client_session,
-                model="dall-e-3",
-            )
-        if self.processor == "TogetherImageGenProcessor":
-            from src.processors.image.together_img_gen_processor import TogetherImageGenProcessor
-
-            return TogetherImageGenProcessor(
-                width=512,
-                height=512,
-                model="black-forest-labs/FLUX.1-schnell-Free",
-            )
-
     async def asyncSetUp(self):
         pipeline = Pipeline(
             [
@@ -135,7 +123,6 @@ class TestProcessor(unittest.IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         self.client_session and await self.client_session.close()
-        pass
 
     async def test_run(self):
         runner = PipelineRunner()
