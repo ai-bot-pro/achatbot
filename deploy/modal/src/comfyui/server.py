@@ -20,7 +20,7 @@ MAX_INPUTS = int(os.getenv("MAX_INPUTS", "2"))
 
 MODEL_NAME = os.getenv("MODEL_NAME", "flux1_schnell_fp8")
 WORKFLOW_CONFIG_DIR = Path(__file__).parent / "workflow_config"
-WORKFLOW_CONFIG_PATH = os.getenv("WORKFLOW_CONFIG_PATH", f"{WORKFLOW_CONFIG_DIR}/{MODEL_NAME}.json")
+WORKFLOW_CONFIG_PATH = os.getenv("WORKFLOW_CONFIG_PATH", f"{WORKFLOW_CONFIG_DIR}/{MODEL_NAME}_api.json")
 
 APP_DIR = Path(__file__).parent / "app"
 
