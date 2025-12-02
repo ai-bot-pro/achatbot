@@ -13,7 +13,7 @@ from src.processors.image.base import ImageGenProcessor
 
 class ComfyUIAPIImageGenProcessor(ImageGenProcessor):
     """
-    ComfyUI API Video Gen Processor
+    ComfyUI API Image Gen Processor
     need cd deploy/modal to run src/comfyui/server.py
     ```
     MODEL_NAME=flux1_schnell_fp8 IMAGE_GPU=L40S modal serve src/comfyui/server.py
