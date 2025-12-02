@@ -20,7 +20,9 @@ MAX_INPUTS = int(os.getenv("MAX_INPUTS", "2"))
 
 MODEL_NAME = os.getenv("MODEL_NAME", "flux1_schnell_fp8")
 WORKFLOW_CONFIG_DIR = Path(__file__).parent / "workflow_config"
-WORKFLOW_CONFIG_PATH = os.getenv("WORKFLOW_CONFIG_PATH", f"{WORKFLOW_CONFIG_DIR}/{MODEL_NAME}_api.json")
+WORKFLOW_CONFIG_PATH = os.getenv(
+    "WORKFLOW_CONFIG_PATH", f"{WORKFLOW_CONFIG_DIR}/{MODEL_NAME}_api.json"
+)
 
 APP_DIR = Path(__file__).parent / "app"
 
@@ -147,8 +149,11 @@ class ComfyUI:
         if model_name != MODEL_NAME:
             return Response(f"Model name does not match, now use {MODEL_NAME}", status_code=400)
 
-        # change workflow conf
         file_path = Path(__file__).parent / f"{MODEL_NAME}_api.json"
+        images = item.get("images")
+        if images is not None and isinstance(images, list) and len(images) > 0:
+            file_path = Path(__file__).parent / f"{MODEL_NAME}_img2img_api.json"
+        # change workflow conf
         filename = self.change_workflow_conf(file_path, item)
         if filename is None:
             return Response("Failed to change workflow conf", status_code=500)
@@ -198,4 +203,7 @@ MODEL_NAME=flux1_schnell_fp8 IMAGE_GPU=L40S modal serve src/comfyui/server.py
 # z-image turbo
 MODEL_NAME=image_z_image_turbo IMAGE_GPU=L4 modal serve src/comfyui/server.py 
 MODEL_NAME=image_z_image_turbo IMAGE_GPU=L40S modal serve src/comfyui/server.py 
+
+# flux2 dev
+MODEL_NAME=image_flux2 IMAGE_GPU=L40S modal serve src/comfyui/server.py 
 """
