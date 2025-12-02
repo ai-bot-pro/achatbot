@@ -1,14 +1,14 @@
 # https://docs.comfy.org/tutorials/video/hunyuan/hunyuan-video-1-5
 """
-:open_file_folder: ComfyUI/
-├── :open_file_folder: models/
-│   ├── :open_file_folder: text_encoders/
+📂 ComfyUI/
+├── 📂 models/
+│   ├── 📂 text_encoders/
 │   │      ├── qwen_2.5_vl_7b_fp8_scaled.safetensors
 │   │      └── byt5_small_glyphxl_fp16.safetensors
-│   ├── :open_file_folder: diffusion_models/
+│   ├── 📂 diffusion_models/
 │   │      ├── hunyuanvideo1.5_1080p_sr_distilled_fp16.safetensors
 │   │      └── hunyuanvideo1.5_720p_t2v_fp16.safetensors
-│   └── :open_file_folder: vae/
+│   └── 📂 vae/
 │          └── hunyuanvideo15_vae_fp16.safetensors
 """
 

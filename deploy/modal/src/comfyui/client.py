@@ -46,6 +46,46 @@ def gen_image(args: argparse.Namespace):
             print(f"Workflow API not found at {url}")
 
 
+def gen_video(args: argparse.Namespace):
+    url = f"https://{args.modal_workspace}--server-comfyui-api{'-dev' if args.dev else ''}.modal.run/video"
+    model = args.model
+    if args.size:
+        width = args.size.split("x")[0]
+        height = args.size.split("x")[1]
+    else:
+        width = 1280
+        height = 720
+    steps = args.steps
+    codec = args.codec
+    data = json.dumps(
+        {
+            "prompt": args.prompt,
+            "width": width,
+            "height": height,
+            "steps": steps,
+            "model": model,
+            "codec": codec,
+        }
+    ).encode("utf-8")
+    print(f"Sending request to {url} with prompt: {args.prompt}")
+    print("Waiting for response...")
+    start_time = time.time()
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req) as response:
+            assert response.status == 200, response.status
+            elapsed = round(time.time() - start_time, 1)
+            print(f"Image finished generating in {elapsed} seconds!")
+            size_suffix = args.size if args.size else ""
+            filename = OUTPUT_DIR / f"{slugify(args.prompt)}{size_suffix}.mp4"
+            filename.write_bytes(response.read())
+            print(f"Saved to '{filename}'")
+    except urllib.error.HTTPError as e:
+        print("error", e)
+        if e.code == 404:
+            print(f"Workflow API not found at {url}")
+
+
 def parse_args(arglist: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
@@ -73,6 +113,12 @@ def parse_args(arglist: list[str]) -> argparse.Namespace:
         type=str,
         required=False,
         help="size (widthxheight) for the image generation model.",
+    )
+    parser.add_argument(
+        "--codec",
+        type=str,
+        required=False,
+        help="steps for the image generation model. The number of steps used in the denoising process.",
     )
     parser.add_argument(
         "--steps",

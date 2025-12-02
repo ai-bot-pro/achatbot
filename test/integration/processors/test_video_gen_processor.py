@@ -23,7 +23,7 @@ load_dotenv()
 
 
 """
-mkdir -p videos
+mkdir -p images/videos
 
 VIDEO_GEN_PROCESSOR=ComfyUIAPIVideoGenProcessor \
     API_URL=https://weedge--server-comfyui-api-dev.modal.run/video \
