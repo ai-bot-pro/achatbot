@@ -14,7 +14,7 @@ class VideoGenProcessor(AIProcessor):
         self._aiohttp_session = None
         self._width = 0
         self._height = 0
-        self._gen_Video_frame = TextFrame
+        self._gen_video_frame = TextFrame
         self._is_pass_frame = False
 
     def set_aiohttp_session(self, session):

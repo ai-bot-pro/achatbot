@@ -41,9 +41,11 @@ class SaveVideoProcessor(FrameProcessor):
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
         if isinstance(frame, ImageRawFrame):
-            print("save-->", frame, self.save_dir)
-            img = Image.frombytes(mode=frame.mode, size=frame.size, data=frame.video)
-            img.save(self.save_dir + frame.id + ".mp4", frame.format)
+            print(f"save {str(frame)=} --> {self.save_dir}")
+            from io import BytesIO
+
+            img = Image.open(BytesIO(frame.image))
+            img.save(self.save_dir + str(frame.id) + ".jpg", "JPEG")
 
 
 class TestProcessor(unittest.IsolatedAsyncioTestCase):

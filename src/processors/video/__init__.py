@@ -1,7 +1,7 @@
-from .base import ImageGenProcessor
+from .base import VideoGenProcessor
 
 
-def get_video_gen_processor(tag, **kwargs) -> ImageGenProcessor:
+def get_video_gen_processor(tag, **kwargs) -> VideoGenProcessor:
     if tag == "ComfyUIAPIVideoGenProcessor":
         from .comfyui_video_gen_processor import ComfyUIAPIVideoGenProcessor
 

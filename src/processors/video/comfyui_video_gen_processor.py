@@ -5,6 +5,7 @@ import time
 import io
 import logging
 import asyncio
+import tempfile
 from typing import AsyncGenerator
 
 import aiohttp
@@ -49,7 +50,7 @@ class ComfyUIAPIVideoGenProcessor(VideoGenProcessor):
     async def run_video_gen(self, prompt: str) -> AsyncGenerator[Frame, None]:
         logging.debug(f"Generating image from prompt: {prompt}")
 
-        response = await self._aiohttp_session.post(
+        async with self._aiohttp_session.post(
             self._api_url,
             json={
                 "model": self._model,
@@ -60,16 +61,26 @@ class ComfyUIAPIVideoGenProcessor(VideoGenProcessor):
                 "codec": self._codec,
                 "steps": self._steps,
             },
-        )
-        video_stream_source = await response.content.read()
+        ) as response:
+            if response.status != 200:
+                error_msg = await response.text()
+                logging.error(f"Video generation failed: {error_msg}")
+                yield ErrorFrame(f"Video generation failed: {error_msg}")
+                return
 
-        if not video_stream_source:
-            yield ErrorFrame("Video generation failed")
-            return
+            with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as temp_file:
+                temp_file_path = temp_file.name
+                async for chunk in response.content.iter_chunked(1024 * 1024):
+                    temp_file.write(chunk)
 
-        yield from self.generate_frames_from_video(video_stream_source)
+        try:
+            async for frame in self.generate_frames_from_video(temp_file_path):
+                yield frame
+        finally:
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
 
-    async def generate_frames_from_video(video_source) -> AsyncGenerator[Frame, None]:
+    async def generate_frames_from_video(self, video_source) -> AsyncGenerator[Frame, None]:
         """
         Generator function to read frames from a video source (path or URL) and yield them as JPEG bytes.
         The frames are yielded at a rate consistent with the original video's FPS.

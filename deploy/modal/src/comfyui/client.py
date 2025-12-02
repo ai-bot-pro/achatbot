@@ -32,7 +32,7 @@ def gen_image(args: argparse.Namespace):
     start_time = time.time()
     req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(req) as response:
+        with urllib.request.urlopen(req, timeout=1200) as response:
             assert response.status == 200, response.status
             elapsed = round(time.time() - start_time, 1)
             print(f"Image finished generating in {elapsed} seconds!")
@@ -69,17 +69,25 @@ def gen_video(args: argparse.Namespace):
     ).encode("utf-8")
     print(f"Sending request to {url} with prompt: {args.prompt}")
     print("Waiting for response...")
-    start_time = time.time()
     req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(req) as response:
-            assert response.status == 200, response.status
-            elapsed = round(time.time() - start_time, 1)
-            print(f"Image finished generating in {elapsed} seconds!")
+        with urllib.request.urlopen(req, timeout=1200) as response:
+            chunk_size = 8192
+            # The rest of the function will handle assert, print, and saving
+            # We need to open the file to write chunks to it.
+            # filename is defined later, so we need to define it here or move its definition up.
+            # Let's move the filename definition up so we can use it.
+            start_time = time.time()
             size_suffix = args.size if args.size else ""
             filename = OUTPUT_DIR / f"{slugify(args.prompt)}{size_suffix}.mp4"
-            filename.write_bytes(response.read())
-            print(f"Saved to '{filename}'")
+            with open(filename, "wb") as f:
+                while True:
+                    chunk = response.read(chunk_size)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+            cost = time.time() - start_time
+            print(f"{cost=:.3f}s Saved to '{filename}'")
     except urllib.error.HTTPError as e:
         print("error", e)
         if e.code == 404:
@@ -94,6 +102,13 @@ def parse_args(arglist: list[str]) -> argparse.Namespace:
         type=str,
         required=True,
         help="Name of the Modal workspace with the deployed app. Run `modal profile current` to check.",
+    )
+    parser.add_argument(
+        "--type",
+        type=str,
+        default="image",
+        required=False,
+        help="generate type.",
     )
     parser.add_argument(
         "--model",
@@ -149,7 +164,12 @@ python client.py --modal-workspace $(modal profile current) --prompt "Surreal dr
 python client.py --modal-workspace $(modal profile current) --prompt "Surreal dreamscape with floating islands, upside-down waterfalls, and impossible geometric structures, all bathed in a soft, ethereal light" --size 512x512 --steps 28 --dev
 
 python client.py --modal-workspace $(modal profile current) --prompt "Surreal dreamscape with floating islands, upside-down waterfalls, and impossible geometric structures, all bathed in a soft, ethereal light" --size 512x512 --steps 28 --dev --model image_flux2
+
+python client.py --modal-workspace $(modal profile current) --prompt "Surreal dreamscape with floating islands, upside-down waterfalls, and impossible geometric structures, all bathed in a soft, ethereal light" --size 1280x720 --steps 20 --dev --type video --model video_hunyuan_video_1_5_720p_t2v
 """
 if __name__ == "__main__":
     args = parse_args(sys.argv)
-    gen_image(args)
+    if args.type == "video":
+        gen_video(args)
+    else:
+        gen_image(args)
