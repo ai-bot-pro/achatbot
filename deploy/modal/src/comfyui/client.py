@@ -14,10 +14,8 @@ OUTPUT_DIR = pathlib.Path(__file__).parent / "output"
 OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
 
 
-def main(args: argparse.Namespace):
-    url = (
-        f"https://{args.modal_workspace}--server-comfyui-api{'-dev' if args.dev else ''}.modal.run/"
-    )
+def gen_image(args: argparse.Namespace):
+    url = f"https://{args.modal_workspace}--server-comfyui-api{'-dev' if args.dev else ''}.modal.run/image"
     model = args.model
     if args.size:
         width = args.size.split("x")[0]
@@ -108,4 +106,4 @@ python client.py --modal-workspace $(modal profile current) --prompt "Surreal dr
 """
 if __name__ == "__main__":
     args = parse_args(sys.argv)
-    main(args)
+    gen_image(args)

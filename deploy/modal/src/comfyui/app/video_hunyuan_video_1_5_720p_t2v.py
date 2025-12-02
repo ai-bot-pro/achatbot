@@ -53,6 +53,23 @@ def change_workflow_conf(file_path: Path, **kwargs) -> str:
     workflow_data = json.loads(file_path.read_text())
     client_id = uuid.uuid4().hex
 
+    if kwargs.get("prompt"):
+        workflow_data["44"]["inputs"]["text"] = kwargs.get("prompt")
+
+    workflow_data["102"]["inputs"]["filename_prefix"] = client_id
+    if kwargs.get("codec"):
+        workflow_data["102"]["inputs"]["codec"] = kwargs.get("codec")
+
+    if kwargs.get("width"):
+        workflow_data["124"]["inputs"]["width"] = kwargs.get("width")
+    if kwargs.get("height"):
+        workflow_data["124"]["inputs"]["height"] = kwargs.get("height")
+    if kwargs.get("length"):
+        workflow_data["124"]["inputs"]["length"] = kwargs.get("length")
+
+    if kwargs.get("steps"):
+        workflow_data["128"]["inputs"]["steps"] = kwargs.get("steps")
+
     print(file_path, workflow_data)
     new_workflow_file = f"{client_id}.json"
     json.dump(workflow_data, Path(new_workflow_file).open("w", encoding="utf-8"))
