@@ -94,6 +94,7 @@ app = modal.App(name="server", image=image)
         model_dir: MODEL_VOL,
         comfyui_out_dir: COMFYUI_OUT_VOL,
     },
+    timeout=1200,  # default 300s
 )
 @modal.concurrent(max_inputs=MAX_INPUTS)  # run max inputs per container
 class ComfyUI:
@@ -132,36 +133,78 @@ class ComfyUI:
             print(f"ComfyUI stderr: {e.stderr}")
             raise  # Re-raise the exception after logging
 
-        # returns the image as bytes
-        for f in Path(comfyui_out_dir).iterdir():
-            if f.name.startswith(file_name):
-                return f.read_bytes()
+    @modal.asgi_app()
+    def api(self):
+        from fastapi import FastAPI, Response
+        from fastapi.responses import StreamingResponse
 
-    @modal.fastapi_endpoint(method="POST")
-    def api(self, item: Dict):
-        from fastapi import Response
+        app = FastAPI()
 
-        model_name = item.get("model")
-        if model_name is None:
-            return Response("Missing model name", status_code=400)
+        @app.post(path="/video")
+        def gen_video(item: Dict):
+            model_name = item.get("model")
+            if model_name is None:
+                return Response("Missing model name", status_code=400)
 
-        MODEL_NAME = os.getenv("MODEL_NAME")
-        if model_name != MODEL_NAME:
-            return Response(f"Model name does not match, now use {MODEL_NAME}", status_code=400)
+            MODEL_NAME = os.getenv("MODEL_NAME")
+            if model_name != MODEL_NAME:
+                return Response(f"Model name does not match, now use {MODEL_NAME}", status_code=400)
 
-        file_path = Path(__file__).parent / f"{MODEL_NAME}_api.json"
-        images = item.get("images")
-        if images is not None and isinstance(images, list) and len(images) > 0:
-            file_path = Path(__file__).parent / f"{MODEL_NAME}_img2img_api.json"
-        # change workflow conf
-        filename = self.change_workflow_conf(file_path, item)
-        if filename is None:
-            return Response("Failed to change workflow conf", status_code=500)
+            file_path = Path(__file__).parent / f"{MODEL_NAME}_api.json"
+            images = item.get("images")
+            if images is not None and isinstance(images, list) and len(images) > 0:
+                file_path = Path(__file__).parent / f"{MODEL_NAME}_img2img_api.json"
+            # change workflow conf
+            filename = self.change_workflow_conf(file_path, item)
+            if filename is None:
+                return Response("Failed to change workflow conf", status_code=500)
 
-        # run inference on the currently running container
-        img_bytes = self.infer.local(filename)
+            # run inference on the currently running container
+            # NOTE: need use modal queue to do this
+            self.infer.local(filename)
 
-        return Response(img_bytes, media_type="image/jpeg")
+            # returns the video as bytes stream
+            # https://fastapi.tiangolo.com/advanced/custom-response/#using-streamingresponse-with-file-like-objects
+            def iterfile():  # (1)
+                for f in Path(comfyui_out_dir).iterdir():
+                    if f.name.startswith(filename):
+                        # if f.name.endswith(".mp4"):
+                        with open(f, mode="rb") as file_like:  # (2)
+                            yield from file_like  # (3)
+
+            return StreamingResponse(iterfile(), media_type="video/mp4")
+
+        @app.post(path="/image")
+        def gen_image(item: Dict):
+            model_name = item.get("model")
+            if model_name is None:
+                return Response("Missing model name", status_code=400)
+
+            MODEL_NAME = os.getenv("MODEL_NAME")
+            if model_name != MODEL_NAME:
+                return Response(f"Model name does not match, now use {MODEL_NAME}", status_code=400)
+
+            file_path = Path(__file__).parent / f"{MODEL_NAME}_api.json"
+            images = item.get("images")
+            if images is not None and isinstance(images, list) and len(images) > 0:
+                file_path = Path(__file__).parent / f"{MODEL_NAME}_img2img_api.json"
+            # change workflow conf
+            filename = self.change_workflow_conf(file_path, item)
+            if filename is None:
+                return Response("Failed to change workflow conf", status_code=500)
+
+            # run inference on the currently running container
+            self.infer.local(filename)
+
+            # returns the image as bytes
+            img_bytes = b""
+            for f in Path(comfyui_out_dir).iterdir():
+                if f.name.startswith(filename):
+                    img_bytes = f.read_bytes()
+
+            return Response(img_bytes, media_type="image/jpeg")
+
+        return app
 
     def change_workflow_conf(self, file_path: Path, item: Dict) -> str:
         try:
@@ -206,4 +249,7 @@ MODEL_NAME=image_z_image_turbo IMAGE_GPU=L40S modal serve src/comfyui/server.py
 
 # flux2 dev
 MODEL_NAME=image_flux2 IMAGE_GPU=L40S modal serve src/comfyui/server.py 
+
+# hunyuan video 1.5 720p t2v
+MODEL_NAME=video_hunyuan_video_1_5_720p_t2v IMAGE_GPU=L40S modal serve src/comfyui/server.py
 """

@@ -1,4 +1,4 @@
-# https://docs.comfy.org/tutorials/image/z-image/z-image-turbo
+# https://docs.comfy.org/tutorials/flux/flux-2-dev
 """
 📂 ComfyUI/
 ├── 📂 models/
@@ -25,8 +25,8 @@ from . import model_dir, MODEL_VOL, comfyui_out_dir, COMFYUI_OUT_VOL, clear_comf
 
 # https://github.com/black-forest-labs/flux2
 # https://huggingface.co/black-forest-labs/FLUX.2-dev
-# https://huggingface.co/black-forest-labs/flux2-dev/tree/main/split_files
-# modal run src/download_models.py --repo-ids "black-forest-labs/flux2-dev" --allow-patterns "*.safetensors"
+# https://huggingface.co/Comfy-Org/flux2-dev/tree/main/split_files
+# modal run src/download_models.py --repo-ids "Comfy-Org/flux2-dev" --allow-patterns "*.safetensors"
 
 
 def link_comfyui_dir():

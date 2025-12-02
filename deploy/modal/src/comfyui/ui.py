@@ -49,6 +49,7 @@ def link_comfyui_dir():
     try:
         MODEL_NAME = os.getenv("MODEL_NAME")
         module = importlib.import_module(f"app.{MODEL_NAME}")
+        print(module)
         func = getattr(module, "link_comfyui_dir")
         func()
     except ImportError as e:
@@ -90,4 +91,7 @@ MODEL_NAME=image_z_image_turbo modal serve src/comfyui/ui.py
 MODEL_NAME=image_z_image_turbo IMAGE_GPU=L40S modal serve src/comfyui/ui.py 
 
 MODEL_NAME=image_flux2 IMAGE_GPU=L40S modal serve src/comfyui/ui.py 
+
+# hunyuan video 1.5
+MODEL_NAME=video_hunyuan_video_1.5_720p_t2v IMAGE_GPU=L40S modal serve src/comfyui/ui.py 
 """

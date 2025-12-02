@@ -38,14 +38,14 @@ IMAGE_GEN_PROCESSOR=HFStableDiffusionImageGenProcessor \
     python -m unittest test.integration.processors.test_image_gen_processor.TestProcessor
 
 IMAGE_GEN_PROCESSOR=ComfyUIAPIImageGenProcessor \
-    API_URL=https://weedge--server-comfyui-api-dev.modal.run \
+    API_URL=https://weedge--server-comfyui-api-dev.modal.run/image \
     python -m unittest test.integration.processors.test_image_gen_processor.TestProcessor
 IMAGE_GEN_PROCESSOR=ComfyUIAPIImageGenProcessor \
-    API_URL=https://weedge--server-comfyui-api-dev.modal.run \
+    API_URL=https://weedge--server-comfyui-api-dev.modal.run/image \
     MODEL=image_z_image_turbo \
     python -m unittest test.integration.processors.test_image_gen_processor.TestProcessor
 IMAGE_GEN_PROCESSOR=ComfyUIAPIImageGenProcessor \
-    API_URL=https://weedge--server-comfyui-api-dev.modal.run \
+    API_URL=https://weedge--server-comfyui-api-dev.modal.run/image \
     MODEL=image_flux2 \
     python -m unittest test.integration.processors.test_image_gen_processor.TestProcessor
 """
