@@ -40,11 +40,6 @@ image = (  # build up a Modal Image to run ComfyUI, step by step
         "which comfy",
         "comfy --help",
     )
-    .env(
-        {
-            "MODEL_NAME": MODEL_NAME,
-        }
-    )
 )
 
 if "fastvideo" in MODEL_NAME:
@@ -91,7 +86,11 @@ if "fastvideo" in MODEL_NAME:
         )
 
 # copy the app path to the container.
-image = image.add_local_dir(APP_DIR, f"/root/app", copy=True)
+image = image.add_local_dir(APP_DIR, f"/root/app", copy=True).env(
+    {
+        "MODEL_NAME": MODEL_NAME,
+    }
+)
 
 
 # https://docs.comfy.org/installation/manual_install#example-structure

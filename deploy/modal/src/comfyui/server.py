@@ -38,11 +38,6 @@ image = (  # build up a Modal Image to run ComfyUI, step by step
     )
     .apt_install("git")  # install git to clone ComfyUI
     .uv_pip_install("fastapi[standard]==0.115.4")  # install web dependencies
-    .env(
-        {
-            "MODEL_NAME": MODEL_NAME,
-        }
-    )
 )
 
 image = (
@@ -111,6 +106,11 @@ image = (
     image.add_local_dir(APP_DIR, f"/root/app", copy=True)
     # copy the ComfyUI workflow JSON to the container.
     .add_local_file(WORKFLOW_CONFIG_PATH, f"/root/{MODEL_NAME}_api.json", copy=True)
+    .env(
+        {
+            "MODEL_NAME": MODEL_NAME,
+        }
+    )
 )
 
 
