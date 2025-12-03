@@ -40,4 +40,8 @@ python deploy/modal/src/comfyui/client.py --modal-workspace $(modal profile curr
 python deploy/modal/src/comfyui/client.py --modal-workspace $(modal profile current) --prompt "Surreal dreamscape with floating islands, upside-down waterfalls, and impossible geometric structures, all bathed in a soft, ethereal light" --size 512x512 --steps 28 --dev --model image_flux2
 
 python deploy/modal/src/comfyui/client.py --modal-workspace $(modal profile current) --prompt "Surreal dreamscape with floating islands, upside-down waterfalls, and impossible geometric structures, all bathed in a soft, ethereal light" --size 512x512 --steps 20 --dev --type video --model video_hunyuan_video_1_5_720p_t2v
+
+python deploy/modal/src/comfyui/client.py --modal-workspace $(modal profile current) --prompt "Surreal dreamscape with floating islands, upside-down waterfalls, and impossible geometric structures, all bathed in a soft, ethereal light" --size 512x512 --steps 6 --dev --type video --model video_fastvideo_hunyuan_diffusers
+
+python deploy/modal/src/comfyui/client.py --modal-workspace $(modal profile current) --prompt "Surreal dreamscape with floating islands, upside-down waterfalls, and impossible geometric structures, all bathed in a soft, ethereal light" --size 512x512 --steps 20 --dev --type video --model video_fastvideo_wan2_1_i2v_14b_480p_diffusers 
 ```

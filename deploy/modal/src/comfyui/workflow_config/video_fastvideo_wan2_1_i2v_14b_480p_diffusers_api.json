@@ -1,0 +1,151 @@
+{
+  "1": {
+    "inputs": {
+      "prompt": "A woman crying from laughter.",
+      "output_path": "/root/comfy/ComfyUI/output",
+      "num_gpus": 4,
+      "model_path": "/root/models/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers",
+      "embedded_cfg_scale": -99999,
+      "sp_size": -99999,
+      "tp_size": -99999,
+      "vae_precision": -99999,
+      "vae_tiling": -99999,
+      "vae_sp": -99999,
+      "text_encoder_precision": -99999,
+      "precision": -99999,
+      "dit_cpu_offload": -99999,
+      "inference_args": [
+        "2",
+        0
+      ],
+      "vae_config": [
+        "4",
+        0
+      ],
+      "text_encoder_config": [
+        "5",
+        0
+      ],
+      "dit_config": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "VideoGenerator",
+    "_meta": {
+      "title": "Video Generator"
+    }
+  },
+  "2": {
+    "inputs": {
+      "height": 1024,
+      "width": 1024,
+      "num_frames": 45,
+      "num_inference_steps": 20,
+      "guidance_scale": -99999,
+      "flow_shift": -99999,
+      "seed": 1024,
+      "fps": 24,
+      "image_path": [
+        "7",
+        0
+      ],
+      "enable_teacache": -99999
+    },
+    "class_type": "InferenceArgs",
+    "_meta": {
+      "title": "Inference Args"
+    }
+  },
+  "3": {
+    "inputs": {
+      "video": [
+        "1",
+        0
+      ],
+      "force_rate": 0,
+      "custom_width": 0,
+      "custom_height": 0,
+      "frame_load_cap": 0,
+      "skip_first_frames": 0,
+      "select_every_nth": 1,
+      "format": "Wan"
+    },
+    "class_type": "VHS_LoadVideoPath",
+    "_meta": {
+      "title": "Load Video (Path) 🎥🅥🅗🅢"
+    }
+  },
+  "4": {
+    "inputs": {
+      "load_encoder": -99999,
+      "load_decoder": -99999,
+      "tile_sample_min_height": -99999,
+      "tile_sample_min_width": -99999,
+      "tile_sample_min_num_frames": -99999,
+      "tile_sample_stride_height": -99999,
+      "tile_sample_stride_width": -99999,
+      "tile_sample_stride_num_frames": -99999,
+      "blend_num_frames": -99999,
+      "use_tiling": -99999,
+      "use_temporal_tiling": -99999,
+      "use_parallel_tiling": -99999
+    },
+    "class_type": "VAEConfig",
+    "_meta": {
+      "title": "VAE Config"
+    }
+  },
+  "5": {
+    "inputs": {
+      "prefix": -99999,
+      "quant_config": -99999,
+      "lora_config": -99999
+    },
+    "class_type": "TextEncoderConfig",
+    "_meta": {
+      "title": "Text Encoder Config"
+    }
+  },
+  "6": {
+    "inputs": {
+      "prefix": -99999,
+      "quant_config": -99999
+    },
+    "class_type": "DITConfig",
+    "_meta": {
+      "title": "DIT Config"
+    }
+  },
+  "7": {
+    "inputs": {
+      "image": "meinv.png"
+    },
+    "class_type": "LoadImagePath",
+    "_meta": {
+      "title": "Load Image Path"
+    }
+  },
+  "8": {
+    "inputs": {
+      "frame_rate": 24,
+      "loop_count": 0,
+      "filename_prefix": "",
+      "format": "video/h264-mp4",
+      "pix_fmt": "yuv420p",
+      "crf": 19,
+      "save_metadata": true,
+      "trim_to_audio": false,
+      "pingpong": false,
+      "save_output": false,
+      "images": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "Video Combine 🎥🅥🅗🅢"
+    }
+  }
+}
