@@ -79,8 +79,7 @@ def change_workflow_conf(file_path: Path, **kwargs) -> str:
             input_image_path = f"{comfyui_out_dir}/{input_image_filename}"
             with open(input_image_path, "wb") as f:
                 f.write(images[0])
-            images[0] = input_image_path
-            workflow_data["46"]["inputs"]["image"] = images[0]
+            workflow_data["46"]["inputs"]["image"] = input_image_path
 
     new_workflow_file = f"{client_id}.json"
     print(file_path, workflow_data)
