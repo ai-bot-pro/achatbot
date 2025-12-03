@@ -221,7 +221,22 @@ class ComfyUI:
                         with open(f, mode="rb") as file_like:  # (2)
                             yield from file_like  # (3)
 
-            return StreamingResponse(iterfile(), media_type="video/mp4")
+            def iterfile_lastest():
+                latest_mp4 = None
+                latest_mtime = 0
+                for f in Path(comfyui_out_dir).iterdir():
+                    if f.name.endswith(".mp4"):
+                        mtime = f.stat().st_mtime
+                        if mtime > latest_mtime:
+                            latest_mtime = mtime
+                            latest_mp4 = f
+                if latest_mp4:
+                    with open(latest_mp4, mode="rb") as file_like:
+                        yield from file_like
+                else:
+                    print(f"No MP4 file found for filename: {filename}")
+
+            return StreamingResponse(iterfile_lastest(), media_type="video/mp4")
 
         @app.post(path="/image")
         def gen_image(item: Dict):
