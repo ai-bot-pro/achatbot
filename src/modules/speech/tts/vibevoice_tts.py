@@ -431,7 +431,7 @@ class VibeVoiceTTS(BaseTTS, ITts):
         """
         - voice_name: voice name
         """
-        pass
+        raise NotImplementedError("set_voice is not supported by VibeVoiceTTS yet.")
 
     def get_voices(self) -> list:
         return list(self.voices.keys())
