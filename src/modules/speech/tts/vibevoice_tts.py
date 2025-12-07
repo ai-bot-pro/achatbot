@@ -62,7 +62,7 @@ class VibeVoiceStreamingTTS:
         self.model: Optional[VibeVoiceStreamingForConditionalGenerationInference] = None
         self.voice_presets: Dict[str, Path] = {}
         self.default_voice_key: Optional[str] = None
-        self._voice_cache: Dict[str, Tuple[object, Path, str]] = {}
+        self._voice_cache: Dict[str, object] = {}
 
         if device == "mpx":
             logging.info("Note: device 'mpx' detected, treating it as 'mps'.")
