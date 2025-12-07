@@ -94,7 +94,7 @@ class BaseTTS(EngineClass, ITts):
             text = self.filter_special_chars(text)
             if len(text.strip()) > 0:
                 async for chunk in self._inference(session, text, **session.ctx.state):
-                    if self.stop_signal.is_set():
+                    if hasattr(self, "stop_signal") and self.stop_signal.is_set():
                         break
                     yield chunk
                 if add_silence_chunk is True:
