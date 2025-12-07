@@ -168,7 +168,7 @@ class VibeVoiceStreamingTTS:
         logging.info(f"[startup] Using fallback voice preset: {first_key}")
         return first_key
 
-    def _ensure_voice_cached(self, key: str) -> Tuple[object, Path, str]:
+    def _ensure_voice_cached(self, key: str) -> object:
         if key not in self.voice_presets:
             raise RuntimeError(f"Voice preset {key!r} not found")
 
