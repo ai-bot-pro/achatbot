@@ -81,3 +81,6 @@
 [submodule "deps/StepAudio2"]
 	path = deps/StepAudio2
 	url = https://github.com/weedge/Step-Audio2.git
+[submodule "deps/VibeVoice"]
+	path = deps/VibeVoice
+	url = https://github.com/weedge/VibeVoice.git

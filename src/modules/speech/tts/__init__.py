@@ -58,6 +58,8 @@ class TTSEnvInit:
             from . import vita_tts
         elif "tts_higgs" == tag:
             from . import higgs_tts
+        elif "tts_vibevoice" == tag:
+            from . import vibevoice_tts
         # elif "tts_openai" in tag:
         # from . import openai_tts
 
@@ -446,6 +448,23 @@ class TTSEnvInit:
         ).__dict__
         return kwargs
 
+    @staticmethod
+    def get_tts_vibevoice_args() -> dict:
+        kwargs = {}
+        kwargs["model_path"] = os.getenv(
+            "TTS_VIBEVOICE_MODEL_PATH",
+            os.path.join(MODELS_DIR, "microsoft/VibeVoice-Realtime-0.5B"),
+        )
+        kwargs["speaker_embedding_pt_dir"] = os.getenv(
+            "TTS_VIBEVOICE_SPEAKER_EMBEDDING_PT_DIR",
+            os.path.join(MODELS_DIR, "microsoft/VibeVoice-Realtime-0.5B/voices/streaming_model"),
+        )
+        kwargs["cfg_scale"] = float(os.getenv("TTS_VIBEVOICE_CFG_SCALE", "1.5"))
+        kwargs["device"] = os.getenv("TTS_DEVICE")
+        kwargs["inference_steps"] = int(os.getenv("TTS_STEPS", "5"))
+        kwargs["voice"] = os.getenv("TTS_VOICE", "")
+        return kwargs
+
     # TAG : config
     map_config_func = {
         "tts_coqui": get_tts_coqui_args,
@@ -469,6 +488,7 @@ class TTSEnvInit:
         "tts_mega3": get_tts_mega3_args,
         "tts_vita": get_tts_vita_args,
         "tts_higgs": get_tts_higgs_args,
+        "tts_vibevoice": get_tts_vibevoice_args,
     }
 
     @staticmethod

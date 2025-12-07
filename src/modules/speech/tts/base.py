@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
 from typing import AsyncGenerator, Generator
@@ -24,6 +25,10 @@ class TTSVoice:
 
 
 class BaseTTS(EngineClass, ITts):
+    def __init__(self):
+        super().__init__()
+        self.stop_signal = threading.Event()
+
     def synthesize_sync(self, session: Session) -> Generator[bytes, None, None]:
         is_stream = (
             self.args.tts_stream if hasattr(self.args, "tts_stream") else True
@@ -77,6 +82,8 @@ class BaseTTS(EngineClass, ITts):
                 if len(text.strip()) == 0:
                     continue
                 async for chunk in self._inference(session, text, **session.ctx.state):
+                    if hasattr(self, "stop_signal") and self.stop_signal.is_set():
+                        break
                     yield chunk
                 if add_silence_chunk is True:
                     silence_chunk = self._get_end_silence_chunk(session, text)
@@ -87,6 +94,8 @@ class BaseTTS(EngineClass, ITts):
             text = self.filter_special_chars(text)
             if len(text.strip()) > 0:
                 async for chunk in self._inference(session, text, **session.ctx.state):
+                    if hasattr(self, "stop_signal") and self.stop_signal.is_set():
+                        break
                     yield chunk
                 if add_silence_chunk is True:
                     silence_chunk = self._get_end_silence_chunk(session, text)
@@ -171,3 +180,19 @@ class BaseTTS(EngineClass, ITts):
         """
         voices = {}
         return voices
+
+    def start_speak(self):
+        """
+        start TTS model to synthesize
+        e.g.: resuming bot speaking
+        """
+        if hasattr(self, "stop_signal"):
+            self.stop_signal.clear()
+
+    def stop_speak(self):
+        """
+        stop TTS model to synthesize
+        e.g.: interrupting bot speaking
+        """
+        if hasattr(self, "stop_signal"):
+            self.stop_signal.set()
