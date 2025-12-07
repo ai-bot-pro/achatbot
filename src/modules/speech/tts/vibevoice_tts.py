@@ -186,7 +186,7 @@ class VibeVoiceStreamingTTS:
 
         return self._voice_cache[key]
 
-    def _get_voice_resources(self, requested_key: Optional[str]) -> Tuple[str, object, Path, str]:
+    def _get_voice_resources(self, requested_key: Optional[str]) -> Tuple[str, object]:
         key = (
             requested_key
             if requested_key and requested_key in self.voice_presets
