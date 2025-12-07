@@ -7,7 +7,7 @@ from src.common.factory import EngineClass, EngineFactory
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 class ASRLiveEnvInit:

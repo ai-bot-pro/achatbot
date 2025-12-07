@@ -16,7 +16,7 @@ from src.common.types import PYAUDIO_PAFLOAT32, PYAUDIO_PAINT16
 from src.types.speech.tts.mega3 import Mega3TTSArgs
 from .base import BaseTTS
 
-load_dotenv(override=True)
+load_dotenv()
 
 try:
     cur_dir = os.path.dirname(__file__)

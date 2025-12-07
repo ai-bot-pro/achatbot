@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 DEFAULT_LLM_SYS_MESSAGES = [

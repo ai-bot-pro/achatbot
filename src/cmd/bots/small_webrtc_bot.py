@@ -23,7 +23,7 @@ from src.transports.small_webrtc import SmallWebRTCTransport
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 @register_ai_small_webrtc_bots.register

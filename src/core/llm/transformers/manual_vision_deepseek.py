@@ -15,7 +15,7 @@ from src.core.llm.transformers.base import TransformersBaseLLM
 from src.types.llm.transformers import TransformersLMArgs
 from src.common.random import set_all_random_seed
 
-load_dotenv(override=True)
+load_dotenv()
 
 try:
     cur_dir = os.path.dirname(__file__)

@@ -22,7 +22,7 @@ from src.modules.vision.detector import VisionDetectorEnvInit
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 class Env(

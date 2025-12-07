@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 from src.types.network.fastapi_websocket import FastapiWebsocketServerParams
 from src.transports.fastapi_websocket_server import FastapiWebsocketTransport
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 @register_ai_fastapi_ws_bots.register

@@ -17,7 +17,7 @@ from src.serializers.avatar_protobuf import AvatarProtobufFrameSerializer, Anima
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 @register_ai_fastapi_ws_bots.register

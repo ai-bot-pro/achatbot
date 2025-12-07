@@ -23,7 +23,7 @@ from src.cmd.bots.base_small_webrtc import SmallWebrtcAIBot
 from src.cmd.http.server.help import APIResponse
 
 # Load environment variables
-load_dotenv(override=True)
+load_dotenv()
 
 
 run_bot: SmallWebrtcAIBot = None

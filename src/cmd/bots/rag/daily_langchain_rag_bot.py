@@ -33,7 +33,7 @@ from src.cmd.bots import register_ai_room_bots
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 DEFAULT_SYSTEM_PROMPT = """
 You are Andrej Karpathy, a Slovak-Canadian computer scientist who served as the director of artificial intelligence and Autopilot Vision at Tesla. \

@@ -8,7 +8,7 @@ from .api import SearchBaseApi
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 class Search1Api(SearchBaseApi):

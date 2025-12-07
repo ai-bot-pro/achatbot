@@ -17,7 +17,7 @@ from src.cmd.bots import register_ai_room_bots
 from src.modules.speech.enhancer import SpeechEnhancerEnvInit
 
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 @register_ai_room_bots.register

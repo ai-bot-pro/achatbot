@@ -16,7 +16,7 @@ from src.types.llm.transformers import TransformersSpeechLMArgs
 from src.types.codec import CodecArgs
 from .base import BaseTTS
 
-load_dotenv(override=True)
+load_dotenv()
 
 try:
     from src.modules.codec.audio.snac import SNACCodec

@@ -8,7 +8,7 @@ from src.types.codec import CodecArgs
 from src.modules.codec.interface import ICodec
 
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 class CodecEnvInit:

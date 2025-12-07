@@ -26,7 +26,7 @@ from src.cmd.http.server.fastapi_daily_bot_serve import ngrok_proxy
 from src.services.webrtc_peer_connection import SmallWebRTCConnection, IceServer
 
 
-load_dotenv(override=True)
+load_dotenv()
 Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)
 
 run_bot: AISmallWebRTCFastapiWebsocketBot = None

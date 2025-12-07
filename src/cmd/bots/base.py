@@ -47,7 +47,7 @@ from src.common.logger import Logger
 from src.common.pool_engine import EngineProviderPool, PoolInstanceInfo
 from src.processors.session_processor import SessionProcessor
 
-load_dotenv(override=True)
+load_dotenv()
 
 use_nest_asyncio = os.getenv("NEST_ASYNCIO", "1") != "0"
 if use_nest_asyncio:

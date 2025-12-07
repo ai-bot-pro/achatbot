@@ -17,7 +17,7 @@ from src.types.frames import PathAudioRawFrame, LLMGenedTokensFrame, BotSpeaking
 from .helper import get_step_audio2_processor, get_step_audio2_llm, get_token2wav
 
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 @register_ai_room_bots.register

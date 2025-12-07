@@ -33,7 +33,7 @@ from .interface import (
 )
 from .factory import EngineClass
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 SRC_PATH = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir))

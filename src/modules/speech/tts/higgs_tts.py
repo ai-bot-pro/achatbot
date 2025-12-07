@@ -24,7 +24,7 @@ from src.core.llm.transformers.manual_speech_higgs import (
     revert_delay_pattern,
 )
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 def encode_base64_content_from_file(file_path: str) -> str:

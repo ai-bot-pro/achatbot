@@ -20,7 +20,7 @@ from src.cmd.bots import register_ai_room_bots
 from src.transports.websocket_server import WebsocketServerTransport
 from src.types.network.websocket import WebsocketServerParams
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 @register_ai_room_bots.register

@@ -8,7 +8,7 @@ from src.common.types import VADAnalyzerArgs
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 class VADAnalyzerEnvInit:

@@ -34,7 +34,7 @@ from src.modules.speech.tts.base import BaseTTS
 from src.common.types import ASSETS_DIR, MODELS_DIR, PYAUDIO_PAFLOAT32, PYAUDIO_PAINT16, RECORDS_DIR
 from src.types.speech.tts.openvoicev2 import OpenVoiceV2TTSArgs
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 class OpenVoiceV2TTS(BaseTTS, ITts):
