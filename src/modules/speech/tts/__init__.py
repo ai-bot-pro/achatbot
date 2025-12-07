@@ -450,20 +450,20 @@ class TTSEnvInit:
 
     @staticmethod
     def get_tts_vibevoice_args() -> dict:
-        kwargs = {}
-        kwargs["model_path"] = os.getenv(
-            "TTS_VIBEVOICE_MODEL_PATH",
-            os.path.join(MODELS_DIR, "microsoft/VibeVoice-Realtime-0.5B"),
-        )
-        kwargs["speaker_embedding_pt_dir"] = os.getenv(
-            "TTS_VIBEVOICE_SPEAKER_EMBEDDING_PT_DIR",
-            os.path.join(MODELS_DIR, "microsoft/VibeVoice-Realtime-0.5B/voices/streaming_model"),
-        )
-        kwargs["cfg_scale"] = float(os.getenv("TTS_VIBEVOICE_CFG_SCALE", "1.5"))
-        kwargs["device"] = os.getenv("TTS_DEVICE")
-        kwargs["inference_steps"] = int(os.getenv("TTS_STEPS", "5"))
-        kwargs["voice"] = os.getenv("TTS_VOICE", "")
-        return kwargs
+        return {
+            "model_path": os.getenv(
+                "TTS_VIBEVOICE_MODEL_PATH",
+                os.path.join(MODELS_DIR, "microsoft/VibeVoice-Realtime-0.5B"),
+            ),
+            "speaker_embedding_pt_dir": os.getenv(
+                "TTS_VIBEVOICE_SPEAKER_EMBEDDING_PT_DIR",
+                os.path.join(MODELS_DIR, "microsoft/VibeVoice-Realtime-0.5B/voices/streaming_model"),
+            ),
+            "cfg_scale": float(os.getenv("TTS_VIBEVOICE_CFG_SCALE", "1.5")),
+            "device": os.getenv("TTS_DEVICE"),
+            "inference_steps": int(os.getenv("TTS_STEPS", "5")),
+            "voice": os.getenv("TTS_VOICE", ""),
+        }
 
     # TAG : config
     map_config_func = {
