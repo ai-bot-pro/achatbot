@@ -22,7 +22,7 @@ from src.modules.punctuation import PuncEnvInit
 from src.serializers.transcription_protobuf import TranscriptionFrameSerializer
 
 
-load_dotenv(override=True)
+load_dotenv()
 
 """
 TOKENIZERS_PARALLELISM=false python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_websocket_asr_translate_tts_bot.json

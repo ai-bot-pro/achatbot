@@ -39,7 +39,7 @@ from src.processors.aggregators.openai_llm_context import OpenAILLMContext
 from dotenv import load_dotenv
 
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 RTVI_PROTOCOL_VERSION = "0.1"

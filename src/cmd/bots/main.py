@@ -13,7 +13,7 @@ from src.common.task_manager import TaskManagerFactory
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 Logger.init(os.getenv("LOG_LEVEL", "info").upper(), is_file=False, is_console=True)

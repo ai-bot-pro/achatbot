@@ -16,7 +16,7 @@ from src.services.help.daily_rest import (
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 class DailyRoom(EngineClass, IRoomManager):

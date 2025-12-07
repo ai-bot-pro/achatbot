@@ -25,7 +25,7 @@ from src.processors.speech.asr.asr_live_processor import ASRLiveProcessor
 from src.processors.punctuation_processor import PunctuationProcessor
 from src.modules.punctuation import PuncEnvInit
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 class SaveASRText(FrameProcessor):

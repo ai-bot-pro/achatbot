@@ -19,7 +19,7 @@ from src.cmd.bots import register_ai_room_bots
 from src.types.frames import *
 
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 @register_ai_room_bots.register

@@ -44,7 +44,7 @@ from src.common.types import RECORDS_DIR, SessionCtx, PYAUDIO_PAFLOAT32, PYAUDIO
 from src.common.session import Session
 
 
-load_dotenv(override=True)
+# load_dotenv()
 
 Logger.init(
     os.getenv("LOG_LEVEL", "info").upper(),
@@ -62,6 +62,7 @@ TTS_TEXT_LIST = [
 
 def load_model(tts_stub: TTSStub):
     tag = os.getenv("TTS_TAG", "tts_edge")
+    print("--->", tag)
     is_reload = bool(os.getenv("IS_RELOAD", None))
     kwargs = TTSEnvInit.map_config_func[tag]()
     request = LoadModelRequest(tts_tag=tag, is_reload=is_reload, json_kwargs=json.dumps(kwargs))
@@ -263,6 +264,13 @@ TTS_TAG=tts_higgs IS_SAVE=1 \
     TTS_REF_AUDIO_PATH="./assets/basic_ref_zh.wav" \
     TTS_CHUNK_SIZE=16 \
     python -m src.cmd.grpc.speaker.client
+
+TTS_TAG=tts_vibevoice IS_SAVE=1 \
+    TTS_VIBEVOICE_MODEL_PATH=./models/microsoft/VibeVoice-Realtime-0.5B \
+    TTS_VIBEVOICE_SPEAKER_EMBEDDING_PT_DIR=./models/microsoft/VibeVoice-Realtime-0.5B/voices/streaming_model \
+    TTS_VIBEVOICE_VOICE=en-Davis_man \
+    TTS_STEPS=5 \
+    python -m src.cmd.grpc.speaker.client
 """
 if __name__ == "__main__":
     player = None
@@ -337,7 +345,7 @@ if __name__ == "__main__":
                 logging.info(f"[ {tts_text} ] save audio stream to {file_path}")
                 info = soundfile.info(file_path, verbose=True)
                 print(
-                    f"tts cost time {sum(times)} s, wav duration {info.duration} s, RTF: {sum(times)/info.duration}"
+                    f"tts cost time {sum(times)} s, wav duration {info.duration} s, RTF: {sum(times) / info.duration}"
                 )
 
             if is_save is False:

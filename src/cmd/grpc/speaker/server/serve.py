@@ -19,7 +19,7 @@ from src.common.grpc.interceptors.authentication_server import AuthenticationInt
 from src.cmd.grpc.speaker.server.servicers.tts import TTS, main_thread_init
 from src.common.logger import Logger
 
-load_dotenv(override=True)
+load_dotenv()
 
 Logger.init(
     os.getenv("LOG_LEVEL", "debug").upper(),

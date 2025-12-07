@@ -9,7 +9,7 @@ from src.common import interface
 from src.common.factory import EngineClass, EngineFactory
 
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 class MockILlm(EngineClass, interface.ILlm):

@@ -17,7 +17,7 @@ from src.processors.a2a.a2a_live_processor import A2ALiveProcessor
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 @register_ai_fastapi_ws_bots.register

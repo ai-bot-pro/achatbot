@@ -22,7 +22,7 @@ from src.modules.punctuation import PuncEnvInit
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 """
 TOKENIZERS_PARALLELISM=false python -m src.cmd.webrtc.signaling_bot_server -f config/bots/small_webrtc_asr_translate_llamacpp_tts_bot.json

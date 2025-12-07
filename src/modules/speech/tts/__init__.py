@@ -8,7 +8,7 @@ from src.common.types import ASSETS_DIR, MODELS_DIR, RECORDS_DIR
 from src.common import interface
 from src.common.factory import EngineClass, EngineFactory
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 class TTSEnvInit:
@@ -457,12 +457,14 @@ class TTSEnvInit:
             ),
             "speaker_embedding_pt_dir": os.getenv(
                 "TTS_VIBEVOICE_SPEAKER_EMBEDDING_PT_DIR",
-                os.path.join(MODELS_DIR, "microsoft/VibeVoice-Realtime-0.5B/voices/streaming_model"),
+                os.path.join(
+                    MODELS_DIR, "microsoft/VibeVoice-Realtime-0.5B/voices/streaming_model"
+                ),
             ),
             "cfg_scale": float(os.getenv("TTS_VIBEVOICE_CFG_SCALE", "1.5")),
             "device": os.getenv("TTS_DEVICE"),
             "inference_steps": int(os.getenv("TTS_STEPS", "5")),
-            "voice": os.getenv("TTS_VOICE", ""),
+            "voice": os.getenv("TTS_VIBEVOICE_VOICE", ""),
         }
 
     # TAG : config

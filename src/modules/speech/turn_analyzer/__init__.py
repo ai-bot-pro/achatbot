@@ -11,7 +11,7 @@ from src.types.speech.turn_analyzer.smart_turn import (
     SmartTurnArgs,
 )
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 class TurnAnalyzerEnvInit:

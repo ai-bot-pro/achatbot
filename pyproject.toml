@@ -33,7 +33,7 @@ local_scheme = "no-local-version"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.33.post1"
+version = "0.0.34"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -667,7 +667,18 @@ tts_mega3 = [
     "achatbot[librosa]",
 ]
 tts_higgs = ["achatbot[llm_transformers_manual_speech_higgs]"]
-
+tts_vibevoice = [
+    "torch",
+    "accelerate==1.6.0",
+    "transformers==4.51.3",
+    "llvmlite>=0.40.0",
+    "numba>=0.57.0",
+    "diffusers",
+    "tqdm",
+    "numpy",
+    "scipy",
+    "librosa",    
+]
 
 # multi tts modules engine
 speech_tts = [

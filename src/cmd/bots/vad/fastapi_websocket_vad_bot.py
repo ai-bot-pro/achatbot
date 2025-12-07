@@ -18,7 +18,7 @@ from src.types.network.fastapi_websocket import FastapiWebsocketServerParams
 from src.transports.fastapi_websocket_server import FastapiWebsocketTransport
 from src.types.frames import BotSpeakingFrame
 
-load_dotenv(override=True)
+load_dotenv()
 
 """
 TEN_VAD_LIB_PATH=<path_to_ten_vad_library> python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_websocket_ten_vad_bot.json

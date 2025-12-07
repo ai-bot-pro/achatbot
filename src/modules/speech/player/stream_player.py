@@ -297,6 +297,12 @@ class PlayStreamInit:
                 "rate": 24000,
                 "sample_width": 2,
             },
+            "tts_vibevoice": {
+                "format": PYAUDIO_PAINT16,
+                "channels": 1,
+                "rate": 24000,
+                "sample_width": 2,
+            },
             "tts_daily_speaker": {
                 "format": PYAUDIO_PAINT16,
                 "channels": 1,

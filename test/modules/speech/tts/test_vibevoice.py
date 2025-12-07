@@ -16,8 +16,11 @@ python -m unittest test.modules.speech.tts.test_vibevoice.TestVibevoiceTTS.test_
 python -m unittest test.modules.speech.tts.test_vibevoice.TestVibevoiceTTS.test_synthesize_speak
 
 # voice
-TTS_VOICE=Frank \
-    python -m unittest test.modules.speech.tts.test_vibevoice.TestVibevoiceTTS.test_synthesize
+wget https://raw.githubusercontent.com/weedge/VibeVoice/refs/heads/main/demo/voices/streaming_model/en-Davis_man.pt -O models/microsoft/VibeVoice-Realtime-0.5B/voices/streaming_model/en-Davis_man.pt
+TTS_VIBEVOICE_VOICE=en-Davis_man python -m unittest test.modules.speech.tts.test_vibevoice.TestVibevoiceTTS.test_synthesize
+
+wget https://raw.githubusercontent.com/weedge/VibeVoice/refs/heads/main/demo/voices/streaming_model/en-Emma_woman.pt -O models/microsoft/VibeVoice-Realtime-0.5B/voices/streaming_model/en-Emma_woman.pt
+TTS_VIBEVOICE_VOICE=en-Emma_woman python -m unittest test.modules.speech.tts.test_vibevoice.TestVibevoiceTTS.test_synthesize
 """
 
 

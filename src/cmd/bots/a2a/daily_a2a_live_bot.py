@@ -19,7 +19,7 @@ from src.processors.interval_processor import IntervalProcessor
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 @register_ai_room_bots.register

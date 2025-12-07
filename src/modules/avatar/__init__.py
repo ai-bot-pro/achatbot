@@ -8,7 +8,7 @@ from src.common.factory import EngineClass, EngineFactory
 from src.modules.avatar.interface import IFaceAvatar
 
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 class AvatarEnvInit:

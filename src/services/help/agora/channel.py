@@ -12,7 +12,7 @@ from agora_realtime_ai_api.token_builder.realtimekit_token_builder import Realti
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 class AgoraChannel(EngineClass, IRoomManager):

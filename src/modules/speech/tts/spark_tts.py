@@ -20,7 +20,7 @@ from src.types.speech.tts.spark import SparkTTSArgs
 from src.types.llm.transformers import TransformersSpeechLMArgs
 from .base import BaseTTS
 
-load_dotenv(override=True)
+load_dotenv()
 
 try:
     cur_dir = os.path.dirname(__file__)

@@ -21,7 +21,7 @@ from src.types.frames.control_frames import UserStartedSpeakingFrame, UserStoppe
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 @register_ai_room_bots.register

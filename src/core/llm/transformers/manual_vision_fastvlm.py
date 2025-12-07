@@ -18,7 +18,7 @@ from src.core.llm.transformers.base import TransformersBaseLLM
 from src.types.llm.transformers import TransformersLMArgs
 from src.types.speech.language import TO_LLM_LANGUAGE
 
-load_dotenv(override=True)
+load_dotenv()
 
 try:
     import torch

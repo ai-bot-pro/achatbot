@@ -27,7 +27,7 @@ from src.processors.aggregators.openai_llm_context import (
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 @register_ai_room_bots.register

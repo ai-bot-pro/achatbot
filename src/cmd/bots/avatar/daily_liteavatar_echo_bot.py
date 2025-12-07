@@ -16,7 +16,7 @@ from src.types.frames.data_frames import LLMMessagesFrame
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 @register_ai_room_bots.register

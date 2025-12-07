@@ -27,7 +27,7 @@ from src.serializers.transcription_protobuf import TranscriptionFrameSerializer
 from .helper import get_step_audio2_processor, get_step_audio2_llm, get_token2wav
 
 
-load_dotenv(override=True)
+load_dotenv()
 
 """
 TOKENIZERS_PARALLELISM=false python -m src.cmd.websocket.server.fastapi_ws_bot_serve -f config/bots/fastapi_websocket_step_audio2_s2st_bot.json

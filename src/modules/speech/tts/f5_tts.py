@@ -17,7 +17,7 @@ from src.common.types import ASSETS_DIR, PYAUDIO_PAINT16, PYAUDIO_PAFLOAT32
 from src.types.speech.tts.f5 import F5TTSArgs
 from .base import BaseTTS
 
-load_dotenv(override=True)
+load_dotenv()
 
 try:
     cur_dir = os.path.dirname(__file__)

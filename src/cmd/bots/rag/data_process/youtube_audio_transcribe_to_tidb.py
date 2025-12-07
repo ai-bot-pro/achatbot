@@ -23,7 +23,7 @@ from src.cmd.bots.rag.helper import get_tidb_url
 # Load environment variables from .env file
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 def time_str_to_seconds(time_str):

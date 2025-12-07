@@ -8,7 +8,7 @@ from src.types.vision.detector.yolo import VisionDetectorArgs
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 class VisionDetectorEnvInit:

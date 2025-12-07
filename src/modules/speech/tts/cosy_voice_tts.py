@@ -33,7 +33,7 @@ from src.common.types import PYAUDIO_PAINT16, RECORDS_DIR, CosyVoiceTTSArgs, RAT
 from src.common.utils.audio_utils import postprocess_tts_wave_int16
 from .base import BaseTTS
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 class CosyVoiceTTS(BaseTTS, ITts):

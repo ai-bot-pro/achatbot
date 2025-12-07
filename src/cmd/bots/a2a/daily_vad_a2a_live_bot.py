@@ -16,7 +16,7 @@ from src.processors.user_image_request_processor import UserVADImageRequestProce
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 @register_ai_room_bots.register

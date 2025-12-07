@@ -32,7 +32,7 @@ from src.common.session import Session
 from src.common.types import RECORDS_DIR, CosyVoiceTTSArgs, RATE
 from src.common.utils.audio_utils import postprocess_tts_wave_int16
 
-load_dotenv(override=True)
+load_dotenv()
 
 
 class CosyVoice2TTS(CosyVoiceTTS):
