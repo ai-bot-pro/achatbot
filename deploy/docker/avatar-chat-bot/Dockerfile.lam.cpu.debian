@@ -1,0 +1,36 @@
+ARG A_ACHATBOT_IMG_TAG=base
+
+FROM achatbot:${A_ACHATBOT_IMG_TAG} AS build
+
+# Custom cache invalidation
+#ARG CACHEBUST=1
+
+# docker build arg after each FROM
+# default install all vad,asr,llm,tts,avatar dependency
+# vad,api asr,api llm,api tts,avatar dependency
+ARG A_ACHATBOT_DEPENDENCY="achatbot[fastapi_bot_server,silero_vad_analyzer,sense_voice_asr,openai_llm_processor,google_llm_processor,litellm_processor,together_ai,tts_edge,lam_audio2expression_avatar]"
+RUN pip install -U "${A_ACHATBOT_DEPENDENCY}"
+
+FROM build AS run
+ARG A_WORKER_HOST="0.0.0.0"
+ARG A_WORKER_PORT="4321"
+# container env
+ENV E_WORKER_HOST=${A_WORKER_HOST}
+ENV E_WORKER_PORT=${A_WORKER_PORT}
+ENV ACHATBOT_PKG=1
+RUN mkdir -p ~/.achatbot/log ~/.achatbot/models ~/.achatbot/config ~/.achatbot/assets ~/.achatbot/resources ~/.achatbot/log
+RUN pip install spleeter==2.4.2
+RUN pip install typing_extensions==4.14.0 aiortc==1.13.0 transformers==4.36.2 protobuf==5.29.4
+
+# NOTE: download model weights from huggingface and oss to models folder for local inference, use docker volume to mount models folder
+#RUN pip install huggingface-hub
+#RUN apt-get install -y git wget tar git
+#RUN wget https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LAM/LAM_audio2exp_streaming.tar -P ~/.achatbot/models/LAM_audio2exp/
+#RUN tar -xzvf ~/.achatbot/models/LAM_audio2exp/LAM_audio2exp_streaming.tar -C ~/.achatbot/models/LAM_audio2exp/ && rm ~/.achatbot/models/LAM_audio2exp/LAM_audio2exp_streaming.tar
+#RUN git clone --depth 1 https://www.modelscope.cn/AI-ModelScope/wav2vec2-base-960h.git ~/.achatbot/models/facebook/wav2vec2-base-960h
+#RUN huggingface-cli download FunAudioLLM/SenseVoiceSmall  --local-dir ~/.achatbot/models/FunAudioLLM/SenseVoiceSmall
+
+EXPOSE ${E_WORKER_PORT}
+CMD python -m achatbot.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve_v2 --port ${E_WORKER_PORT} --host ${E_WORKER_HOST} -f ~/.achatbot/config/bots/small_webrtc_fastapi_websocket_avatar_chat_bot.json
+
+
