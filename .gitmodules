@@ -84,3 +84,6 @@
 [submodule "deps/VibeVoice"]
 	path = deps/VibeVoice
 	url = https://github.com/weedge/VibeVoice.git
+[submodule "deps/GLMTTS"]
+	path = deps/GLMTTS
+	url = https://github.com/weedge/GLM-TTS.git
