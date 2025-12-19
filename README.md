@@ -120,6 +120,7 @@ python -m src.cmd.webrtc_websocket.fastapi_ws_signaling_bot_serve_v2 -f config/b
 
 ```shell
 cd deploy/docker
+
 # build base img
 make docker_cpu_debian_img
 # build runnable img
