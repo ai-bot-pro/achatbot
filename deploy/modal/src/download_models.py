@@ -106,7 +106,7 @@ def download_modelscope_models(
     timeout=1200,
     scaledown_window=1200,
 )
-def download_ckpts(ckpt_urls: str) -> str:
+def download_ckpts(ckpt_urls: str, dir_name: str = "") -> str:
     import os
     import subprocess
     import logging
@@ -120,7 +120,7 @@ def download_ckpts(ckpt_urls: str) -> str:
             continue
 
         filename = os.path.basename(url)
-        local_path = os.path.join(HF_MODEL_DIR, filename)
+        local_path = os.path.join(HF_MODEL_DIR, dir_name, filename)
         local_path = unquote(local_path)
         dir_path = os.path.dirname(local_path)
         os.makedirs(dir_path, exist_ok=True)
