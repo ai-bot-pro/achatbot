@@ -60,6 +60,8 @@ class TTSEnvInit:
             from . import higgs_tts
         elif "tts_vibevoice" == tag:
             from . import vibevoice_tts
+        elif "tts_glm" == tag:
+            from . import glm_tts
         # elif "tts_openai" in tag:
         # from . import openai_tts
 
@@ -467,6 +469,33 @@ class TTSEnvInit:
             "voice": os.getenv("TTS_VIBEVOICE_VOICE", ""),
         }
 
+    @staticmethod
+    def get_tts_glm_args() -> dict:
+        return {
+            "model_path": os.getenv(
+                "TTS_GLM_MODEL_PATH",
+                os.path.join(MODELS_DIR, "zai-org/GLM-TTS"),
+            ),
+            "default_voice_name": os.getenv("TTS_GLM_VOICE", "jiayan_zh"),
+            "default_prompt_text": os.getenv(
+                "TTS_GLM_PROMPT_TEXT", "他当时还跟线下其他的站姐吵架，然后，打架进局子了。"
+            ),
+            "default_prompt_speech_path": os.getenv(
+                "TTS_GLM_PROMPT_SPEECH_PATH",
+                "https://raw.githubusercontent.com/weedge/GLM-TTS/refs/heads/main/examples/prompt/jiayan_zh.wav",
+            ),
+            "device": os.getenv("TTS_DEVICE", None),
+            "inference_steps": int(os.getenv("TTS_GLM_INFERENCE_STEPS", "10")),
+            "use_phoneme": bool(os.getenv("TTS_GLM_USE_PHONEME", "")),
+            "sample_method": os.getenv("TTS_GLM_SAMPLE_METHOD", "ras"),
+            "seed": int(os.getenv("TTS_SEED", "42")),
+            "warmup_steps": int(os.getenv("TTS_WARMUP_STEPS", "1")),
+            "warm_up_text": os.getenv("TTS_WARM_UP_TEXT", "hello world"),
+            "tts_stream": bool(os.getenv("TTS_TTS_STREAM", "1")),
+            "chunk_length_seconds": float(os.getenv("TTS_CHUNK_LENGTH_SECONDS", "0.5")),
+            "add_silence_chunk": bool(os.getenv("TTS_ADD_SILENCE_CHUNK", "")),
+        }
+
     # TAG : config
     map_config_func = {
         "tts_coqui": get_tts_coqui_args,
@@ -491,6 +520,7 @@ class TTSEnvInit:
         "tts_vita": get_tts_vita_args,
         "tts_higgs": get_tts_higgs_args,
         "tts_vibevoice": get_tts_vibevoice_args,
+        "tts_glm": get_tts_glm_args,
     }
 
     @staticmethod

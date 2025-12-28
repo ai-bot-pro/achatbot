@@ -33,7 +33,7 @@ local_scheme = "no-local-version"
 [project]
 name = "achatbot"
 #dynamic = ["version"]
-version = "0.0.34"
+version = "0.0.35"
 authors = [{ name = "weedge", email = "weege007@gmail.com" }]
 maintainers = [{ name = "weedge", email = "weege007@gmail.com" }]
 description = "An open source chat bot for voice (and multimodal) assistants"
@@ -82,7 +82,7 @@ dependencies = [
     "requests",
     "apipeline>=0.2.12",
     "python-dotenv",
-    "pydub",            # need install ffmpeg
+    "pydub",             # need install ffmpeg
     "pillow",
     "aiohttp==3.10.11",
     "scipy",
@@ -677,7 +677,27 @@ tts_vibevoice = [
     "tqdm",
     "numpy",
     "scipy",
-    "librosa",    
+    "librosa",
+]
+tts_glm = [
+    "numpy==1.26.4",
+    "scipy==1.15.3",
+    "sentencepiece==0.1.99",
+    "soundfile==0.12.1",
+    "tiktoken==0.6.0",
+    "torch==2.3.1",
+    "torchaudio==2.3.1",
+    "torchvision==0.18.1",
+    "tqdm==4.66.4",
+    "train==0.0.5",
+    "transformers==4.57.3",
+    "wandb==0.16.6",
+    "WeTextProcessing==1.0.3",
+    "x_transformers==1.42.26",
+    "zhconv==1.4.3",
+    "zhon==2.1.1",
+    "jiwer==4.0.0",
+    "librosa==0.9.2",
 ]
 
 # multi tts modules engine

@@ -271,6 +271,15 @@ TTS_TAG=tts_vibevoice IS_SAVE=1 \
     TTS_VIBEVOICE_VOICE=en-Davis_man \
     TTS_STEPS=5 \
     python -m src.cmd.grpc.speaker.client
+
+TTS_TAG=tts_glm IS_SAVE=1 \
+    TTS_GLM_MODEL_PATH=./models/zai-org/GLM-TTS \
+    TTS_GLM_VOICE=jiayan_zh \
+    TTS_GLM_PROMPT_TEXT="他当时还跟线下其他的站姐吵架，然后，打架进局子了。" \
+    TTS_GLM_PROMPT_SPEECH_PATH="https://raw.githubusercontent.com/weedge/GLM-TTS/refs/heads/main/examples/prompt/jiayan_zh.wav" \
+    TTS_GLM_INFERENCE_STEPS=10 \
+    TTS_SEED=42 \
+    python -m src.cmd.grpc.speaker.client
 """
 if __name__ == "__main__":
     player = None

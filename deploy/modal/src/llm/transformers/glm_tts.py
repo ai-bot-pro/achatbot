@@ -568,10 +568,8 @@ def stream_generate_long(
     speech_feat=None,
     use_phoneme=False,
 ):
-    uttid = text_info[0]
     syn_text = text_info[1]
     text_tn_dict = {
-        "uttid": uttid,
         "syn_text": syn_text,
         "syn_text_tn": [],
         "syn_text_phoneme": [],
